@@ -4,40 +4,72 @@ on:
     branches: ['feat/ru-android-polish']
     paths: ['.github/workflows/moru-polish-development.yml', 'tool/moru-polish/run.txt']
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: moru-polish-dev
   cancel-in-progress: false
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          ref: ${{ github.sha }}
+          fetch-depth: 0
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.44.9'
           channel: stable
           cache: true
       - run: flutter pub get
-      - name: Reproduce display-only locale gaps before the repair
+      - name: Apply reviewed Android presentation edits and generate Dart
         shell: bash
-        run: flutter test test/l10n/moru_android_remaining_test.dart --reporter expanded 2>&1 | tee locale-regressions.log
-      - name: Export Android presentation sources for review
+        run: |
+          python3 tool/moru-polish/apply.py
+          flutter gen-l10n
+          git ls-files -m -o --exclude-standard -- lib test | grep '\.dart$' | xargs -r dart format
+          python3 tool/test_check_moru_ru.py
+          python3 tool/check_moru_ru.py
+          git diff --check
+      - name: Russian and English widget and locale regressions
+        shell: bash
+        run: flutter test test/l10n test/core/providers/moru_locale_preferences_test.dart test/core/providers/settings_provider_locale_test.dart --reporter expanded 2>&1 | tee locale-regressions.log
+      - name: Analyze all application code and tests
+        shell: bash
+        run: dart analyze --fatal-infos lib test integration_test 2>&1 | tee analyzer.log
+      - name: Commit verified presentation files without overwriting concurrent work
+        shell: bash
+        run: |
+          test "$GITHUB_REF_NAME" = 'feat/ru-android-polish'
+          test "$(git ls-remote origin refs/heads/feat/ru-android-polish | cut -f1)" = "$GITHUB_SHA"
+          git add lib test tool/check_moru_ru.py tool/moru_ru_technical_allowlist.json
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'l10n(ru): complete Android notices, speech models and code labels'
+            git push origin HEAD:refs/heads/feat/ru-android-polish
+          fi
+      - name: Export exact reviewed source and reports
         if: always()
         shell: bash
         run: |
           mkdir -p review
-          cp -R android/app/src review/android-src
+          cp -R lib review/lib
           cp -R test review/tests
-          cp -R tool/moru-translation-stage review/translation-stage
+          cp -R android/app/src review/android-src
+          git diff 846af083621e9e6a59b1d30b89ed2468777d0491 --stat > diff-stat.txt
+          git diff 846af083621e9e6a59b1d30b89ed2468777d0491 -- lib test > source-diff.patch
+          git rev-parse HEAD > verified-source-sha.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: moru-android-polish-review
           path: |
             locale-regressions.log
+            analyzer.log
+            diff-stat.txt
+            source-diff.patch
+            verified-source-sha.txt
             review/
-          retention-days: 7
+          retention-days: 14
