@@ -11369,6 +11369,69 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get oauthPromptCachingHelp => '复用多轮对话中的上下文，可设置缓存保留时长。';
+
+  @override
+  String get moruLanguageRussian => 'Русский';
+
+  @override
+  String get moruDeleteHeader => '删除请求头';
+
+  @override
+  String get moruDeleteEntry => '删除条目';
+
+  @override
+  String get moruSearchCategory => '类别';
+
+  @override
+  String get moruSearchCountry => '国家';
+
+  @override
+  String get moruSearchIncludeDomains => '包含域名';
+
+  @override
+  String get moruSearchExcludeDomains => '排除域名';
+
+  @override
+  String moruLogReadFailed(String error) {
+    return '读取文件失败：$error';
+  }
+
+  @override
+  String get moruChatNotificationChannel => '聊天后台任务';
+
+  @override
+  String get moruChatNotificationDescription => '聊天回复生成状态通知';
+
+  @override
+  String get moruCherryImportWarning =>
+      '此功能目前仍处于实验阶段。\n目前仅能导入助手，对话内容，供应商和文件，\n一些供应商需要在baseurl后面添加/v1 or /v1beta。 \n为确保数据安全，建议在导入前先执行备份。\n是否已知晓并继续选择文件？';
+
+  @override
+  String get moruPaletteDefault => '默认';
+
+  @override
+  String get moruPaletteBlue => '海霄蓝';
+
+  @override
+  String get moruPaletteGreen => '竹影绿';
+
+  @override
+  String get moruPalettePurple => '暮紫韵';
+
+  @override
+  String get moruPaletteYellow => '琥珀金';
+
+  @override
+  String get moruPaletteSmokyRose => '暮霭玫';
+
+  @override
+  String get moruPaletteTerracotta => '陶砂红';
+
+  @override
+  String get moruPaletteMonochrome => '纸墨灰';
+
+  @override
+  String get moruPaletteDocTheme => '樱桃绿';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -22662,6 +22725,69 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get oauthPromptCachingHelp => '复用多轮对话中的上下文，可设置缓存保留时长。';
+
+  @override
+  String get moruLanguageRussian => 'Русский';
+
+  @override
+  String get moruDeleteHeader => '删除请求头';
+
+  @override
+  String get moruDeleteEntry => '删除条目';
+
+  @override
+  String get moruSearchCategory => '类别';
+
+  @override
+  String get moruSearchCountry => '国家';
+
+  @override
+  String get moruSearchIncludeDomains => '包含域名';
+
+  @override
+  String get moruSearchExcludeDomains => '排除域名';
+
+  @override
+  String moruLogReadFailed(String error) {
+    return '读取文件失败：$error';
+  }
+
+  @override
+  String get moruChatNotificationChannel => '聊天后台任务';
+
+  @override
+  String get moruChatNotificationDescription => '聊天回复生成状态通知';
+
+  @override
+  String get moruCherryImportWarning =>
+      '此功能目前仍处于实验阶段。\n目前仅能导入助手，对话内容，供应商和文件，\n一些供应商需要在baseurl后面添加/v1 or /v1beta。 \n为确保数据安全，建议在导入前先执行备份。\n是否已知晓并继续选择文件？';
+
+  @override
+  String get moruPaletteDefault => '默认';
+
+  @override
+  String get moruPaletteBlue => '海霄蓝';
+
+  @override
+  String get moruPaletteGreen => '竹影绿';
+
+  @override
+  String get moruPalettePurple => '暮紫韵';
+
+  @override
+  String get moruPaletteYellow => '琥珀金';
+
+  @override
+  String get moruPaletteSmokyRose => '暮霭玫';
+
+  @override
+  String get moruPaletteTerracotta => '陶砂红';
+
+  @override
+  String get moruPaletteMonochrome => '纸墨灰';
+
+  @override
+  String get moruPaletteDocTheme => '樱桃绿';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -34034,4 +34160,67 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get oauthPromptCachingHelp => '重用多輪對話中的上下文，可設定快取保留時間。';
+
+  @override
+  String get moruLanguageRussian => 'Русский';
+
+  @override
+  String get moruDeleteHeader => '刪除請求標頭';
+
+  @override
+  String get moruDeleteEntry => '刪除項目';
+
+  @override
+  String get moruSearchCategory => '類別';
+
+  @override
+  String get moruSearchCountry => '國家';
+
+  @override
+  String get moruSearchIncludeDomains => '包含網域';
+
+  @override
+  String get moruSearchExcludeDomains => '排除網域';
+
+  @override
+  String moruLogReadFailed(String error) {
+    return '讀取檔案失敗：$error';
+  }
+
+  @override
+  String get moruChatNotificationChannel => '聊天背景工作';
+
+  @override
+  String get moruChatNotificationDescription => '聊天回覆生成狀態通知';
+
+  @override
+  String get moruCherryImportWarning =>
+      '此功能目前仍處於實驗階段。\n目前僅能匯入助手、對話內容、供應商和檔案，\n部分供應商需要在 baseurl 後面新增 /v1 或 /v1beta。\n為確保資料安全，建議在匯入前先執行備份。\n是否已知悉並繼續選擇檔案？';
+
+  @override
+  String get moruPaletteDefault => '默认';
+
+  @override
+  String get moruPaletteBlue => '海霄蓝';
+
+  @override
+  String get moruPaletteGreen => '竹影绿';
+
+  @override
+  String get moruPalettePurple => '暮紫韵';
+
+  @override
+  String get moruPaletteYellow => '琥珀金';
+
+  @override
+  String get moruPaletteSmokyRose => '暮霭玫';
+
+  @override
+  String get moruPaletteTerracotta => '陶砂红';
+
+  @override
+  String get moruPaletteMonochrome => '纸墨灰';
+
+  @override
+  String get moruPaletteDocTheme => '樱桃绿';
 }

@@ -11894,4 +11894,68 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get oauthPromptCachingHelp =>
       'Reuse context across messages and choose how long the cache is retained.';
+
+  @override
+  String get moruLanguageRussian => 'Русский';
+
+  @override
+  String get moruDeleteHeader => 'Delete header';
+
+  @override
+  String get moruDeleteEntry => 'Delete entry';
+
+  @override
+  String get moruSearchCategory => 'Category';
+
+  @override
+  String get moruSearchCountry => 'Country';
+
+  @override
+  String get moruSearchIncludeDomains => 'Include domains';
+
+  @override
+  String get moruSearchExcludeDomains => 'Exclude domains';
+
+  @override
+  String moruLogReadFailed(String error) {
+    return 'Error loading file: $error';
+  }
+
+  @override
+  String get moruChatNotificationChannel => 'Chat Background';
+
+  @override
+  String get moruChatNotificationDescription =>
+      'Notifications for chat generation status';
+
+  @override
+  String get moruCherryImportWarning =>
+      'This feature is experimental.\nTo keep your data safe, it is recommended to back up before importing.\nProceed to choose a file?';
+
+  @override
+  String get moruPaletteDefault => 'Default';
+
+  @override
+  String get moruPaletteBlue => 'Aether Blue';
+
+  @override
+  String get moruPaletteGreen => 'Bamboo Green';
+
+  @override
+  String get moruPalettePurple => 'Twilight Purple';
+
+  @override
+  String get moruPaletteYellow => 'Amber Gold';
+
+  @override
+  String get moruPaletteSmokyRose => 'Smoky Rose';
+
+  @override
+  String get moruPaletteTerracotta => 'Terracotta Clay';
+
+  @override
+  String get moruPaletteMonochrome => 'Frost Gray';
+
+  @override
+  String get moruPaletteDocTheme => 'Verdant Mint';
 }

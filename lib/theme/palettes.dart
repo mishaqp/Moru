@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 class ThemePalette {
   final String id;
@@ -17,6 +18,24 @@ class ThemePalette {
 
   String get displayNameZh => zhName;
   String get displayNameEn => enName;
+
+  String localizedName(AppLocalizations l10n) {
+    // Only presentation changes; palette IDs and saved custom names stay intact.
+    if (l10n.localeName.startsWith('zh')) return zhName;
+    if (!l10n.localeName.startsWith('ru')) return enName;
+    return switch (id) {
+      ThemePalettes.defaultId => l10n.moruPaletteDefault,
+      ThemePalettes.blueId => l10n.moruPaletteBlue,
+      ThemePalettes.greenId => l10n.moruPaletteGreen,
+      ThemePalettes.purpleId => l10n.moruPalettePurple,
+      ThemePalettes.yellowId => l10n.moruPaletteYellow,
+      ThemePalettes.smokyRoseId => l10n.moruPaletteSmokyRose,
+      ThemePalettes.terracottaId => l10n.moruPaletteTerracotta,
+      ThemePalettes.monochromeId => l10n.moruPaletteMonochrome,
+      ThemePalettes.docThemeId => l10n.moruPaletteDocTheme,
+      _ => enName,
+    };
+  }
 }
 
 class ThemePalettes {

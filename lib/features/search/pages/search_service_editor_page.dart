@@ -529,7 +529,7 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
         ),
         field(
           key: 'category',
-          label: 'Category',
+          label: l10n.moruSearchCategory,
           hint: 'programming / research / gov / business',
         ),
       ];
@@ -548,8 +548,8 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
           hint: FirecrawlOptions.defaultUrl,
           keyboardType: TextInputType.url,
         ),
-        field(key: 'country', label: 'Country', hint: 'US'),
-        field(key: 'location', label: 'Location'),
+        field(key: 'country', label: l10n.moruSearchCountry, hint: 'US'),
+        field(key: 'location', label: l10n.providerDetailPageLocationLabel),
       ];
     }
     if (service is TinyFishOptions) {
@@ -567,10 +567,18 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
           hint: TinyFishOptions.defaultUrl,
           keyboardType: TextInputType.url,
         ),
-        field(key: 'location', label: 'Location', hint: 'US'),
-        field(key: 'language', label: 'Language', hint: 'en'),
-        field(key: 'includeDomains', label: 'Include domains'),
-        field(key: 'excludeDomains', label: 'Exclude domains'),
+        field(
+          key: 'location',
+          label: l10n.providerDetailPageLocationLabel,
+          hint: 'US',
+        ),
+        field(
+          key: 'language',
+          label: l10n.asrServicesLanguageLabel,
+          hint: 'en',
+        ),
+        field(key: 'includeDomains', label: l10n.moruSearchIncludeDomains),
+        field(key: 'excludeDomains', label: l10n.moruSearchExcludeDomains),
       ];
     }
     if (service is AnySearchOptions) {

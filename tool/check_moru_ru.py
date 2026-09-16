@@ -20,6 +20,49 @@ def read_json(path):
     return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
 
 
+def icu_arguments(message):
+    names = set()
+
+    def closing(start):
+        depth = 1
+        for index in range(start + 1, len(message)):
+            if message[index] == "{":
+                depth += 1
+            elif message[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    return index
+        raise ValueError("Unbalanced ICU braces")
+
+    def scan(start, end):
+        index = start
+        while index < end:
+            if message[index] != "{":
+                index += 1
+                continue
+            stop = closing(index)
+            header = re.match(r"\{\s*([A-Za-z][A-Za-z0-9_]*)\s*([,}])", message[index:])
+            if header is None:
+                raise ValueError("Invalid ICU argument header")
+            names.add(header.group(1))
+            cursor = index + header.end()
+            if header.group(2) == ",":
+                kind = re.match(r"\s*(plural|select|selectordinal)\s*,", message[cursor:])
+                if kind:
+                    cursor += kind.end()
+                    while cursor < stop:
+                        branch = message.find("{", cursor, stop)
+                        if branch < 0:
+                            break
+                        branch_end = closing(branch)
+                        scan(branch + 1, branch_end)
+                        cursor = branch_end + 1
+            index = stop + 1
+
+    scan(0, len(message))
+    return names
+
+
 def validate(root):
     directory = root / "lib/l10n"
     english = read_json(directory / "app_en.arb")
@@ -42,13 +85,12 @@ def validate(root):
             errors.append(f"Invalid technical-English exception: {key}")
     # ICU syntax itself is validated by flutter gen-l10n; here ensure that
     # named interpolation/plural/select inputs survive translation.
-    variables = re.compile(r"\{\s*([a-zA-Z][a-zA-Z0-9_]*)\s*(?:[,}])")
     for key in sorted(en.keys() & ru.keys()):
         value = ru[key]
         if not isinstance(value, str) or not value.strip():
             errors.append(f"Empty or non-text RU value: {key}")
             continue
-        en_vars, ru_vars = set(variables.findall(en[key])), set(variables.findall(value))
+        en_vars, ru_vars = icu_arguments(en[key]), icu_arguments(value)
         if en_vars != ru_vars:
             errors.append(f"Placeholder mismatch: {key}: EN={sorted(en_vars)}, RU={sorted(ru_vars)}")
         metadata = english.get("@" + key, {})

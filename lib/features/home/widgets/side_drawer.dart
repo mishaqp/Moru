@@ -4930,7 +4930,9 @@ class _AssistantInlineTileState extends State<_AssistantInlineTile> {
                 padding: const EdgeInsets.all(8),
                 minSize: 36,
                 onTap: widget.onEditTap,
-                semanticLabel: 'Edit assistant',
+                semanticLabel: AppLocalizations.of(
+                  context,
+                )!.assistantTagsContextMenuEditAssistant,
               ),
             ],
           ],

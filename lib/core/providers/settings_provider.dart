@@ -1372,11 +1372,11 @@ class SettingsProvider extends ChangeNotifier {
     _desktopSidebarOpen = prefs.getBool(_desktopSidebarOpenKey) ?? true;
     _desktopRightSidebarWidth =
         prefs.getDouble(_desktopRightSidebarWidthKey) ?? 300;
-    // Load app locale; default to follow system on first launch
+    // New Moru installations default to Russian; preserve explicit choices.
     final storedAppLocale = prefs.get(_appLocaleKey);
     _appLocaleTag = _readAppLocaleTag(prefs);
     if (storedAppLocale != _appLocaleTag) {
-      await prefs.setString(_appLocaleKey, 'system');
+      await prefs.setString(_appLocaleKey, _appLocaleTag!);
     }
 
     final backgroundJson = prefs.getString(_mobileBackgroundKey);
@@ -2191,10 +2191,11 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   // ===== App locale (UI language) =====
-  String? _appLocaleTag; // 'system', 'zh_CN', 'zh_Hant', 'en_US'
+  String? _appLocaleTag; // 'system', 'ru', 'zh_CN', 'zh_Hant', 'en_US'
   static String _readAppLocaleTag(BusinessPreferences preferences) {
     final value = preferences.get(_appLocaleKey);
-    const supportedTags = {'system', 'zh_CN', 'zh_Hant', 'en_US'};
+    if (value == null) return 'ru';
+    const supportedTags = {'system', 'ru', 'zh_CN', 'zh_Hant', 'en_US'};
     return value is String && supportedTags.contains(value) ? value : 'system';
   }
 
@@ -2222,6 +2223,7 @@ class SettingsProvider extends ChangeNotifier {
 
   String _localeToTag(Locale l) {
     final lc = l.languageCode.toLowerCase();
+    if (lc == 'ru') return 'ru';
     if (lc == 'zh') {
       final script = (l.scriptCode ?? '').toLowerCase();
       if (script == 'hant') return 'zh_Hant';
@@ -2232,6 +2234,8 @@ class SettingsProvider extends ChangeNotifier {
 
   Locale _parseLocaleTag(String tag) {
     switch (tag) {
+      case 'ru':
+        return const Locale('ru');
       case 'zh_CN':
         return const Locale('zh', 'CN');
       case 'zh_Hant':
