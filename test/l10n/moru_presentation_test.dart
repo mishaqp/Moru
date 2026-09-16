@@ -46,7 +46,6 @@ void main() {
   });
 
   testWidgets('Android display settings offer Russian and retain a chosen English locale', (tester) async {
-    await tester.view.reset();
     await tester.binding.setSurfaceSize(const Size(440, 920));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final harness = await createBusinessTestHarness(initial: const {'app_locale_v1': 'ru'});
