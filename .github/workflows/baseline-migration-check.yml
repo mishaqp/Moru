@@ -1,0 +1,43 @@
+name: Unchanged baseline regression diagnosis
+on:
+  push:
+    branches: ['test/baseline-migration-check']
+    paths: ['.github/workflows/baseline-migration-check.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 846af083621e9e6a59b1d30b89ed2468777d0491
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.9'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Run existing tests without localization or Android configuration edits
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = '846af083621e9e6a59b1d30b89ed2468777d0491'
+          flutter test test/core/services/auth/provider_oauth_service_test.dart test/features/migration/hive_to_sqlite_migration_fault_test.dart --reporter expanded 2>&1 | tee baseline-focused.log
+      - name: Capture previous failing PR run for exact comparison
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api repos/mishaqp/Moru/actions/jobs/104776877839/logs > baseline-pr1.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unchanged-baseline-evidence
+          path: |
+            baseline-focused.log
+            baseline-pr1.log
+            test/core/services/auth/provider_oauth_service_test.dart
+            test/features/migration/hive_to_sqlite_migration_fault_test.dart
+          retention-days: 7
