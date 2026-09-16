@@ -37,7 +37,8 @@ regression = '''  testWidgets('Russian Android search opens the language setting
     await tester.pumpAndSettle();
     expect(find.text(query).hitTestable(), findsOneWidget);
     expect(find.text('Русский').hitTestable(), findsOneWidget);
-    await tester.pageBack();
+    // Exercise Android system back, independent of localized toolbar tooltips.
+    expect(await tester.binding.handlePopRoute(), isTrue);
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, query);
     expect(tester.takeException(), isNull);
