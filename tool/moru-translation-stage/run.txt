@@ -1,1 +1,1 @@
-Run 2: select the English option by its current Russian presentation, then verify English and saved preferences.
+Run 3: finish remaining provider notices, seconds and console labels; keep all source contracts and regression checks.
