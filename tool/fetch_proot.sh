@@ -35,11 +35,10 @@ PROOT_VERSION="${PROOT_VERSION:-5.1.107.92}"
 TALLOC_VERSION="${TALLOC_VERSION:-2.4.3}"
 SHMEM_VERSION="${SHMEM_VERSION:-0.7}"
 
+# Moru ships only Android arm64-v8a; do not download unused architectures.
 # termux-arch:android-abi
 ABIS=(
-  "arm:armeabi-v7a"
   "aarch64:arm64-v8a"
-  "x86_64:x86_64"
 )
 
 sha256_of() {
