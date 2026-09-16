@@ -26,7 +26,10 @@ void main() {
     expect(ru.scheduledTasksTitle, 'Задачи по расписанию');
     expect(ru.toolSchemaSettingsPageTitle, 'Описания инструментов');
     expect(ru.oauthLoginTo('ChatGPT'), 'Войти в ChatGPT');
-    expect(ru.modelDetailSheetModelIdDisabledHint('gpt-technical-id'), 'gpt-technical-id');
+    expect(
+      ru.modelDetailSheetModelIdDisabledHint('gpt-technical-id'),
+      'gpt-technical-id',
+    );
   });
 
   test('Russian count grammar handles 0, 1, 2, 5 and compound numbers', () async {
@@ -53,18 +56,25 @@ void main() {
     expect(ru.askUserCardQuestionCount(3), 'Задать 3 вопроса');
   });
 
-  testWidgets('MaterialApp can switch RU to EN and back without stale strings', (tester) async {
+  testWidgets('MaterialApp can switch RU to EN and back without stale strings', (
+    tester,
+  ) async {
     Future<void> showLocale(Locale locale) async {
-      await tester.pumpWidget(MaterialApp(
-        locale: locale,
-        supportedLocales: AppLocalizations.supportedLocales,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        home: Builder(builder: (context) => Scaffold(
-          body: Text(AppLocalizations.of(context)!.skillsTitle),
-        )),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Text(AppLocalizations.of(context)!.skillsTitle),
+            ),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
     }
+
     await showLocale(const Locale('ru'));
     expect(find.text('Навыки'), findsOneWidget);
     await showLocale(const Locale('en'));

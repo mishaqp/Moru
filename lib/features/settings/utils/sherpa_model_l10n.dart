@@ -12,7 +12,8 @@ extension SherpaModelLocalization on SherpaModelDefinition {
 
   String localizedDescription(AppLocalizations l10n) => switch (id) {
     'paraformer-zh-small-2024-03-09' => l10n.moruAsrParaformerDescription,
-    'sense-voice-multilingual-int8-2025-09-09' => l10n.moruAsrSenseVoiceDescription,
+    'sense-voice-multilingual-int8-2025-09-09' =>
+      l10n.moruAsrSenseVoiceDescription,
     'zipformer-zh-en-mobile-2023-02-20' => l10n.moruAsrZipformerDescription,
     _ => description,
   };
