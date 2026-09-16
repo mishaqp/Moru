@@ -34,8 +34,9 @@ def prepare_release(root: Path, apk_dir: Path, reports_dir: Path,
     if len(checksum) != 2 or checksum[0] != digest or Path(checksum[1]).name != apk.name:
         raise ValueError('APK checksum does not match the verified build')
     signature = _one(reports_dir, 'signature.txt').read_text()
-    certificates = re.findall(r'^Signer #\d+ certificate SHA-256 digest:\s*(\S+)\s*$',
-                              signature, re.M)
+    certificates = re.findall(
+        r'^(?:Signer #\d+|V2 Signer:) certificate SHA-256 digest:\s*(\S+)\s*$',
+        signature, re.M)
     if [value.replace(':', '').lower() for value in certificates] != [pin]:
         raise ValueError('Signing certificate does not match the permanent pin')
     badging = _one(reports_dir, 'badging.txt').read_text()

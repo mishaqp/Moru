@@ -52,6 +52,21 @@ class PrepareReleaseTest(unittest.TestCase):
         self.assertEqual((self.destination / f'{target.name}.sha256').read_text(),
                          f'{self.digest}  {target.name}\n')
 
+    def test_accepts_v2_signer_format_from_the_previous_release(self):
+        (self.reports / 'signature.txt').write_text(
+            'Verifies\n'
+            'Verified using v2 scheme (APK Signature Scheme v2): true\n'
+            'Number of signers: 1\n'
+            f'V2 Signer: certificate SHA-256 digest: {self.pin}\n')
+        self.assertEqual(self.prepare()['certificate_sha256'], self.pin)
+
+    def test_rejects_multiple_signing_certificates(self):
+        (self.reports / 'signature.txt').write_text(
+            f'Verifies\nSigner #1 certificate SHA-256 digest: {self.pin}\n'
+            'Signer #2 certificate SHA-256 digest: ' + 'b' * 64 + '\n')
+        with self.assertRaisesRegex(ValueError, 'certificate'):
+            self.prepare()
+
     def test_rejects_modified_apk(self):
         self.apk.write_bytes(b'tampered')
         with self.assertRaisesRegex(ValueError, 'checksum'):
