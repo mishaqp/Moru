@@ -23,43 +23,45 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - name: Apply reviewed Android presentation edits and generate Dart
-        shell: bash
-        run: |
-          python3 tool/moru-polish/apply.py
-          flutter gen-l10n
-          git ls-files -m -o --exclude-standard -- lib test | grep '\.dart$' | xargs -r dart format
-          python3 tool/test_check_moru_ru.py
-          python3 tool/check_moru_ru.py
-          git diff --check
-      - name: Russian and English widget and locale regressions
-        shell: bash
-        run: flutter test test/l10n test/core/providers/moru_locale_preferences_test.dart test/core/providers/settings_provider_locale_test.dart --reporter expanded 2>&1 | tee locale-regressions.log
-      - name: Analyze all application code and tests
-        shell: bash
-        run: dart analyze --fatal-infos lib test integration_test 2>&1 | tee analyzer.log
-      - name: Commit verified presentation files without overwriting concurrent work
+      - name: Integrate only the reviewed commits and remove temporary staging
         shell: bash
         run: |
           test "$GITHUB_REF_NAME" = 'feat/ru-android-polish'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          python3 tool/moru-polish/integrate.py
+          flutter gen-l10n
+          git ls-files -m -o --exclude-standard -- lib test | grep '\.dart$' | xargs -r dart format || test "${PIPESTATUS[1]}" = 1
+          python3 tool/test_check_moru_ru.py
+          python3 tool/check_moru_ru.py
+          python3 -m unittest discover -s tool -p 'test_android_only_policy.py' -v
+          python3 -m unittest discover -s tool -p 'test_verify_apk_arm64.py' -v
+          git diff --check
+      - name: Russian, English and Android settings navigation regressions
+        shell: bash
+        run: flutter test test/l10n test/core/providers/moru_locale_preferences_test.dart test/core/providers/settings_provider_locale_test.dart test/features/settings/search/settings_search_widgets_test.dart --reporter expanded 2>&1 | tee locale-regressions.log
+      - name: Analyze all application code and tests
+        shell: bash
+        run: dart analyze --fatal-infos lib test integration_test 2>&1 | tee analyzer.log
+      - name: Commit reviewed integration without overwriting concurrent work
+        shell: bash
+        run: |
           test "$(git ls-remote origin refs/heads/feat/ru-android-polish | cut -f1)" = "$GITHUB_SHA"
-          git add lib test tool/check_moru_ru.py tool/moru_ru_technical_allowlist.json
+          git add -u
+          git add docs/MORU_RUSSIAN_LOCALIZATION.md .github/workflows/pr-check.yml
           if ! git diff --cached --quiet; then
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'l10n(ru): complete Android notices, speech models and code labels'
-            git push origin HEAD:refs/heads/feat/ru-android-polish
+            git commit -m 'l10n(ru): integrate complete Russian Android UI and permanent locale validation'
           fi
-      - name: Export exact reviewed source and reports
+          git push origin HEAD:refs/heads/feat/ru-android-polish
+      - name: Export exact integration source and reports
         if: always()
         shell: bash
         run: |
           mkdir -p review
           cp -R lib review/lib
           cp -R test review/tests
-          cp -R android/app/src review/android-src
-          git diff 846af083621e9e6a59b1d30b89ed2468777d0491 --stat > diff-stat.txt
-          git diff 846af083621e9e6a59b1d30b89ed2468777d0491 -- lib test > source-diff.patch
+          git diff 63aa1f33bf90d1d9d986ccb52e2f07dcfd2e1028 --stat > diff-stat.txt
+          git diff 63aa1f33bf90d1d9d986ccb52e2f07dcfd2e1028 -- lib test .github tool docs > source-diff.patch
           git rev-parse HEAD > verified-source-sha.txt
       - uses: actions/upload-artifact@v4
         if: always()
