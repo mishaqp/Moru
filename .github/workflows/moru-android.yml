@@ -2,6 +2,9 @@ name: Moru Android arm64
 on:
   pull_request:
     branches: ['master']
+  push:
+    branches: ['master']
+    paths: ['pubspec.yaml']
   workflow_dispatch:
     inputs:
       variant:
@@ -17,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 env:
   FLUTTER_VERSION: '3.44.9'
-  BUILD_VARIANT: ${{ inputs.variant || 'debug' }}
+  BUILD_VARIANT: ${{ github.event_name == 'push' && 'release' || inputs.variant || 'debug' }}
 jobs:
   android:
     name: Android arm64 APK and native tests
@@ -31,6 +34,7 @@ jobs:
         run: |
           python3 -m unittest discover -s tool -p 'test_android_only_policy.py' -v
           python3 -m unittest discover -s tool -p 'test_verify_apk_arm64.py' -v
+          python3 -m unittest discover -s tool -p 'test_prepare_release.py' -v
           bash -n tool/fetch_proot.sh
       - uses: actions/setup-java@v4
         with:
@@ -49,13 +53,13 @@ jobs:
           flutter pub get
           flutter gen-l10n
           git diff --exit-code -- pubspec.lock lib/l10n
-      - name: Verify full application checks for a manually requested release
-        if: github.event_name == 'workflow_dispatch' && inputs.variant == 'release'
+      - name: Verify full application checks for a release
+        if: env.BUILD_VARIANT == 'release'
         run: |
           dart analyze --fatal-infos lib test integration_test
           flutter test
       - name: Prepare the existing permanent release identity, never a new debug key
-        if: github.event_name == 'workflow_dispatch' && inputs.variant == 'release'
+        if: env.BUILD_VARIANT == 'release'
         env:
           SIGN_KEYSTORE_BASE64: ${{ secrets.SIGN_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -144,3 +148,47 @@ jobs:
       - name: Remove private signing files
         if: always()
         run: rm -f android/key.properties android/app/moru-release.jks
+  publish:
+    name: Publish verified stable arm64 release
+    needs: android
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: Moru-android-arm64-release
+          path: out
+      - uses: actions/download-artifact@v4
+        with:
+          name: Moru-android-verification
+          path: verification
+      - name: Recheck and package the exact verified APK
+        run: |
+          python3 tool/verify_apk_arm64.py out/Moru-arm64-v8a-release.apk
+          python3 tool/prepare_release.py --apk-dir out --reports-dir verification --output dist --commit "$GITHUB_SHA"
+      - name: Publish one APK with checksums and public verification metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="$(python3 -c 'import json; print(json.load(open("dist/release-metadata.json"))["tag"])')"
+          existing="$(git ls-remote --tags origin "refs/tags/$tag")"
+          test -z "$existing" || { echo "Refusing to replace existing tag $tag"; exit 1; }
+          test -s "docs/releases/$tag.md"
+          {
+            cat "docs/releases/$tag.md"
+            printf '\n## Проверка APK\n\n```json\n'
+            cat dist/release-metadata.json
+            printf '```\n'
+          } > dist/release-notes.md
+          gh release create "$tag" dist/*.apk dist/*.sha256 dist/release-metadata.json --draft --target "$GITHUB_SHA" --title "Moru $tag" --notes-file dist/release-notes.md
+          gh release edit "$tag" --draft=false --latest
+          gh release view "$tag" --json url,tagName,isDraft,assets

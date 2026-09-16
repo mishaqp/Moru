@@ -263,10 +263,10 @@ abstract class ProviderOAuthAdapter {
     final idProfile = oauthMap(idClaims['https://api.openai.com/profile']);
     final expires = oauthNumber(data['expires_in']);
     final jwtExpiry = oauthNumber(claims['exp']);
+    // Codex token responses may omit expires_in; the access JWT still has exp.
     if (access == null ||
         refresh == null ||
-        (expires == null &&
-            (provider == OAuthProvider.chatgpt || jwtExpiry == null))) {
+        (expires == null && jwtExpiry == null)) {
       throw const ProviderOAuthException(ProviderOAuthFailure.invalidResponse);
     }
     final accountId =
@@ -462,7 +462,10 @@ class ChatGptOAuthAdapter extends ProviderOAuthAdapter {
     );
     if (!init.ok) throw _requestFailure(init, null);
     final id = oauthString(init.data['device_auth_id']);
-    final code = oauthString(init.data['user_code']);
+    // Both spellings are accepted by the official Codex device-code client.
+    final code =
+        oauthString(init.data['user_code']) ??
+        oauthString(init.data['usercode']);
     if (!init.ok || id == null || code == null) {
       throw ProviderOAuthException(
         ProviderOAuthFailure.invalidResponse,
