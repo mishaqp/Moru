@@ -164,7 +164,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
               _iosNavRow(
                 context,
                 icon: Lucide.Thermometer,
-                label: 'Temperature',
+                label: l10n.assistantEditTemperatureTitle,
                 detailText: a.temperature != null
                     ? a.temperature!.toStringAsFixed(2)
                     : l10n.assistantEditParameterDisabled,
@@ -175,7 +175,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
               _iosNavRow(
                 context,
                 icon: Lucide.Wand2,
-                label: 'Top P',
+                label: l10n.assistantEditTopPTitle,
                 detailText: a.topP != null
                     ? a.topP!.toStringAsFixed(2)
                     : l10n.assistantEditParameterDisabled,
@@ -682,7 +682,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                       children: [
                         Expanded(
                           child: Text(
-                            'Temperature',
+                            l10n.assistantEditTemperatureTitle,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: AppFontWeights.semibold,
@@ -796,7 +796,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                       children: [
                         Expanded(
                           child: Text(
-                            'Top P',
+                            l10n.assistantEditTopPTitle,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: AppFontWeights.semibold,

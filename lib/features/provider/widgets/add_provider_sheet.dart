@@ -192,9 +192,12 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
           controller: _openaiName,
         ),
         const SizedBox(height: 10),
-        _inputRow(label: 'API Key', controller: _openaiKey),
+        _inputRow(label: l10n.multiKeyPageKey, controller: _openaiKey),
         const SizedBox(height: 10),
-        _inputRow(label: 'API Base Url', controller: _openaiBase),
+        _inputRow(
+          label: l10n.providerDetailPageApiBaseUrlLabel,
+          controller: _openaiBase,
+        ),
         const SizedBox(height: 10),
         if (!_openaiUseResponse)
           _inputRow(
@@ -233,9 +236,12 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
         ),
         const SizedBox(height: 10),
         if (!_googleVertex) ...[
-          _inputRow(label: 'API Key', controller: _googleKey),
+          _inputRow(label: l10n.multiKeyPageKey, controller: _googleKey),
           const SizedBox(height: 10),
-          _inputRow(label: 'API Base Url', controller: _googleBase),
+          _inputRow(
+            label: l10n.providerDetailPageApiBaseUrlLabel,
+            controller: _googleBase,
+          ),
           const SizedBox(height: 10),
         ],
         if (_googleVertex) ...[
@@ -288,9 +294,12 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
           controller: _claudeName,
         ),
         const SizedBox(height: 10),
-        _inputRow(label: 'API Key', controller: _claudeKey),
+        _inputRow(label: l10n.multiKeyPageKey, controller: _claudeKey),
         const SizedBox(height: 10),
-        _inputRow(label: 'API Base Url', controller: _claudeBase),
+        _inputRow(
+          label: l10n.providerDetailPageApiBaseUrlLabel,
+          controller: _claudeBase,
+        ),
       ],
     );
   }

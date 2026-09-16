@@ -118,6 +118,7 @@ class MobileBackgroundCoordinator extends ChangeNotifier
         _l10n?.localeName != l10n.localeName;
     _settings = settings;
     _l10n = l10n;
+    await NotificationService.configureLocalizations(l10n);
     await initialize();
     if (changed) {
       if (platform == TargetPlatform.iOS &&

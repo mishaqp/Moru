@@ -318,7 +318,7 @@ class _ConsoleSheet extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Text(
-                      '${m.level}: ${m.message}\nSource: ${m.source ?? ''}${m.line != null ? ':${m.line}' : ''}',
+                      '${m.level}: ${m.message}\n${l10n.moruConsoleSource('${m.source ?? ''}${m.line != null ? ':${m.line}' : ''}')}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: c,
                         fontFamily: 'monospace',
