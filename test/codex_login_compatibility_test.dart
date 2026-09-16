@@ -1,12 +1,11 @@
 import 'dart:convert';
 
+import 'package:Kelivo/core/models/provider_oauth.dart';
+import 'package:Kelivo/core/services/auth/oauth_cancellation.dart';
+import 'package:Kelivo/core/services/auth/provider_oauth_adapter.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-
-import '../lib/core/models/provider_oauth.dart';
-import '../lib/core/services/auth/oauth_cancellation.dart';
-import '../lib/core/services/auth/provider_oauth_adapter.dart';
 
 String _jwt(Map<String, dynamic> claims) {
   String encode(Object value) =>
