@@ -1,0 +1,29 @@
+name: Advance final localization verification
+on:
+  push:
+    branches: ['test/baseline-migration-check']
+    paths: ['.github/workflows/advance-localization.yml']
+permissions:
+  contents: read
+  actions: write
+jobs:
+  advance:
+    if: github.repository == 'mishaqp/Moru' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Cancel only the superseded run after its source and locale checks completed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo='mishaqp/Moru'
+          gh api "repos/$repo/actions/runs/35094706424" > obsolete.json
+          jq -e '.head_sha == "01f174ddebad09aa59166b358dcf92f77b98ba58" and .head_branch == "feat/russian-android-arm64"' obsolete.json
+          gh api "repos/$repo/actions/jobs/104789081243" > job.json
+          jq -e '[.steps[] | select(.name == "Russian runtime, widgets and saved language tests" or .name == "Analyze all application code and tests" or .name == "Commit only reviewed presentation changes without overwriting a moved branch") | .conclusion] == ["success","success","success"]' job.json
+          if [ "$(jq -r .status obsolete.json)" != completed ]; then
+            gh api --method POST "repos/$repo/actions/runs/35094706424/cancel"
+          fi
+          echo 'The newer complete-source verification remains required. No failed check is reported as passing.'
