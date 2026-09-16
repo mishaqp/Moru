@@ -1,0 +1,146 @@
+name: Moru Android arm64
+on:
+  pull_request:
+    branches: ['master']
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: 'debug for validation; release requires the permanent signing secrets'
+        required: true
+        default: debug
+        type: choice
+        options: [debug, release]
+permissions:
+  contents: read
+concurrency:
+  group: moru-android-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  FLUTTER_VERSION: '3.44.9'
+  BUILD_VARIANT: ${{ inputs.variant || 'debug' }}
+jobs:
+  android:
+    name: Android arm64 APK and native tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify Android-only repository policy
+        run: |
+          python3 -m unittest discover -s tool -p 'test_android_only_policy.py' -v
+          python3 -m unittest discover -s tool -p 'test_verify_apk_arm64.py' -v
+          bash -n tool/fetch_proot.sh
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+      - name: Resolve locked Flutter dependencies and generate locales
+        run: |
+          flutter pub get
+          flutter gen-l10n
+          git diff --exit-code -- pubspec.lock lib/l10n
+      - name: Verify full application checks for a manually requested release
+        if: github.event_name == 'workflow_dispatch' && inputs.variant == 'release'
+        run: |
+          dart analyze --fatal-infos lib test integration_test
+          flutter test
+      - name: Prepare the existing permanent release identity, never a new debug key
+        if: github.event_name == 'workflow_dispatch' && inputs.variant == 'release'
+        env:
+          SIGN_KEYSTORE_BASE64: ${{ secrets.SIGN_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/master' || { echo 'Stable signing is allowed only from master'; exit 1; }
+          python3 - <<'PY'
+          import base64, os
+          from pathlib import Path
+          names = ('SIGN_KEYSTORE_BASE64', 'KEYSTORE_PASSWORD', 'KEY_ALIAS', 'KEY_PASSWORD')
+          missing = [key for key in names if not os.environ.get(key)]
+          if missing:
+              raise SystemExit('Permanent release signing is not configured: ' + ', '.join(missing))
+          pin = Path('.github/moru-signing-cert-sha256.txt')
+          if not pin.is_file():
+              raise SystemExit('Pin the permanent public certificate in .github/moru-signing-cert-sha256.txt first')
+          cert = pin.read_text().strip().lower()
+          if len(cert) != 64 or any(c not in '0123456789abcdef' for c in cert):
+              raise SystemExit('Invalid public signing-certificate pin')
+          key = Path('android/app/moru-release.jks')
+          key.write_bytes(base64.b64decode(''.join(os.environ['SIGN_KEYSTORE_BASE64'].split()), validate=True))
+          key.chmod(0o600)
+          def escaped(value):
+              raw = value.encode('utf-16-be')
+              return ''.join('\\u' + raw[i:i+2].hex() for i in range(0, len(raw), 2))
+          props = {'storeFile': 'moru-release.jks', 'storePassword': os.environ['KEYSTORE_PASSWORD'],
+                   'keyAlias': os.environ['KEY_ALIAS'], 'keyPassword': os.environ['KEY_PASSWORD']}
+          path = Path('android/key.properties')
+          path.write_text(''.join(name + '=' + escaped(value) + '\n' for name, value in props.items()))
+          path.chmod(0o600)
+          PY
+      - name: Fetch and verify only the pinned arm64 PRoot runtime
+        run: |
+          bash tool/fetch_proot.sh
+          sha256sum --check tool/proot_checksums.txt
+      - name: Build one Android arm64 APK
+        shell: bash
+        run: |
+          case "$BUILD_VARIANT" in debug|release) ;; *) exit 1;; esac
+          flutter build apk --"$BUILD_VARIANT" --target-platform=android-arm64
+          mapfile -t apks < <(find build/app/outputs/flutter-apk -maxdepth 1 -type f -name '*.apk')
+          test "${#apks[@]}" -eq 1 || { printf 'Expected one APK, got %s\n' "${#apks[@]}"; exit 1; }
+          mkdir -p out reports
+          cp "${apks[0]}" "out/Moru-arm64-v8a-$BUILD_VARIANT.apk"
+          python3 tool/verify_apk_arm64.py "out/Moru-arm64-v8a-$BUILD_VARIANT.apk" > reports/apk-abi.json
+          cat reports/apk-abi.json
+      - name: Run Android JVM unit tests without building another architecture
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:testDebugUnitTest -Ptarget-platform=android-arm64 --stacktrace
+      - name: Verify APK signature and record actual package metadata
+        shell: bash
+        run: |
+          sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          bt="$(find "$sdk/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n1)"
+          apk="out/Moru-arm64-v8a-$BUILD_VARIANT.apk"
+          "$bt/apksigner" verify --verbose --print-certs "$apk" > reports/signature.txt
+          "$bt/aapt2" dump badging "$apk" > reports/badging.txt
+          if [ "$BUILD_VARIANT" = release ]; then
+            actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' reports/signature.txt | tr 'A-F' 'a-f' | tr -d ':\r\n ')"
+            expected="$(tr -d '\r\n ' < .github/moru-signing-cert-sha256.txt)"
+            test "$actual" = "$expected"
+            ! grep -q 'application-debuggable' reports/badging.txt
+          fi
+          sha256sum "$apk" > reports/apk.sha256
+      - name: Upload the single APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Moru-android-arm64-${{ env.BUILD_VARIANT }}
+          path: out/*.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload verification reports (not additional applications)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Moru-android-verification
+          path: |
+            reports/
+            build/app/test-results/**
+            build/app/reports/tests/**
+          retention-days: 14
+      - name: Remove private signing files
+        if: always()
+        run: rm -f android/key.properties android/app/moru-release.jks
