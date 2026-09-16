@@ -1,0 +1,29 @@
+name: OAuth callback regression
+on:
+  pull_request:
+    branches: [master]
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Archive tracked sources for review without signing material
+        run: git archive --format=zip --output="$RUNNER_TEMP/moru-oauth-source.zip" HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moru-oauth-source
+          path: ${{ runner.temp }}/moru-oauth-source.zip
+          retention-days: 1
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.9'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Run authentication regressions
+        run: flutter test test/codex_login_compatibility_test.dart --reporter expanded
