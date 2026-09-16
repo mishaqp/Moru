@@ -11958,4 +11958,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get moruPaletteDocTheme => 'Verdant Mint';
+
+  @override
+  String get moruProviderTensdaqNotice =>
+      'A bidding-based AI MaaS platform with prices determined by market supply and demand instead of fixed pricing.';
+
+  @override
+  String get moruProviderSiliconFlowNotice =>
+      'Free SiliconFlow models are included and need no API key. For more capable models, obtain your own API key and configure it here.';
+
+  @override
+  String get moruProviderSuixiangNotice =>
+      'An API relay for Claude, Codex, Gemini and other services. It advertises privacy, no data resale or model substitution, 1:1 credits and usage-based billing, with redundant routes, cross-region recovery, automatic failover and persistent SSE connections.';
+
+  @override
+  String get moruProviderMaruCodeNotice =>
+      'An independently operated API relay with its own account pool for Codex, Claude Code, GPT Image and other models. WebSocket support; advertised rates: Codex 0.25x, CC 1.5x, transparent 1:1 conversion and \$2 registration credit for new users.';
+
+  @override
+  String get moruProviderWebsitePrefix => 'Website: ';
+
+  @override
+  String moruSecondsShort(int seconds) {
+    return '${seconds}s';
+  }
+
+  @override
+  String moruConsoleSource(String source) {
+    return 'Source: $source';
+  }
 }

@@ -288,7 +288,9 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                   }
                   final seconds = sp.autoScrollIdleSeconds;
                   return Text(
-                    '${seconds.round()}s',
+                    AppLocalizations.of(
+                      context,
+                    )!.moruSecondsShort(seconds.round()),
                     style: TextStyle(
                       color: cs.onSurface.withValues(alpha: 0.6),
                       fontSize: 13,
@@ -671,7 +673,7 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                     Row(
                       children: [
                         Text(
-                          '2s',
+                          AppLocalizations.of(context)!.moruSecondsShort(2),
                           style: TextStyle(
                             color: cs.onSurface.withValues(alpha: 0.7),
                             fontSize: 12,
@@ -752,7 +754,9 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                         const SizedBox(width: 8),
                         Text(
                           enabled
-                              ? '${seconds.round()}s'
+                              ? AppLocalizations.of(
+                                  context,
+                                )!.moruSecondsShort(seconds.round())
                               : l10n.displaySettingsPageAutoScrollDisabledLabel,
                           style: TextStyle(
                             color: cs.onSurface.withValues(

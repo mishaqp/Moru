@@ -21466,6 +21466,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Verdant Mint'**
   String get moruPaletteDocTheme;
+
+  /// No description provided for @moruProviderTensdaqNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'A bidding-based AI MaaS platform with prices determined by market supply and demand instead of fixed pricing.'**
+  String get moruProviderTensdaqNotice;
+
+  /// No description provided for @moruProviderSiliconFlowNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Free SiliconFlow models are included and need no API key. For more capable models, obtain your own API key and configure it here.'**
+  String get moruProviderSiliconFlowNotice;
+
+  /// No description provided for @moruProviderSuixiangNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'An API relay for Claude, Codex, Gemini and other services. It advertises privacy, no data resale or model substitution, 1:1 credits and usage-based billing, with redundant routes, cross-region recovery, automatic failover and persistent SSE connections.'**
+  String get moruProviderSuixiangNotice;
+
+  /// No description provided for @moruProviderMaruCodeNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'An independently operated API relay with its own account pool for Codex, Claude Code, GPT Image and other models. WebSocket support; advertised rates: Codex 0.25x, CC 1.5x, transparent 1:1 conversion and \$2 registration credit for new users.'**
+  String get moruProviderMaruCodeNotice;
+
+  /// No description provided for @moruProviderWebsitePrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Website: '**
+  String get moruProviderWebsitePrefix;
+
+  /// No description provided for @moruSecondsShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds}s'**
+  String moruSecondsShort(int seconds);
+
+  /// No description provided for @moruConsoleSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source: {source}'**
+  String moruConsoleSource(String source);
 }
 
 class _AppLocalizationsDelegate
