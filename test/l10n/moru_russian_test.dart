@@ -16,7 +16,7 @@ void main() {
     }
   });
 
-  test('Russian covers settings, workspace, skills, memory and OAuth', () async {
+  test('RU covers settings, workspace, skills, memory and OAuth', () async {
     final ru = await AppLocalizations.delegate.load(const Locale('ru'));
     expect(ru.displaySettingsPageLanguageTitle, 'Язык приложения');
     expect(ru.workspacesTitle, 'Рабочие пространства');
@@ -32,7 +32,7 @@ void main() {
     );
   });
 
-  test('Russian count grammar handles 0, 1, 2, 5 and compound numbers', () async {
+  test('RU count grammar handles zero and compound numbers', () async {
     final ru = await AppLocalizations.delegate.load(const Locale('ru'));
     for (final entry in {
       0: '0 результатов',
@@ -56,9 +56,7 @@ void main() {
     expect(ru.askUserCardQuestionCount(3), 'Задать 3 вопроса');
   });
 
-  testWidgets('MaterialApp can switch RU to EN and back without stale strings', (
-    tester,
-  ) async {
+  testWidgets('RU/EN switch does not keep stale strings', (tester) async {
     Future<void> showLocale(Locale locale) async {
       await tester.pumpWidget(
         MaterialApp(
