@@ -5,6 +5,7 @@ on:
     paths: ['tool/moru-translation-stage/run.txt']
 permissions:
   contents: write
+  actions: read
 concurrency:
   group: moru-l10n-development
   cancel-in-progress: false
@@ -25,27 +26,11 @@ jobs:
           cache: true
       - name: Resolve existing dependencies
         run: flutter pub get
-      - name: Verify regressions before production changes
-        if: hashFiles('lib/l10n/app_ru.arb') == ''
-        shell: bash
-        run: |
-          set -euo pipefail
-          if flutter test test/core/providers/moru_locale_preferences_test.dart --plain-name 'new installations use Russian before and after async load' --reporter expanded > ru-before.log 2>&1; then
-            cat ru-before.log; echo 'Missing Russian default unexpectedly passed'; exit 1
-          fi
-          cat ru-before.log
-          grep -q 'Actual:' ru-before.log
-          if python3 tool/test_check_moru_ru.py > validator-before.log 2>&1; then
-            cat validator-before.log; echo 'Broken ICU parser unexpectedly passed'; exit 1
-          fi
-          cat validator-before.log
-          grep -q 'Placeholder mismatch' validator-before.log
       - name: Apply reviewed translations and generate Dart
         shell: bash
         run: |
           test "$GITHUB_REF_NAME" = 'feat/russian-android-arm64'
-          if [ ! -f lib/l10n/app_ru.arb ]; then python3 tool/moru-translation-stage/assemble.py; fi
-          python3 tool/moru-translation-stage/apply.py
+          python3 tool/moru-translation-stage/finalize.py
           flutter gen-l10n
           git ls-files -m -o --exclude-standard -- lib test | grep '\.dart$' | xargs -r dart format
           python3 tool/test_check_moru_ru.py
@@ -62,17 +47,24 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           current="$(git ls-remote origin refs/heads/feat/russian-android-arm64 | cut -f1)"
-          test "$current" = "$GITHUB_SHA" || { echo 'Branch changed; generated sources are retained in the artifact, not force-pushed'; exit 1; }
+          test "$current" = "$GITHUB_SHA" || { echo 'Branch changed; generated sources retained in artifact, never force-pushed'; exit 1; }
           git add lib test tool/check_moru_ru.py tool/moru_ru_technical_allowlist.json
           if ! git diff --cached --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'l10n(ru): connect the full Russian catalog and localize Android presentation'
+            git commit -m 'l10n(ru): finish provider notices and Android presentation labels'
             git push origin HEAD:refs/heads/feat/russian-android-arm64
           fi
       - name: Full Flutter regression suite
         shell: bash
         run: flutter test --reporter expanded 2>&1 | tee flutter-tests.log
+      - name: Retain earlier PR failure evidence without rerunning or changing it
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: gh api repos/mishaqp/Moru/actions/jobs/104776877839/logs > baseline-pr1.log
       - name: Export sources and remaining presentation candidates for review
         if: always()
         shell: bash
@@ -82,7 +74,7 @@ jobs:
           import json, re, shutil, subprocess
           dest=Path('moru-localization-review')
           dest.mkdir(exist_ok=True)
-          for top in ('lib','test/l10n','test/core/providers','tool'):
+          for top in ('lib','test/l10n','test/core/providers','test/core/services/auth','test/features/migration','tool'):
               for p in Path(top).rglob('*'):
                   if not p.is_file() or p.suffix not in ('.dart','.arb','.py','.json'): continue
                   if 'moru-translation-stage' in p.parts: continue
@@ -104,9 +96,8 @@ jobs:
           name: moru-localization-review
           path: |
             moru-localization-review/
-            ru-before.log
-            validator-before.log
             ru-runtime-tests.log
             ru-analyzer.log
             flutter-tests.log
+            baseline-pr1.log
           retention-days: 14
