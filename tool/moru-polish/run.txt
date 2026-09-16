@@ -1,0 +1,1 @@
+Verify speech-model presentation, code labels and provider notices. Earlier translation patches are already committed; do not replay them after formatting.
