@@ -1,1 +1,1 @@
-Run 1: Russian defaults, ICU validation, generated catalog, mobile labels, palettes and notification localization.
+Run 2: select the English option by its current Russian presentation, then verify English and saved preferences.
