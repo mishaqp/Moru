@@ -1,10 +1,18 @@
 """Temporary, exact presentation edits. Removed before the localization PR merge."""
 from pathlib import Path
 import json
-import runpy
 
 root = Path(__file__).resolve().parents[2]
-runpy.run_path(str(root / 'tool/moru-translation-stage/finalize.py'))
+# The earlier apply.py changes were already generated, tested and committed at
+# this branch's base. Replaying them after dart format breaks exact whitespace
+# matching. Execute only the still-pending notices, keeping its verified edits.
+finalizer = root / 'tool/moru-translation-stage/finalize.py'
+source = finalizer.read_text()
+replay = "runpy.run_path(str(Path(__file__).with_name('apply.py')))"
+assert source.count(replay) == 1
+assert 'assistantTagsContextMenuEditAssistant' in (root / 'lib/features/home/widgets/side_drawer.dart').read_text()
+assert "if (value == null) return 'ru';" in (root / 'lib/core/providers/settings_provider.dart').read_text()
+exec(compile(source.replace(replay, '# Earlier localization is already committed.'), str(finalizer), 'exec'), {'__file__': str(finalizer)})
 
 messages = {
     'moruCodeBlockLabel': ['Code', 'Код', '代码', '程式碼'],
