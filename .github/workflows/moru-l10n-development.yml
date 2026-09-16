@@ -2,7 +2,7 @@ name: Moru localization development (temporary)
 on:
   push:
     branches: ['feat/russian-android-arm64']
-    paths: ['.github/workflows/moru-l10n-development.yml', 'tool/moru-translation-stage/apply.py']
+    paths: ['tool/moru-translation-stage/run.txt']
 permissions:
   contents: write
 concurrency:
@@ -10,99 +10,93 @@ concurrency:
   cancel-in-progress: false
 jobs:
   generate:
+    if: github.repository == 'mishaqp/Moru'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feat/russian-android-arm64
+          ref: ${{ github.sha }}
+          fetch-depth: 0
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.44.9'
           channel: stable
           cache: true
-      - name: Resolve dependencies
+      - name: Resolve existing dependencies
         run: flutter pub get
-      - name: Verify the new runtime test rejects the original missing locale
+      - name: Verify regressions before production changes
         if: hashFiles('lib/l10n/app_ru.arb') == ''
         shell: bash
         run: |
-          set -o pipefail
-          if flutter test test/l10n/moru_russian_test.dart --plain-name 'Russian is supported without removing English or Chinese' --reporter expanded > ru-before.log 2>&1; then
-            cat ru-before.log
-            echo 'Expected the missing-Russian regression to fail before implementation'
-            exit 1
+          set -euo pipefail
+          if flutter test test/core/providers/moru_locale_preferences_test.dart --plain-name 'new installations use Russian before and after async load' --reporter expanded > ru-before.log 2>&1; then
+            cat ru-before.log; echo 'Missing Russian default unexpectedly passed'; exit 1
           fi
           cat ru-before.log
-          grep -q 'Expected: true' ru-before.log
-      - name: Assemble and apply reviewed localization
+          grep -q 'Actual:' ru-before.log
+          if python3 tool/test_check_moru_ru.py > validator-before.log 2>&1; then
+            cat validator-before.log; echo 'Broken ICU parser unexpectedly passed'; exit 1
+          fi
+          cat validator-before.log
+          grep -q 'Placeholder mismatch' validator-before.log
+      - name: Apply reviewed translations and generate Dart
         shell: bash
         run: |
           test "$GITHUB_REF_NAME" = 'feat/russian-android-arm64'
           if [ ! -f lib/l10n/app_ru.arb ]; then python3 tool/moru-translation-stage/assemble.py; fi
-          if [ -f tool/moru-translation-stage/apply.py ]; then python3 tool/moru-translation-stage/apply.py; fi
+          python3 tool/moru-translation-stage/apply.py
           flutter gen-l10n
-          dart format lib/l10n test/l10n
+          git ls-files -m -o --exclude-standard -- lib test | grep '\.dart$' | xargs -r dart format
+          python3 tool/test_check_moru_ru.py
+          python3 tool/check_moru_ru.py
           git diff --check
-          git add lib/l10n test/l10n
+      - name: Russian runtime, widgets and saved language tests
+        shell: bash
+        run: flutter test test/l10n test/core/providers/moru_locale_preferences_test.dart test/core/providers/settings_provider_locale_test.dart --reporter expanded 2>&1 | tee ru-runtime-tests.log
+      - name: Analyze all application code and tests
+        shell: bash
+        run: dart analyze --fatal-infos lib test integration_test 2>&1 | tee ru-analyzer.log
+      - name: Commit only reviewed presentation changes without overwriting a moved branch
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          current="$(git ls-remote origin refs/heads/feat/russian-android-arm64 | cut -f1)"
+          test "$current" = "$GITHUB_SHA" || { echo 'Branch changed; generated sources are retained in the artifact, not force-pushed'; exit 1; }
+          git add lib test tool/check_moru_ru.py tool/moru_ru_technical_allowlist.json
           if ! git diff --cached --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'l10n(ru): generate the full Russian catalog with Flutter gen-l10n'
+            git commit -m 'l10n(ru): connect the full Russian catalog and localize Android presentation'
             git push origin HEAD:refs/heads/feat/russian-android-arm64
           fi
-      - name: Inspect runtime translations
+      - name: Full Flutter regression suite
         shell: bash
-        run: flutter test test/l10n/moru_russian_test.dart --reporter expanded 2>&1 | tee ru-runtime-tests.log
-      - name: Export the remaining presentation source for review
+        run: flutter test --reporter expanded 2>&1 | tee flutter-tests.log
+      - name: Export sources and remaining presentation candidates for review
         if: always()
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import json, shutil, re
-          dest = Path('moru-localization-review')
+          import json, re, shutil, subprocess
+          dest=Path('moru-localization-review')
           dest.mkdir(exist_ok=True)
-          for path in ('lib/l10n/app_ru.arb','lib/l10n/app_en.arb','lib/l10n/app_localizations_ru.dart', 'tool/check_moru_ru.py', 'lib/main.dart','lib/core/providers/settings_provider.dart','lib/core/services/mobile_background.dart','lib/core/services/notification_service.dart','test/core/providers/settings_provider_locale_test.dart','test/support/business_test_harness.dart'):
-              p = Path(path)
-              if p.is_file():
-                  target = dest / path
-                  target.parent.mkdir(parents=True, exist_ok=True)
-                  shutil.copyfile(p, target)
-          candidates = []
-          for top in ('lib/features','lib/shared','android/app/src/main'):
-              for p in sorted(Path(top).rglob('*')):
-                  if not p.is_file() or p.suffix not in ('.dart','.kt','.xml'): continue
-                  text = p.read_text(errors='replace')
-                  # Select UI source files with hardcoded labels or bilingual helpers;
-                  # complete selected files are included to retain scope/const context.
-                  if re.search(r"(?:Text\(|(?:title|subtitle|label|hintText|tooltip|message|semanticLabel)\s*:)\s*['\"][A-Za-z\u4e00-\u9fff]|(?:isZh|languageCode\s*==\s*['\"]zh|String _t\w*\()", text) or p.suffix in ('.kt','.xml'):
-                      target = dest / p
-                      target.parent.mkdir(parents=True, exist_ok=True)
-                      shutil.copyfile(p, target)
-                      candidates.append(str(p))
-          (dest/'selected-source-files.json').write_text(json.dumps(candidates, indent=2))
-          if Path('lib/l10n/app_ru.arb').exists():
-              en = json.loads(Path('lib/l10n/app_en.arb').read_text())
-              ru = json.loads(Path('lib/l10n/app_ru.arb').read_text())
-              unchanged = {k:v for k,v in en.items() if not k.startswith('@') and ru.get(k)==v and re.search('[A-Za-z]',v)}
-              (dest/'unchanged-candidates.json').write_text(json.dumps(unchanged, ensure_ascii=False, indent=2))
-          PY
-      - name: Check signing material presence without exposing any values
-        if: always()
-        env:
-          KEYSTORE: ${{ secrets.SIGN_KEYSTORE_BASE64 }}
-          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          python3 - <<'PY'
-          import os, json
-          from pathlib import Path
-          result = {k:bool(os.environ.get(k)) for k in ('KEYSTORE','STORE_PASSWORD','KEY_ALIAS','KEY_PASSWORD')}
-          result['ready'] = all(result.values())
-          Path('moru-localization-review/signing-availability.json').write_text(json.dumps(result,indent=2))
-          print('Existing Android release-signing configuration present:', result['ready'])
+          for top in ('lib','test/l10n','test/core/providers','tool'):
+              for p in Path(top).rglob('*'):
+                  if not p.is_file() or p.suffix not in ('.dart','.arb','.py','.json'): continue
+                  if 'moru-translation-stage' in p.parts: continue
+                  target=dest/p
+                  target.parent.mkdir(parents=True,exist_ok=True)
+                  shutil.copyfile(p,target)
+          (dest/'diff.patch').write_text(subprocess.check_output(['git','diff'],text=True))
+          candidates=[]
+          for p in sorted(Path('lib').rglob('*.dart')):
+              if 'l10n' in p.parts or p.name.endswith('.g.dart'): continue
+              for i,line in enumerate(p.read_text().splitlines(),1):
+                  if re.search(r"(?:Text\(|(?:title|subtitle|label|hintText|tooltip|semanticLabel)\s*:)\s*['\"][A-Za-z\u4e00-\u9fff]|(?:isZh|languageCode\s*==\s*['\"]zh)",line):
+                      candidates.append({'path':str(p),'line':i,'text':line.strip()})
+          (dest/'remaining-candidates.json').write_text(json.dumps(candidates,ensure_ascii=False,indent=2))
           PY
       - uses: actions/upload-artifact@v4
         if: always()
@@ -111,5 +105,8 @@ jobs:
           path: |
             moru-localization-review/
             ru-before.log
+            validator-before.log
             ru-runtime-tests.log
+            ru-analyzer.log
+            flutter-tests.log
           retention-days: 14
