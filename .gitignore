@@ -68,3 +68,10 @@ internationalization.md
 /skills-lock.json
 /.scratch/
 /.grok/
+
+# Moru release signing — the private key and passwords must never be committed.
+*.jks
+*.keystore
+key.properties
+android/key.properties
+android/app/moru-release.jks
