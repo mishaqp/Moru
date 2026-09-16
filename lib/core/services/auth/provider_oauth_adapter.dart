@@ -8,12 +8,16 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/provider_oauth.dart';
 import '../logging/log_redactor.dart';
+import '../network/request_logger.dart';
+import 'codex_oauth_callback.dart';
+import 'oauth_diagnostics.dart';
 import 'oauth_callback.dart';
 import 'oauth_cancellation.dart';
 import 'oauth_pkce.dart';
 import 'claude_oauth_request.dart';
 
 part 'claude_oauth_adapter.dart';
+part 'chatgpt_browser_oauth.dart';
 
 const codexClientVersion = '0.153.0';
 
@@ -42,8 +46,9 @@ class OAuthWireResponse {
 
 /// Form encoding, bounded requests and redirect handling shared by adapters.
 class OAuthWire {
-  OAuthWire(this.client);
+  OAuthWire(this.client, {this.diagnostics = RequestLogger.logLine});
   final http.Client client;
+  final void Function(String) diagnostics;
 
   Future<OAuthWireResponse> request(
     String url, {
@@ -64,10 +69,16 @@ class OAuthWire {
       request.headers['Content-Type'] = 'application/json';
       request.body = jsonEncode(json);
     }
+    final stage = oauthRequestStage(request.url);
+    final requestId = RequestLogger.nextRequestId();
+    void record(String result) =>
+        diagnostics('[OAUTH $requestId] $stage $result');
+    record('start');
     try {
       final response = await (() async => http.Response.fromStream(
         await client.send(request),
       ))().timeout(timeout);
+      record('http-${response.statusCode}');
       Map<String, dynamic> data = const {};
       try {
         final decoded = jsonDecode(response.body);
@@ -85,11 +96,17 @@ class OAuthWire {
         headers: response.headers,
       );
     } on ProviderOAuthException {
+      record('invalid-response');
       rethrow;
-    } on TimeoutException {
-      throw const ProviderOAuthException(ProviderOAuthFailure.timeout);
-    } catch (_) {
-      throw const ProviderOAuthException(ProviderOAuthFailure.network);
+    } catch (error) {
+      final reason = oauthTransportReason(error);
+      record('failed-$reason');
+      throw ProviderOAuthException(
+        reason == 'timeout'
+            ? ProviderOAuthFailure.timeout
+            : ProviderOAuthFailure.network,
+        code: '$stage/$reason',
+      );
     }
   }
 }
@@ -523,62 +540,7 @@ class ChatGptOAuthAdapter extends ProviderOAuthAdapter {
     OAuthCancellation cancellation,
     OAuthPromptHandler onPrompt,
     OAuthUrlLauncher launcher,
-  ) async {
-    final redirect = Uri.parse('http://localhost:1455/auth/callback');
-    final callback = await openOAuthCallback(
-      Uri.parse('https://auth.openai.com'),
-      loopbackRedirect: redirect,
-    );
-    unawaited(cancellation.whenCancelled.then((_) => callback.close()));
-    try {
-      final verifier = oauthRandomString(32);
-      final state = oauthRandomString(24);
-      final url = Uri.https('auth.openai.com', '/oauth/authorize', {
-        'response_type': 'code',
-        'client_id': provider.clientId,
-        'redirect_uri': redirect.toString(),
-        'scope': provider.scope,
-        'code_challenge': oauthPkceChallenge(verifier),
-        'code_challenge_method': 'S256',
-        'state': state,
-        'id_token_add_organizations': 'true',
-        'codex_cli_simplified_flow': 'true',
-        'originator': 'kelivo',
-      });
-      cancellation.check();
-      await onPrompt(OAuthLoginPrompt(url: url, browserAuthorization: true));
-      cancellation.check();
-      final received = await Future.any<Uri>([
-        callback.authorize(url, const Duration(minutes: 10), launcher),
-        cancellation.whenCancelled.then(
-          (_) => throw const ProviderOAuthException(
-            ProviderOAuthFailure.cancelled,
-          ),
-        ),
-      ]);
-      cancellation.check();
-      if (received.queryParameters['state'] != state) {
-        throw const ProviderOAuthException(
-          ProviderOAuthFailure.invalidResponse,
-        );
-      }
-      final code = oauthString(received.queryParameters['code']);
-      if (code == null) {
-        throw const ProviderOAuthException(ProviderOAuthFailure.denied);
-      }
-      return await _exchange(wire, code, verifier, redirect.toString());
-    } on OAuthCallbackException catch (error) {
-      throw ProviderOAuthException(
-        error.cancelled
-            ? ProviderOAuthFailure.cancelled
-            : ProviderOAuthFailure.invalidResponse,
-      );
-    } on TimeoutException {
-      throw const ProviderOAuthException(ProviderOAuthFailure.timeout);
-    } finally {
-      await callback.close();
-    }
-  }
+  ) => _loginChatGptInBrowser(this, wire, cancellation, onPrompt, launcher);
 
   Future<ProviderOAuthCredentials> _exchange(
     OAuthWire wire,
