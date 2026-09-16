@@ -11,10 +11,11 @@ class _BrowserCallback implements OAuthCallback {
   late Future<Uri> Function(Uri) open;
   final cancelled = Completer<Uri>();
   int closes = 0;
+  Future<Uri>? result;
 
   @override
   Future<Uri> authorize(Uri url, Duration timeout, OAuthUrlLauncher launch) =>
-      Future.any([open(url), cancelled.future]);
+      result = Future.any([open(url), cancelled.future]);
 
   @override
   Future<Uri> waitForCallback(Duration timeout) => throw UnimplementedError();
@@ -90,6 +91,7 @@ void main() {
         (_) async => fail('must use the native browser session'),
       );
       expect(received.queryParameters, {'code': 'secret', 'state': 'state'});
+      await browser.result;
       await callback.close();
       await callback.close();
       expect(browser.closes, 1);

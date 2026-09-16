@@ -199,6 +199,7 @@ final class _IoOAuthCallback implements OAuthCallback {
   final Completer<Uri> _callback = Completer<Uri>();
   late final StreamSubscription<HttpRequest> _subscription;
   bool _closed = false;
+  bool _responding = false;
 
   @override
   Uri get redirectUri => _redirectUri;
@@ -217,22 +218,27 @@ final class _IoOAuthCallback implements OAuthCallback {
       _state = states.single;
       // The provider returns to its registered loopback URL. That local page
       // redirects to the native callback to dismiss the browser and resume us.
-      final results = await Future.wait([
-        waitForCallback(timeout),
-        mobile.authorize(authorizationUrl, timeout, launchAuthorizationUrl),
-      ], eagerError: true);
-      final native = results[1];
-      final expected = mobile.redirectUri;
-      if (native.scheme != expected.scheme ||
-          native.host != expected.host ||
-          native.port != expected.port ||
-          native.path != expected.path ||
-          native.hasFragment ||
-          native.queryParametersAll['state']?.length != 1 ||
-          native.queryParameters['state'] != _state) {
-        throw const OAuthCallbackException('authorization callback mismatch');
-      }
-      return results.first;
+      final loopback = waitForCallback(timeout);
+      final native = mobile
+          .authorize(authorizationUrl, timeout, launchAuthorizationUrl)
+          .then((result) {
+            final expected = mobile.redirectUri;
+            if (result.scheme != expected.scheme ||
+                result.host != expected.host ||
+                result.port != expected.port ||
+                result.path != expected.path ||
+                result.hasFragment ||
+                result.queryParametersAll['state']?.length != 1 ||
+                result.queryParameters['state'] != _state) {
+              throw const OAuthCallbackException(
+                'authorization callback mismatch',
+              );
+            }
+            return loopback;
+          });
+      // The state-validated loopback is sufficient. Android may never dispatch
+      // the second intent (browser policy or another app handling the scheme).
+      return Future.any([loopback, native]);
     }
     if (!await launchAuthorizationUrl(authorizationUrl)) {
       throw const OAuthCallbackException(
@@ -264,7 +270,7 @@ final class _IoOAuthCallback implements OAuthCallback {
       final validResult =
           (codes?.length == 1 && codes!.single.isNotEmpty && errors == null) ||
           (errors?.length == 1 && errors!.single.isNotEmpty && codes == null);
-      if (_closed || _callback.isCompleted) {
+      if (_closed || _callback.isCompleted || _responding) {
         request.response.statusCode = HttpStatus.gone;
         await request.response.close();
         return;
@@ -280,6 +286,7 @@ final class _IoOAuthCallback implements OAuthCallback {
       }
     }
 
+    _responding = true;
     if (mobileCallback case final mobile?) {
       // Keep the authorization code on the loopback connection. The custom
       // URI only signals completion of this particular browser session.
@@ -291,8 +298,10 @@ final class _IoOAuthCallback implements OAuthCallback {
           HttpHeaders.locationHeader,
           mobile.redirectUri.replace(queryParameters: {'state': _state!}),
         );
-      _callback.complete(redirectUri.replace(query: request.uri.query));
       await request.response.close();
+      if (!_callback.isCompleted) {
+        _callback.complete(redirectUri.replace(query: request.uri.query));
+      }
       return;
     }
 

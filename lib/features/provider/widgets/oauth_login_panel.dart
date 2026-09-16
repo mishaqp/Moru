@@ -133,6 +133,7 @@ class _OAuthLoginPanelState extends State<OAuthLoginPanel> {
       }
     } finally {
       if (mounted && identical(cancellation, _cancellation)) {
+        _authorizationCode.clear();
         final switchToDeviceCode = _switchingToDeviceCode;
         setState(() {
           _active = null;
@@ -264,6 +265,9 @@ class _OAuthLoginPanelState extends State<OAuthLoginPanel> {
               IosFormTextField(
                 label: l.oauthAuthorizationCode,
                 controller: _authorizationCode,
+                autocorrect: false,
+                enableSuggestions: false,
+                keyboardType: TextInputType.url,
               ),
               if (_invalidAuthorizationCode)
                 Padding(
