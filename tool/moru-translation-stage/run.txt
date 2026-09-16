@@ -1,1 +1,1 @@
-Run 4: do not reapply already formatted initial source; finalize remaining labels and verify RU Android settings search plus all existing English search assertions.
+Run 5: all original English search cases now pass; exercise Android system back for the Russian search fixture, then analyze and commit verified localization.
