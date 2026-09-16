@@ -12,18 +12,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Archive tracked sources for review without signing material
-        run: git archive --format=zip --output="$RUNNER_TEMP/moru-oauth-source.zip" HEAD
-      - uses: actions/upload-artifact@v4
-        with:
-          name: moru-oauth-source
-          path: ${{ runner.temp }}/moru-oauth-source.zip
-          retention-days: 1
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.44.9'
           channel: stable
           cache: true
       - run: flutter pub get
-      - name: Run authentication regressions
-        run: flutter test test/codex_login_compatibility_test.dart --reporter expanded
+      - name: Prepare local review tools and canonical source formatting
+        run: |
+          dart format lib/core/services/auth test/core/services/auth/oauth_android_recovery_test.dart
+          tar -czf "$RUNNER_TEMP/moru-dart-sdk.tgz" -C "$FLUTTER_ROOT/bin/cache" dart-sdk
+          git ls-files -z | tar --null -T - -czf "$RUNNER_TEMP/moru-formatted-source.tgz"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moru-oauth-review
+          path: |
+            ${{ runner.temp }}/moru-dart-sdk.tgz
+            ${{ runner.temp }}/moru-formatted-source.tgz
+          retention-days: 1
+      - name: Run callback and transport regressions
+        run: flutter test test/core/services/auth/oauth_android_recovery_test.dart --reporter expanded
