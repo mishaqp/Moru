@@ -1,0 +1,24 @@
+name: Codex login regression
+on:
+  pull_request:
+    branches: [master]
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.9'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Show canonical test formatting
+        run: dart format --output=show test/codex_login_compatibility_test.dart
+      - name: Exercise the real OAuth adapter with a mock HTTP transport
+        run: flutter test test/codex_login_compatibility_test.dart --reporter expanded
