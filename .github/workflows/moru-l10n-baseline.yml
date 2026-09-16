@@ -1,0 +1,102 @@
+name: Moru localization baseline (temporary)
+on:
+  push:
+    branches: ['feat/russian-android-arm64']
+    paths: ['.github/workflows/moru-l10n-baseline.yml']
+permissions:
+  contents: read
+concurrency:
+  group: moru-l10n-baseline
+  cancel-in-progress: false
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Export source messages and focused source inspection
+        shell: bash
+        run: |
+          mkdir -p moru-source/messages moru-source/inspection
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, re, hashlib
+          source = Path('lib/l10n/app_en.arb')
+          data = json.loads(source.read_text())
+          messages = {key: value for key, value in data.items() if not key.startswith('@')}
+          pairs = list(messages.items())
+          for start in range(0, len(pairs), 160):
+              chunk = dict(pairs[start:start + 160])
+              Path(f'moru-source/messages/en-{start // 160 + 1:02}.json').write_text(json.dumps(chunk, ensure_ascii=False, indent=2) + '\n')
+          Path('moru-source/app_en.arb').write_bytes(source.read_bytes())
+          summary = {'source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(), 'messages': len(messages), 'distinct_values': len(set(messages.values())), 'words': sum(len(v.split()) for v in messages.values()), 'chunks': (len(pairs) + 159) // 160}
+          Path('moru-source/summary.json').write_text(json.dumps(summary, indent=2))
+          print(json.dumps(summary, indent=2))
+          inventory = []
+          for file in sorted(Path('lib').rglob('*.dart')):
+              if '/l10n/' in str(file) or file.name.endswith('.g.dart'):
+                  continue
+              lines = file.read_text().splitlines()
+              for n, line in enumerate(lines, 1):
+                  if re.search(r"locale|Locale\(|language|Language", line) and not line.lstrip().startswith('//'):
+                      if 'settings' in str(file) or 'locale' in str(file) or file.name == 'main.dart':
+                          inventory.append(f'{file}:{n}: {line.strip()}')
+          Path('moru-source/inspection/locale-sites.txt').write_text('\n'.join(inventory))
+          hardcoded = []
+          for top in ('lib', 'android/app/src/main'):
+              for file in sorted(Path(top).rglob('*')):
+                  if not file.is_file() or file.suffix not in ('.dart', '.kt', '.xml') or '/l10n/' in str(file) or file.name.endswith('.g.dart'):
+                      continue
+                  lines = file.read_text(errors='replace').splitlines()
+                  for n, line in enumerate(lines, 1):
+                      if line.lstrip().startswith('//'): continue
+                      if re.search(r"(?:Text\(|(?:title|subtitle|label|hintText|tooltip|message|semanticLabel|contentDescription|text)\s*:)\s*['\"][A-Za-z\u4e00-\u9fff]", line):
+                          hardcoded.append(f'{file}:{n}: {line.strip()}')
+          Path('moru-source/inspection/hardcoded-candidates.txt').write_text('\n'.join(hardcoded))
+          for file in sorted(Path('.github/workflows').glob('*.yml')):
+              Path('moru-source/inspection/' + file.name + '.txt').write_text(file.read_text())
+          for path, name in [('lib/core/providers/settings_provider.dart','settings_provider.txt'), ('android/app/build.gradle.kts','android-gradle.txt'), ('android/app/src/main/AndroidManifest.xml','AndroidManifest.txt'), ('tool/fetch_proot.sh','fetch_proot.txt'), ('pubspec.yaml','pubspec.txt'), ('pubspec.lock','pubspec-lock.txt')]:
+              p = Path(path)
+              if p.is_file(): Path('moru-source/inspection/' + name).write_bytes(p.read_bytes())
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moru-localization-source
+          path: moru-source/
+          retention-days: 14
+      - name: Confirm Russian contract is missing before implementation
+        shell: bash
+        run: python3 tool/check_moru_ru.py
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.9'
+          channel: stable
+          cache: true
+      - name: Resolve locked dependencies and generate existing locales
+        run: |
+          flutter pub get
+          flutter gen-l10n
+      - name: Original analyzer baseline
+        shell: bash
+        run: dart analyze --fatal-infos lib test integration_test 2>&1 | tee analyze-baseline.log
+      - name: Original test baseline
+        if: success() || failure()
+        shell: bash
+        run: flutter test --reporter expanded 2>&1 | tee tests-baseline.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: moru-flutter-baseline-reports
+          path: |
+            analyze-baseline.log
+            tests-baseline.log
+          retention-days: 14
