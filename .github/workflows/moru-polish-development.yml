@@ -1,0 +1,43 @@
+name: Moru Android locale polish (temporary)
+on:
+  push:
+    branches: ['feat/ru-android-polish']
+    paths: ['.github/workflows/moru-polish-development.yml', 'tool/moru-polish/run.txt']
+permissions:
+  contents: read
+concurrency:
+  group: moru-polish-dev
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.9'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Reproduce display-only locale gaps before the repair
+        shell: bash
+        run: flutter test test/l10n/moru_android_remaining_test.dart --reporter expanded 2>&1 | tee locale-regressions.log
+      - name: Export Android presentation sources for review
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p review
+          cp -R android/app/src review/android-src
+          cp -R test review/tests
+          cp -R tool/moru-translation-stage review/translation-stage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: moru-android-polish-review
+          path: |
+            locale-regressions.log
+            review/
+          retention-days: 7
