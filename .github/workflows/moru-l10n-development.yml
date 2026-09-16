@@ -5,7 +5,6 @@ on:
     paths: ['tool/moru-translation-stage/run.txt']
 permissions:
   contents: write
-  actions: read
 concurrency:
   group: moru-l10n-development
   cancel-in-progress: false
@@ -13,7 +12,7 @@ jobs:
   generate:
     if: github.repository == 'mishaqp/Moru'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,48 +23,40 @@ jobs:
           flutter-version: '3.44.9'
           channel: stable
           cache: true
-      - name: Resolve existing dependencies
-        run: flutter pub get
-      - name: Apply reviewed translations and generate Dart
+      - run: flutter pub get
+      - name: Apply final reviewed translations and generate Dart
         shell: bash
         run: |
           test "$GITHUB_REF_NAME" = 'feat/russian-android-arm64'
+          python3 tool/moru-translation-stage/prepare_final.py
           python3 tool/moru-translation-stage/finalize.py
           flutter gen-l10n
           git ls-files -m -o --exclude-standard -- lib test | grep '\.dart$' | xargs -r dart format
           python3 tool/test_check_moru_ru.py
           python3 tool/check_moru_ru.py
           git diff --check
-      - name: Russian runtime, widgets and saved language tests
+      - name: Verify RU/EN preference, notification, widget and search behavior
         shell: bash
-        run: flutter test test/l10n test/core/providers/moru_locale_preferences_test.dart test/core/providers/settings_provider_locale_test.dart --reporter expanded 2>&1 | tee ru-runtime-tests.log
+        run: |
+          flutter test test/l10n test/core/providers/moru_locale_preferences_test.dart test/core/providers/settings_provider_locale_test.dart test/features/settings/search/settings_search_widgets_test.dart --reporter expanded 2>&1 | tee ru-runtime-tests.log
       - name: Analyze all application code and tests
         shell: bash
         run: dart analyze --fatal-infos lib test integration_test 2>&1 | tee ru-analyzer.log
-      - name: Commit only reviewed presentation changes without overwriting a moved branch
+      - name: Commit checked source only if the branch has not changed
         shell: bash
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           current="$(git ls-remote origin refs/heads/feat/russian-android-arm64 | cut -f1)"
-          test "$current" = "$GITHUB_SHA" || { echo 'Branch changed; generated sources retained in artifact, never force-pushed'; exit 1; }
+          test "$current" = "$GITHUB_SHA" || { echo 'Branch changed; preserving generated sources in artifact instead of overwriting'; exit 1; }
           git add lib test tool/check_moru_ru.py tool/moru_ru_technical_allowlist.json
           if ! git diff --cached --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'l10n(ru): finish provider notices and Android presentation labels'
+            git commit -m 'l10n(ru): finish Android labels and verify Russian settings navigation'
             git push origin HEAD:refs/heads/feat/russian-android-arm64
           fi
-      - name: Full Flutter regression suite
-        shell: bash
-        run: flutter test --reporter expanded 2>&1 | tee flutter-tests.log
-      - name: Retain earlier PR failure evidence without rerunning or changing it
-        if: always()
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: gh api repos/mishaqp/Moru/actions/jobs/104776877839/logs > baseline-pr1.log
-      - name: Export sources and remaining presentation candidates for review
+          echo 'Full Flutter tests and Android APK verification remain mandatory in the final PR; this development job is not that gate.'
+      - name: Export review sources and diagnostics
         if: always()
         shell: bash
         run: |
@@ -74,7 +65,7 @@ jobs:
           import json, re, shutil, subprocess
           dest=Path('moru-localization-review')
           dest.mkdir(exist_ok=True)
-          for top in ('lib','test/l10n','test/core/providers','test/core/services/auth','test/features/migration','tool'):
+          for top in ('lib','test/l10n','test/core/providers','test/features/settings/search','tool'):
               for p in Path(top).rglob('*'):
                   if not p.is_file() or p.suffix not in ('.dart','.arb','.py','.json'): continue
                   if 'moru-translation-stage' in p.parts: continue
@@ -98,6 +89,4 @@ jobs:
             moru-localization-review/
             ru-runtime-tests.log
             ru-analyzer.log
-            flutter-tests.log
-            baseline-pr1.log
           retention-days: 14
