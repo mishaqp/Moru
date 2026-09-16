@@ -64,9 +64,8 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           home: Builder(
-            builder: (context) => Scaffold(
-              body: Text(AppLocalizations.of(context)!.skillsTitle),
-            ),
+            builder: (context) =>
+                Scaffold(body: Text(AppLocalizations.of(context)!.skillsTitle)),
           ),
         ),
       );
