@@ -4,6 +4,8 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/app_localizations_ru.dart';
 
 typedef ChatCompletionNotificationSender =
     Future<void> Function({
@@ -21,13 +23,40 @@ class NotificationService {
   static Future<void>? _initialization;
   static String? _pendingConversationId;
   static const String _chatCompletionPayloadPrefix = 'chat-complete:';
-  static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
+  static AppLocalizations _l10n = AppLocalizationsRu();
+
+  static ({
+    String title,
+    String body,
+    String channelName,
+    String channelDescription,
+  })
+  get completionText => (
+    title: _l10n.notificationChatCompletedTitle,
+    body: _l10n.notificationChatCompletedBody,
+    channelName: _l10n.moruChatNotificationChannel,
+    channelDescription: _l10n.moruChatNotificationDescription,
+  );
+
+  static AndroidNotificationChannel get _channel => AndroidNotificationChannel(
     'kelivo_bg_chat_v2',
-    'Chat Background',
-    description: 'Notifications for chat generation status',
+    completionText.channelName,
+    description: completionText.channelDescription,
     importance: Importance.high,
     playSound: true,
   );
+
+  static Future<void> configureLocalizations(AppLocalizations l10n) async {
+    final changed = _l10n.localeName != l10n.localeName;
+    _l10n = l10n;
+    if (changed && _inited && Platform.isAndroid) {
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(_channel);
+    }
+  }
 
   static Stream<String> get conversationTaps =>
       _conversationTapController.stream;
@@ -129,8 +158,8 @@ class NotificationService {
     await ensureInitialized();
     await _plugin.show(
       notificationIdForConversation(conversationId),
-      title ?? 'Generation complete',
-      body ?? 'Assistant reply has been generated',
+      title ?? completionText.title,
+      body ?? completionText.body,
       NotificationDetails(
         android: AndroidNotificationDetails(
           _channel.id,
@@ -144,7 +173,7 @@ class NotificationService {
           visibility: NotificationVisibility.public,
           ticker: 'Kelivo',
           styleInformation: BigTextStyleInformation(
-            body ?? 'Assistant reply has been generated',
+            body ?? completionText.body,
           ),
         ),
         iOS: const DarwinNotificationDetails(

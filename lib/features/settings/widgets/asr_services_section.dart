@@ -17,6 +17,7 @@ import '../../../shared/widgets/snackbar.dart';
 import '../../../theme/app_font_weights.dart';
 import '../../../utils/brand_assets.dart';
 import 'voice_service_widgets.dart';
+import '../utils/sherpa_model_l10n.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 /// The speech-recognition half of the Voice Services screen.
@@ -1609,7 +1610,7 @@ class _ModelRow extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  model.name,
+                  model.localizedName(l10n),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1635,7 +1636,7 @@ class _ModelRow extends StatelessWidget {
           ),
           const SizedBox(height: 7),
           Text(
-            model.description,
+            model.localizedDescription(l10n),
             style: TextStyle(
               fontSize: 12,
               height: 1.35,

@@ -464,7 +464,9 @@ class _PlainLogContentPageState extends State<_PlainLogContentPage> {
       });
     } catch (e) {
       setState(() {
-        _content = 'Error loading file: $e';
+        _content = AppLocalizations.of(
+          context,
+        )!.moruLogReadFailed(e.toString());
         _loading = false;
       });
     }
@@ -482,7 +484,9 @@ class _PlainLogContentPageState extends State<_PlainLogContentPage> {
       if (mounted) {
         showAppSnackBar(
           context,
-          message: 'Export failed: $e',
+          message: AppLocalizations.of(
+            context,
+          )!.storageSpaceExportFailed(e.toString()),
           type: NotificationType.error,
         );
       }
@@ -605,7 +609,9 @@ class _RequestLogFilePageState extends State<_RequestLogFilePage> {
       }
       showAppSnackBar(
         context,
-        message: 'Export failed: $e',
+        message: AppLocalizations.of(
+          context,
+        )!.storageSpaceExportFailed(e.toString()),
         type: NotificationType.error,
       );
     }
@@ -782,7 +788,9 @@ class _ContextLogFilePageState extends State<_ContextLogFilePage> {
       }
       showAppSnackBar(
         context,
-        message: 'Export failed: $e',
+        message: AppLocalizations.of(
+          context,
+        )!.storageSpaceExportFailed(e.toString()),
         type: NotificationType.error,
       );
     }

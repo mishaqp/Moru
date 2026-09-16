@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_en.dart';
+import 'app_localizations_ru.dart';
 import 'app_localizations_zh.dart';
 
 // ignore_for_file: type=lint
@@ -95,6 +96,7 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
+    Locale('ru'),
     Locale('zh'),
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
@@ -21344,6 +21346,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reuse context across messages and choose how long the cache is retained.'**
   String get oauthPromptCachingHelp;
+
+  /// No description provided for @moruLanguageRussian.
+  ///
+  /// In en, this message translates to:
+  /// **'Русский'**
+  String get moruLanguageRussian;
+
+  /// No description provided for @moruDeleteHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete header'**
+  String get moruDeleteHeader;
+
+  /// No description provided for @moruDeleteEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete entry'**
+  String get moruDeleteEntry;
+
+  /// No description provided for @moruSearchCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get moruSearchCategory;
+
+  /// No description provided for @moruSearchCountry.
+  ///
+  /// In en, this message translates to:
+  /// **'Country'**
+  String get moruSearchCountry;
+
+  /// No description provided for @moruSearchIncludeDomains.
+  ///
+  /// In en, this message translates to:
+  /// **'Include domains'**
+  String get moruSearchIncludeDomains;
+
+  /// No description provided for @moruSearchExcludeDomains.
+  ///
+  /// In en, this message translates to:
+  /// **'Exclude domains'**
+  String get moruSearchExcludeDomains;
+
+  /// No description provided for @moruLogReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading file: {error}'**
+  String moruLogReadFailed(String error);
+
+  /// No description provided for @moruChatNotificationChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Background'**
+  String get moruChatNotificationChannel;
+
+  /// No description provided for @moruChatNotificationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications for chat generation status'**
+  String get moruChatNotificationDescription;
+
+  /// No description provided for @moruCherryImportWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This feature is experimental.\nTo keep your data safe, it is recommended to back up before importing.\nProceed to choose a file?'**
+  String get moruCherryImportWarning;
+
+  /// No description provided for @moruPaletteDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get moruPaletteDefault;
+
+  /// No description provided for @moruPaletteBlue.
+  ///
+  /// In en, this message translates to:
+  /// **'Aether Blue'**
+  String get moruPaletteBlue;
+
+  /// No description provided for @moruPaletteGreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Bamboo Green'**
+  String get moruPaletteGreen;
+
+  /// No description provided for @moruPalettePurple.
+  ///
+  /// In en, this message translates to:
+  /// **'Twilight Purple'**
+  String get moruPalettePurple;
+
+  /// No description provided for @moruPaletteYellow.
+  ///
+  /// In en, this message translates to:
+  /// **'Amber Gold'**
+  String get moruPaletteYellow;
+
+  /// No description provided for @moruPaletteSmokyRose.
+  ///
+  /// In en, this message translates to:
+  /// **'Smoky Rose'**
+  String get moruPaletteSmokyRose;
+
+  /// No description provided for @moruPaletteTerracotta.
+  ///
+  /// In en, this message translates to:
+  /// **'Terracotta Clay'**
+  String get moruPaletteTerracotta;
+
+  /// No description provided for @moruPaletteMonochrome.
+  ///
+  /// In en, this message translates to:
+  /// **'Frost Gray'**
+  String get moruPaletteMonochrome;
+
+  /// No description provided for @moruPaletteDocTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Verdant Mint'**
+  String get moruPaletteDocTheme;
+
+  /// No description provided for @moruProviderTensdaqNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'A bidding-based AI MaaS platform with prices determined by market supply and demand instead of fixed pricing.'**
+  String get moruProviderTensdaqNotice;
+
+  /// No description provided for @moruProviderSiliconFlowNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Free SiliconFlow models are included and need no API key. For more capable models, obtain your own API key and configure it here.'**
+  String get moruProviderSiliconFlowNotice;
+
+  /// No description provided for @moruProviderSuixiangNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'An API relay for Claude, Codex, Gemini and other services. It advertises privacy, no data resale or model substitution, 1:1 credits and usage-based billing, with redundant routes, cross-region recovery, automatic failover and persistent SSE connections.'**
+  String get moruProviderSuixiangNotice;
+
+  /// No description provided for @moruProviderMaruCodeNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'An independently operated API relay with its own account pool for Codex, Claude Code, GPT Image and other models. WebSocket support; advertised rates: Codex 0.25x, CC 1.5x, transparent 1:1 conversion and \$2 registration credit for new users.'**
+  String get moruProviderMaruCodeNotice;
+
+  /// No description provided for @moruProviderWebsitePrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Website: '**
+  String get moruProviderWebsitePrefix;
+
+  /// No description provided for @moruSecondsShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds}s'**
+  String moruSecondsShort(int seconds);
+
+  /// No description provided for @moruConsoleSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source: {source}'**
+  String moruConsoleSource(String source);
+
+  /// No description provided for @moruCodeBlockLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Code'**
+  String get moruCodeBlockLabel;
+
+  /// No description provided for @moruAsrParaformerName.
+  ///
+  /// In en, this message translates to:
+  /// **'Paraformer small Chinese model'**
+  String get moruAsrParaformerName;
+
+  /// No description provided for @moruAsrParaformerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Primarily Chinese, with basic English support. Download: about 78 MB.'**
+  String get moruAsrParaformerDescription;
+
+  /// No description provided for @moruAsrSenseVoiceName.
+  ///
+  /// In en, this message translates to:
+  /// **'SenseVoice int8 multilingual model'**
+  String get moruAsrSenseVoiceName;
+
+  /// No description provided for @moruAsrSenseVoiceDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Chinese, English, Cantonese, Japanese and Korean. Download: about 166 MB.'**
+  String get moruAsrSenseVoiceDescription;
+
+  /// No description provided for @moruAsrZipformerName.
+  ///
+  /// In en, this message translates to:
+  /// **'Zipformer Chinese/English Mobile'**
+  String get moruAsrZipformerName;
+
+  /// No description provided for @moruAsrZipformerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Streaming Chinese and English recognition. Download: about 347 MB.'**
+  String get moruAsrZipformerDescription;
 }
 
 class _AppLocalizationsDelegate
@@ -21357,7 +21563,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en', 'zh'].contains(locale.languageCode);
+      <String>['en', 'ru', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -21382,6 +21588,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   switch (locale.languageCode) {
     case 'en':
       return AppLocalizationsEn();
+    case 'ru':
+      return AppLocalizationsRu();
     case 'zh':
       return AppLocalizationsZh();
   }

@@ -42,9 +42,7 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
     String paletteName() {
       final settings = context.read<SettingsProvider>();
       final palette = ThemePalettes.byId(settings.themePaletteId);
-      return Localizations.localeOf(context).languageCode == 'zh'
-          ? palette.displayNameZh
-          : palette.displayNameEn;
+      return palette.localizedName(l10n);
     }
 
     return Scaffold(
@@ -83,6 +81,7 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                 detailBuilder: (ctx) {
                   final settings = ctx.watch<SettingsProvider>();
                   String labelFor(Locale l) {
+                    if (l.languageCode == 'ru') return l10n.moruLanguageRussian;
                     if (l.languageCode == 'zh') {
                       if ((l.scriptCode ?? '').toLowerCase() == 'hant') {
                         return l10n.languageDisplayTraditionalChinese;
@@ -289,7 +288,9 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                   }
                   final seconds = sp.autoScrollIdleSeconds;
                   return Text(
-                    '${seconds.round()}s',
+                    AppLocalizations.of(
+                      context,
+                    )!.moruSecondsShort(seconds.round()),
                     style: TextStyle(
                       color: cs.onSurface.withValues(alpha: 0.6),
                       fontSize: 13,
@@ -440,6 +441,12 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                 _sheetDividerNoIcon(ctx),
                 _sheetOption(
                   ctx,
+                  label: l10n.moruLanguageRussian,
+                  onTap: () => Navigator.of(ctx).pop('ru'),
+                ),
+                _sheetDividerNoIcon(ctx),
+                _sheetOption(
+                  ctx,
                   label: l10n.displaySettingsPageLanguageChineseLabel,
                   onTap: () => Navigator.of(ctx).pop('zh_CN'),
                 ),
@@ -466,6 +473,9 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
 
     final settings = context.read<SettingsProvider>();
     switch (selected) {
+      case 'ru':
+        await settings.setAppLocale(const Locale('ru'));
+        break;
       case 'system':
         await settings.setAppLocaleFollowSystem();
         break;
@@ -663,7 +673,7 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                     Row(
                       children: [
                         Text(
-                          '2s',
+                          AppLocalizations.of(context)!.moruSecondsShort(2),
                           style: TextStyle(
                             color: cs.onSurface.withValues(alpha: 0.7),
                             fontSize: 12,
@@ -744,7 +754,9 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                         const SizedBox(width: 8),
                         Text(
                           enabled
-                              ? '${seconds.round()}s'
+                              ? AppLocalizations.of(
+                                  context,
+                                )!.moruSecondsShort(seconds.round())
                               : l10n.displaySettingsPageAutoScrollDisabledLabel,
                           style: TextStyle(
                             color: cs.onSurface.withValues(

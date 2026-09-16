@@ -26,6 +26,7 @@ void main() {
     Size size = const Size(390, 844),
     TargetPlatform platform = TargetPlatform.iOS,
     double textScale = 1,
+    Locale locale = const Locale('en', 'US'),
   }) async {
     debugDefaultTargetPlatformOverride = platform;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
@@ -35,6 +36,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final settings = SettingsProvider(createBusinessTestPreferences());
     await settings.loaded;
+    await settings.setAppLocale(locale);
     addTearDown(settings.dispose);
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
@@ -58,6 +60,38 @@ void main() {
     await tester.pumpAndSettle();
     return settings;
   }
+
+  testWidgets(
+    'Russian Android search opens the language setting and preserves its query',
+    (tester) async {
+      await pump(
+        tester,
+        const SettingsSearchPage(onColorMode: _noop),
+        platform: TargetPlatform.android,
+        locale: const Locale('ru'),
+      );
+      const query = 'Язык приложения';
+      await tester.enterText(find.byType(TextField), query);
+      await tester.pumpAndSettle();
+      final result = find.byKey(
+        const ValueKey('displaySettingsPageLanguageTitle'),
+      );
+      expect(result, findsOneWidget);
+      await tester.tap(result);
+      await tester.pumpAndSettle();
+      expect(find.text(query).hitTestable(), findsOneWidget);
+      expect(find.text('Русский').hitTestable(), findsOneWidget);
+      // Exercise Android system back, independent of localized toolbar tooltips.
+      expect(await tester.binding.handlePopRoute(), isTrue);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        query,
+      );
+      expect(tester.takeException(), isNull);
+      debugDefaultTargetPlatformOverride = null;
+    },
+  );
 
   testWidgets('search is hidden initially, pulls into view, and scrolls away', (
     tester,

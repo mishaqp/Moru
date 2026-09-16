@@ -11894,4 +11894,121 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get oauthPromptCachingHelp =>
       'Reuse context across messages and choose how long the cache is retained.';
+
+  @override
+  String get moruLanguageRussian => 'Русский';
+
+  @override
+  String get moruDeleteHeader => 'Delete header';
+
+  @override
+  String get moruDeleteEntry => 'Delete entry';
+
+  @override
+  String get moruSearchCategory => 'Category';
+
+  @override
+  String get moruSearchCountry => 'Country';
+
+  @override
+  String get moruSearchIncludeDomains => 'Include domains';
+
+  @override
+  String get moruSearchExcludeDomains => 'Exclude domains';
+
+  @override
+  String moruLogReadFailed(String error) {
+    return 'Error loading file: $error';
+  }
+
+  @override
+  String get moruChatNotificationChannel => 'Chat Background';
+
+  @override
+  String get moruChatNotificationDescription =>
+      'Notifications for chat generation status';
+
+  @override
+  String get moruCherryImportWarning =>
+      'This feature is experimental.\nTo keep your data safe, it is recommended to back up before importing.\nProceed to choose a file?';
+
+  @override
+  String get moruPaletteDefault => 'Default';
+
+  @override
+  String get moruPaletteBlue => 'Aether Blue';
+
+  @override
+  String get moruPaletteGreen => 'Bamboo Green';
+
+  @override
+  String get moruPalettePurple => 'Twilight Purple';
+
+  @override
+  String get moruPaletteYellow => 'Amber Gold';
+
+  @override
+  String get moruPaletteSmokyRose => 'Smoky Rose';
+
+  @override
+  String get moruPaletteTerracotta => 'Terracotta Clay';
+
+  @override
+  String get moruPaletteMonochrome => 'Frost Gray';
+
+  @override
+  String get moruPaletteDocTheme => 'Verdant Mint';
+
+  @override
+  String get moruProviderTensdaqNotice =>
+      'A bidding-based AI MaaS platform with prices determined by market supply and demand instead of fixed pricing.';
+
+  @override
+  String get moruProviderSiliconFlowNotice =>
+      'Free SiliconFlow models are included and need no API key. For more capable models, obtain your own API key and configure it here.';
+
+  @override
+  String get moruProviderSuixiangNotice =>
+      'An API relay for Claude, Codex, Gemini and other services. It advertises privacy, no data resale or model substitution, 1:1 credits and usage-based billing, with redundant routes, cross-region recovery, automatic failover and persistent SSE connections.';
+
+  @override
+  String get moruProviderMaruCodeNotice =>
+      'An independently operated API relay with its own account pool for Codex, Claude Code, GPT Image and other models. WebSocket support; advertised rates: Codex 0.25x, CC 1.5x, transparent 1:1 conversion and \$2 registration credit for new users.';
+
+  @override
+  String get moruProviderWebsitePrefix => 'Website: ';
+
+  @override
+  String moruSecondsShort(int seconds) {
+    return '${seconds}s';
+  }
+
+  @override
+  String moruConsoleSource(String source) {
+    return 'Source: $source';
+  }
+
+  @override
+  String get moruCodeBlockLabel => 'Code';
+
+  @override
+  String get moruAsrParaformerName => 'Paraformer small Chinese model';
+
+  @override
+  String get moruAsrParaformerDescription =>
+      'Primarily Chinese, with basic English support. Download: about 78 MB.';
+
+  @override
+  String get moruAsrSenseVoiceName => 'SenseVoice int8 multilingual model';
+
+  @override
+  String get moruAsrSenseVoiceDescription =>
+      'Chinese, English, Cantonese, Japanese and Korean. Download: about 166 MB.';
+
+  @override
+  String get moruAsrZipformerName => 'Zipformer Chinese/English Mobile';
+
+  @override
+  String get moruAsrZipformerDescription =>
+      'Streaming Chinese and English recognition. Download: about 347 MB.';
 }
