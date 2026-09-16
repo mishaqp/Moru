@@ -17,8 +17,8 @@ android {
     }
 
     defaultConfig {
-        // The Android-only change deliberately preserves the existing app identity.
-        applicationId = "com.psyche.kelivo"
+        // Moru ships as an independent personal app under its own stable identity.
+        applicationId = "com.mishaqp.moru"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
