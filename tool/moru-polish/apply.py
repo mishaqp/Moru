@@ -37,9 +37,9 @@ edit('lib/features/settings/widgets/asr_services_section.dart',
      "import 'voice_service_widgets.dart';",
      "import 'voice_service_widgets.dart';\nimport '../utils/sherpa_model_l10n.dart';")
 edit('lib/features/settings/widgets/asr_services_section.dart',
-     '                      model.name,',
-     '                      model.localizedName(l10n),')
+     '                  model.name,',
+     '                  model.localizedName(l10n),')
 edit('lib/features/settings/widgets/asr_services_section.dart',
-     '                model.description,',
-     '                model.localizedDescription(l10n),')
+     '            model.description,',
+     '            model.localizedDescription(l10n),')
 print('Translated code-fence fallback and all three speech-model display entries; model definitions untouched.')
