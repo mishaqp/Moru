@@ -66,12 +66,14 @@ void main() {
     await tester.tap(find.text('Язык приложения'));
     await tester.pumpAndSettle();
     expect(find.text('Русский'), findsWidgets);
+    final ru = await AppLocalizations.delegate.load(const Locale('ru'));
     final en = await AppLocalizations.delegate.load(const Locale('en'));
-    await tester.tap(find.text(en.displaySettingsPageLanguageEnglishLabel).last);
+    expect(find.text(ru.displaySettingsPageLanguageEnglishLabel), findsOneWidget);
+    await tester.tap(find.text(ru.displaySettingsPageLanguageEnglishLabel));
     await tester.pumpAndSettle();
     expect(settings.appLocaleForMaterialApp, const Locale('en', 'US'));
     expect(harness.preferences.get('app_locale_v1'), 'en_US');
-    expect(find.text('App Language'), findsOneWidget);
+    expect(find.text(en.displaySettingsPageLanguageTitle), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
