@@ -17,18 +17,20 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // The Android-only change deliberately preserves the existing app identity.
         applicationId = "com.psyche.kelivo"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        // Flutter controls APK ABI filtering, including --split-per-abi.
+        // Moru ships one APK for Android arm64. Keep Flutter, AGP and CMake aligned.
+        ndk {
+            abiFilters.clear()
+            abiFilters += listOf("arm64-v8a")
+        }
         externalNativeBuild {
             cmake {
-                abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+                abiFilters += listOf("arm64-v8a")
             }
         }
     }
@@ -87,18 +89,10 @@ flutter {
 }
 
 val requiredProotLibs = listOf(
-    "armeabi-v7a/libproot_exec.so",
-    "armeabi-v7a/libproot_loader.so",
-    "armeabi-v7a/libtalloc.so",
-    "armeabi-v7a/libandroid-shmem.so",
     "arm64-v8a/libproot_exec.so",
     "arm64-v8a/libproot_loader.so",
     "arm64-v8a/libtalloc.so",
     "arm64-v8a/libandroid-shmem.so",
-    "x86_64/libproot_exec.so",
-    "x86_64/libproot_loader.so",
-    "x86_64/libtalloc.so",
-    "x86_64/libandroid-shmem.so",
 )
 
 tasks.register<Exec>("fetchProot") {
