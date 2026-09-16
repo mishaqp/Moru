@@ -1,1 +1,1 @@
-Run 3: finish remaining provider notices, seconds and console labels; keep all source contracts and regression checks.
+Run 4: do not reapply already formatted initial source; finalize remaining labels and verify RU Android settings search plus all existing English search assertions.
