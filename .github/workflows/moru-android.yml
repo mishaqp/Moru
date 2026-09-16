@@ -118,7 +118,7 @@ jobs:
           "$bt/apksigner" verify --verbose --print-certs "$apk" > reports/signature.txt
           "$bt/aapt2" dump badging "$apk" > reports/badging.txt
           if [ "$BUILD_VARIANT" = release ]; then
-            actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' reports/signature.txt | tr 'A-F' 'a-f' | tr -d ':\r\n ')"
+            actual="$(grep -m1 'certificate SHA-256 digest:' reports/signature.txt | sed 's/^.*certificate SHA-256 digest: //' | tr 'A-F' 'a-f' | tr -d ':\r\n ')"
             expected="$(tr -d '\r\n ' < .github/moru-signing-cert-sha256.txt)"
             test "$actual" = "$expected"
             ! grep -q 'application-debuggable' reports/badging.txt
