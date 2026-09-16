@@ -1,0 +1,39 @@
+name: Collect existing baseline test evidence
+on:
+  push:
+    branches: ['test/baseline-migration-check']
+    paths: ['.github/workflows/baseline-logs.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  logs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Download the completed earlier PR check log
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api repos/mishaqp/Moru/actions/jobs/104776877839/logs > baseline-pr1.log
+      - name: Extract exact failure contexts
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('baseline-pr1.log').read_text(errors='replace')
+          text=re.sub(r'\x1b\[[0-9;]*[A-Za-z]', '', text).replace('\r','\n')
+          lines=text.splitlines()
+          keep=set()
+          for i,line in enumerate(lines):
+              if re.search(r'\[E\]|Exception|Expected:|Actual:|Some tests failed|Failing tests|Error:|error:|Test timed out',line):
+                  keep.update(range(max(0,i-3),min(len(lines),i+14)))
+          Path('baseline-failures.txt').write_text('\n'.join(lines[i] for i in sorted(keep)))
+          print(Path('baseline-failures.txt').read_text())
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prior-baseline-test-logs
+          path: |
+            baseline-pr1.log
+            baseline-failures.txt
+          retention-days: 7
