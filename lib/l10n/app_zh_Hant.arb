@@ -4331,5 +4331,33 @@
   "moruPaletteSmokyRose": "暮霭玫",
   "moruPaletteTerracotta": "陶砂红",
   "moruPaletteMonochrome": "纸墨灰",
-  "moruPaletteDocTheme": "樱桃绿"
+  "moruPaletteDocTheme": "樱桃绿",
+  "moruProviderTensdaqNotice": "革命性的競價 AI MaaS 平台，價格由市場供需決定，告別高成本固定定價。",
+  "moruProviderSiliconFlowNotice": "已內建 SiliconFlow 的免費模型，無需 API Key。若需要更強大的模型，請申請並在此設定自己的 API Key。",
+  "moruProviderSuixiangNotice": "可靠高效的 API 中繼服務，提供 Claude、Codex、Gemini 等服務。注重隱私，不轉售資料、不替換模型，儲值額度 1:1，按量付費。多線路備援、跨區域復原、自動容錯切換，長連線 SSE 不中斷。",
+  "moruProviderMaruCodeNotice": "不時回饋使用者的小型 API 服務，使用自營帳號池，主要提供 Codex、Claude Code、GPT Image 等模型。支援 WebSocket，明確標價（Codex 0.25x、CC 1.5x），透明匯率（1:1），新使用者註冊贈送 2 美元。",
+  "moruProviderWebsitePrefix": "官網：",
+  "moruSecondsShort": "{seconds}秒",
+  "moruConsoleSource": "來源：{source}",
+  "@moruSecondsShort": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "@moruConsoleSource": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "moruCodeBlockLabel": "程式碼",
+  "moruAsrParaformerName": "Paraformer 中文小模型",
+  "moruAsrParaformerDescription": "以中文為主，兼顧簡單英文，下載約 78 MB",
+  "moruAsrSenseVoiceName": "SenseVoice int8 多語模型",
+  "moruAsrSenseVoiceDescription": "支援中文、英文、粵語、日語和韓語，下載約 166 MB",
+  "moruAsrZipformerName": "Zipformer 中英 Mobile",
+  "moruAsrZipformerDescription": "中英雙語串流辨識，下載約 347 MB"
 }

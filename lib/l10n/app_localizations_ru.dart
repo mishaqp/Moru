@@ -12089,4 +12089,58 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get moruPaletteDocTheme => 'Документ';
+
+  @override
+  String get moruProviderTensdaqNotice =>
+      'Платформа AI MaaS с аукционным ценообразованием: цены определяются рыночным спросом и предложением вместо фиксированных тарифов.';
+
+  @override
+  String get moruProviderSiliconFlowNotice =>
+      'Бесплатные модели SiliconFlow уже доступны без ключа API. Для более мощных моделей получите собственный ключ API и укажите его здесь.';
+
+  @override
+  String get moruProviderSuixiangNotice =>
+      'API-посредник для Claude, Codex, Gemini и других сервисов. Заявлены конфиденциальность, отсутствие перепродажи данных и подмены моделей, пополнение 1:1 и оплата по использованию, резервные маршруты, межрегиональное восстановление, автоматическое переключение при сбоях и непрерывные соединения SSE.';
+
+  @override
+  String get moruProviderMaruCodeNotice =>
+      'Независимый API-посредник с собственным пулом аккаунтов для Codex, Claude Code, GPT Image и других моделей. Поддерживает WebSocket; заявленные тарифы: Codex 0.25x, CC 1.5x, прозрачный курс 1:1 и бонус \$2 новым пользователям при регистрации.';
+
+  @override
+  String get moruProviderWebsitePrefix => 'Сайт: ';
+
+  @override
+  String moruSecondsShort(int seconds) {
+    return '$seconds с';
+  }
+
+  @override
+  String moruConsoleSource(String source) {
+    return 'Источник: $source';
+  }
+
+  @override
+  String get moruCodeBlockLabel => 'Код';
+
+  @override
+  String get moruAsrParaformerName => 'Paraformer — малая китайская модель';
+
+  @override
+  String get moruAsrParaformerDescription =>
+      'В основном для китайского языка, с поддержкой простого английского. Загрузка: около 78 МБ.';
+
+  @override
+  String get moruAsrSenseVoiceName => 'SenseVoice int8 — многоязычная модель';
+
+  @override
+  String get moruAsrSenseVoiceDescription =>
+      'Китайский, английский, кантонский, японский и корейский языки. Загрузка: около 166 МБ.';
+
+  @override
+  String get moruAsrZipformerName =>
+      'Zipformer — китайский и английский, Mobile';
+
+  @override
+  String get moruAsrZipformerDescription =>
+      'Потоковое распознавание китайской и английской речи. Загрузка: около 347 МБ.';
 }

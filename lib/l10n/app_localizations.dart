@@ -21466,6 +21466,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Verdant Mint'**
   String get moruPaletteDocTheme;
+
+  /// No description provided for @moruProviderTensdaqNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'A bidding-based AI MaaS platform with prices determined by market supply and demand instead of fixed pricing.'**
+  String get moruProviderTensdaqNotice;
+
+  /// No description provided for @moruProviderSiliconFlowNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Free SiliconFlow models are included and need no API key. For more capable models, obtain your own API key and configure it here.'**
+  String get moruProviderSiliconFlowNotice;
+
+  /// No description provided for @moruProviderSuixiangNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'An API relay for Claude, Codex, Gemini and other services. It advertises privacy, no data resale or model substitution, 1:1 credits and usage-based billing, with redundant routes, cross-region recovery, automatic failover and persistent SSE connections.'**
+  String get moruProviderSuixiangNotice;
+
+  /// No description provided for @moruProviderMaruCodeNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'An independently operated API relay with its own account pool for Codex, Claude Code, GPT Image and other models. WebSocket support; advertised rates: Codex 0.25x, CC 1.5x, transparent 1:1 conversion and \$2 registration credit for new users.'**
+  String get moruProviderMaruCodeNotice;
+
+  /// No description provided for @moruProviderWebsitePrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Website: '**
+  String get moruProviderWebsitePrefix;
+
+  /// No description provided for @moruSecondsShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds}s'**
+  String moruSecondsShort(int seconds);
+
+  /// No description provided for @moruConsoleSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source: {source}'**
+  String moruConsoleSource(String source);
+
+  /// No description provided for @moruCodeBlockLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Code'**
+  String get moruCodeBlockLabel;
+
+  /// No description provided for @moruAsrParaformerName.
+  ///
+  /// In en, this message translates to:
+  /// **'Paraformer small Chinese model'**
+  String get moruAsrParaformerName;
+
+  /// No description provided for @moruAsrParaformerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Primarily Chinese, with basic English support. Download: about 78 MB.'**
+  String get moruAsrParaformerDescription;
+
+  /// No description provided for @moruAsrSenseVoiceName.
+  ///
+  /// In en, this message translates to:
+  /// **'SenseVoice int8 multilingual model'**
+  String get moruAsrSenseVoiceName;
+
+  /// No description provided for @moruAsrSenseVoiceDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Chinese, English, Cantonese, Japanese and Korean. Download: about 166 MB.'**
+  String get moruAsrSenseVoiceDescription;
+
+  /// No description provided for @moruAsrZipformerName.
+  ///
+  /// In en, this message translates to:
+  /// **'Zipformer Chinese/English Mobile'**
+  String get moruAsrZipformerName;
+
+  /// No description provided for @moruAsrZipformerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Streaming Chinese and English recognition. Download: about 347 MB.'**
+  String get moruAsrZipformerDescription;
 }
 
 class _AppLocalizationsDelegate

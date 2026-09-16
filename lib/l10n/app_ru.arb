@@ -5372,5 +5372,33 @@
   "moruPaletteSmokyRose": "Дымчатая роза",
   "moruPaletteTerracotta": "Терракота",
   "moruPaletteMonochrome": "Морозный серый",
-  "moruPaletteDocTheme": "Документ"
+  "moruPaletteDocTheme": "Документ",
+  "moruProviderTensdaqNotice": "Платформа AI MaaS с аукционным ценообразованием: цены определяются рыночным спросом и предложением вместо фиксированных тарифов.",
+  "moruProviderSiliconFlowNotice": "Бесплатные модели SiliconFlow уже доступны без ключа API. Для более мощных моделей получите собственный ключ API и укажите его здесь.",
+  "moruProviderSuixiangNotice": "API-посредник для Claude, Codex, Gemini и других сервисов. Заявлены конфиденциальность, отсутствие перепродажи данных и подмены моделей, пополнение 1:1 и оплата по использованию, резервные маршруты, межрегиональное восстановление, автоматическое переключение при сбоях и непрерывные соединения SSE.",
+  "moruProviderMaruCodeNotice": "Независимый API-посредник с собственным пулом аккаунтов для Codex, Claude Code, GPT Image и других моделей. Поддерживает WebSocket; заявленные тарифы: Codex 0.25x, CC 1.5x, прозрачный курс 1:1 и бонус $2 новым пользователям при регистрации.",
+  "moruProviderWebsitePrefix": "Сайт: ",
+  "moruSecondsShort": "{seconds} с",
+  "moruConsoleSource": "Источник: {source}",
+  "@moruSecondsShort": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "@moruConsoleSource": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "moruCodeBlockLabel": "Код",
+  "moruAsrParaformerName": "Paraformer — малая китайская модель",
+  "moruAsrParaformerDescription": "В основном для китайского языка, с поддержкой простого английского. Загрузка: около 78 МБ.",
+  "moruAsrSenseVoiceName": "SenseVoice int8 — многоязычная модель",
+  "moruAsrSenseVoiceDescription": "Китайский, английский, кантонский, японский и корейский языки. Загрузка: около 166 МБ.",
+  "moruAsrZipformerName": "Zipformer — китайский и английский, Mobile",
+  "moruAsrZipformerDescription": "Потоковое распознавание китайской и английской речи. Загрузка: около 347 МБ."
 }
