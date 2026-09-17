@@ -76,7 +76,7 @@ void main() {
         expect(response.headers.value('cache-control'), 'no-store');
         final finish = browser.redirectUri.replace(query: 'state=state');
         final html = await utf8.decoder.bind(response).join();
-        expect(html, contains(finish.toString()));
+        expect(html, contains(const HtmlEscape().convert(finish.toString())));
         expect(html, contains('Return to Moru'));
         expect(html, isNot(contains('secret')));
         expect(finish.queryParameters.containsKey('code'), false);
