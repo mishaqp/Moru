@@ -3160,6 +3160,7 @@ class _QueuedInputPanel extends StatelessWidget {
               if (items.length > maxVisible)
                 Text(
                   '${items.length}',
+                  key: const ValueKey('queued-input-count'),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
                     fontWeight: AppFontWeights.semibold,

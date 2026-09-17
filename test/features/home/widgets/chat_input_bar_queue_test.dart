@@ -207,7 +207,9 @@ void main() {
       expect(find.text('one'), findsNothing);
       expect(find.text('two'), findsOneWidget);
       expect(find.text('four'), findsOneWidget);
-      expect(find.text('4'), findsOneWidget);
+      // The total is only shown when the list is trimmed, and the position
+      // numbers make a bare "4" ambiguous, so it is addressed by key.
+      expect(find.byKey(const ValueKey('queued-input-count')), findsOneWidget);
 
       controller.dispose();
       focusNode.dispose();
@@ -293,6 +295,9 @@ void main() {
       expect(textField.readOnly, isFalse);
 
       controller.text = 'second follow-up';
+      // The send button's enabled state is derived during build, so the new
+      // text has to reach the widget before it can be tapped.
+      await tester.pump();
       await tapSendButton(tester);
 
       expect(submitted?.text, 'second follow-up');
