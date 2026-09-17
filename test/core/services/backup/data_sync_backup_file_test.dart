@@ -28,6 +28,7 @@ import 'package:Kelivo/utils/kelivo_file_uri.dart';
 import 'package:Kelivo/utils/sandbox_path_resolver.dart';
 import 'package:Kelivo/core/providers/backup_provider.dart';
 import 'package:Kelivo/core/services/backup/backup_cancel_token.dart';
+import 'package:Kelivo/core/services/backup/backup_isolate_runner.dart';
 import 'package:Kelivo/core/services/backup/backup_task_progress.dart';
 import 'package:Kelivo/core/services/backup/data_sync.dart';
 import 'package:Kelivo/core/services/backup/restore_business_lease.dart';
@@ -2894,6 +2895,71 @@ void main() {
         expect(await directory.list().toList(), isEmpty, reason: rootName);
       }
     });
+
+    test(
+      'packing progress never reports more bytes than its own phase total',
+      () async {
+        // Report every metered chunk instead of racing the production 100 ms
+        // throttle window, so a byte counted outside the phase total is always
+        // observable.
+        final previousInterval = debugBackupProgressMinIntervalMs;
+        debugBackupProgressMinIntervalMs = 0;
+        addTearDown(() => debugBackupProgressMinIntervalMs = previousInterval);
+
+        final nested = <String, List<int>>{
+          'skills/demo/SKILL.md': utf8.encode('# skill'),
+          'workspaces/ws1/files/note.txt': utf8.encode('workspace file'),
+          'sessions/conv1/attachments/a.bin': [1, 2, 3, 4],
+        };
+        for (final entry in nested.entries) {
+          final file = File(p.join(root.path, entry.key));
+          await file.parent.create(recursive: true);
+          await file.writeAsBytes(entry.value, flush: true);
+        }
+
+        final events = <BackupProgress>[];
+        final backupFile =
+            await DataSync(
+              businessRepository: businessRepository,
+              chatService: ChatService(),
+            ).prepareBackupFile(
+              const WebDavConfig(includeChats: false, includeFiles: true),
+              onProgress: events.add,
+            );
+        addTearDown(() => DataSync.cleanupTemporaryBackupFile(backupFile));
+
+        final packing = events
+            .where(
+              (event) =>
+                  event.phase == BackupPhase.packing && event.total != null,
+            )
+            .toList();
+        expect(packing, isNotEmpty);
+        for (final event in packing) {
+          expect(
+            event.processed,
+            lessThanOrEqualTo(event.total!),
+            reason: 'packing reported ${event.processed} of ${event.total}',
+          );
+        }
+        expect(packing.last.processed, packing.last.total);
+
+        // The generated manifest is appended last and is not part of the byte
+        // budget the meter promised, but it must still be in the archive.
+        final input = InputFileStream(backupFile.path);
+        Archive? archive;
+        try {
+          archive = ZipDecoder().decodeStream(input);
+          expect(archive.findFile('manifest.json'), isNotNull);
+          for (final name in nested.keys) {
+            expect(archive.findFile(name), isNotNull, reason: name);
+          }
+        } finally {
+          archive?.clearSync();
+          input.closeSync();
+        }
+      },
+    );
 
     test(
       'packs skills, workspaces, and sessions and excludes environment',

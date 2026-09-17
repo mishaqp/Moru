@@ -17,6 +17,15 @@ export '../../database/sqlite_interrupt.dart'
 @visibleForTesting
 bool debugSkipBackupIsolateKill = false;
 
+/// Test-only: minimum interval between same-phase byte progress reports.
+///
+/// Production keeps the 100 ms default so a multi-gigabyte export cannot flood
+/// the parent isolate with one message per read chunk. A test that has to
+/// observe every underlying report (rather than race the window) sets this to
+/// zero.
+@visibleForTesting
+int debugBackupProgressMinIntervalMs = 100;
+
 /// Test-only: blocks the calling thread in a native sleep that neither
 /// `Isolate.kill` nor a signal can cut short, simulating a kill-resistant
 /// native call.
@@ -157,6 +166,9 @@ Future<R> runBackupIsolate<R, P>({
         cancelCellAddress: cancelToken?.cellAddress,
         payload: payload,
         body: body,
+        // Read in this isolate: a child isolate would start from the field's
+        // initializer, never from a test's override.
+        progressMinIntervalMs: debugBackupProgressMinIntervalMs,
       ),
       errorsAreFatal: true,
       onExit: exitPort.sendPort,
@@ -328,7 +340,10 @@ void _backupIsolateEntry(_BackupIsolateSpawnMessage message) async {
   final cancelFlag = message.cancelCellAddress == null
       ? IsolateCancelFlag.disabled()
       : IsolateCancelFlag.fromAddress(message.cancelCellAddress!);
-  final reporter = _ThrottledProgressReporter(message.progressPort);
+  final reporter = _ThrottledProgressReporter(
+    message.progressPort,
+    message.progressMinIntervalMs,
+  );
   final context = BackupIsolateContext(
     cancelFlag: cancelFlag,
     reportProgress: reporter.report,
@@ -362,6 +377,7 @@ final class _BackupIsolateSpawnMessage {
     required this.cancelCellAddress,
     required this.payload,
     required this.body,
+    required this.progressMinIntervalMs,
   });
 
   final SendPort progressPort;
@@ -369,6 +385,7 @@ final class _BackupIsolateSpawnMessage {
   final int? cancelCellAddress;
   final Object? payload;
   final Function body;
+  final int progressMinIntervalMs;
 }
 
 final class _BackupIsolateSuccess {
@@ -405,13 +422,12 @@ final class _BackupSqliteCloseAck {
 }
 
 final class _ThrottledProgressReporter {
-  _ThrottledProgressReporter(this._port) {
+  _ThrottledProgressReporter(this._port, this._minIntervalMs) {
     _elapsed.start();
   }
 
-  static const _minIntervalMs = 100;
-
   final SendPort _port;
+  final int _minIntervalMs;
   final Stopwatch _elapsed = Stopwatch();
   int? _lastEmitMs;
   BackupPhase? _lastPhase;
