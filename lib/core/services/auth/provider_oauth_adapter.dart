@@ -50,6 +50,13 @@ class OAuthWire {
   final http.Client client;
   final void Function(String) diagnostics;
 
+  static const _dnsRetryDelays = <Duration>[
+    Duration(milliseconds: 250),
+    Duration(milliseconds: 750),
+    Duration(milliseconds: 1500),
+    Duration(milliseconds: 3000),
+  ];
+
   Future<OAuthWireResponse> request(
     String url, {
     Map<String, String> headers = const {},
@@ -57,56 +64,67 @@ class OAuthWire {
     Map<String, dynamic>? json,
     Duration timeout = const Duration(seconds: 30),
   }) async {
-    final request =
-        http.Request(
-            form == null && json == null ? 'GET' : 'POST',
-            Uri.parse(url),
-          )
-          ..followRedirects = false
-          ..headers.addAll({'Accept': 'application/json', ...headers});
-    if (form != null) request.bodyFields = form;
-    if (json != null) {
-      request.headers['Content-Type'] = 'application/json';
-      request.body = jsonEncode(json);
+    final uri = Uri.parse(url);
+    final method = form == null && json == null ? 'GET' : 'POST';
+    http.Request buildRequest() {
+      final request = http.Request(method, uri)
+        ..followRedirects = false
+        ..headers.addAll({'Accept': 'application/json', ...headers});
+      if (form != null) request.bodyFields = form;
+      if (json != null) {
+        request.headers['Content-Type'] = 'application/json';
+        request.body = jsonEncode(json);
+      }
+      return request;
     }
-    final stage = oauthRequestStage(request.url);
+
+    final stage = oauthRequestStage(uri);
     final requestId = RequestLogger.nextRequestId();
     void record(String result) =>
         diagnostics('[OAUTH $requestId] $stage $result');
     record('start');
-    try {
-      final response = await (() async => http.Response.fromStream(
-        await client.send(request),
-      ))().timeout(timeout);
-      record('http-${response.statusCode}');
-      Map<String, dynamic> data = const {};
+
+    for (var attempt = 0; ; attempt++) {
+      final request = buildRequest();
       try {
-        final decoded = jsonDecode(response.body);
-        if (decoded is Map) data = decoded.cast<String, dynamic>();
-      } catch (_) {
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          throw const ProviderOAuthException(
-            ProviderOAuthFailure.invalidResponse,
-          );
+        final response = await (() async => http.Response.fromStream(
+          await client.send(request),
+        ))().timeout(timeout);
+        record('http-${response.statusCode}');
+        Map<String, dynamic> data = const {};
+        try {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map) data = decoded.cast<String, dynamic>();
+        } catch (_) {
+          if (response.statusCode >= 200 && response.statusCode < 300) {
+            throw const ProviderOAuthException(
+              ProviderOAuthFailure.invalidResponse,
+            );
+          }
         }
+        return OAuthWireResponse(
+          response.statusCode,
+          data,
+          headers: response.headers,
+        );
+      } on ProviderOAuthException {
+        record('invalid-response');
+        rethrow;
+      } catch (error) {
+        final reason = oauthTransportReason(error);
+        record('failed-$reason');
+        if (reason == 'dns' && attempt < _dnsRetryDelays.length) {
+          record('retry-dns-${attempt + 1}');
+          await Future<void>.delayed(_dnsRetryDelays[attempt]);
+          continue;
+        }
+        throw ProviderOAuthException(
+          reason == 'timeout'
+              ? ProviderOAuthFailure.timeout
+              : ProviderOAuthFailure.network,
+          code: '$stage/$reason',
+        );
       }
-      return OAuthWireResponse(
-        response.statusCode,
-        data,
-        headers: response.headers,
-      );
-    } on ProviderOAuthException {
-      record('invalid-response');
-      rethrow;
-    } catch (error) {
-      final reason = oauthTransportReason(error);
-      record('failed-$reason');
-      throw ProviderOAuthException(
-        reason == 'timeout'
-            ? ProviderOAuthFailure.timeout
-            : ProviderOAuthFailure.network,
-        code: '$stage/$reason',
-      );
     }
   }
 }
