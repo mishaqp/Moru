@@ -13,6 +13,7 @@ import 'codex_oauth_callback.dart';
 import 'oauth_diagnostics.dart';
 import 'oauth_callback.dart';
 import 'oauth_cancellation.dart';
+import 'oauth_login_gate.dart';
 import 'oauth_pkce.dart';
 import 'claude_oauth_request.dart';
 
@@ -46,9 +47,14 @@ class OAuthWireResponse {
 
 /// Form encoding, bounded requests and redirect handling shared by adapters.
 class OAuthWire {
-  OAuthWire(this.client, {this.diagnostics = RequestLogger.logLine});
+  OAuthWire(
+    this.client, {
+    this.diagnostics = RequestLogger.logLine,
+    this.beforeRequest,
+  });
   final http.Client client;
   final void Function(String) diagnostics;
+  final Future<void> Function()? beforeRequest;
 
   static const _dnsRetryDelays = <Duration>[
     Duration(milliseconds: 250),
@@ -85,6 +91,9 @@ class OAuthWire {
     record('start');
 
     for (var attempt = 0; ; attempt++) {
+      // Waiting for Android foreground/network readiness is not a failed HTTP
+      // request, and must not consume the exchange timeout or retry budget.
+      await beforeRequest?.call();
       final request = buildRequest();
       try {
         final response = await (() async => http.Response.fromStream(
@@ -475,6 +484,53 @@ class ChatGptOAuthAdapter extends ProviderOAuthAdapter {
 
   @override
   Future<ProviderOAuthCredentials> login(
+    OAuthWire wire,
+    OAuthCancellation cancellation,
+    OAuthPromptHandler onPrompt, {
+    bool deviceCode = true,
+    OAuthUrlLauncher? launcher,
+  }) async {
+    final session = OAuthCancellation();
+    cancellation.check();
+    unawaited(cancellation.whenCancelled.then((_) => session.cancel()));
+    final gate = OAuthLoginGate(session);
+    final guardedWire = OAuthWire(
+      wire.client,
+      diagnostics: wire.diagnostics,
+      beforeRequest: () async {
+        await wire.beforeRequest?.call();
+        await gate.wait();
+      },
+    );
+    try {
+      return await Future.any<ProviderOAuthCredentials>([
+        _login(
+          guardedWire,
+          session,
+          onPrompt,
+          deviceCode: deviceCode,
+          launcher: launcher,
+        ),
+        session.whenCancelled.then(
+          (_) => throw const ProviderOAuthException(
+            ProviderOAuthFailure.cancelled,
+          ),
+        ),
+      ]).timeout(const Duration(minutes: 15));
+    } on TimeoutException {
+      throw const ProviderOAuthException(
+        ProviderOAuthFailure.timeout,
+        code: 'login/deadline',
+      );
+    } finally {
+      // Unwind polling timers and native waits even on the overall deadline,
+      // without marking the caller's cancellation token (and hiding timeout).
+      session.cancel();
+      await gate.close();
+    }
+  }
+
+  Future<ProviderOAuthCredentials> _login(
     OAuthWire wire,
     OAuthCancellation cancellation,
     OAuthPromptHandler onPrompt, {

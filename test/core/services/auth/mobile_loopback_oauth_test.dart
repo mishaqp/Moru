@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:Kelivo/core/services/auth/oauth_callback_io.dart';
@@ -71,12 +72,14 @@ void main() {
           query: 'code=secret&state=state',
         );
         final response = await request(uri);
-        expect(response.statusCode, HttpStatus.found);
+        expect(response.statusCode, HttpStatus.ok);
         expect(response.headers.value('cache-control'), 'no-store');
-        final finish = Uri.parse(response.headers.value('location')!);
-        expect(finish, browser.redirectUri.replace(query: 'state=state'));
+        final finish = browser.redirectUri.replace(query: 'state=state');
+        final html = await utf8.decoder.bind(response).join();
+        expect(html, contains(finish.toString()));
+        expect(html, contains('Return to Moru'));
+        expect(html, isNot(contains('secret')));
         expect(finish.queryParameters.containsKey('code'), false);
-        await response.drain<void>();
         final duplicate = await request(uri);
         expect(duplicate.statusCode, HttpStatus.gone);
         await duplicate.drain<void>();

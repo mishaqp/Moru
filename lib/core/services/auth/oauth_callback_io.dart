@@ -30,7 +30,10 @@ Future<OAuthCallback> openOAuthCallback(
       redirectUri: loopbackRedirect.replace(port: server.port),
       expectedState: expectedState,
       mobileCallback: Platform.isAndroid
-          ? _AndroidOAuthCallback(authorizationServer)
+          ? _AndroidOAuthCallback(
+              authorizationServer,
+              scheme: 'com.mishaqp.moru',
+            )
           : Platform.isIOS
           ? _IosOAuthCallback(authorizationServer)
           : null,
@@ -63,14 +66,16 @@ String _authorizationServerHash(Uri authorizationServer) => base64UrlEncode(
 ).replaceAll('=', '');
 
 final class _AndroidOAuthCallback implements OAuthCallback {
-  _AndroidOAuthCallback(Uri authorizationServer)
-    : redirectUri = Uri(
-        scheme: 'psyche.kelivo',
-        // This URI is registered with authorization servers; sharing the
-        // callback implementation must not rename the registered redirect.
-        host: 'mcp-oauth-callback',
-        path: '/${_authorizationServerHash(authorizationServer)}',
-      );
+  _AndroidOAuthCallback(
+    Uri authorizationServer, {
+    String scheme = 'psyche.kelivo',
+  }) : redirectUri = Uri(
+         scheme: scheme,
+         // This URI is registered with authorization servers; sharing the
+         // callback implementation must not rename the registered redirect.
+         host: 'mcp-oauth-callback',
+         path: '/${_authorizationServerHash(authorizationServer)}',
+       );
 
   @override
   final Uri redirectUri;
@@ -290,14 +295,15 @@ final class _IoOAuthCallback implements OAuthCallback {
     if (mobileCallback case final mobile?) {
       // Keep the authorization code on the loopback connection. The custom
       // URI only signals completion of this particular browser session.
+      final returnUri = mobile.redirectUri.replace(
+        queryParameters: {'state': _state!},
+      );
       request.response
-        ..statusCode = HttpStatus.found
+        ..statusCode = HttpStatus.ok
+        ..headers.contentType = ContentType.html
         ..headers.set(HttpHeaders.cacheControlHeader, 'no-store')
         ..headers.set('Referrer-Policy', 'no-referrer')
-        ..headers.set(
-          HttpHeaders.locationHeader,
-          mobile.redirectUri.replace(queryParameters: {'state': _state!}),
-        );
+        ..write(_mobileReturnPage(returnUri));
       await request.response.close();
       if (!_callback.isCompleted) {
         _callback.complete(redirectUri.replace(query: request.uri.query));
@@ -341,3 +347,20 @@ String _callbackPage() => '''<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Kelivo</title></head>
 <body><p>Authorization received. You may close this window and return to Kelivo.</p>
 </body></html>''';
+
+/// Only the completion nonce leaves the loopback listener, never the code.
+/// A clickable link remains when the browser declines an automatic app jump.
+String _mobileReturnPage(Uri returnUri) {
+  final href = const HtmlEscape().convert(returnUri.toString());
+  return '''<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="refresh" content="0; url=$href">
+<title>Moru</title></head>
+<body style="background:#141414;color:#eee;font:18px sans-serif;padding:32px">
+<p>Authorization received. Return to Moru to finish signing in.</p>
+<p>Авторизация получена. Вернитесь в Moru для завершения входа.</p>
+<p><a style="color:#fff" href="$href">Return to Moru / Вернуться в Moru</a></p>
+</body></html>''';
+}

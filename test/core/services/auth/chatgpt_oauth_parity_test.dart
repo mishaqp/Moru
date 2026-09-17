@@ -145,7 +145,7 @@ void main() {
   );
 
   test(
-    'device auth polls at 5s then interval + 3s, bounded to 120 attempts',
+    'device auth polls at 5s then interval + 3s, bounded by a 15-minute deadline',
     () {
       fakeAsync((async) {
         var polls = 0;
@@ -188,8 +188,8 @@ void main() {
         expect(polls, 1);
         async.elapse(const Duration(seconds: 1));
         expect(polls, 2);
-        async.elapse(const Duration(seconds: 8 * 118));
-        expect(polls, 120);
+        async.elapse(const Duration(seconds: 900 - 13));
+        expect(polls, 112);
         expect(
           failure,
           isA<ProviderOAuthException>().having(
