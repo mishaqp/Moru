@@ -11482,6 +11482,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get moruAsrZipformerDescription => '中英双语流式识别，下载约 347 MB';
+
+  @override
+  String get chatInputBarQueueEdit => '编辑排队消息';
+
+  @override
+  String get chatInputBarQueueRemove => '删除排队消息';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -22888,6 +22894,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get moruAsrZipformerDescription => '中英双语流式识别，下载约 347 MB';
+
+  @override
+  String get chatInputBarQueueEdit => '编辑排队消息';
+
+  @override
+  String get chatInputBarQueueRemove => '删除排队消息';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -34373,4 +34385,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get moruAsrZipformerDescription => '中英雙語串流辨識，下載約 347 MB';
+
+  @override
+  String get chatInputBarQueueEdit => '編輯排隊訊息';
+
+  @override
+  String get chatInputBarQueueRemove => '刪除排隊訊息';
 }

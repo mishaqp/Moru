@@ -32,6 +32,7 @@ import '../../../core/models/skills_binding.dart';
 import '../../../core/providers/workspace_provider.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import '../../../core/services/skills/skills_service.dart';
+import '../../../core/services/workspace/workspace_agents_instructions.dart';
 import '../../../core/services/workspace/workspace_runtime.dart';
 import '../../../core/services/workspace/workspace_tools_service.dart';
 import '../../../core/providers/instruction_injection_provider.dart';
@@ -1857,10 +1858,21 @@ class MessageBuilderService {
         attachments: attachments,
         environmentVariableNames: environment?.variables.keys ?? const [],
       );
-      if (fragment.trim().isEmpty) return;
+      if (fragment.trim().isNotEmpty) {
+        _appendToSystemMessage(
+          apiMessages,
+          fragment,
+          source: ContextSource.instructionInjection,
+        );
+      }
+      // AGENTS.md lives inside the workspace and is read on every request, so
+      // editing it changes the next turn without rewriting stored history. A
+      // missing or unusable file contributes nothing.
+      final instructions = await WorkspaceAgentsInstructions.build(ctx);
+      if (instructions.trim().isEmpty) return;
       _appendToSystemMessage(
         apiMessages,
-        fragment,
+        instructions,
         source: ContextSource.instructionInjection,
       );
     } catch (_) {}

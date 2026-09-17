@@ -21550,6 +21550,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Streaming Chinese and English recognition. Download: about 347 MB.'**
   String get moruAsrZipformerDescription;
+
+  /// No description provided for @chatInputBarQueueEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit queued message'**
+  String get chatInputBarQueueEdit;
+
+  /// No description provided for @chatInputBarQueueRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove queued message'**
+  String get chatInputBarQueueRemove;
 }
 
 class _AppLocalizationsDelegate

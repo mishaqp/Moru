@@ -6667,7 +6667,6 @@ class ProviderConfig {
     if (k.contains('deepseek')) return '/user/balance';
     if (k.contains('openrouter')) return '/credits';
     if (k.contains('vercel')) return '/credits';
-    if (k.contains('silicon')) return '/user/info';
     if (RegExp(r'kimi|moonshot|月之暗面').hasMatch(k)) {
       return '/users/me/balance';
     }
@@ -6682,7 +6681,6 @@ class ProviderConfig {
       return 'data.total_credits - data.total_usage';
     }
     if (k.contains('vercel')) return 'balance';
-    if (k.contains('silicon')) return 'data.totalBalance';
     if (RegExp(r'kimi|moonshot|月之暗面').hasMatch(k)) {
       return 'data.available_balance';
     }
@@ -6695,7 +6693,6 @@ class ProviderConfig {
         k.contains('deepseek') ||
         k.contains('openrouter') ||
         k.contains('vercel') ||
-        k.contains('silicon') ||
         RegExp(r'kimi|moonshot|月之暗面').hasMatch(k);
   }
 }

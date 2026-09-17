@@ -30,6 +30,21 @@ package name does not require building other platforms.
 - **Database**: Drift (`lib/core/database/`). Schema versions tracked in `drift_schemas/`.
 - **Localization**: ARB-based (`lib/l10n/`), English template (`app_en.arb`). Edit source ARB, run `flutter gen-l10n`, and commit generated output. Preserve English and Chinese translations when adding Russian.
 
+## Chat features that already exist — do not reimplement
+
+- **Workspace AGENTS.md**: a workspace bound to a conversation gets its root
+  `AGENTS.md` (and the one in the current working directory, when that lies
+  inside the workspace) appended to the system message of every request.
+  `lib/core/services/workspace/workspace_agents_instructions.dart` reads it;
+  `MessageBuilderService.injectWorkspacePrompt` injects it. Nothing is stored in
+  the conversation, the assistant's system prompt is untouched, and a missing,
+  empty, oversized or unreadable file is skipped silently.
+- **Pending message queue**: submitting while a reply streams parks the message
+  instead of rejecting it. `QueuedInputQueue` (`lib/features/home/controllers/`)
+  owns the FIFO, `HomeViewModel` drains it when a conversation goes idle, and
+  `_QueuedInputPanel` in `chat_input_bar.dart` shows order, edit and remove. A
+  pending item can be edited in the composer through `QueuedMessageEditState`.
+
 ## Pre-commit checklist
 
 ```bash

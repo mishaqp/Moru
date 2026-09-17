@@ -12143,4 +12143,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get moruAsrZipformerDescription =>
       'Потоковое распознавание китайской и английской речи. Загрузка: около 347 МБ.';
+
+  @override
+  String get chatInputBarQueueEdit => 'Изменить сообщение из очереди';
+
+  @override
+  String get chatInputBarQueueRemove => 'Удалить сообщение из очереди';
 }

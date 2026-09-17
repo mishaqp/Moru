@@ -26,9 +26,22 @@ class ChatInputData {
 
 enum ChatInputSubmissionResult { sent, queued, rejected }
 
+/// One message the user submitted while the conversation was still generating.
+///
+/// Items live in a per-conversation FIFO and are sent one after another, each
+/// only once the previous generation has finished. [id] is stable for the whole
+/// lifetime of the item so the UI can edit or delete it before it is sent.
 class QueuedChatInput {
+  final String id;
   final String conversationId;
   final ChatInputData input;
 
-  const QueuedChatInput({required this.conversationId, required this.input});
+  const QueuedChatInput({
+    required this.id,
+    required this.conversationId,
+    required this.input,
+  });
+
+  QueuedChatInput withInput(ChatInputData input) =>
+      QueuedChatInput(id: id, conversationId: conversationId, input: input);
 }

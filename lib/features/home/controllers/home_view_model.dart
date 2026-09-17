@@ -22,6 +22,7 @@ import '../services/message_generation_service.dart';
 import '../services/chat_suggestion_service.dart';
 import '../utils/model_display_helper.dart';
 import 'chat_actions.dart';
+import 'queued_input_queue.dart';
 import 'file_processing_indicator_controller.dart';
 import 'chat_controller.dart';
 import 'generation_controller.dart';
@@ -149,7 +150,13 @@ class HomeViewModel extends ChangeNotifier {
 
   @visibleForTesting
   ChatActions get debugChatActions => _chatActions;
-  QueuedChatInput? _queuedInput;
+
+  /// Pending messages, in the order the user submitted them.
+  ///
+  /// A conversation keeps at most one generation at a time, so a submission
+  /// that arrives mid-stream is parked here and sent by
+  /// [_drainQueuedInputIfReady] once the current one settles.
+  final QueuedInputQueue _queuedInputs = QueuedInputQueue();
   bool _isDrainingQueuedInput = false;
 
   /// Function to get localized title
@@ -222,14 +229,23 @@ class HomeViewModel extends ChangeNotifier {
         !_chatActions.isStopping(cid);
   }
 
-  QueuedChatInput? get currentQueuedInput {
+  /// Pending messages of the conversation currently on screen, oldest first.
+  List<QueuedChatInput> get currentQueuedInputs {
     final cid = currentConversation?.id;
-    final queued = _queuedInput;
-    if (cid == null || queued == null || queued.conversationId != cid) {
-      return null;
-    }
-    return queued;
+    if (cid == null) return const <QueuedChatInput>[];
+    if (_pruneQueuedInputsWithoutConversation()) notifyListeners();
+    return _queuedInputs.forConversation(cid);
   }
+
+  /// Head of [currentQueuedInputs], or null when nothing is pending.
+  QueuedChatInput? get currentQueuedInput {
+    final items = currentQueuedInputs;
+    return items.isEmpty ? null : items.first;
+  }
+
+  /// Every pending message, across conversations. Diagnostics and tests only.
+  @visibleForTesting
+  List<QueuedChatInput> get debugQueuedInputs => _queuedInputs.items;
 
   final FileProcessingIndicatorController _fileProcessingIndicator =
       FileProcessingIndicatorController();
@@ -423,15 +439,7 @@ class HomeViewModel extends ChangeNotifier {
 
     final activeConversation = currentConversation!;
     if (_chatController.isConversationLoading(activeConversation.id)) {
-      if (_queuedInput != null) {
-        return ChatInputSubmissionResult.rejected;
-      }
-      _queuedInput = QueuedChatInput(
-        conversationId: activeConversation.id,
-        input: _cloneInput(input),
-      );
-      notifyListeners();
-      return ChatInputSubmissionResult.queued;
+      return _queueInput(activeConversation.id, input);
     }
 
     final success = await _sendMessageToConversation(input, activeConversation);
@@ -440,12 +448,122 @@ class HomeViewModel extends ChangeNotifier {
         : ChatInputSubmissionResult.rejected;
   }
 
-  ChatInputData? cancelCurrentQueuedInput() {
-    final queued = currentQueuedInput;
-    if (queued == null || _isDrainingQueuedInput) return null;
-    _queuedInput = null;
+  /// Parks [input] behind the running generation of [conversationId].
+  ChatInputSubmissionResult _queueInput(
+    String conversationId,
+    ChatInputData input,
+  ) {
+    _queuedInputs.enqueue(conversationId, input);
     notifyListeners();
-    return _cloneInput(queued.input);
+    return ChatInputSubmissionResult.queued;
+  }
+
+  /// Drops every pending message of one conversation without sending it.
+  ///
+  /// Used when the conversation itself disappears; a switch or a screen close
+  /// keeps the queue intact.
+  void discardQueuedInputsFor(String conversationId) {
+    if (_queuedInputs.removeConversation(conversationId) > 0) notifyListeners();
+  }
+
+  /// Removes one pending message, returning it so the caller can restore the
+  /// draft. Returns null when [id] is not queued any more.
+  QueuedChatInput? removeQueuedInput(String id) {
+    final removed = _queuedInputs.remove(id);
+    if (removed != null) notifyListeners();
+    return removed;
+  }
+
+  /// Index of [id] among the pending messages of its own conversation, or -1.
+  ///
+  /// The composer's edit flow needs the position to put an edited message back
+  /// where it was queued.
+  int queuedInputIndex(String id) => _queuedInputs.indexOf(id);
+
+  /// Puts an edited pending message back where it sat in the FIFO.
+  ///
+  /// [index] is clamped, so an edit that finishes after other items were sent
+  /// still lands in a valid position instead of being dropped.
+  bool insertQueuedInput({
+    required String id,
+    required String conversationId,
+    required int index,
+    required ChatInputData input,
+  }) {
+    final inserted = _queuedInputs.reinsert(
+      id: id,
+      conversationId: conversationId,
+      index: index,
+      input: input,
+    );
+    if (inserted) notifyListeners();
+    return inserted;
+  }
+
+  /// Applies an edit made to a pending message.
+  ///
+  /// A queued message is edited in the composer, so it is out of the queue
+  /// while the edit is open and this is where it goes back. Which of the three
+  /// outcomes happens depends on the conversation, not on the user's intent:
+  /// it is sent straight away when the conversation is idle again, returns to
+  /// its slot while a generation is still running, and stays parked untouched
+  /// when the user has moved to another conversation.
+  Future<ChatInputSubmissionResult> submitEditedQueuedInput({
+    required String id,
+    required String conversationId,
+    required int index,
+    required ChatInputData input,
+  }) async {
+    final content = input.text.trim();
+    if (content.isEmpty &&
+        input.imagePaths.isEmpty &&
+        input.documents.isEmpty) {
+      return ChatInputSubmissionResult.rejected;
+    }
+
+    Future<ChatInputSubmissionResult> park() async {
+      insertQueuedInput(
+        id: id,
+        conversationId: conversationId,
+        index: index,
+        input: input,
+      );
+      return ChatInputSubmissionResult.queued;
+    }
+
+    final conversation = currentConversation;
+    if (conversation == null || conversation.id != conversationId) {
+      return park();
+    }
+    if (_chatController.isConversationLoading(conversationId)) {
+      return park();
+    }
+
+    final success = await _sendMessageToConversation(input, conversation);
+    return success
+        ? ChatInputSubmissionResult.sent
+        : ChatInputSubmissionResult.rejected;
+  }
+
+  /// True while the conversation on screen is generating.
+  bool get isCurrentConversationLoading => _isCurrentLoading();
+
+  bool _isCurrentLoading() {
+    final cid = currentConversation?.id;
+    if (cid == null) return false;
+    return _chatController.isConversationLoading(cid);
+  }
+
+  /// Drops the oldest pending message and hands its content back so the
+  /// composer can restore it as the draft.
+  ///
+  /// Refused while a drain owns the head: the send is already past the point
+  /// where a cancel could stop it, and returning the text would duplicate it.
+  ChatInputData? cancelCurrentQueuedInput() {
+    final head = currentQueuedInput;
+    if (head == null || _isDrainingQueuedInput) return null;
+    final removed = removeQueuedInput(head.id);
+    return removed == null ? null : _cloneInput(removed.input);
   }
 
   Future<bool> _sendMessageToConversation(
@@ -496,29 +614,72 @@ class HomeViewModel extends ChangeNotifier {
     );
   }
 
+  /// Sends the next pending message of [conversationId].
+  ///
+  /// Called whenever a conversation stops generating: a normal completion, a
+  /// provider error or a user cancellation all land here through
+  /// [_onLoadingChanged]. The head is claimed *before* awaiting the send, so a
+  /// second drain cannot pick the same item up twice — the send path re-checks
+  /// the loading guard itself, which is what makes the claim safe.
+  ///
+  /// The loop stops as soon as the conversation is generating again, which is
+  /// also the only state a fresh send can leave it in; the remaining items stay
+  /// queued for the next idle moment.
   Future<void> _drainQueuedInputIfReady(String conversationId) async {
     if (_isDrainingQueuedInput) return;
-    final queued = _queuedInput;
-    final conversation = currentConversation;
-    if (queued == null || conversation == null) return;
-    if (queued.conversationId != conversationId ||
-        conversation.id != conversationId) {
-      return;
-    }
-    if (_chatController.isConversationLoading(conversationId)) return;
-
+    if (_pruneQueuedInputsWithoutConversation()) notifyListeners();
+    if (!_canDrain(conversationId)) return;
     _isDrainingQueuedInput = true;
-    _queuedInput = null;
-    notifyListeners();
+    try {
+      while (_canDrain(conversationId)) {
+        // Claiming removes the item synchronously, so a drain re-entered from
+        // a loading callback can never send the same message twice.
+        final head = _queuedInputs.claimHeadFor(conversationId);
+        if (head == null) return;
+        notifyListeners();
 
-    final input = queued.input;
-    final success = await _sendMessageToConversation(input, conversation);
-    if (!success) {
-      _queuedInput = queued;
+        final conversation = currentConversation!;
+        final success = await _sendMessageToConversation(
+          head.input,
+          conversation,
+        );
+        if (!success) {
+          // The send was refused (for example a racing claim on the same
+          // conversation). Put the message back so the draft is never lost.
+          insertQueuedInput(
+            id: head.id,
+            conversationId: head.conversationId,
+            index: 0,
+            input: head.input,
+          );
+          return;
+        }
+      }
+    } finally {
+      _isDrainingQueuedInput = false;
+      notifyListeners();
     }
+  }
 
-    _isDrainingQueuedInput = false;
-    notifyListeners();
+  /// Whether a queued message may be sent right now.
+  ///
+  /// A conversation deleted while it still had pending messages is unreachable
+  /// on screen, so this is also where those orphans stop blocking the queue.
+  bool _canDrain(String conversationId) {
+    final conversation = currentConversation;
+    if (conversation == null || conversation.id != conversationId) return false;
+    return !_chatController.isConversationLoading(conversationId);
+  }
+
+  /// Drops pending messages whose conversation no longer exists.
+  ///
+  /// Without this a deleted chat would keep its parked messages forever: they
+  /// can never be drained (the drain is scoped to the conversation on screen)
+  /// and nothing else would ever remove them.
+  bool _pruneQueuedInputsWithoutConversation() {
+    return _queuedInputs.prune(
+      (conversationId) => _chatService.getConversation(conversationId) != null,
+    );
   }
 
   /// Regenerate response at a specific message.

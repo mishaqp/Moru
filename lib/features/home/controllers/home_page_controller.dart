@@ -75,6 +75,28 @@ class UserMessageEditState {
   final String previewText;
 }
 
+/// A pending queue message the user opened in the composer.
+///
+/// The item is out of the queue while the edit is open, so [index] remembers
+/// where it has to go back and [original] is what a cancelled edit restores.
+class QueuedMessageEditState {
+  const QueuedMessageEditState({
+    required this.id,
+    required this.conversationId,
+    required this.index,
+    required this.original,
+    required this.previewText,
+  });
+
+  final String id;
+  final String conversationId;
+  final int index;
+  final ChatInputData original;
+
+  /// What the edit overlay shows above the composer.
+  final String previewText;
+}
+
 /// Controller that manages all state and service wiring for HomePage.
 ///
 /// This controller extracts the non-UI logic from _HomePageState to:
@@ -255,6 +277,7 @@ class HomePageController extends ChangeNotifier {
   double _inputBarHeight = 72;
 
   UserMessageEditState? _userMessageEditState;
+  QueuedMessageEditState? _queuedEditState;
 
   // Animation tuning
   static const Duration _postSwitchScrollDelay = Duration(milliseconds: 220);
@@ -342,6 +365,17 @@ class HomePageController extends ChangeNotifier {
       _viewModel.isCurrentConversationLoading;
 
   QueuedChatInput? get currentQueuedInput => _viewModel.currentQueuedInput;
+
+  /// Pending messages of the conversation on screen, oldest first.
+  List<QueuedChatInput> get queuedInputs => _viewModel.currentQueuedInputs;
+
+  /// Id of the pending message currently open in the composer, or null.
+  String? get editingQueuedInputId => _queuedEditState?.id;
+
+  bool get isQueuedMessageEditActive => _queuedEditState != null;
+
+  /// The pending message open in the composer, for the edit overlay.
+  QueuedMessageEditState? get queuedMessageEditState => _queuedEditState;
 
   ValueNotifier<String?> get processingFilesMessageId =>
       _viewModel.processingFilesMessageId;
@@ -971,6 +1005,30 @@ class HomePageController extends ChangeNotifier {
       }
     }
     _warmupSerial++;
+    final queuedEdit = _queuedEditState;
+    if (queuedEdit != null) {
+      _queuedEditState = null;
+      final result = await _viewModel.submitEditedQueuedInput(
+        id: queuedEdit.id,
+        conversationId: queuedEdit.conversationId,
+        index: queuedEdit.index,
+        input: input,
+      );
+      if (result == ChatInputSubmissionResult.rejected) {
+        // Nothing could be done with the edit: keep the original message so a
+        // failed send never deletes it silently.
+        _viewModel.insertQueuedInput(
+          id: queuedEdit.id,
+          conversationId: queuedEdit.conversationId,
+          index: queuedEdit.index,
+          input: queuedEdit.original,
+        );
+        return result;
+      }
+      _mediaController.clearDraft();
+      notifyListeners();
+      return result;
+    }
     final editState = _userMessageEditState;
     if (editState != null) {
       final newMsg = await _saveEditedUserMessageVersion(input, editState);
@@ -1029,17 +1087,102 @@ class HomePageController extends ChangeNotifier {
     final restored = _viewModel.cancelCurrentQueuedInput();
     if (restored == null) return;
 
-    _inputController.value = TextEditingValue(
-      text: restored.text,
-      selection: TextSelection.collapsed(offset: restored.text.length),
-      composing: TextRange.empty,
+    _loadDraftIntoComposer(restored);
+    notifyListeners();
+  }
+
+  /// Drops one pending message without bringing its text back to the composer.
+  ///
+  /// This is the "delete" half of the queue panel: the user explicitly asked
+  /// for the message to be gone, so the draft must stay as they left it.
+  void removeQueuedMessage(String id) {
+    if (_queuedEditState?.id == id) _exitQueuedMessageEdit(restore: false);
+    _viewModel.removeQueuedInput(id);
+    notifyListeners();
+  }
+
+  /// Opens one pending message in the composer for editing.
+  ///
+  /// The item leaves the queue while it is being edited — otherwise a
+  /// generation that finishes mid-edit would send the stale text — and goes
+  /// back to its slot when the user sends or dismisses the edit.
+  void editQueuedMessage(QueuedChatInput item) {
+    final index = _viewModel.queuedInputIndex(item.id);
+    if (index < 0) return;
+    if (_userMessageEditState != null) cancelUserMessageEdit();
+    _queuedEditState = QueuedMessageEditState(
+      id: item.id,
+      conversationId: item.conversationId,
+      index: index,
+      original: item.input,
+      previewText: item.input.text.trim().isNotEmpty
+          ? item.input.text.trim()
+          : item.input.documents.isEmpty
+          ? item.input.imagePaths.first
+          : item.input.documents.first.fileName,
     );
-    _mediaController.restoreInput(restored);
+    _viewModel.removeQueuedInput(item.id);
+    _loadDraftIntoComposer(item.input);
+    notifyListeners();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_context.mounted) return;
       _inputFocus.requestFocus();
     });
+  }
+
+  /// Cancels an in-progress queue edit and puts the message back untouched.
+  void cancelQueuedMessageEdit() => _exitQueuedMessageEdit(restore: true);
+
+  /// Saves the edit of a pending message without sending it right away.
+  ///
+  /// The message goes back to its slot in the queue with the new text, which is
+  /// what "save only" means for something that has not been sent yet.
+  void saveQueuedMessageEditOnly() {
+    final state = _queuedEditState;
+    if (state == null || _mediaController.hasUnreadyImages) return;
+    final input = _mediaController.snapshotInput(_inputController.text);
+    if (input.text.trim().isEmpty &&
+        input.imagePaths.isEmpty &&
+        input.documents.isEmpty) {
+      return;
+    }
+    _queuedEditState = null;
+    _viewModel.insertQueuedInput(
+      id: state.id,
+      conversationId: state.conversationId,
+      index: state.index,
+      input: input,
+    );
+    _mediaController.clearDraft();
     notifyListeners();
+  }
+
+  void _exitQueuedMessageEdit({required bool restore}) {
+    final state = _queuedEditState;
+    if (state == null) return;
+    _queuedEditState = null;
+    if (restore) {
+      // Either path restores the original text: the queue keeps a message that
+      // was never sent, and the composer must not keep a copy of it.
+      _viewModel.insertQueuedInput(
+        id: state.id,
+        conversationId: state.conversationId,
+        index: state.index,
+        input: state.original,
+      );
+      _mediaController.clearDraft();
+    }
+    notifyListeners();
+  }
+
+  /// Puts [input] into the composer and adopts its attachments.
+  void _loadDraftIntoComposer(ChatInputData input) {
+    _inputController.value = TextEditingValue(
+      text: input.text,
+      selection: TextSelection.collapsed(offset: input.text.length),
+      composing: TextRange.empty,
+    );
+    _mediaController.restoreInput(input);
   }
 
   Future<void> regenerateAtMessage(

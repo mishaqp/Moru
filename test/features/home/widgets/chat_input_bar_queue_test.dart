@@ -25,9 +25,9 @@ void main() {
     AssistantProvider? assistantProvider,
     ChatInputBarController? mediaController,
     bool loading = false,
-    bool hasQueuedInput = false,
-    String? queuedPreviewText,
-    VoidCallback? onCancelQueuedInput,
+    List<QueuedChatInput> queuedInputs = const <QueuedChatInput>[],
+    void Function(QueuedChatInput item)? onEditQueuedInput,
+    void Function(String id)? onRemoveQueuedInput,
     String? conversationId,
     String? sendButtonTooltip,
     ThemeData? theme,
@@ -68,9 +68,9 @@ void main() {
             mediaController: mediaController,
             onSend: onSend,
             loading: loading,
-            hasQueuedInput: hasQueuedInput,
-            queuedPreviewText: queuedPreviewText,
-            onCancelQueuedInput: onCancelQueuedInput,
+            queuedInputs: queuedInputs,
+            onEditQueuedInput: onEditQueuedInput,
+            onRemoveQueuedInput: onRemoveQueuedInput,
             conversationId: conversationId,
             sendButtonTooltip: sendButtonTooltip,
             backgroundImageActive: backgroundImageActive,
@@ -146,42 +146,179 @@ void main() {
     focusNode.dispose();
   });
 
-  testWidgets('有排队项时显示状态并允许取消', (tester) async {
-    final controller = TextEditingController();
-    final focusNode = FocusNode();
-    var cancelled = false;
-    const preview = '第一行\n第二行\n第三行\n第四行';
+  group('pending queue', () {
+    QueuedChatInput queued(String id, String text) {
+      return QueuedChatInput(
+        id: id,
+        conversationId: 'conversation-a',
+        input: ChatInputData(text: text),
+      );
+    }
 
-    await tester.pumpWidget(
-      buildHarness(
-        controller: controller,
-        focusNode: focusNode,
-        hasQueuedInput: true,
-        queuedPreviewText: preview,
-        onCancelQueuedInput: () {
-          cancelled = true;
-        },
-        onSend: (_) async => ChatInputSubmissionResult.rejected,
-      ),
-    );
+    testWidgets('lists every pending message in send order', (tester) async {
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
 
-    final textField = tester.widget<TextField>(find.byType(TextField));
-    expect(textField.readOnly, isTrue);
-    expect(find.text('Queued to send'), findsOneWidget);
-    expect(find.text('Cancel Queue'), findsOneWidget);
-    expect(find.text(preview), findsOneWidget);
+      await tester.pumpWidget(
+        buildHarness(
+          controller: controller,
+          focusNode: focusNode,
+          queuedInputs: [
+            queued('queued-1', 'first follow-up'),
+            queued('queued-2', 'second follow-up'),
+            queued('queued-3', 'third follow-up'),
+          ],
+          onSend: (_) async => ChatInputSubmissionResult.rejected,
+        ),
+      );
 
-    final previewText = tester.widget<Text>(find.text(preview));
-    expect(previewText.maxLines, 3);
-    expect(previewText.overflow, TextOverflow.ellipsis);
+      expect(find.text('Queued to send'), findsOneWidget);
+      expect(find.text('first follow-up'), findsOneWidget);
+      expect(find.text('second follow-up'), findsOneWidget);
+      expect(find.text('third follow-up'), findsOneWidget);
+      // Positions are 1-based and follow the send order.
+      expect(find.text('1'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
 
-    await tester.tap(find.text('Cancel Queue'));
-    await tester.pumpAndSettle();
+      controller.dispose();
+      focusNode.dispose();
+    });
 
-    expect(cancelled, isTrue);
+    testWidgets('a long queue shows the newest items and the total count', (
+      tester,
+    ) async {
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
 
-    controller.dispose();
-    focusNode.dispose();
+      await tester.pumpWidget(
+        buildHarness(
+          controller: controller,
+          focusNode: focusNode,
+          queuedInputs: [
+            queued('queued-1', 'one'),
+            queued('queued-2', 'two'),
+            queued('queued-3', 'three'),
+            queued('queued-4', 'four'),
+          ],
+          onSend: (_) async => ChatInputSubmissionResult.rejected,
+        ),
+      );
+
+      expect(find.text('one'), findsNothing);
+      expect(find.text('two'), findsOneWidget);
+      expect(find.text('four'), findsOneWidget);
+      expect(find.text('4'), findsOneWidget);
+
+      controller.dispose();
+      focusNode.dispose();
+    });
+
+    testWidgets('each pending message can be edited', (tester) async {
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
+      final edited = <String>[];
+
+      await tester.pumpWidget(
+        buildHarness(
+          controller: controller,
+          focusNode: focusNode,
+          queuedInputs: [
+            queued('queued-1', 'first follow-up'),
+            queued('queued-2', 'second follow-up'),
+          ],
+          onEditQueuedInput: (item) => edited.add(item.id),
+          onSend: (_) async => ChatInputSubmissionResult.rejected,
+        ),
+      );
+
+      await tester.tap(find.byTooltip('Edit queued message').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Edit queued message').last);
+      await tester.pumpAndSettle();
+
+      expect(edited, ['queued-1', 'queued-2']);
+
+      controller.dispose();
+      focusNode.dispose();
+    });
+
+    testWidgets('each pending message can be removed', (tester) async {
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
+      final removed = <String>[];
+
+      await tester.pumpWidget(
+        buildHarness(
+          controller: controller,
+          focusNode: focusNode,
+          queuedInputs: [
+            queued('queued-1', 'first follow-up'),
+            queued('queued-2', 'second follow-up'),
+          ],
+          onRemoveQueuedInput: removed.add,
+          onSend: (_) async => ChatInputSubmissionResult.rejected,
+        ),
+      );
+
+      await tester.tap(find.byTooltip('Remove queued message').last);
+      await tester.pumpAndSettle();
+
+      expect(removed, ['queued-2']);
+
+      controller.dispose();
+      focusNode.dispose();
+    });
+
+    testWidgets('the composer stays editable while messages are pending', (
+      tester,
+    ) async {
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
+      ChatInputData? submitted;
+
+      await tester.pumpWidget(
+        buildHarness(
+          controller: controller,
+          focusNode: focusNode,
+          queuedInputs: [queued('queued-1', 'first follow-up')],
+          onSend: (input) async {
+            submitted = input;
+            return ChatInputSubmissionResult.rejected;
+          },
+        ),
+      );
+
+      // Queueing a second message must not require waiting for the first.
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.readOnly, isFalse);
+
+      controller.text = 'second follow-up';
+      await tapSendButton(tester);
+
+      expect(submitted?.text, 'second follow-up');
+
+      controller.dispose();
+      focusNode.dispose();
+    });
+
+    testWidgets('no panel is drawn without pending messages', (tester) async {
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
+
+      await tester.pumpWidget(
+        buildHarness(
+          controller: controller,
+          focusNode: focusNode,
+          onSend: (_) async => ChatInputSubmissionResult.rejected,
+        ),
+      );
+
+      expect(find.text('Queued to send'), findsNothing);
+      expect(find.byTooltip('Edit queued message'), findsNothing);
+
+      controller.dispose();
+      focusNode.dispose();
+    });
   });
 
   testWidgets('绘图模式胶囊可关闭并传递聊天接口路由', (tester) async {

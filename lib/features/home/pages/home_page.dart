@@ -1505,7 +1505,9 @@ class _HomePageState extends State<HomePage>
       isReasoningModel: _controller.isReasoningModel,
       isReasoningEnabled: _controller.isReasoningEnabled,
       conversationId: _controller.currentConversation?.id,
-      sendButtonTooltip: _controller.isUserMessageEditActive
+      sendButtonTooltip:
+          (_controller.isUserMessageEditActive ||
+              _controller.isQueuedMessageEditActive)
           ? AppLocalizations.of(context)!.messageEditPageSaveAndSend
           : null,
       onMore: _toggleTools,
@@ -1612,9 +1614,9 @@ class _HomePageState extends State<HomePage>
         return result;
       },
       onStop: _controller.cancelStreaming,
-      hasQueuedInput: _controller.currentQueuedInput != null,
-      queuedPreviewText: _controller.currentQueuedInput?.input.text,
-      onCancelQueuedInput: _controller.cancelQueuedMessage,
+      queuedInputs: _controller.queuedInputs,
+      onEditQueuedInput: _controller.editQueuedMessage,
+      onRemoveQueuedInput: _controller.removeQueuedMessage,
       onQuickPhrase: _showQuickPhraseMenu,
       onLongPressQuickPhrase: () {
         Navigator.of(
@@ -1701,6 +1703,9 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildForegroundOverlay(BuildContext context) {
     final editState = _controller.userMessageEditState;
+    // A queued message is edited in the composer too, so it reuses the same
+    // overlay; only what Cancel and Save do with it differs.
+    final queuedEdit = _controller.queuedMessageEditState;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -1714,6 +1719,15 @@ class _HomePageState extends State<HomePage>
           onSaveOnly: () {
             unawaited(_controller.saveUserMessageEditOnly());
           },
+          onPreviewTap: _controller.focusUserMessageEditInput,
+        ),
+        UserMessageEditOverlay(
+          visible: queuedEdit != null && !_controller.selecting,
+          previewText: queuedEdit?.previewText ?? '',
+          topInset: _chatTopOverlayInset(context),
+          bottomInset: _controller.inputBarHeight,
+          onCancel: _controller.cancelQueuedMessageEdit,
+          onSaveOnly: _controller.saveQueuedMessageEditOnly,
           onPreviewTap: _controller.focusUserMessageEditInput,
         ),
       ],
