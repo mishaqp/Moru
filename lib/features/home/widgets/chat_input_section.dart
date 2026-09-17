@@ -63,9 +63,9 @@ class ChatInputSection extends StatelessWidget {
     this.onConfigureReasoning,
     this.onSend,
     this.onStop,
-    this.hasQueuedInput = false,
-    this.queuedPreviewText,
-    this.onCancelQueuedInput,
+    this.queuedInputs = const <QueuedChatInput>[],
+    this.onEditQueuedInput,
+    this.onRemoveQueuedInput,
     this.onQuickPhrase,
     this.onLongPressQuickPhrase,
     this.onToggleOcr,
@@ -107,9 +107,9 @@ class ChatInputSection extends StatelessWidget {
   final VoidCallback? onConfigureReasoning;
   final Future<ChatInputSubmissionResult> Function(ChatInputData)? onSend;
   final VoidCallback? onStop;
-  final bool hasQueuedInput;
-  final String? queuedPreviewText;
-  final VoidCallback? onCancelQueuedInput;
+  final List<QueuedChatInput> queuedInputs;
+  final void Function(QueuedChatInput item)? onEditQueuedInput;
+  final void Function(String id)? onRemoveQueuedInput;
   final VoidCallback? onQuickPhrase;
   final VoidCallback? onLongPressQuickPhrase;
   final VoidCallback? onToggleOcr;
@@ -216,9 +216,9 @@ class ChatInputSection extends StatelessWidget {
       onSend: onSend,
       loading: isLoading,
       sendButtonTooltip: sendButtonTooltip,
-      hasQueuedInput: hasQueuedInput,
-      queuedPreviewText: queuedPreviewText,
-      onCancelQueuedInput: onCancelQueuedInput,
+      queuedInputs: queuedInputs,
+      onEditQueuedInput: onEditQueuedInput,
+      onRemoveQueuedInput: onRemoveQueuedInput,
       showToolsButton: _shouldShowToolsButton(pk, mid),
       toolsActive: _isToolsActive(context, a, workspaceBound),
       showQuickPhraseButton: _hasQuickPhrases(context, a),

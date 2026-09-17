@@ -12011,4 +12011,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get moruAsrZipformerDescription =>
       'Streaming Chinese and English recognition. Download: about 347 MB.';
+
+  @override
+  String get chatInputBarQueueEdit => 'Edit queued message';
+
+  @override
+  String get chatInputBarQueueRemove => 'Remove queued message';
 }

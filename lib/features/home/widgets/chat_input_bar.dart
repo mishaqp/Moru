@@ -137,9 +137,9 @@ class ChatInputBar extends StatefulWidget {
     this.mediaController,
     this.asrProvider,
     this.loading = false,
-    this.hasQueuedInput = false,
-    this.queuedPreviewText,
-    this.onCancelQueuedInput,
+    this.queuedInputs = const <QueuedChatInput>[],
+    this.onEditQueuedInput,
+    this.onRemoveQueuedInput,
     this.reasoningActive = false,
     this.reasoningBudget,
     this.supportsReasoning = true,
@@ -194,9 +194,13 @@ class ChatInputBar extends StatefulWidget {
   final ChatInputBarController? mediaController;
   final AsrProvider? asrProvider;
   final bool loading;
-  final bool hasQueuedInput;
-  final String? queuedPreviewText;
-  final VoidCallback? onCancelQueuedInput;
+
+  /// Messages submitted while the assistant was still answering, oldest
+  /// first. They are sent automatically once the current reply finishes, so
+  /// they are shown above the composer instead of inside it.
+  final List<QueuedChatInput> queuedInputs;
+  final void Function(QueuedChatInput item)? onEditQueuedInput;
+  final void Function(String id)? onRemoveQueuedInput;
   final bool reasoningActive;
   final int? reasoningBudget;
   final bool supportsReasoning;
@@ -284,8 +288,6 @@ class _ChatInputBarState extends State<ChatInputBar>
   String? _imageModeModelKey;
   String? _lastImageModeModelKey;
   String? _dismissedImageModeModelKey;
-
-  bool get _composerLocked => widget.hasQueuedInput;
 
   Color _inputFillColor({
     required ThemeData theme,
@@ -671,8 +673,7 @@ class _ChatInputBarState extends State<ChatInputBar>
   Future<void> _startVoiceInput() async {
     final asr = widget.asrProvider;
     final selected = context.read<SettingsProvider>().selectedAsrService;
-    if (_composerLocked ||
-        widget.loading ||
+    if (widget.loading ||
         _ownsVoiceSession ||
         asr == null ||
         asr.isActive ||
@@ -1782,10 +1783,6 @@ class _ChatInputBarState extends State<ChatInputBar>
     const double plusButtonW = 32;
 
     final l10n = AppLocalizations.of(context)!;
-    VoidCallback? lockTap(VoidCallback? callback) {
-      if (_composerLocked) return null;
-      return callback;
-    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1799,14 +1796,14 @@ class _ChatInputBarState extends State<ChatInputBar>
               tooltip: l10n.chatInputBarSelectModelTooltip,
               icon: Lucide.Boxes,
               modelIcon: true,
-              onTap: lockTap(widget.onSelectModel),
-              onLongPress: lockTap(widget.onLongPressSelectModel),
+              onTap: widget.onSelectModel,
+              onLongPress: widget.onLongPressSelectModel,
               child: widget.modelIcon,
             ),
             menu: DesktopContextMenuItem(
               icon: Lucide.Boxes,
               label: l10n.chatInputBarSelectModelTooltip,
-              onTap: lockTap(widget.onSelectModel),
+              onTap: widget.onSelectModel,
             ),
           ),
         );
@@ -1851,7 +1848,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                   tooltip: l10n.chatInputBarOnlineSearchTooltip,
                   icon: Lucide.Globe,
                   active: false,
-                  onTap: lockTap(widget.onOpenSearch),
+                  onTap: widget.onOpenSearch,
                 );
               }
               // Built-in search -> magnifier icon in theme color
@@ -1860,7 +1857,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                   tooltip: l10n.chatInputBarOnlineSearchTooltip,
                   icon: Lucide.Search,
                   active: true,
-                  onTap: lockTap(widget.onOpenSearch),
+                  onTap: widget.onOpenSearch,
                 );
               }
               // External provider search -> brand icon
@@ -1868,7 +1865,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                 tooltip: l10n.chatInputBarOnlineSearchTooltip,
                 icon: Lucide.Globe,
                 active: true,
-                onTap: lockTap(widget.onOpenSearch),
+                onTap: widget.onOpenSearch,
                 childBuilder: (c) {
                   final asset = brandAsset;
                   if (asset != null) {
@@ -1900,27 +1897,27 @@ class _ChatInputBarState extends State<ChatInputBar>
                 return DesktopContextMenuItem(
                   icon: Lucide.Globe,
                   label: l10n.chatInputBarOnlineSearchTooltip,
-                  onTap: lockTap(widget.onOpenSearch),
+                  onTap: widget.onOpenSearch,
                 );
               }
               if (builtinSearchActive) {
                 return DesktopContextMenuItem(
                   icon: Lucide.Search,
                   label: l10n.chatInputBarOnlineSearchTooltip,
-                  onTap: lockTap(widget.onOpenSearch),
+                  onTap: widget.onOpenSearch,
                 );
               }
               if (brandAsset != null && brandAsset.endsWith('.svg')) {
                 return DesktopContextMenuItem(
                   svgAsset: brandAsset,
                   label: l10n.chatInputBarOnlineSearchTooltip,
-                  onTap: lockTap(widget.onOpenSearch),
+                  onTap: widget.onOpenSearch,
                 );
               }
               return DesktopContextMenuItem(
                 icon: Lucide.Globe,
                 label: l10n.chatInputBarOnlineSearchTooltip,
-                onTap: lockTap(widget.onOpenSearch),
+                onTap: widget.onOpenSearch,
               );
             }(),
           ),
@@ -1934,7 +1931,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                 tooltip: l10n.chatInputBarReasoningStrengthTooltip,
                 icon: Lucide.Brain,
                 active: widget.reasoningActive,
-                onTap: lockTap(widget.onConfigureReasoning),
+                onTap: widget.onConfigureReasoning,
                 childBuilder: (c) => ReasoningIcons.budgetIcon(
                   widget.reasoningBudget,
                   size: 20,
@@ -1944,7 +1941,7 @@ class _ChatInputBarState extends State<ChatInputBar>
               menu: DesktopContextMenuItem(
                 svgAsset: ReasoningIcons.assetForBudget(widget.reasoningBudget),
                 label: l10n.chatInputBarReasoningStrengthTooltip,
-                onTap: lockTap(widget.onConfigureReasoning),
+                onTap: widget.onConfigureReasoning,
               ),
             ),
           );
@@ -1958,12 +1955,12 @@ class _ChatInputBarState extends State<ChatInputBar>
                 tooltip: l10n.workspaceEntryTooltip,
                 icon: Lucide.FolderCode,
                 active: widget.workspaceActive,
-                onTap: lockTap(widget.onOpenWorkspace),
+                onTap: widget.onOpenWorkspace,
               ),
               menu: DesktopContextMenuItem(
                 icon: Lucide.FolderCode,
                 label: l10n.workspaceEntryTooltip,
-                onTap: lockTap(widget.onOpenWorkspace),
+                onTap: widget.onOpenWorkspace,
               ),
             ),
           );
@@ -1977,12 +1974,12 @@ class _ChatInputBarState extends State<ChatInputBar>
                 tooltip: l10n.workspaceEntrySessionSkills,
                 icon: Lucide.WandSparkles,
                 active: widget.skillsActive,
-                onTap: lockTap(widget.onOpenSkills),
+                onTap: widget.onOpenSkills,
               ),
               menu: DesktopContextMenuItem(
                 icon: Lucide.WandSparkles,
                 label: l10n.workspaceEntrySessionSkills,
-                onTap: lockTap(widget.onOpenSkills),
+                onTap: widget.onOpenSkills,
               ),
             ),
           );
@@ -1997,13 +1994,13 @@ class _ChatInputBarState extends State<ChatInputBar>
                 tooltip: l10n.chatInputBarToolsTooltip,
                 icon: Lucide.ToolCase,
                 active: widget.toolsActive,
-                onTap: lockTap(widget.onOpenTools),
-                onLongPress: lockTap(widget.onLongPressTools),
+                onTap: widget.onOpenTools,
+                onLongPress: widget.onLongPressTools,
               ),
               menu: DesktopContextMenuItem(
                 icon: Lucide.ToolCase,
                 label: l10n.chatInputBarToolsTooltip,
-                onTap: lockTap(widget.onOpenTools),
+                onTap: widget.onOpenTools,
               ),
             ),
           );
@@ -2016,13 +2013,13 @@ class _ChatInputBarState extends State<ChatInputBar>
               builder: () => _CompactIconButton(
                 tooltip: l10n.chatInputBarQuickPhraseTooltip,
                 icon: Lucide.Zap,
-                onTap: lockTap(widget.onQuickPhrase),
-                onLongPress: lockTap(widget.onLongPressQuickPhrase),
+                onTap: widget.onQuickPhrase,
+                onLongPress: widget.onLongPressQuickPhrase,
               ),
               menu: DesktopContextMenuItem(
                 icon: Lucide.Zap,
                 label: l10n.chatInputBarQuickPhraseTooltip,
-                onTap: lockTap(widget.onQuickPhrase),
+                onTap: widget.onQuickPhrase,
               ),
             ),
           );
@@ -2035,12 +2032,12 @@ class _ChatInputBarState extends State<ChatInputBar>
               builder: () => _CompactIconButton(
                 tooltip: l10n.bottomToolsSheetCamera,
                 icon: Lucide.Camera,
-                onTap: lockTap(widget.onPickCamera),
+                onTap: widget.onPickCamera,
               ),
               menu: DesktopContextMenuItem(
                 icon: Lucide.Camera,
                 label: l10n.bottomToolsSheetCamera,
-                onTap: lockTap(widget.onPickCamera),
+                onTap: widget.onPickCamera,
               ),
             ),
           );
@@ -2053,12 +2050,12 @@ class _ChatInputBarState extends State<ChatInputBar>
               builder: () => _CompactIconButton(
                 tooltip: l10n.bottomToolsSheetPhotos,
                 icon: Lucide.Image,
-                onTap: lockTap(widget.onPickPhotos),
+                onTap: widget.onPickPhotos,
               ),
               menu: DesktopContextMenuItem(
                 icon: Lucide.Image,
                 label: l10n.bottomToolsSheetPhotos,
-                onTap: lockTap(widget.onPickPhotos),
+                onTap: widget.onPickPhotos,
               ),
             ),
           );
@@ -2071,12 +2068,12 @@ class _ChatInputBarState extends State<ChatInputBar>
               builder: () => _CompactIconButton(
                 tooltip: l10n.bottomToolsSheetUpload,
                 icon: Lucide.Paperclip,
-                onTap: lockTap(widget.onUploadFiles),
+                onTap: widget.onUploadFiles,
               ),
               menu: DesktopContextMenuItem(
                 icon: Lucide.Paperclip,
                 label: l10n.bottomToolsSheetUpload,
-                onTap: lockTap(widget.onUploadFiles),
+                onTap: widget.onUploadFiles,
               ),
             ),
           );
@@ -2090,13 +2087,13 @@ class _ChatInputBarState extends State<ChatInputBar>
                 tooltip: l10n.instructionInjectionTitle,
                 icon: Lucide.Layers,
                 active: widget.learningModeActive,
-                onTap: lockTap(widget.onToggleLearningMode),
-                onLongPress: lockTap(widget.onLongPressLearning),
+                onTap: widget.onToggleLearningMode,
+                onLongPress: widget.onLongPressLearning,
               ),
               menu: DesktopContextMenuItem(
                 icon: Lucide.Layers,
                 label: l10n.instructionInjectionTitle,
-                onTap: lockTap(widget.onToggleLearningMode),
+                onTap: widget.onToggleLearningMode,
               ),
             ),
           );
@@ -2110,12 +2107,12 @@ class _ChatInputBarState extends State<ChatInputBar>
                 tooltip: l10n.worldBookTitle,
                 icon: Lucide.BookOpen,
                 active: widget.worldBookActive,
-                onTap: lockTap(widget.onOpenWorldBook),
+                onTap: widget.onOpenWorldBook,
               ),
               menu: DesktopContextMenuItem(
                 icon: Lucide.BookOpen,
                 label: l10n.worldBookTitle,
-                onTap: lockTap(widget.onOpenWorldBook),
+                onTap: widget.onOpenWorldBook,
               ),
             ),
           );
@@ -2131,12 +2128,12 @@ class _ChatInputBarState extends State<ChatInputBar>
                   DesktopContextMenuItem(
                     icon: Lucide.package2,
                     label: l10n.compressContext,
-                    onTap: lockTap(widget.onCompressContext),
+                    onTap: widget.onCompressContext,
                   ),
                 DesktopContextMenuItem(
                   icon: Lucide.Eraser,
                   label: l10n.bottomToolsSheetClearContext,
-                  onTap: lockTap(widget.onClearContext),
+                  onTap: widget.onClearContext,
                 ),
               ],
             );
@@ -2150,13 +2147,13 @@ class _ChatInputBarState extends State<ChatInputBar>
                 child: _CompactIconButton(
                   tooltip: l10n.contextManagement,
                   icon: Lucide.Eraser,
-                  onTap: _composerLocked ? null : showContextMenu,
+                  onTap: showContextMenu,
                 ),
               ),
               menu: DesktopContextMenuItem(
                 icon: Lucide.Eraser,
                 label: l10n.contextManagement,
-                onTap: _composerLocked ? null : showContextMenu,
+                onTap: showContextMenu,
               ),
             ),
           );
@@ -2169,12 +2166,12 @@ class _ChatInputBarState extends State<ChatInputBar>
               builder: () => _CompactIconButton(
                 tooltip: l10n.miniMapTooltip,
                 icon: Lucide.Map,
-                onTap: lockTap(widget.onOpenMiniMap),
+                onTap: widget.onOpenMiniMap,
               ),
               menu: DesktopContextMenuItem(
                 icon: Lucide.Map,
                 label: l10n.miniMapTooltip,
-                onTap: lockTap(widget.onOpenMiniMap),
+                onTap: widget.onOpenMiniMap,
               ),
             ),
           );
@@ -2188,12 +2185,12 @@ class _ChatInputBarState extends State<ChatInputBar>
                 tooltip: l10n.chatInputBarOcrTooltip,
                 icon: Lucide.Eye,
                 active: widget.ocrActive,
-                onTap: lockTap(widget.onToggleOcr),
+                onTap: widget.onToggleOcr,
               ),
               menu: DesktopContextMenuItem(
                 icon: Lucide.Eye,
                 label: l10n.chatInputBarOcrTooltip,
-                onTap: lockTap(widget.onToggleOcr),
+                onTap: widget.onToggleOcr,
               ),
             ),
           );
@@ -2624,14 +2621,16 @@ class _ChatInputBarState extends State<ChatInputBar>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (widget.hasQueuedInput) ...[
-              _QueuedInputBanner(
-                label: AppLocalizations.of(context)!.chatInputBarQueuedPending,
-                previewText: widget.queuedPreviewText,
-                cancelLabel: AppLocalizations.of(
+            if (widget.queuedInputs.isNotEmpty) ...[
+              _QueuedInputPanel(
+                items: widget.queuedInputs,
+                title: AppLocalizations.of(context)!.chatInputBarQueuedPending,
+                editLabel: AppLocalizations.of(context)!.chatInputBarQueueEdit,
+                removeLabel: AppLocalizations.of(
                   context,
-                )!.chatInputBarQueuedCancel,
-                onCancel: widget.onCancelQueuedInput,
+                )!.chatInputBarQueueRemove,
+                onEdit: widget.onEditQueuedInput,
+                onRemove: widget.onRemoveQueuedInput,
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
@@ -2857,9 +2856,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                                                     'image/webp',
                                                   ],
                                                 ),
-                                            readOnly:
-                                                _composerLocked ||
-                                                _ownsVoiceSession,
+                                            readOnly: _ownsVoiceSession,
                                             minLines: 1,
                                             maxLines: _isExpanded ? 25 : 5,
                                             // On mobile, optionally show "Send" on the return key and submit on tap.
@@ -2981,9 +2978,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                                                 )!.chatInputBarMoreTooltip,
                                                 icon: Lucide.Plus,
                                                 active: widget.moreOpen,
-                                                onTap: _composerLocked
-                                                    ? null
-                                                    : widget.onMore,
+                                                onTap: widget.onMore,
                                                 childBuilder: (c) =>
                                                     AnimatedSwitcher(
                                                       duration: const Duration(
@@ -3027,9 +3022,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                                                   context,
                                                 )!.chatInputBarVoiceInputTooltip,
                                                 icon: Lucide.Mic,
-                                                onTap:
-                                                    _composerLocked ||
-                                                        widget.loading
+                                                onTap: widget.loading
                                                     ? null
                                                     : () => unawaited(
                                                         _startVoiceInput(),
@@ -3075,15 +3068,13 @@ class _ChatInputBarState extends State<ChatInputBar>
                       closeTooltip: AppLocalizations.of(
                         context,
                       )!.chatInputBarDisableImageModeTooltip,
-                      onClose: _composerLocked
-                          ? null
-                          : () {
-                              final key = _imageModeModelKey;
-                              if (key == null) return;
-                              setState(() {
-                                _dismissedImageModeModelKey = key;
-                              });
-                            },
+                      onClose: () {
+                        final key = _imageModeModelKey;
+                        if (key == null) return;
+                        setState(() {
+                          _dismissedImageModeModelKey = key;
+                        });
+                      },
                     ),
                   ),
               ],
@@ -3095,25 +3086,39 @@ class _ChatInputBarState extends State<ChatInputBar>
   }
 }
 
-class _QueuedInputBanner extends StatelessWidget {
-  const _QueuedInputBanner({
-    required this.label,
-    required this.cancelLabel,
-    this.previewText,
-    this.onCancel,
+/// Pending messages waiting for the current reply to finish.
+///
+/// Sits above the composer and lists the queue in send order, so the user can
+/// see what is about to be sent and edit or drop an item before it goes out.
+/// The composer stays usable: adding a fourth message while three are waiting
+/// is the whole point of the queue.
+class _QueuedInputPanel extends StatelessWidget {
+  const _QueuedInputPanel({
+    required this.items,
+    required this.title,
+    required this.editLabel,
+    required this.removeLabel,
+    required this.onEdit,
+    required this.onRemove,
   });
 
-  final String label;
-  final String cancelLabel;
-  final String? previewText;
-  final VoidCallback? onCancel;
+  final List<QueuedChatInput> items;
+  final String title;
+  final String editLabel;
+  final String removeLabel;
+  final void Function(QueuedChatInput item)? onEdit;
+  final void Function(String id)? onRemove;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final preview = previewText?.trim();
-    final hasPreview = preview != null && preview.isNotEmpty;
+    // Only the newest few are listed in full: a long queue would otherwise
+    // push the composer off the screen.
+    const maxVisible = 3;
+    final visible = items.length <= maxVisible
+        ? items
+        : items.sublist(items.length - maxVisible);
 
     return Container(
       decoration: BoxDecoration(
@@ -3129,65 +3134,148 @@ class _QueuedInputBanner extends StatelessWidget {
         horizontal: AppSpacing.sm,
         vertical: AppSpacing.xs,
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Icon(
-              Icons.schedule_rounded,
-              size: 16,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
+          Row(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(
+                  Icons.schedule_rounded,
+                  size: 16,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  title,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: AppFontWeights.semibold,
                   ),
                 ),
-                if (hasPreview) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    preview,
-                    maxLines: 3,
+              ),
+              if (items.length > maxVisible)
+                Text(
+                  '${items.length}',
+                  key: const ValueKey('queued-input-count'),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
+                    fontWeight: AppFontWeights.semibold,
+                  ),
+                ),
+            ],
+          ),
+          for (var index = 0; index < visible.length; index++) ...[
+            const SizedBox(height: AppSpacing.xxs),
+            _QueuedInputRow(
+              position: items.length - visible.length + index + 1,
+              text: visible[index].input.text.trim(),
+              attachmentCount:
+                  visible[index].input.imagePaths.length +
+                  visible[index].input.documents.length,
+              editLabel: editLabel,
+              removeLabel: removeLabel,
+              onEdit: onEdit == null ? null : () => onEdit!(visible[index]),
+              onRemove: onRemove == null
+                  ? null
+                  : () => onRemove!(visible[index].id),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// One queued message with its own edit and remove actions.
+class _QueuedInputRow extends StatelessWidget {
+  const _QueuedInputRow({
+    required this.position,
+    required this.text,
+    required this.attachmentCount,
+    required this.editLabel,
+    required this.removeLabel,
+    this.onEdit,
+    this.onRemove,
+  });
+
+  final int position;
+  final String text;
+  final int attachmentCount;
+  final String editLabel;
+  final String removeLabel;
+  final VoidCallback? onEdit;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.72);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 18,
+          child: Text(
+            '$position',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: muted,
+              fontWeight: AppFontWeights.semibold,
+              height: 1.3,
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.xxs),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (text.isNotEmpty)
+                Flexible(
+                  child: Text(
+                    text,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(
-                        alpha: 0.72,
-                      ),
+                      color: muted,
                       height: 1.3,
                     ),
                   ),
-                ],
+                ),
+              if (attachmentCount > 0) ...[
+                if (text.isNotEmpty) const SizedBox(width: AppSpacing.xxs),
+                // Icons instead of prose keep this row free of a second
+                // translation for every attachment combination.
+                Icon(Lucide.Paperclip, size: 13, color: muted),
+                const SizedBox(width: 2),
+                Text(
+                  '$attachmentCount',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: muted,
+                    height: 1.3,
+                  ),
+                ),
               ],
-            ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.xs),
-          IosCardPress(
-            onTap: onCancel,
-            borderRadius: BorderRadius.circular(10),
-            baseColor: Colors.transparent,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.xs,
-            ),
-            child: Text(
-              cancelLabel,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: AppFontWeights.semibold,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(width: AppSpacing.xxs),
+        _CompactIconButton(
+          tooltip: editLabel,
+          icon: Lucide.Pencil,
+          onTap: onEdit,
+        ),
+        _CompactIconButton(
+          tooltip: removeLabel,
+          icon: Lucide.Trash2,
+          onTap: onRemove,
+        ),
+      ],
     );
   }
 }

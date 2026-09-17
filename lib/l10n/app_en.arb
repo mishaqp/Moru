@@ -5401,5 +5401,7 @@
   "moruAsrSenseVoiceName": "SenseVoice int8 multilingual model",
   "moruAsrSenseVoiceDescription": "Chinese, English, Cantonese, Japanese and Korean. Download: about 166 MB.",
   "moruAsrZipformerName": "Zipformer Chinese/English Mobile",
-  "moruAsrZipformerDescription": "Streaming Chinese and English recognition. Download: about 347 MB."
+  "moruAsrZipformerDescription": "Streaming Chinese and English recognition. Download: about 347 MB.",
+  "chatInputBarQueueEdit": "Edit queued message",
+  "chatInputBarQueueRemove": "Remove queued message"
 }

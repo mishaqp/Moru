@@ -4359,5 +4359,7 @@
   "moruAsrSenseVoiceName": "SenseVoice int8 多語模型",
   "moruAsrSenseVoiceDescription": "支援中文、英文、粵語、日語和韓語，下載約 166 MB",
   "moruAsrZipformerName": "Zipformer 中英 Mobile",
-  "moruAsrZipformerDescription": "中英雙語串流辨識，下載約 347 MB"
+  "moruAsrZipformerDescription": "中英雙語串流辨識，下載約 347 MB",
+  "chatInputBarQueueEdit": "編輯排隊訊息",
+  "chatInputBarQueueRemove": "刪除排隊訊息"
 }

@@ -5400,5 +5400,7 @@
   "moruAsrSenseVoiceName": "SenseVoice int8 — многоязычная модель",
   "moruAsrSenseVoiceDescription": "Китайский, английский, кантонский, японский и корейский языки. Загрузка: около 166 МБ.",
   "moruAsrZipformerName": "Zipformer — китайский и английский, Mobile",
-  "moruAsrZipformerDescription": "Потоковое распознавание китайской и английской речи. Загрузка: около 347 МБ."
+  "moruAsrZipformerDescription": "Потоковое распознавание китайской и английской речи. Загрузка: около 347 МБ.",
+  "chatInputBarQueueEdit": "Изменить сообщение из очереди",
+  "chatInputBarQueueRemove": "Удалить сообщение из очереди"
 }
