@@ -28,6 +28,9 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Targeted login and updater regression tests
+        run: flutter test test/core/services/auth/oauth_login_gate_test.dart test/moru_update_source_test.dart test/moru_oauth_return_page_test.dart --reporter expanded
+
       - name: Dart format (changed files only)
         shell: bash
         run: |
