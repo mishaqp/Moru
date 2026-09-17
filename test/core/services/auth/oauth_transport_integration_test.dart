@@ -65,7 +65,7 @@ void main() {
     final bodies = <String>[];
     final client = MockClient((request) async {
       attempts++;
-      bodies.add(request is http.Request ? request.body : '');
+      bodies.add(request.body);
       if (attempts < 3) {
         throw http.ClientException(
           'SocketException: Failed host lookup: auth.openai.com',
