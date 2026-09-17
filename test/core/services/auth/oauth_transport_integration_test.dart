@@ -60,6 +60,44 @@ void main() {
     },
   );
 
+  test('transient DNS failure is retried before OAuth is abandoned', () async {
+    var attempts = 0;
+    final bodies = <String>[];
+    final client = MockClient((request) async {
+      attempts++;
+      bodies.add(request is http.Request ? request.body : '');
+      if (attempts < 3) {
+        throw http.ClientException(
+          'SocketException: Failed host lookup: auth.openai.com',
+          request.url,
+        );
+      }
+      return http.Response('{"ok":true}', 200);
+    });
+    addTearDown(client.close);
+    final logs = <String>[];
+
+    final response = await OAuthWire(client, diagnostics: logs.add).request(
+      'https://auth.openai.com/oauth/token',
+      form: {
+        'grant_type': 'authorization_code',
+        'code': 'synthetic-code',
+        'code_verifier': 'synthetic-verifier',
+      },
+    );
+
+    expect(response.data, {'ok': true});
+    expect(attempts, 3);
+    expect(bodies.toSet(), hasLength(1));
+    expect(
+      Uri.splitQueryString(bodies.single),
+      containsPair('grant_type', 'authorization_code'),
+    );
+    expect(logs.where((line) => line.contains('failed-dns')), hasLength(2));
+    expect(logs.join('\n'), isNot(contains('synthetic-code')));
+    expect(logs.join('\n'), isNot(contains('synthetic-verifier')));
+  });
+
   for (final entry in {
     'HandshakeException: CERTIFICATE_VERIFY_FAILED': 'tls',
     'DioException [connection timeout]': 'timeout',
