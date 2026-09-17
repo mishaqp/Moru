@@ -274,7 +274,9 @@ void main() {
     testWidgets('the composer stays editable while messages are pending', (
       tester,
     ) async {
-      final controller = TextEditingController();
+      // The draft is set up front because the composer derives its send
+      // button from the controller during build, exactly as in the app.
+      final controller = TextEditingController(text: 'second follow-up');
       final focusNode = FocusNode();
       ChatInputData? submitted;
 
@@ -290,14 +292,10 @@ void main() {
         ),
       );
 
-      // Queueing a second message must not require waiting for the first.
+      // Queueing another message must not require waiting for the first.
       final textField = tester.widget<TextField>(find.byType(TextField));
       expect(textField.readOnly, isFalse);
 
-      controller.text = 'second follow-up';
-      // The send button's enabled state is derived during build, so the new
-      // text has to reach the widget before it can be tapped.
-      await tester.pump();
       await tapSendButton(tester);
 
       expect(submitted?.text, 'second follow-up');
