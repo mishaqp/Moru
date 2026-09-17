@@ -1097,7 +1097,12 @@ class DataSync {
       );
       final manifestFile = File(manifestPath)
         ..writeAsStringSync(manifestJson, flush: true);
-      entries[_manifestEntryName] = writer.addFile(
+      // The manifest is an index over the payload, so its exact size is only
+      // known once every entry hash exists and it has to be written last. It
+      // is therefore excluded from the byte budget the meter promised the
+      // caller: metering it without counting it in that total reported more
+      // bytes than the phase total (progress over 100%).
+      entries[_manifestEntryName] = writer.addUnmeteredFile(
         manifestFile,
         _manifestEntryName,
       );
@@ -3578,6 +3583,21 @@ class _StreamingZipWriter {
   final List<_StreamingZipEntry> _entries = <_StreamingZipEntry>[];
   bool _closed = false;
 
+  /// Whether bytes written by the next [addFile] count into the progress
+  /// meter. Cleared while the generated manifest is appended, because the
+  /// meter's total was computed before that file existed.
+  bool _meterWrites = true;
+
+  _BackupEntryMetadata addUnmeteredFile(File file, String entryName) {
+    final previous = _meterWrites;
+    _meterWrites = false;
+    try {
+      return addFile(file, entryName);
+    } finally {
+      _meterWrites = previous;
+    }
+  }
+
   _BackupEntryMetadata addFile(File file, String entryName) {
     if (_closed) {
       throw StateError('Cannot add files after the ZIP writer is closed.');
@@ -3697,7 +3717,9 @@ class _StreamingZipWriter {
         uncompressedSize += read;
         hashSink.add(chunk);
         inputSink.add(chunk);
-        meter?.add(read, detail: entryName);
+        if (_meterWrites) {
+          meter?.add(read, detail: entryName);
+        }
       }
       hashSink.close();
       inputSink.close();

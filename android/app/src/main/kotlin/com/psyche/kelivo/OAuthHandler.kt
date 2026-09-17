@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.net.ConnectivityManager
 import androidx.browser.customtabs.CustomTabsClient
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.browser.customtabs.CustomTabsService
@@ -17,7 +18,7 @@ import java.lang.ref.WeakReference
 
 internal object OAuthHandler {
     private const val CHANNEL_NAME = "app.oauth"
-    private const val CALLBACK_SCHEME = "psyche.kelivo"
+    private val CALLBACK_SCHEMES = setOf("psyche.kelivo", "com.mishaqp.moru")
     private const val CALLBACK_HOST = "mcp-oauth-callback"
 
     private var pendingResult: MethodChannel.Result? = null
@@ -27,9 +28,16 @@ internal object OAuthHandler {
     private var browserConnection: CustomTabsServiceConnection? = null
     private var browserContext: Context? = null
     private var host = WeakReference<Activity>(null)
+    private var networkWaiter: OAuthNetworkWaiter? = null
 
     fun configure(activity: Activity, messenger: BinaryMessenger) {
         host = WeakReference(activity)
+        networkWaiter?.close()
+        networkWaiter = OAuthNetworkWaiter(
+            activity.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager,
+        ).also { waiter ->
+            MethodChannel(messenger, "app.oauth.network").setMethodCallHandler(waiter)
+        }
         MethodChannel(messenger, CHANNEL_NAME).setMethodCallHandler { call, result ->
             when (call.method) {
                 "authenticate" -> {
@@ -46,6 +54,8 @@ internal object OAuthHandler {
     fun detachActivity(activity: Activity) {
         if (host.get() === activity) {
             host.clear()
+            networkWaiter?.close()
+            networkWaiter = null
             failPending("authorization_cancelled", "The authorization window was closed.")
         }
     }
@@ -187,7 +197,7 @@ internal object OAuthHandler {
 
     private fun validRedirectUri(uri: Uri?): Boolean =
         uri != null &&
-            uri.scheme.equals(CALLBACK_SCHEME, ignoreCase = true) &&
+            CALLBACK_SCHEMES.any { uri.scheme.equals(it, ignoreCase = true) } &&
             uri.host.equals(CALLBACK_HOST, ignoreCase = true) &&
             uri.pathSegments.size == 1 &&
             uri.pathSegments.first().isNotEmpty() &&
