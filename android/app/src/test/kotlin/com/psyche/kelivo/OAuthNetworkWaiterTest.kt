@@ -17,6 +17,8 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
+import org.robolectric.shadows.ShadowNetwork
+import org.robolectric.shadows.ShadowNetworkCapabilities
 import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
@@ -44,7 +46,7 @@ class OAuthNetworkWaiterTest {
         val result = Result()
         waiter.awaitNetwork("one", 1000, result)
         val callback = shadowOf(manager).networkCallbacks.single()
-        val network = Network(100)
+        val network = ShadowNetwork.newInstance(100)
         callback.onAvailable(network)
         main.idle()
         assertEquals(0, result.completions)
@@ -67,7 +69,7 @@ class OAuthNetworkWaiterTest {
         waiter.awaitNetwork("one", 1000, result)
         val callback = shadowOf(manager).networkCallbacks.single()
         waiter.cancel("one")
-        ready(callback, Network(100))
+        ready(callback, ShadowNetwork.newInstance(100))
         main.idle()
         assertEquals("authorization_cancelled", result.error)
         assertEquals(1, result.completions)
@@ -86,8 +88,8 @@ class OAuthNetworkWaiterTest {
         val result = Result()
         waiter.awaitNetwork("one", 1000, result)
         val callback = shadowOf(manager).networkCallbacks.single()
-        val old = Network(100)
-        val replacement = Network(101)
+        val old = ShadowNetwork.newInstance(100)
+        val replacement = ShadowNetwork.newInstance(101)
         callback.onAvailable(old)
         callback.onLost(old)
         callback.onAvailable(replacement)
@@ -113,14 +115,14 @@ class OAuthNetworkWaiterTest {
         assertEquals("authorization_cancelled", first.error)
         assertEquals(0, second.completions)
         val callback = shadowOf(manager).networkCallbacks.single()
-        ready(callback, Network(101))
+        ready(callback, ShadowNetwork.newInstance(101))
         main.idle()
         assertEquals(1, second.completions)
         assertNull(second.error)
     }
 
-    private fun internet() = NetworkCapabilities().apply {
-        addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    private fun internet() = ShadowNetworkCapabilities.newInstance().apply {
+        shadowOf(this).addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
     private fun ready(callback: ConnectivityManager.NetworkCallback, network: Network) {
