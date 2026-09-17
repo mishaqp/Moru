@@ -40,28 +40,31 @@ void main() {
     );
   });
 
-  test('Moru requests its own release feed and exposes the arm64 APK', () async {
-    final urls = <Uri>[];
-    final provider = UpdateProvider();
-    addTearDown(provider.dispose);
-    await http.runWithClient(
-      provider.checkForUpdates,
-      () => MockClient((request) async {
-        urls.add(request.url);
-        return http.Response(jsonEncode(_release()), 200);
-      }),
-    );
-    expect(urls, hasLength(1));
-    expect(urls.single.host, 'api.github.com');
-    expect(urls.single.path, '/repos/mishaqp/Moru/releases/latest');
-    expect(provider.available?.app, 'Moru');
-    expect(provider.available?.version, '0.1.4');
-    expect(
-      provider.available?.downloads['android'],
-      '$_repo/releases/download/v0.1.4/Moru-v0.1.4-arm64-v8a-release.apk',
-    );
-    expect(provider.error, isNull);
-  });
+  test(
+    'Moru requests its own release feed and exposes the arm64 APK',
+    () async {
+      final urls = <Uri>[];
+      final provider = UpdateProvider();
+      addTearDown(provider.dispose);
+      await http.runWithClient(
+        provider.checkForUpdates,
+        () => MockClient((request) async {
+          urls.add(request.url);
+          return http.Response(jsonEncode(_release()), 200);
+        }),
+      );
+      expect(urls, hasLength(1));
+      expect(urls.single.host, 'api.github.com');
+      expect(urls.single.path, '/repos/mishaqp/Moru/releases/latest');
+      expect(provider.available?.app, 'Moru');
+      expect(provider.available?.version, '0.1.4');
+      expect(
+        provider.available?.downloads['android'],
+        '$_repo/releases/download/v0.1.4/Moru-v0.1.4-arm64-v8a-release.apk',
+      );
+      expect(provider.error, isNull);
+    },
+  );
 
   for (final scenario in ['upstream', 'draft', 'prerelease', 'wrong-abi']) {
     test('does not advertise $scenario as a Moru update', () async {
