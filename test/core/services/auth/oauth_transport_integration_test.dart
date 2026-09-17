@@ -90,7 +90,7 @@ void main() {
     expect(attempts, 3);
     expect(bodies.toSet(), hasLength(1));
     expect(
-      Uri.splitQueryString(bodies.single),
+      Uri.splitQueryString(bodies.first),
       containsPair('grant_type', 'authorization_code'),
     );
     expect(logs.where((line) => line.contains('failed-dns')), hasLength(2));
