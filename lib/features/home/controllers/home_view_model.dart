@@ -545,15 +545,6 @@ class HomeViewModel extends ChangeNotifier {
         : ChatInputSubmissionResult.rejected;
   }
 
-  /// True while the conversation on screen is generating.
-  bool get isCurrentConversationLoading => _isCurrentLoading();
-
-  bool _isCurrentLoading() {
-    final cid = currentConversation?.id;
-    if (cid == null) return false;
-    return _chatController.isConversationLoading(cid);
-  }
-
   /// Drops the oldest pending message and hands its content back so the
   /// composer can restore it as the draft.
   ///

@@ -42,7 +42,9 @@ void main() {
         createdAt: epoch,
         updatedAt: epoch,
       ),
-      binding: const WorkspaceBinding(workspaceId: 'workspace-1'),
+      // `cwd` is derived from the binding, so the model working directory is
+      // set here rather than passed to the constructor.
+      binding: WorkspaceBinding(workspaceId: 'workspace-1', cwd: modelCwd),
       paths: sandboxed
           ? WorkspacePaths.sandboxed(
               workspaceHostRoot: workspaceRoot.path,
@@ -54,7 +56,6 @@ void main() {
               sessionHostDir: p.join(temp.path, 'session'),
               skillsHostDir: p.join(temp.path, 'skills'),
             ),
-      cwd: modelCwd,
       sessionDir: Directory(p.join(temp.path, 'session')),
       outputsDir: Directory(p.join(temp.path, 'session', 'outputs')),
       conversationId: 'conversation-1',

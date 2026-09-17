@@ -369,9 +369,6 @@ class HomePageController extends ChangeNotifier {
   /// Pending messages of the conversation on screen, oldest first.
   List<QueuedChatInput> get queuedInputs => _viewModel.currentQueuedInputs;
 
-  /// Id of the pending message currently open in the composer, or null.
-  String? get editingQueuedInputId => _queuedEditState?.id;
-
   bool get isQueuedMessageEditActive => _queuedEditState != null;
 
   /// The pending message open in the composer, for the edit overlay.
@@ -1094,7 +1091,8 @@ class HomePageController extends ChangeNotifier {
   /// Drops one pending message without bringing its text back to the composer.
   ///
   /// This is the "delete" half of the queue panel: the user explicitly asked
-  /// for the message to be gone, so the draft must stay as they left it.
+  /// for the message to be gone, so it is not restored anywhere. An edit of the
+  /// same message is closed first, which also clears the composer.
   void removeQueuedMessage(String id) {
     if (_queuedEditState?.id == id) _exitQueuedMessageEdit(restore: false);
     _viewModel.removeQueuedInput(id);
@@ -1162,16 +1160,19 @@ class HomePageController extends ChangeNotifier {
     if (state == null) return;
     _queuedEditState = null;
     if (restore) {
-      // Either path restores the original text: the queue keeps a message that
-      // was never sent, and the composer must not keep a copy of it.
+      // The message goes back to the queue untouched, so the composer must not
+      // keep a second copy of it.
       _viewModel.insertQueuedInput(
         id: state.id,
         conversationId: state.conversationId,
         index: state.index,
         input: state.original,
       );
-      _mediaController.clearDraft();
     }
+    // Both paths own the draft from here: an edit loaded it into the composer,
+    // and leaving it there would duplicate a message that is now in the queue
+    // (restore) or was just deleted (no restore).
+    _mediaController.clearDraft();
     notifyListeners();
   }
 
