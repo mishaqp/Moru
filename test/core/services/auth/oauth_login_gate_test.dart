@@ -43,20 +43,44 @@ void main() {
       return http.Response('{"ok":true}', 200);
     });
     addTearDown(client.close);
-    final pending = OAuthWire(client, beforeRequest: gate.wait).request(
-      'https://auth.openai.com/api/accounts/deviceauth/token',
-      json: {'device_auth_id': 'synthetic', 'user_code': 'CODE'},
-      timeout: const Duration(milliseconds: 5),
-    );
+    final pending =
+        OAuthWire(
+          client,
+          beforeRequest: () async {
+            print('TEST gate entered ${binding.lifecycleState}');
+            await gate.wait();
+            print('TEST gate exited ${binding.lifecycleState}');
+          },
+          diagnostics: print,
+        ).request(
+          'https://auth.openai.com/api/accounts/deviceauth/token',
+          json: {'device_auth_id': 'synthetic', 'user_code': 'CODE'},
+          timeout: const Duration(milliseconds: 5),
+        );
+    print('TEST await 30ms');
     await Future<void>.delayed(const Duration(milliseconds: 30));
+    print('TEST after 30ms');
     expect(sends, 0);
     expect(networkWaits, 0);
     binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await Future<void>.delayed(Duration.zero);
     expect(networkWaits, 1);
     expect(sends, 0);
+    print(
+      'TEST completing native network, lifecycle=${binding.lifecycleState} waits=$networkWaits sends=$sends',
+    );
     network.complete();
-    expect((await pending).status, 200);
+    expect(
+      (await pending.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {
+          throw StateError(
+            'Gate did not resume: lifecycle=${binding.lifecycleState}',
+          );
+        },
+      )).status,
+      200,
+    );
     expect(sends, 1);
   });
 
@@ -86,10 +110,22 @@ void main() {
             'https://auth.openai.com/oauth/token',
             form: {'code': 'private-code', 'code_verifier': 'private-verifier'},
           );
+      print('TEST DNS await 350ms');
       await Future<void>.delayed(const Duration(milliseconds: 350));
+      print('TEST DNS after350');
       expect(bodies, hasLength(1));
       binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-      expect((await pending).status, 200);
+      expect(
+        (await pending.timeout(
+          const Duration(seconds: 2),
+          onTimeout: () {
+            throw StateError(
+              'Gate did not resume: lifecycle=${binding.lifecycleState}',
+            );
+          },
+        )).status,
+        200,
+      );
       expect(bodies, hasLength(2));
       expect(bodies[0], bodies[1]);
       expect(logs.join('\n'), isNot(contains('private-')));
