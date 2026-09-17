@@ -27,6 +27,13 @@ Map<String, dynamic> _release({String tag = 'v0.1.4'}) => {
   ],
 };
 
+// GitHub JSON is UTF-8; the default Response(String) encoding is Latin-1.
+http.Response _jsonResponse(Map<String, dynamic> data) => http.Response.bytes(
+  utf8.encode(jsonEncode(data)),
+  200,
+  headers: {'content-type': 'application/json; charset=utf-8'},
+);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -50,7 +57,7 @@ void main() {
         provider.checkForUpdates,
         () => MockClient((request) async {
           urls.add(request.url);
-          return http.Response(jsonEncode(_release()), 200);
+          return _jsonResponse(_release());
         }),
       );
       expect(urls, hasLength(1));
@@ -58,6 +65,7 @@ void main() {
       expect(urls.single.path, '/repos/mishaqp/Moru/releases/latest');
       expect(provider.available?.app, 'Moru');
       expect(provider.available?.version, '0.1.4');
+      expect(provider.available?.notes, 'Исправлен вход Codex.');
       expect(
         provider.available?.downloads['android'],
         '$_repo/releases/download/v0.1.4/Moru-v0.1.4-arm64-v8a-release.apk',
@@ -89,7 +97,7 @@ void main() {
       addTearDown(provider.dispose);
       await http.runWithClient(
         provider.checkForUpdates,
-        () => MockClient((_) async => http.Response(jsonEncode(data), 200)),
+        () => MockClient((_) async => _jsonResponse(data)),
       );
       expect(provider.available, isNull);
     });
@@ -100,9 +108,7 @@ void main() {
     addTearDown(provider.dispose);
     await http.runWithClient(
       provider.checkForUpdates,
-      () => MockClient(
-        (_) async => http.Response(jsonEncode(_release(tag: 'v0.1.3')), 200),
-      ),
+      () => MockClient((_) async => _jsonResponse(_release(tag: 'v0.1.3'))),
     );
     expect(provider.available, isNull);
     expect(provider.error, isNull);

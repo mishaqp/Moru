@@ -48,7 +48,9 @@ void main() {
     final html = await utf8.decoder.bind(response).join();
     expect(response.statusCode, HttpStatus.ok);
     expect(html, contains('Return to Moru'));
-    expect(html, contains('com.mishaqp.moru://mcp-oauth-callback/test'));
+    final returnUrl = browser.redirectUri.replace(query: 'state=nonce');
+    final escapedUrl = const HtmlEscape().convert(returnUrl.toString());
+    expect(html, contains('href="$escapedUrl"'));
     expect(html, isNot(contains('private-auth-code')));
     expect(response.headers.value('cache-control'), 'no-store');
     expect(response.headers.value('referrer-policy'), 'no-referrer');
