@@ -26,28 +26,51 @@ class BrowserAgentTool {
     }
 
     final action = (args['action'] ?? '').toString().trim().toLowerCase();
+    final session = BrowserAgentSession.instance;
     try {
       switch (action) {
         case 'open':
           return jsonEncode(await _open((args['url'] ?? '').toString()));
         case 'observe':
-          return jsonEncode(await BrowserAgentSession.instance.observe());
-        case 'click':
           return jsonEncode(
-            await BrowserAgentSession.instance.click(_elementId(args)),
+            await session.observe(
+              scope: (args['scope'] ?? 'viewport').toString().toLowerCase(),
+              maxTextChars: _intArg(args, 'max_text_chars', 3000),
+              maxElements: _intArg(args, 'max_elements', 36),
+              includeText: _boolArg(args, 'include_text', true),
+            ),
           );
+        case 'click':
+          return jsonEncode(await session.click(_elementId(args)));
         case 'type':
           return jsonEncode(
-            await BrowserAgentSession.instance.type(
+            await session.type(
               _elementId(args),
               (args['text'] ?? '').toString(),
             ),
           );
+        case 'scroll':
+          return jsonEncode(
+            await session.scroll(
+              direction: (args['direction'] ?? 'down')
+                  .toString()
+                  .trim()
+                  .toLowerCase(),
+              amount: _nullableIntArg(args, 'amount'),
+            ),
+          );
+        case 'back':
+          return jsonEncode(await session.goBack());
+        case 'forward':
+          return jsonEncode(await session.goForward());
+        case 'reload':
+          return jsonEncode(await session.reload());
         default:
           return jsonEncode({
             'ok': false,
             'error': 'invalid_action',
-            'message': 'Use action open, observe, click, or type.',
+            'message':
+                'Use action open, observe, click, type, scroll, back, forward, or reload.',
           });
       }
     } on TimeoutException {
@@ -104,13 +127,41 @@ class BrowserAgentTool {
   }
 
   static int _elementId(Map<String, dynamic> args) {
-    final raw = args['element_id'];
-    final id = raw is num ? raw.toInt() : int.tryParse(raw?.toString() ?? '');
+    final id = _nullableIntArg(args, 'element_id');
     if (id == null || id < 1) {
       throw ArgumentError(
         'element_id must be a positive integer from observe.',
       );
     }
     return id;
+  }
+
+  static int _intArg(
+    Map<String, dynamic> args,
+    String key,
+    int fallback,
+  ) {
+    return _nullableIntArg(args, key) ?? fallback;
+  }
+
+  static int? _nullableIntArg(Map<String, dynamic> args, String key) {
+    final raw = args[key];
+    if (raw == null) return null;
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw.toString());
+  }
+
+  static bool _boolArg(
+    Map<String, dynamic> args,
+    String key,
+    bool fallback,
+  ) {
+    final raw = args[key];
+    if (raw == null) return fallback;
+    if (raw is bool) return raw;
+    final normalized = raw.toString().trim().toLowerCase();
+    if (normalized == 'true') return true;
+    if (normalized == 'false') return false;
+    return fallback;
   }
 }
