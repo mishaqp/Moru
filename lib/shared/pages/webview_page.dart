@@ -193,7 +193,7 @@ class _WebViewPageState extends State<WebViewPage> {
     setState(() {
       _forceAgentClose = true;
     });
-    await Future<void>.delayed(Duration.zero);
+    await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
     await Navigator.of(context).maybePop();
   }
