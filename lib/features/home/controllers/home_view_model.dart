@@ -230,10 +230,15 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   /// Pending messages of the conversation currently on screen, oldest first.
+  ///
+  /// Read while the page builds, so it never notifies listeners: the pruning
+  /// here only drops messages of conversations that no longer exist, which are
+  /// already invisible to this getter because they are filtered by id. Any
+  /// listener is told about a real change by the code that makes it.
   List<QueuedChatInput> get currentQueuedInputs {
     final cid = currentConversation?.id;
     if (cid == null) return const <QueuedChatInput>[];
-    if (_pruneQueuedInputsWithoutConversation()) notifyListeners();
+    _pruneQueuedInputsWithoutConversation();
     return _queuedInputs.forConversation(cid);
   }
 
