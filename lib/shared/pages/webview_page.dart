@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/providers/settings_provider.dart';
 import '../../core/services/browser/browser_agent_session.dart';
+import '../../features/home/services/tool_approval_service.dart';
 import '../../l10n/app_localizations.dart';
 
 class WebViewPage extends StatefulWidget {
@@ -181,12 +184,131 @@ class _WebViewPageState extends State<WebViewPage> {
     } catch (_) {}
   }
 
+  Future<void> _openAddressEditor() async {
+    final ru = Localizations.localeOf(context).languageCode == 'ru';
+    final editor = TextEditingController(text: _currentUrl ?? '');
+    final value = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(ru ? 'Открыть адрес' : 'Open address'),
+        content: TextField(
+          controller: editor,
+          autofocus: true,
+          keyboardType: TextInputType.url,
+          autocorrect: false,
+          enableSuggestions: false,
+          decoration: const InputDecoration(hintText: 'https://example.com'),
+          onSubmitted: (value) => Navigator.of(dialogContext).pop(value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(ru ? 'Отмена' : 'Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(editor.text),
+            child: Text(ru ? 'Открыть' : 'Open'),
+          ),
+        ],
+      ),
+    );
+    editor.dispose();
+    if (!mounted || value == null || value.trim().isEmpty) return;
+    var raw = value.trim();
+    if (!raw.contains('://')) raw = 'https://$raw';
+    final uri = Uri.tryParse(raw);
+    if (uri == null ||
+        !uri.hasScheme ||
+        (uri.scheme != 'http' && uri.scheme != 'https')) {
+      return;
+    }
+    if (widget.agentSession) BrowserAgentSession.instance.expectNavigation();
+    await _controller.loadRequest(uri);
+  }
+
+  ToolApprovalRequest? _pendingBrowserApproval(
+    ToolApprovalService? service,
+  ) {
+    if (service == null) return null;
+    for (final request in service.pendingRequests) {
+      if (request.toolName == 'browser_use') return request;
+    }
+    return null;
+  }
+
+  Widget _browserApprovalBar(
+    BuildContext context,
+    ToolApprovalRequest request,
+  ) {
+    final ru = Localizations.localeOf(context).languageCode == 'ru';
+    final approval = context.read<ToolApprovalService>();
+    final action = (request.arguments['action'] ?? '').toString();
+    final elementId = request.arguments['element_id'];
+    final detail = elementId == null ? action : '$action #$elementId';
+    final cs = Theme.of(context).colorScheme;
+
+    return SafeArea(
+      top: false,
+      child: Material(
+        color: cs.surfaceContainerHigh,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                ru
+                    ? 'Moru хочет выполнить действие в браузере: $detail'
+                    : 'Moru wants to perform a browser action: $detail',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: () => approval.deny(
+                      request.toolCallId,
+                      conversationId: request.conversationId,
+                    ),
+                    child: Text(ru ? 'Запретить' : 'Deny'),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () async {
+                      approval.setAutoApproveAll(true);
+                      await context
+                          .read<SettingsProvider>()
+                          .setToolAutoApproveAll(true);
+                    },
+                    child: Text(ru ? 'Всегда разрешать' : 'Always allow'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: () => approval.approve(
+                      request.toolCallId,
+                      conversationId: request.conversationId,
+                    ),
+                    child: Text(ru ? 'Разрешить' : 'Allow'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final bool contentMode =
         (widget.contentBase64 != null && (widget.contentBase64!.isNotEmpty)) &&
         ((widget.url == null) || widget.url!.isEmpty);
+    final approvalService = widget.agentSession
+        ? context.watch<ToolApprovalService>()
+        : null;
+    final browserApproval = _pendingBrowserApproval(approvalService);
     return PopScope(
       canPop: !_canGoBack,
       onPopInvokedWithResult: (didPop, _) {
@@ -270,6 +392,72 @@ class _WebViewPageState extends State<WebViewPage> {
                 value: _progress > 0 ? _progress / 100 : null,
               ),
             Expanded(child: WebViewWidget(controller: _controller)),
+            if (!contentMode)
+              SafeArea(
+                top: false,
+                child: Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    border: Border(
+                      top: BorderSide(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outlineVariant
+                            .withValues(alpha: 0.35),
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).backButtonTooltip,
+                        onPressed: _canGoBack ? () => _controller.goBack() : null,
+                        icon: const Icon(Icons.arrow_back, size: 20),
+                      ),
+                      IconButton(
+                        tooltip: l10n.messageWebViewForwardTooltip,
+                        onPressed: _canGoForward
+                            ? () => _controller.goForward()
+                            : null,
+                        icon: const Icon(Icons.arrow_forward, size: 20),
+                      ),
+                      Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: _openAddressEditor,
+                          child: Container(
+                            height: 34,
+                            alignment: Alignment.centerLeft,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              _currentUrl ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: l10n.messageWebViewRefreshTooltip,
+                        onPressed: () => _controller.reload(),
+                        icon: const Icon(Icons.refresh, size: 20),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (browserApproval != null)
+              _browserApprovalBar(context, browserApproval),
           ],
         ),
       ),
