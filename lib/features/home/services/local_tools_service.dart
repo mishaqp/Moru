@@ -7,6 +7,7 @@ import 'package:math_expressions/math_expressions.dart';
 
 import '../../../core/models/assistant.dart';
 import '../../../core/models/health_data_type.dart';
+import 'browser_agent_tool.dart';
 
 typedef TextToSpeechStarter = Future<void> Function(String text);
 
@@ -18,6 +19,7 @@ class LocalToolNames {
   static const String textToSpeech = 'text_to_speech';
   static const String askUser = 'ask_user_input_v0';
   static const String calculate = 'calculate';
+  static const String browserUse = 'browser_use';
   static const String screenTime = 'get_screen_time';
   static const String calendarQuery = 'calendar_query';
   static const String calendarCreate = 'calendar_create';
@@ -34,6 +36,7 @@ class LocalToolNames {
     textToSpeech,
     askUser,
     calculate,
+    browserUse,
     screenTime,
     calendarQuery,
     calendarCreate,
@@ -50,6 +53,16 @@ class LocalToolNames {
     remindersCreate,
     remindersComplete,
   ];
+
+  static bool requiresApprovalFor(
+    String name,
+    Map<String, dynamic> arguments,
+  ) {
+    if (requiresUserApproval.contains(name)) return true;
+    if (name != browserUse) return false;
+    final action = (arguments['action'] ?? '').toString().trim().toLowerCase();
+    return action == 'click' || action == 'type';
+  }
 }
 
 /// Platform availability of the device-backed local tools (implemented over
@@ -363,6 +376,8 @@ class LocalToolsService {
   /// assistant "Local tools" tab.
   static bool isAvailableOnThisPlatform(String name) {
     switch (name) {
+      case LocalToolNames.browserUse:
+        return BrowserAgentTool.supported;
       case LocalToolNames.screenTime:
         return DeviceLocalTools.screenTimeSupported;
       case LocalToolNames.calendarQuery:
@@ -401,6 +416,8 @@ class LocalToolsService {
         return _askUserDefinition;
       case LocalToolNames.calculate:
         return _calculateDefinition;
+      case LocalToolNames.browserUse:
+        return _browserUseDefinition;
       case LocalToolNames.screenTime:
         return _screenTimeDefinition();
       case LocalToolNames.calendarQuery:
@@ -476,6 +493,9 @@ class LocalToolsService {
     }
     if (name == LocalToolNames.calculate) {
       return _handleCalculateTool(args);
+    }
+    if (name == LocalToolNames.browserUse && BrowserAgentTool.supported) {
+      return BrowserAgentTool.execute(args);
     }
     if (name == LocalToolNames.screenTime &&
         DeviceLocalTools.screenTimeSupported) {
@@ -649,6 +669,39 @@ class LocalToolsService {
           },
         },
         'required': ['expression'],
+      },
+    },
+  };
+
+  static const Map<String, dynamic> _browserUseDefinition = {
+    'type': 'function',
+    'function': {
+      'name': LocalToolNames.browserUse,
+      'description':
+          'Control the visible Shared Browser in Moru. Use open to show an http/https URL, then observe to read visible page text and interactive element IDs. Use click or type only with element_id values from the latest observe result. Observe again after navigation or when an element becomes stale. Never claim to have clicked or typed unless this tool returns ok=true.',
+      'parameters': {
+        'type': 'object',
+        'properties': {
+          'action': {
+            'type': 'string',
+            'enum': ['open', 'observe', 'click', 'type'],
+            'description': 'Browser operation to perform.',
+          },
+          'url': {
+            'type': 'string',
+            'description': 'http/https URL. Required for action=open.',
+          },
+          'element_id': {
+            'type': 'integer',
+            'description':
+                'Interactive element ID returned by the latest observe. Required for click/type.',
+          },
+          'text': {
+            'type': 'string',
+            'description': 'Text to enter. Required for action=type.',
+          },
+        },
+        'required': ['action'],
       },
     },
   };

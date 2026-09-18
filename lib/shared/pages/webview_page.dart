@@ -5,12 +5,19 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/services/browser/browser_agent_session.dart';
 import '../../l10n/app_localizations.dart';
 
 class WebViewPage extends StatefulWidget {
-  const WebViewPage({super.key, this.url, this.contentBase64});
+  const WebViewPage({
+    super.key,
+    this.url,
+    this.contentBase64,
+    this.agentSession = false,
+  });
   final String? url;
   final String? contentBase64; // HTML string in Base64
+  final bool agentSession;
 
   @override
   State<WebViewPage> createState() => _WebViewPageState();
@@ -45,6 +52,9 @@ class _WebViewPageState extends State<WebViewPage> {
               _isLoading = true;
               _currentUrl = url;
             });
+            if (widget.agentSession) {
+              BrowserAgentSession.instance.pageStarted(url);
+            }
           },
           onPageFinished: (url) async {
             setState(() {
@@ -52,6 +62,9 @@ class _WebViewPageState extends State<WebViewPage> {
               _progress = 100;
               _currentUrl = url;
             });
+            if (widget.agentSession) {
+              BrowserAgentSession.instance.pageFinished(url);
+            }
             await _refreshCanGoStates();
             await _updateTitle();
           },
@@ -64,8 +77,19 @@ class _WebViewPageState extends State<WebViewPage> {
           },
         ),
       );
+    if (widget.agentSession) {
+      BrowserAgentSession.instance.register(_controller);
+    }
     // Initial load
     scheduleMicrotask(_initialLoad);
+  }
+
+  @override
+  void dispose() {
+    if (widget.agentSession) {
+      BrowserAgentSession.instance.unregister(_controller);
+    }
+    super.dispose();
   }
 
   Future<void> _initialLoad() async {
