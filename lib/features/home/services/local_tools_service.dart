@@ -686,13 +686,22 @@ class LocalToolsService {
     'function': {
       'name': LocalToolNames.browserUse,
       'description':
-          'Control the visible Shared Browser in Moru. Use open to show an http/https URL, then observe to read visible page text and interactive element IDs. Use click or type only with element_id values from the latest observe result. Observe again after navigation or when an element becomes stale. Never claim to have clicked or typed unless this tool returns ok=true.',
+          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, scroll, or use browser history. Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
       'parameters': {
         'type': 'object',
         'properties': {
           'action': {
             'type': 'string',
-            'enum': ['open', 'observe', 'click', 'type'],
+            'enum': [
+              'open',
+              'observe',
+              'click',
+              'type',
+              'scroll',
+              'back',
+              'forward',
+              'reload',
+            ],
             'description': 'Browser operation to perform.',
           },
           'url': {
@@ -707,6 +716,44 @@ class LocalToolsService {
           'text': {
             'type': 'string',
             'description': 'Text to enter. Required for action=type.',
+          },
+          'scope': {
+            'type': 'string',
+            'enum': ['viewport', 'document'],
+            'description':
+                'Observe only the visible viewport (default, cheaper) or the whole document.',
+          },
+          'max_text_chars': {
+            'type': 'integer',
+            'minimum': 256,
+            'maximum': 8000,
+            'default': 3000,
+            'description': 'Maximum page-text characters returned by observe.',
+          },
+          'max_elements': {
+            'type': 'integer',
+            'minimum': 1,
+            'maximum': 80,
+            'default': 36,
+            'description': 'Maximum interactive elements returned by observe.',
+          },
+          'include_text': {
+            'type': 'boolean',
+            'default': true,
+            'description':
+                'Set false when only interactive elements are needed to save tokens.',
+          },
+          'direction': {
+            'type': 'string',
+            'enum': ['up', 'down', 'top', 'bottom'],
+            'description': 'Scroll direction for action=scroll.',
+          },
+          'amount': {
+            'type': 'integer',
+            'minimum': 0,
+            'maximum': 5000,
+            'description':
+                'Optional scroll distance in CSS pixels. Defaults to about 78% of the viewport.',
           },
         },
         'required': ['action'],
