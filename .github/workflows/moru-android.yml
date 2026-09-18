@@ -151,7 +151,14 @@ jobs:
   publish:
     name: Publish verified stable arm64 release
     needs: android
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    # A release APK is published from master, whether the run came from a
+    # version bump on the branch or from a manual release dispatch: the
+    # build that was verified is the build that ships, so publication must
+    # not depend on which event produced it.
+    if: >-
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' && inputs.variant == 'release'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
