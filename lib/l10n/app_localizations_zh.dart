@@ -8469,7 +8469,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get toolSchemaSettingsPageTitle => '工具描述';
+  String get toolSchemaSettingsPageTitle => '工具与权限';
 
   @override
   String get toolSchemaSettingsGroupSearch => '搜索';
@@ -19881,7 +19881,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
-  String get toolSchemaSettingsPageTitle => '工具描述';
+  String get toolSchemaSettingsPageTitle => '工具与权限';
 
   @override
   String get toolSchemaSettingsGroupSearch => '搜索';
@@ -31368,7 +31368,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get toolSchemaSettingsPageTitle => '工具描述';
+  String get toolSchemaSettingsPageTitle => '工具与权限';
 
   @override
   String get toolSchemaSettingsGroupSearch => '搜尋';
