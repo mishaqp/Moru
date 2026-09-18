@@ -46,9 +46,7 @@ class _ToolSchemaSettingsPageState extends State<ToolSchemaSettingsPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(
-          ru ? 'Полное доверие инструментам' : 'Full tool trust',
-        ),
+        title: Text(ru ? 'Полное доверие инструментам' : 'Full tool trust'),
         content: Text(
           ru
               ? 'Moru перестанет спрашивать подтверждение перед действиями инструментов. '
@@ -138,10 +136,7 @@ class _ToolSchemaSettingsPageState extends State<ToolSchemaSettingsPage> {
     );
   }
 
-  Widget _approvalSection(
-    BuildContext context,
-    SettingsProvider settings,
-  ) {
+  Widget _approvalSection(BuildContext context, SettingsProvider settings) {
     final cs = Theme.of(context).colorScheme;
     final ru = Localizations.localeOf(context).languageCode == 'ru';
     return Column(
