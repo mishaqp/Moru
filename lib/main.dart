@@ -698,7 +698,14 @@ class MyApp extends StatelessWidget {
               ChatService(existingRepository: databaseLease.chatRepository),
         ),
         ChangeNotifierProvider(create: (_) => McpToolService()),
-        ChangeNotifierProvider(create: (_) => ToolApprovalService()),
+        ChangeNotifierProxyProvider<SettingsProvider, ToolApprovalService>(
+          create: (_) => ToolApprovalService(),
+          update: (_, settings, approval) {
+            final service = approval ?? ToolApprovalService();
+            service.setAutoApproveAll(settings.toolAutoApproveAll);
+            return service;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => AskUserInteractionService()),
         ChangeNotifierProvider(
           create: (ctx) => AssistantProvider(
