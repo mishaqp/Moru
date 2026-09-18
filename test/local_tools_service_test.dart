@@ -164,10 +164,10 @@ void main() {
         'reload',
         'close',
       ]);
-      expect(
-        (properties['scope'] as Map<String, dynamic>)['enum'],
-        const ['viewport', 'document'],
-      );
+      expect((properties['scope'] as Map<String, dynamic>)['enum'], const [
+        'viewport',
+        'document',
+      ]);
       expect(
         (properties['max_text_chars'] as Map<String, dynamic>)['default'],
         3000,
