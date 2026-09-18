@@ -162,6 +162,7 @@ void main() {
         'back',
         'forward',
         'reload',
+        'close',
       ]);
       expect(
         (properties['scope'] as Map<String, dynamic>)['enum'],
