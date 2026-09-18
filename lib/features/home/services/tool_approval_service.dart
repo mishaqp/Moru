@@ -50,6 +50,30 @@ class ToolApprovalRequest {
 class ToolApprovalService extends ChangeNotifier {
   final Map<_PendingKey, ToolApprovalRequest> _pending = {};
   int _unscopedSeq = 0;
+  bool _autoApproveAll = false;
+
+  /// Global trusted mode. When enabled, tool calls never create approval cards.
+  bool get autoApproveAll => _autoApproveAll;
+
+  /// Synchronizes the global trusted mode from SettingsProvider.
+  ///
+  /// Turning it on also approves requests that were already waiting, so an
+  /// agent cannot remain stuck behind a confirmation card after the user
+  /// enables trusted mode.
+  void setAutoApproveAll(bool value) {
+    if (_autoApproveAll == value) return;
+    _autoApproveAll = value;
+    if (!value || _pending.isEmpty) return;
+
+    final waiting = _pending.values.toList(growable: false);
+    _pending.clear();
+    for (final req in waiting) {
+      if (!req._completer.isCompleted) {
+        req._completer.complete(ToolApprovalResult.approved());
+      }
+    }
+    notifyListeners();
+  }
 
   /// Unmodifiable snapshot of pending approval requests.
   List<ToolApprovalRequest> get pendingRequests =>
@@ -104,6 +128,9 @@ class ToolApprovalService extends ChangeNotifier {
     required Map<String, dynamic> arguments,
     String? conversationId,
   }) {
+    if (_autoApproveAll) {
+      return Future<ToolApprovalResult>.value(ToolApprovalResult.approved());
+    }
     final key = _storageKey(conversationId, toolCallId);
     final existing = _pending[key];
     if (existing != null) {
