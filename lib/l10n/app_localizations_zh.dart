@@ -31368,7 +31368,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get toolSchemaSettingsPageTitle => '工具与权限';
+  String get toolSchemaSettingsPageTitle => '工具與權限';
 
   @override
   String get toolSchemaSettingsGroupSearch => '搜尋';
