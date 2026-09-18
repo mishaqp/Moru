@@ -3942,7 +3942,7 @@
       }
     }
   },
-  "toolSchemaSettingsPageTitle": "Описания инструментов",
+  "toolSchemaSettingsPageTitle": "Инструменты и разрешения",
   "toolSchemaSettingsGroupSearch": "Поиск",
   "toolSchemaSettingsGroupMemory": "Память",
   "toolSchemaSettingsGroupLocal": "Инструменты устройства",
