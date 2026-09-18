@@ -278,6 +278,37 @@ class BrowserAgentSession {
     });
   }
   const tag = element.tagName.toLowerCase();
+  if (tag === 'select') {
+    if (element.disabled) {
+      return JSON.stringify({
+        ok: false,
+        error: 'not_editable',
+        message: 'The selected element is disabled.'
+      });
+    }
+    const wanted = String(text).trim().toLowerCase();
+    const option = Array.from(element.options).find((item) =>
+      String(item.value).trim().toLowerCase() === wanted ||
+      String(item.textContent || '').trim().toLowerCase() === wanted
+    );
+    if (!option) {
+      return JSON.stringify({
+        ok: false,
+        error: 'option_not_found',
+        message: 'No select option matches the requested text or value.'
+      });
+    }
+    element.focus();
+    element.value = option.value;
+    element.dispatchEvent(new Event('input', {bubbles: true}));
+    element.dispatchEvent(new Event('change', {bubbles: true}));
+    return JSON.stringify({
+      ok: true,
+      element_id: id,
+      selected: String(option.textContent || option.value).trim().slice(0, 120)
+    });
+  }
+
   const editable = element.isContentEditable ||
       tag === 'input' || tag === 'textarea';
   if (!editable || element.disabled || element.readOnly) {
@@ -395,6 +426,12 @@ class BrowserAgentSession {
     if (placeholder) item.placeholder = placeholder;
     if (value) item.value = value;
     if (href) item.href = href;
+    if (tag === 'select') {
+      item.options = Array.from(element.options).slice(0, 12).map((option) => ({
+        value: normalize(option.value).slice(0, 80),
+        text: normalize(option.textContent).slice(0, 80)
+      }));
+    }
     if (element.disabled) item.disabled = true;
     return item;
   });
