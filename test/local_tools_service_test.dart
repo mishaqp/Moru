@@ -158,7 +158,23 @@ void main() {
         'observe',
         'click',
         'type',
+        'scroll',
+        'back',
+        'forward',
+        'reload',
       ]);
+      expect(
+        (properties['scope'] as Map<String, dynamic>)['enum'],
+        const ['viewport', 'document'],
+      );
+      expect(
+        (properties['max_text_chars'] as Map<String, dynamic>)['default'],
+        3000,
+      );
+      expect(
+        (properties['max_elements'] as Map<String, dynamic>)['default'],
+        36,
+      );
       expect(parameters['required'], const ['action']);
     });
 
