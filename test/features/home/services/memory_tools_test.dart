@@ -19,6 +19,7 @@ import 'package:Kelivo/core/services/memory/memory_prompts.dart';
 import 'package:Kelivo/core/services/memory/memory_repository.dart';
 import 'package:Kelivo/core/services/memory/memory_tools.dart';
 import 'package:Kelivo/core/services/memory/memory_trace.dart';
+import 'package:Kelivo/features/home/services/local_tools_service.dart';
 import 'package:Kelivo/features/home/services/tool_handler_service.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
@@ -372,7 +373,10 @@ void main() {
           false,
           isToolModel: (_, __) => true,
         );
-        final names = defs.map(toolName).toList();
+        final names = defs
+            .map(toolName)
+            .where((name) => name != LocalToolNames.browserUse)
+            .toList();
         expect(names, MemoryTools.legacyToolNames);
         expect(names.toSet().intersection(MemoryTools.allToolNames), isEmpty);
         expect(names.any((n) => n.startsWith('memory_')), isFalse);
@@ -397,6 +401,7 @@ void main() {
               false,
               isToolModel: (_, __) => true,
             )
+            .where((d) => MemoryTools.legacyToolNames.contains(toolName(d)))
             .map((d) => (d['function'] as Map)['description'] as String)
             .toList();
       }
