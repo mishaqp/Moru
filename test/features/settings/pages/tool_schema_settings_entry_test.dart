@@ -16,7 +16,7 @@ void main() {
   });
 
   testWidgets(
-    'mobile settings lists Tool Descriptions below Logs and above Sponsor',
+    'mobile settings lists Tools & permissions below Logs and above Sponsor',
     (tester) async {
       tester.view.physicalSize = const Size(400, 4000);
       tester.view.devicePixelRatio = 1.0;
@@ -43,22 +43,22 @@ void main() {
 
       final labels = _listTexts(tester);
       expect(
-        labels.indexOf('Tool Descriptions'),
+        labels.indexOf('Tools & permissions'),
         greaterThan(labels.indexOf('Logs')),
       );
       expect(
         labels.indexOf('Sponsor'),
-        greaterThan(labels.indexOf('Tool Descriptions')),
+        greaterThan(labels.indexOf('Tools & permissions')),
       );
       expect(
-        labels.indexOf('Tool Descriptions'),
+        labels.indexOf('Tools & permissions'),
         greaterThan(labels.indexOf('Search')),
       );
     },
   );
 
   testWidgets(
-    'desktop settings lists Tool Descriptions below Statistics and above About',
+    'desktop settings lists Tools & permissions below Statistics and above About',
     (tester) async {
       tester.view.physicalSize = const Size(1400, 1200);
       tester.view.devicePixelRatio = 1.0;
@@ -84,15 +84,15 @@ void main() {
 
       final labels = _listTexts(tester);
       expect(
-        labels.indexOf('Tool Descriptions'),
+        labels.indexOf('Tools & permissions'),
         greaterThan(labels.indexOf('Statistics')),
       );
       expect(
         labels.indexOf('About'),
-        greaterThan(labels.indexOf('Tool Descriptions')),
+        greaterThan(labels.indexOf('Tools & permissions')),
       );
       expect(
-        labels.indexOf('Tool Descriptions'),
+        labels.indexOf('Tools & permissions'),
         greaterThan(labels.indexOf('Search')),
       );
     },

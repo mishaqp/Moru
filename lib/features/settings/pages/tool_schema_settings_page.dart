@@ -7,6 +7,7 @@ import '../../../core/services/tools/built_in_tool_catalog.dart';
 import '../../../features/home/services/local_tools_service.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/section_card.dart';
 import '../../../theme/app_font_weights.dart';
@@ -155,26 +156,46 @@ class _ToolSchemaSettingsPageState extends State<ToolSchemaSettingsPage> {
         ),
         SectionCard(
           padding: EdgeInsets.zero,
-          child: SwitchListTile.adaptive(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 6,
-            ),
-            value: settings.toolAutoApproveAll,
-            onChanged: _setFullTrust,
-            title: Text(
-              ru
-                  ? 'Я понимаю риск — разрешать всё'
-                  : 'Full trust mode (dangerous)',
-              style: TextStyle(fontWeight: AppFontWeights.semibold),
-            ),
-            subtitle: Text(
-              ru
-                  ? 'Не спрашивать подтверждение перед действиями ИИ. '
-                        'Действует для браузера, MCP, shell, записи файлов и '
-                        'других инструментов, которые обычно требуют подтверждения.'
-                  : 'Skip per-action confirmations for browser, MCP, shell, '
-                        'file writes, and other tools that normally require approval.',
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ru
+                            ? 'Я понимаю риск — разрешать всё'
+                            : 'Full trust mode (dangerous)',
+                        style: TextStyle(
+                          fontWeight: AppFontWeights.semibold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        ru
+                            ? 'Не спрашивать подтверждение перед действиями ИИ. '
+                                  'Действует для браузера, MCP, shell, записи файлов и '
+                                  'других инструментов, которые обычно требуют подтверждения.'
+                            : 'Skip per-action confirmations for browser, MCP, shell, '
+                                  'file writes, and other tools that normally require approval.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          height: 1.35,
+                          color: cs.onSurface.withValues(alpha: 0.62),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                IosSwitch(
+                  value: settings.toolAutoApproveAll,
+                  onChanged: _setFullTrust,
+                ),
+              ],
             ),
           ),
         ),
