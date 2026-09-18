@@ -395,6 +395,17 @@ class LocalToolsService {
     }
   }
 
+  /// Whether a local tool is enabled for this assistant.
+  ///
+  /// Shared Browser is a built-in Android capability and is always exposed
+  /// when the current platform supports it. Other local tools remain opt-in.
+  static bool isEnabledForAssistant(String name, Assistant assistant) {
+    if (name == LocalToolNames.browserUse) {
+      return BrowserAgentTool.supported;
+    }
+    return assistant.localToolIds.contains(name);
+  }
+
   /// Default schemas keyed by tool name. Timezone-dependent descriptions are
   /// rebuilt on each read so they stay current.
   static Map<String, Map<String, dynamic>> get definitions => {
@@ -452,7 +463,7 @@ class LocalToolsService {
 
     final tools = <Map<String, dynamic>>[];
     for (final id in LocalToolNames.all) {
-      if (!assistant.localToolIds.contains(id)) continue;
+      if (!isEnabledForAssistant(id, assistant)) continue;
       if (!isAvailableOnThisPlatform(id)) continue;
       if (id == LocalToolNames.healthSummary) {
         tools.add(
@@ -476,7 +487,7 @@ class LocalToolsService {
     Assistant? assistant, {
     TextToSpeechStarter? onSpeakText,
   }) async {
-    if (assistant == null || !assistant.localToolIds.contains(name)) {
+    if (assistant == null || !isEnabledForAssistant(name, assistant)) {
       return null;
     }
     if (name == LocalToolNames.timeInfo) {

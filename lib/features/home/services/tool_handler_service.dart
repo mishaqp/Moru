@@ -509,7 +509,7 @@ class ToolHandlerService {
         // user-visible state, so they require explicit approval first.
         if (LocalToolNames.requiresApprovalFor(name, args) &&
             assistant != null &&
-            assistant.localToolIds.contains(name) &&
+            LocalToolsService.isEnabledForAssistant(name, assistant) &&
             approvalService != null) {
           final approval = await approvalService.requestApproval(
             toolCallId: approvalIdFor(name, toolCallId),

@@ -24,9 +24,6 @@ class _LocalToolsTab extends StatelessWidget {
     final calculateEnabled = assistant.localToolIds.contains(
       LocalToolNames.calculate,
     );
-    final browserEnabled = assistant.localToolIds.contains(
-      LocalToolNames.browserUse,
-    );
     final screenTimeEnabled = assistant.localToolIds.contains(
       LocalToolNames.screenTime,
     );
@@ -109,20 +106,6 @@ class _LocalToolsTab extends StatelessWidget {
               enabled: calculateEnabled,
               onChanged: (value) => toggleTool(LocalToolNames.calculate, value),
             ),
-            if (LocalToolsService.isAvailableOnThisPlatform(
-              LocalToolNames.browserUse,
-            )) ...[
-              _iosDivider(context),
-              _LocalToolRow(
-                icon: Icons.language,
-                title: 'Shared Browser (experimental)',
-                subtitle:
-                    'Let the assistant open, inspect, click and type in the same visible WebView.',
-                enabled: browserEnabled,
-                onChanged: (value) =>
-                    toggleTool(LocalToolNames.browserUse, value),
-              ),
-            ],
             if (DeviceLocalTools.screenTimeSupported) ...[
               _iosDivider(context),
               _LocalToolRow(

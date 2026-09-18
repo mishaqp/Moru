@@ -159,6 +159,36 @@ void main() {
       expect(parameters['required'], const ['action']);
     });
 
+    test('Android automatically exposes shared browser to every assistant', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+      const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+      expect(
+        LocalToolsService.isEnabledForAssistant(
+          LocalToolNames.browserUse,
+          assistant,
+        ),
+        isTrue,
+      );
+      expect(
+        LocalToolsService.buildToolDefinitions(
+          assistant: assistant,
+          supportsTools: true,
+        ).map((tool) => tool['function']['name']),
+        contains(LocalToolNames.browserUse),
+      );
+
+      final result = await LocalToolsService.tryHandleToolCall(
+        LocalToolNames.browserUse,
+        const {'action': 'invalid'},
+        assistant,
+      );
+      expect(result, isNotNull);
+      expect(jsonDecode(result!)['error'], 'invalid_action');
+    });
+
     test('shared browser requires approval only for click and type', () {
       expect(
         LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
@@ -332,7 +362,7 @@ void main() {
           assistant: iosAssistant,
           supportsTools: true,
         ).map((tool) => tool['function']['name']),
-        [LocalToolNames.currentLocation],
+        [LocalToolNames.browserUse, LocalToolNames.currentLocation],
       );
 
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
