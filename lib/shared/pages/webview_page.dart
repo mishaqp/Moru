@@ -226,9 +226,7 @@ class _WebViewPageState extends State<WebViewPage> {
     await _controller.loadRequest(uri);
   }
 
-  ToolApprovalRequest? _pendingBrowserApproval(
-    ToolApprovalService? service,
-  ) {
+  ToolApprovalRequest? _pendingBrowserApproval(ToolApprovalService? service) {
     if (service == null) return null;
     for (final request in service.pendingRequests) {
       if (request.toolName == 'browser_use') return request;
@@ -402,10 +400,9 @@ class _WebViewPageState extends State<WebViewPage> {
                     color: Theme.of(context).colorScheme.surface,
                     border: Border(
                       top: BorderSide(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .outlineVariant
-                            .withValues(alpha: 0.35),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outlineVariant.withValues(alpha: 0.35),
                       ),
                     ),
                   ),
@@ -415,7 +412,9 @@ class _WebViewPageState extends State<WebViewPage> {
                         tooltip: MaterialLocalizations.of(
                           context,
                         ).backButtonTooltip,
-                        onPressed: _canGoBack ? () => _controller.goBack() : null,
+                        onPressed: _canGoBack
+                            ? () => _controller.goBack()
+                            : null,
                         icon: const Icon(Icons.arrow_back, size: 20),
                       ),
                       IconButton(
@@ -434,9 +433,9 @@ class _WebViewPageState extends State<WebViewPage> {
                             alignment: Alignment.centerLeft,
                             padding: const EdgeInsets.symmetric(horizontal: 10),
                             decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
