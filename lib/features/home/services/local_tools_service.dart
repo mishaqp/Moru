@@ -701,6 +701,7 @@ class LocalToolsService {
               'back',
               'forward',
               'reload',
+              'close',
             ],
             'description': 'Browser operation to perform.',
           },
