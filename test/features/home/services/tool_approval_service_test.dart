@@ -136,4 +136,37 @@ void main() {
       isNotNull,
     );
   });
+  test('full trust approves immediately without creating pending UI', () async {
+    final service = ToolApprovalService();
+    service.setAutoApproveAll(true);
+
+    final result = await service.requestApproval(
+      toolCallId: 'browser-1',
+      toolName: 'browser_use',
+      arguments: const {'action': 'click', 'element_id': 1},
+      conversationId: 'conversation-a',
+    );
+
+    expect(result.approved, isTrue);
+    expect(service.pendingRequests, isEmpty);
+  });
+
+  test('enabling full trust releases requests that are already waiting', () async {
+    final service = ToolApprovalService();
+    final pending = service.requestApproval(
+      toolCallId: 'browser-1',
+      toolName: 'browser_use',
+      arguments: const {'action': 'type', 'element_id': 2},
+      conversationId: 'conversation-a',
+    );
+
+    await expectStillPending(pending);
+    expect(service.hasPending, isTrue);
+
+    service.setAutoApproveAll(true);
+
+    expect((await pending).approved, isTrue);
+    expect(service.hasPending, isFalse);
+  });
+
 }
