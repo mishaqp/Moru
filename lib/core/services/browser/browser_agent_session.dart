@@ -90,7 +90,8 @@ class BrowserAgentSession {
 
   Future<Map<String, dynamic>> click(int elementId) async {
     await waitUntilReady();
-    final script = '''
+    final script =
+        '''
 (() => {
   const elements = window.__moruBrowserElements;
   const id = $elementId;
@@ -120,7 +121,8 @@ class BrowserAgentSession {
   Future<Map<String, dynamic>> type(int elementId, String text) async {
     await waitUntilReady();
     final encodedText = jsonEncode(text);
-    final script = '''
+    final script =
+        '''
 (() => {
   const elements = window.__moruBrowserElements;
   const id = $elementId;
@@ -184,7 +186,9 @@ class BrowserAgentSession {
   }
 
   Future<Map<String, dynamic>> _runJson(String script) async {
-    final result = await _requireController().runJavaScriptReturningResult(script);
+    final result = await _requireController().runJavaScriptReturningResult(
+      script,
+    );
     dynamic decoded = result;
     for (var i = 0; i < 2 && decoded is String; i++) {
       try {

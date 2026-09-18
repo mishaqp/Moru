@@ -142,46 +142,46 @@ void main() {
     );
 
     test('shared browser schema exposes only the bounded browser actions', () {
-      final definition = LocalToolsService.definitionFor(LocalToolNames.browserUse);
+      final definition = LocalToolsService.definitionFor(
+        LocalToolNames.browserUse,
+      );
       final function = definition['function'] as Map<String, dynamic>;
       final parameters = function['parameters'] as Map<String, dynamic>;
       final properties = parameters['properties'] as Map<String, dynamic>;
 
       expect(function['name'], LocalToolNames.browserUse);
-      expect(
-        (properties['action'] as Map<String, dynamic>)['enum'],
-        const ['open', 'observe', 'click', 'type'],
-      );
+      expect((properties['action'] as Map<String, dynamic>)['enum'], const [
+        'open',
+        'observe',
+        'click',
+        'type',
+      ]);
       expect(parameters['required'], const ['action']);
     });
 
     test('shared browser requires approval only for click and type', () {
       expect(
-        LocalToolNames.requiresApprovalFor(
-          LocalToolNames.browserUse,
-          const {'action': 'open'},
-        ),
+        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+          'action': 'open',
+        }),
         isFalse,
       );
       expect(
-        LocalToolNames.requiresApprovalFor(
-          LocalToolNames.browserUse,
-          const {'action': 'observe'},
-        ),
+        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+          'action': 'observe',
+        }),
         isFalse,
       );
       expect(
-        LocalToolNames.requiresApprovalFor(
-          LocalToolNames.browserUse,
-          const {'action': 'click'},
-        ),
+        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+          'action': 'click',
+        }),
         isTrue,
       );
       expect(
-        LocalToolNames.requiresApprovalFor(
-          LocalToolNames.browserUse,
-          const {'action': 'type'},
-        ),
+        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+          'action': 'type',
+        }),
         isTrue,
       );
     });

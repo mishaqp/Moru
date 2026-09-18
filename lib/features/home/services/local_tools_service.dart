@@ -54,10 +54,7 @@ class LocalToolNames {
     remindersComplete,
   ];
 
-  static bool requiresApprovalFor(
-    String name,
-    Map<String, dynamic> arguments,
-  ) {
+  static bool requiresApprovalFor(String name, Map<String, dynamic> arguments) {
     if (requiresUserApproval.contains(name)) return true;
     if (name != browserUse) return false;
     final action = (arguments['action'] ?? '').toString().trim().toLowerCase();
