@@ -323,6 +323,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _userChatBubbleStyleOverridesKey =
       'chat_bubble_style_overrides_user_v1';
   static const String _toolSchemaOverridesKey = 'tool_schema_overrides_v1';
+  static const String _toolAutoApproveAllKey = 'tool_auto_approve_all_v1';
   static const String _mobileAssistantEditTabOrderKey =
       'mobile_assistant_edit_tab_order_v1';
   static const String _mobileAssistantEditTabHiddenKey =
@@ -1143,6 +1144,7 @@ class SettingsProvider extends ChangeNotifier {
     _keepAssistantListExpandedOnSidebarClose =
         prefs.getBool(_displayKeepAssistantListExpandedOnSidebarCloseKey) ??
         false;
+    _toolAutoApproveAll = prefs.getBool(_toolAutoApproveAllKey) ?? false;
     _requestLogEnabled = prefs.getBool(_requestLogEnabledKey) ?? true;
     await RequestLogger.setEnabled(_requestLogEnabled);
     _contextLogEnabled = prefs.getBool(_contextLogEnabledKey) ?? true;
@@ -5479,6 +5481,17 @@ Requirements:
     notifyListeners();
     final prefs = _preferences;
     await prefs.setBool(_displayKeepAssistantListExpandedOnSidebarCloseKey, v);
+  }
+
+  // Tools: explicit global trust mode. Off by default.
+  bool _toolAutoApproveAll = false;
+  bool get toolAutoApproveAll => _toolAutoApproveAll;
+
+  Future<void> setToolAutoApproveAll(bool value) async {
+    if (_toolAutoApproveAll == value) return;
+    _toolAutoApproveAll = value;
+    notifyListeners();
+    await _preferences.setBool(_toolAutoApproveAllKey, value);
   }
 
   // Network: request logging (debug)
