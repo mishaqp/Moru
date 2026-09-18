@@ -34,6 +34,7 @@ class _WebViewPageState extends State<WebViewPage> {
   int _progress = 0;
   bool _canGoBack = false;
   bool _canGoForward = false;
+  bool _forceAgentClose = false;
   final List<_ConsoleMessage> _console = <_ConsoleMessage>[];
 
   @override
@@ -81,7 +82,10 @@ class _WebViewPageState extends State<WebViewPage> {
         ),
       );
     if (widget.agentSession) {
-      BrowserAgentSession.instance.register(_controller);
+      BrowserAgentSession.instance.register(
+        _controller,
+        onClose: _closeAgentSession,
+      );
     }
     // Initial load
     scheduleMicrotask(_initialLoad);
@@ -182,6 +186,16 @@ class _WebViewPageState extends State<WebViewPage> {
         _canGoForward = fwd;
       });
     } catch (_) {}
+  }
+
+  Future<void> _closeAgentSession() async {
+    if (!mounted) return;
+    setState(() {
+      _forceAgentClose = true;
+    });
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) return;
+    await Navigator.of(context).maybePop();
   }
 
   Future<void> _openAddressEditor() async {
@@ -309,9 +323,9 @@ class _WebViewPageState extends State<WebViewPage> {
         : null;
     final browserApproval = _pendingBrowserApproval(approvalService);
     return PopScope(
-      canPop: !_canGoBack,
+      canPop: _forceAgentClose || !_canGoBack,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
+        if (didPop || _forceAgentClose) return;
         if (_canGoBack) {
           _controller.goBack();
         }
@@ -322,7 +336,7 @@ class _WebViewPageState extends State<WebViewPage> {
             _title?.isNotEmpty == true ? _title! : (_currentUrl ?? ''),
           ),
           actions: [
-            if (!contentMode) ...[
+            if (!contentMode && !widget.agentSession) ...[
               IconButton(
                 tooltip: l10n.messageWebViewRefreshTooltip,
                 onPressed: () => _controller.reload(),
@@ -374,12 +388,18 @@ class _WebViewPageState extends State<WebViewPage> {
             ),
           ],
           leading: IconButton(
-            icon: Icon(_canGoBack ? Icons.arrow_back : Icons.close),
+            icon: Icon(
+              widget.agentSession
+                  ? Icons.close
+                  : (_canGoBack ? Icons.arrow_back : Icons.close),
+            ),
             onPressed: () async {
-              if (_canGoBack) {
-                _controller.goBack();
+              if (widget.agentSession) {
+                await _closeAgentSession();
+              } else if (_canGoBack) {
+                await _controller.goBack();
               } else {
-                Navigator.of(context).maybePop();
+                await Navigator.of(context).maybePop();
               }
             },
           ),
