@@ -28,6 +28,7 @@ void main() {
       LocalToolNames.textToSpeech,
       LocalToolNames.askUser,
       LocalToolNames.calculate,
+      LocalToolNames.browserUse,
       LocalToolNames.screenTime,
       LocalToolNames.calendarQuery,
       LocalToolNames.calendarCreate,
