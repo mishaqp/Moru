@@ -169,9 +169,7 @@ class _ToolSchemaSettingsPageState extends State<ToolSchemaSettingsPage> {
                         ru
                             ? 'Я понимаю риск — разрешать всё'
                             : 'Full trust mode (dangerous)',
-                        style: TextStyle(
-                          fontWeight: AppFontWeights.semibold,
-                        ),
+                        style: TextStyle(fontWeight: AppFontWeights.semibold),
                       ),
                       const SizedBox(height: 4),
                       Text(
