@@ -166,7 +166,7 @@ class _ToolSchemaSettingsPageState extends State<ToolSchemaSettingsPage> {
               ru
                   ? 'Я понимаю риск — разрешать всё'
                   : 'Full trust mode (dangerous)',
-              style: const TextStyle(fontWeight: AppFontWeights.semibold),
+              style: TextStyle(fontWeight: AppFontWeights.semibold),
             ),
             subtitle: Text(
               ru
