@@ -109,13 +109,16 @@ void main() {
           supportsTools: true,
         );
 
-        expect(disabled, isEmpty);
+        expect(disabled.map((tool) => tool['function']['name']), const [
+          LocalToolNames.browserUse,
+        ]);
         expect(unsupported, isEmpty);
         expect(enabled.map((tool) => tool['function']['name']), const [
           LocalToolNames.timeInfo,
           LocalToolNames.clipboard,
           LocalToolNames.textToSpeech,
           LocalToolNames.askUser,
+          LocalToolNames.browserUse,
         ]);
         expect(enabled.first['function']['parameters']['properties'], isEmpty);
         expect(
