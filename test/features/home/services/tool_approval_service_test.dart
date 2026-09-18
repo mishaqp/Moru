@@ -151,22 +151,25 @@ void main() {
     expect(service.pendingRequests, isEmpty);
   });
 
-  test('enabling full trust releases requests that are already waiting', () async {
-    final service = ToolApprovalService();
-    final pending = service.requestApproval(
-      toolCallId: 'browser-1',
-      toolName: 'browser_use',
-      arguments: const {'action': 'type', 'element_id': 2},
-      conversationId: 'conversation-a',
-    );
+  test(
+    'enabling full trust releases requests that are already waiting',
+    () async {
+      final service = ToolApprovalService();
+      final pending = service.requestApproval(
+        toolCallId: 'browser-1',
+        toolName: 'browser_use',
+        arguments: const {'action': 'type', 'element_id': 2},
+        conversationId: 'conversation-a',
+      );
 
-    await expectStillPending(pending);
-    expect(service.hasPending, isTrue);
+      await expectStillPending(pending);
+      expect(service.hasPending, isTrue);
 
-    service.setAutoApproveAll(true);
+      service.setAutoApproveAll(true);
 
-    expect((await pending).approved, isTrue);
-    expect(service.hasPending, isFalse);
-  });
+      expect((await pending).approved, isTrue);
+      expect(service.hasPending, isFalse);
+    },
+  );
 
 }
