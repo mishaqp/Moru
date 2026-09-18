@@ -8863,7 +8863,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get toolSchemaSettingsPageTitle => 'Tool Descriptions';
+  String get toolSchemaSettingsPageTitle => 'Tools & permissions';
 
   @override
   String get toolSchemaSettingsGroupSearch => 'Search';
