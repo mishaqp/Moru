@@ -263,7 +263,10 @@ class _WebViewPageState extends State<WebViewPage> {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 8),
-              Row(
+              OverflowBar(
+                alignment: MainAxisAlignment.end,
+                spacing: 8,
+                overflowSpacing: 8,
                 children: [
                   TextButton(
                     onPressed: () => approval.deny(
@@ -272,7 +275,6 @@ class _WebViewPageState extends State<WebViewPage> {
                     ),
                     child: Text(ru ? 'Запретить' : 'Deny'),
                   ),
-                  const Spacer(),
                   TextButton(
                     onPressed: () async {
                       approval.setAutoApproveAll(true);
@@ -282,7 +284,6 @@ class _WebViewPageState extends State<WebViewPage> {
                     },
                     child: Text(ru ? 'Всегда разрешать' : 'Always allow'),
                   ),
-                  const SizedBox(width: 8),
                   FilledButton(
                     onPressed: () => approval.approve(
                       request.toolCallId,
