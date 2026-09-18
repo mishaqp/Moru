@@ -65,12 +65,14 @@ class BrowserAgentTool {
           return jsonEncode(await session.goForward());
         case 'reload':
           return jsonEncode(await session.reload());
+        case 'close':
+          return jsonEncode(await _close());
         default:
           return jsonEncode({
             'ok': false,
             'error': 'invalid_action',
             'message':
-                'Use action open, observe, click, type, scroll, back, forward, or reload.',
+                'Use action open, observe, click, type, scroll, back, forward, reload, or close.',
           });
       }
     } on TimeoutException {
@@ -92,6 +94,24 @@ class BrowserAgentTool {
         'message': error.message,
       });
     }
+  }
+
+  static Future<Map<String, dynamic>> _close() async {
+    final session = BrowserAgentSession.instance;
+    if (!session.isAttached) {
+      return {
+        'ok': false,
+        'error': 'browser_not_open',
+        'message': 'Shared browser is not open.',
+      };
+    }
+    final navigator = rootNavigatorKey.currentState;
+    if (navigator == null) {
+      throw StateError('The app navigator is not ready.');
+    }
+    final closed = await navigator.maybePop();
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    return {'ok': closed, 'closed': closed};
   }
 
   static Future<Map<String, dynamic>> _open(String rawUrl) async {
