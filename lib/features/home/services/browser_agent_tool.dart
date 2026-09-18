@@ -156,11 +156,7 @@ class BrowserAgentTool {
     return id;
   }
 
-  static int _intArg(
-    Map<String, dynamic> args,
-    String key,
-    int fallback,
-  ) {
+  static int _intArg(Map<String, dynamic> args, String key, int fallback) {
     return _nullableIntArg(args, key) ?? fallback;
   }
 
@@ -171,11 +167,7 @@ class BrowserAgentTool {
     return int.tryParse(raw.toString());
   }
 
-  static bool _boolArg(
-    Map<String, dynamic> args,
-    String key,
-    bool fallback,
-  ) {
+  static bool _boolArg(Map<String, dynamic> args, String key, bool fallback) {
     final raw = args[key];
     if (raw == null) return fallback;
     if (raw is bool) return raw;
