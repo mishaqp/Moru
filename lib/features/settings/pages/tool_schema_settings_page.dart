@@ -7,6 +7,7 @@ import '../../../core/services/tools/built_in_tool_catalog.dart';
 import '../../../features/home/services/local_tools_service.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/section_card.dart';
 import '../../../theme/app_font_weights.dart';
@@ -33,6 +34,50 @@ class _ToolSchemaSettingsPageState extends State<ToolSchemaSettingsPage> {
     final confirmed = await confirmResetAllToolSchemas(context);
     if (!confirmed || !mounted) return;
     await context.read<SettingsProvider>().resetAllToolSchemaOverrides();
+  }
+
+  Future<void> _setFullTrust(bool value) async {
+    final settings = context.read<SettingsProvider>();
+    if (!value) {
+      await settings.setToolAutoApproveAll(false);
+      return;
+    }
+
+    final ru = Localizations.localeOf(context).languageCode == 'ru';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(ru ? 'Полное доверие инструментам' : 'Full tool trust'),
+        content: Text(
+          ru
+              ? 'Moru перестанет спрашивать подтверждение перед действиями инструментов. '
+                    'ИИ сможет автоматически нажимать и вводить текст в браузере, '
+                    'запускать shell, изменять файлы и выполнять другие разрешённые '
+                    'инструменты. Системные разрешения Android это не отключает.'
+              : 'Moru will stop asking for confirmation before tool actions. '
+                    'The AI may click and type in the browser, run shell commands, '
+                    'modify files, and use other enabled tools automatically. '
+                    'This does not bypass Android system permissions.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(ru ? 'Отмена' : 'Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              ru
+                  ? 'Я понимаю риск — разрешить всё'
+                  : 'I understand — allow everything',
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await settings.setToolAutoApproveAll(true);
+    }
   }
 
   @override
@@ -78,6 +123,8 @@ class _ToolSchemaSettingsPageState extends State<ToolSchemaSettingsPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
+          _approvalSection(context, settings),
+          const SizedBox(height: 18),
           for (final group in BuiltInToolGroup.values)
             ..._groupSection(
               context,
@@ -87,6 +134,70 @@ class _ToolSchemaSettingsPageState extends State<ToolSchemaSettingsPage> {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _approvalSection(BuildContext context, SettingsProvider settings) {
+    final cs = Theme.of(context).colorScheme;
+    final ru = Localizations.localeOf(context).languageCode == 'ru';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+          child: Text(
+            ru ? 'Подтверждения инструментов' : 'Tool approvals',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: AppFontWeights.semibold,
+              color: cs.onSurface.withValues(alpha: 0.8),
+            ),
+          ),
+        ),
+        SectionCard(
+          padding: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ru
+                            ? 'Я понимаю риск — разрешать всё'
+                            : 'Full trust mode (dangerous)',
+                        style: TextStyle(fontWeight: AppFontWeights.semibold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        ru
+                            ? 'Не спрашивать подтверждение перед действиями ИИ. '
+                                  'Действует для браузера, MCP, shell, записи файлов и '
+                                  'других инструментов, которые обычно требуют подтверждения.'
+                            : 'Skip per-action confirmations for browser, MCP, shell, '
+                                  'file writes, and other tools that normally require approval.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          height: 1.35,
+                          color: cs.onSurface.withValues(alpha: 0.62),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                IosSwitch(
+                  value: settings.toolAutoApproveAll,
+                  onChanged: _setFullTrust,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

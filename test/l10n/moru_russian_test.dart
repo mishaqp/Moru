@@ -24,7 +24,7 @@ void main() {
     expect(ru.terminalTitle, 'Терминал');
     expect(ru.memorySettingsProfileTitle, 'Профиль пользователя');
     expect(ru.scheduledTasksTitle, 'Задачи по расписанию');
-    expect(ru.toolSchemaSettingsPageTitle, 'Описания инструментов');
+    expect(ru.toolSchemaSettingsPageTitle, 'Инструменты и разрешения');
     expect(ru.oauthLoginTo('ChatGPT'), 'Войти в ChatGPT');
     expect(
       ru.modelDetailSheetModelIdDisabledHint('gpt-technical-id'),

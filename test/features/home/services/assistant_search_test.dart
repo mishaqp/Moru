@@ -11,6 +11,7 @@ import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/services/mcp/mcp_tool_service.dart';
 import 'package:Kelivo/core/services/search/search_tool_service.dart';
+import 'package:Kelivo/features/home/services/local_tools_service.dart';
 import 'package:Kelivo/features/home/services/message_builder_service.dart';
 import 'package:Kelivo/features/home/services/tool_handler_service.dart';
 
@@ -111,9 +112,12 @@ void main() {
         ),
       );
 
-      expect(disabledTools, isEmpty);
+      expect(disabledTools.map((tool) => tool['function']['name']), [
+        LocalToolNames.browserUse,
+      ]);
       expect(enabledTools.map((tool) => tool['function']['name']), [
         SearchToolService.toolName,
+        LocalToolNames.browserUse,
       ]);
     });
   });

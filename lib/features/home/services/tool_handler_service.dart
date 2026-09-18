@@ -505,11 +505,11 @@ class ToolHandlerService {
           return memoryResult;
         }
 
-        // Creating calendar events or changing reminders modifies user data,
-        // so those tools always require explicit user approval first.
-        if (LocalToolNames.requiresUserApproval.contains(name) &&
+        // Mutating device tools and Shared Browser click/type actions modify
+        // user-visible state, so they require explicit approval first.
+        if (LocalToolNames.requiresApprovalFor(name, args) &&
             assistant != null &&
-            assistant.localToolIds.contains(name) &&
+            LocalToolsService.isEnabledForAssistant(name, assistant) &&
             approvalService != null) {
           final approval = await approvalService.requestApproval(
             toolCallId: approvalIdFor(name, toolCallId),

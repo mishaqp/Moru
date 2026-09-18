@@ -8976,7 +8976,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get toolSchemaSettingsPageTitle => 'Описания инструментов';
+  String get toolSchemaSettingsPageTitle => 'Инструменты и разрешения';
 
   @override
   String get toolSchemaSettingsGroupSearch => 'Поиск';

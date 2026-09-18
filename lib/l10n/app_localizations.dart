@@ -15936,7 +15936,7 @@ abstract class AppLocalizations {
   /// No description provided for @toolSchemaSettingsPageTitle.
   ///
   /// In en, this message translates to:
-  /// **'Tool Descriptions'**
+  /// **'Tools & permissions'**
   String get toolSchemaSettingsPageTitle;
 
   /// No description provided for @toolSchemaSettingsGroupSearch.

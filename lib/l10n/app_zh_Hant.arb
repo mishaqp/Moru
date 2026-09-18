@@ -3279,7 +3279,7 @@
   "localSnapshotRunningInBackground": "正在背景備份副本",
   "startupRecoveryLocalCopiesAvailable": "本機還保留著 {count} 份本機副本，最新一份是 {when} 的。重設不會刪除它們——重新啟動後可以在 設定 › 備份 › 本機副本 裡還原。",
   "startupRecoveryRecoveredCopiesDeleted": "另外還有 {count} 份故障還原時留下的資料庫副本，重設會把它們一併永久刪除。想留住的話請先匯出資料。",
-  "toolSchemaSettingsPageTitle": "工具描述",
+  "toolSchemaSettingsPageTitle": "工具與權限",
   "toolSchemaSettingsGroupSearch": "搜尋",
   "toolSchemaSettingsGroupMemory": "記憶",
   "toolSchemaSettingsGroupLocal": "本機工具",

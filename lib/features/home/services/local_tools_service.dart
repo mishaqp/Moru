@@ -7,6 +7,7 @@ import 'package:math_expressions/math_expressions.dart';
 
 import '../../../core/models/assistant.dart';
 import '../../../core/models/health_data_type.dart';
+import 'browser_agent_tool.dart';
 
 typedef TextToSpeechStarter = Future<void> Function(String text);
 
@@ -18,6 +19,7 @@ class LocalToolNames {
   static const String textToSpeech = 'text_to_speech';
   static const String askUser = 'ask_user_input_v0';
   static const String calculate = 'calculate';
+  static const String browserUse = 'browser_use';
   static const String screenTime = 'get_screen_time';
   static const String calendarQuery = 'calendar_query';
   static const String calendarCreate = 'calendar_create';
@@ -34,6 +36,7 @@ class LocalToolNames {
     textToSpeech,
     askUser,
     calculate,
+    browserUse,
     screenTime,
     calendarQuery,
     calendarCreate,
@@ -50,6 +53,13 @@ class LocalToolNames {
     remindersCreate,
     remindersComplete,
   ];
+
+  static bool requiresApprovalFor(String name, Map<String, dynamic> arguments) {
+    if (requiresUserApproval.contains(name)) return true;
+    if (name != browserUse) return false;
+    final action = (arguments['action'] ?? '').toString().trim().toLowerCase();
+    return action == 'click' || action == 'type';
+  }
 }
 
 /// Platform availability of the device-backed local tools (implemented over
@@ -363,6 +373,8 @@ class LocalToolsService {
   /// assistant "Local tools" tab.
   static bool isAvailableOnThisPlatform(String name) {
     switch (name) {
+      case LocalToolNames.browserUse:
+        return BrowserAgentTool.supported;
       case LocalToolNames.screenTime:
         return DeviceLocalTools.screenTimeSupported;
       case LocalToolNames.calendarQuery:
@@ -383,6 +395,17 @@ class LocalToolsService {
     }
   }
 
+  /// Whether a local tool is enabled for this assistant.
+  ///
+  /// Shared Browser is a built-in Android capability and is always exposed
+  /// when the current platform supports it. Other local tools remain opt-in.
+  static bool isEnabledForAssistant(String name, Assistant assistant) {
+    if (name == LocalToolNames.browserUse) {
+      return BrowserAgentTool.supported;
+    }
+    return assistant.localToolIds.contains(name);
+  }
+
   /// Default schemas keyed by tool name. Timezone-dependent descriptions are
   /// rebuilt on each read so they stay current.
   static Map<String, Map<String, dynamic>> get definitions => {
@@ -401,6 +424,8 @@ class LocalToolsService {
         return _askUserDefinition;
       case LocalToolNames.calculate:
         return _calculateDefinition;
+      case LocalToolNames.browserUse:
+        return _browserUseDefinition;
       case LocalToolNames.screenTime:
         return _screenTimeDefinition();
       case LocalToolNames.calendarQuery:
@@ -438,7 +463,7 @@ class LocalToolsService {
 
     final tools = <Map<String, dynamic>>[];
     for (final id in LocalToolNames.all) {
-      if (!assistant.localToolIds.contains(id)) continue;
+      if (!isEnabledForAssistant(id, assistant)) continue;
       if (!isAvailableOnThisPlatform(id)) continue;
       if (id == LocalToolNames.healthSummary) {
         tools.add(
@@ -462,7 +487,7 @@ class LocalToolsService {
     Assistant? assistant, {
     TextToSpeechStarter? onSpeakText,
   }) async {
-    if (assistant == null || !assistant.localToolIds.contains(name)) {
+    if (assistant == null || !isEnabledForAssistant(name, assistant)) {
       return null;
     }
     if (name == LocalToolNames.timeInfo) {
@@ -476,6 +501,9 @@ class LocalToolsService {
     }
     if (name == LocalToolNames.calculate) {
       return _handleCalculateTool(args);
+    }
+    if (name == LocalToolNames.browserUse && BrowserAgentTool.supported) {
+      return BrowserAgentTool.execute(args);
     }
     if (name == LocalToolNames.screenTime &&
         DeviceLocalTools.screenTimeSupported) {
@@ -649,6 +677,87 @@ class LocalToolsService {
           },
         },
         'required': ['expression'],
+      },
+    },
+  };
+
+  static const Map<String, dynamic> _browserUseDefinition = {
+    'type': 'function',
+    'function': {
+      'name': LocalToolNames.browserUse,
+      'description':
+          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, scroll, or use browser history. Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
+      'parameters': {
+        'type': 'object',
+        'properties': {
+          'action': {
+            'type': 'string',
+            'enum': [
+              'open',
+              'observe',
+              'click',
+              'type',
+              'scroll',
+              'back',
+              'forward',
+              'reload',
+              'close',
+            ],
+            'description': 'Browser operation to perform.',
+          },
+          'url': {
+            'type': 'string',
+            'description': 'http/https URL. Required for action=open.',
+          },
+          'element_id': {
+            'type': 'integer',
+            'description':
+                'Interactive element ID returned by the latest observe. Required for click/type.',
+          },
+          'text': {
+            'type': 'string',
+            'description': 'Text to enter. Required for action=type.',
+          },
+          'scope': {
+            'type': 'string',
+            'enum': ['viewport', 'document'],
+            'description':
+                'Observe only the visible viewport (default, cheaper) or the whole document.',
+          },
+          'max_text_chars': {
+            'type': 'integer',
+            'minimum': 256,
+            'maximum': 8000,
+            'default': 3000,
+            'description': 'Maximum page-text characters returned by observe.',
+          },
+          'max_elements': {
+            'type': 'integer',
+            'minimum': 1,
+            'maximum': 80,
+            'default': 36,
+            'description': 'Maximum interactive elements returned by observe.',
+          },
+          'include_text': {
+            'type': 'boolean',
+            'default': true,
+            'description':
+                'Set false when only interactive elements are needed to save tokens.',
+          },
+          'direction': {
+            'type': 'string',
+            'enum': ['up', 'down', 'top', 'bottom'],
+            'description': 'Scroll direction for action=scroll.',
+          },
+          'amount': {
+            'type': 'integer',
+            'minimum': 0,
+            'maximum': 5000,
+            'description':
+                'Optional scroll distance in CSS pixels. Defaults to about 78% of the viewport.',
+          },
+        },
+        'required': ['action'],
       },
     },
   };
