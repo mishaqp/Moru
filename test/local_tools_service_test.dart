@@ -273,26 +273,6 @@ void main() {
     );
 
     test(
-      'shared browser submit/press_key approval can still be bypassed by full trust',
-      () {
-        expect(
-          LocalToolNames.requiresMandatoryApprovalFor(
-            LocalToolNames.browserUse,
-            const {'action': 'submit'},
-          ),
-          isFalse,
-        );
-        expect(
-          LocalToolNames.requiresMandatoryApprovalFor(
-            LocalToolNames.browserUse,
-            const {'action': 'press_key'},
-          ),
-          isFalse,
-        );
-      },
-    );
-
-    test(
       'shared browser submit without an element_id reports invalid_arguments',
       () async {
         debugDefaultTargetPlatformOverride = TargetPlatform.android;
@@ -346,31 +326,14 @@ void main() {
       },
     );
 
-    test(
-      'shared browser eval_js requires approval and it is never bypassed by full trust',
-      () {
-        expect(
-          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
-            'action': 'eval_js',
-          }),
-          isTrue,
-        );
-        expect(
-          LocalToolNames.requiresMandatoryApprovalFor(
-            LocalToolNames.browserUse,
-            const {'action': 'eval_js'},
-          ),
-          isTrue,
-        );
-        expect(
-          LocalToolNames.requiresMandatoryApprovalFor(
-            LocalToolNames.browserUse,
-            const {'action': 'click'},
-          ),
-          isFalse,
-        );
-      },
-    );
+    test('shared browser eval_js requires approval like click/type', () {
+      expect(
+        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+          'action': 'eval_js',
+        }),
+        isTrue,
+      );
+    });
 
     test(
       'shared browser eval_js blocks cookie access, eval/Function, and string timers',

@@ -64,19 +64,6 @@ class LocalToolNames {
         action == 'press_key' ||
         action == 'eval_js';
   }
-
-  /// Whether approval for this call can never be waved through by the global
-  /// full-trust flag, even while it's on. `eval_js` runs arbitrary JavaScript in the
-  /// page, which can read cookies and exfiltrate a logged-in session — the one class
-  /// of harm full trust is not meant to cover.
-  static bool requiresMandatoryApprovalFor(
-    String name,
-    Map<String, dynamic> arguments,
-  ) {
-    if (name != browserUse) return false;
-    final action = (arguments['action'] ?? '').toString().trim().toLowerCase();
-    return action == 'eval_js';
-  }
 }
 
 /// Platform availability of the device-backed local tools (implemented over
@@ -703,7 +690,7 @@ class LocalToolsService {
     'function': {
       'name': LocalToolNames.browserUse,
       'description':
-          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, submit a form (action=submit) or synthesize a key press on the focused element (action=press_key, e.g. Enter), scroll, use browser history, read the full page text with action=read, wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again), or run arbitrary JavaScript with action=eval_js when nothing else covers the task (always requires explicit approval). Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
+          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, submit a form (action=submit) or synthesize a key press on the focused element (action=press_key, e.g. Enter), scroll, use browser history, read the full page text with action=read, wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again), or run arbitrary JavaScript with action=eval_js when nothing else covers the task (requires explicit approval unless full tool trust is on). Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -833,7 +820,7 @@ class LocalToolsService {
           'code': {
             'type': 'string',
             'description':
-                'Required for action=eval_js: JavaScript to run in the page; the result is its last expression, JSON-encoded. Always requires explicit user approval, even when full tool trust is on. Cannot access document.cookie, use eval/Function, or pass a string to setTimeout/setInterval — those are rejected before running.',
+                'Required for action=eval_js: JavaScript to run in the page; the result is its last expression, JSON-encoded. Requires explicit user approval unless full tool trust is on. Cannot access document.cookie, use eval/Function, or pass a string to setTimeout/setInterval — those are rejected before running.',
           },
         },
         'required': ['action'],

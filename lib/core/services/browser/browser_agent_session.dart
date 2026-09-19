@@ -67,8 +67,9 @@ const int evalJsMaxResultChars = 64 * 1024;
 /// One shared browser session used by the visible WebView and the model.
 ///
 /// Every action here but `eval_js` is a bounded, single-purpose script the model
-/// cannot alter; `eval_js` is the one deliberate exception, and it always requires
-/// approval that global trusted mode cannot bypass (see `requiresMandatoryApprovalFor`).
+/// cannot alter; `eval_js` is the one deliberate exception, gated the same way as
+/// click/type/submit/press_key (requires approval unless global trusted mode is on)
+/// plus a static block on the code itself for cookie/session-theft-shaped patterns.
 class BrowserAgentSession {
   BrowserAgentSession._();
 
@@ -406,8 +407,8 @@ class BrowserAgentSession {
   }
 
   /// Runs [code] as the page's own script and returns its last expression, JSON-encoded.
-  /// Caller (the `eval_js` tool) is responsible for pattern-blocking and mandatory
-  /// approval — this method only dispatches and reports the outcome honestly.
+  /// Caller (the `eval_js` tool) is responsible for pattern-blocking and approval —
+  /// this method only dispatches and reports the outcome honestly.
   Future<Map<String, dynamic>> evalJs(String code) async {
     if (!isAttached) {
       return {
