@@ -324,6 +324,8 @@ class SettingsProvider extends ChangeNotifier {
       'chat_bubble_style_overrides_user_v1';
   static const String _toolSchemaOverridesKey = 'tool_schema_overrides_v1';
   static const String _toolAutoApproveAllKey = 'tool_auto_approve_all_v1';
+  static const String _disabledBrowserActionsKey =
+      'browser_disabled_actions_v1';
   static const String _mobileAssistantEditTabOrderKey =
       'mobile_assistant_edit_tab_order_v1';
   static const String _mobileAssistantEditTabHiddenKey =
@@ -1145,6 +1147,9 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getBool(_displayKeepAssistantListExpandedOnSidebarCloseKey) ??
         false;
     _toolAutoApproveAll = prefs.getBool(_toolAutoApproveAllKey) ?? false;
+    _disabledBrowserActions = Set.unmodifiable(
+      prefs.getStringList(_disabledBrowserActionsKey) ?? const <String>[],
+    );
     _requestLogEnabled = prefs.getBool(_requestLogEnabledKey) ?? true;
     await RequestLogger.setEnabled(_requestLogEnabled);
     _contextLogEnabled = prefs.getBool(_contextLogEnabledKey) ?? true;
@@ -5492,6 +5497,23 @@ Requirements:
     _toolAutoApproveAll = value;
     notifyListeners();
     await _preferences.setBool(_toolAutoApproveAllKey, value);
+  }
+
+  // Shared Browser: individually disabled `browser_use` actions. Empty by
+  // default (every action enabled).
+  Set<String> _disabledBrowserActions = const <String>{};
+  Set<String> get disabledBrowserActions => _disabledBrowserActions;
+
+  Future<void> setBrowserActionEnabled(String action, bool enabled) async {
+    final next = Set<String>.from(_disabledBrowserActions);
+    final changed = enabled ? next.remove(action) : next.add(action);
+    if (!changed) return;
+    _disabledBrowserActions = Set.unmodifiable(next);
+    notifyListeners();
+    await _preferences.setStringList(
+      _disabledBrowserActionsKey,
+      _disabledBrowserActions.toList()..sort(),
+    );
   }
 
   // Network: request logging (debug)

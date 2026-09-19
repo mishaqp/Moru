@@ -264,6 +264,12 @@ abstract class AppLocalizations {
   /// **'MCP'**
   String get settingsPageMcp;
 
+  /// No description provided for @settingsPageBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser'**
+  String get settingsPageBrowser;
+
   /// No description provided for @settingsPageQuickPhrase.
   ///
   /// In en, this message translates to:

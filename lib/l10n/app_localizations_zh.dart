@@ -92,6 +92,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPageMcp => 'MCP';
 
   @override
+  String get settingsPageBrowser => '浏览器';
+
+  @override
   String get settingsPageQuickPhrase => '快捷短语';
 
   @override

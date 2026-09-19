@@ -19,6 +19,8 @@ import 'about_page.dart';
 import 'memory_settings_page.dart';
 import 'tts_services_page.dart';
 import 'tool_schema_settings_page.dart';
+import 'browser_settings_page.dart';
+import '../../home/services/browser_agent_tool.dart';
 import 'sponsor_page.dart';
 import 'log_viewer_page.dart';
 import '../../search/pages/search_services_page.dart';
@@ -264,6 +266,21 @@ class SettingsPage extends StatelessWidget {
                   ).push(MaterialPageRoute(builder: (_) => const McpPage()));
                 },
               ),
+              if (BrowserAgentTool.supported) ...[
+                _iosDivider(context),
+                _iosNavRow(
+                  context,
+                  icon: LucideIcons.appWindowMac,
+                  label: l10n.settingsPageBrowser,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const BrowserSettingsPage(),
+                      ),
+                    );
+                  },
+                ),
+              ],
               _iosDivider(context),
               _iosNavRow(
                 context,

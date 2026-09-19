@@ -101,6 +101,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPageMcp => 'MCP';
 
   @override
+  String get settingsPageBrowser => 'Browser';
+
+  @override
   String get settingsPageQuickPhrase => 'Quick Phrase';
 
   @override

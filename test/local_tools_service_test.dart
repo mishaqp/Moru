@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/models/health_data_type.dart';
 import 'package:Kelivo/core/services/browser/web_source.dart';
+import 'package:Kelivo/features/home/services/browser_agent_actions.dart';
 import 'package:Kelivo/features/home/services/health_data_selection.dart';
 import 'package:Kelivo/features/home/services/local_tools_service.dart';
 
@@ -184,6 +185,33 @@ void main() {
       );
       expect(parameters['required'], const ['action']);
     });
+
+    test(
+      'BrowserAgentActions stays in sync with the schema enum and approval gate',
+      () {
+        final schemaActions = Set<String>.from(
+          (LocalToolsService.definitionFor(
+                LocalToolNames.browserUse,
+              )['function']
+              as Map<
+                String,
+                dynamic
+              >)['parameters']['properties']['action']['enum'],
+        );
+        final catalogActions = BrowserAgentActions.all.map((a) => a.id).toSet();
+        expect(catalogActions, schemaActions);
+
+        for (final action in BrowserAgentActions.all) {
+          expect(
+            LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, {
+              'action': action.id,
+            }),
+            action.requiresApproval,
+            reason: action.id,
+          );
+        }
+      },
+    );
 
     test(
       'Android automatically exposes shared browser to every assistant',
@@ -394,6 +422,43 @@ void main() {
         final decoded = jsonDecode(result!) as Map<String, dynamic>;
         expect(decoded['ok'], isFalse);
         expect(decoded['error'], 'invalid_arguments');
+      },
+    );
+
+    test(
+      'a browser_use action turned off in settings is rejected before it runs',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        final result = await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'eval_js', 'code': 'document.title'},
+          assistant,
+          disabledBrowserActions: const {'eval_js'},
+        );
+        final decoded = jsonDecode(result!) as Map<String, dynamic>;
+        expect(decoded['ok'], isFalse);
+        expect(decoded['error'], 'action_disabled');
+      },
+    );
+
+    test(
+      'disabling one browser_use action leaves the others working',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        final result = await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'read'},
+          assistant,
+          disabledBrowserActions: const {'eval_js'},
+        );
+        final decoded = jsonDecode(result!) as Map<String, dynamic>;
+        expect(decoded['error'], 'browser_not_open');
       },
     );
 

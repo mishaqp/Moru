@@ -490,6 +490,7 @@ class LocalToolsService {
     Map<String, dynamic> args,
     Assistant? assistant, {
     TextToSpeechStarter? onSpeakText,
+    Set<String> disabledBrowserActions = const <String>{},
   }) async {
     if (assistant == null || !isEnabledForAssistant(name, assistant)) {
       return null;
@@ -507,6 +508,15 @@ class LocalToolsService {
       return _handleCalculateTool(args);
     }
     if (name == LocalToolNames.browserUse && BrowserAgentTool.supported) {
+      final action = (args['action'] ?? '').toString().trim().toLowerCase();
+      if (disabledBrowserActions.contains(action)) {
+        return jsonEncode({
+          'ok': false,
+          'error': 'action_disabled',
+          'message':
+              'The browser_use action "$action" is turned off in Settings > Browser.',
+        });
+      }
       return BrowserAgentTool.execute(args);
     }
     if (name == LocalToolNames.screenTime &&
