@@ -42,4 +42,56 @@ void main() {
     expect(session.recentActivity.first.detail, '10');
     expect(session.recentActivity.last.detail, '39');
   });
+
+  test('a fresh activity starts as running', () {
+    session.recordActivity(const BrowserActivity(action: 'click'));
+
+    expect(
+      session.currentActivity.value?.outcome,
+      BrowserActivityOutcome.running,
+    );
+  });
+
+  test(
+    'updateLastActivityOutcome resolves both the current value and the log entry',
+    () {
+      session.recordActivity(const BrowserActivity(action: 'click'));
+
+      session.updateLastActivityOutcome(true);
+
+      expect(session.currentActivity.value?.outcome, BrowserActivityOutcome.ok);
+      expect(session.recentActivity.single.outcome, BrowserActivityOutcome.ok);
+    },
+  );
+
+  test('updateLastActivityOutcome(false) resolves to failed', () {
+    session.recordActivity(const BrowserActivity(action: 'click'));
+
+    session.updateLastActivityOutcome(false);
+
+    expect(
+      session.currentActivity.value?.outcome,
+      BrowserActivityOutcome.failed,
+    );
+    expect(
+      session.recentActivity.single.outcome,
+      BrowserActivityOutcome.failed,
+    );
+  });
+
+  test('updateLastActivityOutcome only resolves the most recent entry', () {
+    session.recordActivity(const BrowserActivity(action: 'open'));
+    session.updateLastActivityOutcome(true);
+    session.recordActivity(const BrowserActivity(action: 'click'));
+
+    session.updateLastActivityOutcome(false);
+
+    expect(session.recentActivity[0].outcome, BrowserActivityOutcome.ok);
+    expect(session.recentActivity[1].outcome, BrowserActivityOutcome.failed);
+  });
+
+  test('updateLastActivityOutcome is a no-op once nothing is recorded', () {
+    expect(() => session.updateLastActivityOutcome(true), returnsNormally);
+    expect(session.currentActivity.value, isNull);
+  });
 }

@@ -100,6 +100,14 @@ class BrowserAgentActions {
       descriptionEn: 'Close the shared browser window.',
     ),
     BrowserAgentAction(
+      id: 'done',
+      requiresApproval: false,
+      labelRu: 'Готово',
+      labelEn: 'Done',
+      descriptionRu: 'Сигнал, что задача в браузере выполнена.',
+      descriptionEn: 'Signal that the browser task is complete.',
+    ),
+    BrowserAgentAction(
       id: 'click',
       requiresApproval: true,
       labelRu: 'Нажать',
@@ -153,13 +161,17 @@ class BrowserAgentActions {
 
 /// A short, localized status line for [activity] (the browser page's status
 /// bar and "Show recent" log). Falls back to the raw action id if it somehow
-/// doesn't match a known action, rather than showing nothing.
+/// doesn't match a known action, rather than showing nothing. Success and
+/// the still-[BrowserActivityOutcome.running] state read the same — only a
+/// [BrowserActivityOutcome.failed] call gets a visible marker, matching how
+/// rikkahub-agent's own action trail only annotates failures.
 String browserActivityLabel(BrowserActivity activity, {required bool ru}) {
   final action = BrowserAgentActions.byId(activity.action);
   final label = action == null
       ? activity.action
       : (ru ? action.labelRu : action.labelEn);
   final detail = activity.detail;
-  if (detail == null || detail.isEmpty) return label;
-  return '$label: $detail';
+  final base = (detail == null || detail.isEmpty) ? label : '$label: $detail';
+  if (activity.outcome != BrowserActivityOutcome.failed) return base;
+  return ru ? '$base — не удалось' : '$base — failed';
 }

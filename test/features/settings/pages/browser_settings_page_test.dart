@@ -38,10 +38,10 @@ void main() {
     return settings;
   }
 
-  testWidgets('lists all 14 actions enabled by default', (tester) async {
+  testWidgets('lists all 15 actions enabled by default', (tester) async {
     await pumpPage(tester);
 
-    expect(find.byType(IosSwitch), findsNWidgets(14));
+    expect(find.byType(IosSwitch), findsNWidgets(15));
     expect(find.text('Run JavaScript'), findsOneWidget);
     expect(find.text('Click'), findsOneWidget);
     for (final s in tester.widgetList<IosSwitch>(find.byType(IosSwitch))) {

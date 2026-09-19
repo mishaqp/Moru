@@ -700,7 +700,7 @@ class LocalToolsService {
     'function': {
       'name': LocalToolNames.browserUse,
       'description':
-          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, submit a form (action=submit) or synthesize a key press on the focused element (action=press_key, e.g. Enter), scroll, use browser history, read the full page text with action=read, wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again), or run arbitrary JavaScript with action=eval_js when nothing else covers the task (requires explicit approval unless full tool trust is on). Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
+          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, submit a form (action=submit) or synthesize a key press on the focused element (action=press_key, e.g. Enter), scroll, use browser history, read the full page text with action=read, wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again), or run arbitrary JavaScript with action=eval_js when nothing else covers the task (requires explicit approval unless full tool trust is on). Call action=done with a short summary once the browser task is complete, so the app can show that clearly instead of leaving the last action as the visible status. Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -720,6 +720,7 @@ class LocalToolsService {
               'read',
               'wait_for',
               'eval_js',
+              'done',
               'close',
             ],
             'description': 'Browser operation to perform.',
@@ -831,6 +832,11 @@ class LocalToolsService {
             'type': 'string',
             'description':
                 'Required for action=eval_js: JavaScript to run in the page; the result is its last expression, JSON-encoded. Requires explicit user approval unless full tool trust is on. Code whose source text mentions document.cookie, eval, Function, or a string-form setTimeout/setInterval is rejected before running, so write straightforward code and do not try to work around that check. A thrown exception is reported as a null result, not as an error.',
+          },
+          'summary': {
+            'type': 'string',
+            'description':
+                'Optional for action=done: a short note on what was accomplished, shown in the browser\'s status line.',
           },
         },
         'required': ['action'],
