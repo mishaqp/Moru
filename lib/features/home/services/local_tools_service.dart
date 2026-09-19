@@ -686,7 +686,7 @@ class LocalToolsService {
     'function': {
       'name': LocalToolNames.browserUse,
       'description':
-          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, scroll, or use browser history. Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
+          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, scroll, use browser history, or read the full page text with action=read. Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -701,6 +701,7 @@ class LocalToolsService {
               'back',
               'forward',
               'reload',
+              'read',
               'close',
             ],
             'description': 'Browser operation to perform.',
@@ -755,6 +756,34 @@ class LocalToolsService {
             'maximum': 5000,
             'description':
                 'Optional scroll distance in CSS pixels. Defaults to about 78% of the viewport.',
+          },
+          'selector': {
+            'type': 'string',
+            'description':
+                'For action=read: optional CSS selector to read one element instead of the whole page. Cannot combine with focus.',
+          },
+          'source_id': {
+            'type': 'string',
+            'description':
+                'For action=read: reuse a page already read this session instead of reading it again, using the source_id a previous read returned.',
+          },
+          'max_chars': {
+            'type': 'integer',
+            'minimum': 100,
+            'maximum': 65536,
+            'default': 8000,
+            'description': 'Maximum characters returned by action=read.',
+          },
+          'focus': {
+            'type': 'string',
+            'description':
+                'For action=read: a question or topic used to rank and return the most relevant passages from the whole page instead of just the top of it. Cannot combine with selector.',
+          },
+          'start_index': {
+            'type': 'integer',
+            'minimum': 0,
+            'description':
+                'For action=read with source_id: character offset to resume reading from. Cannot combine with focus.',
           },
         },
         'required': ['action'],

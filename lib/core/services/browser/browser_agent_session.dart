@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:webview_flutter/webview_flutter.dart';
 
+import 'browser_research.dart';
+
 class BrowserAgentProtocolException implements Exception {
   const BrowserAgentProtocolException(this.message);
 
@@ -261,6 +263,56 @@ class BrowserAgentSession {
         .replaceAll('__DIRECTION__', jsonEncode(direction))
         .replaceAll('__AMOUNT__', '$safeAmount');
     return _runJson(script);
+  }
+
+  /// Reads the rendered page text for the browser research path.
+  ///
+  /// Implements [RenderedPageReader]: a whole-document read (no selector) is reported as
+  /// [RenderedScope.fullPage] and doubles as the research corpus, so [browserTextEnvelope]
+  /// can hand out a `source_id`. A selector-scoped read is [RenderedScope.selector] and is
+  /// never cached as a page-level source. There is no article/Readability heuristic yet: the
+  /// extract mode is honestly reported as `raw` rather than claiming a pass this layer does
+  /// not run.
+  Future<RenderedRead> read(ReadRequest request) async {
+    if (!isAttached) return const RenderedReadNotOpen();
+    await waitUntilReady();
+    final selector = request.selector;
+    Map<String, dynamic> result;
+    try {
+      result = await _runJson(
+        _readScript
+            .replaceAll('__SELECTOR__', jsonEncode(selector ?? ''))
+            .replaceAll('__MAX_CHARS__', '$browserResearchMaxChars'),
+      );
+    } on BrowserAgentProtocolException catch (error) {
+      return RenderedReadFailure(
+        'browser_protocol_error',
+        detail: error.message,
+      );
+    }
+    if (result['ok'] != true) {
+      return RenderedReadFailure(
+        (result['error'] ?? 'read_failed').toString(),
+        detail: result['message']?.toString(),
+      );
+    }
+    final text = (result['text'] ?? '').toString();
+    final truncated = result['truncated'] == true;
+    final scope = selector == null
+        ? RenderedScope.fullPage
+        : RenderedScope.selector;
+    return RenderedReadOk(
+      RenderedPage(
+        url: result['url']?.toString(),
+        title: result['title']?.toString(),
+        text: text,
+        extractMode: 'raw',
+        scope: scope,
+        readTruncated: truncated,
+        researchText: scope == RenderedScope.fullPage ? text : null,
+        researchTruncated: truncated,
+      ),
+    );
   }
 
   Future<Map<String, dynamic>> goBack() async {
@@ -541,6 +593,43 @@ class BrowserAgentSession {
     ok: true,
     element_id: id,
     typed_length: text.length
+  });
+})();
+''';
+
+  static const String _readScript = r'''
+(() => {
+  const selector = __SELECTOR__;
+  const maxChars = __MAX_CHARS__;
+  let root;
+  if (selector) {
+    root = document.querySelector(selector);
+    if (!root) {
+      return JSON.stringify({
+        ok: false,
+        error: 'selector_not_found',
+        message: 'No element matches the given selector.'
+      });
+    }
+  } else {
+    root = document.body;
+  }
+  if (!root) {
+    return JSON.stringify({
+      ok: false,
+      error: 'read_unavailable',
+      message: 'The page has no readable content yet.'
+    });
+  }
+  const raw = (root.innerText || root.textContent || '').toString();
+  const truncated = raw.length > maxChars;
+  const text = truncated ? raw.slice(0, maxChars) : raw;
+  return JSON.stringify({
+    ok: true,
+    url: (document.location && document.location.href) || '',
+    title: document.title || '',
+    text,
+    truncated
   });
 })();
 ''';

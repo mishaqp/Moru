@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/models/health_data_type.dart';
+import 'package:Kelivo/core/services/browser/web_source.dart';
 import 'package:Kelivo/features/home/services/health_data_selection.dart';
 import 'package:Kelivo/features/home/services/local_tools_service.dart';
 
@@ -162,6 +163,7 @@ void main() {
         'back',
         'forward',
         'reload',
+        'read',
         'close',
       ]);
       expect((properties['scope'] as Map<String, dynamic>)['enum'], const [
@@ -237,7 +239,81 @@ void main() {
         }),
         isTrue,
       );
+      expect(
+        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+          'action': 'read',
+        }),
+        isFalse,
+      );
     });
+
+    test(
+      'shared browser read without an open browser reports browser_not_open',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        final result = await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'read'},
+          assistant,
+        );
+        final decoded = jsonDecode(result!) as Map<String, dynamic>;
+        expect(decoded['ok'], isFalse);
+        expect(decoded['error'], 'browser_not_open');
+      },
+    );
+
+    test(
+      'shared browser read reuses a cached source_id without reopening the page',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        final source = WebSource(
+          sourceId: WebSourceId.newId(),
+          url: 'https://example.com/article',
+          mode: WebSourceMode.text,
+          title: 'Example article',
+          text: 'Paragraph one.\n\nParagraph two, the important part.',
+          storedAtMillis: DateTime.now().millisecondsSinceEpoch,
+          origin: WebSourceOrigin.browser,
+        );
+        browserSourceCache.put(source);
+        addTearDown(() => browserSourceCache.remove(source.sourceId));
+
+        final result = await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          {'action': 'read', 'source_id': source.sourceId},
+          assistant,
+        );
+        final decoded = jsonDecode(result!) as Map<String, dynamic>;
+        expect(decoded['ok'], isTrue);
+        expect(decoded['cached'], isTrue);
+        expect(decoded['source_id'], source.sourceId);
+        expect(decoded['text'], source.text);
+      },
+    );
+
+    test(
+      'shared browser read reports unknown_source_id for an unrecognized handle',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        final result = await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          {'action': 'read', 'source_id': WebSourceId.newId()},
+          assistant,
+        );
+        final decoded = jsonDecode(result!) as Map<String, dynamic>;
+        expect(decoded['ok'], isFalse);
+        expect(decoded['error'], 'unknown_source_id');
+      },
+    );
 
     test('text to speech call starts playback and returns success', () async {
       final spokenTexts = <String>[];

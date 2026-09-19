@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 
 import '../../../core/services/browser/browser_agent_session.dart';
+import '../../../core/services/browser/browser_research.dart';
+import '../../../core/services/browser/web_source.dart';
 import '../../../shared/pages/webview_page.dart';
 import '../../../shared/widgets/snackbar.dart';
 
@@ -65,6 +67,8 @@ class BrowserAgentTool {
           return jsonEncode(await session.goForward());
         case 'reload':
           return jsonEncode(await session.reload());
+        case 'read':
+          return jsonEncode(await _read(args));
         case 'close':
           return jsonEncode(await _close());
         default:
@@ -72,7 +76,7 @@ class BrowserAgentTool {
             'ok': false,
             'error': 'invalid_action',
             'message':
-                'Use action open, observe, click, type, scroll, back, forward, reload, or close.',
+                'Use action open, observe, click, type, scroll, back, forward, reload, read, or close.',
           });
       }
     } on TimeoutException {
@@ -104,6 +108,55 @@ class BrowserAgentTool {
 
   static Future<Map<String, dynamic>> _close() {
     return BrowserAgentSession.instance.close();
+  }
+
+  /// Reads the current page, or reuses a page already read this session via `source_id` -
+  /// no network, no re-render. Both paths go through [_normalizeReadResult] so `read` reports
+  /// `ok` like every other `browser_use` action, even though the ported research envelopes
+  /// (kept identical to RikkaHub's) signal failure by an `error` key instead.
+  static Future<Map<String, dynamic>> _read(Map<String, dynamic> args) async {
+    final sourceId = _stringArg(args, 'source_id');
+    if (sourceId != null) {
+      return _normalizeReadResult(_readCachedSource(sourceId, args));
+    }
+    final result = await runBrowserRead(
+      args: args,
+      reader: BrowserAgentSession.instance.read,
+      timeoutMs: const Duration(seconds: 20).inMilliseconds,
+      notOpen: () => const {
+        'error': 'browser_not_open',
+        'message': 'Shared browser is not open.',
+      },
+    );
+    return _normalizeReadResult(result);
+  }
+
+  static Map<String, dynamic> _readCachedSource(
+    String sourceId,
+    Map<String, dynamic> args,
+  ) {
+    final cached = browserSourceCache.get(sourceId);
+    if (cached == null) return unknownSourceEnvelope(sourceId);
+    final maxChars = _intArg(
+      args,
+      'max_chars',
+      browserReadDefaultMaxChars,
+    ).clamp(browserReadMinChars, browserReadMaxChars);
+    return cachedSourceEnvelope(
+      source: cached,
+      maxChars: maxChars,
+      focus: _stringArg(args, 'focus'),
+      startIndex: _nullableIntArg(args, 'start_index'),
+    );
+  }
+
+  /// The research envelopes (ported as-is from RikkaHub) signal failure with an `error` key
+  /// and carry no `ok` field. Every other `browser_use` action always returns `ok`, so this
+  /// normalizes `read`'s result to the same contract without touching the ported envelopes.
+  static Map<String, dynamic> _normalizeReadResult(
+    Map<String, dynamic> result,
+  ) {
+    return {'ok': !result.containsKey('error'), ...result};
   }
 
   static Future<Map<String, dynamic>> _open(String rawUrl) async {
@@ -151,6 +204,13 @@ class BrowserAgentTool {
 
   static int _intArg(Map<String, dynamic> args, String key, int fallback) {
     return _nullableIntArg(args, key) ?? fallback;
+  }
+
+  static String? _stringArg(Map<String, dynamic> args, String key) {
+    final raw = args[key];
+    if (raw is! String) return null;
+    final trimmed = raw.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   static int? _nullableIntArg(Map<String, dynamic> args, String key) {
