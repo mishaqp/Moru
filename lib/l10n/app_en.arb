@@ -33,6 +33,7 @@
   "settingsPageSearch": "Search",
   "settingsPageTts": "TTS",
   "settingsPageMcp": "MCP",
+  "settingsPageBrowser": "Browser",
   "settingsPageQuickPhrase": "Quick Phrase",
   "settingsPageInstructionInjection": "Instruction Injection",
   "settingsPageDataSection": "Data",

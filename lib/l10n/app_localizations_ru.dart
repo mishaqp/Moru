@@ -103,6 +103,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsPageMcp => 'MCP';
 
   @override
+  String get settingsPageBrowser => 'Браузер';
+
+  @override
   String get settingsPageQuickPhrase => 'Быстрая фраза';
 
   @override

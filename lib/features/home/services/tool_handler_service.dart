@@ -505,6 +505,20 @@ class ToolHandlerService {
           return memoryResult;
         }
 
+        // A browser action turned off in Settings > Browser is rejected
+        // before it ever reaches an approval prompt.
+        if (name == LocalToolNames.browserUse &&
+            settings.disabledBrowserActions.contains(
+              (args['action'] ?? '').toString().trim().toLowerCase(),
+            )) {
+          return jsonEncode({
+            'ok': false,
+            'error': 'action_disabled',
+            'message':
+                'The browser_use action "${args['action']}" is turned off in Settings > Browser.',
+          });
+        }
+
         // Mutating device tools and Shared Browser click/type actions modify
         // user-visible state, so they require explicit approval first.
         if (LocalToolNames.requiresApprovalFor(name, args) &&
@@ -531,6 +545,7 @@ class ToolHandlerService {
           name,
           args,
           assistant,
+          disabledBrowserActions: settings.disabledBrowserActions,
           onSpeakText: (text) async {
             final tts = contextProvider.read<TtsProvider>();
             if (!tts.isAvailable) {
