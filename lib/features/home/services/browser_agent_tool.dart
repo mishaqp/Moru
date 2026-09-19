@@ -81,6 +81,12 @@ class BrowserAgentTool {
         'error': 'browser_timeout',
         'message': 'The shared browser did not become ready in time.',
       });
+    } on BrowserAgentProtocolException catch (error) {
+      return jsonEncode({
+        'ok': false,
+        'error': 'browser_protocol_error',
+        'message': error.message,
+      });
     } on StateError catch (error) {
       return jsonEncode({
         'ok': false,
@@ -96,22 +102,8 @@ class BrowserAgentTool {
     }
   }
 
-  static Future<Map<String, dynamic>> _close() async {
-    final session = BrowserAgentSession.instance;
-    if (!session.isAttached) {
-      return {
-        'ok': false,
-        'error': 'browser_not_open',
-        'message': 'Shared browser is not open.',
-      };
-    }
-    final navigator = rootNavigatorKey.currentState;
-    if (navigator == null) {
-      throw StateError('The app navigator is not ready.');
-    }
-    final closed = await navigator.maybePop();
-    await Future<void>.delayed(const Duration(milliseconds: 80));
-    return {'ok': closed, 'closed': closed};
+  static Future<Map<String, dynamic>> _close() {
+    return BrowserAgentSession.instance.close();
   }
 
   static Future<Map<String, dynamic>> _open(String rawUrl) async {
@@ -143,6 +135,7 @@ class BrowserAgentTool {
     );
     await session.waitUntilAttached();
     await session.waitUntilReady();
+    await session.recordInitialPage();
     return {'ok': true, 'url': uri.toString(), 'reused': false};
   }
 

@@ -3,6 +3,61 @@ import 'dart:convert';
 
 import 'package:webview_flutter/webview_flutter.dart';
 
+class BrowserAgentProtocolException implements Exception {
+  const BrowserAgentProtocolException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+/// Deterministic history for model-driven navigation.
+///
+/// Native WebView history can include redirects and entries created outside the
+/// agent flow. The agent keeps its own committed-page stack so back/forward
+/// always mean the pages the model actually reached.
+class BrowserNavigationHistory {
+  final List<String> _entries = <String>[];
+  int _index = -1;
+
+  bool get canGoBack => _index > 0;
+  bool get canGoForward => _index >= 0 && _index < _entries.length - 1;
+  String? get current =>
+      _index >= 0 && _index < _entries.length ? _entries[_index] : null;
+  String? get backTarget => canGoBack ? _entries[_index - 1] : null;
+  String? get forwardTarget => canGoForward ? _entries[_index + 1] : null;
+
+  void reset(String url) {
+    _entries
+      ..clear()
+      ..add(url);
+    _index = 0;
+  }
+
+  void push(String url) {
+    if (url.isEmpty || current == url) return;
+    if (canGoForward) {
+      _entries.removeRange(_index + 1, _entries.length);
+    }
+    _entries.add(url);
+    _index = _entries.length - 1;
+  }
+
+  void commitBack() {
+    if (canGoBack) _index--;
+  }
+
+  void commitForward() {
+    if (canGoForward) _index++;
+  }
+
+  void clear() {
+    _entries.clear();
+    _index = -1;
+  }
+}
+
 /// One shared browser session used by the visible WebView and the model.
 ///
 /// The model never gets arbitrary JavaScript execution. It can only observe the
@@ -16,6 +71,9 @@ class BrowserAgentSession {
   Completer<void>? _attachedCompleter;
   Completer<void>? _readyCompleter;
   bool _loading = false;
+  int _navigationSequence = 0;
+  Future<void> Function()? _closeHandler;
+  final BrowserNavigationHistory _history = BrowserNavigationHistory();
 
   bool get isAttached => _controller != null;
 
@@ -24,8 +82,12 @@ class BrowserAgentSession {
     _readyCompleter = Completer<void>();
   }
 
-  void register(WebViewController controller) {
+  void register(
+    WebViewController controller, {
+    Future<void> Function()? onClose,
+  }) {
     _controller = controller;
+    _closeHandler = onClose;
     final attached = _attachedCompleter;
     if (attached != null && !attached.isCompleted) attached.complete();
     _attachedCompleter = null;
@@ -34,8 +96,10 @@ class BrowserAgentSession {
   void unregister(WebViewController controller) {
     if (!identical(_controller, controller)) return;
     _controller = null;
+    _closeHandler = null;
     _attachedCompleter = null;
     _loading = false;
+    _history.clear();
     final ready = _readyCompleter;
     if (ready != null && !ready.isCompleted) {
       ready.completeError(StateError('Shared browser was closed.'));
@@ -44,6 +108,7 @@ class BrowserAgentSession {
   }
 
   void pageStarted(String url) {
+    _navigationSequence++;
     _loading = true;
     final previous = _readyCompleter;
     if (previous == null || previous.isCompleted) {
@@ -81,6 +146,44 @@ class BrowserAgentSession {
     expectNavigation();
     await controller.loadRequest(uri);
     await waitUntilReady();
+    await _recordCurrentPage();
+  }
+
+  Future<void> recordInitialPage() async {
+    await waitUntilReady();
+    final url = await _requireController().currentUrl();
+    if (url != null && url.isNotEmpty) {
+      _history.reset(url);
+    }
+  }
+
+  Future<Map<String, dynamic>> close() async {
+    if (!isAttached) {
+      return {
+        'ok': false,
+        'error': 'browser_not_open',
+        'message': 'Shared browser is not open.',
+      };
+    }
+    final closeHandler = _closeHandler;
+    if (closeHandler == null) {
+      throw const BrowserAgentProtocolException(
+        'Shared browser close handler is unavailable.',
+      );
+    }
+    await closeHandler();
+    final deadline = DateTime.now().add(const Duration(seconds: 2));
+    while (isAttached && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+    if (isAttached) {
+      return {
+        'ok': false,
+        'error': 'browser_close_timeout',
+        'message': 'Shared browser did not close in time.',
+      };
+    }
+    return {'ok': true, 'closed': true};
   }
 
   Future<Map<String, dynamic>> observe({
@@ -103,19 +206,44 @@ class BrowserAgentSession {
 
   Future<Map<String, dynamic>> click(int elementId) async {
     await waitUntilReady();
+    final controller = _requireController();
+    final beforeUrl = await controller.currentUrl();
+    final beforeSequence = _navigationSequence;
     final result = await _runJson(
       _clickScript.replaceAll('__ELEMENT_ID__', '$elementId'),
     );
-    await _settleAfterInteraction();
-    return _withCurrentUrl(result);
+    if (result['ok'] == true) {
+      await _settleAfterInteraction(
+        navigationSequence: beforeSequence,
+        urlBefore: beforeUrl,
+        navigationGrace: result['may_navigate'] == true
+            ? const Duration(seconds: 1)
+            : const Duration(milliseconds: 180),
+      );
+      await _recordCurrentPageIfChanged(beforeUrl);
+    }
+    final visibleResult = Map<String, dynamic>.from(result)
+      ..remove('may_navigate');
+    return _withCurrentUrl(visibleResult);
   }
 
   Future<Map<String, dynamic>> type(int elementId, String text) async {
     await waitUntilReady();
+    final controller = _requireController();
+    final beforeUrl = await controller.currentUrl();
+    final beforeSequence = _navigationSequence;
     final script = _typeScript
         .replaceAll('__ELEMENT_ID__', '$elementId')
         .replaceAll('__TEXT__', jsonEncode(text));
     final result = await _runJson(script);
+    if (result['ok'] == true) {
+      await _settleAfterInteraction(
+        navigationSequence: beforeSequence,
+        urlBefore: beforeUrl,
+        navigationGrace: const Duration(milliseconds: 250),
+      );
+      await _recordCurrentPageIfChanged(beforeUrl);
+    }
     return _withCurrentUrl(result);
   }
 
@@ -138,47 +266,82 @@ class BrowserAgentSession {
   Future<Map<String, dynamic>> goBack() async {
     final controller = _requireController();
     await waitUntilReady();
-    if (!await controller.canGoBack()) {
+    final target = _history.backTarget;
+    if (target == null) {
       return {
         'ok': false,
         'error': 'no_history',
         'message': 'There is no previous page in browser history.',
       };
     }
-    await controller.goBack();
-    await _settleAfterInteraction();
+    expectNavigation();
+    await controller.loadRequest(Uri.parse(target));
+    await waitUntilReady(timeout: const Duration(seconds: 15));
+    _history.commitBack();
     return _pageState();
   }
 
   Future<Map<String, dynamic>> goForward() async {
     final controller = _requireController();
     await waitUntilReady();
-    if (!await controller.canGoForward()) {
+    final target = _history.forwardTarget;
+    if (target == null) {
       return {
         'ok': false,
         'error': 'no_history',
         'message': 'There is no next page in browser history.',
       };
     }
-    await controller.goForward();
-    await _settleAfterInteraction();
+    expectNavigation();
+    await controller.loadRequest(Uri.parse(target));
+    await waitUntilReady(timeout: const Duration(seconds: 15));
+    _history.commitForward();
     return _pageState();
   }
 
   Future<Map<String, dynamic>> reload() async {
     final controller = _requireController();
     await waitUntilReady();
+    expectNavigation();
     await controller.reload();
-    await _settleAfterInteraction();
+    await waitUntilReady(timeout: const Duration(seconds: 15));
     return _pageState();
   }
 
-  Future<void> _settleAfterInteraction() async {
-    // A click/navigation callback can arrive just after the JavaScript result.
-    // Give WebView a short turn, then wait only when navigation actually began.
-    await Future<void>.delayed(const Duration(milliseconds: 120));
-    if (_loading) {
-      await waitUntilReady(timeout: const Duration(seconds: 15));
+  Future<void> _settleAfterInteraction({
+    required int navigationSequence,
+    required String? urlBefore,
+    required Duration navigationGrace,
+  }) async {
+    final deadline = DateTime.now().add(navigationGrace);
+    while (DateTime.now().isBefore(deadline)) {
+      if (_navigationSequence != navigationSequence || _loading) {
+        await waitUntilReady(timeout: const Duration(seconds: 15));
+        return;
+      }
+      final currentUrl = await _requireController().currentUrl();
+      if (urlBefore != null && currentUrl != null && currentUrl != urlBefore) {
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        if (_loading) {
+          await waitUntilReady(timeout: const Duration(seconds: 15));
+        }
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+    }
+  }
+
+  Future<void> _recordCurrentPage() async {
+    final url = await _requireController().currentUrl();
+    if (url != null && url.isNotEmpty) {
+      _history.push(url);
+    }
+  }
+
+  Future<void> _recordCurrentPageIfChanged(String? beforeUrl) async {
+    final url = await _requireController().currentUrl();
+    if (url != null && url.isNotEmpty && url != beforeUrl) {
+      _history.push(url);
     }
   }
 
@@ -196,8 +359,8 @@ class BrowserAgentSession {
     return {
       'ok': true,
       'url': await controller.currentUrl(),
-      'can_go_back': await controller.canGoBack(),
-      'can_go_forward': await controller.canGoForward(),
+      'can_go_back': _history.canGoBack,
+      'can_go_forward': _history.canGoForward,
     };
   }
 
@@ -222,21 +385,30 @@ class BrowserAgentSession {
     if (decoded is Map) {
       return Map<String, dynamic>.from(decoded);
     }
-    throw StateError('Shared browser returned an invalid result.');
+    throw const BrowserAgentProtocolException(
+      'Shared browser returned an invalid result.',
+    );
   }
 
   static const String _clickScript = r'''
 (() => {
-  const elements = window.__moruBrowserElements;
+  const elements = window.__moruBrowserElementRegistry;
   const id = __ELEMENT_ID__;
-  if (!Array.isArray(elements) || id < 1 || id > elements.length) {
+  if (!(elements instanceof Map)) {
     return JSON.stringify({
       ok: false,
       error: 'stale_observation',
       message: 'Observe the page again before clicking.'
     });
   }
-  const element = elements[id - 1];
+  if (!elements.has(id)) {
+    return JSON.stringify({
+      ok: false,
+      error: 'invalid_element_id',
+      message: 'Choose an element_id from the latest observe result.'
+    });
+  }
+  const element = elements.get(id);
   if (!element || !element.isConnected) {
     return JSON.stringify({
       ok: false,
@@ -251,25 +423,45 @@ class BrowserAgentSession {
       message: 'The selected element is disabled.'
     });
   }
+  const tag = element.tagName.toLowerCase();
+  const inputType = tag === 'input'
+      ? String(element.getAttribute('type') || 'text').toLowerCase()
+      : '';
+  const role = String(element.getAttribute('role') || '').toLowerCase();
+  const mayNavigate = tag === 'a' || tag === 'button' ||
+      role === 'link' || role === 'button' ||
+      (tag === 'input' && ['submit', 'button', 'image'].includes(inputType)) ||
+      Boolean(element.getAttribute('onclick'));
   element.scrollIntoView({block: 'center', inline: 'center'});
   element.click();
-  return JSON.stringify({ok: true, element_id: id});
+  return JSON.stringify({
+    ok: true,
+    element_id: id,
+    may_navigate: mayNavigate
+  });
 })();
 ''';
 
   static const String _typeScript = r'''
 (() => {
-  const elements = window.__moruBrowserElements;
+  const elements = window.__moruBrowserElementRegistry;
   const id = __ELEMENT_ID__;
   const text = __TEXT__;
-  if (!Array.isArray(elements) || id < 1 || id > elements.length) {
+  if (!(elements instanceof Map)) {
     return JSON.stringify({
       ok: false,
       error: 'stale_observation',
       message: 'Observe the page again before typing.'
     });
   }
-  const element = elements[id - 1];
+  if (!elements.has(id)) {
+    return JSON.stringify({
+      ok: false,
+      error: 'invalid_element_id',
+      message: 'Choose an element_id from the latest observe result.'
+    });
+  }
+  const element = elements.get(id);
   if (!element || !element.isConnected) {
     return JSON.stringify({
       ok: false,
@@ -278,6 +470,16 @@ class BrowserAgentSession {
     });
   }
   const tag = element.tagName.toLowerCase();
+  const inputType = tag === 'input'
+      ? String(element.getAttribute('type') || 'text').toLowerCase()
+      : '';
+  if (tag === 'input' && inputType === 'file') {
+    return JSON.stringify({
+      ok: false,
+      error: 'unsupported_element_type',
+      message: 'File inputs cannot be filled with browser_use type.'
+    });
+  }
   if (tag === 'select') {
     if (element.disabled) {
       return JSON.stringify({
@@ -399,9 +601,15 @@ class BrowserAgentSession {
     'a,button,input,textarea,select,summary,[role="button"],[role="link"],[contenteditable="true"]'
   )).filter(visible).slice(0, maxElements);
 
-  window.__moruBrowserElements = candidates;
+  if (!(window.__moruBrowserElementRegistry instanceof Map)) {
+    window.__moruBrowserElementRegistry = new Map();
+    window.__moruBrowserElementIds = new WeakMap();
+    window.__moruBrowserNextElementId = 1;
+  }
+  const registry = window.__moruBrowserElementRegistry;
+  const ids = window.__moruBrowserElementIds;
 
-  const elements = candidates.map((element, index) => {
+  const elements = candidates.map((element) => {
     const tag = element.tagName.toLowerCase();
     const inputType = tag === 'input'
         ? String(element.getAttribute('type') || 'text').toLowerCase()
@@ -420,13 +628,24 @@ class BrowserAgentSession {
     const href = tag === 'a'
         ? normalize(element.getAttribute('href')).slice(0, 180)
         : '';
-    const item = {id: index + 1, tag};
+    let id = ids.get(element);
+    if (!id) {
+      id = window.__moruBrowserNextElementId++;
+      ids.set(element, id);
+    }
+    registry.set(id, element);
+    const item = {id, tag};
     if (inputType) item.type = inputType;
     if (label) item.text = label;
     if (placeholder) item.placeholder = placeholder;
     if (value) item.value = value;
     if (href) item.href = href;
+    if (inputType === 'checkbox' || inputType === 'radio') {
+      item.checked = Boolean(element.checked);
+    }
+    if (element.readOnly) item.readonly = true;
     if (tag === 'select') {
+      item.selected_index = element.selectedIndex;
       item.options = Array.from(element.options).slice(0, 12).map((option) => ({
         value: normalize(option.value).slice(0, 80),
         text: normalize(option.textContent).slice(0, 80)
