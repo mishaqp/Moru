@@ -820,7 +820,7 @@ class LocalToolsService {
           'code': {
             'type': 'string',
             'description':
-                'Required for action=eval_js: JavaScript to run in the page; the result is its last expression, JSON-encoded. Requires explicit user approval unless full tool trust is on. Cannot access document.cookie, use eval/Function, or pass a string to setTimeout/setInterval — those are rejected before running.',
+                'Required for action=eval_js: JavaScript to run in the page; the result is its last expression, JSON-encoded. Requires explicit user approval unless full tool trust is on. Code whose source text mentions document.cookie, eval, Function, or a string-form setTimeout/setInterval is rejected before running, so write straightforward code and do not try to work around that check. A thrown exception is reported as a null result, not as an error.',
           },
         },
         'required': ['action'],

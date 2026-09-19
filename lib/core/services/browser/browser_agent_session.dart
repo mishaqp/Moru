@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../../../utils/utf16_safe_cut.dart';
 import 'browser_research.dart';
 
 class BrowserAgentProtocolException implements Exception {
@@ -388,6 +389,16 @@ class BrowserAgentSession {
     final deadline = start.add(Duration(milliseconds: clampedTimeout));
     while (true) {
       final result = await _runJson(script);
+      // A selector the page's own querySelectorAll rejects will never be satisfied;
+      // report it now instead of burning the whole timeout on a doomed poll.
+      if (result['error'] != null) {
+        return {
+          'ok': false,
+          'error': result['error'],
+          'message':
+              result['message'] ?? 'The selector could not be evaluated.',
+        };
+      }
       if (result['satisfied'] == true) {
         return {
           'ok': true,
@@ -407,8 +418,13 @@ class BrowserAgentSession {
   }
 
   /// Runs [code] as the page's own script and returns its last expression, JSON-encoded.
-  /// Caller (the `eval_js` tool) is responsible for pattern-blocking and approval —
-  /// this method only dispatches and reports the outcome honestly.
+  /// Caller (the `eval_js` tool) is responsible for pattern-blocking and approval.
+  ///
+  /// The code runs unwrapped, so a statement list works the same as an expression, but
+  /// that also means a thrown exception is indistinguishable from a `null` result:
+  /// Android's WebView resolves `evaluateJavascript` with the string `"null"` either
+  /// way rather than reporting the throw, so `result: null` is reported for both and
+  /// this method never claims to have detected a JS error it cannot see.
   Future<Map<String, dynamic>> evalJs(String code) async {
     if (!isAttached) {
       return {
@@ -425,14 +441,24 @@ class BrowserAgentSession {
     } catch (error) {
       return {'ok': false, 'error': 'js_failed', 'message': error.toString()};
     }
-    final encoded = jsonEncode(raw);
-    final truncated = encoded.length > evalJsMaxResultChars;
+    // The platform hands back the value already JSON-encoded (sometimes twice over),
+    // which is why _runJson decodes up to two rounds. Re-encoding `raw` as-is would
+    // ship `"\"Example\""` to the model instead of `"Example"`, so decode first and
+    // encode exactly once.
+    dynamic decoded = raw;
+    for (var i = 0; i < 2 && decoded is String; i++) {
+      try {
+        decoded = jsonDecode(decoded);
+      } catch (_) {
+        break;
+      }
+    }
+    final encoded = jsonEncode(decoded);
+    final clipped = truncateHeadUtf16Safe(encoded, evalJsMaxResultChars);
     return {
       'ok': true,
-      'result': truncated
-          ? encoded.substring(0, evalJsMaxResultChars)
-          : encoded,
-      'truncated': truncated,
+      'result': clipped,
+      'truncated': clipped.length < encoded.length,
     };
   }
 
@@ -756,6 +782,13 @@ class BrowserAgentSession {
       message: 'The element is no longer on the page. Observe again.'
     });
   }
+  if (element.disabled) {
+    return JSON.stringify({
+      ok: false,
+      error: 'not_editable',
+      message: 'The selected element is disabled.'
+    });
+  }
   const tag = element.tagName.toLowerCase();
   const form = tag === 'form' ? element : (element.form || element.closest('form'));
   if (!form) {
@@ -775,6 +808,16 @@ class BrowserAgentSession {
     element.click();
     return JSON.stringify({ok: true, element_id: id, via: 'button_click'});
   }
+  // requestSubmit() runs constraint validation and silently does nothing when the
+  // form is invalid, so check first rather than reporting a submit that never happened.
+  if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+    if (typeof form.reportValidity === 'function') form.reportValidity();
+    return JSON.stringify({
+      ok: false,
+      error: 'form_invalid',
+      message: 'The form failed its own validation, so it was not submitted.'
+    });
+  }
   if (typeof form.requestSubmit === 'function') {
     form.requestSubmit();
   } else {
@@ -789,11 +832,31 @@ class BrowserAgentSession {
   const key = __KEY__;
   try {
     const el = document.activeElement || document.body;
-    const down = new KeyboardEvent('keydown', {key, bubbles: true, cancelable: true});
-    const up = new KeyboardEvent('keyup', {key, bubbles: true, cancelable: true});
+    // Legacy keyCode/which are deprecated but still what a lot of handlers read
+    // (`e.keyCode === 13`); without them Enter silently does nothing on those pages.
+    const legacyCodes = {
+      Enter: 13, Tab: 9, Escape: 27, Backspace: 8, Delete: 46, ' ': 32,
+      ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39,
+      Home: 36, End: 35, PageUp: 33, PageDown: 34
+    };
+    const keyCode = Object.prototype.hasOwnProperty.call(legacyCodes, key)
+        ? legacyCodes[key]
+        : (key.length === 1 ? key.toUpperCase().charCodeAt(0) : 0);
+    const init = {
+      key,
+      code: key.length === 1 ? 'Key' + key.toUpperCase() : key,
+      keyCode,
+      which: keyCode,
+      bubbles: true,
+      cancelable: true
+    };
+    const down = new KeyboardEvent('keydown', init);
     el.dispatchEvent(down);
-    el.dispatchEvent(up);
-    return JSON.stringify({ok: true, key});
+    if (key.length === 1) {
+      el.dispatchEvent(new KeyboardEvent('keypress', init));
+    }
+    el.dispatchEvent(new KeyboardEvent('keyup', init));
+    return JSON.stringify({ok: true, key, default_prevented: down.defaultPrevented});
   } catch (e) {
     return JSON.stringify({ok: false, error: 'js_failed', message: String(e)});
   }
@@ -805,10 +868,15 @@ class BrowserAgentSession {
   const selector = __SELECTOR__;
   const state = __STATE__;
   const containsText = __CONTAINS_TEXT__;
+  // Same rule observe's hasBox uses: offsetParent/getClientRects stay truthy for
+  // visibility:hidden and opacity:0, which would make state=visible fire on an
+  // invisible element and state=hidden unsatisfiable.
   function visible(el) {
-    if (el.offsetParent !== null) return true;
-    const rects = el.getClientRects();
-    return Boolean(rects && rects.length > 0);
+    const style = window.getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none') return false;
+    if (parseFloat(style.opacity || '1') === 0) return false;
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
   }
   function hasText(el) {
     if (!containsText) return true;
@@ -838,7 +906,11 @@ class BrowserAgentSession {
     }
     return JSON.stringify({satisfied: false});
   } catch (e) {
-    return JSON.stringify({satisfied: false, error: String(e)});
+    return JSON.stringify({
+      satisfied: false,
+      error: 'invalid_selector',
+      message: String(e)
+    });
   }
 })();
 ''';

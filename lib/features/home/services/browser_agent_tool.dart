@@ -238,11 +238,13 @@ class BrowserAgentTool {
     return key.length > 32 ? key.substring(0, 32) : key;
   }
 
-  /// Best-effort static guard for `eval_js`, checked before the code ever reaches the
-  /// WebView: it is not a JS sandbox and stops obvious cases, not a determined
-  /// adversarial script. Blocks cookie access (session/exfiltration risk on whatever
-  /// page the browser happens to be logged into), eval/Function construction, and
-  /// string-form setTimeout/setInterval (the same dynamic-execution shape as eval).
+  /// Best-effort source-text guard for `eval_js`, checked before the code reaches the
+  /// WebView. It matches the literal source, so it stops a model that reaches for
+  /// `document.cookie` by name — not a determined bypass like
+  /// `document['coo' + 'kie']`. It is a guardrail against the obvious mistake, not a
+  /// sandbox, and the approval prompt (when trust is off) remains the real boundary.
+  /// Covers cookie access (session risk on whatever page the browser is logged into),
+  /// eval/Function construction, and string-form setTimeout/setInterval.
   static final Map<String, RegExp> _evalBlockedPatterns = {
     'cookie_access': RegExp(r'document\s*\.\s*cookie', caseSensitive: false),
     'dynamic_eval': RegExp(
