@@ -170,6 +170,7 @@ void main() {
         'read',
         'wait_for',
         'eval_js',
+        'done',
         'close',
       ]);
       expect((properties['scope'] as Map<String, dynamic>)['enum'], const [
@@ -484,7 +485,68 @@ void main() {
         final activity = BrowserAgentSession.instance.currentActivity.value;
         expect(activity?.action, 'press_key');
         expect(activity?.detail, 'Enter');
+        expect(activity?.outcome, BrowserActivityOutcome.failed);
         expect(BrowserAgentSession.instance.recentActivity, hasLength(1));
+      },
+    );
+
+    test('a successful call resolves its activity to outcome ok', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+      final result = await LocalToolsService.tryHandleToolCall(
+        LocalToolNames.browserUse,
+        const {'action': 'done', 'summary': 'Filled out the form'},
+        assistant,
+      );
+
+      final decoded = jsonDecode(result!) as Map<String, dynamic>;
+      expect(decoded['ok'], isTrue);
+      expect(decoded['summary'], 'Filled out the form');
+      final activity = BrowserAgentSession.instance.currentActivity.value;
+      expect(activity?.action, 'done');
+      expect(activity?.detail, 'Filled out the form');
+      expect(activity?.outcome, BrowserActivityOutcome.ok);
+    });
+
+    test('done without a summary still succeeds', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+      final result = await LocalToolsService.tryHandleToolCall(
+        LocalToolNames.browserUse,
+        const {'action': 'done'},
+        assistant,
+      );
+
+      final decoded = jsonDecode(result!) as Map<String, dynamic>;
+      expect(decoded['ok'], isTrue);
+      expect(decoded.containsKey('summary'), isFalse);
+    });
+
+    test(
+      'an unrecognized action leaves a previously recorded activity untouched',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'done', 'summary': 'first'},
+          assistant,
+        );
+        await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'not_a_real_action'},
+          assistant,
+        );
+
+        final activity = BrowserAgentSession.instance.currentActivity.value;
+        expect(activity?.action, 'done');
+        expect(activity?.outcome, BrowserActivityOutcome.ok);
       },
     );
 

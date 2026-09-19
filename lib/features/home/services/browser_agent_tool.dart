@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/services/browser/browser_agent_session.dart';
 import '../../../core/services/browser/browser_research.dart';
+import 'browser_agent_actions.dart';
 import '../../../core/services/browser/web_source.dart';
 import '../../../shared/pages/webview_page.dart';
 import '../../../shared/widgets/snackbar.dart';
@@ -29,6 +30,22 @@ class BrowserAgentTool {
 
     final action = (args['action'] ?? '').toString().trim().toLowerCase();
     final session = BrowserAgentSession.instance;
+    final result = await _dispatch(action, args, session);
+    // The default case (an unrecognized action) never called recordActivity, so
+    // there is nothing of this call's own to mark — leave whatever activity was
+    // already there (from an earlier, different call) alone.
+    if (BrowserAgentActions.isKnown(action)) {
+      final ok = (jsonDecode(result) as Map<String, dynamic>)['ok'] == true;
+      session.updateLastActivityOutcome(ok);
+    }
+    return result;
+  }
+
+  static Future<String> _dispatch(
+    String action,
+    Map<String, dynamic> args,
+    BrowserAgentSession session,
+  ) async {
     try {
       switch (action) {
         case 'open':
@@ -111,12 +128,22 @@ class BrowserAgentTool {
         case 'close':
           session.recordActivity(const BrowserActivity(action: 'close'));
           return jsonEncode(await _close());
+        case 'done':
+          final summary = _stringArg(args, 'summary');
+          session.recordActivity(
+            BrowserActivity(action: action, detail: summary),
+          );
+          return jsonEncode({
+            'ok': true,
+            'action': 'done',
+            if (summary != null) 'summary': summary,
+          });
         default:
           return jsonEncode({
             'ok': false,
             'error': 'invalid_action',
             'message':
-                'Use action open, observe, click, type, submit, press_key, scroll, back, forward, reload, read, wait_for, eval_js, or close.',
+                'Use action open, observe, click, type, submit, press_key, scroll, back, forward, reload, read, wait_for, eval_js, done, or close.',
           });
       }
     } on TimeoutException {

@@ -7,15 +7,29 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../../utils/utf16_safe_cut.dart';
 import 'browser_research.dart';
 
+/// Lifecycle state of a [BrowserActivity]: [running] the moment it is
+/// recorded (before the call's own result is known), then [ok]/[failed] once
+/// [BrowserAgentTool.execute] sees whether the JSON result it returned set
+/// `ok: true`.
+enum BrowserActivityOutcome { running, ok, failed }
+
 /// One `browser_use` call, for the browser page's status line: [action]
 /// matches a `BrowserAgentAction.id` for its label, [detail] is an optional
 /// short extra (a URL, a key, a truncated selector) the label alone doesn't
 /// carry.
 class BrowserActivity {
-  const BrowserActivity({required this.action, this.detail});
+  const BrowserActivity({
+    required this.action,
+    this.detail,
+    this.outcome = BrowserActivityOutcome.running,
+  });
 
   final String action;
   final String? detail;
+  final BrowserActivityOutcome outcome;
+
+  BrowserActivity withOutcome(BrowserActivityOutcome outcome) =>
+      BrowserActivity(action: action, detail: detail, outcome: outcome);
 }
 
 class BrowserAgentProtocolException implements Exception {
@@ -111,6 +125,21 @@ class BrowserAgentSession {
     recentActivity.add(activity);
     if (recentActivity.length > _maxRecentActivity) {
       recentActivity.removeAt(0);
+    }
+  }
+
+  /// Resolves the most recently recorded activity to [BrowserActivityOutcome.ok]
+  /// or [.failed] once its call has actually returned. A no-op once the
+  /// session has moved on (nothing recorded, or [close] already cleared it).
+  void updateLastActivityOutcome(bool ok) {
+    final current = currentActivity.value;
+    if (current == null) return;
+    final resolved = current.withOutcome(
+      ok ? BrowserActivityOutcome.ok : BrowserActivityOutcome.failed,
+    );
+    currentActivity.value = resolved;
+    if (recentActivity.isNotEmpty) {
+      recentActivity[recentActivity.length - 1] = resolved;
     }
   }
 
