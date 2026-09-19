@@ -553,7 +553,19 @@ class BrowserAgentSession {
       });
     }
     element.focus();
-    element.value = option.value;
+    // Same native-setter trick as the text-input path below: React installs its own
+    // setter on the element instance to track "last known value", so a direct
+    // `element.value = ...` is invisible to it and the component silently keeps its
+    // old selection even though the DOM (and this tool) say otherwise.
+    const selectDescriptor = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      'value'
+    );
+    if (selectDescriptor && selectDescriptor.set) {
+      selectDescriptor.set.call(element, option.value);
+    } else {
+      element.value = option.value;
+    }
     element.dispatchEvent(new Event('input', {bubbles: true}));
     element.dispatchEvent(new Event('change', {bubbles: true}));
     return JSON.stringify({
