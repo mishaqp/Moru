@@ -288,17 +288,21 @@ class _WebViewPageState extends State<WebViewPage> {
                     ),
                     child: Text(ru ? 'Запретить' : 'Deny'),
                   ),
-                  TextButton(
-                    onPressed: () async {
-                      final confirmed = await confirmFullToolTrust(context);
-                      if (!confirmed || !context.mounted) return;
-                      approval.setAutoApproveAll(true);
-                      await context
-                          .read<SettingsProvider>()
-                          .setToolAutoApproveAll(true);
-                    },
-                    child: Text(ru ? 'Всегда разрешать' : 'Always allow'),
-                  ),
+                  // Not shown for a mandatory request (e.g. eval_js): turning on global
+                  // trust would not actually skip its future approvals, so the button
+                  // would promise something it doesn't do.
+                  if (!request.alwaysAsk)
+                    TextButton(
+                      onPressed: () async {
+                        final confirmed = await confirmFullToolTrust(context);
+                        if (!confirmed || !context.mounted) return;
+                        approval.setAutoApproveAll(true);
+                        await context
+                            .read<SettingsProvider>()
+                            .setToolAutoApproveAll(true);
+                      },
+                      child: Text(ru ? 'Всегда разрешать' : 'Always allow'),
+                    ),
                   FilledButton(
                     onPressed: () => approval.approve(
                       request.toolCallId,

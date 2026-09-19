@@ -516,6 +516,7 @@ class ToolHandlerService {
             toolName: name,
             arguments: args,
             conversationId: conversationId,
+            alwaysAsk: LocalToolNames.requiresMandatoryApprovalFor(name, args),
           );
           if (!approval.approved) {
             return _toolError(

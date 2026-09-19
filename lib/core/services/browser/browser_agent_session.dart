@@ -60,10 +60,15 @@ class BrowserNavigationHistory {
   }
 }
 
+/// Hard cap on the string `eval_js` puts in its result envelope, so evaluating something
+/// like `document.body.outerHTML` can't dump megabytes into a turn.
+const int evalJsMaxResultChars = 64 * 1024;
+
 /// One shared browser session used by the visible WebView and the model.
 ///
-/// The model never gets arbitrary JavaScript execution. It can only observe the
-/// current document and use the bounded actions implemented here.
+/// Every action here but `eval_js` is a bounded, single-purpose script the model
+/// cannot alter; `eval_js` is the one deliberate exception, and it always requires
+/// approval that global trusted mode cannot bypass (see `requiresMandatoryApprovalFor`).
 class BrowserAgentSession {
   BrowserAgentSession._();
 
@@ -360,6 +365,36 @@ class BrowserAgentSession {
       }
       await Future<void>.delayed(const Duration(milliseconds: 150));
     }
+  }
+
+  /// Runs [code] as the page's own script and returns its last expression, JSON-encoded.
+  /// Caller (the `eval_js` tool) is responsible for pattern-blocking and mandatory
+  /// approval — this method only dispatches and reports the outcome honestly.
+  Future<Map<String, dynamic>> evalJs(String code) async {
+    if (!isAttached) {
+      return {
+        'ok': false,
+        'error': 'browser_not_open',
+        'message': 'Shared browser is not open.',
+      };
+    }
+    await waitUntilReady();
+    final controller = _requireController();
+    Object? raw;
+    try {
+      raw = await controller.runJavaScriptReturningResult(code);
+    } catch (error) {
+      return {'ok': false, 'error': 'js_failed', 'message': error.toString()};
+    }
+    final encoded = jsonEncode(raw);
+    final truncated = encoded.length > evalJsMaxResultChars;
+    return {
+      'ok': true,
+      'result': truncated
+          ? encoded.substring(0, evalJsMaxResultChars)
+          : encoded,
+      'truncated': truncated,
+    };
   }
 
   Future<Map<String, dynamic>> goBack() async {

@@ -171,4 +171,50 @@ void main() {
       expect(service.hasPending, isFalse);
     },
   );
+
+  test(
+    'alwaysAsk keeps creating a pending request even with full trust already on',
+    () async {
+      final service = ToolApprovalService();
+      service.setAutoApproveAll(true);
+
+      final pending = service.requestApproval(
+        toolCallId: 'browser-1',
+        toolName: 'browser_use',
+        arguments: const {'action': 'eval_js', 'code': 'document.title'},
+        conversationId: 'conversation-a',
+        alwaysAsk: true,
+      );
+
+      await expectStillPending(pending);
+      expect(service.hasPending, isTrue);
+
+      service.approve('browser-1', conversationId: 'conversation-a');
+      expect((await pending).approved, isTrue);
+    },
+  );
+
+  test(
+    'enabling full trust does not release an alwaysAsk request already waiting',
+    () async {
+      final service = ToolApprovalService();
+      final pending = service.requestApproval(
+        toolCallId: 'browser-1',
+        toolName: 'browser_use',
+        arguments: const {'action': 'eval_js', 'code': 'document.title'},
+        conversationId: 'conversation-a',
+        alwaysAsk: true,
+      );
+
+      await expectStillPending(pending);
+
+      service.setAutoApproveAll(true);
+
+      await expectStillPending(pending);
+      expect(service.hasPending, isTrue);
+
+      service.approve('browser-1', conversationId: 'conversation-a');
+      expect((await pending).approved, isTrue);
+    },
+  );
 }

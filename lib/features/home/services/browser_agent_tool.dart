@@ -81,6 +81,8 @@ class BrowserAgentTool {
               timeoutMs: _intArg(args, 'timeout_ms', 10000),
             ),
           );
+        case 'eval_js':
+          return jsonEncode(await _evalJs(args));
         case 'close':
           return jsonEncode(await _close());
         default:
@@ -88,7 +90,7 @@ class BrowserAgentTool {
             'ok': false,
             'error': 'invalid_action',
             'message':
-                'Use action open, observe, click, type, scroll, back, forward, reload, read, wait_for, or close.',
+                'Use action open, observe, click, type, scroll, back, forward, reload, read, wait_for, eval_js, or close.',
           });
       }
     } on TimeoutException {
@@ -220,6 +222,49 @@ class BrowserAgentTool {
       throw ArgumentError('selector is required for action=wait_for.');
     }
     return selector;
+  }
+
+  /// Best-effort static guard for `eval_js`, checked before the code ever reaches the
+  /// WebView: it is not a JS sandbox and stops obvious cases, not a determined
+  /// adversarial script. Blocks cookie access (session/exfiltration risk on whatever
+  /// page the browser happens to be logged into), eval/Function construction, and
+  /// string-form setTimeout/setInterval (the same dynamic-execution shape as eval).
+  static final Map<String, RegExp> _evalBlockedPatterns = {
+    'cookie_access': RegExp(r'document\s*\.\s*cookie', caseSensitive: false),
+    'dynamic_eval': RegExp(
+      r'\beval\s*\(|\bnew\s+Function\s*\(|\bFunction\s*\(',
+      caseSensitive: false,
+    ),
+    'string_timer': RegExp(
+      r'''\b(setTimeout|setInterval)\s*\(\s*['"`]''',
+      caseSensitive: false,
+    ),
+  };
+
+  static String? _blockedEvalPattern(String code) {
+    for (final entry in _evalBlockedPatterns.entries) {
+      if (entry.value.hasMatch(code)) return entry.key;
+    }
+    return null;
+  }
+
+  static Future<Map<String, dynamic>> _evalJs(Map<String, dynamic> args) {
+    final code = _stringArg(args, 'code');
+    if (code == null) {
+      throw ArgumentError('code is required for action=eval_js.');
+    }
+    final blocked = _blockedEvalPattern(code);
+    if (blocked != null) {
+      return Future.value({
+        'ok': false,
+        'error': 'blocked_pattern',
+        'message':
+            'This script matches a blocked pattern ($blocked) and was not run. '
+            'eval_js cannot access document.cookie, use eval/Function, or pass a '
+            'string to setTimeout/setInterval.',
+      });
+    }
+    return BrowserAgentSession.instance.evalJs(code);
   }
 
   static int _intArg(Map<String, dynamic> args, String key, int fallback) {

@@ -22,6 +22,7 @@ class ToolApprovalRequest {
   final String toolName;
   final Map<String, dynamic> arguments;
   final String? conversationId;
+  final bool alwaysAsk;
   final Completer<ToolApprovalResult> _completer;
 
   ToolApprovalRequest({
@@ -29,6 +30,7 @@ class ToolApprovalRequest {
     required this.toolName,
     required this.arguments,
     this.conversationId,
+    this.alwaysAsk = false,
     required this._completer,
   });
 
@@ -59,16 +61,22 @@ class ToolApprovalService extends ChangeNotifier {
   ///
   /// Turning it on also approves requests that were already waiting, so an
   /// agent cannot remain stuck behind a confirmation card after the user
-  /// enables trusted mode.
+  /// enables trusted mode. A request created with `alwaysAsk: true` is left
+  /// waiting even here — the same guarantee [requestApproval] gives a new
+  /// request of that kind.
   void setAutoApproveAll(bool value) {
     if (_autoApproveAll == value) return;
     _autoApproveAll = value;
     if (!value || _pending.isEmpty) return;
 
-    final waiting = _pending.values.toList(growable: false);
-    _pending.clear();
-    for (final req in waiting) {
-      if (!req._completer.isCompleted) {
+    final toApprove = _pending.entries
+        .where((entry) => !entry.value.alwaysAsk)
+        .map((entry) => entry.key)
+        .toList(growable: false);
+    if (toApprove.isEmpty) return;
+    for (final key in toApprove) {
+      final req = _pending.remove(key);
+      if (req != null && !req._completer.isCompleted) {
         req._completer.complete(ToolApprovalResult.approved());
       }
     }
@@ -122,13 +130,18 @@ class ToolApprovalService extends ChangeNotifier {
   ///
   /// New requests should pass [conversationId]. A null conversation is stored
   /// under a unique unscoped key so two chats cannot overwrite each other.
+  ///
+  /// [alwaysAsk] keeps this request pending even while global trusted mode is on —
+  /// for a tool call whose risk (e.g. arbitrary JavaScript that can read a logged-in
+  /// page's cookies) trusted mode is not meant to wave through.
   Future<ToolApprovalResult> requestApproval({
     required String toolCallId,
     required String toolName,
     required Map<String, dynamic> arguments,
     String? conversationId,
+    bool alwaysAsk = false,
   }) {
-    if (_autoApproveAll) {
+    if (_autoApproveAll && !alwaysAsk) {
       return Future<ToolApprovalResult>.value(ToolApprovalResult.approved());
     }
     final key = _storageKey(conversationId, toolCallId);
@@ -142,6 +155,7 @@ class ToolApprovalService extends ChangeNotifier {
       toolName: toolName,
       arguments: arguments,
       conversationId: _storedConversationId(conversationId),
+      alwaysAsk: alwaysAsk,
       completer: completer,
     );
     notifyListeners();
