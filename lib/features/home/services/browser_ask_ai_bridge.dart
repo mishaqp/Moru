@@ -5,10 +5,19 @@ import 'package:flutter/foundation.dart';
 /// One instruction submitted from the floating "Ask AI" bar in the shared
 /// browser. [id] pairs the request with its eventual [BrowserAskAiOutcome].
 class BrowserAskAiRequest {
-  const BrowserAskAiRequest({required this.id, required this.text});
+  const BrowserAskAiRequest({
+    required this.id,
+    required this.text,
+    this.pageUrl,
+  });
 
   final String id;
   final String text;
+
+  /// The browser page's URL at submit time, or null if unknown (e.g. a
+  /// blank/loading page). Included so the model knows what the user was
+  /// looking at when they asked.
+  final String? pageUrl;
 }
 
 class BrowserAskAiOutcome {
@@ -71,9 +80,10 @@ class BrowserAskAiBridge extends ChangeNotifier {
   int _nextId = 0;
 
   /// Submits [text] and returns the request id to match against [outcomes].
-  String submit(String text) {
+  /// [pageUrl] is the browser page's current URL, when known.
+  String submit(String text, {String? pageUrl}) {
     final id = 'browser-ask-ai-${_nextId++}';
-    _requests.add(BrowserAskAiRequest(id: id, text: text));
+    _requests.add(BrowserAskAiRequest(id: id, text: text, pageUrl: pageUrl));
     return id;
   }
 

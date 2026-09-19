@@ -184,10 +184,14 @@ void main() {
           request.messageId,
           mode == ScheduledTaskMode.regenerate ? 'question' : null,
         );
-        expect(
-          request.prompt,
-          mode == ScheduledTaskMode.regenerate ? null : 'Follow-up prompt',
-        );
+        if (mode == ScheduledTaskMode.regenerate) {
+          expect(request.prompt, isNull);
+        } else {
+          expect(
+            request.prompt,
+            '${scheduledTaskOriginDirective(task)}Follow-up prompt',
+          );
+        }
         expect(
           harness.chat.created.length,
           mode == ScheduledTaskMode.newChat ? 1 : 0,

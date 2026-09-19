@@ -70,7 +70,9 @@ Future<void> runBrowserAskAiRequest({
   );
   try {
     final result = await send(
-      input: ChatInputData(text: request.text),
+      input: ChatInputData(
+        text: browserAskAiOriginDirective(request) + request.text,
+      ),
       conversation: conversation,
       assistant: assistant,
       onGenerationStarted: (id) => messageId = id,
@@ -93,4 +95,18 @@ Future<void> runBrowserAskAiRequest({
   } finally {
     await cancelSub.cancel();
   }
+}
+
+/// Prepended to [BrowserAskAiRequest.text] before it is sent as the user
+/// turn. Baked into the turn's own text rather than the system prompt, the
+/// same way [scheduledTaskOriginDirective] is -- this fires once per
+/// request, not on a long-lived conversation, so there is no repeated-
+/// preamble cost to avoid by moving it to a system-prompt injection.
+String browserAskAiOriginDirective(BrowserAskAiRequest request) {
+  final url = request.pageUrl;
+  final where = (url == null || url.isEmpty) ? 'a page in the browser' : url;
+  return '[System] This message came from the floating "Ask AI" bar in '
+      "Moru's in-app browser, while the user is looking at $where. The "
+      'reply is shown in a small overlay above the page -- keep it short.'
+      '\n\n';
 }

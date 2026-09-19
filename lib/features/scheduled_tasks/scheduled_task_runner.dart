@@ -131,7 +131,9 @@ Future<Map<String, Object?>> runScheduledTask(
     );
   } else {
     result = await viewModel.sendScheduledMessage(
-      input: ChatInputData(text: task.prompt),
+      input: ChatInputData(
+        text: scheduledTaskOriginDirective(task) + task.prompt,
+      ),
       conversation: conversation,
       assistant: assistant,
       modelOverride: modelOverride,
@@ -177,3 +179,21 @@ Future<Map<String, Object?>> runScheduledTask(
     await Future<void>.delayed(const Duration(milliseconds: 500));
   }
 }
+
+/// Prepended to [ScheduledTask.prompt] before it is sent as the user turn.
+///
+/// Unlike the unconditional, per-request `_appContextPrompt` (which describes
+/// the app itself), this describes THIS turn: nobody is watching in real
+/// time, and the runner above throws `user_interaction_required` -- failing
+/// the whole run -- the moment a tool call needs a human answer. Baked into
+/// the turn's own text rather than injected as a system prompt, mirroring
+/// how rikkahub-agent's cron worker prepends its own delivery directive to
+/// the task text rather than the system prompt: a scheduled run is a single
+/// message, not a long-lived conversation, so there is no repeated-preamble
+/// token cost to avoid by moving it to a rebuilt-per-turn system section.
+String scheduledTaskOriginDirective(ScheduledTask task) =>
+    '[System] This message was triggered automatically by the scheduled '
+    'task "${task.name}" -- nobody is watching this conversation in real '
+    'time right now. If you would normally ask for clarification, make the '
+    'most reasonable assumption instead and briefly note it in your reply.'
+    '\n\n';
