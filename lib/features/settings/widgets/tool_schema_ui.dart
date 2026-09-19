@@ -45,6 +45,46 @@ String toolSchemaFirstLine(String text) {
   return trimmed.split(RegExp(r'\r?\n')).first;
 }
 
+/// Shows the risk-acknowledgment dialog for enabling global tool auto-approval
+/// (trusted mode). Every place that can flip this switch on must show this
+/// same dialog first, so the user cannot enable it with a single accidental
+/// tap and always sees the same explanation of what it disables.
+Future<bool> confirmFullToolTrust(BuildContext context) async {
+  final ru = Localizations.localeOf(context).languageCode == 'ru';
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(ru ? 'Полное доверие инструментам' : 'Full tool trust'),
+      content: Text(
+        ru
+            ? 'Moru перестанет спрашивать подтверждение перед действиями инструментов. '
+                  'ИИ сможет автоматически нажимать и вводить текст в браузере, '
+                  'запускать shell, изменять файлы и выполнять другие разрешённые '
+                  'инструменты. Системные разрешения Android это не отключает.'
+            : 'Moru will stop asking for confirmation before tool actions. '
+                  'The AI may click and type in the browser, run shell commands, '
+                  'modify files, and use other enabled tools automatically. '
+                  'This does not bypass Android system permissions.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(ru ? 'Отмена' : 'Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: Text(
+            ru
+                ? 'Я понимаю риск — разрешить всё'
+                : 'I understand — allow everything',
+          ),
+        ),
+      ],
+    ),
+  );
+  return confirmed == true;
+}
+
 Future<bool> confirmResetAllToolSchemas(BuildContext context) async {
   final l10n = AppLocalizations.of(context)!;
   final cs = Theme.of(context).colorScheme;
