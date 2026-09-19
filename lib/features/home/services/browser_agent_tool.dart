@@ -51,6 +51,10 @@ class BrowserAgentTool {
               (args['text'] ?? '').toString(),
             ),
           );
+        case 'submit':
+          return jsonEncode(await session.submit(_elementId(args)));
+        case 'press_key':
+          return jsonEncode(await session.pressKey(_key(args)));
         case 'scroll':
           return jsonEncode(
             await session.scroll(
@@ -69,6 +73,20 @@ class BrowserAgentTool {
           return jsonEncode(await session.reload());
         case 'read':
           return jsonEncode(await _read(args));
+        case 'wait_for':
+          return jsonEncode(
+            await session.waitFor(
+              selector: _selector(args),
+              state: (args['state'] ?? 'attached')
+                  .toString()
+                  .trim()
+                  .toLowerCase(),
+              containsText: _stringArg(args, 'contains_text'),
+              timeoutMs: _intArg(args, 'timeout_ms', 10000),
+            ),
+          );
+        case 'eval_js':
+          return jsonEncode(await _evalJs(args));
         case 'close':
           return jsonEncode(await _close());
         default:
@@ -76,7 +94,7 @@ class BrowserAgentTool {
             'ok': false,
             'error': 'invalid_action',
             'message':
-                'Use action open, observe, click, type, scroll, back, forward, reload, read, or close.',
+                'Use action open, observe, click, type, submit, press_key, scroll, back, forward, reload, read, wait_for, eval_js, or close.',
           });
       }
     } on TimeoutException {
@@ -200,6 +218,69 @@ class BrowserAgentTool {
       );
     }
     return id;
+  }
+
+  static String _selector(Map<String, dynamic> args) {
+    final selector = _stringArg(args, 'selector');
+    if (selector == null) {
+      throw ArgumentError('selector is required for action=wait_for.');
+    }
+    return selector;
+  }
+
+  static String _key(Map<String, dynamic> args) {
+    final key = _stringArg(args, 'key');
+    if (key == null) {
+      throw ArgumentError('key is required for action=press_key.');
+    }
+    // KeyboardEvent.key values ('Enter', 'ArrowDown', ...) are short; a longer
+    // string suggests misuse, so clamp before it reaches the JS payload.
+    return key.length > 32 ? key.substring(0, 32) : key;
+  }
+
+  /// Best-effort source-text guard for `eval_js`, checked before the code reaches the
+  /// WebView. It matches the literal source, so it stops a model that reaches for
+  /// `document.cookie` by name — not a determined bypass like
+  /// `document['coo' + 'kie']`. It is a guardrail against the obvious mistake, not a
+  /// sandbox, and the approval prompt (when trust is off) remains the real boundary.
+  /// Covers cookie access (session risk on whatever page the browser is logged into),
+  /// eval/Function construction, and string-form setTimeout/setInterval.
+  static final Map<String, RegExp> _evalBlockedPatterns = {
+    'cookie_access': RegExp(r'document\s*\.\s*cookie', caseSensitive: false),
+    'dynamic_eval': RegExp(
+      r'\beval\s*\(|\bnew\s+Function\s*\(|\bFunction\s*\(',
+      caseSensitive: false,
+    ),
+    'string_timer': RegExp(
+      r'''\b(setTimeout|setInterval)\s*\(\s*['"`]''',
+      caseSensitive: false,
+    ),
+  };
+
+  static String? _blockedEvalPattern(String code) {
+    for (final entry in _evalBlockedPatterns.entries) {
+      if (entry.value.hasMatch(code)) return entry.key;
+    }
+    return null;
+  }
+
+  static Future<Map<String, dynamic>> _evalJs(Map<String, dynamic> args) {
+    final code = _stringArg(args, 'code');
+    if (code == null) {
+      throw ArgumentError('code is required for action=eval_js.');
+    }
+    final blocked = _blockedEvalPattern(code);
+    if (blocked != null) {
+      return Future.value({
+        'ok': false,
+        'error': 'blocked_pattern',
+        'message':
+            'This script matches a blocked pattern ($blocked) and was not run. '
+            'eval_js cannot access document.cookie, use eval/Function, or pass a '
+            'string to setTimeout/setInterval.',
+      });
+    }
+    return BrowserAgentSession.instance.evalJs(code);
   }
 
   static int _intArg(Map<String, dynamic> args, String key, int fallback) {

@@ -171,4 +171,19 @@ void main() {
       expect(service.hasPending, isFalse);
     },
   );
+
+  test('full trust also covers eval_js, with no exception', () async {
+    final service = ToolApprovalService();
+    service.setAutoApproveAll(true);
+
+    final result = await service.requestApproval(
+      toolCallId: 'browser-1',
+      toolName: 'browser_use',
+      arguments: const {'action': 'eval_js', 'code': 'document.title'},
+      conversationId: 'conversation-a',
+    );
+
+    expect(result.approved, isTrue);
+    expect(service.pendingRequests, isEmpty);
+  });
 }

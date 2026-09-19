@@ -159,11 +159,15 @@ void main() {
         'observe',
         'click',
         'type',
+        'submit',
+        'press_key',
         'scroll',
         'back',
         'forward',
         'reload',
         'read',
+        'wait_for',
+        'eval_js',
         'close',
       ]);
       expect((properties['scope'] as Map<String, dynamic>)['enum'], const [
@@ -214,38 +218,184 @@ void main() {
       },
     );
 
-    test('shared browser requires approval only for click and type', () {
+    test(
+      'shared browser requires approval for state-changing actions only',
+      () {
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'open',
+          }),
+          isFalse,
+        );
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'observe',
+          }),
+          isFalse,
+        );
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'click',
+          }),
+          isTrue,
+        );
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'type',
+          }),
+          isTrue,
+        );
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'submit',
+          }),
+          isTrue,
+        );
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'press_key',
+          }),
+          isTrue,
+        );
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'read',
+          }),
+          isFalse,
+        );
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'wait_for',
+          }),
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'shared browser submit without an element_id reports invalid_arguments',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        final result = await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'submit'},
+          assistant,
+        );
+        final decoded = jsonDecode(result!) as Map<String, dynamic>;
+        expect(decoded['ok'], isFalse);
+        expect(decoded['error'], 'invalid_arguments');
+      },
+    );
+
+    test(
+      'shared browser press_key without a key reports invalid_arguments',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        final result = await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'press_key'},
+          assistant,
+        );
+        final decoded = jsonDecode(result!) as Map<String, dynamic>;
+        expect(decoded['ok'], isFalse);
+        expect(decoded['error'], 'invalid_arguments');
+      },
+    );
+
+    test(
+      'shared browser wait_for without a selector reports invalid_arguments',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        final result = await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'wait_for'},
+          assistant,
+        );
+        final decoded = jsonDecode(result!) as Map<String, dynamic>;
+        expect(decoded['ok'], isFalse);
+        expect(decoded['error'], 'invalid_arguments');
+      },
+    );
+
+    test('shared browser eval_js requires approval like click/type', () {
       expect(
         LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
-          'action': 'open',
-        }),
-        isFalse,
-      );
-      expect(
-        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
-          'action': 'observe',
-        }),
-        isFalse,
-      );
-      expect(
-        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
-          'action': 'click',
+          'action': 'eval_js',
         }),
         isTrue,
-      );
-      expect(
-        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
-          'action': 'type',
-        }),
-        isTrue,
-      );
-      expect(
-        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
-          'action': 'read',
-        }),
-        isFalse,
       );
     });
+
+    test(
+      'shared browser eval_js blocks cookie access, eval/Function, and string timers',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        for (final code in [
+          'document.cookie',
+          'var c = document . cookie;',
+          "eval('alert(1)')",
+          "new Function('return 1')()",
+          "setTimeout('alert(1)', 100)",
+        ]) {
+          final result = await LocalToolsService.tryHandleToolCall(
+            LocalToolNames.browserUse,
+            {'action': 'eval_js', 'code': code},
+            assistant,
+          );
+          final decoded = jsonDecode(result!) as Map<String, dynamic>;
+          expect(decoded['ok'], isFalse, reason: 'code: $code');
+          expect(decoded['error'], 'blocked_pattern', reason: 'code: $code');
+        }
+      },
+    );
+
+    test(
+      'shared browser eval_js without an open browser reports browser_not_open',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        final result = await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'eval_js', 'code': 'document.title'},
+          assistant,
+        );
+        final decoded = jsonDecode(result!) as Map<String, dynamic>;
+        expect(decoded['ok'], isFalse);
+        expect(decoded['error'], 'browser_not_open');
+      },
+    );
+
+    test(
+      'shared browser eval_js without code reports invalid_arguments',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        final result = await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'eval_js'},
+          assistant,
+        );
+        final decoded = jsonDecode(result!) as Map<String, dynamic>;
+        expect(decoded['ok'], isFalse);
+        expect(decoded['error'], 'invalid_arguments');
+      },
+    );
 
     test(
       'shared browser read without an open browser reports browser_not_open',

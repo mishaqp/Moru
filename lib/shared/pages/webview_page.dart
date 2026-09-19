@@ -258,6 +258,11 @@ class _WebViewPageState extends State<WebViewPage> {
     final action = (request.arguments['action'] ?? '').toString();
     final elementId = request.arguments['element_id'];
     final detail = elementId == null ? action : '$action #$elementId';
+    // eval_js runs whatever the model wrote; approving it without seeing it is
+    // approving nothing in particular, so the code itself goes in the prompt.
+    final code = action == 'eval_js'
+        ? (request.arguments['code'] ?? '').toString().trim()
+        : '';
     final cs = Theme.of(context).colorScheme;
 
     return SafeArea(
@@ -275,6 +280,25 @@ class _WebViewPageState extends State<WebViewPage> {
                     : 'Moru wants to perform a browser action: $detail',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
+              if (code.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    code,
+                    maxLines: 6,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                  ),
+                ),
+              ],
               const SizedBox(height: 8),
               OverflowBar(
                 alignment: MainAxisAlignment.end,

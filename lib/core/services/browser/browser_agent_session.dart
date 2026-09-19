@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../../../utils/utf16_safe_cut.dart';
 import 'browser_research.dart';
 
 class BrowserAgentProtocolException implements Exception {
@@ -60,10 +61,16 @@ class BrowserNavigationHistory {
   }
 }
 
+/// Hard cap on the string `eval_js` puts in its result envelope, so evaluating something
+/// like `document.body.outerHTML` can't dump megabytes into a turn.
+const int evalJsMaxResultChars = 64 * 1024;
+
 /// One shared browser session used by the visible WebView and the model.
 ///
-/// The model never gets arbitrary JavaScript execution. It can only observe the
-/// current document and use the bounded actions implemented here.
+/// Every action here but `eval_js` is a bounded, single-purpose script the model
+/// cannot alter; `eval_js` is the one deliberate exception, gated the same way as
+/// click/type/submit/press_key (requires approval unless global trusted mode is on)
+/// plus a static block on the code itself for cookie/session-theft-shaped patterns.
 class BrowserAgentSession {
   BrowserAgentSession._();
 
@@ -249,6 +256,44 @@ class BrowserAgentSession {
     return _withCurrentUrl(result);
   }
 
+  Future<Map<String, dynamic>> submit(int elementId) async {
+    await waitUntilReady();
+    final controller = _requireController();
+    final beforeUrl = await controller.currentUrl();
+    final beforeSequence = _navigationSequence;
+    final result = await _runJson(
+      _submitScript.replaceAll('__ELEMENT_ID__', '$elementId'),
+    );
+    if (result['ok'] == true) {
+      await _settleAfterInteraction(
+        navigationSequence: beforeSequence,
+        urlBefore: beforeUrl,
+        navigationGrace: const Duration(seconds: 1),
+      );
+      await _recordCurrentPageIfChanged(beforeUrl);
+    }
+    return _withCurrentUrl(result);
+  }
+
+  Future<Map<String, dynamic>> pressKey(String key) async {
+    await waitUntilReady();
+    final controller = _requireController();
+    final beforeUrl = await controller.currentUrl();
+    final beforeSequence = _navigationSequence;
+    final result = await _runJson(
+      _pressKeyScript.replaceAll('__KEY__', jsonEncode(key)),
+    );
+    if (result['ok'] == true) {
+      await _settleAfterInteraction(
+        navigationSequence: beforeSequence,
+        urlBefore: beforeUrl,
+        navigationGrace: const Duration(milliseconds: 250),
+      );
+      await _recordCurrentPageIfChanged(beforeUrl);
+    }
+    return _withCurrentUrl(result);
+  }
+
   Future<Map<String, dynamic>> scroll({
     required String direction,
     int? amount,
@@ -313,6 +358,108 @@ class BrowserAgentSession {
         researchTruncated: truncated,
       ),
     );
+  }
+
+  /// Waits until [selector] reaches [state] (or [timeoutMs] elapses). Polls a synchronous
+  /// JS check from the Dart side, matching this file's other actions, rather than an async
+  /// IIFE returned through `evaluateJavascript`: Android WebView's completion value for a
+  /// pending Promise is unreliable across versions, so the wait loop lives in Dart instead.
+  Future<Map<String, dynamic>> waitFor({
+    required String selector,
+    String state = 'attached',
+    String? containsText,
+    int timeoutMs = 10000,
+  }) async {
+    await waitUntilReady();
+    const allowedStates = {'attached', 'detached', 'visible', 'hidden'};
+    if (!allowedStates.contains(state)) {
+      throw ArgumentError(
+        'state must be one of attached, detached, visible, or hidden.',
+      );
+    }
+    final clampedTimeout = timeoutMs.clamp(200, 30000);
+    final script = _waitForScript
+        .replaceAll('__SELECTOR__', jsonEncode(selector))
+        .replaceAll('__STATE__', jsonEncode(state))
+        .replaceAll(
+          '__CONTAINS_TEXT__',
+          containsText == null ? 'null' : jsonEncode(containsText),
+        );
+    final start = DateTime.now();
+    final deadline = start.add(Duration(milliseconds: clampedTimeout));
+    while (true) {
+      final result = await _runJson(script);
+      // A selector the page's own querySelectorAll rejects will never be satisfied;
+      // report it now instead of burning the whole timeout on a doomed poll.
+      if (result['error'] != null) {
+        return {
+          'ok': false,
+          'error': result['error'],
+          'message':
+              result['message'] ?? 'The selector could not be evaluated.',
+        };
+      }
+      if (result['satisfied'] == true) {
+        return {
+          'ok': true,
+          'found': true,
+          'elapsed_ms': DateTime.now().difference(start).inMilliseconds,
+        };
+      }
+      if (DateTime.now().isAfter(deadline)) {
+        return {
+          'ok': true,
+          'found': false,
+          'elapsed_ms': DateTime.now().difference(start).inMilliseconds,
+        };
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    }
+  }
+
+  /// Runs [code] as the page's own script and returns its last expression, JSON-encoded.
+  /// Caller (the `eval_js` tool) is responsible for pattern-blocking and approval.
+  ///
+  /// The code runs unwrapped, so a statement list works the same as an expression, but
+  /// that also means a thrown exception is indistinguishable from a `null` result:
+  /// Android's WebView resolves `evaluateJavascript` with the string `"null"` either
+  /// way rather than reporting the throw, so `result: null` is reported for both and
+  /// this method never claims to have detected a JS error it cannot see.
+  Future<Map<String, dynamic>> evalJs(String code) async {
+    if (!isAttached) {
+      return {
+        'ok': false,
+        'error': 'browser_not_open',
+        'message': 'Shared browser is not open.',
+      };
+    }
+    await waitUntilReady();
+    final controller = _requireController();
+    Object? raw;
+    try {
+      raw = await controller.runJavaScriptReturningResult(code);
+    } catch (error) {
+      return {'ok': false, 'error': 'js_failed', 'message': error.toString()};
+    }
+    // The platform hands back the value already JSON-encoded (sometimes twice over),
+    // which is why _runJson decodes up to two rounds. Re-encoding `raw` as-is would
+    // ship `"\"Example\""` to the model instead of `"Example"`, so decode first and
+    // encode exactly once.
+    dynamic decoded = raw;
+    for (var i = 0; i < 2 && decoded is String; i++) {
+      try {
+        decoded = jsonDecode(decoded);
+      } catch (_) {
+        break;
+      }
+    }
+    final encoded = jsonEncode(decoded);
+    final clipped = truncateHeadUtf16Safe(encoded, evalJsMaxResultChars);
+    return {
+      'ok': true,
+      'result': clipped,
+      'truncated': clipped.length < encoded.length,
+    };
   }
 
   Future<Map<String, dynamic>> goBack() async {
@@ -553,7 +700,19 @@ class BrowserAgentSession {
       });
     }
     element.focus();
-    element.value = option.value;
+    // Same native-setter trick as the text-input path below: React installs its own
+    // setter on the element instance to track "last known value", so a direct
+    // `element.value = ...` is invisible to it and the component silently keeps its
+    // old selection even though the DOM (and this tool) say otherwise.
+    const selectDescriptor = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      'value'
+    );
+    if (selectDescriptor && selectDescriptor.set) {
+      selectDescriptor.set.call(element, option.value);
+    } else {
+      element.value = option.value;
+    }
     element.dispatchEvent(new Event('input', {bubbles: true}));
     element.dispatchEvent(new Event('change', {bubbles: true}));
     return JSON.stringify({
@@ -594,6 +753,165 @@ class BrowserAgentSession {
     element_id: id,
     typed_length: text.length
   });
+})();
+''';
+
+  static const String _submitScript = r'''
+(() => {
+  const elements = window.__moruBrowserElementRegistry;
+  const id = __ELEMENT_ID__;
+  if (!(elements instanceof Map)) {
+    return JSON.stringify({
+      ok: false,
+      error: 'stale_observation',
+      message: 'Observe the page again before submitting.'
+    });
+  }
+  if (!elements.has(id)) {
+    return JSON.stringify({
+      ok: false,
+      error: 'invalid_element_id',
+      message: 'Choose an element_id from the latest observe result.'
+    });
+  }
+  const element = elements.get(id);
+  if (!element || !element.isConnected) {
+    return JSON.stringify({
+      ok: false,
+      error: 'stale_element',
+      message: 'The element is no longer on the page. Observe again.'
+    });
+  }
+  if (element.disabled) {
+    return JSON.stringify({
+      ok: false,
+      error: 'not_editable',
+      message: 'The selected element is disabled.'
+    });
+  }
+  const tag = element.tagName.toLowerCase();
+  const form = tag === 'form' ? element : (element.form || element.closest('form'));
+  if (!form) {
+    return JSON.stringify({
+      ok: false,
+      error: 'no_enclosing_form',
+      message: 'No form contains this element.'
+    });
+  }
+  const inputType = tag === 'input'
+      ? String(element.getAttribute('type') || 'text').toLowerCase()
+      : '';
+  const isSubmitControl =
+      (tag === 'button' && (element.type === 'submit' || element.type === '')) ||
+      (tag === 'input' && (inputType === 'submit' || inputType === 'image'));
+  if (isSubmitControl) {
+    element.click();
+    return JSON.stringify({ok: true, element_id: id, via: 'button_click'});
+  }
+  // requestSubmit() runs constraint validation and silently does nothing when the
+  // form is invalid, so check first rather than reporting a submit that never happened.
+  if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+    if (typeof form.reportValidity === 'function') form.reportValidity();
+    return JSON.stringify({
+      ok: false,
+      error: 'form_invalid',
+      message: 'The form failed its own validation, so it was not submitted.'
+    });
+  }
+  if (typeof form.requestSubmit === 'function') {
+    form.requestSubmit();
+  } else {
+    form.submit();
+  }
+  return JSON.stringify({ok: true, element_id: id, via: 'form_submit'});
+})();
+''';
+
+  static const String _pressKeyScript = r'''
+(() => {
+  const key = __KEY__;
+  try {
+    const el = document.activeElement || document.body;
+    // Legacy keyCode/which are deprecated but still what a lot of handlers read
+    // (`e.keyCode === 13`); without them Enter silently does nothing on those pages.
+    const legacyCodes = {
+      Enter: 13, Tab: 9, Escape: 27, Backspace: 8, Delete: 46, ' ': 32,
+      ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39,
+      Home: 36, End: 35, PageUp: 33, PageDown: 34
+    };
+    const keyCode = Object.prototype.hasOwnProperty.call(legacyCodes, key)
+        ? legacyCodes[key]
+        : (key.length === 1 ? key.toUpperCase().charCodeAt(0) : 0);
+    const init = {
+      key,
+      code: key.length === 1 ? 'Key' + key.toUpperCase() : key,
+      keyCode,
+      which: keyCode,
+      bubbles: true,
+      cancelable: true
+    };
+    const down = new KeyboardEvent('keydown', init);
+    el.dispatchEvent(down);
+    if (key.length === 1) {
+      el.dispatchEvent(new KeyboardEvent('keypress', init));
+    }
+    el.dispatchEvent(new KeyboardEvent('keyup', init));
+    return JSON.stringify({ok: true, key, default_prevented: down.defaultPrevented});
+  } catch (e) {
+    return JSON.stringify({ok: false, error: 'js_failed', message: String(e)});
+  }
+})();
+''';
+
+  static const String _waitForScript = r'''
+(() => {
+  const selector = __SELECTOR__;
+  const state = __STATE__;
+  const containsText = __CONTAINS_TEXT__;
+  // Same rule observe's hasBox uses: offsetParent/getClientRects stay truthy for
+  // visibility:hidden and opacity:0, which would make state=visible fire on an
+  // invisible element and state=hidden unsatisfiable.
+  function visible(el) {
+    const style = window.getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none') return false;
+    if (parseFloat(style.opacity || '1') === 0) return false;
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }
+  function hasText(el) {
+    if (!containsText) return true;
+    const text = (el.innerText || el.textContent || '');
+    return text.indexOf(containsText) !== -1;
+  }
+  try {
+    if (state === 'detached') {
+      return JSON.stringify({satisfied: document.querySelector(selector) === null});
+    }
+    const elements = document.querySelectorAll(selector);
+    if (state === 'hidden') {
+      for (const el of elements) {
+        if (visible(el)) return JSON.stringify({satisfied: false});
+      }
+      return JSON.stringify({satisfied: true});
+    }
+    if (state === 'visible') {
+      for (const el of elements) {
+        if (visible(el) && hasText(el)) return JSON.stringify({satisfied: true});
+      }
+      return JSON.stringify({satisfied: false});
+    }
+    // 'attached' (default)
+    for (const el of elements) {
+      if (hasText(el)) return JSON.stringify({satisfied: true});
+    }
+    return JSON.stringify({satisfied: false});
+  } catch (e) {
+    return JSON.stringify({
+      satisfied: false,
+      error: 'invalid_selector',
+      message: String(e)
+    });
+  }
 })();
 ''';
 
