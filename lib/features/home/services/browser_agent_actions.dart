@@ -1,3 +1,5 @@
+import '../../../core/services/browser/browser_agent_session.dart';
+
 /// Canonical list of `browser_use` actions, shared by the tool dispatcher
 /// and the Browser settings page so the two can never drift apart.
 class BrowserAgentAction {
@@ -140,4 +142,24 @@ class BrowserAgentActions {
   ];
 
   static bool isKnown(String id) => all.any((a) => a.id == id);
+
+  static BrowserAgentAction? byId(String id) {
+    for (final action in all) {
+      if (action.id == id) return action;
+    }
+    return null;
+  }
+}
+
+/// A short, localized status line for [activity] (the browser page's status
+/// bar and "Show recent" log). Falls back to the raw action id if it somehow
+/// doesn't match a known action, rather than showing nothing.
+String browserActivityLabel(BrowserActivity activity, {required bool ru}) {
+  final action = BrowserAgentActions.byId(activity.action);
+  final label = action == null
+      ? activity.action
+      : (ru ? action.labelRu : action.labelEn);
+  final detail = activity.detail;
+  if (detail == null || detail.isEmpty) return label;
+  return '$label: $detail';
 }

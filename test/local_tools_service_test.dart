@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/models/health_data_type.dart';
+import 'package:Kelivo/core/services/browser/browser_agent_session.dart';
 import 'package:Kelivo/core/services/browser/web_source.dart';
 import 'package:Kelivo/features/home/services/browser_agent_actions.dart';
 import 'package:Kelivo/features/home/services/health_data_selection.dart';
@@ -459,6 +460,68 @@ void main() {
         );
         final decoded = jsonDecode(result!) as Map<String, dynamic>;
         expect(decoded['error'], 'browser_not_open');
+      },
+    );
+
+    tearDown(() {
+      BrowserAgentSession.instance.currentActivity.value = null;
+      BrowserAgentSession.instance.recentActivity.clear();
+    });
+
+    test(
+      'browser_use actions record their activity even when the call fails',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'press_key', 'key': 'Enter'},
+          assistant,
+        );
+
+        final activity = BrowserAgentSession.instance.currentActivity.value;
+        expect(activity?.action, 'press_key');
+        expect(activity?.detail, 'Enter');
+        expect(BrowserAgentSession.instance.recentActivity, hasLength(1));
+      },
+    );
+
+    test(
+      'an open call records the target URL as its activity detail',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'open', 'url': 'https://example.com'},
+          assistant,
+        );
+
+        final activity = BrowserAgentSession.instance.currentActivity.value;
+        expect(activity?.action, 'open');
+        expect(activity?.detail, 'https://example.com');
+      },
+    );
+
+    test(
+      'a disabled action never reaches BrowserAgentTool, so it records no activity',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'eval_js', 'code': 'document.title'},
+          assistant,
+          disabledBrowserActions: const {'eval_js'},
+        );
+
+        expect(BrowserAgentSession.instance.currentActivity.value, isNull);
       },
     );
 
