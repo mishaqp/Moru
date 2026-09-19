@@ -129,7 +129,10 @@ class _WebViewPageState extends State<WebViewPage> {
   void _submitAskAi() {
     final text = _askAiController.text.trim();
     if (text.isEmpty || _askAiBusy) return;
-    final id = context.read<BrowserAskAiBridge>().submit(text);
+    final id = context.read<BrowserAskAiBridge>().submit(
+      text,
+      pageUrl: _currentUrl,
+    );
     setState(() {
       _askAiBusy = true;
       _askAiActiveRequestId = id;

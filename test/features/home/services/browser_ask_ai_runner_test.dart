@@ -64,9 +64,64 @@ void main() {
       expect(outcome.requestId, 'req-1');
       expect(outcome.ok, isTrue);
       expect(outcome.error, isNull);
-      expect(sentInputs.single.text, 'find flights');
+      expect(sentInputs.single.text, endsWith('find flights'));
+      expect(sentInputs.single.text, contains('floating "Ask AI" bar'));
       expect(sentConversations.single.id, conversation.id);
       expect(sentAssistants.single.id, assistant.id);
+    },
+  );
+
+  test('prepends the page URL when the request carries one', () async {
+    final bridge = BrowserAskAiBridge();
+    addTearDown(bridge.dispose);
+    final sentInputs = <ChatInputData>[];
+    final outcomeFuture = firstOutcome(bridge);
+
+    await runBrowserAskAiRequest(
+      bridge: bridge,
+      request: const BrowserAskAiRequest(
+        id: 'req-1b',
+        text: 'summarize this',
+        pageUrl: 'https://example.com/article',
+      ),
+      currentConversationId: conversation.id,
+      getConversation: (id) => id == conversation.id ? conversation : null,
+      getAssistantById: (id) => id == assistant.id ? assistant : null,
+      currentAssistant: null,
+      send:
+          ({
+            required input,
+            required conversation,
+            required assistant,
+            required onGenerationStarted,
+          }) async {
+            sentInputs.add(input);
+            onGenerationStarted('message-1b');
+            return ChatActionResult.success(
+              ChatMessage(
+                id: 'message-1b',
+                conversationId: conversation.id,
+                role: 'assistant',
+                content: '',
+              ),
+            );
+          },
+      cancel: (_, {expectedMessageId}) async {},
+    );
+
+    await outcomeFuture;
+    expect(sentInputs.single.text, contains('https://example.com/article'));
+    expect(sentInputs.single.text, endsWith('summarize this'));
+  });
+
+  test(
+    'browserAskAiOriginDirective falls back to a generic phrase without a URL',
+    () {
+      const request = BrowserAskAiRequest(id: 'req-x', text: 'hi');
+      expect(
+        browserAskAiOriginDirective(request),
+        contains('a page in the browser'),
+      );
     },
   );
 
