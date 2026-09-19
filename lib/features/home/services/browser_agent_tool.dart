@@ -32,8 +32,11 @@ class BrowserAgentTool {
     try {
       switch (action) {
         case 'open':
-          return jsonEncode(await _open((args['url'] ?? '').toString()));
+          final url = (args['url'] ?? '').toString();
+          session.recordActivity(BrowserActivity(action: action, detail: url));
+          return jsonEncode(await _open(url));
         case 'observe':
+          session.recordActivity(const BrowserActivity(action: 'observe'));
           return jsonEncode(
             await session.observe(
               scope: (args['scope'] ?? 'viewport').toString().toLowerCase(),
@@ -43,8 +46,10 @@ class BrowserAgentTool {
             ),
           );
         case 'click':
+          session.recordActivity(const BrowserActivity(action: 'click'));
           return jsonEncode(await session.click(_elementId(args)));
         case 'type':
+          session.recordActivity(const BrowserActivity(action: 'type'));
           return jsonEncode(
             await session.type(
               _elementId(args),
@@ -52,31 +57,46 @@ class BrowserAgentTool {
             ),
           );
         case 'submit':
+          session.recordActivity(const BrowserActivity(action: 'submit'));
           return jsonEncode(await session.submit(_elementId(args)));
         case 'press_key':
-          return jsonEncode(await session.pressKey(_key(args)));
+          final key = _key(args);
+          session.recordActivity(BrowserActivity(action: action, detail: key));
+          return jsonEncode(await session.pressKey(key));
         case 'scroll':
+          final direction = (args['direction'] ?? 'down')
+              .toString()
+              .trim()
+              .toLowerCase();
+          session.recordActivity(
+            BrowserActivity(action: action, detail: direction),
+          );
           return jsonEncode(
             await session.scroll(
-              direction: (args['direction'] ?? 'down')
-                  .toString()
-                  .trim()
-                  .toLowerCase(),
+              direction: direction,
               amount: _nullableIntArg(args, 'amount'),
             ),
           );
         case 'back':
+          session.recordActivity(const BrowserActivity(action: 'back'));
           return jsonEncode(await session.goBack());
         case 'forward':
+          session.recordActivity(const BrowserActivity(action: 'forward'));
           return jsonEncode(await session.goForward());
         case 'reload':
+          session.recordActivity(const BrowserActivity(action: 'reload'));
           return jsonEncode(await session.reload());
         case 'read':
+          session.recordActivity(const BrowserActivity(action: 'read'));
           return jsonEncode(await _read(args));
         case 'wait_for':
+          final selector = _selector(args);
+          session.recordActivity(
+            BrowserActivity(action: action, detail: selector),
+          );
           return jsonEncode(
             await session.waitFor(
-              selector: _selector(args),
+              selector: selector,
               state: (args['state'] ?? 'attached')
                   .toString()
                   .trim()
@@ -86,8 +106,10 @@ class BrowserAgentTool {
             ),
           );
         case 'eval_js':
+          session.recordActivity(const BrowserActivity(action: 'eval_js'));
           return jsonEncode(await _evalJs(args));
         case 'close':
+          session.recordActivity(const BrowserActivity(action: 'close'));
           return jsonEncode(await _close());
         default:
           return jsonEncode({

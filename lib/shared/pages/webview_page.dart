@@ -8,6 +8,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/browser/browser_agent_session.dart';
+import '../../features/home/services/browser_agent_actions.dart';
 import '../../features/home/services/browser_ask_ai_bridge.dart';
 import '../../features/home/services/tool_approval_service.dart';
 import '../../features/settings/widgets/tool_schema_ui.dart';
@@ -381,70 +382,183 @@ class _WebViewPageState extends State<WebViewPage> {
     );
   }
 
-  Widget _askAiBar(BuildContext context) {
+  /// A small floating pill over the page itself (not the input area below),
+  /// so "the AI is working" stays visible while the input card is replaced
+  /// by the status bar.
+  Widget _workingPill(BuildContext context) {
+    final ru = Localizations.localeOf(context).languageCode == 'ru';
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      elevation: 3,
+      borderRadius: BorderRadius.circular(20),
+      color: cs.inverseSurface,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: _cancelAskAi,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: cs.onInverseSurface,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                ru ? 'ИИ работает' : 'The agent is working',
+                style: TextStyle(
+                  color: cs.onInverseSurface,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.close, size: 16, color: cs.onInverseSurface),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Idle state of the bottom bar: a rounded, elevated card floating just
+  /// above the nav row, rather than a full-bleed bar flush with the page.
+  Widget _askAiInputCard(BuildContext context) {
+    final ru = Localizations.localeOf(context).languageCode == 'ru';
+    final cs = Theme.of(context).colorScheme;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+        child: Material(
+          elevation: 2,
+          shadowColor: cs.shadow.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(24),
+          color: cs.surfaceContainerHigh,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 16, right: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _askAiController,
+                    decoration: InputDecoration(
+                      isCollapsed: true,
+                      border: InputBorder.none,
+                      hintText: ru
+                          ? 'Скажите ИИ, что делать…'
+                          : 'Tell the AI what to do…',
+                    ),
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _submitAskAi(),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                IconButton(
+                  tooltip: ru ? 'Отправить' : 'Send',
+                  onPressed: _submitAskAi,
+                  icon: Icon(Icons.arrow_upward, size: 18, color: cs.onPrimary),
+                  style: IconButton.styleFrom(
+                    backgroundColor: cs.primary,
+                    shape: const CircleBorder(),
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Busy state of the bottom bar: what the AI is doing right now, a way to
+  /// see the log behind it, and Stop.
+  Widget _askAiActivityBar(BuildContext context) {
     final ru = Localizations.localeOf(context).languageCode == 'ru';
     final cs = Theme.of(context).colorScheme;
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
         decoration: BoxDecoration(
           color: cs.surfaceContainerHigh,
           border: Border(
             top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.35)),
           ),
         ),
-        child: _askAiBusy
-            ? Row(
-                children: [
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+        child: ValueListenableBuilder<BrowserActivity?>(
+          valueListenable: BrowserAgentSession.instance.currentActivity,
+          builder: (context, activity, _) {
+            final label = activity == null
+                ? (ru ? 'ИИ работает…' : 'The agent is working…')
+                : '${ru ? 'ИИ' : 'AI'}: ${browserActivityLabel(activity, ru: ru)}';
+            return Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      ru ? 'ИИ работает…' : 'The agent is working…',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: _cancelAskAi,
-                    child: Text(ru ? 'Стоп' : 'Stop'),
-                  ),
-                ],
-              )
-            : Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _askAiController,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        hintText: ru
-                            ? 'Скажите ИИ, что делать…'
-                            : 'Tell the AI what to do…',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                      ),
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _submitAskAi(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    tooltip: ru ? 'Отправить' : 'Send',
-                    onPressed: _submitAskAi,
-                    icon: const Icon(Icons.arrow_upward),
-                  ),
-                ],
+                ),
+                TextButton(
+                  onPressed: BrowserAgentSession.instance.recentActivity.isEmpty
+                      ? null
+                      : () => _showRecentActivitySheet(context),
+                  child: Text(ru ? 'Недавнее' : 'Recent'),
+                ),
+                TextButton(
+                  onPressed: _cancelAskAi,
+                  child: Text(ru ? 'Стоп' : 'Stop'),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showRecentActivitySheet(BuildContext context) {
+    final ru = Localizations.localeOf(context).languageCode == 'ru';
+    final entries = BrowserAgentSession.instance.recentActivity.reversed
+        .toList();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                ru ? 'Недавние действия' : 'Recent actions',
+                style: Theme.of(ctx).textTheme.titleLarge,
               ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: entries.length,
+                  itemBuilder: (c, i) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(browserActivityLabel(entries[i], ru: ru)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -547,7 +661,20 @@ class _WebViewPageState extends State<WebViewPage> {
               LinearProgressIndicator(
                 value: _progress > 0 ? _progress / 100 : null,
               ),
-            Expanded(child: WebViewWidget(controller: _controller)),
+            Expanded(
+              child: Stack(
+                children: [
+                  WebViewWidget(controller: _controller),
+                  if (widget.agentSession && _askAiBusy)
+                    Positioned(
+                      top: 12,
+                      left: 0,
+                      right: 0,
+                      child: Center(child: _workingPill(context)),
+                    ),
+                ],
+              ),
+            ),
             if (!contentMode)
               SafeArea(
                 top: false,
@@ -614,7 +741,9 @@ class _WebViewPageState extends State<WebViewPage> {
                 ),
               ),
             if (widget.agentSession && browserApproval == null)
-              _askAiBar(context),
+              _askAiBusy
+                  ? _askAiActivityBar(context)
+                  : _askAiInputCard(context),
             if (browserApproval != null)
               _browserApprovalBar(context, browserApproval),
           ],

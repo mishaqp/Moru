@@ -1,10 +1,22 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../utils/utf16_safe_cut.dart';
 import 'browser_research.dart';
+
+/// One `browser_use` call, for the browser page's status line: [action]
+/// matches a `BrowserAgentAction.id` for its label, [detail] is an optional
+/// short extra (a URL, a key, a truncated selector) the label alone doesn't
+/// carry.
+class BrowserActivity {
+  const BrowserActivity({required this.action, this.detail});
+
+  final String action;
+  final String? detail;
+}
 
 class BrowserAgentProtocolException implements Exception {
   const BrowserAgentProtocolException(this.message);
@@ -84,6 +96,24 @@ class BrowserAgentSession {
   Future<void> Function()? _closeHandler;
   final BrowserNavigationHistory _history = BrowserNavigationHistory();
 
+  /// The most recent `browser_use` call, for the browser page's status line.
+  /// Null once the session closes; otherwise sticky until the next call.
+  final ValueNotifier<BrowserActivity?> currentActivity =
+      ValueNotifier<BrowserActivity?>(null);
+
+  static const int _maxRecentActivity = 30;
+
+  /// Bounded log behind "Show recent", oldest first.
+  final List<BrowserActivity> recentActivity = <BrowserActivity>[];
+
+  void recordActivity(BrowserActivity activity) {
+    currentActivity.value = activity;
+    recentActivity.add(activity);
+    if (recentActivity.length > _maxRecentActivity) {
+      recentActivity.removeAt(0);
+    }
+  }
+
   bool get isAttached => _controller != null;
 
   void expectNavigation() {
@@ -109,6 +139,8 @@ class BrowserAgentSession {
     _attachedCompleter = null;
     _loading = false;
     _history.clear();
+    currentActivity.value = null;
+    recentActivity.clear();
     final ready = _readyCompleter;
     if (ready != null && !ready.isCompleted) {
       ready.completeError(StateError('Shared browser was closed.'));
