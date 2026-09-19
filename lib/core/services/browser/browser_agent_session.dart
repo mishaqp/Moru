@@ -315,6 +315,53 @@ class BrowserAgentSession {
     );
   }
 
+  /// Waits until [selector] reaches [state] (or [timeoutMs] elapses). Polls a synchronous
+  /// JS check from the Dart side, matching this file's other actions, rather than an async
+  /// IIFE returned through `evaluateJavascript`: Android WebView's completion value for a
+  /// pending Promise is unreliable across versions, so the wait loop lives in Dart instead.
+  Future<Map<String, dynamic>> waitFor({
+    required String selector,
+    String state = 'attached',
+    String? containsText,
+    int timeoutMs = 10000,
+  }) async {
+    await waitUntilReady();
+    const allowedStates = {'attached', 'detached', 'visible', 'hidden'};
+    if (!allowedStates.contains(state)) {
+      throw ArgumentError(
+        'state must be one of attached, detached, visible, or hidden.',
+      );
+    }
+    final clampedTimeout = timeoutMs.clamp(200, 30000);
+    final script = _waitForScript
+        .replaceAll('__SELECTOR__', jsonEncode(selector))
+        .replaceAll('__STATE__', jsonEncode(state))
+        .replaceAll(
+          '__CONTAINS_TEXT__',
+          containsText == null ? 'null' : jsonEncode(containsText),
+        );
+    final start = DateTime.now();
+    final deadline = start.add(Duration(milliseconds: clampedTimeout));
+    while (true) {
+      final result = await _runJson(script);
+      if (result['satisfied'] == true) {
+        return {
+          'ok': true,
+          'found': true,
+          'elapsed_ms': DateTime.now().difference(start).inMilliseconds,
+        };
+      }
+      if (DateTime.now().isAfter(deadline)) {
+        return {
+          'ok': true,
+          'found': false,
+          'elapsed_ms': DateTime.now().difference(start).inMilliseconds,
+        };
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    }
+  }
+
   Future<Map<String, dynamic>> goBack() async {
     final controller = _requireController();
     await waitUntilReady();
@@ -606,6 +653,49 @@ class BrowserAgentSession {
     element_id: id,
     typed_length: text.length
   });
+})();
+''';
+
+  static const String _waitForScript = r'''
+(() => {
+  const selector = __SELECTOR__;
+  const state = __STATE__;
+  const containsText = __CONTAINS_TEXT__;
+  function visible(el) {
+    if (el.offsetParent !== null) return true;
+    const rects = el.getClientRects();
+    return Boolean(rects && rects.length > 0);
+  }
+  function hasText(el) {
+    if (!containsText) return true;
+    const text = (el.innerText || el.textContent || '');
+    return text.indexOf(containsText) !== -1;
+  }
+  try {
+    if (state === 'detached') {
+      return JSON.stringify({satisfied: document.querySelector(selector) === null});
+    }
+    const elements = document.querySelectorAll(selector);
+    if (state === 'hidden') {
+      for (const el of elements) {
+        if (visible(el)) return JSON.stringify({satisfied: false});
+      }
+      return JSON.stringify({satisfied: true});
+    }
+    if (state === 'visible') {
+      for (const el of elements) {
+        if (visible(el) && hasText(el)) return JSON.stringify({satisfied: true});
+      }
+      return JSON.stringify({satisfied: false});
+    }
+    // 'attached' (default)
+    for (const el of elements) {
+      if (hasText(el)) return JSON.stringify({satisfied: true});
+    }
+    return JSON.stringify({satisfied: false});
+  } catch (e) {
+    return JSON.stringify({satisfied: false, error: String(e)});
+  }
 })();
 ''';
 

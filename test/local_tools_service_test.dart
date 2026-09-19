@@ -164,6 +164,7 @@ void main() {
         'forward',
         'reload',
         'read',
+        'wait_for',
         'close',
       ]);
       expect((properties['scope'] as Map<String, dynamic>)['enum'], const [
@@ -245,7 +246,31 @@ void main() {
         }),
         isFalse,
       );
+      expect(
+        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+          'action': 'wait_for',
+        }),
+        isFalse,
+      );
     });
+
+    test(
+      'shared browser wait_for without a selector reports invalid_arguments',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        final result = await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'wait_for'},
+          assistant,
+        );
+        final decoded = jsonDecode(result!) as Map<String, dynamic>;
+        expect(decoded['ok'], isFalse);
+        expect(decoded['error'], 'invalid_arguments');
+      },
+    );
 
     test(
       'shared browser read without an open browser reports browser_not_open',

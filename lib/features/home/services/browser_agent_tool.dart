@@ -69,6 +69,18 @@ class BrowserAgentTool {
           return jsonEncode(await session.reload());
         case 'read':
           return jsonEncode(await _read(args));
+        case 'wait_for':
+          return jsonEncode(
+            await session.waitFor(
+              selector: _selector(args),
+              state: (args['state'] ?? 'attached')
+                  .toString()
+                  .trim()
+                  .toLowerCase(),
+              containsText: _stringArg(args, 'contains_text'),
+              timeoutMs: _intArg(args, 'timeout_ms', 10000),
+            ),
+          );
         case 'close':
           return jsonEncode(await _close());
         default:
@@ -76,7 +88,7 @@ class BrowserAgentTool {
             'ok': false,
             'error': 'invalid_action',
             'message':
-                'Use action open, observe, click, type, scroll, back, forward, reload, read, or close.',
+                'Use action open, observe, click, type, scroll, back, forward, reload, read, wait_for, or close.',
           });
       }
     } on TimeoutException {
@@ -200,6 +212,14 @@ class BrowserAgentTool {
       );
     }
     return id;
+  }
+
+  static String _selector(Map<String, dynamic> args) {
+    final selector = _stringArg(args, 'selector');
+    if (selector == null) {
+      throw ArgumentError('selector is required for action=wait_for.');
+    }
+    return selector;
   }
 
   static int _intArg(Map<String, dynamic> args, String key, int fallback) {

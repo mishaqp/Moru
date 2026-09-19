@@ -686,7 +686,7 @@ class LocalToolsService {
     'function': {
       'name': LocalToolNames.browserUse,
       'description':
-          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, scroll, use browser history, or read the full page text with action=read. Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
+          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, scroll, use browser history, read the full page text with action=read, or wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again). Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -702,6 +702,7 @@ class LocalToolsService {
               'forward',
               'reload',
               'read',
+              'wait_for',
               'close',
             ],
             'description': 'Browser operation to perform.',
@@ -760,7 +761,7 @@ class LocalToolsService {
           'selector': {
             'type': 'string',
             'description':
-                'For action=read: optional CSS selector to read one element instead of the whole page. Cannot combine with focus.',
+                'CSS selector. For action=read: optional, reads one element instead of the whole page (cannot combine with focus). Required for action=wait_for.',
           },
           'source_id': {
             'type': 'string',
@@ -784,6 +785,25 @@ class LocalToolsService {
             'minimum': 0,
             'description':
                 'For action=read with source_id: character offset to resume reading from. Cannot combine with focus.',
+          },
+          'state': {
+            'type': 'string',
+            'enum': ['attached', 'detached', 'visible', 'hidden'],
+            'default': 'attached',
+            'description':
+                'For action=wait_for: target state of selector — attached (present in the DOM), detached (gone), visible (present and rendered), or hidden (none rendered).',
+          },
+          'contains_text': {
+            'type': 'string',
+            'description':
+                'For action=wait_for: also require a matching element to contain this text. Ignored for state=detached/hidden.',
+          },
+          'timeout_ms': {
+            'type': 'integer',
+            'minimum': 200,
+            'maximum': 30000,
+            'default': 10000,
+            'description': 'For action=wait_for: maximum time to wait.',
           },
         },
         'required': ['action'],
