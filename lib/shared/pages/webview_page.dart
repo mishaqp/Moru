@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/browser/browser_agent_session.dart';
 import '../../features/home/services/tool_approval_service.dart';
+import '../../features/settings/widgets/tool_schema_ui.dart';
 import '../../l10n/app_localizations.dart';
 
 class WebViewPage extends StatefulWidget {
@@ -289,6 +290,8 @@ class _WebViewPageState extends State<WebViewPage> {
                   ),
                   TextButton(
                     onPressed: () async {
+                      final confirmed = await confirmFullToolTrust(context);
+                      if (!confirmed || !context.mounted) return;
                       approval.setAutoApproveAll(true);
                       await context
                           .read<SettingsProvider>()
