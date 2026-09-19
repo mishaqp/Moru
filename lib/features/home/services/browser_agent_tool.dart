@@ -51,6 +51,10 @@ class BrowserAgentTool {
               (args['text'] ?? '').toString(),
             ),
           );
+        case 'submit':
+          return jsonEncode(await session.submit(_elementId(args)));
+        case 'press_key':
+          return jsonEncode(await session.pressKey(_key(args)));
         case 'scroll':
           return jsonEncode(
             await session.scroll(
@@ -90,7 +94,7 @@ class BrowserAgentTool {
             'ok': false,
             'error': 'invalid_action',
             'message':
-                'Use action open, observe, click, type, scroll, back, forward, reload, read, wait_for, eval_js, or close.',
+                'Use action open, observe, click, type, submit, press_key, scroll, back, forward, reload, read, wait_for, eval_js, or close.',
           });
       }
     } on TimeoutException {
@@ -222,6 +226,16 @@ class BrowserAgentTool {
       throw ArgumentError('selector is required for action=wait_for.');
     }
     return selector;
+  }
+
+  static String _key(Map<String, dynamic> args) {
+    final key = _stringArg(args, 'key');
+    if (key == null) {
+      throw ArgumentError('key is required for action=press_key.');
+    }
+    // KeyboardEvent.key values ('Enter', 'ArrowDown', ...) are short; a longer
+    // string suggests misuse, so clamp before it reaches the JS payload.
+    return key.length > 32 ? key.substring(0, 32) : key;
   }
 
   /// Best-effort static guard for `eval_js`, checked before the code ever reaches the

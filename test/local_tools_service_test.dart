@@ -159,6 +159,8 @@ void main() {
         'observe',
         'click',
         'type',
+        'submit',
+        'press_key',
         'scroll',
         'back',
         'forward',
@@ -216,44 +218,115 @@ void main() {
       },
     );
 
-    test('shared browser requires approval only for click and type', () {
-      expect(
-        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
-          'action': 'open',
-        }),
-        isFalse,
-      );
-      expect(
-        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
-          'action': 'observe',
-        }),
-        isFalse,
-      );
-      expect(
-        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
-          'action': 'click',
-        }),
-        isTrue,
-      );
-      expect(
-        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
-          'action': 'type',
-        }),
-        isTrue,
-      );
-      expect(
-        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
-          'action': 'read',
-        }),
-        isFalse,
-      );
-      expect(
-        LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
-          'action': 'wait_for',
-        }),
-        isFalse,
-      );
-    });
+    test(
+      'shared browser requires approval for state-changing actions only',
+      () {
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'open',
+          }),
+          isFalse,
+        );
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'observe',
+          }),
+          isFalse,
+        );
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'click',
+          }),
+          isTrue,
+        );
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'type',
+          }),
+          isTrue,
+        );
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'submit',
+          }),
+          isTrue,
+        );
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'press_key',
+          }),
+          isTrue,
+        );
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'read',
+          }),
+          isFalse,
+        );
+        expect(
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, const {
+            'action': 'wait_for',
+          }),
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'shared browser submit/press_key approval can still be bypassed by full trust',
+      () {
+        expect(
+          LocalToolNames.requiresMandatoryApprovalFor(
+            LocalToolNames.browserUse,
+            const {'action': 'submit'},
+          ),
+          isFalse,
+        );
+        expect(
+          LocalToolNames.requiresMandatoryApprovalFor(
+            LocalToolNames.browserUse,
+            const {'action': 'press_key'},
+          ),
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'shared browser submit without an element_id reports invalid_arguments',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        final result = await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'submit'},
+          assistant,
+        );
+        final decoded = jsonDecode(result!) as Map<String, dynamic>;
+        expect(decoded['ok'], isFalse);
+        expect(decoded['error'], 'invalid_arguments');
+      },
+    );
+
+    test(
+      'shared browser press_key without a key reports invalid_arguments',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const assistant = Assistant(id: 'a1', name: 'Assistant');
+
+        final result = await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'press_key'},
+          assistant,
+        );
+        final decoded = jsonDecode(result!) as Map<String, dynamic>;
+        expect(decoded['ok'], isFalse);
+        expect(decoded['error'], 'invalid_arguments');
+      },
+    );
 
     test(
       'shared browser wait_for without a selector reports invalid_arguments',

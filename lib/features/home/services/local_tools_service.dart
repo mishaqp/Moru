@@ -58,7 +58,11 @@ class LocalToolNames {
     if (requiresUserApproval.contains(name)) return true;
     if (name != browserUse) return false;
     final action = (arguments['action'] ?? '').toString().trim().toLowerCase();
-    return action == 'click' || action == 'type' || action == 'eval_js';
+    return action == 'click' ||
+        action == 'type' ||
+        action == 'submit' ||
+        action == 'press_key' ||
+        action == 'eval_js';
   }
 
   /// Whether approval for this call can never be waved through by the global
@@ -699,7 +703,7 @@ class LocalToolsService {
     'function': {
       'name': LocalToolNames.browserUse,
       'description':
-          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, scroll, use browser history, read the full page text with action=read, wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again), or run arbitrary JavaScript with action=eval_js when nothing else covers the task (always requires explicit approval). Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
+          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, submit a form (action=submit) or synthesize a key press on the focused element (action=press_key, e.g. Enter), scroll, use browser history, read the full page text with action=read, wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again), or run arbitrary JavaScript with action=eval_js when nothing else covers the task (always requires explicit approval). Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -710,6 +714,8 @@ class LocalToolsService {
               'observe',
               'click',
               'type',
+              'submit',
+              'press_key',
               'scroll',
               'back',
               'forward',
@@ -728,11 +734,16 @@ class LocalToolsService {
           'element_id': {
             'type': 'integer',
             'description':
-                'Interactive element ID returned by the latest observe. Required for click/type.',
+                'Interactive element ID returned by the latest observe. Required for click/type. For submit, may be the submit button or any element inside the target form.',
           },
           'text': {
             'type': 'string',
             'description': 'Text to enter. Required for action=type.',
+          },
+          'key': {
+            'type': 'string',
+            'description':
+                "Required for action=press_key: a KeyboardEvent.key value (e.g. 'Enter', 'Escape', 'ArrowDown') synthesized on the currently focused element.",
           },
           'scope': {
             'type': 'string',

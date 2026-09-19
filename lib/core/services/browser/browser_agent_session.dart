@@ -254,6 +254,44 @@ class BrowserAgentSession {
     return _withCurrentUrl(result);
   }
 
+  Future<Map<String, dynamic>> submit(int elementId) async {
+    await waitUntilReady();
+    final controller = _requireController();
+    final beforeUrl = await controller.currentUrl();
+    final beforeSequence = _navigationSequence;
+    final result = await _runJson(
+      _submitScript.replaceAll('__ELEMENT_ID__', '$elementId'),
+    );
+    if (result['ok'] == true) {
+      await _settleAfterInteraction(
+        navigationSequence: beforeSequence,
+        urlBefore: beforeUrl,
+        navigationGrace: const Duration(seconds: 1),
+      );
+      await _recordCurrentPageIfChanged(beforeUrl);
+    }
+    return _withCurrentUrl(result);
+  }
+
+  Future<Map<String, dynamic>> pressKey(String key) async {
+    await waitUntilReady();
+    final controller = _requireController();
+    final beforeUrl = await controller.currentUrl();
+    final beforeSequence = _navigationSequence;
+    final result = await _runJson(
+      _pressKeyScript.replaceAll('__KEY__', jsonEncode(key)),
+    );
+    if (result['ok'] == true) {
+      await _settleAfterInteraction(
+        navigationSequence: beforeSequence,
+        urlBefore: beforeUrl,
+        navigationGrace: const Duration(milliseconds: 250),
+      );
+      await _recordCurrentPageIfChanged(beforeUrl);
+    }
+    return _withCurrentUrl(result);
+  }
+
   Future<Map<String, dynamic>> scroll({
     required String direction,
     int? amount,
@@ -688,6 +726,76 @@ class BrowserAgentSession {
     element_id: id,
     typed_length: text.length
   });
+})();
+''';
+
+  static const String _submitScript = r'''
+(() => {
+  const elements = window.__moruBrowserElementRegistry;
+  const id = __ELEMENT_ID__;
+  if (!(elements instanceof Map)) {
+    return JSON.stringify({
+      ok: false,
+      error: 'stale_observation',
+      message: 'Observe the page again before submitting.'
+    });
+  }
+  if (!elements.has(id)) {
+    return JSON.stringify({
+      ok: false,
+      error: 'invalid_element_id',
+      message: 'Choose an element_id from the latest observe result.'
+    });
+  }
+  const element = elements.get(id);
+  if (!element || !element.isConnected) {
+    return JSON.stringify({
+      ok: false,
+      error: 'stale_element',
+      message: 'The element is no longer on the page. Observe again.'
+    });
+  }
+  const tag = element.tagName.toLowerCase();
+  const form = tag === 'form' ? element : (element.form || element.closest('form'));
+  if (!form) {
+    return JSON.stringify({
+      ok: false,
+      error: 'no_enclosing_form',
+      message: 'No form contains this element.'
+    });
+  }
+  const inputType = tag === 'input'
+      ? String(element.getAttribute('type') || 'text').toLowerCase()
+      : '';
+  const isSubmitControl =
+      (tag === 'button' && (element.type === 'submit' || element.type === '')) ||
+      (tag === 'input' && (inputType === 'submit' || inputType === 'image'));
+  if (isSubmitControl) {
+    element.click();
+    return JSON.stringify({ok: true, element_id: id, via: 'button_click'});
+  }
+  if (typeof form.requestSubmit === 'function') {
+    form.requestSubmit();
+  } else {
+    form.submit();
+  }
+  return JSON.stringify({ok: true, element_id: id, via: 'form_submit'});
+})();
+''';
+
+  static const String _pressKeyScript = r'''
+(() => {
+  const key = __KEY__;
+  try {
+    const el = document.activeElement || document.body;
+    const down = new KeyboardEvent('keydown', {key, bubbles: true, cancelable: true});
+    const up = new KeyboardEvent('keyup', {key, bubbles: true, cancelable: true});
+    el.dispatchEvent(down);
+    el.dispatchEvent(up);
+    return JSON.stringify({ok: true, key});
+  } catch (e) {
+    return JSON.stringify({ok: false, error: 'js_failed', message: String(e)});
+  }
 })();
 ''';
 
