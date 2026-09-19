@@ -41,6 +41,7 @@ import '../../chat/widgets/message_export_sheet.dart';
 import '../../../desktop/message_edit_dialog.dart';
 import '../../../desktop/hotkeys/chat_action_bus.dart';
 import '../../../desktop/hotkeys/sidebar_tab_bus.dart';
+import 'chat_actions.dart';
 import 'chat_controller.dart';
 import 'stream_controller.dart' as stream_ctrl;
 import 'generation_controller.dart';
@@ -50,6 +51,8 @@ import '../services/message_builder_service.dart';
 import '../services/message_generation_service.dart';
 import '../services/local_tools_service.dart';
 import '../services/ask_user_interaction_service.dart';
+import '../services/browser_ask_ai_bridge.dart';
+import '../services/browser_ask_ai_runner.dart';
 import '../services/ocr_service.dart';
 import '../services/translation_service.dart';
 import '../services/file_upload_service.dart';
@@ -179,6 +182,7 @@ class HomePageController extends ChangeNotifier {
   McpProvider? _mcpProvider;
   StreamSubscription<ChatAction>? _chatActionSub;
   StreamSubscription<String>? _notificationTapSub;
+  StreamSubscription<BrowserAskAiRequest>? _browserAskAiSub;
 
   // ============================================================================
   // Animation Controllers
@@ -406,6 +410,7 @@ class HomePageController extends ChangeNotifier {
     _setupKeyboardListeners();
     _setupDesktopFeatures();
     _setupNotificationActions();
+    _setupBrowserAskAi();
   }
 
   void _initializeAnimations() {
@@ -753,6 +758,52 @@ class HomePageController extends ChangeNotifier {
       }
     }
     unawaited(_openPendingNotificationConversation());
+  }
+
+  /// Lets the browser page's floating "Ask AI" bar — pushed on the app's
+  /// root navigator, outside this controller's own widget subtree — hand an
+  /// instruction to the normal generation pipeline without a direct
+  /// reference to [HomeViewModel]. Mirrors [_setupNotificationActions]'s use
+  /// of a stream to cross that same navigator boundary.
+  void _setupBrowserAskAi() {
+    if (!_isAndroid) return;
+    final bridge = _context.read<BrowserAskAiBridge>();
+    _browserAskAiSub = bridge.requests.listen((request) {
+      if (!_chatInitialized || !_context.mounted) {
+        bridge.reportOutcome(
+          BrowserAskAiOutcome(
+            requestId: request.id,
+            ok: false,
+            error: 'no_conversation',
+          ),
+        );
+        return;
+      }
+      final assistants = _context.read<AssistantProvider>();
+      unawaited(
+        runBrowserAskAiRequest(
+          bridge: bridge,
+          request: request,
+          currentConversationId: _chatService.currentConversationId,
+          getConversation: _chatService.getConversation,
+          getAssistantById: assistants.getById,
+          currentAssistant: assistants.currentAssistant,
+          send:
+              ({
+                required input,
+                required conversation,
+                required assistant,
+                required onGenerationStarted,
+              }) => _viewModel.sendScheduledMessage(
+                input: input,
+                conversation: conversation,
+                assistant: assistant,
+                onGenerationStarted: onGenerationStarted,
+              ),
+          cancel: ChatActions.cancelActiveGenerationFor,
+        ),
+      );
+    });
   }
 
   Future<void> _openPendingNotificationConversation() async {
@@ -3119,6 +3170,9 @@ class HomePageController extends ChangeNotifier {
     } catch (_) {}
     try {
       _notificationTapSub?.cancel();
+    } catch (_) {}
+    try {
+      _browserAskAiSub?.cancel();
     } catch (_) {}
     _chatController.dispose();
     _streamController.dispose();

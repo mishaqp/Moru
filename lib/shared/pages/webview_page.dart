@@ -8,6 +8,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/browser/browser_agent_session.dart';
+import '../../features/home/services/browser_ask_ai_bridge.dart';
 import '../../features/home/services/tool_approval_service.dart';
 import '../../features/settings/widgets/tool_schema_ui.dart';
 import '../../l10n/app_localizations.dart';
@@ -37,6 +38,11 @@ class _WebViewPageState extends State<WebViewPage> {
   bool _canGoForward = false;
   bool _forceAgentClose = false;
   final List<_ConsoleMessage> _console = <_ConsoleMessage>[];
+
+  final TextEditingController _askAiController = TextEditingController();
+  String? _askAiActiveRequestId;
+  bool _askAiBusy = false;
+  StreamSubscription<BrowserAskAiOutcome>? _askAiOutcomeSub;
 
   @override
   void initState() {
@@ -87,6 +93,9 @@ class _WebViewPageState extends State<WebViewPage> {
         _controller,
         onClose: _closeAgentSession,
       );
+      _askAiOutcomeSub = context.read<BrowserAskAiBridge>().outcomes.listen(
+        _onAskAiOutcome,
+      );
     }
     // Initial load
     scheduleMicrotask(_initialLoad);
@@ -97,7 +106,40 @@ class _WebViewPageState extends State<WebViewPage> {
     if (widget.agentSession) {
       BrowserAgentSession.instance.unregister(_controller);
     }
+    _askAiOutcomeSub?.cancel();
+    _askAiController.dispose();
     super.dispose();
+  }
+
+  void _onAskAiOutcome(BrowserAskAiOutcome outcome) {
+    if (outcome.requestId != _askAiActiveRequestId || !mounted) return;
+    setState(() {
+      _askAiBusy = false;
+      _askAiActiveRequestId = null;
+    });
+    if (!outcome.ok) {
+      final ru = Localizations.localeOf(context).languageCode == 'ru';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(askAiErrorMessage(outcome.error, ru: ru))),
+      );
+    }
+  }
+
+  void _submitAskAi() {
+    final text = _askAiController.text.trim();
+    if (text.isEmpty || _askAiBusy) return;
+    final id = context.read<BrowserAskAiBridge>().submit(text);
+    setState(() {
+      _askAiBusy = true;
+      _askAiActiveRequestId = id;
+    });
+    _askAiController.clear();
+  }
+
+  void _cancelAskAi() {
+    final id = _askAiActiveRequestId;
+    if (id == null) return;
+    context.read<BrowserAskAiBridge>().cancel(id);
   }
 
   Future<void> _initialLoad() async {
@@ -339,6 +381,74 @@ class _WebViewPageState extends State<WebViewPage> {
     );
   }
 
+  Widget _askAiBar(BuildContext context) {
+    final ru = Localizations.localeOf(context).languageCode == 'ru';
+    final cs = Theme.of(context).colorScheme;
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHigh,
+          border: Border(
+            top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.35)),
+          ),
+        ),
+        child: _askAiBusy
+            ? Row(
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      ru ? 'ИИ работает…' : 'The agent is working…',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _cancelAskAi,
+                    child: Text(ru ? 'Стоп' : 'Stop'),
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _askAiController,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        hintText: ru
+                            ? 'Скажите ИИ, что делать…'
+                            : 'Tell the AI what to do…',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                      ),
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _submitAskAi(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: ru ? 'Отправить' : 'Send',
+                    onPressed: _submitAskAi,
+                    icon: const Icon(Icons.arrow_upward),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -503,6 +613,8 @@ class _WebViewPageState extends State<WebViewPage> {
                   ),
                 ),
               ),
+            if (widget.agentSession && browserApproval == null)
+              _askAiBar(context),
             if (browserApproval != null)
               _browserApprovalBar(context, browserApproval),
           ],
