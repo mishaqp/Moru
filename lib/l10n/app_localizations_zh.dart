@@ -11581,6 +11581,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get settingsPageMcp => 'MCP';
 
   @override
+  String get settingsPageBrowser => '浏览器';
+
+  @override
   String get settingsPageQuickPhrase => '快捷短语';
 
   @override
@@ -22991,6 +22994,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get settingsPageMcp => 'MCP';
+
+  @override
+  String get settingsPageBrowser => '瀏覽器';
 
   @override
   String get settingsPageQuickPhrase => '快捷短语';

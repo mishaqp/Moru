@@ -25,6 +25,7 @@
   "settingsPageSearch": "搜索服务",
   "settingsPageTts": "语音服务",
   "settingsPageMcp": "MCP",
+  "settingsPageBrowser": "浏览器",
   "settingsPageQuickPhrase": "快捷短语",
   "settingsPageInstructionInjection": "指令注入",
   "settingsPageDataSection": "数据设置",
