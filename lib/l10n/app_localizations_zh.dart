@@ -6332,6 +6332,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contextLogSourceSystemPrompt => '系统提示词';
 
   @override
+  String get contextLogSourceAppContext => '应用上下文';
+
+  @override
   String get contextLogSourceMemoryRules => '记忆规则';
 
   @override
@@ -17745,6 +17748,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get contextLogSourceSystemPrompt => '系统提示词';
+
+  @override
+  String get contextLogSourceAppContext => '应用上下文';
 
   @override
   String get contextLogSourceMemoryRules => '记忆规则';
@@ -29235,6 +29241,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get contextLogSourceSystemPrompt => '系統提示詞';
+
+  @override
+  String get contextLogSourceAppContext => '應用上下文';
 
   @override
   String get contextLogSourceMemoryRules => '記憶規則';

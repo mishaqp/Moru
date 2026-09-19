@@ -2327,6 +2327,7 @@
   "contextLogSnapshotMessages": "{count} 条消息",
   "contextLogSnapshotTokens": "{count} tokens",
   "contextLogSourceSystemPrompt": "系统提示词",
+  "contextLogSourceAppContext": "应用上下文",
   "contextLogSourceMemoryRules": "记忆规则",
   "contextLogSourceSearchPrompt": "搜索提示",
   "contextLogSourceInstructionInjection": "指令注入",

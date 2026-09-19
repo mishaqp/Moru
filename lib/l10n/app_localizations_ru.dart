@@ -6684,6 +6684,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get contextLogSourceSystemPrompt => 'Системный промпт';
 
   @override
+  String get contextLogSourceAppContext => 'Контекст приложения';
+
+  @override
   String get contextLogSourceMemoryRules => 'Правила памяти';
 
   @override
