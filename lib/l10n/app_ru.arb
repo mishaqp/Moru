@@ -2839,6 +2839,7 @@
     }
   },
   "contextLogSourceSystemPrompt": "Системный промпт",
+  "contextLogSourceAppContext": "Контекст приложения",
   "contextLogSourceMemoryRules": "Правила памяти",
   "contextLogSourceSearchPrompt": "Промпт поиска",
   "contextLogSourceInstructionInjection": "Инструкция",

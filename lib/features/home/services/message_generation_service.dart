@@ -194,6 +194,7 @@ class MessageGenerationService {
       modelId,
       conversation: promptConversation,
     );
+    messageBuilderService.injectAppContextPrompt(apiMessages);
     await messageBuilderService.injectMemoryAndRecentChats(
       apiMessages,
       assistant,

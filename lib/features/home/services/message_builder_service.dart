@@ -1648,14 +1648,34 @@ class MessageBuilderService {
     }
   }
 
+  /// Grounds every request in what Moru actually is, so the model doesn't
+  /// guess about its own environment turn after turn. Unconditional — no
+  /// assistant/settings gate — since this is about the app, not a
+  /// per-assistant preference.
+  void injectAppContextPrompt(List<Map<String, dynamic>> apiMessages) {
+    _appendToSystemMessage(
+      apiMessages,
+      _appContextPrompt,
+      source: ContextSource.appContext,
+    );
+  }
+
+  static const String _appContextPrompt = '''
+<app_context>
+You are running inside Moru, an Android app for chatting with LLMs (a personal fork of Kelivo). The person you are talking to is using this app on their own phone, not a browser tab or an API playground.
+When asked what you are or what you can do, answer in terms of this app and whichever tools are actually enabled for you right now -- never guess at a capability you were not given. If you have a browser_use tool, it drives Moru's own embedded Android WebView, not a remote headless browser. If you have workspace tools (files, a terminal, MCP servers), they run inside an isolated Linux environment (PRoot) embedded in the app, not on a server you connect to.
+</app_context>
+''';
+
   /// Inject §11 memory rules into the system message.
   ///
   /// Pure function of `(enableMemory, allowPastConversationRecall, lang,
   /// user template)` — must not vary with memory content or the clock (§11.1).
   /// Relative order among remaining system injections is preserved by the
-  /// caller (`injectSystemPrompt` → this → `injectSearchPrompt` →
-  /// `injectInstructionPrompts` → `injectWorldBookPrompts` →
-  /// `injectWorkspacePrompt` → `injectSkillsPrompt`).
+  /// caller (`injectSystemPrompt` → `injectAppContextPrompt` → this →
+  /// `injectSearchPrompt` → `injectInstructionPrompts` →
+  /// `injectWorldBookPrompts` → `injectWorkspacePrompt` →
+  /// `injectSkillsPrompt`).
   Future<void> injectMemoryAndRecentChats(
     List<Map<String, dynamic>> apiMessages,
     Assistant? assistant, {

@@ -2017,6 +2017,7 @@ Color _contextSourceColor(BuildContext context, ContextSource source) {
   final colors = context.appColors;
   switch (source) {
     case ContextSource.systemPrompt:
+    case ContextSource.appContext:
       return cs.primary;
     case ContextSource.memoryRules:
     case ContextSource.memorySnapshot:
@@ -2039,6 +2040,8 @@ String _contextSourceLabel(AppLocalizations l10n, ContextSource source) {
   switch (source) {
     case ContextSource.systemPrompt:
       return l10n.contextLogSourceSystemPrompt;
+    case ContextSource.appContext:
+      return l10n.contextLogSourceAppContext;
     case ContextSource.memoryRules:
       return l10n.contextLogSourceMemoryRules;
     case ContextSource.searchPrompt:

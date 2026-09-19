@@ -12051,6 +12051,12 @@ abstract class AppLocalizations {
   /// **'System prompt'**
   String get contextLogSourceSystemPrompt;
 
+  /// No description provided for @contextLogSourceAppContext.
+  ///
+  /// In en, this message translates to:
+  /// **'App context'**
+  String get contextLogSourceAppContext;
+
   /// No description provided for @contextLogSourceMemoryRules.
   ///
   /// In en, this message translates to:

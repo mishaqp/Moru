@@ -6591,6 +6591,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contextLogSourceSystemPrompt => 'System prompt';
 
   @override
+  String get contextLogSourceAppContext => 'App context';
+
+  @override
   String get contextLogSourceMemoryRules => 'Memory rules';
 
   @override

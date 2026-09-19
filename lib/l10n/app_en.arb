@@ -2840,6 +2840,7 @@
     }
   },
   "contextLogSourceSystemPrompt": "System prompt",
+  "contextLogSourceAppContext": "App context",
   "contextLogSourceMemoryRules": "Memory rules",
   "contextLogSourceSearchPrompt": "Search prompt",
   "contextLogSourceInstructionInjection": "Instruction",
