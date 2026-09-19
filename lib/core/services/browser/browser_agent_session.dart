@@ -621,7 +621,15 @@ class BrowserAgentSession {
       message: 'The page has no readable content yet.'
     });
   }
-  const raw = (root.innerText || root.textContent || '').toString();
+  // textContent (not innerText) so a page that hides most sections behind
+  // CSS until the user taps them (e.g. Wikipedia's mobile skin collapses
+  // every section but the lead) still yields its full body text; innerText
+  // is visibility-aware and would return only what's on-screen right now.
+  // script/style/template are stripped first so their source code never
+  // leaks into the "page text" the way textContent normally would.
+  const clone = root.cloneNode(true);
+  clone.querySelectorAll('script, style, noscript, template').forEach((el) => el.remove());
+  const raw = (clone.textContent || '').toString();
   const truncated = raw.length > maxChars;
   const text = truncated ? raw.slice(0, maxChars) : raw;
   return JSON.stringify({
