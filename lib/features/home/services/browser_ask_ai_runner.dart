@@ -43,6 +43,7 @@ Future<void> runBrowserAskAiRequest({
   required BrowserAskAiSend send,
   required BrowserAskAiCancel cancel,
   required Stream<GenerationTerminalEvent> terminalEvents,
+  void Function(String taskId, String conversationId)? onTaskStarted,
 }) async {
   // A cancel racing this call's own start (submitted, then stopped before
   // the request even reached this function — the request and cancellation
@@ -144,6 +145,14 @@ Future<void> runBrowserAskAiRequest({
       );
       return;
     }
+    // The task id MobileBackgroundCoordinator.finish() will eventually use
+    // for this exact run -- reported now, right as send() confirms the run
+    // actually started, so a caller tracking Ask-AI-owned task ids (for
+    // notification suppression) never races that later finish() call
+    // against AskAiPanelController's own activeRequestId, which resets to
+    // null the moment this run's outcome is reported below.
+    final taskId = result.generationRunId ?? messageId;
+    if (taskId != null) onTaskStarted?.call(taskId, conversation.id);
     // send() only confirms the run started; result.assistantMessage is
     // still the empty placeholder ChatActions.sendMessage persists before
     // handing generation off. Wait for this run's own terminal event for
@@ -188,6 +197,11 @@ String browserAskAiOriginDirective(BrowserAskAiRequest request) {
   final where = (url == null || url.isEmpty) ? 'a page in the browser' : url;
   return '[System] This message came from the floating "Ask AI" bar in '
       "Moru's in-app browser, while the user is looking at $where. The "
-      'reply is shown in a small overlay above the page -- keep it short.'
+      'reply is shown in a small overlay above the page -- keep it short '
+      'and to the point. By default, do not include raw tool output or '
+      'explanations about permissions/trust settings; if the user '
+      'explicitly asks for diagnostics, JSON, or technical detail, provide '
+      'it. If an action was blocked, needs confirmation, or failed, '
+      'explain that plainly.'
       '\n\n';
 }

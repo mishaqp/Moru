@@ -51,6 +51,7 @@ import '../services/message_builder_service.dart';
 import '../services/message_generation_service.dart';
 import '../services/local_tools_service.dart';
 import '../services/ask_user_interaction_service.dart';
+import '../../../core/services/browser/browser_agent_session.dart';
 import '../services/browser_ask_ai_bridge.dart';
 import '../services/browser_ask_ai_runner.dart';
 import '../services/ocr_service.dart';
@@ -768,6 +769,12 @@ class HomePageController extends ChangeNotifier {
   void _setupBrowserAskAi() {
     if (!_isAndroid) return;
     final bridge = _context.read<BrowserAskAiBridge>();
+    // Lets MobileBackgroundCoordinator.finish() ask "does the browser's own
+    // Ask-AI surface already show this run's result right now" instead of
+    // only "is this conversation the one Home shows", which the browser
+    // page (pushed as its own route on top of Home) would never satisfy.
+    MobileBackgroundCoordinator.instance.visibleBrowserAskAiTask =
+        BrowserAgentSession.instance.consumeVisibleAskAiTask;
     _browserAskAiSub = bridge.requests.listen((request) {
       if (!_chatInitialized || !_context.mounted) {
         bridge.reportOutcome(
@@ -802,6 +809,7 @@ class HomePageController extends ChangeNotifier {
               ),
           cancel: ChatActions.cancelActiveGenerationFor,
           terminalEvents: _viewModel.generationTerminalEvents,
+          onTaskStarted: BrowserAgentSession.instance.trackAskAiTask,
         ),
       );
     });

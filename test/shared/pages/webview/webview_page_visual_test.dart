@@ -358,6 +358,82 @@ void main() {
     await snapshot(tester, key, 'browser-360-light-result-card');
   });
 
+  testWidgets(
+    '360dp light result card expanded to the full Markdown answer sheet',
+    (tester) async {
+      await setUpDevice(tester, widthDp: 360, heightDp: 740);
+      final key = GlobalKey();
+      final bridge = BrowserAskAiBridge();
+      final requests = <String>[];
+      bridge.requests.listen((r) => requests.add(r.id));
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      addTearDown(settings.dispose);
+      await settings.loaded;
+
+      // RepaintBoundary wraps the whole MaterialApp (not just the home
+      // route), same as the activity-log snapshot above: the bottom sheet
+      // is a sibling OverlayEntry, not a descendant of the home route.
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: key,
+          child: MultiProvider(
+            providers: [
+              ChangeNotifierProvider<BrowserAskAiBridge>.value(value: bridge),
+              ChangeNotifierProvider<ToolApprovalService>.value(
+                value: ToolApprovalService(),
+              ),
+              ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: ThemeData(
+                brightness: Brightness.light,
+                useMaterial3: true,
+              ),
+              home: const WebViewPage(
+                url: 'https://example.com',
+                agentSession: true,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), 'summarize this page');
+      await tester.pump();
+      await tester.tap(find.byTooltip('Send'));
+      await tester.pump();
+
+      final requestId = requests.single;
+      bridge.reportOutcome(
+        BrowserAskAiOutcome(
+          requestId: requestId,
+          ok: true,
+          answerText:
+              '**Flights found**\n\n- Tokyo, 2 stops, \$412\n- Osaka, '
+              'direct, \$530\n\nUse `browser_use` to book one.',
+          conversationId: 'conv-1',
+          assistantMessageId: 'msg-1',
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(find.text('View full answer'));
+      await tester.pumpAndSettle();
+
+      // Proves the sheet actually renders formatted Markdown, not the
+      // literal source, before the screenshot is captured.
+      expect(find.textContaining('**Flights found**'), findsNothing);
+      expect(find.textContaining('Flights found'), findsOneWidget);
+
+      await snapshot(tester, key, 'browser-360-light-result-sheet-markdown');
+    },
+  );
+
   testWidgets('360dp light main-frame error', (tester) async {
     await setUpDevice(tester, widthDp: 360, heightDp: 740);
     final key = GlobalKey();

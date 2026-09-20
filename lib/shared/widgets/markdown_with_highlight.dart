@@ -101,6 +101,7 @@ class MarkdownWithCodeHighlight extends StatefulWidget {
     this.baseStyle,
     this.streaming = false,
     this.conversationId,
+    this.renderImages = true,
   });
 
   final String text;
@@ -113,6 +114,14 @@ class MarkdownWithCodeHighlight extends StatefulWidget {
   final String? Function(String id)? citationIndexResolver;
   final TextStyle? baseStyle; // optional override for base markdown text style
   final bool streaming;
+
+  /// Whether `![alt](url)` images actually fetch and render. True for real
+  /// chat messages (the default). A caller showing Markdown that was never
+  /// meant to carry a real inline image -- the browser Ask-AI answer sheet,
+  /// which only wants text -- passes false so opening it can never trigger
+  /// an unexpected network fetch; the image markup renders as an inert
+  /// placeholder instead.
+  final bool renderImages;
 
   static const int _streamingTableMaxRows = 30;
   static const int _streamingHighlightMaxLines = 300;
@@ -439,7 +448,9 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
               ],
         components: [DetailsHtmlMd(detailsRegistry), ...components],
         inlineComponents: inlineComponents,
-        imageBuilder: (ctx, url, width, height) {
+        imageBuilder: !widget.renderImages
+            ? (ctx, url, width, height) => const _InertImagePlaceholder()
+            : (ctx, url, width, height) {
           if (KelivoLink.tryParse(url) != null) {
             return _KelivoMarkdownImage(
               url: url,
@@ -843,6 +854,29 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
       u = 'https://$u';
     }
     return Uri.parse(u);
+  }
+}
+
+/// Stands in for `![alt](url)` when [MarkdownWithCodeHighlight.renderImages]
+/// is false: no network fetch, no workspace file lookup, just a small inert
+/// icon so the surrounding text layout stays sane.
+class _InertImagePlaceholder extends StatelessWidget {
+  const _InertImagePlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: 36,
+      height: 36,
+      child: Center(
+        child: Icon(
+          Lucide.Image,
+          size: 18,
+          color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+        ),
+      ),
+    );
   }
 }
 

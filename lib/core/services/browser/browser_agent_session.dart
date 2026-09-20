@@ -192,6 +192,48 @@ class BrowserAgentSession {
     ownerConversationId = conversationId;
   }
 
+  /// True exactly when this session's own [WebViewPage] route is the
+  /// current, foreground-visible route -- not covered by another push
+  /// (Settings, the trust-settings link from an approval card, an image
+  /// viewer) and not yet closed. Kept current by that page's own
+  /// `RouteAware` hookup; never guessed from "is the browser attached"
+  /// alone, since the session stays attached while covered by another
+  /// screen.
+  bool isRouteCurrent = false;
+
+  /// taskId -> conversationId for every browser Ask-AI request this
+  /// session has started but whose `MobileBackgroundCoordinator.finish()`
+  /// notification decision hasn't run yet. [taskId] matches
+  /// `MobileBackgroundCoordinator`'s own per-run id (`generationRunId`, or
+  /// the assistant message id when no run id exists) exactly, so a lookup
+  /// here can never partially match a different run for the same
+  /// conversation.
+  ///
+  /// Written the moment `runBrowserAskAiRequest`'s `send()` call returns
+  /// successfully -- well before that run's own terminal event, let alone
+  /// `finish()` -- specifically so the notification decision never races
+  /// `AskAiPanelController`'s own `activeRequestId` (which resets to null
+  /// the instant an outcome arrives, often before `finish()` even runs).
+  final Map<String, String> _askAiTasks = <String, String>{};
+
+  /// Records that [taskId] (for [conversationId]) belongs to a browser
+  /// Ask-AI request this session just started.
+  void trackAskAiTask(String taskId, String conversationId) {
+    _askAiTasks[taskId] = conversationId;
+  }
+
+  /// Consumes (removes) the tracked entry for [taskId], returning whether
+  /// it belonged to this session, matches [conversationId], and this
+  /// session's own browser page is right now the visible, current route.
+  /// Called at most once per [taskId] -- `MobileBackgroundCoordinator`
+  /// calls `finish()` exactly once per run -- so a stale entry can never
+  /// linger past the one decision it exists for.
+  bool consumeVisibleAskAiTask(String taskId, String conversationId) {
+    final owner = _askAiTasks.remove(taskId);
+    if (owner == null) return false;
+    return isRouteCurrent && owner == conversationId;
+  }
+
   /// The most recent `browser_use` call, for the browser page's status line.
   /// Null once the session closes; otherwise sticky until the next call.
   final ValueNotifier<BrowserActivity?> currentActivity =
@@ -278,6 +320,8 @@ class BrowserAgentSession {
     _loading = false;
     _history.clear();
     ownerConversationId = null;
+    isRouteCurrent = false;
+    _askAiTasks.clear();
     currentActivity.value = null;
     recentActivityNotifier.value = const <BrowserActivity>[];
     final ready = _readyCompleter;
