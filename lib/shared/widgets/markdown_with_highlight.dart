@@ -101,6 +101,7 @@ class MarkdownWithCodeHighlight extends StatefulWidget {
     this.baseStyle,
     this.streaming = false,
     this.conversationId,
+    this.renderImages = true,
   });
 
   final String text;
@@ -113,6 +114,14 @@ class MarkdownWithCodeHighlight extends StatefulWidget {
   final String? Function(String id)? citationIndexResolver;
   final TextStyle? baseStyle; // optional override for base markdown text style
   final bool streaming;
+
+  /// Whether `![alt](url)` images actually fetch and render. True for real
+  /// chat messages (the default). A caller showing Markdown that was never
+  /// meant to carry a real inline image -- the browser Ask-AI answer sheet,
+  /// which only wants text -- passes false so opening it can never trigger
+  /// an unexpected network fetch; the image markup renders as an inert
+  /// placeholder instead.
+  final bool renderImages;
 
   static const int _streamingTableMaxRows = 30;
   static const int _streamingHighlightMaxLines = 300;
@@ -439,85 +448,93 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
               ],
         components: [DetailsHtmlMd(detailsRegistry), ...components],
         inlineComponents: inlineComponents,
-        imageBuilder: (ctx, url, width, height) {
-          if (KelivoLink.tryParse(url) != null) {
-            return _KelivoMarkdownImage(
-              url: url,
-              width: width,
-              height: height,
-              conversationId: widget.conversationId,
-            );
-          }
-          final imgs = imageUrls.isNotEmpty ? imageUrls : <String>[url];
-          final idx = imgs.indexOf(url);
-          final initial = idx >= 0 ? idx : 0;
-          final provider = _imageProviderFor(url);
-          return GestureDetector(
-            onTap: () {
-              Navigator.of(ctx).push(
-                PageRouteBuilder(
-                  pageBuilder: (_, __, ___) =>
-                      ImageViewerPage(images: imgs, initialIndex: initial),
-                  transitionDuration: const Duration(milliseconds: 360),
-                  reverseTransitionDuration: const Duration(milliseconds: 280),
-                  transitionsBuilder: (context, anim, sec, child) {
-                    final curved = CurvedAnimation(
-                      parent: anim,
-                      curve: Curves.easeOutCubic,
-                      reverseCurve: Curves.easeInCubic,
-                    );
-                    return FadeTransition(
-                      opacity: curved,
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0, 0.02),
-                          end: Offset.zero,
-                        ).animate(curved),
-                        child: child,
+        imageBuilder: !widget.renderImages
+            ? (ctx, url, width, height) => const _InertImagePlaceholder()
+            : (ctx, url, width, height) {
+                if (KelivoLink.tryParse(url) != null) {
+                  return _KelivoMarkdownImage(
+                    url: url,
+                    width: width,
+                    height: height,
+                    conversationId: widget.conversationId,
+                  );
+                }
+                final imgs = imageUrls.isNotEmpty ? imageUrls : <String>[url];
+                final idx = imgs.indexOf(url);
+                final initial = idx >= 0 ? idx : 0;
+                final provider = _imageProviderFor(url);
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.of(ctx).push(
+                      PageRouteBuilder(
+                        pageBuilder: (_, __, ___) => ImageViewerPage(
+                          images: imgs,
+                          initialIndex: initial,
+                        ),
+                        transitionDuration: const Duration(milliseconds: 360),
+                        reverseTransitionDuration: const Duration(
+                          milliseconds: 280,
+                        ),
+                        transitionsBuilder: (context, anim, sec, child) {
+                          final curved = CurvedAnimation(
+                            parent: anim,
+                            curve: Curves.easeOutCubic,
+                            reverseCurve: Curves.easeInCubic,
+                          );
+                          return FadeTransition(
+                            opacity: curved,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, 0.02),
+                                end: Offset.zero,
+                              ).animate(curved),
+                              child: child,
+                            ),
+                          );
+                        },
                       ),
                     );
                   },
-                ),
-              );
-            },
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: () {
-                    if (provider == null) {
-                      // Missing or unsupported source: show a broken image indicator
-                      return const Icon(Icons.broken_image);
-                    }
-                    final displayWidth = width ?? constraints.maxWidth;
-                    final devicePixelRatio = MediaQuery.devicePixelRatioOf(
-                      context,
-                    );
-                    final cacheWidth = displayWidth.isFinite
-                        ? math.max(1, (displayWidth * devicePixelRatio).ceil())
-                        : null;
-                    final cacheHeight = height == null
-                        ? null
-                        : math.max(1, (height * devicePixelRatio).ceil());
-                    final resized = ResizeImage.resizeIfNeeded(
-                      cacheWidth,
-                      cacheHeight,
-                      provider,
-                    );
-                    return Image(
-                      image: resized,
-                      width: displayWidth,
-                      height: height,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stack) =>
-                          const Icon(Icons.broken_image),
-                    );
-                  }(),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: () {
+                          if (provider == null) {
+                            // Missing or unsupported source: show a broken image indicator
+                            return const Icon(Icons.broken_image);
+                          }
+                          final displayWidth = width ?? constraints.maxWidth;
+                          final devicePixelRatio =
+                              MediaQuery.devicePixelRatioOf(context);
+                          final cacheWidth = displayWidth.isFinite
+                              ? math.max(
+                                  1,
+                                  (displayWidth * devicePixelRatio).ceil(),
+                                )
+                              : null;
+                          final cacheHeight = height == null
+                              ? null
+                              : math.max(1, (height * devicePixelRatio).ceil());
+                          final resized = ResizeImage.resizeIfNeeded(
+                            cacheWidth,
+                            cacheHeight,
+                            provider,
+                          );
+                          return Image(
+                            image: resized,
+                            width: displayWidth,
+                            height: height,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stack) =>
+                                const Icon(Icons.broken_image),
+                          );
+                        }(),
+                      );
+                    },
+                  ),
                 );
               },
-            ),
-          );
-        },
         linkBuilder: (ctx, span, url, style) {
           final label = span.toPlainText().trim();
           // Special handling: [citation](id) and legacy [citation](index:id)
@@ -843,6 +860,29 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
       u = 'https://$u';
     }
     return Uri.parse(u);
+  }
+}
+
+/// Stands in for `![alt](url)` when [MarkdownWithCodeHighlight.renderImages]
+/// is false: no network fetch, no workspace file lookup, just a small inert
+/// icon so the surrounding text layout stays sane.
+class _InertImagePlaceholder extends StatelessWidget {
+  const _InertImagePlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: 36,
+      height: 36,
+      child: Center(
+        child: Icon(
+          Lucide.Image,
+          size: 18,
+          color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+        ),
+      ),
+    );
   }
 }
 

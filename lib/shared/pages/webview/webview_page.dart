@@ -14,6 +14,7 @@ import '../../../features/home/services/tool_approval_service.dart';
 import '../../../features/settings/pages/browser_settings_page.dart';
 import '../../../features/settings/pages/tool_schema_settings_page.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../main.dart' show routeObserver;
 import '../../widgets/snackbar.dart';
 import 'webview_activity_log_sheet.dart';
 import 'webview_address_editor.dart';
@@ -48,7 +49,7 @@ class WebViewPage extends StatefulWidget {
   State<WebViewPage> createState() => _WebViewPageState();
 }
 
-class _WebViewPageState extends State<WebViewPage> {
+class _WebViewPageState extends State<WebViewPage> with RouteAware {
   late final WebViewController _controller;
   String? _title;
   String? _currentUrl;
@@ -147,6 +148,10 @@ class _WebViewPageState extends State<WebViewPage> {
         _controller,
         onClose: () => _closeAgentSession(WebViewCloseReason.agentClose),
       );
+      // Just pushed, so this route is current from the start -- didPushNext/
+      // didPopNext (via routeObserver, subscribed in didChangeDependencies)
+      // keep this accurate as later routes cover and uncover it.
+      BrowserAgentSession.instance.isRouteCurrent = true;
       final bridge = context.read<BrowserAskAiBridge>();
       _askAiController = AskAiPanelController(bridge: bridge)
         ..addListener(_onAskAiControllerChanged);
@@ -159,8 +164,30 @@ class _WebViewPageState extends State<WebViewPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!widget.agentSession) return;
+    final route = ModalRoute.of(context);
+    if (route != null) routeObserver.subscribe(this, route);
+  }
+
+  @override
+  void didPushNext() {
+    // Covered by another route (Settings, the trust-settings link from an
+    // approval card, an image viewer) -- the browser's own Ask-AI surface
+    // is no longer what the user is actually looking at.
+    BrowserAgentSession.instance.isRouteCurrent = false;
+  }
+
+  @override
+  void didPopNext() {
+    BrowserAgentSession.instance.isRouteCurrent = true;
+  }
+
+  @override
   void dispose() {
     if (widget.agentSession) {
+      routeObserver.unsubscribe(this);
       BrowserAgentSession.instance.unregister(_controller);
       BrowserAgentSession.instance.recentActivityNotifier.removeListener(
         _onSessionActivityChanged,
@@ -488,6 +515,7 @@ class _WebViewPageState extends State<WebViewPage> {
                   onExpand: () => showBrowserAskAiResultSheet(
                     context,
                     _resultOutcome!.answerText ?? '',
+                    conversationId: _resultOutcome!.conversationId,
                   ),
                   onCopy: () => Clipboard.setData(
                     ClipboardData(text: _resultOutcome!.answerText ?? ''),

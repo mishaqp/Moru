@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_font_weights.dart';
+import '../../widgets/browser_ask_ai_preview_text.dart';
+import '../../widgets/markdown_with_highlight.dart';
 
 /// Compact "Ask AI" answer card, shown when a
 /// `BrowserAskAiOutcome(ok: true)` arrives for the request this browser
@@ -17,6 +19,11 @@ import '../../../theme/app_font_weights.dart';
 /// unrelated `browser_use` activity (a `done` activity must never dismiss
 /// this on its own -- only the user's own dismiss, or a new outcome,
 /// should).
+///
+/// The preview is a plain-text rendering of [answerText] -- Markdown
+/// markers (`**bold**`, backticks, `#` headings, ...) never leak into it --
+/// clamped to three visual lines. The full, unmodified Markdown source is
+/// only ever shown (and copied) via [onExpand]'s full-answer sheet.
 class BrowserAskAiResultCard extends StatelessWidget {
   const BrowserAskAiResultCard({
     super.key,
@@ -35,19 +42,20 @@ class BrowserAskAiResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final preview = answerText.trim();
+    final preview = browserAskAiPreviewPlainText(answerText);
     return Material(
       key: const ValueKey('browser_ask_ai_result_card'),
       color: cs.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+        padding: const EdgeInsets.fromLTRB(12, 6, 2, 6),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Lucide.MessageSquare, size: 14, color: cs.primary),
+                Icon(Lucide.MessageSquare, size: 13, color: cs.primary),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -69,7 +77,8 @@ class BrowserAskAiResultCard extends StatelessWidget {
                         minWidth: 48,
                         minHeight: 48,
                       ),
-                      icon: const Icon(Lucide.Copy, size: 16),
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Lucide.Copy, size: 15),
                       onPressed: onCopy,
                     ),
                   ),
@@ -84,7 +93,8 @@ class BrowserAskAiResultCard extends StatelessWidget {
                         minWidth: 48,
                         minHeight: 48,
                       ),
-                      icon: const Icon(Lucide.X, size: 16),
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Lucide.X, size: 15),
                       onPressed: onDismiss,
                     ),
                   ),
@@ -95,20 +105,31 @@ class BrowserAskAiResultCard extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: onExpand,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 2, 8, 4),
+                padding: const EdgeInsets.fromLTRB(0, 0, 8, 0),
                 child: Text(
                   preview,
-                  maxLines: 4,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(height: 1.3),
                 ),
               ),
             ),
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton(
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  minimumSize: const Size(48, 32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
                 onPressed: onExpand,
-                child: Text(l10n.browserResultExpandAction),
+                child: Text(
+                  l10n.browserResultExpandAction,
+                  style: const TextStyle(fontSize: 12.5),
+                ),
               ),
             ),
           ],
@@ -119,57 +140,95 @@ class BrowserAskAiResultCard extends StatelessWidget {
 }
 
 /// The full-text bottom sheet opened from [BrowserAskAiResultCard]'s expand
-/// action.
-Future<void> showBrowserAskAiResultSheet(BuildContext context, String text) {
+/// action. Renders [text] through the app's own chat Markdown renderer
+/// (bold/italic, lists, links, inline code, fenced code, blockquotes) --
+/// the same one chat messages use -- rather than a plain [Text]/
+/// [SelectableText], so the answer reads the way the model actually
+/// formatted it. Deliberately does not wire up the heavier parts of a real
+/// chat message this answer never needs (regenerate menu, tool cards,
+/// reasoning, version switching): it is one fixed block of finished text.
+/// Images never auto-fetch here ([MarkdownWithCodeHighlight.renderImages]
+/// is false) -- opening this sheet must never trigger a surprise network
+/// request just to preview an answer.
+Future<void> showBrowserAskAiResultSheet(
+  BuildContext context,
+  String text, {
+  String? conversationId,
+}) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    builder: (ctx) => _ResultSheet(text: text),
+    useSafeArea: true,
+    builder: (ctx) => _ResultSheet(text: text, conversationId: conversationId),
   );
 }
 
 class _ResultSheet extends StatelessWidget {
-  const _ResultSheet({required this.text});
+  const _ResultSheet({required this.text, this.conversationId});
 
   final String text;
+  final String? conversationId;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.browserResultSheetTitle,
-                    style: Theme.of(context).textTheme.titleLarge,
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.browserResultSheetTitle,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  Semantics(
+                    button: true,
+                    label: l10n.commonClose,
+                    child: IconButton(
+                      constraints: const BoxConstraints(
+                        minWidth: 48,
+                        minHeight: 48,
+                      ),
+                      tooltip: l10n.commonClose,
+                      icon: const Icon(Lucide.X, size: 20),
+                      onPressed: () => Navigator.of(context).maybePop(),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: SelectionArea(
+                    child: MarkdownWithCodeHighlight(
+                      text: text,
+                      conversationId: conversationId,
+                      renderImages: false,
+                    ),
                   ),
                 ),
-                IconButton(
-                  tooltip: l10n.commonClose,
-                  icon: const Icon(Lucide.X, size: 20),
-                  onPressed: () => Navigator.of(context).maybePop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Flexible(child: SingleChildScrollView(child: SelectableText(text))),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                icon: const Icon(Lucide.Copy, size: 16),
-                label: Text(l10n.browserResultCopyTooltip),
-                onPressed: () => Clipboard.setData(ClipboardData(text: text)),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  icon: const Icon(Lucide.Copy, size: 16),
+                  label: Text(l10n.browserResultCopyTooltip),
+                  onPressed: () => Clipboard.setData(ClipboardData(text: text)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

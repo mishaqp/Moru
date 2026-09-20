@@ -74,6 +74,19 @@ class MobileBackgroundCoordinator extends ChangeNotifier
       !kIsWeb &&
       (platform == TargetPlatform.android || platform == TargetPlatform.iOS);
   String? Function()? visibleConversation;
+
+  /// Whether [taskId] (this task's own id -- see [finish]) belongs to a
+  /// browser Ask-AI request whose own UI is, right now, the visible,
+  /// foreground surface showing (or about to show) its result, for the
+  /// exact conversation [conversationId] names. Distinct from
+  /// [visibleConversation]: the browser page is pushed as its own route on
+  /// top of Home, so Home's own "is this conversation on screen" check can
+  /// never by itself see the browser's Ask-AI surface, and checking only
+  /// "is the browser open" would also suppress a notification for a
+  /// different, unrelated run or a browser covered by another screen. Set
+  /// by `HomePageController._setupBrowserAskAi` to
+  /// `BrowserAgentSession.instance.consumeVisibleAskAiTask`.
+  bool Function(String taskId, String conversationId)? visibleBrowserAskAiTask;
   Future<void> Function()? pauseSpeech;
   Future<void>? _tail;
   Timer? _updateTimer;
@@ -187,11 +200,19 @@ class MobileBackgroundCoordinator extends ChangeNotifier
     );
     await _enqueue(() async {
       final l10n = _l10n;
+      // Evaluated here, at the moment the notification would actually be
+      // sent, not when finish() was first called: "is the browser's own
+      // Ask-AI surface visible right now" is a live question, not one this
+      // could answer earlier and cache.
+      final suppressedByVisibleBrowserAskAi =
+          _foreground &&
+          (visibleBrowserAskAiTask?.call(id, task.conversationId) ?? false);
       if (resultPersisted &&
           (_settings.notificationsEnabled || task.scheduled) &&
           outcome != BackgroundTaskOutcome.cancelled &&
           !(_foreground &&
-              visibleConversation?.call() == task.conversationId)) {
+              visibleConversation?.call() == task.conversationId) &&
+          !suppressedByVisibleBrowserAskAi) {
         try {
           await _notificationSender(
             conversationId: task.conversationId,
