@@ -6,17 +6,27 @@ import 'oauth_pkce.dart';
 
 /// OpenRouter's own minimal, loopback-only OAuth callback.
 ///
-/// OpenRouter's `/auth` authorization endpoint has no `state` parameter
-/// (confirmed absent from its docs, and never echoed back), so the shared
-/// `openOAuthCallback` helper cannot be reused here: on Android it
+/// `state` is not among OpenRouter's documented `/auth` parameters. That is
+/// not proof the server would reject or silently drop an undocumented one —
+/// only that nothing guarantees it is preserved and echoed back, so this
+/// adapter cannot depend on it for session binding. The shared
+/// `openOAuthCallback` helper is unusable here regardless: on Android it
 /// unconditionally requires a non-empty `state` query parameter whenever a
-/// loopback redirect is passed, and throws otherwise. `callback_url` is also
-/// a free-form query parameter for OpenRouter, not a pre-registered redirect
-/// URI, so session binding instead uses a fresh random nonce embedded as a
-/// path segment for every login attempt: only a request whose path matches
-/// exactly is accepted. That gives exact-URL-match + one-time-nonce +
-/// one-time-completion binding without fabricating a `state` parameter
-/// OpenRouter does not document.
+/// loopback redirect is passed, and throws otherwise, which would crash a
+/// login built on an authorize URL that has no such parameter.
+///
+/// `callback_url` is a free-form query parameter for OpenRouter, not a
+/// pre-registered redirect URI, so session binding instead uses a fresh
+/// random nonce embedded as a path segment for every login attempt: only a
+/// request whose path matches exactly is accepted, and only once — a repeat
+/// delivery to the same path after completion, or a request to a path from a
+/// different (e.g. cancelled or stale) attempt, gets rejected rather than
+/// treated as a valid callback. `close()` (called on cancellation and on
+/// every login exit path) stops the listening socket outright, so a late
+/// callback cannot even reach the handler afterwards. Combined with PKCE
+/// (the authorization code alone is useless without this device's matching
+/// `code_verifier`), this binds a completed login to the exact attempt that
+/// started it without relying on an unconfirmed `state` echo.
 class OpenRouterOAuthCallback {
   OpenRouterOAuthCallback._(this._server, String nonce)
     : redirectUri = Uri(

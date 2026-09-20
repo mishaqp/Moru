@@ -4,10 +4,14 @@ part of 'provider_oauth_adapter.dart';
 /// `/api/v1/auth/keys`). Independent of, and does not replace, the existing
 /// manual API-key OpenRouter provider.
 ///
-/// Per OpenRouter's docs (confirmed, not re-derived here): the authorize
-/// request takes `callback_url`, `code_challenge`, `code_challenge_method`
-/// and `key_label`, and has no `state` parameter; the exchange returns only
-/// `{key, user_id}` with no refresh token and no expiry.
+/// Per OpenRouter's docs: the authorize request takes `callback_url`,
+/// `code_challenge`, `code_challenge_method` and `key_label`. `state` is not
+/// among the documented parameters — that doesn't prove the server rejects
+/// or drops an undocumented one, only that we cannot rely on it being
+/// echoed back, so this adapter never depends on it (see
+/// `openrouter_oauth_callback.dart` for the session binding used instead).
+/// The exchange response is documented as `{key, user_id}` only, with no
+/// refresh token and no expiry field.
 class OpenRouterOAuthAdapter extends ProviderOAuthAdapter {
   @override
   OAuthProvider get provider => OAuthProvider.openrouter;

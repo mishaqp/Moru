@@ -197,6 +197,56 @@ void main() {
     expect(result.queryParameters['code'], 'real-code');
   });
 
+  test('a second delivery to the same nonce path after completion is rejected, '
+      'not treated as a fresh authorization', () async {
+    final callback = await OpenRouterOAuthCallback.bind();
+    addTearDown(callback.close);
+    final first = await sendLoopbackCallback(
+      callback.redirectUri.replace(queryParameters: {'code': 'first-code'}),
+    );
+    expect(first, HttpStatus.ok);
+    final result = await callback.waitForCallback(const Duration(seconds: 2));
+    expect(result.queryParameters['code'], 'first-code');
+    // A replayed or duplicate redirect to the exact same one-time URL (e.g.
+    // a browser retry, or an attacker resending a captured redirect) must
+    // never be accepted as a second, independent completion.
+    final replay = await sendLoopbackCallback(
+      callback.redirectUri.replace(queryParameters: {'code': 'replayed'}),
+    );
+    expect(replay, HttpStatus.gone);
+  });
+
+  test('cancelling a login closes the loopback listener so the port stops '
+      'accepting connections', () async {
+    final cancellation = OAuthCancellation();
+    Uri? callbackUrl;
+    final loginFuture = OpenRouterOAuthAdapter().login(
+      OAuthWire(MockClient((request) async => response({}))),
+      cancellation,
+      (_) async {},
+      launcher: (url) async {
+        callbackUrl = Uri.parse(url.queryParameters['callback_url']!);
+        return true;
+      },
+    );
+    // Wait for the listener to actually bind before cancelling it.
+    while (callbackUrl == null) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    cancellation.cancel();
+    try {
+      await loginFuture;
+    } catch (_) {
+      // Expected: login() throws ProviderOAuthFailure.cancelled.
+    }
+    await expectLater(
+      sendLoopbackCallback(
+        callbackUrl!.replace(queryParameters: {'code': 'too-late'}),
+      ),
+      throwsA(isA<SocketException>()),
+    );
+  });
+
   test(
     'a stale nonce delivered to a fresh OpenRouter login attempt is rejected, '
     'not accepted',
