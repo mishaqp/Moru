@@ -491,6 +491,7 @@ class LocalToolsService {
     Assistant? assistant, {
     TextToSpeechStarter? onSpeakText,
     Set<String> disabledBrowserActions = const <String>{},
+    String? conversationId,
   }) async {
     if (assistant == null || !isEnabledForAssistant(name, assistant)) {
       return null;
@@ -517,7 +518,7 @@ class LocalToolsService {
               'The browser_use action "$action" is turned off in Settings > Browser.',
         });
       }
-      return BrowserAgentTool.execute(args);
+      return BrowserAgentTool.execute(args, conversationId: conversationId);
     }
     if (name == LocalToolNames.screenTime &&
         DeviceLocalTools.screenTimeSupported) {

@@ -5405,5 +5405,90 @@
   "moruAsrZipformerName": "Zipformer Chinese/English Mobile",
   "moruAsrZipformerDescription": "Streaming Chinese and English recognition. Download: about 347 MB.",
   "chatInputBarQueueEdit": "Edit queued message",
-  "chatInputBarQueueRemove": "Remove queued message"
+  "chatInputBarQueueRemove": "Remove queued message",
+  "browserAddressEditorTitle": "Edit address",
+  "browserAddressEditorHint": "https://example.com",
+  "browserAddressEditorInvalid": "Enter a valid http or https address.",
+  "browserAddressEditorGo": "Go",
+  "browserMenuTooltip": "More options",
+  "browserMenuCopyLink": "Copy link",
+  "browserMenuActivityLog": "Activity log",
+  "browserMenuSettings": "Browser settings",
+  "browserSchemeSecure": "Encrypted connection (https)",
+  "browserSchemeInsecure": "Not encrypted (http)",
+  "browserComposerHint": "Tell the AI what to do…",
+  "browserComposerSendTooltip": "Send",
+  "browserComposerStopTooltip": "Stop",
+  "browserComposerActivityLogTooltip": "Activity log",
+  "browserStateStarting": "Starting…",
+  "browserStateRunning": "Working…",
+  "browserStateAwaitingApproval": "Waiting for your approval…",
+  "browserStateStopping": "Stopping…",
+  "browserStateStopped": "Stopped",
+  "browserStateError": "Something went wrong",
+  "browserApprovalHeading": "Moru wants to perform a browser action on {site}",
+  "@browserApprovalHeading": {
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "browserApprovalAction": "Action: {action}",
+  "@browserApprovalAction": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "browserApprovalElement": "Element: #{elementId}",
+  "@browserApprovalElement": {
+    "placeholders": {
+      "elementId": {
+        "type": "String"
+      }
+    }
+  },
+  "browserApprovalCodeLabel": "Code to run",
+  "browserApprovalDeny": "Deny",
+  "browserApprovalAllow": "Allow",
+  "browserApprovalChangeTrust": "Change trust settings",
+  "browserResultTitle": "AI answer",
+  "browserResultExpandAction": "View full answer",
+  "browserResultCopyTooltip": "Copy answer",
+  "browserResultCloseTooltip": "Dismiss answer",
+  "browserResultSheetTitle": "Full answer",
+  "browserErrorTitle": "This page couldn't load",
+  "browserErrorRetry": "Retry",
+  "browserActivityLogTitle": "Recent actions",
+  "browserActivityLogEmpty": "No activity yet",
+  "browserSettingsIntro": "Switches let the AI use these actions. Whether it needs confirmation depends on trust mode.",
+  "browserSettingsTrustOn": "Full trust is currently ON — the AI is not asked to confirm these actions.",
+  "browserSettingsTrustOff": "Full trust is currently OFF — actions that change the page ask for confirmation.",
+  "browserSettingsGroupNavigation": "Navigation",
+  "browserSettingsGroupNavigationDesc": "Move around the page.",
+  "browserSettingsGroupReadPage": "Read page",
+  "browserSettingsGroupReadPageDesc": "Look at the page without changing anything.",
+  "browserSettingsGroupInteraction": "Interaction",
+  "browserSettingsGroupInteractionDesc": "Click, type, and submit on the page.",
+  "browserSettingsGroupAdvanced": "Advanced",
+  "browserSettingsGroupAdvancedDesc": "Less common, more powerful actions.",
+  "browserSettingsGroupEnabledCount": "{enabled} of {total} enabled",
+  "@browserSettingsGroupEnabledCount": {
+    "placeholders": {
+      "enabled": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "browserErrorReasonConnect": "Could not connect to the server.",
+  "browserErrorReasonTimeout": "The connection timed out.",
+  "browserErrorReasonBadUrl": "This address is not valid.",
+  "browserErrorReasonSsl": "A secure connection could not be established.",
+  "browserStateCompleted": "Done",
+  "browserApprovalHeadingUnknownSite": "Moru wants to perform a browser action"
 }

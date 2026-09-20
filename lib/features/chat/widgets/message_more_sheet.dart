@@ -14,7 +14,7 @@ import '../../../desktop/menu_anchor.dart';
 import '../../../desktop/select_copy_dialog.dart';
 import '../../../utils/markdown_preview_html.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
-import '../../../shared/pages/webview_page.dart';
+import '../../../shared/pages/webview/webview_page.dart';
 import '../../../desktop/html_preview_dialog.dart';
 import 'dart:convert';
 import 'package:Kelivo/theme/app_font_weights.dart';

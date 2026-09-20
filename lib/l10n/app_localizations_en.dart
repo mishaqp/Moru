@@ -12023,4 +12023,183 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatInputBarQueueRemove => 'Remove queued message';
+
+  @override
+  String get browserAddressEditorTitle => 'Edit address';
+
+  @override
+  String get browserAddressEditorHint => 'https://example.com';
+
+  @override
+  String get browserAddressEditorInvalid =>
+      'Enter a valid http or https address.';
+
+  @override
+  String get browserAddressEditorGo => 'Go';
+
+  @override
+  String get browserMenuTooltip => 'More options';
+
+  @override
+  String get browserMenuCopyLink => 'Copy link';
+
+  @override
+  String get browserMenuActivityLog => 'Activity log';
+
+  @override
+  String get browserMenuSettings => 'Browser settings';
+
+  @override
+  String get browserSchemeSecure => 'Encrypted connection (https)';
+
+  @override
+  String get browserSchemeInsecure => 'Not encrypted (http)';
+
+  @override
+  String get browserComposerHint => 'Tell the AI what to do…';
+
+  @override
+  String get browserComposerSendTooltip => 'Send';
+
+  @override
+  String get browserComposerStopTooltip => 'Stop';
+
+  @override
+  String get browserComposerActivityLogTooltip => 'Activity log';
+
+  @override
+  String get browserStateStarting => 'Starting…';
+
+  @override
+  String get browserStateRunning => 'Working…';
+
+  @override
+  String get browserStateAwaitingApproval => 'Waiting for your approval…';
+
+  @override
+  String get browserStateStopping => 'Stopping…';
+
+  @override
+  String get browserStateStopped => 'Stopped';
+
+  @override
+  String get browserStateError => 'Something went wrong';
+
+  @override
+  String browserApprovalHeading(String site) {
+    return 'Moru wants to perform a browser action on $site';
+  }
+
+  @override
+  String browserApprovalAction(String action) {
+    return 'Action: $action';
+  }
+
+  @override
+  String browserApprovalElement(String elementId) {
+    return 'Element: #$elementId';
+  }
+
+  @override
+  String get browserApprovalCodeLabel => 'Code to run';
+
+  @override
+  String get browserApprovalDeny => 'Deny';
+
+  @override
+  String get browserApprovalAllow => 'Allow';
+
+  @override
+  String get browserApprovalChangeTrust => 'Change trust settings';
+
+  @override
+  String get browserResultTitle => 'AI answer';
+
+  @override
+  String get browserResultExpandAction => 'View full answer';
+
+  @override
+  String get browserResultCopyTooltip => 'Copy answer';
+
+  @override
+  String get browserResultCloseTooltip => 'Dismiss answer';
+
+  @override
+  String get browserResultSheetTitle => 'Full answer';
+
+  @override
+  String get browserErrorTitle => 'This page couldn\'t load';
+
+  @override
+  String get browserErrorRetry => 'Retry';
+
+  @override
+  String get browserActivityLogTitle => 'Recent actions';
+
+  @override
+  String get browserActivityLogEmpty => 'No activity yet';
+
+  @override
+  String get browserSettingsIntro =>
+      'Switches let the AI use these actions. Whether it needs confirmation depends on trust mode.';
+
+  @override
+  String get browserSettingsTrustOn =>
+      'Full trust is currently ON — the AI is not asked to confirm these actions.';
+
+  @override
+  String get browserSettingsTrustOff =>
+      'Full trust is currently OFF — actions that change the page ask for confirmation.';
+
+  @override
+  String get browserSettingsGroupNavigation => 'Navigation';
+
+  @override
+  String get browserSettingsGroupNavigationDesc => 'Move around the page.';
+
+  @override
+  String get browserSettingsGroupReadPage => 'Read page';
+
+  @override
+  String get browserSettingsGroupReadPageDesc =>
+      'Look at the page without changing anything.';
+
+  @override
+  String get browserSettingsGroupInteraction => 'Interaction';
+
+  @override
+  String get browserSettingsGroupInteractionDesc =>
+      'Click, type, and submit on the page.';
+
+  @override
+  String get browserSettingsGroupAdvanced => 'Advanced';
+
+  @override
+  String get browserSettingsGroupAdvancedDesc =>
+      'Less common, more powerful actions.';
+
+  @override
+  String browserSettingsGroupEnabledCount(int enabled, int total) {
+    return '$enabled of $total enabled';
+  }
+
+  @override
+  String get browserErrorReasonConnect => 'Could not connect to the server.';
+
+  @override
+  String get browserErrorReasonTimeout => 'The connection timed out.';
+
+  @override
+  String get browserErrorReasonBadUrl => 'This address is not valid.';
+
+  @override
+  String get browserErrorReasonSsl =>
+      'A secure connection could not be established.';
+
+  @override
+  String get browserStateCompleted => 'Done';
+
+  @override
+  String get browserApprovalHeadingUnknownSite =>
+      'Moru wants to perform a browser action';
 }

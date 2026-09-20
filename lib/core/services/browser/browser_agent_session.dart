@@ -8,28 +8,51 @@ import '../../../utils/utf16_safe_cut.dart';
 import 'browser_research.dart';
 
 /// Lifecycle state of a [BrowserActivity]: [running] the moment it is
-/// recorded (before the call's own result is known), then [ok]/[failed] once
-/// [BrowserAgentTool.execute] sees whether the JSON result it returned set
-/// `ok: true`.
-enum BrowserActivityOutcome { running, ok, failed }
+/// recorded (before the call's own result is known), then one of the
+/// terminal states once [BrowserAgentTool.execute] sees the call's own JSON
+/// result. [notFound] is a *display-only* distinction for `wait_for`: the
+/// tool's own JSON contract with the model always reports `ok: true` with
+/// `found: false` (that is not a failure the model needs to retry
+/// differently), but the human-facing log still needs to say the element
+/// was never found rather than showing the same look as a real success.
+enum BrowserActivityOutcome { running, ok, failed, notFound }
 
-/// One `browser_use` call, for the browser page's status line: [action]
-/// matches a `BrowserAgentAction.id` for its label, [detail] is an optional
-/// short extra (a URL, a key, a truncated selector) the label alone doesn't
-/// carry.
+/// One `browser_use` call, for the browser page's status line and its
+/// activity log: [action] matches a `BrowserAgentAction.id` for its label,
+/// [detail] is an optional short extra (a URL, a key, a truncated selector)
+/// the label alone doesn't carry. [id] is unique per call (even repeats of
+/// the same action), so a result can always be resolved against the exact
+/// call it belongs to rather than "whatever is currently last".
 class BrowserActivity {
   const BrowserActivity({
+    required this.id,
     required this.action,
     this.detail,
     this.outcome = BrowserActivityOutcome.running,
+    required this.startedAt,
+    this.finishedAt,
   });
 
+  final String id;
   final String action;
   final String? detail;
   final BrowserActivityOutcome outcome;
+  final DateTime startedAt;
+  final DateTime? finishedAt;
 
-  BrowserActivity withOutcome(BrowserActivityOutcome outcome) =>
-      BrowserActivity(action: action, detail: detail, outcome: outcome);
+  Duration? get duration => finishedAt?.difference(startedAt);
+
+  BrowserActivity withOutcome(
+    BrowserActivityOutcome outcome, {
+    DateTime? finishedAt,
+  }) => BrowserActivity(
+    id: id,
+    action: action,
+    detail: detail,
+    outcome: outcome,
+    startedAt: startedAt,
+    finishedAt: finishedAt ?? this.finishedAt,
+  );
 }
 
 class BrowserAgentProtocolException implements Exception {
@@ -46,6 +69,34 @@ class BrowserAgentProtocolException implements Exception {
 /// Native WebView history can include redirects and entries created outside the
 /// agent flow. The agent keeps its own committed-page stack so back/forward
 /// always mean the pages the model actually reached.
+///
+/// ## Navigation contract
+///
+/// Native UI back/forward (the browser page's own buttons, and Android's
+/// system back gesture) always call the real `WebViewController`'s
+/// `goBack()`/`goForward()` directly and are authoritative for what the user
+/// sees — this history is never used to drive those controls.
+///
+/// This history exists only so the model's own `browser_use` `back`/`forward`
+/// actions ([BrowserAgentSession.goBack]/[goForward], which replay a URL via
+/// `loadRequest` rather than native history, since that is required to keep
+/// forms/POST state/SPA state intact) stay accurate even when the user
+/// navigates manually in between. To make that possible, [reconcileCommitted]
+/// must be called once for every committed navigation on the shared
+/// controller — agent-initiated or not — typically from the WebView's
+/// `onPageFinished` callback. It classifies the newly-committed URL against
+/// this history's own back/forward targets:
+///  - matches [backTarget]: a native back happened -> [commitBack] (no push)
+///  - matches [forwardTarget]: a native forward happened -> [commitForward]
+///  - anything else (a manual address-bar submit, an in-page link tap, a
+///    fresh agent-initiated load, or a mid-load redirect that lands
+///    somewhere new): a genuinely new page -> [push], which truncates any
+///    stale forward entries the same way agent-initiated navigation does.
+/// Because every committed navigation goes through the same reconciliation,
+/// [BrowserAgentSession.goBack]/[goForward]/[load] and the click/type/submit/
+/// press_key actions no longer need to push or commit history themselves —
+/// doing so as well would double-count the very navigation this method just
+/// reconciled.
 class BrowserNavigationHistory {
   final List<String> _entries = <String>[];
   int _index = -1;
@@ -85,6 +136,26 @@ class BrowserNavigationHistory {
     _entries.clear();
     _index = -1;
   }
+
+  /// Reconciles one committed navigation against this history. See the
+  /// class doc comment above for the full contract; this is the single
+  /// entry point every committed navigation on the shared controller must
+  /// go through, so agent-initiated and manual navigation never drift apart.
+  void reconcileCommitted(String url) {
+    if (url.isEmpty) return;
+    if (current == null) {
+      reset(url);
+      return;
+    }
+    if (url == current) return;
+    if (url == backTarget) {
+      commitBack();
+    } else if (url == forwardTarget) {
+      commitForward();
+    } else {
+      push(url);
+    }
+  }
 }
 
 /// Hard cap on the string `eval_js` puts in its result envelope, so evaluating something
@@ -110,36 +181,74 @@ class BrowserAgentSession {
   Future<void> Function()? _closeHandler;
   final BrowserNavigationHistory _history = BrowserNavigationHistory();
 
+  /// The conversation currently driving `browser_use` calls against this
+  /// session, refreshed on every dispatch by [BrowserAgentTool.execute].
+  /// Lets the browser page's approval prompt pick the one pending
+  /// `browser_use` request that actually belongs to this session instead of
+  /// any conversation's, and is cleared with everything else on [unregister].
+  String? ownerConversationId;
+
+  void setOwnerConversationId(String? conversationId) {
+    ownerConversationId = conversationId;
+  }
+
   /// The most recent `browser_use` call, for the browser page's status line.
   /// Null once the session closes; otherwise sticky until the next call.
   final ValueNotifier<BrowserActivity?> currentActivity =
       ValueNotifier<BrowserActivity?>(null);
 
   static const int _maxRecentActivity = 30;
+  int _nextActivityId = 0;
 
-  /// Bounded log behind "Show recent", oldest first.
-  final List<BrowserActivity> recentActivity = <BrowserActivity>[];
+  /// Bounded log behind "Show recent", oldest first, reactive: a "Recent"
+  /// sheet built with `ValueListenableBuilder` on this updates live while
+  /// open, both while a call is still [BrowserActivityOutcome.running] and
+  /// after it resolves — it does not need to be reopened to see the result.
+  final ValueNotifier<List<BrowserActivity>> recentActivityNotifier =
+      ValueNotifier<List<BrowserActivity>>(const <BrowserActivity>[]);
 
-  void recordActivity(BrowserActivity activity) {
+  /// Read-only snapshot of the current log. Prefer [recentActivityNotifier]
+  /// for anything that should stay live while visible.
+  List<BrowserActivity> get recentActivity => recentActivityNotifier.value;
+
+  /// Starts a new activity and returns its id, to later resolve via
+  /// [resolveActivity]. ids are unique for the process lifetime (never
+  /// reused across sessions), so a late resolution can never land on a
+  /// newer, unrelated call that happens to be "last" by the time it arrives.
+  String recordActivity({required String action, String? detail}) {
+    final id = 'browser-activity-${_nextActivityId++}';
+    final activity = BrowserActivity(
+      id: id,
+      action: action,
+      detail: detail,
+      startedAt: DateTime.now(),
+    );
     currentActivity.value = activity;
-    recentActivity.add(activity);
-    if (recentActivity.length > _maxRecentActivity) {
-      recentActivity.removeAt(0);
-    }
+    final next = <BrowserActivity>[...recentActivityNotifier.value, activity];
+    recentActivityNotifier.value = next.length > _maxRecentActivity
+        ? next.sublist(next.length - _maxRecentActivity)
+        : next;
+    return id;
   }
 
-  /// Resolves the most recently recorded activity to [BrowserActivityOutcome.ok]
-  /// or [.failed] once its call has actually returned. A no-op once the
-  /// session has moved on (nothing recorded, or [close] already cleared it).
-  void updateLastActivityOutcome(bool ok) {
-    final current = currentActivity.value;
-    if (current == null) return;
-    final resolved = current.withOutcome(
-      ok ? BrowserActivityOutcome.ok : BrowserActivityOutcome.failed,
-    );
-    currentActivity.value = resolved;
-    if (recentActivity.isNotEmpty) {
-      recentActivity[recentActivity.length - 1] = resolved;
+  /// Resolves the activity started by [id] (from [recordActivity]) to
+  /// [outcome]. A no-op if [id] is not in the current log: either this
+  /// session closed and reopened since (`unregister` clears the log
+  /// entirely, so no id from a previous session can ever match again), the
+  /// entry aged out of the bounded log, or it was already resolved — a late
+  /// or duplicate result must never overwrite a newer outcome.
+  void resolveActivity(String id, BrowserActivityOutcome outcome) {
+    final list = recentActivityNotifier.value;
+    final index = list.indexWhere((activity) => activity.id == id);
+    if (index == -1) return;
+    final existing = list[index];
+    if (existing.outcome != BrowserActivityOutcome.running) return;
+    final resolved = existing.withOutcome(outcome, finishedAt: DateTime.now());
+    final next = List<BrowserActivity>.of(list);
+    next[index] = resolved;
+    recentActivityNotifier.value = next;
+    if (currentActivity.value?.id == id) {
+      currentActivity.value = resolved;
     }
   }
 
@@ -168,8 +277,9 @@ class BrowserAgentSession {
     _attachedCompleter = null;
     _loading = false;
     _history.clear();
+    ownerConversationId = null;
     currentActivity.value = null;
-    recentActivity.clear();
+    recentActivityNotifier.value = const <BrowserActivity>[];
     final ready = _readyCompleter;
     if (ready != null && !ready.isCompleted) {
       ready.completeError(StateError('Shared browser was closed.'));
@@ -188,6 +298,14 @@ class BrowserAgentSession {
 
   void pageFinished(String url) {
     _loading = false;
+    // The single, central reconciliation point for every committed
+    // navigation on the shared controller — see
+    // BrowserNavigationHistory's doc comment for the full contract. This
+    // fires for agent-initiated loads (open/back/forward/reload/a click or
+    // submit that navigates) exactly as it does for the user editing the
+    // address bar or tapping a link, so `_history` never drifts from what
+    // native back/forward would actually do.
+    _history.reconcileCommitted(url);
     final ready = _readyCompleter;
     if (ready != null && !ready.isCompleted) ready.complete();
   }
@@ -215,8 +333,10 @@ class BrowserAgentSession {
     final controller = _requireController();
     expectNavigation();
     await controller.loadRequest(uri);
+    // waitUntilReady() only returns once pageFinished() has already run,
+    // which is where `_history` is reconciled centrally — no separate push
+    // needed here (see BrowserNavigationHistory's doc comment).
     await waitUntilReady();
-    await _recordCurrentPage();
   }
 
   Future<void> recordInitialPage() async {
@@ -290,7 +410,8 @@ class BrowserAgentSession {
             ? const Duration(seconds: 1)
             : const Duration(milliseconds: 180),
       );
-      await _recordCurrentPageIfChanged(beforeUrl);
+      // Any navigation this click caused was already reconciled into
+      // `_history` by pageFinished() as part of the wait above.
     }
     final visibleResult = Map<String, dynamic>.from(result)
       ..remove('may_navigate');
@@ -312,7 +433,6 @@ class BrowserAgentSession {
         urlBefore: beforeUrl,
         navigationGrace: const Duration(milliseconds: 250),
       );
-      await _recordCurrentPageIfChanged(beforeUrl);
     }
     return _withCurrentUrl(result);
   }
@@ -331,7 +451,6 @@ class BrowserAgentSession {
         urlBefore: beforeUrl,
         navigationGrace: const Duration(seconds: 1),
       );
-      await _recordCurrentPageIfChanged(beforeUrl);
     }
     return _withCurrentUrl(result);
   }
@@ -350,7 +469,6 @@ class BrowserAgentSession {
         urlBefore: beforeUrl,
         navigationGrace: const Duration(milliseconds: 250),
       );
-      await _recordCurrentPageIfChanged(beforeUrl);
     }
     return _withCurrentUrl(result);
   }
@@ -536,8 +654,10 @@ class BrowserAgentSession {
     }
     expectNavigation();
     await controller.loadRequest(Uri.parse(target));
+    // waitUntilReady() only returns after pageFinished() has already
+    // reconciled this exact URL against `_history.backTarget` and called
+    // commitBack() itself — committing again here would double-step.
     await waitUntilReady(timeout: const Duration(seconds: 15));
-    _history.commitBack();
     return _pageState();
   }
 
@@ -554,8 +674,9 @@ class BrowserAgentSession {
     }
     expectNavigation();
     await controller.loadRequest(Uri.parse(target));
+    // Same reasoning as goBack(): pageFinished() already committed this
+    // exact navigation via reconcileCommitted().
     await waitUntilReady(timeout: const Duration(seconds: 15));
-    _history.commitForward();
     return _pageState();
   }
 
@@ -588,20 +709,6 @@ class BrowserAgentSession {
         return;
       }
       await Future<void>.delayed(const Duration(milliseconds: 40));
-    }
-  }
-
-  Future<void> _recordCurrentPage() async {
-    final url = await _requireController().currentUrl();
-    if (url != null && url.isNotEmpty) {
-      _history.push(url);
-    }
-  }
-
-  Future<void> _recordCurrentPageIfChanged(String? beforeUrl) async {
-    final url = await _requireController().currentUrl();
-    if (url != null && url.isNotEmpty && url != beforeUrl) {
-      _history.push(url);
     }
   }
 

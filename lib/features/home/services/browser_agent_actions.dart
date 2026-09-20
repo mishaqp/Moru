@@ -54,10 +54,10 @@ class BrowserAgentActions {
     BrowserAgentAction(
       id: 'wait_for',
       requiresApproval: false,
-      labelRu: 'Ожидать элемент',
-      labelEn: 'Wait for element',
-      descriptionRu: 'Пауза до появления/исчезновения CSS-селектора.',
-      descriptionEn: 'Pause until a CSS selector reaches a state.',
+      labelRu: 'Дождаться элемента на странице',
+      labelEn: 'Wait for something to appear on the page',
+      descriptionRu: 'Пауза, пока часть страницы не появится или не исчезнет.',
+      descriptionEn: 'Pause until part of the page appears or disappears.',
     ),
     BrowserAgentAction(
       id: 'back',
@@ -142,10 +142,11 @@ class BrowserAgentActions {
     BrowserAgentAction(
       id: 'eval_js',
       requiresApproval: true,
-      labelRu: 'Выполнить JavaScript',
-      labelEn: 'Run JavaScript',
-      descriptionRu: 'Выполнение произвольного JS на странице.',
-      descriptionEn: 'Run arbitrary JavaScript on the page.',
+      labelRu: 'Выполнить код на странице',
+      labelEn: 'Run code on the page',
+      descriptionRu:
+          'Может прочитать или изменить что угодно на открытой странице.',
+      descriptionEn: 'Can read or change anything on the currently open page.',
     ),
   ];
 
@@ -172,6 +173,13 @@ String browserActivityLabel(BrowserActivity activity, {required bool ru}) {
       : (ru ? action.labelRu : action.labelEn);
   final detail = activity.detail;
   final base = (detail == null || detail.isEmpty) ? label : '$label: $detail';
-  if (activity.outcome != BrowserActivityOutcome.failed) return base;
-  return ru ? '$base — не удалось' : '$base — failed';
+  switch (activity.outcome) {
+    case BrowserActivityOutcome.failed:
+      return ru ? '$base — не удалось' : '$base — failed';
+    case BrowserActivityOutcome.notFound:
+      return ru ? '$base — не найдено' : '$base — not found';
+    case BrowserActivityOutcome.running:
+    case BrowserActivityOutcome.ok:
+      return base;
+  }
 }

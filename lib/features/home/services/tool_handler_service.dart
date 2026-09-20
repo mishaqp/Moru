@@ -24,6 +24,7 @@ import '../../../core/services/workspace/tool_run_registry.dart';
 import '../../../core/services/workspace/workspace_runtime.dart';
 import '../../../core/services/workspace/workspace_tools_service.dart';
 import '../../../core/providers/workspace_provider.dart';
+import '../../../core/services/browser/browser_agent_session.dart';
 import 'ask_user_interaction_service.dart';
 import 'built_in_tool_names.dart';
 import 'local_tools_service.dart';
@@ -525,6 +526,13 @@ class ToolHandlerService {
             assistant != null &&
             LocalToolsService.isEnabledForAssistant(name, assistant) &&
             approvalService != null) {
+          if (name == LocalToolNames.browserUse) {
+            // Set before the prompt is created (not just inside
+            // BrowserAgentTool.execute, which only runs after approval) so
+            // the browser page can already pick the matching request out of
+            // ToolApprovalService.pendingRequests instead of guessing.
+            BrowserAgentSession.instance.setOwnerConversationId(conversationId);
+          }
           final approval = await approvalService.requestApproval(
             toolCallId: approvalIdFor(name, toolCallId),
             toolName: name,
@@ -546,6 +554,7 @@ class ToolHandlerService {
           args,
           assistant,
           disabledBrowserActions: settings.disabledBrowserActions,
+          conversationId: conversationId,
           onSpeakText: (text) async {
             final tts = contextProvider.read<TtsProvider>();
             if (!tts.isAvailable) {
