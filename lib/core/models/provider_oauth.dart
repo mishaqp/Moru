@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-enum OAuthProvider { chatgpt, grok, kimi, claude }
+enum OAuthProvider { chatgpt, grok, kimi, claude, openrouter }
 
 extension OAuthProviderInfo on OAuthProvider {
   String get displayName => switch (this) {
@@ -8,6 +8,7 @@ extension OAuthProviderInfo on OAuthProvider {
     OAuthProvider.grok => 'Grok',
     OAuthProvider.kimi => 'Kimi Code',
     OAuthProvider.claude => 'Claude',
+    OAuthProvider.openrouter => 'OpenRouter',
   };
 
   String get baseUrl => switch (this) {
@@ -15,13 +16,18 @@ extension OAuthProviderInfo on OAuthProvider {
     OAuthProvider.grok => 'https://api.x.ai/v1',
     OAuthProvider.kimi => 'https://api.kimi.com/coding/v1',
     OAuthProvider.claude => 'https://api.anthropic.com/v1',
+    OAuthProvider.openrouter => 'https://openrouter.ai/api/v1',
   };
 
+  /// OpenRouter's `/auth` PKCE flow has no registered OAuth client: the
+  /// authorize and exchange requests never send a client_id (confirmed
+  /// absent from its docs).
   String get clientId => switch (this) {
     OAuthProvider.chatgpt => 'app_EMoamEEZ73f0CkXaXp7hrann',
     OAuthProvider.grok => 'b1a00492-073a-47ea-816f-4c329264a828',
     OAuthProvider.kimi => '17e5f671-d194-4dfb-9706-5516cb48c098',
     OAuthProvider.claude => '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
+    OAuthProvider.openrouter => '',
   };
 
   String get tokenEndpoint => switch (this) {
@@ -29,8 +35,10 @@ extension OAuthProviderInfo on OAuthProvider {
     OAuthProvider.grok => 'https://auth.x.ai/oauth2/token',
     OAuthProvider.kimi => 'https://auth.kimi.com/api/oauth/token',
     OAuthProvider.claude => 'https://api.anthropic.com/v1/oauth/token',
+    OAuthProvider.openrouter => 'https://openrouter.ai/api/v1/auth/keys',
   };
 
+  /// OpenRouter's `/auth` endpoint has no `scope` parameter either.
   String get scope => switch (this) {
     OAuthProvider.chatgpt =>
       'openid profile email offline_access api.connectors.read api.connectors.invoke',
@@ -39,6 +47,7 @@ extension OAuthProviderInfo on OAuthProvider {
     OAuthProvider.kimi => '',
     OAuthProvider.claude =>
       'org:create_api_key user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload',
+    OAuthProvider.openrouter => '',
   };
 
   String get icon => switch (this) {
@@ -46,6 +55,7 @@ extension OAuthProviderInfo on OAuthProvider {
     OAuthProvider.grok => 'assets/icons/grok.svg',
     OAuthProvider.kimi => 'assets/icons/kimi-color.svg',
     OAuthProvider.claude => 'assets/icons/claude-color.svg',
+    OAuthProvider.openrouter => 'assets/icons/openrouter.svg',
   };
 
   bool get usesResponsesApi =>
@@ -69,8 +79,11 @@ class ProviderOAuthCredentials {
   });
 
   final String accessToken;
-  final String refreshToken;
-  final DateTime expiresAt;
+  // OpenRouter's exchanged API key has neither a refresh token nor an
+  // expiry (confirmed absent from its docs); every other provider always
+  // supplies both.
+  final String? refreshToken;
+  final DateTime? expiresAt;
   final String sessionId;
   final String? accountId;
   final String? email;
@@ -83,7 +96,7 @@ class ProviderOAuthCredentials {
   bool shouldRefresh(
     DateTime now, {
     Duration leeway = const Duration(minutes: 1),
-  }) => !now.add(leeway).isBefore(expiresAt);
+  }) => expiresAt != null && !now.add(leeway).isBefore(expiresAt!);
 
   ProviderOAuthCredentials copyWith({
     String? accessToken,
@@ -112,8 +125,8 @@ class ProviderOAuthCredentials {
 
   Map<String, dynamic> toJson() => {
     'accessToken': accessToken,
-    'refreshToken': refreshToken,
-    'expiresAt': expiresAt.toUtc().toIso8601String(),
+    if (refreshToken != null) 'refreshToken': refreshToken,
+    if (expiresAt != null) 'expiresAt': expiresAt!.toUtc().toIso8601String(),
     'sessionId': sessionId,
     if (accountId != null) 'accountId': accountId,
     if (email != null) 'email': email,
@@ -127,8 +140,10 @@ class ProviderOAuthCredentials {
   factory ProviderOAuthCredentials.fromJson(Map<String, dynamic> json) =>
       ProviderOAuthCredentials(
         accessToken: json['accessToken'] as String,
-        refreshToken: json['refreshToken'] as String,
-        expiresAt: DateTime.parse(json['expiresAt'] as String),
+        refreshToken: json['refreshToken'] as String?,
+        expiresAt: json['expiresAt'] == null
+            ? null
+            : DateTime.parse(json['expiresAt'] as String),
         sessionId: json['sessionId'] as String,
         accountId: json['accountId'] as String?,
         email: json['email'] as String?,

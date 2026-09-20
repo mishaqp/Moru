@@ -807,7 +807,13 @@ final class BusinessSettingsRouter {
   ) {
     final oauthProvider = payload['oauthProvider'];
     if (oauthProvider != null &&
-        !{'chatgpt', 'grok', 'kimi', 'claude'}.contains(oauthProvider)) {
+        !{
+          'chatgpt',
+          'grok',
+          'kimi',
+          'claude',
+          'openrouter',
+        }.contains(oauthProvider)) {
       throw const FormatException('Invalid OAuth provider');
     }
     final credentials = payload['oauthCredentials'];
@@ -815,12 +821,11 @@ final class BusinessSettingsRouter {
       _validateKnownFields(
         kind,
         _stringKeyedMap(credentials),
-        requiredStrings: const {
-          'accessToken',
-          'refreshToken',
-          'expiresAt',
-          'sessionId',
-        },
+        requiredStrings: const {'accessToken', 'sessionId'},
+        // OpenRouter's exchanged key has neither a refresh token nor an
+        // expiry (confirmed absent from its docs); every other provider
+        // still always supplies both, so this stays optional rather than
+        // required without weakening existing records.
         strings: const {
           'email',
           'accountId',
@@ -828,11 +833,15 @@ final class BusinessSettingsRouter {
           'deviceId',
           'organizationId',
           'organizationName',
+          'refreshToken',
+          'expiresAt',
         },
         booleans: const {'requiresLogin'},
       );
+      final expiresAt = credentials['expiresAt'];
       if (oauthProvider == null ||
-          DateTime.tryParse(credentials['expiresAt'] as String) == null) {
+          (expiresAt != null &&
+              DateTime.tryParse(expiresAt as String) == null)) {
         throw const FormatException('Invalid OAuth credentials');
       }
     }

@@ -31,8 +31,10 @@ class OAuthConnectionInfo extends StatelessWidget {
       if (config.oauthProvider!.scope.isNotEmpty)
         (l.oauthScope, config.oauthProvider!.scope),
       if (credentials?.accountId case final id?) (l.oauthAccountId, id),
-      if (credentials != null)
-        (l.oauthTokenExpiry, oauthDisplayTime(context, credentials.expiresAt)),
+      // OpenRouter's exchanged key has no expiry to show; the row is
+      // skipped rather than displaying a placeholder.
+      if (credentials?.expiresAt case final expiresAt?)
+        (l.oauthTokenExpiry, oauthDisplayTime(context, expiresAt)),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

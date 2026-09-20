@@ -15,10 +15,12 @@ import 'oauth_callback.dart';
 import 'oauth_cancellation.dart';
 import 'oauth_login_gate.dart';
 import 'oauth_pkce.dart';
+import 'openrouter_oauth_callback.dart';
 import 'claude_oauth_request.dart';
 
 part 'claude_oauth_adapter.dart';
 part 'chatgpt_browser_oauth.dart';
+part 'openrouter_oauth_adapter.dart';
 
 const codexClientVersion = '0.153.0';
 
@@ -195,7 +197,7 @@ ProviderOAuthException _requestFailure(
     for (final secret in [
       if (credentials != null) ...[
         credentials.accessToken,
-        credentials.refreshToken,
+        if (credentials.refreshToken case final token?) token,
       ],
       ...secrets,
       if (oauthString(data['access_token']) case final token?) token,
@@ -236,6 +238,7 @@ abstract class ProviderOAuthAdapter {
         OAuthProvider.grok => GrokOAuthAdapter(),
         OAuthProvider.kimi => KimiOAuthAdapter(),
         OAuthProvider.claude => ClaudeOAuthAdapter(),
+        OAuthProvider.openrouter => OpenRouterOAuthAdapter(),
       };
 
   Map<String, String> headers(ProviderOAuthCredentials credentials) => {
@@ -261,7 +264,10 @@ abstract class ProviderOAuthAdapter {
       form: {
         'grant_type': 'refresh_token',
         'client_id': provider.clientId,
-        'refresh_token': stored.refreshToken,
+        // The base refresh() is only reached by providers that always issue
+        // a refresh token (grok/kimi); OpenRouter overrides refresh() and
+        // never calls this.
+        'refresh_token': stored.refreshToken!,
       },
       headers: tokenHeaders(stored.deviceId),
       timeout: tokenRequestTimeout,

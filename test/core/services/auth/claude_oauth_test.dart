@@ -570,7 +570,7 @@ void main() {
       await settings.setProviderConfig(created.id, expiring);
       final resolved = await service.resolve(expiring);
       expect(
-        resolved.oauthCredentials!.expiresAt.isAfter(
+        resolved.oauthCredentials!.expiresAt!.isAfter(
           DateTime.now().add(const Duration(minutes: 60)),
         ),
         isTrue,

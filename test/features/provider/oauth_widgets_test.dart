@@ -366,7 +366,7 @@ void main() {
   );
 
   testWidgets(
-    'account login is the fourth add tab and offers all four providers',
+    'account login is the fourth add tab and offers all five providers',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
@@ -404,7 +404,8 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Log in'), findsNWidgets(4));
+      expect(find.text('OpenRouter'), findsNWidgets(2));
+      expect(find.text('Log in'), findsNWidgets(5));
       expect(find.text('Use device code'), findsNothing);
       expect(find.text('API Key'), findsNothing);
       expect(tester.takeException(), isNull);
