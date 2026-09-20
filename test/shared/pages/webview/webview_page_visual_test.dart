@@ -426,9 +426,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // Proves the sheet actually renders formatted Markdown, not the
-      // literal source, before the screenshot is captured.
+      // literal source, before the screenshot is captured. findsWidgets
+      // (not findsOneWidget): the compact card stays in the tree under the
+      // modal sheet and also contains this text in its own preview.
       expect(find.textContaining('**Flights found**'), findsNothing);
-      expect(find.textContaining('Flights found'), findsOneWidget);
+      expect(find.textContaining('Flights found'), findsWidgets);
 
       await snapshot(tester, key, 'browser-360-light-result-sheet-markdown');
     },
