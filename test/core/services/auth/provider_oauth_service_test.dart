@@ -192,8 +192,8 @@ void main() {
       );
       expect(restored.oauthProvider, OAuthProvider.kimi);
       expect(
-        restored.oauthCredentials!.expiresAt.isAtSameMomentAs(
-          original.oauthCredentials!.expiresAt,
+        restored.oauthCredentials!.expiresAt!.isAtSameMomentAs(
+          original.oauthCredentials!.expiresAt!,
         ),
         true,
       );

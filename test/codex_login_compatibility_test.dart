@@ -104,7 +104,7 @@ void main() {
       final credentials = ChatGptOAuthAdapter().credentials(
         _tokens(expiresIn: false),
       );
-      expect(credentials.expiresAt.millisecondsSinceEpoch, 4102444800000);
+      expect(credentials.expiresAt!.millisecondsSinceEpoch, 4102444800000);
       expect(credentials.plan, 'pro');
       expect(credentials.accountId, 'test-personal-account');
       expect(credentials.shouldRefresh(DateTime.utc(2026)), isFalse);
@@ -133,7 +133,7 @@ void main() {
         expect(refreshed.sessionId, original.sessionId);
         expect(refreshed.refreshToken, 'test-rotated-refresh-token');
         expect(refreshed.plan, 'pro');
-        expect(refreshed.expiresAt.millisecondsSinceEpoch, 4102444800000);
+        expect(refreshed.expiresAt!.millisecondsSinceEpoch, 4102444800000);
       },
     );
 

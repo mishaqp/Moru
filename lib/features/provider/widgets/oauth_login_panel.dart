@@ -405,6 +405,7 @@ class _OAuthLoginPanelState extends State<OAuthLoginPanel> {
                               OAuthProvider.grok => 'xAI',
                               OAuthProvider.kimi => 'Kimi Code',
                               OAuthProvider.claude => 'Pro / Max',
+                              OAuthProvider.openrouter => 'OpenRouter',
                             },
                             style: TextStyle(
                               fontSize: 12,
