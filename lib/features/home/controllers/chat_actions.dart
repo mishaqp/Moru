@@ -30,6 +30,7 @@ import '../services/tool_approval_service.dart';
 import 'active_streaming_message_store.dart';
 import 'chat_controller.dart';
 import 'generation_controller.dart';
+import 'generation_terminal_event.dart';
 import 'home_view_model.dart';
 import 'latest_wins_checkpoint_writer.dart';
 import 'stream_controller.dart' as stream_ctrl;
@@ -185,6 +186,24 @@ class ChatActions {
   }
 
   final MobileBackgroundCoordinator _background;
+
+  /// Broadcasts a [GenerationTerminalEvent] every time a generation run's
+  /// terminal state is durably persisted, regardless of which of the four
+  /// call sites reaches it (normal completion, a stream error, a manual
+  /// cancel, or a preparation failure before streaming even started). See
+  /// [_finalizeStreamingCheckpoint], the single choke point all four share.
+  ///
+  /// Unlike [onAssistantMessageFinished]/[onStreamError]/[onStreamFinished]
+  /// above, which are single nullable callback slots [HomeViewModel] alone
+  /// owns, this is a broadcast stream: any number of independent listeners
+  /// (e.g. the browser Ask-AI runner, matching by its own run's
+  /// `assistantMessageId`) can observe a specific run's real finish without
+  /// competing for those slots or changing what they do.
+  final StreamController<GenerationTerminalEvent> _generationTerminalEvents =
+      StreamController<GenerationTerminalEvent>.broadcast();
+
+  Stream<GenerationTerminalEvent> get generationTerminalEvents =>
+      _generationTerminalEvents.stream;
 
   /// Latest live instance. Deletion entry points that sit outside the home
   /// controller graph (e.g. the drawer's conversation delete) reach the
@@ -604,7 +623,19 @@ class ChatActions {
       }
       committed = true;
     } finally {
-      if (committed) _clearGenerationRuntimeState(message);
+      if (committed) {
+        _clearGenerationRuntimeState(message);
+        _generationTerminalEvents.add(
+          GenerationTerminalEvent(
+            conversationId: message.conversationId,
+            assistantMessageId: message.id,
+            generationRunId: cursor?.runId,
+            terminalState: terminalState,
+            message: message,
+            errorCode: errorCode,
+          ),
+        );
+      }
     }
   }
 

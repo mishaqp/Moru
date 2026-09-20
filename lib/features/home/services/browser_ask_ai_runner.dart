@@ -4,6 +4,7 @@ import '../../../core/models/assistant.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/conversation.dart';
 import '../controllers/chat_actions.dart' show ChatActionResult;
+import '../controllers/generation_terminal_event.dart';
 import 'browser_ask_ai_bridge.dart';
 
 typedef BrowserAskAiSend =
@@ -23,6 +24,15 @@ typedef BrowserAskAiCancel =
 /// passed in rather than read from a `BuildContext`, so it can be unit-tested
 /// without the full generation pipeline `HomePageController` normally runs
 /// against — mirrors `runScheduledTask`'s own shape.
+///
+/// [send] only confirms that generation *started*: `ChatActions.sendMessage`
+/// launches the real work via `unawaited(...)` and returns immediately with
+/// an empty placeholder `ChatMessage` so the composer is never blocked on a
+/// full reply. The real, finished answer arrives later and separately, on
+/// [terminalEvents] — this function subscribes to it *before* calling [send]
+/// (so an unusually fast finish can never race past a not-yet-registered
+/// listener) and waits for the one event whose `assistantMessageId` matches
+/// this run's own id, which [send] reports through [onGenerationStarted].
 Future<void> runBrowserAskAiRequest({
   required BrowserAskAiBridge bridge,
   required BrowserAskAiRequest request,
@@ -32,6 +42,7 @@ Future<void> runBrowserAskAiRequest({
   required Assistant? currentAssistant,
   required BrowserAskAiSend send,
   required BrowserAskAiCancel cancel,
+  required Stream<GenerationTerminalEvent> terminalEvents,
 }) async {
   // A cancel racing this call's own start (submitted, then stopped before
   // the request even reached this function — the request and cancellation
@@ -90,6 +101,20 @@ Future<void> runBrowserAskAiRequest({
       issueCancelIfPossible();
     },
   );
+
+  // Subscribed before send() runs at all, so this run's own terminal event
+  // — however quickly it arrives — is always observed. Matched by
+  // assistantMessageId (known the moment onGenerationStarted fires, always
+  // before send() returns), never by conversationId alone: a fast-moving
+  // conversation can start and finish another run for the same
+  // conversation while this one is still in flight.
+  final terminalCompleter = Completer<GenerationTerminalEvent>();
+  final terminalSub = terminalEvents.listen((event) {
+    final id = messageId;
+    if (id == null || event.assistantMessageId != id) return;
+    if (!terminalCompleter.isCompleted) terminalCompleter.complete(event);
+  });
+
   try {
     final result = await send(
       input: ChatInputData(
@@ -106,15 +131,37 @@ Future<void> runBrowserAskAiRequest({
         if (cancelRequested) issueCancelIfPossible();
       },
     );
+    if (!result.success) {
+      // A synchronous failure from send() itself (no_model, in_flight, a
+      // validation error) — generation never started, so there is no
+      // terminal event to wait for.
+      bridge.reportOutcome(
+        BrowserAskAiOutcome(
+          requestId: request.id,
+          ok: false,
+          error: result.errorMessage,
+        ),
+      );
+      return;
+    }
+    // send() only confirms the run started; result.assistantMessage is
+    // still the empty placeholder ChatActions.sendMessage persists before
+    // handing generation off. Wait for this run's own terminal event for
+    // the real, finished ChatMessage — the chat's own source of truth,
+    // written by the exact same code path that ends the tool loop and every
+    // other consumer of a finished reply already reads from.
+    final event = await terminalCompleter.future;
     bridge.reportOutcome(
       BrowserAskAiOutcome(
         requestId: request.id,
-        ok: result.success,
-        error: result.success ? null : result.errorMessage,
-        cancelled: cancelIssued && !result.success,
-        answerText: result.success ? result.assistantMessage?.content : null,
-        conversationId: result.success ? conversation.id : null,
-        assistantMessageId: result.success ? result.assistantMessage?.id : null,
+        ok: event.succeeded,
+        error: event.succeeded
+            ? null
+            : (event.errorCode ?? 'generation_failed'),
+        cancelled: event.cancelled,
+        answerText: event.succeeded ? event.message.content : null,
+        conversationId: event.succeeded ? event.conversationId : null,
+        assistantMessageId: event.succeeded ? event.assistantMessageId : null,
       ),
     );
   } catch (error) {
@@ -127,6 +174,7 @@ Future<void> runBrowserAskAiRequest({
     );
   } finally {
     await cancelSub.cancel();
+    await terminalSub.cancel();
   }
 }
 
