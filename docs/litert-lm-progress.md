@@ -216,3 +216,160 @@ Reading Moru's existing provider/chat architecture (ProviderConfig/Kind,
 ModelProvider, ChatApiService, StreamChunk, generation lifecycle/terminal
 events, settings/backup, Android channel patterns, GenerationForegroundService)
 before writing any integration code.
+
+## Verified facts — Moru's existing architecture (read directly, via research agent)
+
+Full findings kept in this session's transcript; key decisions extracted here:
+
+1. **`ProviderKind`** (`lib/core/providers/settings_provider.dart:6080`): only
+   `openai`/`google`/`claude` exist today. Adding `ProviderKind.local` is
+   **safe** for old saved configs — `ProviderConfig.fromJson` already falls
+   back via `ProviderKind.values.firstWhere(..., orElse: () =>
+   classify(json['id']))` for any unrecognized `providerType` string, and
+   `classify()` never throws. A local provider's `ProviderConfig` must always
+   pass `explicitType: ProviderKind.local` since nothing infers it from an id
+   string.
+2. **No provider interface** — `ChatApiService._sendOnce`
+   (`chat_api_service.dart:336-515`) is an if/else dispatch by
+   `ProviderKind`. Add a 4th branch calling a new top-level
+   `sendLiteRtStream(...)` matching the existing per-provider function shape
+   (`Stream<StreamChunk> sendXStream(http.Client, ProviderConfig, String
+   modelId, List<Map<String,dynamic>> messages, {...})` — unused HTTP-shaped
+   params can be ignored). `StreamChunk` is a sealed hierarchy
+   (`TextStart/Delta/End`, `Finish`, `Usage`, ...); errors are thrown Dart
+   exceptions, not a chunk variant.
+3. **Cancellation**: keyed by `conversationId` end-to-end.
+   `ChatActions.cancelStreaming` → `ChatApiService.cancelRequest(cid)` cancels
+   a Dio `CancelToken` stored in `_activeCancelTokens[cid]`. A local provider
+   must thread/observe that same per-request cancel signal and call
+   `conversation.cancelProcess()` (see SDK section above) when it fires —
+   this is the real Stop path to wire into, not a new mechanism.
+4. **No existing single-flight guard** across title-gen/summary-gen/
+   suggestions/memory-organize — all independent `unawaited()` background
+   calls (`home_view_model.dart`), and title/summary gen falls back to the
+   *same* model as the just-finished chat turn if no separate title model is
+   configured. **A local single-engine provider needs its own Dart-side
+   mutex/queue** serializing all calls into the one in-memory engine —
+   nothing in Moru does this for us today. Policy to implement: local calls
+   queue behind the active user-facing generation; never run concurrently
+   with it, never start a second engine instance.
+5. **Backups**: provider config is plain SharedPreferences JSON
+   (`provider_configs_v1`), always included — fine, it's small. Model weight
+   files must live under an app-data subdirectory **not** added to
+   `data_sync.dart`'s `_assetRootNames` whitelist (same treatment the PRoot
+   `environment/` rootfs already gets, with the same "not backup data"
+   rationale) — automatic exclusion, no special-case code needed.
+6. **Platform channel template**: reuse `app.workspace`/`app.workspace/events`
+   pattern verbatim (`workspace_channel.dart` Dart side;
+   `WorkspacePlugin.kt`/`WorkspaceEvents.kt` Kotlin side) — cached
+   thread-pool `runAsync` helper for off-main-thread work + queued
+   `EventSink` that buffers events fired before Dart subscribes. New channel
+   pair: `app.litert` / `app.litert/events`.
+7. **`GenerationForegroundService`** currently declares only
+   `foregroundServiceType="dataSync"`, already time-limited per Android
+   15+'s FGS execution-time budget (service has an `onTimeout` handler for
+   exactly this). **Open decision, not resolved yet**: don't blindly reuse
+   `dataSync` for local inference — evaluate whether it fits Play policy for
+   on-device compute or whether local generation should instead run without
+   a foreground service guarantee (honest "stops when backgrounded" per the
+   task brief's fallback instruction) for v1.
+8. **UI**: don't bolt onto `add_provider_sheet.dart`/`provider_detail_page.dart`
+   (structurally HTTP-provider-specific, 4831 lines of `if (_kind ==
+   ProviderKind.openai/google/claude)` branches) — build a dedicated
+   "Локальные модели · LiteRT" entry point/page instead (matches how OAuth
+   providers already get their own detail page). The generic model picker
+   (`model_select_sheet.dart`) needs **zero changes** — it already lists
+   every provider's `cfg.models` generically and will show local models
+   automatically once the `ProviderConfig` exists with `models: [...]`
+   populated, only needs a brand-avatar icon added.
+
+## Next
+Starting vertical slice 1: Android native integration (Gradle dependency
+pinned to 0.17.1, `app.litert` MethodChannel/EventChannel Kotlin plugin
+wrapping Engine/Conversation, minimal load/stream/cancel/close proven to
+actually compile and run before any Dart-side chat-pipeline wiring).
+
+## Vertical slice 1 — real compile findings (not theoretical anymore)
+
+- Added `com.google.ai.edge.litertlm:litertlm-android:0.17.1` to
+  `android/app/build.gradle.kts`, the `libvndksupport.so`/`libOpenCL.so`
+  `<uses-native-library>` entries to `AndroidManifest.xml`, and wrote the
+  Kotlin bridge: `LiteRtEvents.kt` (copy of `WorkspaceEvents`' queued-sink
+  pattern), `LiteRtEngineManager.kt` (single-threaded command executor,
+  `Engine`/`Conversation` lifecycle, cancel-then-await-then-close ordering,
+  one CPU→GPU fallback), `LiteRtPlugin.kt` (`app.litert` /
+  `app.litert/events` channel pair, mirrors `WorkspacePlugin`). Registered
+  in `KelivoApplication.kt` exactly like `workspace`/`deviceTools`.
+- **Confirmed real incompatibility** (not the theoretical one flagged
+  earlier): compiling with `gradle :app:compileDebugKotlin` failed with
+  `Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin.
+  The actual metadata version is 2.4.0, but the compiler version 2.2.0 can
+  read versions up to 2.3.0` — Gradle's normal dependency resolution bumped
+  the whole project's `kotlin-stdlib` to 2.4.0 (litertlm-android's POM
+  dependency), breaking compilation of every other Kotlin file too (e.g.
+  `WorkspacePlugin.kt`), not just the new code.
+  - **Minimal fix applied** (not a toolchain-wide Kotlin bump): added a
+    `resolutionStrategy.eachDependency` force in `android/build.gradle.kts`
+    pinning `org.jetbrains.kotlin:kotlin-stdlib` and `:kotlin-reflect` back
+    to `2.2.20` (our own Kotlin Gradle plugin version) for all subprojects
+    — same pattern already used there for `androidx.test:runner`. Justified
+    because `kotlin-reflect` is only needed by litertlm-android's
+    `ToolSet`/`@Tool` reflection-based tool definitions, which are unused
+    (text-only v1, no tools).
+  - **Open risk, to watch for at runtime** (not just compile time): if
+    litertlm-android's own compiled bytecode calls a `kotlin-stdlib` API
+    only added in 2.3/2.4, downgrading could throw `NoSuchMethodError` at
+    runtime despite compiling fine. Real device/emulator generation must be
+    watched for this specifically, not assumed safe from a clean compile
+    alone.
+- Local dev-environment notes (not project changes): needed
+  `android/local.properties` `sdk.dir=/home/user/android-sdk` and
+  `ANDROID_HOME`/`ANDROID_SDK_ROOT` env vars for Gradle's
+  `compileFlutterBuildDebug` step to find the SDK in this sandbox — already
+  handled correctly by CI's `android-actions/setup-android@v3` step, not a
+  project file change.
+
+## Vertical slice 1 — RESULT: real compile success
+
+Root cause was not the transitive `kotlin-stdlib` bump alone -- `litertlm-
+android-0.17.1`'s own published classes (`Conversation`, `Engine`,
+`Backend`, ...) carry Kotlin 2.4.0 metadata directly. No transitive-pin
+trick fixes that; the project's own Kotlin compiler must be able to read
+2.4.0 metadata. **Actual minimal fix**: bumped
+`org.jetbrains.kotlin.android` in `android/settings.gradle.kts` from
+`2.2.20` to **`2.4.0`** (the exact version litertlm-android itself was
+built with, not the newest available `2.4.20` -- picked the minimal
+sufficient version, not the latest).
+
+`gradle :app:compileDebugKotlin --no-daemon -Dorg.gradle.jvmargs=-Xmx3g`
+→ **BUILD SUCCESSFUL**, all 475 tasks, including the new `com.psyche.
+kelivo.litert` package (`LiteRtEvents.kt`, `LiteRtEngineManager.kt`,
+`LiteRtPlugin.kt`) compiling cleanly against the real published SDK
+classes -- only pre-existing unrelated deprecation warnings. This is real
+proof the API signatures used (`Engine`, `EngineConfig`, `Backend.CPU()`/
+`GPU()`, `Conversation`, `ConversationConfig`, `Message.user/model/system/
+tool`, `Contents.of`, `SamplerConfig`, `MessageCallback`,
+`conversation.cancelProcess()`, `CancellationException`) are all real and
+correctly typed -- not guessed.
+
+(Dev-environment note, first Gradle daemon run crashed/OOM'd mid-build in
+this sandbox under full module compilation load -- unrelated to the code,
+resolved with `--no-daemon` + a bounded heap for the retry.)
+
+**Not yet possible to verify in this sandbox**: no Android device/emulator
+here to actually load a real `.litertlm` file and prove streaming/cancel/
+unload at runtime. Compile-correctness is proven; runtime behavior (the
+open risk noted above -- downgraded/upgraded stdlib API surface actually
+working, GPU fallback actually firing, cancelProcess() actually halting
+generation observably) is deferred to a real device per the task's own
+process (section 14: finish code + checks + APK, hand off for the one
+mandatory real-device smoke test before stable release).
+
+## Next
+Vertical slice 2: wire the Kotlin bridge into Moru's Dart chat pipeline --
+`ProviderKind.local`, `app.litert` Dart-side channel wrapper, a new
+`sendLiteRtStream` dispatched from `ChatApiService._sendOnce`, threading
+the existing conversationId-keyed cancel signal through to `cancel`, and a
+Dart-side single-flight queue serializing local-model calls (main chat +
+title/summary/suggestions/memory-organize all potentially racing the one
+in-memory engine).

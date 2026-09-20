@@ -46,6 +46,12 @@
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true"
         android:icon="@mipmap/ic_launcher">
+        <!-- Optional GPU backend for the local LiteRT-LM provider. Both
+             required="false": install must not be blocked on a device
+             without them, and the provider falls back to CPU when GPU
+             initialization fails (see LiteRtEngineManager). -->
+        <uses-native-library android:name="libvndksupport.so" android:required="false"/>
+        <uses-native-library android:name="libOpenCL.so" android:required="false"/>
         <!-- Shares from another task must reach the existing chat composer. -->
         <activity
             android:name=".MainActivity"
