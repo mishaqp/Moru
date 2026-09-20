@@ -11494,6 +11494,176 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatInputBarQueueRemove => '删除排队消息';
+
+  @override
+  String get browserAddressEditorTitle => '编辑地址';
+
+  @override
+  String get browserAddressEditorHint => 'https://example.com';
+
+  @override
+  String get browserAddressEditorInvalid => '请输入有效的 http 或 https 地址。';
+
+  @override
+  String get browserAddressEditorGo => '前往';
+
+  @override
+  String get browserMenuTooltip => '更多';
+
+  @override
+  String get browserMenuCopyLink => '复制链接';
+
+  @override
+  String get browserMenuActivityLog => '活动记录';
+
+  @override
+  String get browserMenuSettings => '浏览器设置';
+
+  @override
+  String get browserSchemeSecure => '已加密连接 (https)';
+
+  @override
+  String get browserSchemeInsecure => '未加密 (http)';
+
+  @override
+  String get browserComposerHint => '告诉 AI 要做什么…';
+
+  @override
+  String get browserComposerSendTooltip => '发送';
+
+  @override
+  String get browserComposerStopTooltip => '停止';
+
+  @override
+  String get browserComposerActivityLogTooltip => '活动记录';
+
+  @override
+  String get browserStateStarting => '正在启动…';
+
+  @override
+  String get browserStateRunning => '正在执行…';
+
+  @override
+  String get browserStateAwaitingApproval => '等待您的确认…';
+
+  @override
+  String get browserStateStopping => '正在停止…';
+
+  @override
+  String get browserStateStopped => '已停止';
+
+  @override
+  String get browserStateError => '出了点问题';
+
+  @override
+  String browserApprovalHeading(String site) {
+    return 'Moru 想在 $site 上执行一个浏览器操作';
+  }
+
+  @override
+  String browserApprovalAction(String action) {
+    return '操作:$action';
+  }
+
+  @override
+  String browserApprovalElement(String elementId) {
+    return '元素:#$elementId';
+  }
+
+  @override
+  String get browserApprovalCodeLabel => '将要运行的代码';
+
+  @override
+  String get browserApprovalDeny => '拒绝';
+
+  @override
+  String get browserApprovalAllow => '允许';
+
+  @override
+  String get browserApprovalChangeTrust => '更改信任设置';
+
+  @override
+  String get browserResultTitle => 'AI 回答';
+
+  @override
+  String get browserResultExpandAction => '查看完整回答';
+
+  @override
+  String get browserResultCopyTooltip => '复制回答';
+
+  @override
+  String get browserResultCloseTooltip => '关闭回答';
+
+  @override
+  String get browserResultSheetTitle => '完整回答';
+
+  @override
+  String get browserErrorTitle => '页面无法加载';
+
+  @override
+  String get browserErrorRetry => '重试';
+
+  @override
+  String get browserActivityLogTitle => '最近的操作';
+
+  @override
+  String get browserActivityLogEmpty => '暂无操作记录';
+
+  @override
+  String get browserSettingsIntro => '开关用于允许 AI 使用这些操作。是否需要确认取决于信任模式。';
+
+  @override
+  String get browserSettingsTrustOn => '完全信任已开启——AI 执行这些操作时不会请求确认。';
+
+  @override
+  String get browserSettingsTrustOff => '完全信任已关闭——会更改页面的操作需要确认。';
+
+  @override
+  String get browserSettingsGroupNavigation => '导航';
+
+  @override
+  String get browserSettingsGroupNavigationDesc => '在页面中移动。';
+
+  @override
+  String get browserSettingsGroupReadPage => '阅读页面';
+
+  @override
+  String get browserSettingsGroupReadPageDesc => '查看页面内容而不做任何更改。';
+
+  @override
+  String get browserSettingsGroupInteraction => '交互';
+
+  @override
+  String get browserSettingsGroupInteractionDesc => '在页面上点击、输入和提交。';
+
+  @override
+  String get browserSettingsGroupAdvanced => '高级';
+
+  @override
+  String get browserSettingsGroupAdvancedDesc => '较少使用但更强大的操作。';
+
+  @override
+  String browserSettingsGroupEnabledCount(int enabled, int total) {
+    return '$enabled/$total 已启用';
+  }
+
+  @override
+  String get browserErrorReasonConnect => '无法连接到服务器。';
+
+  @override
+  String get browserErrorReasonTimeout => '连接超时。';
+
+  @override
+  String get browserErrorReasonBadUrl => '此地址无效。';
+
+  @override
+  String get browserErrorReasonSsl => '无法建立安全连接。';
+
+  @override
+  String get browserStateCompleted => '完成';
+
+  @override
+  String get browserApprovalHeadingUnknownSite => 'Moru 想执行一个浏览器操作';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -22912,6 +23082,176 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get chatInputBarQueueRemove => '删除排队消息';
+
+  @override
+  String get browserAddressEditorTitle => '编辑地址';
+
+  @override
+  String get browserAddressEditorHint => 'https://example.com';
+
+  @override
+  String get browserAddressEditorInvalid => '请输入有效的 http 或 https 地址。';
+
+  @override
+  String get browserAddressEditorGo => '前往';
+
+  @override
+  String get browserMenuTooltip => '更多';
+
+  @override
+  String get browserMenuCopyLink => '复制链接';
+
+  @override
+  String get browserMenuActivityLog => '活动记录';
+
+  @override
+  String get browserMenuSettings => '浏览器设置';
+
+  @override
+  String get browserSchemeSecure => '已加密连接 (https)';
+
+  @override
+  String get browserSchemeInsecure => '未加密 (http)';
+
+  @override
+  String get browserComposerHint => '告诉 AI 要做什么…';
+
+  @override
+  String get browserComposerSendTooltip => '发送';
+
+  @override
+  String get browserComposerStopTooltip => '停止';
+
+  @override
+  String get browserComposerActivityLogTooltip => '活动记录';
+
+  @override
+  String get browserStateStarting => '正在启动…';
+
+  @override
+  String get browserStateRunning => '正在执行…';
+
+  @override
+  String get browserStateAwaitingApproval => '等待您的确认…';
+
+  @override
+  String get browserStateStopping => '正在停止…';
+
+  @override
+  String get browserStateStopped => '已停止';
+
+  @override
+  String get browserStateError => '出了点问题';
+
+  @override
+  String browserApprovalHeading(String site) {
+    return 'Moru 想在 $site 上执行一个浏览器操作';
+  }
+
+  @override
+  String browserApprovalAction(String action) {
+    return '操作:$action';
+  }
+
+  @override
+  String browserApprovalElement(String elementId) {
+    return '元素:#$elementId';
+  }
+
+  @override
+  String get browserApprovalCodeLabel => '将要运行的代码';
+
+  @override
+  String get browserApprovalDeny => '拒绝';
+
+  @override
+  String get browserApprovalAllow => '允许';
+
+  @override
+  String get browserApprovalChangeTrust => '更改信任设置';
+
+  @override
+  String get browserResultTitle => 'AI 回答';
+
+  @override
+  String get browserResultExpandAction => '查看完整回答';
+
+  @override
+  String get browserResultCopyTooltip => '复制回答';
+
+  @override
+  String get browserResultCloseTooltip => '关闭回答';
+
+  @override
+  String get browserResultSheetTitle => '完整回答';
+
+  @override
+  String get browserErrorTitle => '页面无法加载';
+
+  @override
+  String get browserErrorRetry => '重试';
+
+  @override
+  String get browserActivityLogTitle => '最近的操作';
+
+  @override
+  String get browserActivityLogEmpty => '暂无操作记录';
+
+  @override
+  String get browserSettingsIntro => '开关用于允许 AI 使用这些操作。是否需要确认取决于信任模式。';
+
+  @override
+  String get browserSettingsTrustOn => '完全信任已开启——AI 执行这些操作时不会请求确认。';
+
+  @override
+  String get browserSettingsTrustOff => '完全信任已关闭——会更改页面的操作需要确认。';
+
+  @override
+  String get browserSettingsGroupNavigation => '导航';
+
+  @override
+  String get browserSettingsGroupNavigationDesc => '在页面中移动。';
+
+  @override
+  String get browserSettingsGroupReadPage => '阅读页面';
+
+  @override
+  String get browserSettingsGroupReadPageDesc => '查看页面内容而不做任何更改。';
+
+  @override
+  String get browserSettingsGroupInteraction => '交互';
+
+  @override
+  String get browserSettingsGroupInteractionDesc => '在页面上点击、输入和提交。';
+
+  @override
+  String get browserSettingsGroupAdvanced => '高级';
+
+  @override
+  String get browserSettingsGroupAdvancedDesc => '较少使用但更强大的操作。';
+
+  @override
+  String browserSettingsGroupEnabledCount(int enabled, int total) {
+    return '$enabled/$total 已启用';
+  }
+
+  @override
+  String get browserErrorReasonConnect => '无法连接到服务器。';
+
+  @override
+  String get browserErrorReasonTimeout => '连接超时。';
+
+  @override
+  String get browserErrorReasonBadUrl => '此地址无效。';
+
+  @override
+  String get browserErrorReasonSsl => '无法建立安全连接。';
+
+  @override
+  String get browserStateCompleted => '完成';
+
+  @override
+  String get browserApprovalHeadingUnknownSite => 'Moru 想执行一个浏览器操作';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -34409,4 +34749,174 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatInputBarQueueRemove => '刪除排隊訊息';
+
+  @override
+  String get browserAddressEditorTitle => '編輯地址';
+
+  @override
+  String get browserAddressEditorHint => 'https://example.com';
+
+  @override
+  String get browserAddressEditorInvalid => '請輸入有效的 http 或 https 地址。';
+
+  @override
+  String get browserAddressEditorGo => '前往';
+
+  @override
+  String get browserMenuTooltip => '更多';
+
+  @override
+  String get browserMenuCopyLink => '複製連結';
+
+  @override
+  String get browserMenuActivityLog => '活動記錄';
+
+  @override
+  String get browserMenuSettings => '瀏覽器設定';
+
+  @override
+  String get browserSchemeSecure => '已加密連線 (https)';
+
+  @override
+  String get browserSchemeInsecure => '未加密 (http)';
+
+  @override
+  String get browserComposerHint => '告訴 AI 要做什麼…';
+
+  @override
+  String get browserComposerSendTooltip => '傳送';
+
+  @override
+  String get browserComposerStopTooltip => '停止';
+
+  @override
+  String get browserComposerActivityLogTooltip => '活動記錄';
+
+  @override
+  String get browserStateStarting => '正在啟動…';
+
+  @override
+  String get browserStateRunning => '執行中…';
+
+  @override
+  String get browserStateAwaitingApproval => '等待您的確認…';
+
+  @override
+  String get browserStateStopping => '正在停止…';
+
+  @override
+  String get browserStateStopped => '已停止';
+
+  @override
+  String get browserStateError => '發生錯誤';
+
+  @override
+  String browserApprovalHeading(String site) {
+    return 'Moru 想在 $site 上執行瀏覽器操作';
+  }
+
+  @override
+  String browserApprovalAction(String action) {
+    return '操作:$action';
+  }
+
+  @override
+  String browserApprovalElement(String elementId) {
+    return '元素:#$elementId';
+  }
+
+  @override
+  String get browserApprovalCodeLabel => '將執行的程式碼';
+
+  @override
+  String get browserApprovalDeny => '拒絕';
+
+  @override
+  String get browserApprovalAllow => '允许';
+
+  @override
+  String get browserApprovalChangeTrust => '變更信任設定';
+
+  @override
+  String get browserResultTitle => 'AI 回答';
+
+  @override
+  String get browserResultExpandAction => '檢視完整回答';
+
+  @override
+  String get browserResultCopyTooltip => '複製回答';
+
+  @override
+  String get browserResultCloseTooltip => '關閉回答';
+
+  @override
+  String get browserResultSheetTitle => '完整回答';
+
+  @override
+  String get browserErrorTitle => '頁面無法載入';
+
+  @override
+  String get browserErrorRetry => '重试';
+
+  @override
+  String get browserActivityLogTitle => '最近的操作';
+
+  @override
+  String get browserActivityLogEmpty => '尚無操作記錄';
+
+  @override
+  String get browserSettingsIntro => '開關用於允許 AI 使用這些操作。是否需要確認取決於信任模式。';
+
+  @override
+  String get browserSettingsTrustOn => '完全信任已開啟——AI 執行這些操作時不會要求確認。';
+
+  @override
+  String get browserSettingsTrustOff => '完全信任已關閉——會變更頁面的操作需要確認。';
+
+  @override
+  String get browserSettingsGroupNavigation => '導覽';
+
+  @override
+  String get browserSettingsGroupNavigationDesc => '在页面中移动。';
+
+  @override
+  String get browserSettingsGroupReadPage => '讀取頁面';
+
+  @override
+  String get browserSettingsGroupReadPageDesc => '檢視頁面內容而不做任何變更。';
+
+  @override
+  String get browserSettingsGroupInteraction => '互動';
+
+  @override
+  String get browserSettingsGroupInteractionDesc => '在页面上点击、输入和提交。';
+
+  @override
+  String get browserSettingsGroupAdvanced => '進階';
+
+  @override
+  String get browserSettingsGroupAdvancedDesc => '較少使用但更強大的操作。';
+
+  @override
+  String browserSettingsGroupEnabledCount(int enabled, int total) {
+    return '$enabled/$total 已启用';
+  }
+
+  @override
+  String get browserErrorReasonConnect => '無法連線到伺服器。';
+
+  @override
+  String get browserErrorReasonTimeout => '連線逾時。';
+
+  @override
+  String get browserErrorReasonBadUrl => '此地址無效。';
+
+  @override
+  String get browserErrorReasonSsl => '無法建立安全連線。';
+
+  @override
+  String get browserStateCompleted => '完成';
+
+  @override
+  String get browserApprovalHeadingUnknownSite => 'Moru 想執行一個瀏覽器操作';
 }

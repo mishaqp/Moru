@@ -9,7 +9,7 @@ import '../../../core/services/browser/browser_agent_session.dart';
 import '../../../core/services/browser/browser_research.dart';
 import 'browser_agent_actions.dart';
 import '../../../core/services/browser/web_source.dart';
-import '../../../shared/pages/webview_page.dart';
+import '../../../shared/pages/webview/webview_page.dart';
 import '../../../shared/widgets/snackbar.dart';
 
 /// Local-tool adapter for the visible shared browser.

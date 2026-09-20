@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/models/health_data_type.dart';
@@ -11,6 +12,8 @@ import 'package:Kelivo/core/services/browser/web_source.dart';
 import 'package:Kelivo/features/home/services/browser_agent_actions.dart';
 import 'package:Kelivo/features/home/services/health_data_selection.dart';
 import 'package:Kelivo/features/home/services/local_tools_service.dart';
+
+import 'support/fake_webview_platform.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -1296,6 +1299,71 @@ void main() {
         ),
         isNull,
       );
+    });
+  });
+
+  group('browser_use wait_for JSON contract vs. activity log display', () {
+    // These exercise the real BrowserAgentSession.waitFor() against a fake
+    // attached WebViewController, proving the tool-level JSON contract
+    // (`ok: true, found: false`) is byte-for-byte unchanged even though the
+    // activity log renders it as a distinct "not found" outcome (Phase A's
+    // BrowserActivityOutcome.notFound is display-only).
+    late FakeWebViewController fakeController;
+    late WebViewController controller;
+
+    setUp(() async {
+      installFakeWebViewPlatform();
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      controller = WebViewController();
+      fakeController = controller.platform as FakeWebViewController;
+      BrowserAgentSession.instance.register(controller, onClose: () async {});
+      BrowserAgentSession.instance.currentActivity.value = null;
+      BrowserAgentSession.instance.recentActivityNotifier.value = const [];
+    });
+
+    tearDown(() {
+      BrowserAgentSession.instance.unregister(controller);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    test(
+      'wait_for that never finds the selector reports ok:true, found:false '
+      'to the model, and BrowserActivityOutcome.notFound for the log',
+      () async {
+        fakeController.jsHandler = (_) => '{"satisfied": false}';
+
+        final result = await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.browserUse,
+          const {'action': 'wait_for', 'selector': '.thing', 'timeout_ms': 200},
+          const Assistant(id: 'a1', name: 'Assistant'),
+        );
+
+        final decoded = jsonDecode(result!) as Map<String, dynamic>;
+        expect(decoded['ok'], isTrue);
+        expect(decoded['found'], isFalse);
+        expect(decoded.containsKey('error'), isFalse);
+
+        final activity = BrowserAgentSession.instance.currentActivity.value;
+        expect(activity?.outcome, BrowserActivityOutcome.notFound);
+      },
+    );
+
+    test('wait_for that finds the selector reports ok:true, found:true, and '
+        'BrowserActivityOutcome.ok for the log', () async {
+      fakeController.jsHandler = (_) => '{"satisfied": true}';
+
+      final result = await LocalToolsService.tryHandleToolCall(
+        LocalToolNames.browserUse,
+        const {'action': 'wait_for', 'selector': '.thing', 'timeout_ms': 200},
+        const Assistant(id: 'a1', name: 'Assistant'),
+      );
+
+      final decoded = jsonDecode(result!) as Map<String, dynamic>;
+      expect(decoded['ok'], isTrue);
+      expect(decoded['found'], isTrue);
+
+      final activity = BrowserAgentSession.instance.currentActivity.value;
+      expect(activity?.outcome, BrowserActivityOutcome.ok);
     });
   });
 }

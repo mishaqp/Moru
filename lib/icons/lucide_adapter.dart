@@ -200,6 +200,7 @@ class Lucide {
   static const IconData Folder = lucide.LucideIcons.folder;
   static const IconData FolderCode = lucide.LucideIcons.folderCode;
   static const IconData Lock = lucide.LucideIcons.lock;
+  static const IconData LockOpen = lucide.LucideIcons.lockOpen;
   static const IconData CornerDownLeft = lucide.LucideIcons.cornerDownLeft;
   static const IconData package2 = lucide.LucideIcons.package2;
   static const IconData workflow = lucide.LucideIcons.workflow;

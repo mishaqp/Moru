@@ -7,11 +7,51 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
-import '../../../shared/widgets/section_card.dart';
 import '../../../theme/app_font_weights.dart';
 
-/// Per-action `browser_use` toggles, so an action can be turned off
-/// individually instead of only through the all-or-nothing tool trust switch.
+/// One named, collapsible group of `browser_use` actions. The action ids
+/// are the single source of truth (`BrowserAgentActions.all`); this only
+/// says which group each id belongs to.
+class _ActionGroup {
+  const _ActionGroup({
+    required this.titleBuilder,
+    required this.subtitleBuilder,
+    required this.actionIds,
+  });
+
+  final String Function(AppLocalizations l10n) titleBuilder;
+  final String Function(AppLocalizations l10n) subtitleBuilder;
+  final List<String> actionIds;
+}
+
+final List<_ActionGroup> _groups = [
+  _ActionGroup(
+    titleBuilder: (l10n) => l10n.browserSettingsGroupNavigation,
+    subtitleBuilder: (l10n) => l10n.browserSettingsGroupNavigationDesc,
+    actionIds: const ['open', 'back', 'forward', 'reload', 'scroll'],
+  ),
+  _ActionGroup(
+    titleBuilder: (l10n) => l10n.browserSettingsGroupReadPage,
+    subtitleBuilder: (l10n) => l10n.browserSettingsGroupReadPageDesc,
+    actionIds: const ['observe', 'read', 'wait_for'],
+  ),
+  _ActionGroup(
+    titleBuilder: (l10n) => l10n.browserSettingsGroupInteraction,
+    subtitleBuilder: (l10n) => l10n.browserSettingsGroupInteractionDesc,
+    actionIds: const ['click', 'type', 'submit', 'press_key'],
+  ),
+  _ActionGroup(
+    titleBuilder: (l10n) => l10n.browserSettingsGroupAdvanced,
+    subtitleBuilder: (l10n) => l10n.browserSettingsGroupAdvancedDesc,
+    actionIds: const ['eval_js', 'done', 'close'],
+  ),
+];
+
+/// Per-action `browser_use` toggles, grouped by what the action actually
+/// does (navigation / reading / interacting / advanced) rather than by
+/// whether it happens to require an approval prompt -- so an action can
+/// still be turned off individually instead of only through the
+/// all-or-nothing tool trust switch.
 class BrowserSettingsPage extends StatelessWidget {
   const BrowserSettingsPage({super.key});
 
@@ -21,12 +61,6 @@ class BrowserSettingsPage extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
     final ru = Localizations.localeOf(context).languageCode == 'ru';
-    final readActions = BrowserAgentActions.all
-        .where((a) => !a.requiresApproval)
-        .toList();
-    final writeActions = BrowserAgentActions.all
-        .where((a) => a.requiresApproval)
-        .toList();
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -47,69 +81,159 @@ class BrowserSettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
-          _groupHeader(
-            context,
-            ru ? 'Чтение' : 'Read',
-            ru
-                ? 'Не требуют подтверждения, даже без полного доверия.'
-                : 'Never require approval, even without full trust.',
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+            child: Text(
+              l10n.browserSettingsIntro,
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.35,
+                color: cs.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
           ),
-          SectionCard(
-            padding: EdgeInsets.zero,
-            children: [
-              for (var i = 0; i < readActions.length; i++) ...[
-                if (i > 0) _divider(context),
-                _actionRow(context, readActions[i], settings, ru),
-              ],
-            ],
+          const SizedBox(height: 4),
+          _TrustStateBanner(
+            trusted: settings.toolAutoApproveAll,
+            label: settings.toolAutoApproveAll
+                ? l10n.browserSettingsTrustOn
+                : l10n.browserSettingsTrustOff,
           ),
-          const SizedBox(height: 18),
-          _groupHeader(
-            context,
-            ru ? 'Запись' : 'Write',
-            ru
-                ? 'Требуют подтверждения, пока не включено полное доверие в инструментах.'
-                : 'Require approval unless full tool trust is on.',
-          ),
-          SectionCard(
-            padding: EdgeInsets.zero,
-            children: [
-              for (var i = 0; i < writeActions.length; i++) ...[
-                if (i > 0) _divider(context),
-                _actionRow(context, writeActions[i], settings, ru),
-              ],
-            ],
+          const SizedBox(height: 14),
+          for (var i = 0; i < _groups.length; i++) ...[
+            if (i > 0) const SizedBox(height: 14),
+            _ActionGroupCard(
+              group: _groups[i],
+              settings: settings,
+              ru: ru,
+              l10n: l10n,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TrustStateBanner extends StatelessWidget {
+  const _TrustStateBanner({required this.trusted, required this.label});
+
+  final bool trusted;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = trusted ? cs.primary : cs.onSurface.withValues(alpha: 0.55);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: trusted
+            ? cs.primary.withValues(alpha: isDark ? 0.16 : 0.08)
+            : cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(trusted ? Lucide.Shield : Lucide.Lock, size: 16, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: AppFontWeights.medium,
+                color: color,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _groupHeader(BuildContext context, String title, String subtitle) {
+class _ActionGroupCard extends StatelessWidget {
+  const _ActionGroupCard({
+    required this.group,
+    required this.settings,
+    required this.ru,
+    required this.l10n,
+  });
+
+  final _ActionGroup group;
+  final SettingsProvider settings;
+  final bool ru;
+  final AppLocalizations l10n;
+
+  List<BrowserAgentAction> get _actions => group.actionIds
+      .map(BrowserAgentActions.byId)
+      .whereType<BrowserAgentAction>()
+      .toList(growable: false);
+
+  @override
+  Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final actions = _actions;
+    final enabledCount = actions
+        .where((a) => !settings.disabledBrowserActions.contains(a.id))
+        .length;
+
+    return Material(
+      color: cs.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: cs.outline.withValues(alpha: 0.12)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: true,
+          tilePadding: const EdgeInsets.fromLTRB(14, 2, 10, 2),
+          childrenPadding: EdgeInsets.zero,
+          title: Text(
+            group.titleBuilder(l10n),
             style: TextStyle(
-              fontSize: 13,
               fontWeight: AppFontWeights.semibold,
-              color: cs.onSurface.withValues(alpha: 0.8),
+              fontSize: 14,
+              color: cs.onSurface.withValues(alpha: 0.92),
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
+          subtitle: Text(
+            group.subtitleBuilder(l10n),
             style: TextStyle(
               fontSize: 12,
-              height: 1.3,
               color: cs.onSurface.withValues(alpha: 0.55),
             ),
           ),
-        ],
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: isDark ? 0.18 : 0.10),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              l10n.browserSettingsGroupEnabledCount(
+                enabledCount,
+                actions.length,
+              ),
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: AppFontWeights.emphasis,
+                color: cs.primary,
+              ),
+            ),
+          ),
+          children: [
+            for (var i = 0; i < actions.length; i++) ...[
+              if (i > 0) _divider(context),
+              _actionRow(context, actions[i], settings, ru),
+            ],
+          ],
+        ),
       ),
     );
   }

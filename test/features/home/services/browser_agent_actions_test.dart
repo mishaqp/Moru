@@ -114,7 +114,7 @@ void main() {
         ),
         ru: false,
       ),
-      'Wait for element: .button — not found',
+      'Wait for something to appear on the page: .button — not found',
     );
     expect(
       browserActivityLabel(
@@ -127,7 +127,14 @@ void main() {
         ),
         ru: true,
       ),
-      'Ожидать элемент: .button — не найдено',
+      'Дождаться элемента на странице: .button — не найдено',
     );
+  });
+
+  test('eval_js has plain-language wording, not technical jargon', () {
+    final action = BrowserAgentActions.byId('eval_js')!;
+    expect(action.labelEn, 'Run code on the page');
+    expect(action.labelRu, 'Выполнить код на странице');
+    expect(action.descriptionEn, contains('read or change anything'));
   });
 }

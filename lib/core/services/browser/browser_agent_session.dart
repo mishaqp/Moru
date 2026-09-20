@@ -69,6 +69,34 @@ class BrowserAgentProtocolException implements Exception {
 /// Native WebView history can include redirects and entries created outside the
 /// agent flow. The agent keeps its own committed-page stack so back/forward
 /// always mean the pages the model actually reached.
+///
+/// ## Navigation contract
+///
+/// Native UI back/forward (the browser page's own buttons, and Android's
+/// system back gesture) always call the real `WebViewController`'s
+/// `goBack()`/`goForward()` directly and are authoritative for what the user
+/// sees — this history is never used to drive those controls.
+///
+/// This history exists only so the model's own `browser_use` `back`/`forward`
+/// actions ([BrowserAgentSession.goBack]/[goForward], which replay a URL via
+/// `loadRequest` rather than native history, since that is required to keep
+/// forms/POST state/SPA state intact) stay accurate even when the user
+/// navigates manually in between. To make that possible, [reconcileCommitted]
+/// must be called once for every committed navigation on the shared
+/// controller — agent-initiated or not — typically from the WebView's
+/// `onPageFinished` callback. It classifies the newly-committed URL against
+/// this history's own back/forward targets:
+///  - matches [backTarget]: a native back happened -> [commitBack] (no push)
+///  - matches [forwardTarget]: a native forward happened -> [commitForward]
+///  - anything else (a manual address-bar submit, an in-page link tap, a
+///    fresh agent-initiated load, or a mid-load redirect that lands
+///    somewhere new): a genuinely new page -> [push], which truncates any
+///    stale forward entries the same way agent-initiated navigation does.
+/// Because every committed navigation goes through the same reconciliation,
+/// [BrowserAgentSession.goBack]/[goForward]/[load] and the click/type/submit/
+/// press_key actions no longer need to push or commit history themselves —
+/// doing so as well would double-count the very navigation this method just
+/// reconciled.
 class BrowserNavigationHistory {
   final List<String> _entries = <String>[];
   int _index = -1;
@@ -107,6 +135,26 @@ class BrowserNavigationHistory {
   void clear() {
     _entries.clear();
     _index = -1;
+  }
+
+  /// Reconciles one committed navigation against this history. See the
+  /// class doc comment above for the full contract; this is the single
+  /// entry point every committed navigation on the shared controller must
+  /// go through, so agent-initiated and manual navigation never drift apart.
+  void reconcileCommitted(String url) {
+    if (url.isEmpty) return;
+    if (current == null) {
+      reset(url);
+      return;
+    }
+    if (url == current) return;
+    if (url == backTarget) {
+      commitBack();
+    } else if (url == forwardTarget) {
+      commitForward();
+    } else {
+      push(url);
+    }
   }
 }
 
@@ -250,6 +298,14 @@ class BrowserAgentSession {
 
   void pageFinished(String url) {
     _loading = false;
+    // The single, central reconciliation point for every committed
+    // navigation on the shared controller — see
+    // BrowserNavigationHistory's doc comment for the full contract. This
+    // fires for agent-initiated loads (open/back/forward/reload/a click or
+    // submit that navigates) exactly as it does for the user editing the
+    // address bar or tapping a link, so `_history` never drifts from what
+    // native back/forward would actually do.
+    _history.reconcileCommitted(url);
     final ready = _readyCompleter;
     if (ready != null && !ready.isCompleted) ready.complete();
   }
@@ -277,8 +333,10 @@ class BrowserAgentSession {
     final controller = _requireController();
     expectNavigation();
     await controller.loadRequest(uri);
+    // waitUntilReady() only returns once pageFinished() has already run,
+    // which is where `_history` is reconciled centrally — no separate push
+    // needed here (see BrowserNavigationHistory's doc comment).
     await waitUntilReady();
-    await _recordCurrentPage();
   }
 
   Future<void> recordInitialPage() async {
@@ -352,7 +410,8 @@ class BrowserAgentSession {
             ? const Duration(seconds: 1)
             : const Duration(milliseconds: 180),
       );
-      await _recordCurrentPageIfChanged(beforeUrl);
+      // Any navigation this click caused was already reconciled into
+      // `_history` by pageFinished() as part of the wait above.
     }
     final visibleResult = Map<String, dynamic>.from(result)
       ..remove('may_navigate');
@@ -374,7 +433,6 @@ class BrowserAgentSession {
         urlBefore: beforeUrl,
         navigationGrace: const Duration(milliseconds: 250),
       );
-      await _recordCurrentPageIfChanged(beforeUrl);
     }
     return _withCurrentUrl(result);
   }
@@ -393,7 +451,6 @@ class BrowserAgentSession {
         urlBefore: beforeUrl,
         navigationGrace: const Duration(seconds: 1),
       );
-      await _recordCurrentPageIfChanged(beforeUrl);
     }
     return _withCurrentUrl(result);
   }
@@ -412,7 +469,6 @@ class BrowserAgentSession {
         urlBefore: beforeUrl,
         navigationGrace: const Duration(milliseconds: 250),
       );
-      await _recordCurrentPageIfChanged(beforeUrl);
     }
     return _withCurrentUrl(result);
   }
@@ -598,8 +654,10 @@ class BrowserAgentSession {
     }
     expectNavigation();
     await controller.loadRequest(Uri.parse(target));
+    // waitUntilReady() only returns after pageFinished() has already
+    // reconciled this exact URL against `_history.backTarget` and called
+    // commitBack() itself — committing again here would double-step.
     await waitUntilReady(timeout: const Duration(seconds: 15));
-    _history.commitBack();
     return _pageState();
   }
 
@@ -616,8 +674,9 @@ class BrowserAgentSession {
     }
     expectNavigation();
     await controller.loadRequest(Uri.parse(target));
+    // Same reasoning as goBack(): pageFinished() already committed this
+    // exact navigation via reconcileCommitted().
     await waitUntilReady(timeout: const Duration(seconds: 15));
-    _history.commitForward();
     return _pageState();
   }
 
@@ -650,20 +709,6 @@ class BrowserAgentSession {
         return;
       }
       await Future<void>.delayed(const Duration(milliseconds: 40));
-    }
-  }
-
-  Future<void> _recordCurrentPage() async {
-    final url = await _requireController().currentUrl();
-    if (url != null && url.isNotEmpty) {
-      _history.push(url);
-    }
-  }
-
-  Future<void> _recordCurrentPageIfChanged(String? beforeUrl) async {
-    final url = await _requireController().currentUrl();
-    if (url != null && url.isNotEmpty && url != beforeUrl) {
-      _history.push(url);
     }
   }
 

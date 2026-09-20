@@ -21574,6 +21574,330 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove queued message'**
   String get chatInputBarQueueRemove;
+
+  /// No description provided for @browserAddressEditorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit address'**
+  String get browserAddressEditorTitle;
+
+  /// No description provided for @browserAddressEditorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'https://example.com'**
+  String get browserAddressEditorHint;
+
+  /// No description provided for @browserAddressEditorInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid http or https address.'**
+  String get browserAddressEditorInvalid;
+
+  /// No description provided for @browserAddressEditorGo.
+  ///
+  /// In en, this message translates to:
+  /// **'Go'**
+  String get browserAddressEditorGo;
+
+  /// No description provided for @browserMenuTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get browserMenuTooltip;
+
+  /// No description provided for @browserMenuCopyLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get browserMenuCopyLink;
+
+  /// No description provided for @browserMenuActivityLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity log'**
+  String get browserMenuActivityLog;
+
+  /// No description provided for @browserMenuSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser settings'**
+  String get browserMenuSettings;
+
+  /// No description provided for @browserSchemeSecure.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted connection (https)'**
+  String get browserSchemeSecure;
+
+  /// No description provided for @browserSchemeInsecure.
+  ///
+  /// In en, this message translates to:
+  /// **'Not encrypted (http)'**
+  String get browserSchemeInsecure;
+
+  /// No description provided for @browserComposerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell the AI what to do…'**
+  String get browserComposerHint;
+
+  /// No description provided for @browserComposerSendTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get browserComposerSendTooltip;
+
+  /// No description provided for @browserComposerStopTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get browserComposerStopTooltip;
+
+  /// No description provided for @browserComposerActivityLogTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity log'**
+  String get browserComposerActivityLogTooltip;
+
+  /// No description provided for @browserStateStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting…'**
+  String get browserStateStarting;
+
+  /// No description provided for @browserStateRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Working…'**
+  String get browserStateRunning;
+
+  /// No description provided for @browserStateAwaitingApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for your approval…'**
+  String get browserStateAwaitingApproval;
+
+  /// No description provided for @browserStateStopping.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopping…'**
+  String get browserStateStopping;
+
+  /// No description provided for @browserStateStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped'**
+  String get browserStateStopped;
+
+  /// No description provided for @browserStateError.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get browserStateError;
+
+  /// No description provided for @browserApprovalHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Moru wants to perform a browser action on {site}'**
+  String browserApprovalHeading(String site);
+
+  /// No description provided for @browserApprovalAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Action: {action}'**
+  String browserApprovalAction(String action);
+
+  /// No description provided for @browserApprovalElement.
+  ///
+  /// In en, this message translates to:
+  /// **'Element: #{elementId}'**
+  String browserApprovalElement(String elementId);
+
+  /// No description provided for @browserApprovalCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Code to run'**
+  String get browserApprovalCodeLabel;
+
+  /// No description provided for @browserApprovalDeny.
+  ///
+  /// In en, this message translates to:
+  /// **'Deny'**
+  String get browserApprovalDeny;
+
+  /// No description provided for @browserApprovalAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get browserApprovalAllow;
+
+  /// No description provided for @browserApprovalChangeTrust.
+  ///
+  /// In en, this message translates to:
+  /// **'Change trust settings'**
+  String get browserApprovalChangeTrust;
+
+  /// No description provided for @browserResultTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI answer'**
+  String get browserResultTitle;
+
+  /// No description provided for @browserResultExpandAction.
+  ///
+  /// In en, this message translates to:
+  /// **'View full answer'**
+  String get browserResultExpandAction;
+
+  /// No description provided for @browserResultCopyTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy answer'**
+  String get browserResultCopyTooltip;
+
+  /// No description provided for @browserResultCloseTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss answer'**
+  String get browserResultCloseTooltip;
+
+  /// No description provided for @browserResultSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Full answer'**
+  String get browserResultSheetTitle;
+
+  /// No description provided for @browserErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This page couldn\'t load'**
+  String get browserErrorTitle;
+
+  /// No description provided for @browserErrorRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get browserErrorRetry;
+
+  /// No description provided for @browserActivityLogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent actions'**
+  String get browserActivityLogTitle;
+
+  /// No description provided for @browserActivityLogEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity yet'**
+  String get browserActivityLogEmpty;
+
+  /// No description provided for @browserSettingsIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Switches let the AI use these actions. Whether it needs confirmation depends on trust mode.'**
+  String get browserSettingsIntro;
+
+  /// No description provided for @browserSettingsTrustOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Full trust is currently ON — the AI is not asked to confirm these actions.'**
+  String get browserSettingsTrustOn;
+
+  /// No description provided for @browserSettingsTrustOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Full trust is currently OFF — actions that change the page ask for confirmation.'**
+  String get browserSettingsTrustOff;
+
+  /// No description provided for @browserSettingsGroupNavigation.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigation'**
+  String get browserSettingsGroupNavigation;
+
+  /// No description provided for @browserSettingsGroupNavigationDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Move around the page.'**
+  String get browserSettingsGroupNavigationDesc;
+
+  /// No description provided for @browserSettingsGroupReadPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Read page'**
+  String get browserSettingsGroupReadPage;
+
+  /// No description provided for @browserSettingsGroupReadPageDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Look at the page without changing anything.'**
+  String get browserSettingsGroupReadPageDesc;
+
+  /// No description provided for @browserSettingsGroupInteraction.
+  ///
+  /// In en, this message translates to:
+  /// **'Interaction'**
+  String get browserSettingsGroupInteraction;
+
+  /// No description provided for @browserSettingsGroupInteractionDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Click, type, and submit on the page.'**
+  String get browserSettingsGroupInteractionDesc;
+
+  /// No description provided for @browserSettingsGroupAdvanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
+  String get browserSettingsGroupAdvanced;
+
+  /// No description provided for @browserSettingsGroupAdvancedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Less common, more powerful actions.'**
+  String get browserSettingsGroupAdvancedDesc;
+
+  /// No description provided for @browserSettingsGroupEnabledCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{enabled} of {total} enabled'**
+  String browserSettingsGroupEnabledCount(int enabled, int total);
+
+  /// No description provided for @browserErrorReasonConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not connect to the server.'**
+  String get browserErrorReasonConnect;
+
+  /// No description provided for @browserErrorReasonTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The connection timed out.'**
+  String get browserErrorReasonTimeout;
+
+  /// No description provided for @browserErrorReasonBadUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'This address is not valid.'**
+  String get browserErrorReasonBadUrl;
+
+  /// No description provided for @browserErrorReasonSsl.
+  ///
+  /// In en, this message translates to:
+  /// **'A secure connection could not be established.'**
+  String get browserErrorReasonSsl;
+
+  /// No description provided for @browserStateCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get browserStateCompleted;
+
+  /// No description provided for @browserApprovalHeadingUnknownSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Moru wants to perform a browser action'**
+  String get browserApprovalHeadingUnknownSite;
 }
 
 class _AppLocalizationsDelegate

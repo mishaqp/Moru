@@ -12155,4 +12155,184 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get chatInputBarQueueRemove => 'Удалить сообщение из очереди';
+
+  @override
+  String get browserAddressEditorTitle => 'Редактировать адрес';
+
+  @override
+  String get browserAddressEditorHint => 'https://example.com';
+
+  @override
+  String get browserAddressEditorInvalid =>
+      'Введите корректный адрес http или https.';
+
+  @override
+  String get browserAddressEditorGo => 'Перейти';
+
+  @override
+  String get browserMenuTooltip => 'Ещё';
+
+  @override
+  String get browserMenuCopyLink => 'Скопировать ссылку';
+
+  @override
+  String get browserMenuActivityLog => 'Журнал действий';
+
+  @override
+  String get browserMenuSettings => 'Настройки браузера';
+
+  @override
+  String get browserSchemeSecure => 'Защищённое соединение (https)';
+
+  @override
+  String get browserSchemeInsecure => 'Без шифрования (http)';
+
+  @override
+  String get browserComposerHint => 'Скажите ИИ, что делать…';
+
+  @override
+  String get browserComposerSendTooltip => 'Отправить';
+
+  @override
+  String get browserComposerStopTooltip => 'Стоп';
+
+  @override
+  String get browserComposerActivityLogTooltip => 'Журнал действий';
+
+  @override
+  String get browserStateStarting => 'Запуск…';
+
+  @override
+  String get browserStateRunning => 'Выполняется…';
+
+  @override
+  String get browserStateAwaitingApproval => 'Ожидание вашего подтверждения…';
+
+  @override
+  String get browserStateStopping => 'Остановка…';
+
+  @override
+  String get browserStateStopped => 'Остановлено';
+
+  @override
+  String get browserStateError => 'Что-то пошло не так';
+
+  @override
+  String browserApprovalHeading(String site) {
+    return 'Moru хочет выполнить действие в браузере на $site';
+  }
+
+  @override
+  String browserApprovalAction(String action) {
+    return 'Действие: $action';
+  }
+
+  @override
+  String browserApprovalElement(String elementId) {
+    return 'Элемент: №$elementId';
+  }
+
+  @override
+  String get browserApprovalCodeLabel => 'Код для выполнения';
+
+  @override
+  String get browserApprovalDeny => 'Запретить';
+
+  @override
+  String get browserApprovalAllow => 'Разрешить';
+
+  @override
+  String get browserApprovalChangeTrust => 'Изменить настройки доверия';
+
+  @override
+  String get browserResultTitle => 'Ответ ИИ';
+
+  @override
+  String get browserResultExpandAction => 'Показать полный ответ';
+
+  @override
+  String get browserResultCopyTooltip => 'Скопировать ответ';
+
+  @override
+  String get browserResultCloseTooltip => 'Скрыть ответ';
+
+  @override
+  String get browserResultSheetTitle => 'Полный ответ';
+
+  @override
+  String get browserErrorTitle => 'Не удалось загрузить страницу';
+
+  @override
+  String get browserErrorRetry => 'Повторить';
+
+  @override
+  String get browserActivityLogTitle => 'Недавние действия';
+
+  @override
+  String get browserActivityLogEmpty => 'Пока нет действий';
+
+  @override
+  String get browserSettingsIntro =>
+      'Переключатели разрешают ИИ использовать эти действия. Нужно ли подтверждение — зависит от режима доверия.';
+
+  @override
+  String get browserSettingsTrustOn =>
+      'Полное доверие включено — ИИ не спрашивает подтверждения для этих действий.';
+
+  @override
+  String get browserSettingsTrustOff =>
+      'Полное доверие выключено — действия, изменяющие страницу, запрашивают подтверждение.';
+
+  @override
+  String get browserSettingsGroupNavigation => 'Навигация';
+
+  @override
+  String get browserSettingsGroupNavigationDesc => 'Перемещение по странице.';
+
+  @override
+  String get browserSettingsGroupReadPage => 'Чтение страницы';
+
+  @override
+  String get browserSettingsGroupReadPageDesc =>
+      'Просмотр страницы без изменений.';
+
+  @override
+  String get browserSettingsGroupInteraction => 'Взаимодействие';
+
+  @override
+  String get browserSettingsGroupInteractionDesc =>
+      'Нажатия, ввод текста и отправка на странице.';
+
+  @override
+  String get browserSettingsGroupAdvanced => 'Дополнительно';
+
+  @override
+  String get browserSettingsGroupAdvancedDesc =>
+      'Менее частые, но более мощные действия.';
+
+  @override
+  String browserSettingsGroupEnabledCount(int enabled, int total) {
+    return '$enabled из $total включено';
+  }
+
+  @override
+  String get browserErrorReasonConnect => 'Не удалось подключиться к серверу.';
+
+  @override
+  String get browserErrorReasonTimeout =>
+      'Превышено время ожидания соединения.';
+
+  @override
+  String get browserErrorReasonBadUrl => 'Этот адрес недействителен.';
+
+  @override
+  String get browserErrorReasonSsl =>
+      'Не удалось установить защищённое соединение.';
+
+  @override
+  String get browserStateCompleted => 'Готово';
+
+  @override
+  String get browserApprovalHeadingUnknownSite =>
+      'Moru хочет выполнить действие в браузере';
 }
