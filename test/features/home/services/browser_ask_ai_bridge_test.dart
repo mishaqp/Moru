@@ -63,6 +63,20 @@ void main() {
     expect(outcomes[1].error, 'no_conversation');
   });
 
+  test(
+    'consumeEarlyCancellation reports a cancel that raced submit, exactly once',
+    () async {
+      final bridge = BrowserAskAiBridge();
+      addTearDown(bridge.dispose);
+
+      bridge.cancel('req-1');
+
+      expect(bridge.consumeEarlyCancellation('req-1'), isTrue);
+      expect(bridge.consumeEarlyCancellation('req-1'), isFalse);
+      expect(bridge.consumeEarlyCancellation('req-2'), isFalse);
+    },
+  );
+
   test('askAiErrorMessage covers every code the runner reports', () {
     expect(
       askAiErrorMessage('no_conversation', ru: true),

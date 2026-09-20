@@ -287,10 +287,20 @@ class _WebViewPageState extends State<WebViewPage> {
     await _controller.loadRequest(uri);
   }
 
+  /// The one `browser_use` approval that belongs to this session, if any.
+  /// Never returns another conversation's pending request: `browser_use` is
+  /// a single shared session, so a stale approval left behind by a
+  /// different (e.g. already-cancelled) conversation must not be shown or
+  /// approved from here just because it happens to be first in the queue.
   ToolApprovalRequest? _pendingBrowserApproval(ToolApprovalService? service) {
     if (service == null) return null;
+    final owner = BrowserAgentSession.instance.ownerConversationId;
+    if (owner == null) return null;
     for (final request in service.pendingRequests) {
-      if (request.toolName == 'browser_use') return request;
+      if (request.toolName == 'browser_use' &&
+          request.conversationId == owner) {
+        return request;
+      }
     }
     return null;
   }
@@ -532,8 +542,6 @@ class _WebViewPageState extends State<WebViewPage> {
 
   void _showRecentActivitySheet(BuildContext context) {
     final ru = Localizations.localeOf(context).languageCode == 'ru';
-    final entries = BrowserAgentSession.instance.recentActivity.reversed
-        .toList();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -550,13 +558,23 @@ class _WebViewPageState extends State<WebViewPage> {
               ),
               const SizedBox(height: 12),
               Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: entries.length,
-                  itemBuilder: (c, i) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text(browserActivityLabel(entries[i], ru: ru)),
-                  ),
+                // Reactive: this sheet can stay open while the agent keeps
+                // acting, so new/resolved entries must appear without the
+                // user closing and reopening it.
+                child: ValueListenableBuilder<List<BrowserActivity>>(
+                  valueListenable:
+                      BrowserAgentSession.instance.recentActivityNotifier,
+                  builder: (context, activities, _) {
+                    final entries = activities.reversed.toList();
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: entries.length,
+                      itemBuilder: (c, i) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(browserActivityLabel(entries[i], ru: ru)),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],

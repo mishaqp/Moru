@@ -172,6 +172,13 @@ String browserActivityLabel(BrowserActivity activity, {required bool ru}) {
       : (ru ? action.labelRu : action.labelEn);
   final detail = activity.detail;
   final base = (detail == null || detail.isEmpty) ? label : '$label: $detail';
-  if (activity.outcome != BrowserActivityOutcome.failed) return base;
-  return ru ? '$base — не удалось' : '$base — failed';
+  switch (activity.outcome) {
+    case BrowserActivityOutcome.failed:
+      return ru ? '$base — не удалось' : '$base — failed';
+    case BrowserActivityOutcome.notFound:
+      return ru ? '$base — не найдено' : '$base — not found';
+    case BrowserActivityOutcome.running:
+    case BrowserActivityOutcome.ok:
+      return base;
+  }
 }

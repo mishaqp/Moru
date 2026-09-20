@@ -466,7 +466,7 @@ void main() {
 
     tearDown(() {
       BrowserAgentSession.instance.currentActivity.value = null;
-      BrowserAgentSession.instance.recentActivity.clear();
+      BrowserAgentSession.instance.recentActivityNotifier.value = const [];
     });
 
     test(

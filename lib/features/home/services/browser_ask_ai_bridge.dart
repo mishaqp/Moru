@@ -25,6 +25,10 @@ class BrowserAskAiOutcome {
     required this.requestId,
     required this.ok,
     this.error,
+    this.cancelled = false,
+    this.answerText,
+    this.conversationId,
+    this.assistantMessageId,
   });
 
   final String requestId;
@@ -33,6 +37,21 @@ class BrowserAskAiOutcome {
   /// Set when [ok] is false: `no_conversation`, `no_assistant`, `in_flight`,
   /// or `ChatActionResult.errorMessage` from a failed generation.
   final String? error;
+
+  /// True when this outcome is a cancellation rather than a failure: [ok] is
+  /// still false (nothing was produced), but this was requested, not an error.
+  final bool cancelled;
+
+  /// The assistant's finished reply text (`ChatMessage.content` — plain text
+  /// only, no reasoning or tool payloads), set only when [ok] is true.
+  final String? answerText;
+
+  /// The conversation and message the reply belongs to, set only when [ok]
+  /// is true. A browser result card must only ever show an outcome whose
+  /// [requestId] (and, defensively, [conversationId]) matches its own
+  /// request — never another conversation's or an earlier run's answer.
+  final String? conversationId;
+  final String? assistantMessageId;
 }
 
 /// A human-readable line for a failed [BrowserAskAiOutcome.error], for the
@@ -79,6 +98,14 @@ class BrowserAskAiBridge extends ChangeNotifier {
 
   int _nextId = 0;
 
+  /// Requests cancelled before their runner ever subscribed to
+  /// [cancellations] — the broadcast stream never replays past events to a
+  /// late subscriber, so a cancel that races the request's own delivery
+  /// would otherwise be silently lost. Consumed (and removed) exactly once
+  /// by [consumeEarlyCancellation], so this never grows past the number of
+  /// cancels currently racing a not-yet-started run.
+  final Set<String> _earlyCancellations = <String>{};
+
   /// Submits [text] and returns the request id to match against [outcomes].
   /// [pageUrl] is the browser page's current URL, when known.
   String submit(String text, {String? pageUrl}) {
@@ -88,8 +115,19 @@ class BrowserAskAiBridge extends ChangeNotifier {
   }
 
   /// Asks whoever is running [requestId] to cancel it. A no-op once that
-  /// request has already produced an outcome.
-  void cancel(String requestId) => _cancellations.add(requestId);
+  /// request has already produced an outcome. Safe to call more than once,
+  /// and safe to call before the request has started running.
+  void cancel(String requestId) {
+    _earlyCancellations.add(requestId);
+    _cancellations.add(requestId);
+  }
+
+  /// Called once by a request's runner, right before it would otherwise
+  /// start work, to check whether [cancel] already fired for it before the
+  /// runner subscribed to [cancellations]. Returns true (and forgets
+  /// [requestId]) exactly once per early cancellation.
+  bool consumeEarlyCancellation(String requestId) =>
+      _earlyCancellations.remove(requestId);
 
   void reportOutcome(BrowserAskAiOutcome outcome) => _outcomes.add(outcome);
 
@@ -98,6 +136,7 @@ class BrowserAskAiBridge extends ChangeNotifier {
     _requests.close();
     _outcomes.close();
     _cancellations.close();
+    _earlyCancellations.clear();
     super.dispose();
   }
 }

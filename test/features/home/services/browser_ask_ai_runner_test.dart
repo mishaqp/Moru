@@ -303,6 +303,187 @@ void main() {
     unawaited(future);
   });
 
+  test(
+    'a successful outcome carries the assistant reply and its ids',
+    () async {
+      final bridge = BrowserAskAiBridge();
+      addTearDown(bridge.dispose);
+      final outcomeFuture = firstOutcome(bridge);
+
+      await runBrowserAskAiRequest(
+        bridge: bridge,
+        request: const BrowserAskAiRequest(id: 'req-8', text: 'read this page'),
+        currentConversationId: conversation.id,
+        getConversation: (id) => id == conversation.id ? conversation : null,
+        getAssistantById: (id) => id == assistant.id ? assistant : null,
+        currentAssistant: null,
+        send:
+            ({
+              required input,
+              required conversation,
+              required assistant,
+              required onGenerationStarted,
+            }) async {
+              onGenerationStarted('message-8');
+              return ChatActionResult.success(
+                ChatMessage(
+                  id: 'message-8',
+                  conversationId: conversation.id,
+                  role: 'assistant',
+                  content: 'The page is about flights.',
+                  reasoningText: 'internal deliberation, never surfaced',
+                ),
+              );
+            },
+        cancel: (_, {expectedMessageId}) async {},
+      );
+
+      final outcome = await outcomeFuture;
+      expect(outcome.ok, isTrue);
+      expect(outcome.answerText, 'The page is about flights.');
+      expect(outcome.conversationId, conversation.id);
+      expect(outcome.assistantMessageId, 'message-8');
+      expect(outcome.cancelled, isFalse);
+    },
+  );
+
+  test('a cancellation that races submit and arrives before the runner even '
+      'starts still prevents the run', () async {
+    final bridge = BrowserAskAiBridge();
+    addTearDown(bridge.dispose);
+    var sendCalled = false;
+    final outcomeFuture = firstOutcome(bridge);
+
+    // The cancel fires before runBrowserAskAiRequest is even invoked, the
+    // same way a stream-delivered request and an immediately-following
+    // cancel can race in production: nothing has subscribed to
+    // `cancellations` yet, so a plain listener would miss this entirely.
+    bridge.cancel('req-9');
+
+    await runBrowserAskAiRequest(
+      bridge: bridge,
+      request: const BrowserAskAiRequest(id: 'req-9', text: 'hi'),
+      currentConversationId: conversation.id,
+      getConversation: (id) => id == conversation.id ? conversation : null,
+      getAssistantById: (id) => id == assistant.id ? assistant : null,
+      currentAssistant: null,
+      send:
+          ({
+            required input,
+            required conversation,
+            required assistant,
+            required onGenerationStarted,
+          }) async {
+            sendCalled = true;
+            onGenerationStarted('message-9');
+            return ChatActionResult.success(
+              ChatMessage(
+                id: 'message-9',
+                conversationId: conversation.id,
+                role: 'assistant',
+                content: '',
+              ),
+            );
+          },
+      cancel: (_, {expectedMessageId}) async {
+        fail('cancel must not be called: the run was already prevented');
+      },
+    );
+
+    final outcome = await outcomeFuture;
+    expect(sendCalled, isFalse);
+    expect(outcome.ok, isFalse);
+    expect(outcome.cancelled, isTrue);
+  });
+
+  test('a cancellation that arrives before onGenerationStarted still cancels '
+      'the run the moment the message id is known', () async {
+    final bridge = BrowserAskAiBridge();
+    addTearDown(bridge.dispose);
+    final cancelledMessageIds = <String?>[];
+    final aboutToStart = Completer<void>();
+    final canStart = Completer<void>();
+
+    final future = runBrowserAskAiRequest(
+      bridge: bridge,
+      request: const BrowserAskAiRequest(id: 'req-10', text: 'hi'),
+      currentConversationId: conversation.id,
+      getConversation: (id) => id == conversation.id ? conversation : null,
+      getAssistantById: (id) => id == assistant.id ? assistant : null,
+      currentAssistant: null,
+      send:
+          ({
+            required input,
+            required conversation,
+            required assistant,
+            required onGenerationStarted,
+          }) async {
+            aboutToStart.complete();
+            // Simulates real generation start taking a moment (queueing,
+            // model setup) after send() begins but before an id exists —
+            // exactly the window the original bug lost a cancel in.
+            await canStart.future;
+            onGenerationStarted('message-10');
+            return Completer<ChatActionResult>().future;
+          },
+      cancel: (conversationId, {expectedMessageId}) async {
+        cancelledMessageIds.add(expectedMessageId);
+      },
+    );
+
+    await aboutToStart.future;
+    bridge.cancel('req-10');
+    await pumpEventQueue();
+    expect(cancelledMessageIds, isEmpty, reason: 'no message id exists yet');
+
+    canStart.complete();
+    await pumpEventQueue();
+
+    expect(cancelledMessageIds, ['message-10']);
+    unawaited(future);
+  });
+
+  test(
+    'cancelling the same run twice issues at most one cancel call',
+    () async {
+      final bridge = BrowserAskAiBridge();
+      addTearDown(bridge.dispose);
+      var cancelCalls = 0;
+      final generationStarted = Completer<void>();
+
+      final future = runBrowserAskAiRequest(
+        bridge: bridge,
+        request: const BrowserAskAiRequest(id: 'req-11', text: 'hi'),
+        currentConversationId: conversation.id,
+        getConversation: (id) => id == conversation.id ? conversation : null,
+        getAssistantById: (id) => id == assistant.id ? assistant : null,
+        currentAssistant: null,
+        send:
+            ({
+              required input,
+              required conversation,
+              required assistant,
+              required onGenerationStarted,
+            }) async {
+              onGenerationStarted('message-11');
+              generationStarted.complete();
+              return Completer<ChatActionResult>().future;
+            },
+        cancel: (_, {expectedMessageId}) async {
+          cancelCalls++;
+        },
+      );
+
+      await generationStarted.future;
+      bridge.cancel('req-11');
+      bridge.cancel('req-11');
+      await pumpEventQueue();
+
+      expect(cancelCalls, 1);
+      unawaited(future);
+    },
+  );
+
   test('a cancellation for a different request id is ignored', () async {
     final bridge = BrowserAskAiBridge();
     addTearDown(bridge.dispose);
