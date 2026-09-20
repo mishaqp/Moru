@@ -801,6 +801,7 @@ class HomePageController extends ChangeNotifier {
                 onGenerationStarted: onGenerationStarted,
               ),
           cancel: ChatActions.cancelActiveGenerationFor,
+          terminalEvents: _viewModel.generationTerminalEvents,
         ),
       );
     });

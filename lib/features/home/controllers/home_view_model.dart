@@ -26,6 +26,7 @@ import 'queued_input_queue.dart';
 import 'file_processing_indicator_controller.dart';
 import 'chat_controller.dart';
 import 'generation_controller.dart';
+import 'generation_terminal_event.dart';
 import 'stream_controller.dart' as stream_ctrl;
 
 export '../../../core/models/compress_context_options.dart';
@@ -150,6 +151,16 @@ class HomeViewModel extends ChangeNotifier {
 
   @visibleForTesting
   ChatActions get debugChatActions => _chatActions;
+
+  /// Fires exactly once per generation run at the point its terminal state
+  /// (completed/failed/cancelled/interrupted) is durably persisted, carrying
+  /// the real, finalized `ChatMessage` -- unlike `sendScheduledMessage`'s own
+  /// return value, which only confirms the run *started*. Used by callers
+  /// that must react to a specific run's real finish (the browser Ask-AI
+  /// runner), decoupled from the single app-wide `onAssistantMessageFinished`/
+  /// `onStreamError` callbacks this class itself already owns.
+  Stream<GenerationTerminalEvent> get generationTerminalEvents =>
+      _chatActions.generationTerminalEvents;
 
   /// Pending messages, in the order the user submitted them.
   ///
