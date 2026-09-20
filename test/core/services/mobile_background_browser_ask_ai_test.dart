@@ -56,19 +56,16 @@ void main() {
         cancel: () async {},
       );
 
-  test(
-    'foreground + the browser\'s own visible Ask-AI surface + the matching '
-    'run suppresses the notification',
-    () async {
-      coordinator.visibleBrowserAskAiTask = (taskId, conversationId) =>
-          taskId == 'run-1' && conversationId == 'conv-1';
-      await start('run-1', conversationId: 'conv-1');
+  test('foreground + the browser\'s own visible Ask-AI surface + the matching '
+      'run suppresses the notification', () async {
+    coordinator.visibleBrowserAskAiTask = (taskId, conversationId) =>
+        taskId == 'run-1' && conversationId == 'conv-1';
+    await start('run-1', conversationId: 'conv-1');
 
-      await coordinator.finish('run-1', BackgroundTaskOutcome.completed);
+    await coordinator.finish('run-1', BackgroundTaskOutcome.completed);
 
-      expect(notifications, isEmpty);
-    },
-  );
+    expect(notifications, isEmpty);
+  });
 
   test('background (not foreground) still notifies even if visible-check '
       'would say yes', () async {
@@ -81,19 +78,16 @@ void main() {
     expect(notifications, isNotEmpty);
   });
 
-  test(
-    'a different run (task id) than the one the browser is showing still '
-    'notifies',
-    () async {
-      coordinator.visibleBrowserAskAiTask = (taskId, conversationId) =>
-          taskId == 'run-shown' && conversationId == 'conv-1';
-      await start('run-other', conversationId: 'conv-1');
+  test('a different run (task id) than the one the browser is showing still '
+      'notifies', () async {
+    coordinator.visibleBrowserAskAiTask = (taskId, conversationId) =>
+        taskId == 'run-shown' && conversationId == 'conv-1';
+    await start('run-other', conversationId: 'conv-1');
 
-      await coordinator.finish('run-other', BackgroundTaskOutcome.completed);
+    await coordinator.finish('run-other', BackgroundTaskOutcome.completed);
 
-      expect(notifications, isNotEmpty);
-    },
-  );
+    expect(notifications, isNotEmpty);
+  });
 
   test(
     'a matching run id but a different conversation still notifies',
@@ -108,34 +102,28 @@ void main() {
     },
   );
 
-  test(
-    'the browser covered by another screen (visible-check itself says no) '
-    'still notifies',
-    () async {
-      // Models BrowserAgentSession.consumeVisibleAskAiTask returning false
-      // because isRouteCurrent is false, even though the run/conversation
-      // ids would otherwise match.
-      coordinator.visibleBrowserAskAiTask = (_, _) => false;
-      await start('run-1', conversationId: 'conv-1');
+  test('the browser covered by another screen (visible-check itself says no) '
+      'still notifies', () async {
+    // Models BrowserAgentSession.consumeVisibleAskAiTask returning false
+    // because isRouteCurrent is false, even though the run/conversation
+    // ids would otherwise match.
+    coordinator.visibleBrowserAskAiTask = (_, _) => false;
+    await start('run-1', conversationId: 'conv-1');
 
-      await coordinator.finish('run-1', BackgroundTaskOutcome.completed);
+    await coordinator.finish('run-1', BackgroundTaskOutcome.completed);
 
-      expect(notifications, isNotEmpty);
-    },
-  );
+    expect(notifications, isNotEmpty);
+  });
 
-  test(
-    'no visible-browser hook registered at all behaves exactly as before '
-    '(falls through to the normal visibleConversation check)',
-    () async {
-      coordinator.visibleConversation = () => 'conv-1';
-      await start('run-1', conversationId: 'conv-1');
+  test('no visible-browser hook registered at all behaves exactly as before '
+      '(falls through to the normal visibleConversation check)', () async {
+    coordinator.visibleConversation = () => 'conv-1';
+    await start('run-1', conversationId: 'conv-1');
 
-      await coordinator.finish('run-1', BackgroundTaskOutcome.completed);
+    await coordinator.finish('run-1', BackgroundTaskOutcome.completed);
 
-      expect(notifications, isEmpty);
-    },
-  );
+    expect(notifications, isEmpty);
+  });
 
   test(
     'the visible-browser check is asked with this exact run\'s task id even '

@@ -110,9 +110,9 @@ class BrowserAskAiResultCard extends StatelessWidget {
                   preview,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    height: 1.3,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(height: 1.3),
                 ),
               ),
             ),
@@ -159,8 +159,7 @@ Future<void> showBrowserAskAiResultSheet(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (ctx) =>
-        _ResultSheet(text: text, conversationId: conversationId),
+    builder: (ctx) => _ResultSheet(text: text, conversationId: conversationId),
   );
 }
 
@@ -175,9 +174,7 @@ class _ResultSheet extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
         child: Padding(

@@ -202,11 +202,10 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byType(SingleChildScrollView), findsWidgets);
       final sheetHeight = tester
-          .getRect(
-            find.byType(ConstrainedBox).first,
-          )
+          .getRect(find.byType(ConstrainedBox).first)
           .height;
-      final screenHeight = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      final screenHeight =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
       expect(sheetHeight, lessThanOrEqualTo(screenHeight));
     },
   );

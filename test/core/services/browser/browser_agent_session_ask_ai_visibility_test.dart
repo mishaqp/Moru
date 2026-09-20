@@ -20,16 +20,13 @@ void main() {
     session.isRouteCurrent = false;
   });
 
-  test(
-    'a tracked task for the matching conversation, with the route current, '
-    'is visible',
-    () {
-      session.trackAskAiTask('run-1', 'conv-1');
-      session.isRouteCurrent = true;
+  test('a tracked task for the matching conversation, with the route current, '
+      'is visible', () {
+    session.trackAskAiTask('run-1', 'conv-1');
+    session.isRouteCurrent = true;
 
-      expect(session.consumeVisibleAskAiTask('run-1', 'conv-1'), isTrue);
-    },
-  );
+    expect(session.consumeVisibleAskAiTask('run-1', 'conv-1'), isTrue);
+  });
 
   test('consuming removes the entry: a second check for the same id fails', () {
     session.trackAskAiTask('run-1', 'conv-1');
@@ -44,27 +41,21 @@ void main() {
     expect(session.consumeVisibleAskAiTask('unknown-run', 'conv-1'), isFalse);
   });
 
-  test(
-    'a tracked task is not visible while the browser route is covered by '
-    'another screen',
-    () {
-      session.trackAskAiTask('run-2', 'conv-1');
-      session.isRouteCurrent = false;
+  test('a tracked task is not visible while the browser route is covered by '
+      'another screen', () {
+    session.trackAskAiTask('run-2', 'conv-1');
+    session.isRouteCurrent = false;
 
-      expect(session.consumeVisibleAskAiTask('run-2', 'conv-1'), isFalse);
-    },
-  );
+    expect(session.consumeVisibleAskAiTask('run-2', 'conv-1'), isFalse);
+  });
 
-  test(
-    'a tracked task is not visible for a different conversation than it '
-    'was started from',
-    () {
-      session.trackAskAiTask('run-3', 'conv-1');
-      session.isRouteCurrent = true;
+  test('a tracked task is not visible for a different conversation than it '
+      'was started from', () {
+    session.trackAskAiTask('run-3', 'conv-1');
+    session.isRouteCurrent = true;
 
-      expect(session.consumeVisibleAskAiTask('run-3', 'conv-2'), isFalse);
-    },
-  );
+    expect(session.consumeVisibleAskAiTask('run-3', 'conv-2'), isFalse);
+  });
 
   test('unregister() clears tracked tasks and route visibility', () {
     final controller = WebViewController();

@@ -943,61 +943,18 @@ void main() {
     },
   );
 
-  test(
-    'onTaskStarted falls back to the assistantMessageId when send() carries '
-    'no generationRunId',
-    () async {
-      final bridge = BrowserAskAiBridge();
-      addTearDown(bridge.dispose);
-      final terminal = StreamController<GenerationTerminalEvent>.broadcast();
-      addTearDown(terminal.close);
-      final started = <(String, String)>[];
+  test('onTaskStarted falls back to the assistantMessageId when send() carries '
+      'no generationRunId', () async {
+    final bridge = BrowserAskAiBridge();
+    addTearDown(bridge.dispose);
+    final terminal = StreamController<GenerationTerminalEvent>.broadcast();
+    addTearDown(terminal.close);
+    final started = <(String, String)>[];
 
-      unawaited(
-        runBrowserAskAiRequest(
-          bridge: bridge,
-          request: const BrowserAskAiRequest(id: 'req-no-run-id', text: 'hi'),
-          currentConversationId: conversation.id,
-          getConversation: (id) => id == conversation.id ? conversation : null,
-          getAssistantById: (id) => id == assistant.id ? assistant : null,
-          currentAssistant: null,
-          terminalEvents: terminal.stream,
-          onTaskStarted: (taskId, conversationId) =>
-              started.add((taskId, conversationId)),
-          send:
-              ({
-                required input,
-                required conversation,
-                required assistant,
-                required onGenerationStarted,
-              }) async {
-                onGenerationStarted('message-no-run-id');
-                return ChatActionResult.success(
-                  placeholderMessage('message-no-run-id'),
-                );
-              },
-          cancel: (_, {expectedMessageId}) async {},
-        ),
-      );
-
-      await pumpEventQueue();
-      expect(started, [('message-no-run-id', conversation.id)]);
-    },
-  );
-
-  test(
-    'onTaskStarted is never called when send() fails synchronously -- no '
-    'run ever started, so there is nothing to track',
-    () async {
-      final bridge = BrowserAskAiBridge();
-      addTearDown(bridge.dispose);
-      final terminal = StreamController<GenerationTerminalEvent>.broadcast();
-      addTearDown(terminal.close);
-      final started = <(String, String)>[];
-
-      await runBrowserAskAiRequest(
+    unawaited(
+      runBrowserAskAiRequest(
         bridge: bridge,
-        request: const BrowserAskAiRequest(id: 'req-never-started', text: 'hi'),
+        request: const BrowserAskAiRequest(id: 'req-no-run-id', text: 'hi'),
         currentConversationId: conversation.id,
         getConversation: (id) => id == conversation.id ? conversation : null,
         getAssistantById: (id) => id == assistant.id ? assistant : null,
@@ -1011,11 +968,48 @@ void main() {
               required conversation,
               required assistant,
               required onGenerationStarted,
-            }) async => ChatActionResult.inFlight(),
+            }) async {
+              onGenerationStarted('message-no-run-id');
+              return ChatActionResult.success(
+                placeholderMessage('message-no-run-id'),
+              );
+            },
         cancel: (_, {expectedMessageId}) async {},
-      );
+      ),
+    );
 
-      expect(started, isEmpty);
-    },
-  );
+    await pumpEventQueue();
+    expect(started, [('message-no-run-id', conversation.id)]);
+  });
+
+  test('onTaskStarted is never called when send() fails synchronously -- no '
+      'run ever started, so there is nothing to track', () async {
+    final bridge = BrowserAskAiBridge();
+    addTearDown(bridge.dispose);
+    final terminal = StreamController<GenerationTerminalEvent>.broadcast();
+    addTearDown(terminal.close);
+    final started = <(String, String)>[];
+
+    await runBrowserAskAiRequest(
+      bridge: bridge,
+      request: const BrowserAskAiRequest(id: 'req-never-started', text: 'hi'),
+      currentConversationId: conversation.id,
+      getConversation: (id) => id == conversation.id ? conversation : null,
+      getAssistantById: (id) => id == assistant.id ? assistant : null,
+      currentAssistant: null,
+      terminalEvents: terminal.stream,
+      onTaskStarted: (taskId, conversationId) =>
+          started.add((taskId, conversationId)),
+      send:
+          ({
+            required input,
+            required conversation,
+            required assistant,
+            required onGenerationStarted,
+          }) async => ChatActionResult.inFlight(),
+      cancel: (_, {expectedMessageId}) async {},
+    );
+
+    expect(started, isEmpty);
+  });
 }

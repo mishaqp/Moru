@@ -451,84 +451,90 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
         imageBuilder: !widget.renderImages
             ? (ctx, url, width, height) => const _InertImagePlaceholder()
             : (ctx, url, width, height) {
-          if (KelivoLink.tryParse(url) != null) {
-            return _KelivoMarkdownImage(
-              url: url,
-              width: width,
-              height: height,
-              conversationId: widget.conversationId,
-            );
-          }
-          final imgs = imageUrls.isNotEmpty ? imageUrls : <String>[url];
-          final idx = imgs.indexOf(url);
-          final initial = idx >= 0 ? idx : 0;
-          final provider = _imageProviderFor(url);
-          return GestureDetector(
-            onTap: () {
-              Navigator.of(ctx).push(
-                PageRouteBuilder(
-                  pageBuilder: (_, __, ___) =>
-                      ImageViewerPage(images: imgs, initialIndex: initial),
-                  transitionDuration: const Duration(milliseconds: 360),
-                  reverseTransitionDuration: const Duration(milliseconds: 280),
-                  transitionsBuilder: (context, anim, sec, child) {
-                    final curved = CurvedAnimation(
-                      parent: anim,
-                      curve: Curves.easeOutCubic,
-                      reverseCurve: Curves.easeInCubic,
-                    );
-                    return FadeTransition(
-                      opacity: curved,
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0, 0.02),
-                          end: Offset.zero,
-                        ).animate(curved),
-                        child: child,
+                if (KelivoLink.tryParse(url) != null) {
+                  return _KelivoMarkdownImage(
+                    url: url,
+                    width: width,
+                    height: height,
+                    conversationId: widget.conversationId,
+                  );
+                }
+                final imgs = imageUrls.isNotEmpty ? imageUrls : <String>[url];
+                final idx = imgs.indexOf(url);
+                final initial = idx >= 0 ? idx : 0;
+                final provider = _imageProviderFor(url);
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.of(ctx).push(
+                      PageRouteBuilder(
+                        pageBuilder: (_, __, ___) => ImageViewerPage(
+                          images: imgs,
+                          initialIndex: initial,
+                        ),
+                        transitionDuration: const Duration(milliseconds: 360),
+                        reverseTransitionDuration: const Duration(
+                          milliseconds: 280,
+                        ),
+                        transitionsBuilder: (context, anim, sec, child) {
+                          final curved = CurvedAnimation(
+                            parent: anim,
+                            curve: Curves.easeOutCubic,
+                            reverseCurve: Curves.easeInCubic,
+                          );
+                          return FadeTransition(
+                            opacity: curved,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, 0.02),
+                                end: Offset.zero,
+                              ).animate(curved),
+                              child: child,
+                            ),
+                          );
+                        },
                       ),
                     );
                   },
-                ),
-              );
-            },
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: () {
-                    if (provider == null) {
-                      // Missing or unsupported source: show a broken image indicator
-                      return const Icon(Icons.broken_image);
-                    }
-                    final displayWidth = width ?? constraints.maxWidth;
-                    final devicePixelRatio = MediaQuery.devicePixelRatioOf(
-                      context,
-                    );
-                    final cacheWidth = displayWidth.isFinite
-                        ? math.max(1, (displayWidth * devicePixelRatio).ceil())
-                        : null;
-                    final cacheHeight = height == null
-                        ? null
-                        : math.max(1, (height * devicePixelRatio).ceil());
-                    final resized = ResizeImage.resizeIfNeeded(
-                      cacheWidth,
-                      cacheHeight,
-                      provider,
-                    );
-                    return Image(
-                      image: resized,
-                      width: displayWidth,
-                      height: height,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stack) =>
-                          const Icon(Icons.broken_image),
-                    );
-                  }(),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: () {
+                          if (provider == null) {
+                            // Missing or unsupported source: show a broken image indicator
+                            return const Icon(Icons.broken_image);
+                          }
+                          final displayWidth = width ?? constraints.maxWidth;
+                          final devicePixelRatio =
+                              MediaQuery.devicePixelRatioOf(context);
+                          final cacheWidth = displayWidth.isFinite
+                              ? math.max(
+                                  1,
+                                  (displayWidth * devicePixelRatio).ceil(),
+                                )
+                              : null;
+                          final cacheHeight = height == null
+                              ? null
+                              : math.max(1, (height * devicePixelRatio).ceil());
+                          final resized = ResizeImage.resizeIfNeeded(
+                            cacheWidth,
+                            cacheHeight,
+                            provider,
+                          );
+                          return Image(
+                            image: resized,
+                            width: displayWidth,
+                            height: height,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stack) =>
+                                const Icon(Icons.broken_image),
+                          );
+                        }(),
+                      );
+                    },
+                  ),
                 );
               },
-            ),
-          );
-        },
         linkBuilder: (ctx, span, url, style) {
           final label = span.toPlainText().trim();
           // Special handling: [citation](id) and legacy [citation](index:id)
