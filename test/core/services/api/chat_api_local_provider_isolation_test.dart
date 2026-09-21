@@ -214,6 +214,7 @@ void main() {
         messages: const [
           {'role': 'user', 'content': 'hello'},
         ],
+        isConversationTurn: true,
       ).toList();
 
       await Future<void>.delayed(Duration.zero);

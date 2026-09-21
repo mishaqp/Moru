@@ -24,9 +24,12 @@ void main() {
     if (await tempDir.exists()) await tempDir.delete(recursive: true);
   });
 
-  Future<String> writeFakeModelFile(String name) async {
+  Future<String> writeFakeModelFile(
+    String name, [
+    List<int> bytes = const [1, 2, 3, 4],
+  ]) async {
     final file = File('${tempDir.path}/$name');
-    await file.writeAsBytes([1, 2, 3, 4]);
+    await file.writeAsBytes(bytes);
     return file.path;
   }
 
@@ -68,7 +71,7 @@ void main() {
     );
     await library.registerInstalledModel(
       settings,
-      filePath: await writeFakeModelFile('b.litertlm'),
+      filePath: await writeFakeModelFile('b.litertlm', [5, 6, 7, 8]),
       sizeBytes: 8,
       displayName: 'B',
       sourceLabel: 'b.litertlm',
