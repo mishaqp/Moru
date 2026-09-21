@@ -1053,5 +1053,95 @@ above), slice 5 polish, and -- non-negotiable per the task brief -- a
 real on-device smoke test on the user's own hardware. Nothing in this
 log substitutes for that.
 
+## Real on-device smoke test (POCO F5 / iQOO 15R)
+
+Before slice 4, ran the actual smoke test the task brief made the one
+mandatory gate before a stable release. Two rounds found and fixed real
+bugs, both on real hardware, neither reachable from this sandbox:
+
+1. A background-task-only diagnostic first surfaced "No local model file
+   is configured for <uuid>" in a brand-new chat with a correctly-shown
+   model name. Traced to `model_detail_sheet.dart`'s generic model-edit
+   form (opened by `ModelSelectSheet`'s long-press on ANY provider's
+   model tile, local ones included) rebuilding the override from
+   `modelSyncMetadata(prev)` -- previously a whitelist of oauth keys
+   only, with no local* field on it at all. A long-press + save silently
+   dropped `localModelPath` while `name` (a field the form does own)
+   survived, exactly matching what was observed. Fixed in `2a3c37c`:
+   extended `modelSyncMetadata`'s whitelist to also preserve every
+   `local*` key. New test in `model_edit_state_helper_local_tools_test.
+   dart` reproduces the installed-model field set and asserts every
+   `local*` field survives a save.
+2. First real generation completed successfully end to end (Qwen3-0.6B,
+   CPU backend) -- roughly a minute to first token on the user's device,
+   which the user found acceptable after confirming it's a one-time
+   model-load cost, not per-message. No performance work done or
+   promised here; the sole measurement is "it works," not "it's fast."
+
+Both fixes landed on real hardware via the repo's own `moru-android.yml`
+`workflow_dispatch` (debug variant) -- the sandbox cannot itself install
+or run an APK.
+
+## Slice 4: verified catalog + resumable download (closed)
+
+`local_model_catalog.dart`: the two entries already verified in "Verified
+facts -- model catalog" above (Qwen3-0.6B pinned size+sha256,
+non-gated, in-app downloadable; Gemma3-1B-IT gated, import-only, no
+fabricated checksum), now wired into the app as `LiteRtCatalogEntry`/
+`LiteRtModelCatalog`, each also carrying its own HF repo page URL for an
+"open" link.
+
+`local_model_downloader.dart` (`LiteRtModelDownloader`): mirrors `asr/
+sherpa_model_manager.dart`'s already-established download-manager shape
+(constructor-injectable `http.Client`/directory for tests, a
+cancellation token, per-entry progress) instead of inventing a new one,
+adapted for a single-file install (no archive/extraction step) and
+genuine HTTP `Range`-based resume. Deliberate difference from
+`importLocalModelFile`: cancelling a catalog download keeps its `.part`
+file on purpose (the whole point of a stable catalog URL is that the
+next `download` call for the same entry can continue from that byte
+offset) -- `importLocalModelFile` deletes on cancel because a picked
+file has nothing to resume from. Falls back to a clean restart if the
+server ignores the `Range` header and resends the whole file.
+Verification gate applied once the full byte count arrives (a resumed
+download's early chunks may start mid-file, so they were never
+re-checked against the magic number as they streamed): the completed
+file's first bytes must be LiteRT-LM's own magic number, and its
+whole-file sha256 must exactly match the catalog's pinned value -- a
+same-size, same-header, wrong-content file is refused and deleted, never
+registered as installed.
+
+Added `InstalledLocalModel.sha256` (was missing) so the catalog UI can
+recognize "this catalog entry is already installed" by content hash,
+consistent with the content-derived identity the library itself already
+uses to de-duplicate a reimport.
+
+`local_models_page.dart`'s catalog section (previously a static "coming
+soon" placeholder) now lists both entries for real: size/license/
+context, a download button with live progress and cancel for the
+downloadable one, an "open model page" link plus the manual-download-
+then-import note for the gated one.
+
+7 new tests (3 catalog data -- exact pinned values, gated entry has no
+download URL or fabricated checksum, every entry is a genuine `.litertlm`
+never `.task`; 4 downloader -- happy path with registration, a checksum
+mismatch is refused despite matching size and magic bytes, wrong magic
+bytes refused, an incomplete transfer refused, cancel-then-resume sends
+the exact right `Range` offset and reassembles the identical original
+bytes, a server that ignores `Range` and resends everything from byte 0
+does not corrupt the file). New ARB strings translated into all 4
+locales (en/ru/zh/zh_Hant) and the l10n untranslated-messages gate
+re-verified via a clean `flutter gen-l10n`; the dead "coming soon"
+placeholder string removed from all of them.
+
+`dart analyze --fatal-infos lib test integration_test` clean. Full
+`flutter test`: 6043 tests, 2 failures -- the same pre-existing,
+sandbox-only limitations documented earlier in this log (no symlink
+support / chmod bypassed by root), unrelated to this change.
+
 ## Next
-Start slice 4 (verified catalog + resumable download).
+Slice 5 (UI polish pass, any remaining test/build verification), then
+the PR is ready to come out of draft -- pending the user's own further
+device testing of the catalog download itself (only the code and its
+unit tests are verified from this sandbox; an actual on-device download
++ install + generate round trip for a catalog entry has not been run).
