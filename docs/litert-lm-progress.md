@@ -373,3 +373,118 @@ the existing conversationId-keyed cancel signal through to `cancel`, and a
 Dart-side single-flight queue serializing local-model calls (main chat +
 title/summary/suggestions/memory-organize all potentially racing the one
 in-memory engine).
+
+## Vertical slice 2 — Dart-side wiring (in progress)
+
+Added:
+- `ProviderKind.local` to the enum (`settings_provider.dart`). Confirmed
+  safe for old saved configs (existing `fromJson` fallback via `classify()`
+  already handles an unrecognized `providerType` string, per the
+  architecture research). `dart analyze` found 12 non-exhaustive-switch
+  compile errors across 11 files touching `ProviderKind` -- each one
+  reviewed individually and given a deliberate case (mostly `false`/empty
+  for capabilities the local provider doesn't have in v1: xhigh/max
+  reasoning, built-in search, tool schemas; `provider_detail_page.dart`/
+  `share_provider_sheet.dart`/`desktop/providers_pane.dart` cases are
+  unreachable in practice since the local provider gets its own dedicated
+  entry points, kept exhaustive only). `dart analyze --fatal-infos lib test
+  integration_test` is clean.
+- `lib/core/services/local/litert_channel.dart` -- Dart-side typed client
+  over `app.litert`/`app.litert/events`, mirrors `WorkspaceChannel`.
+- `lib/core/services/local/local_model_runtime.dart` -- the Dart-side
+  single-flight queue + conversation-reuse decision logic. Key design:
+  since every provider (local included) receives the *full* current
+  message history on every `ChatApiService.sendMessageStream` call (Moru's
+  own message-builder assembles it, not an incremental delta), the runtime
+  detects "is this a pure continuation of the conversation the native
+  engine already has loaded" by comparing the new call's history (minus
+  its trailing new user turn) against what was stored after the *previous*
+  successful turn (which includes that previous turn's own assistant
+  reply, appended once streaming finishes) -- an exact prefix match reuses
+  the existing native `Conversation` (fast path, KV-cache intact); anything
+  else (different conversationId, edited/regenerated history, mismatched
+  content) recreates it via `initialMessages`. This is deliberately the
+  *one* mechanism for switch/regenerate/edit-old-message the task asked for,
+  not three special cases.
+- `lib/core/services/api/providers/litert_local.dart` -- `sendLiteRtStream`,
+  reads `modelPath`/`backend` from
+  `config.modelOverrides[modelId]['localModelPath'/'localBackend']` (the
+  model-management UI in slice 3 will populate these; not yet built).
+- `chat_api_service.dart`: `kind == ProviderKind.local` now short-circuits
+  *before* any `http.Client`/OAuth/proxy/cancelToken-bridging code runs --
+  confirmed by placing the branch before `_clientFor`/`authenticatedClient`
+  are even constructed, not just choosing not to use them.
+- Threaded `conversationId` into `_sendOnce` (previously not a parameter)
+  so the local branch has a stable per-chat identity; `sessionToken`
+  (already a `_sendOnce` parameter) is reused as-is for cancellation --
+  `sendLiteRtStream` races `sessionToken.whenCancel` and calls
+  `LiteRtChannel.cancel(requestId)`, which reaches
+  `Conversation.cancelProcess()` on the Kotlin side.
+
+**Bug caught before it shipped**: while writing `LocalModelRuntime`'s own
+tests, found that `_runGenerate` never actually called
+`_channel.sendMessage(...)` -- it registered the request id and went
+straight to awaiting events that would never arrive. Fixed (wrapped in a
+try/catch that cleans up `_byRequestId`/the controller and rethrows on a
+synchronous send failure, matching the "don't leave the caller hanging"
+rule from the task brief). This is exactly the kind of thing the task's
+own emphasis on real tests (not just a clean compile) exists to catch.
+
+New tests: `test/core/services/local/litert_channel_test.dart` (channel
+encode/decode/error-mapping, same style as `workspace_channel_test.dart`)
+and `local_model_runtime_test.dart` (streaming order, cancellation,
+conversation reuse vs. recreate incl. the regenerate case, single-flight
+queueing, one-load-not-reloaded). **Status: written, first
+`flutter test` run still in progress / not yet confirmed green** -- this
+sandbox's flutter test startup has taken 1-3 minutes before on a cold
+build cache; continuing to verify before committing further slices.
+
+## Next (after confirming these tests pass)
+Still needed for a complete slice 2: wiring `LocalModelRuntime.unload()`
+into somewhere sensible (manual "Выгрузить из памяти" UI action -- slice
+5), and deciding whether/how the background title/summary/suggestions/
+memory-organize calls should skip themselves entirely when the local
+engine is mid-user-generation rather than just queuing behind it
+indefinitely (queuing is implemented; an explicit "skip if it would make
+the user wait too long" policy is not yet decided). Then slice 3 (import +
+model management UI, which is what actually populates
+`modelOverrides[...]['localModelPath']`).
+
+## Vertical slice 2 — RESULT: real deadlock caught and fixed by the new tests
+
+The first `flutter test` run of `local_model_runtime_test.dart` hung on
+every single test (30s timeout each). Debug prints traced it precisely:
+all native events (`textDelta`/`done`) were correctly delivered into the
+per-request `StreamController`, and the `await for (final event in
+events.stream)` loop correctly received them -- but execution never
+returned from processing the terminal `LiteRtDone`/`LiteRtError` event.
+
+**Root cause**: the `LiteRtDone`/`LiteRtError` case bodies did
+`await events.close();` -- but that code runs *inside* the very
+`await for` loop that is `events.stream`'s own listener. A
+`StreamController.close()`'s returned future only completes once the
+stream has finished notifying its listener that it's done; since the
+listener (this same callback) was blocked awaiting that future, it could
+never reach the point where the "done" notification would actually be
+delivered to itself. Classic self-deadlock. **Fix**: `unawaited(events.
+close())` instead -- the bare call still closes the controller (ending
+the `await for` on its next iteration once this event's processing
+returns), without waiting on a future that can only resolve after this
+callback returns.
+
+This is exactly why the task brief insisted on real tests over a clean
+compile: `dart analyze` and a successful `gradle :app:compileDebugKotlin`
+both passed while this bug was live; only actually exercising the stream
+end-to-end caught it.
+
+After the fix: all 12 tests in `test/core/services/local/` pass --
+`litert_channel_test.dart` (4) and `local_model_runtime_test.dart` (8:
+streaming order, mid-stream cancellation, genuine native error, reuse on
+pure continuation, recreate on conversation switch, recreate on
+regenerate, single-flight queueing across two overlapping `generate()`
+calls, load-once-not-reloaded). `dart analyze --fatal-infos lib test
+integration_test` clean. The `ProviderKind.local`-exclusion in
+`chat_api_custom_request_precedence_test.dart` confirmed: exactly the 3
+HTTP kinds (openai/google/claude) run, local correctly skipped.
+Full `flutter test` run in progress to check for regressions elsewhere
+before committing.

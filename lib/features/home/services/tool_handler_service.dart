@@ -203,6 +203,11 @@ class ToolHandlerService {
           'additionalProperties',
         };
         break;
+      case ProviderKind.local:
+        // Tool calling is out of scope for the local provider in this
+        // release -- unreachable in practice, kept exhaustive only.
+        allowed = const {};
+        break;
     }
     m.removeWhere((k, v) => !allowed.contains(k));
     return m;

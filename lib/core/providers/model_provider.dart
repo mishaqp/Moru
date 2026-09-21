@@ -465,6 +465,11 @@ class ProviderManager {
         return ClaudeProvider();
       case ProviderKind.openai:
         return OpenAIProvider();
+      case ProviderKind.local:
+        throw UnsupportedError(
+          'Local models have no remote BaseProvider -- they are listed and '
+          'tested through the local model catalog/management UI instead.',
+        );
     }
   }
 

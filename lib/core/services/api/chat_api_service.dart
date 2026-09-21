@@ -24,6 +24,7 @@ import 'providers/openai_chat_completions.dart';
 import 'providers/openai/openai_vendor_compat.dart';
 import 'providers/openai_images.dart';
 import 'providers/openai_responses.dart';
+import 'providers/litert_local.dart';
 import 'providers/zhipu_layout_parsing.dart';
 import 'retry_policy.dart';
 import 'tool_call_cancellation.dart';
@@ -288,6 +289,7 @@ class ChatApiService {
           useZhipuLayoutParsing: useZhipuLayoutParsing,
           sessionToken: sessionToken,
           retryRound: retryRound,
+          conversationId: conversationId,
         ),
       );
     } finally {
@@ -354,9 +356,23 @@ class ChatApiService {
     required bool useZhipuLayoutParsing,
     required CancelToken sessionToken,
     required StreamRoundRunner retryRound,
+    String? conversationId,
   }) async* {
     if (sessionToken.isCancelled) {
       throw http.ClientException('cancelled');
+    }
+    if (kind == ProviderKind.local) {
+      // The local provider is not HTTP-shaped at all: no client, no
+      // OAuth, no proxy, no network retry -- it talks to the on-device
+      // engine directly and races its own cancellation off sessionToken.
+      yield* sendLiteRtStream(
+        config: config,
+        modelId: modelId,
+        messages: messages,
+        conversationId: conversationId ?? config.id,
+        sessionToken: sessionToken,
+      );
+      return;
     }
     final cancelToken = CancelToken();
     _bridgeCancel(sessionToken, cancelToken);

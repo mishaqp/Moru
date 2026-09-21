@@ -601,6 +601,8 @@ class SettingsProvider extends ChangeNotifier {
             _claudeSupportsXhighReasoning(modelForCheck);
       case ProviderKind.google:
         return false;
+      case ProviderKind.local:
+        return false;
     }
   }
 
@@ -628,6 +630,8 @@ class SettingsProvider extends ChangeNotifier {
               config: cfg,
             ) ||
             _claudeSupportsMaxReasoning(modelForCheck);
+      case ProviderKind.local:
+        return false;
     }
   }
 
@@ -6077,7 +6081,7 @@ class _SocksProxyHttpOverrides extends HttpOverrides {
   }
 }
 
-enum ProviderKind { openai, google, claude }
+enum ProviderKind { openai, google, claude, local }
 
 // Background rendering mode for chat message bubbles
 enum ChatMessageBackgroundStyle { defaultStyle, frosted, solid }
@@ -6691,6 +6695,35 @@ class ProviderConfig {
           balanceEnabled: _defaultBalanceEnabled(key),
           balanceApiPath: _defaultBalanceApiPath(key),
           balanceResultPath: _defaultBalanceResultPath(key),
+          claudePromptCachingEnabled: false,
+        );
+      case ProviderKind.local:
+        // classify(key) (no explicitType) never returns .local -- the
+        // local provider is always created with an explicit providerType
+        // through its own dedicated entry point, never inferred from a
+        // typed-in key name. Unreachable in practice; a minimal, harmless
+        // default keeps this switch exhaustive.
+        return ProviderConfig(
+          id: key,
+          enabled: false,
+          name: displayName ?? key,
+          apiKey: '',
+          baseUrl: '',
+          providerType: ProviderKind.local,
+          models: const [],
+          modelOverrides: const {},
+          proxyEnabled: false,
+          proxyHost: '',
+          proxyPort: '8080',
+          proxyUsername: '',
+          proxyPassword: '',
+          multiKeyEnabled: false,
+          apiKeys: const [],
+          keyManagement: const KeyManagementConfig(),
+          aihubmixAppCodeEnabled: false,
+          balanceEnabled: false,
+          balanceApiPath: '/credits',
+          balanceResultPath: 'data.total_usage',
           claudePromptCachingEnabled: false,
         );
     }

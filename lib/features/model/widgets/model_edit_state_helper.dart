@@ -248,6 +248,9 @@ class ModelBuiltInToolTiles {
             available: responses,
           ),
         ];
+      case ProviderKind.local:
+        // No built-in tools for the local provider in this release.
+        return const <ModelBuiltInToolTile>[];
     }
   }
 }

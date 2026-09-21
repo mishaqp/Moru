@@ -146,6 +146,10 @@ class MessageGenerationService {
     );
     final includeToolMessages = switch (kind) {
       ProviderKind.openai || ProviderKind.claude || ProviderKind.google => true,
+      // The local provider does not support tool calling in this release
+      // (see docs/litert-lm-progress.md) -- never send tool-call/response
+      // turns a local model has no way to act on.
+      ProviderKind.local => false,
     };
     WorkspaceProvider? workspaceProvider;
     WorkspaceRuntimeProvider? runtimeProvider;

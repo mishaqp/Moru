@@ -5459,6 +5459,9 @@ class _ProviderTypeDropdownState extends State<_ProviderTypeDropdown> {
       ProviderKind.openai => 'OpenAI',
       ProviderKind.google => 'Google',
       ProviderKind.claude => 'Claude',
+      // Unused desktop layout (Moru is Android-only) -- kept exhaustive
+      // only so this file still compiles; not part of the local-provider UI.
+      ProviderKind.local => 'Local',
     };
     return CompositedTransformTarget(
       link: _link,
