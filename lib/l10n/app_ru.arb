@@ -5462,7 +5462,24 @@
   "localModelsProviderName": "Локальные модели · LiteRT",
   "localModelsInstalledSectionTitle": "Установленные",
   "localModelsCatalogSectionTitle": "Каталог",
-  "localModelsCatalogComingSoon": "Проверенный каталог появится в одном из следующих обновлений. Пока импортируйте уже скачанный файл .litertlm.",
+  "localModelsCatalogDownloadAction": "Скачать",
+  "localModelsCatalogCancelAction": "Отмена",
+  "localModelsCatalogDownloadingLabel": "Загрузка…",
+  "localModelsCatalogInstalledBadge": "Установлена",
+  "localModelsCatalogOpenPageAction": "Открыть страницу модели",
+  "localModelsCatalogGatedNote": "Лицензия ограничена — Moru не может скачать это автоматически. Откройте страницу модели, примите лицензию (при необходимости войдите в аккаунт), скачайте файл в браузере, затем используйте «Импортировать файл» ниже.",
+  "localModelsCatalogContextLabel": "Контекст: {tokens} токенов",
+  "@localModelsCatalogContextLabel": {
+    "placeholders": {
+      "tokens": {"type": "int"}
+    }
+  },
+  "localModelsCatalogDownloadFailedHttp": "Не удалось скачать (ошибка сервера).",
+  "localModelsCatalogDownloadFailedIncomplete": "Загрузка прервалась раньше времени — попробуйте ещё раз.",
+  "localModelsCatalogDownloadFailedFormat": "Скачанный файл не является корректной моделью LiteRT-LM — попробуйте ещё раз.",
+  "localModelsCatalogDownloadFailedChecksum": "Скачанный файл не совпал с ожидаемой контрольной суммой — попробуйте ещё раз.",
+  "localModelsCatalogDownloadCancelled": "Загрузка отменена",
+  "localModelsCatalogDownloadSuccess": "Модель установлена",
   "localModelsImportAction": "Импортировать файл",
   "localModelsEmptyTitle": "Нет установленных моделей",
   "localModelsEmptySubtitle": "Импортируйте файл .litertlm, чтобы начать использовать локальную модель — после установки не нужны ни аккаунт, ни интернет.",

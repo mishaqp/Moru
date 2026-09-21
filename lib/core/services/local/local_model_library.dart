@@ -24,6 +24,7 @@ class InstalledLocalModel {
     required this.backend,
     required this.sourceLabel,
     required this.installedAtMillis,
+    required this.sha256,
   });
 
   final String id;
@@ -37,11 +38,18 @@ class InstalledLocalModel {
   /// user's preference, not a live status.
   final String backend;
 
-  /// Human-readable origin: the imported file's own name, or (once the
-  /// catalog exists) the catalog entry's name.
+  /// Human-readable origin: the imported file's own name, or the catalog
+  /// entry's own file name for a catalog download.
   final String sourceLabel;
 
   final int installedAtMillis;
+
+  /// Content hash of the installed file, empty for a model installed
+  /// before this field existed. Lets the catalog UI recognize "this
+  /// catalog entry is already installed" by content rather than id --
+  /// matches the identity `local_model_library.dart` itself already uses
+  /// to de-duplicate a reimport.
+  final String sha256;
 
   factory InstalledLocalModel.fromOverride(
     String id,
@@ -56,6 +64,7 @@ class InstalledLocalModel {
       sourceLabel: (override['localSourceLabel'] ?? '').toString(),
       installedAtMillis:
           (override['localInstalledAtMillis'] as num?)?.toInt() ?? 0,
+      sha256: (override['localSha256'] ?? '').toString(),
     );
   }
 }

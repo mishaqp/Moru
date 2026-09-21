@@ -12213,8 +12213,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get localModelsCatalogSectionTitle => 'Catalog';
 
   @override
-  String get localModelsCatalogComingSoon =>
-      'A curated catalog is coming in a future update. For now, import a .litertlm file you already have.';
+  String get localModelsCatalogDownloadAction => 'Download';
+
+  @override
+  String get localModelsCatalogCancelAction => 'Cancel';
+
+  @override
+  String get localModelsCatalogDownloadingLabel => 'Downloading…';
+
+  @override
+  String get localModelsCatalogInstalledBadge => 'Installed';
+
+  @override
+  String get localModelsCatalogOpenPageAction => 'Open model page';
+
+  @override
+  String get localModelsCatalogGatedNote =>
+      'License-gated -- Moru can\'t download this automatically. Open the model page, accept the license (sign in if needed), download the file in your browser, then use \"Import file\" below.';
+
+  @override
+  String localModelsCatalogContextLabel(int tokens) {
+    return 'Context: $tokens tokens';
+  }
+
+  @override
+  String get localModelsCatalogDownloadFailedHttp =>
+      'Download failed (server error).';
+
+  @override
+  String get localModelsCatalogDownloadFailedIncomplete =>
+      'Download ended before it finished -- try again.';
+
+  @override
+  String get localModelsCatalogDownloadFailedFormat =>
+      'The downloaded file isn\'t a valid LiteRT-LM model -- try again.';
+
+  @override
+  String get localModelsCatalogDownloadFailedChecksum =>
+      'The downloaded file didn\'t match the expected checksum -- try again.';
+
+  @override
+  String get localModelsCatalogDownloadCancelled => 'Download cancelled';
+
+  @override
+  String get localModelsCatalogDownloadSuccess => 'Model installed';
 
   @override
   String get localModelsImportAction => 'Import file';

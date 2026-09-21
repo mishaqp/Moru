@@ -11675,8 +11675,47 @@ class AppLocalizationsZh extends AppLocalizations {
   String get localModelsCatalogSectionTitle => '模型库';
 
   @override
-  String get localModelsCatalogComingSoon =>
-      '精选模型库将在后续更新中提供。目前请手动导入已下载的 .litertlm 文件。';
+  String get localModelsCatalogDownloadAction => '下载';
+
+  @override
+  String get localModelsCatalogCancelAction => '取消';
+
+  @override
+  String get localModelsCatalogDownloadingLabel => '下载中…';
+
+  @override
+  String get localModelsCatalogInstalledBadge => '已安装';
+
+  @override
+  String get localModelsCatalogOpenPageAction => '打开模型页面';
+
+  @override
+  String get localModelsCatalogGatedNote =>
+      '该模型受许可证限制，Moru 无法自动下载。请打开模型页面，接受许可证（如需要请登录），在浏览器中下载文件，然后使用下方的“导入文件”。';
+
+  @override
+  String localModelsCatalogContextLabel(int tokens) {
+    return '上下文：$tokens 个 token';
+  }
+
+  @override
+  String get localModelsCatalogDownloadFailedHttp => '下载失败（服务器错误）。';
+
+  @override
+  String get localModelsCatalogDownloadFailedIncomplete => '下载中途结束，请重试。';
+
+  @override
+  String get localModelsCatalogDownloadFailedFormat =>
+      '下载的文件不是有效的 LiteRT-LM 模型，请重试。';
+
+  @override
+  String get localModelsCatalogDownloadFailedChecksum => '下载的文件与预期校验和不匹配，请重试。';
+
+  @override
+  String get localModelsCatalogDownloadCancelled => '已取消下载';
+
+  @override
+  String get localModelsCatalogDownloadSuccess => '模型已安装';
 
   @override
   String get localModelsImportAction => '导入文件';
@@ -23336,8 +23375,47 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get localModelsCatalogSectionTitle => '模型库';
 
   @override
-  String get localModelsCatalogComingSoon =>
-      '精选模型库将在后续更新中提供。目前请手动导入已下载的 .litertlm 文件。';
+  String get localModelsCatalogDownloadAction => '下载';
+
+  @override
+  String get localModelsCatalogCancelAction => '取消';
+
+  @override
+  String get localModelsCatalogDownloadingLabel => '下载中…';
+
+  @override
+  String get localModelsCatalogInstalledBadge => '已安装';
+
+  @override
+  String get localModelsCatalogOpenPageAction => '打开模型页面';
+
+  @override
+  String get localModelsCatalogGatedNote =>
+      '该模型受许可证限制，Moru 无法自动下载。请打开模型页面，接受许可证（如需要请登录），在浏览器中下载文件，然后使用下方的“导入文件”。';
+
+  @override
+  String localModelsCatalogContextLabel(int tokens) {
+    return '上下文：$tokens 个 token';
+  }
+
+  @override
+  String get localModelsCatalogDownloadFailedHttp => '下载失败（服务器错误）。';
+
+  @override
+  String get localModelsCatalogDownloadFailedIncomplete => '下载中途结束，请重试。';
+
+  @override
+  String get localModelsCatalogDownloadFailedFormat =>
+      '下载的文件不是有效的 LiteRT-LM 模型，请重试。';
+
+  @override
+  String get localModelsCatalogDownloadFailedChecksum => '下载的文件与预期校验和不匹配，请重试。';
+
+  @override
+  String get localModelsCatalogDownloadCancelled => '已取消下载';
+
+  @override
+  String get localModelsCatalogDownloadSuccess => '模型已安装';
 
   @override
   String get localModelsImportAction => '导入文件';
@@ -35076,8 +35154,47 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get localModelsCatalogSectionTitle => '模型庫';
 
   @override
-  String get localModelsCatalogComingSoon =>
-      '精選模型庫將在後續更新中提供。目前請手動匯入已下載的 .litertlm 檔案。';
+  String get localModelsCatalogDownloadAction => '下載';
+
+  @override
+  String get localModelsCatalogCancelAction => '取消';
+
+  @override
+  String get localModelsCatalogDownloadingLabel => '下載中…';
+
+  @override
+  String get localModelsCatalogInstalledBadge => '已安裝';
+
+  @override
+  String get localModelsCatalogOpenPageAction => '開啟模型頁面';
+
+  @override
+  String get localModelsCatalogGatedNote =>
+      '該模型受授權限制，Moru 無法自動下載。請開啟模型頁面，接受授權條款（如需要請登入），在瀏覽器中下載檔案，然後使用下方的「匯入檔案」。';
+
+  @override
+  String localModelsCatalogContextLabel(int tokens) {
+    return '上下文：$tokens 個 token';
+  }
+
+  @override
+  String get localModelsCatalogDownloadFailedHttp => '下載失敗（伺服器錯誤）。';
+
+  @override
+  String get localModelsCatalogDownloadFailedIncomplete => '下載中途結束，請重試。';
+
+  @override
+  String get localModelsCatalogDownloadFailedFormat =>
+      '下載的檔案不是有效的 LiteRT-LM 模型，請重試。';
+
+  @override
+  String get localModelsCatalogDownloadFailedChecksum => '下載的檔案與預期校驗碼不符，請重試。';
+
+  @override
+  String get localModelsCatalogDownloadCancelled => '已取消下載';
+
+  @override
+  String get localModelsCatalogDownloadSuccess => '模型已安裝';
 
   @override
   String get localModelsImportAction => '匯入檔案';

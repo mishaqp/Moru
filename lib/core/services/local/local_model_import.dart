@@ -94,6 +94,22 @@ bool _startsWith(List<int> header, List<int> magic) {
   return true;
 }
 
+/// Whether [file]'s first bytes are LiteRT-LM's own magic number
+/// ("LITERTLM"). Reuses the exact same check [importLocalModelFile] applies
+/// to a picked file's first chunk -- the catalog downloader in
+/// `local_model_downloader.dart` calls this once a download is complete
+/// (its own first chunk may be mid-file on a resumed download, so it can't
+/// check as it streams the way a fresh import does).
+Future<bool> fileStartsWithLiteRtLmMagic(File file) async {
+  final raf = await file.open();
+  try {
+    final header = await raf.read(_liteRtLmMagic.length);
+    return _startsWith(header, _liteRtLmMagic);
+  } finally {
+    await raf.close();
+  }
+}
+
 /// Streams [source] into `<localModelsDir>/[targetFileName]`, validating
 /// the real file format (magic bytes, not just the picked file's own
 /// extension) before any bytes are trusted. Writes to a `.part` sibling

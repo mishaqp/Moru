@@ -21917,11 +21917,83 @@ abstract class AppLocalizations {
   /// **'Catalog'**
   String get localModelsCatalogSectionTitle;
 
-  /// No description provided for @localModelsCatalogComingSoon.
+  /// No description provided for @localModelsCatalogDownloadAction.
   ///
   /// In en, this message translates to:
-  /// **'A curated catalog is coming in a future update. For now, import a .litertlm file you already have.'**
-  String get localModelsCatalogComingSoon;
+  /// **'Download'**
+  String get localModelsCatalogDownloadAction;
+
+  /// No description provided for @localModelsCatalogCancelAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get localModelsCatalogCancelAction;
+
+  /// No description provided for @localModelsCatalogDownloadingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading…'**
+  String get localModelsCatalogDownloadingLabel;
+
+  /// No description provided for @localModelsCatalogInstalledBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed'**
+  String get localModelsCatalogInstalledBadge;
+
+  /// No description provided for @localModelsCatalogOpenPageAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Open model page'**
+  String get localModelsCatalogOpenPageAction;
+
+  /// No description provided for @localModelsCatalogGatedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'License-gated -- Moru can\'t download this automatically. Open the model page, accept the license (sign in if needed), download the file in your browser, then use \"Import file\" below.'**
+  String get localModelsCatalogGatedNote;
+
+  /// No description provided for @localModelsCatalogContextLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Context: {tokens} tokens'**
+  String localModelsCatalogContextLabel(int tokens);
+
+  /// No description provided for @localModelsCatalogDownloadFailedHttp.
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed (server error).'**
+  String get localModelsCatalogDownloadFailedHttp;
+
+  /// No description provided for @localModelsCatalogDownloadFailedIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Download ended before it finished -- try again.'**
+  String get localModelsCatalogDownloadFailedIncomplete;
+
+  /// No description provided for @localModelsCatalogDownloadFailedFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'The downloaded file isn\'t a valid LiteRT-LM model -- try again.'**
+  String get localModelsCatalogDownloadFailedFormat;
+
+  /// No description provided for @localModelsCatalogDownloadFailedChecksum.
+  ///
+  /// In en, this message translates to:
+  /// **'The downloaded file didn\'t match the expected checksum -- try again.'**
+  String get localModelsCatalogDownloadFailedChecksum;
+
+  /// No description provided for @localModelsCatalogDownloadCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Download cancelled'**
+  String get localModelsCatalogDownloadCancelled;
+
+  /// No description provided for @localModelsCatalogDownloadSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Model installed'**
+  String get localModelsCatalogDownloadSuccess;
 
   /// No description provided for @localModelsImportAction.
   ///

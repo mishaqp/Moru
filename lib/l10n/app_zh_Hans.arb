@@ -4397,7 +4397,24 @@
   "localModelsProviderName": "本地模型 · LiteRT",
   "localModelsInstalledSectionTitle": "已安装",
   "localModelsCatalogSectionTitle": "模型库",
-  "localModelsCatalogComingSoon": "精选模型库将在后续更新中提供。目前请手动导入已下载的 .litertlm 文件。",
+  "localModelsCatalogDownloadAction": "下载",
+  "localModelsCatalogCancelAction": "取消",
+  "localModelsCatalogDownloadingLabel": "下载中…",
+  "localModelsCatalogInstalledBadge": "已安装",
+  "localModelsCatalogOpenPageAction": "打开模型页面",
+  "localModelsCatalogGatedNote": "该模型受许可证限制，Moru 无法自动下载。请打开模型页面，接受许可证（如需要请登录），在浏览器中下载文件，然后使用下方的“导入文件”。",
+  "localModelsCatalogContextLabel": "上下文：{tokens} 个 token",
+  "@localModelsCatalogContextLabel": {
+    "placeholders": {
+      "tokens": {"type": "int"}
+    }
+  },
+  "localModelsCatalogDownloadFailedHttp": "下载失败（服务器错误）。",
+  "localModelsCatalogDownloadFailedIncomplete": "下载中途结束，请重试。",
+  "localModelsCatalogDownloadFailedFormat": "下载的文件不是有效的 LiteRT-LM 模型，请重试。",
+  "localModelsCatalogDownloadFailedChecksum": "下载的文件与预期校验和不匹配，请重试。",
+  "localModelsCatalogDownloadCancelled": "已取消下载",
+  "localModelsCatalogDownloadSuccess": "模型已安装",
   "localModelsImportAction": "导入文件",
   "localModelsEmptyTitle": "尚未安装任何模型",
   "localModelsEmptySubtitle": "导入 .litertlm 文件即可开始使用本地模型——安装后无需账号，也无需联网。",

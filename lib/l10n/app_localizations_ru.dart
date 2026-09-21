@@ -12346,8 +12346,50 @@ class AppLocalizationsRu extends AppLocalizations {
   String get localModelsCatalogSectionTitle => 'Каталог';
 
   @override
-  String get localModelsCatalogComingSoon =>
-      'Проверенный каталог появится в одном из следующих обновлений. Пока импортируйте уже скачанный файл .litertlm.';
+  String get localModelsCatalogDownloadAction => 'Скачать';
+
+  @override
+  String get localModelsCatalogCancelAction => 'Отмена';
+
+  @override
+  String get localModelsCatalogDownloadingLabel => 'Загрузка…';
+
+  @override
+  String get localModelsCatalogInstalledBadge => 'Установлена';
+
+  @override
+  String get localModelsCatalogOpenPageAction => 'Открыть страницу модели';
+
+  @override
+  String get localModelsCatalogGatedNote =>
+      'Лицензия ограничена — Moru не может скачать это автоматически. Откройте страницу модели, примите лицензию (при необходимости войдите в аккаунт), скачайте файл в браузере, затем используйте «Импортировать файл» ниже.';
+
+  @override
+  String localModelsCatalogContextLabel(int tokens) {
+    return 'Контекст: $tokens токенов';
+  }
+
+  @override
+  String get localModelsCatalogDownloadFailedHttp =>
+      'Не удалось скачать (ошибка сервера).';
+
+  @override
+  String get localModelsCatalogDownloadFailedIncomplete =>
+      'Загрузка прервалась раньше времени — попробуйте ещё раз.';
+
+  @override
+  String get localModelsCatalogDownloadFailedFormat =>
+      'Скачанный файл не является корректной моделью LiteRT-LM — попробуйте ещё раз.';
+
+  @override
+  String get localModelsCatalogDownloadFailedChecksum =>
+      'Скачанный файл не совпал с ожидаемой контрольной суммой — попробуйте ещё раз.';
+
+  @override
+  String get localModelsCatalogDownloadCancelled => 'Загрузка отменена';
+
+  @override
+  String get localModelsCatalogDownloadSuccess => 'Модель установлена';
 
   @override
   String get localModelsImportAction => 'Импортировать файл';

@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/services/local/local_model_catalog.dart';
+import '../../../core/services/local/local_model_downloader.dart';
 import '../../../core/services/local/local_model_import.dart';
 import '../../../core/services/local/local_model_library.dart';
 import '../../../icons/lucide_adapter.dart';
@@ -26,6 +29,72 @@ class LocalModelsPage extends StatefulWidget {
 
 class _LocalModelsPageState extends State<LocalModelsPage> {
   static const _library = LocalModelLibrary();
+  final _downloader = LiteRtModelDownloader();
+  final Map<String, LiteRtDownloadProgress> _catalogProgress = {};
+
+  @override
+  void dispose() {
+    _downloader.dispose();
+    super.dispose();
+  }
+
+  Future<void> _downloadCatalogEntry(LiteRtCatalogEntry entry) async {
+    final settings = context.read<SettingsProvider>();
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await _downloader.download(
+        entry,
+        settings,
+        onProgress: (p) {
+          if (!mounted) return;
+          setState(() => _catalogProgress[entry.id] = p);
+        },
+      );
+      if (!mounted) return;
+      setState(() => _catalogProgress.remove(entry.id));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.localModelsCatalogDownloadSuccess)),
+      );
+    } on LiteRtDownloadCancelledException {
+      if (!mounted) return;
+      setState(() => _catalogProgress.remove(entry.id));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.localModelsCatalogDownloadCancelled)),
+      );
+    } on LiteRtDownloadFailedException catch (e) {
+      if (!mounted) return;
+      setState(() => _catalogProgress.remove(entry.id));
+      messenger.showSnackBar(
+        SnackBar(content: Text(_catalogFailureMessage(l10n, e.code))),
+      );
+    }
+  }
+
+  String _catalogFailureMessage(
+    AppLocalizations l10n,
+    LiteRtDownloadFailureCode code,
+  ) => switch (code) {
+    LiteRtDownloadFailureCode.httpError =>
+      l10n.localModelsCatalogDownloadFailedHttp,
+    LiteRtDownloadFailureCode.incompleteTransfer =>
+      l10n.localModelsCatalogDownloadFailedIncomplete,
+    LiteRtDownloadFailureCode.formatMismatch =>
+      l10n.localModelsCatalogDownloadFailedFormat,
+    LiteRtDownloadFailureCode.checksumMismatch =>
+      l10n.localModelsCatalogDownloadFailedChecksum,
+  };
+
+  Future<void> _openCatalogEntryPage(LiteRtCatalogEntry entry) async {
+    final uri = entry.repoUrl;
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok) await launchUrl(uri);
+    } catch (_) {
+      await launchUrl(uri);
+    }
+  }
 
   Future<void> _import() async {
     final settings = context.read<SettingsProvider>();
@@ -240,15 +309,20 @@ class _LocalModelsPageState extends State<LocalModelsPage> {
           _SectionHeader(l10n.localModelsCatalogSectionTitle),
           const SizedBox(height: 8),
           SectionCard(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Text(
-                l10n.localModelsCatalogComingSoon,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-              ),
-            ),
+            dividers: true,
+            children: [
+              for (final entry in LiteRtModelCatalog.entries)
+                _CatalogEntryTile(
+                  entry: entry,
+                  isInstalled: models.any(
+                    (m) => m.sha256.isNotEmpty && m.sha256 == entry.sha256,
+                  ),
+                  progress: _catalogProgress[entry.id],
+                  onDownload: () => _downloadCatalogEntry(entry),
+                  onCancel: () => _downloader.cancel(entry.id),
+                  onOpenPage: () => _openCatalogEntryPage(entry),
+                ),
+            ],
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
@@ -276,6 +350,134 @@ class _SectionHeader extends StatelessWidget {
         style: Theme.of(
           context,
         ).textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant),
+      ),
+    );
+  }
+}
+
+class _CatalogEntryTile extends StatelessWidget {
+  const _CatalogEntryTile({
+    required this.entry,
+    required this.isInstalled,
+    required this.progress,
+    required this.onDownload,
+    required this.onCancel,
+    required this.onOpenPage,
+  });
+
+  final LiteRtCatalogEntry entry;
+  final bool isInstalled;
+  final LiteRtDownloadProgress? progress;
+  final VoidCallback onDownload;
+  final VoidCallback onCancel;
+  final VoidCallback onOpenPage;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final subtitle =
+        '${_formatBytes(entry.sizeBytes)} · ${entry.license} · '
+        '${l10n.localModelsCatalogContextLabel(entry.contextTokens)}';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Lucide.Package, size: 18, color: cs.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.displayName,
+                      style: textTheme.bodyMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (isInstalled)
+                Text(
+                  l10n.localModelsCatalogInstalledBadge,
+                  style: textTheme.bodySmall?.copyWith(color: cs.primary),
+                )
+              else if (progress != null)
+                Semantics(
+                  button: true,
+                  label: l10n.localModelsCatalogCancelAction,
+                  child: IconButton(
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                    tooltip: l10n.localModelsCatalogCancelAction,
+                    icon: const Icon(Lucide.X, size: 18),
+                    onPressed: onCancel,
+                  ),
+                )
+              else if (entry.isDownloadable)
+                Semantics(
+                  button: true,
+                  label: l10n.localModelsCatalogDownloadAction,
+                  child: IconButton(
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                    tooltip: l10n.localModelsCatalogDownloadAction,
+                    icon: Icon(Lucide.Download, size: 18, color: cs.primary),
+                    onPressed: onDownload,
+                  ),
+                )
+              else
+                Semantics(
+                  button: true,
+                  label: l10n.localModelsCatalogOpenPageAction,
+                  child: IconButton(
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                    tooltip: l10n.localModelsCatalogOpenPageAction,
+                    icon: const Icon(Lucide.ExternalLink, size: 18),
+                    onPressed: onOpenPage,
+                  ),
+                ),
+            ],
+          ),
+          if (progress != null) ...[
+            const SizedBox(height: 8),
+            LinearProgressIndicator(value: progress!.fraction),
+            const SizedBox(height: 4),
+            Text(
+              '${l10n.localModelsCatalogDownloadingLabel} '
+              '${_formatBytes(progress!.receivedBytes)}'
+              '${progress!.totalBytes != null ? ' / ${_formatBytes(progress!.totalBytes!)}' : ''}',
+              style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ],
+          if (!entry.isDownloadable && !isInstalled) ...[
+            const SizedBox(height: 6),
+            Text(
+              l10n.localModelsCatalogGatedNote,
+              style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ],
+        ],
       ),
     );
   }
