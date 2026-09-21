@@ -642,3 +642,74 @@ and note the two still-open design questions before slice 4 (verified
 catalog + resumable download): the background-task (title-gen etc.)
 skip/defer policy against the single-flight local queue, and the
 `GenerationForegroundService` service-type fit for long local inference.
+
+## Full-suite confirmation + hardening pass (before catalog/download)
+
+Full `flutter test` run against the slice 3 UI commit surfaced two real
+regressions (both from this branch's own diff, fixed and reverified with a
+second full run, exit code 0 both times):
+
+- `business_shared_preferences_static_gate_test.dart` does a literal
+  `\bSharedPreferences\b` text scan across `lib/**/*.dart` -- a doc comment
+  in `local_model_library.dart` used that word in prose and tripped it.
+  Reworded to name `SettingsProvider` instead (no code change; the class
+  never touches SharedPreferences directly, same as before).
+- `moru_catalog_validator_test.dart` rejects an RU string identical to its
+  EN source without an explicit technical-exception entry.
+  `localModelsBackendCpuLabel`/`GpuLabel` ("CPU"/"GPU") are genuinely
+  untranslated acronyms, same class as the project's existing
+  `networkProxyTypeHttp` etc. entries -- added both to
+  `tool/moru_ru_technical_allowlist.json`.
+
+Both are real full-suite catches this branch is responsible for, not
+pre-existing (unlike `desktop_process_runtime_test.dart`'s SIGTERM-timing
+failure and `chat_input_bar_attachment_cleanup_test.dart`'s `chmod 0555`
+failure, both sandbox-specific and reproducing identically without any
+change from this branch, previously confirmed in isolation).
+
+### Runtime-verified provider isolation (not just loop exclusion)
+
+`ProviderKind.local` was already excluded from the generic HTTP-request-
+precedence and tool-schema test loops with a comment explaining why. That
+documents the claim but doesn't prove it executes correctly. Added
+dedicated tests that actually run the real code path:
+
+- `test/core/services/api/chat_api_local_provider_isolation_test.dart`
+  (new): drives a full local generation through the real public entry
+  point, `ChatApiService.sendMessageStream`, with the native engine
+  mocked at the platform-channel level (same technique as
+  `litert_channel_test.dart`). The `ProviderConfig`'s `baseUrl` points at
+  a real bound `HttpServer` that fails the test if it ever receives a
+  connection -- proves no HTTP request is built, which is also the
+  runtime precondition for OAuth mattering at all (`ProviderOAuthService
+  .resolve`/`authenticatedClient` are cheap no-ops unless a request is
+  actually sent through the wrapped client; a local `ProviderConfig` never
+  sets `oauthProvider` in the first place, so `config.isOAuth` is false
+  and `resolve()`'s very first line returns early). The same call passes
+  a non-trivial `tools` schema and an `onToolCall` that fails the test if
+  invoked, proving the local branch neither forwards tool definitions to
+  the engine nor calls back into tool handling.
+- `tool_handler_service_test.dart`: added a direct test asserting
+  `sanitizeToolParametersForProvider(schema, ProviderKind.local)` strips
+  *every* top-level key (not just the one payload shape the excluded loop
+  test happened to assert on).
+- `builtin_tools_search_test.dart`: added a direct test asserting
+  `supportsSearch`/`supportsBuiltInSearchForModel` both return `false` for
+  `ProviderKind.local`, even when a model override explicitly requests
+  search.
+- `test/features/model/widgets/model_edit_state_helper_local_tools_test.dart`
+  (new): `ModelBuiltInToolTiles.forConfig` returns an empty list for a
+  local config -- no built-in-tool toggle (search, code execution, etc.)
+  is ever offered in the model edit sheet for an on-device model.
+
+## Next
+Magic-byte import validation only proves the file *header* is well-formed
+-- it is not proof the file is a compatible, loadable model (task
+explicitly warns against conflating the two). Need to verify what
+`LiteRtEngineManager.loadModel` actually does with a header-valid but
+otherwise corrupt/incompatible `.litertlm` file: does the real SDK reject
+it cleanly (a `PlatformException` surfaced as `LiteRtException`), or can it
+crash/hang the native side? Then: pin exact Kotlin/LiteRT-LM versions
+explicitly in the progress log and run a full Android build (not just
+`compileDebugKotlin`) including JVM tests, and close the background-
+generation queuing policy before starting slice 4.
