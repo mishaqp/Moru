@@ -1026,5 +1026,32 @@ for the debug-keystore signature bytes (expected: each machine's
 auto-generated debug keystore differs, hence a different sha256 from the
 locally-built APK despite otherwise-identical content).
 
+## Handoff note (both CI checks green on PR #36)
+
+Between the previous entry and this one, a separate session/tool continued
+work on this same branch and pushed further commits (`94c140a` through
+`2db5f33`): a stable content-derived local model identity across
+reimports, a streaming (not buffer-then-hash) digest fix, and a
+compatibility fallback so chats referencing a random UUID from an earlier
+test build resolve to the sole installed model instead of erroring. Draft
+PR #36 was opened from this branch against `master`. Did not audit that
+work's own correctness in this session (no context for it beyond the
+commit messages and diffstat) -- whoever picks this up next should read
+those commits' own diffs before trusting them further, same as any other
+inherited change.
+
+The one thing broken across all of PR #36's `pr-check.yml` runs
+(126 through 130, every single one) was purely mechanical: one test file,
+`chat_api_local_provider_isolation_test.dart`, didn't match `dart
+format`'s output. Fixed in `65099f6` (format-only, no logic change). Both
+`pr-check.yml` (run 131) and `moru-android.yml` (run 150) are now green
+on `65099f6` -- https://github.com/mishaqp/Moru/pull/36.
+
+**Still open before this can leave draft**: slice 4 (verified catalog +
+resumable download, model info already researched and re-verified live
+above), slice 5 polish, and -- non-negotiable per the task brief -- a
+real on-device smoke test on the user's own hardware. Nothing in this
+log substitutes for that.
+
 ## Next
 Start slice 4 (verified catalog + resumable download).
