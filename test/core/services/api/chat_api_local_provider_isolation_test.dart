@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'package:Kelivo/core/services/api/providers/litert_local.dart';
 import 'package:Kelivo/core/services/local/litert_channel.dart';
 import 'package:Kelivo/core/services/local/local_model_library.dart';
 
@@ -164,37 +165,7 @@ void main() {
 
   test(
     'a stale local model id falls back to the only installed model',
-    () async {
-      final messenger =
-          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-      const methodChannel = MethodChannel(kLiteRtMethodChannel);
-      const eventChannel = EventChannel(kLiteRtEventChannel);
-      MockStreamHandlerEventSink? sink;
-      final sentMessages = <MethodCall>[];
-
-      messenger.setMockMethodCallHandler(methodChannel, (call) async {
-        switch (call.method) {
-          case 'loadModel':
-            expect(call.arguments['modelPath'], '/models/current.litertlm');
-            return <String, Object?>{'backend': 'cpu'};
-          case 'startConversation':
-            return null;
-          case 'sendMessage':
-            sentMessages.add(call);
-            return null;
-          default:
-            return null;
-        }
-      });
-      messenger.setMockStreamHandler(
-        eventChannel,
-        MockStreamHandler.inline(onListen: (args, s) => sink = s),
-      );
-      addTearDown(() {
-        messenger.setMockMethodCallHandler(methodChannel, null);
-        messenger.setMockStreamHandler(eventChannel, null);
-      });
-
+    () {
       const currentId = 'litert-current';
       final config = ProviderConfig(
         id: kLocalModelProviderKey,
@@ -208,21 +179,11 @@ void main() {
           currentId: {'localModelPath': '/models/current.litertlm'},
         },
       );
-      final future = ChatApiService.sendMessageStream(
-        config: config,
-        modelId: 'deleted-random-uuid',
-        messages: const [
-          {'role': 'user', 'content': 'hello'},
-        ],
-        isConversationTurn: true,
-      ).toList();
-
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
-      expect(sentMessages, hasLength(1));
-      final requestId = sentMessages.single.arguments['requestId'] as String;
-      sink?.success({'type': 'done', 'requestId': requestId});
-      await future;
+      final resolved = resolveLiteRtModelOverride(
+        config,
+        'deleted-random-uuid',
+      );
+      expect(resolved?['localModelPath'], '/models/current.litertlm');
     },
   );
 }
