@@ -110,6 +110,7 @@ class LocalModelLibrary {
     required String sourceLabel,
     String backend = 'cpu',
     String? contentSha256,
+    Map<String, dynamic> initialSettings = const {},
   }) async {
     final existing = settings.providerConfigs[kLocalModelProviderKey];
     final cfg =
@@ -157,14 +158,17 @@ class LocalModelLibrary {
     final nextModels = matchingId == null
         ? [...cfg.models, modelId]
         : cfg.models;
+    final previous = (nextOverrides[modelId] as Map?)?.cast<String, dynamic>();
     nextOverrides[modelId] = {
+      ...initialSettings,
       'name': displayName,
       'type': 'chat',
-      'input': ['text'],
+      'input': ['text', if (initialSettings['localVision'] == true) 'image', if (initialSettings['localAudio'] == true) 'audio'],
       'output': ['text'],
-      'abilities': <String>[],
+      'abilities': <String>[if (initialSettings['localThinking'] == true) 'reasoning', if (initialSettings['localTools'] == true) 'tool'],
+      ...?previous,
       'localModelPath': filePath,
-      'localBackend': backend,
+      'localBackend': previous?['localBackend'] ?? backend,
       'localSizeBytes': sizeBytes,
       'localSourceLabel': sourceLabel,
       'localInstalledAtMillis': DateTime.now().millisecondsSinceEpoch,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -159,11 +160,11 @@ final class LiteRtModelDownloader {
     token.throwIfCancelled();
     _activeTokens[entry.id] = token;
 
-    final dir = await _modelsDirectory();
-    await dir.create(recursive: true);
-    final partFile = File(p.join(dir.path, '.catalog-${entry.id}.part'));
-
     try {
+      final dir = await _modelsDirectory();
+      await dir.create(recursive: true);
+      final partFile = File(p.join(dir.path, partialFileName(entry)));
+      token.throwIfCancelled();
       final receivedBytes = await _downloadToPartFile(
         entry,
         partFile,
@@ -197,7 +198,7 @@ final class LiteRtModelDownloader {
 
       final finalName =
           '${DateTime.now().millisecondsSinceEpoch}_'
-          '${entry.fileName}';
+          '${p.basename(entry.fileName)}';
       final finalFile = File(p.join(dir.path, finalName));
       if (await finalFile.exists()) await finalFile.delete();
       await partFile.rename(finalFile.path);
@@ -209,6 +210,11 @@ final class LiteRtModelDownloader {
         displayName: entry.displayName,
         sourceLabel: entry.fileName,
         contentSha256: entry.sha256,
+        initialSettings: {
+          'localVision': entry.vision, 'localAudio': entry.audio,
+          'localThinking': entry.thinking, 'localTools': entry.tools,
+          if (entry.contextTokens > 0) 'localMaxNumTokens': entry.contextTokens > 4096 ? 4096 : entry.contextTokens,
+        },
       );
     } on LiteRtDownloadCancelledException {
       rethrow;
@@ -216,6 +222,9 @@ final class LiteRtModelDownloader {
       _activeTokens.remove(entry.id);
     }
   }
+
+  static String partialFileName(LiteRtCatalogEntry entry) =>
+      '.catalog-${sha256.convert(utf8.encode('${entry.id}:${entry.sha256}:${entry.sizeBytes}'))}.part';
 
   static const _library = LocalModelLibrary();
 
@@ -256,8 +265,12 @@ final class LiteRtModelDownloader {
     var receivedBytes = resumeFrom;
     IOSink sink;
     if (response.statusCode == HttpStatus.partialContent && resumeFrom > 0) {
-      // Server honored the Range request -- append to what's already on
-      // disk.
+      final match = RegExp(r'^bytes (\d+)-(\d+)/(\d+)$').firstMatch(response.headers['content-range'] ?? '');
+      if (match == null || int.parse(match[1]!) != resumeFrom || int.parse(match[3]!) != entry.sizeBytes || int.parse(match[2]!) != entry.sizeBytes - 1) {
+        final sub = response.stream.listen((_) {});
+        await sub.cancel();
+        throw const LiteRtDownloadFailedException(LiteRtDownloadFailureCode.incompleteTransfer);
+      }
       sink = partFile.openWrite(mode: FileMode.append);
     } else if (response.statusCode == HttpStatus.ok) {
       // Either a fresh download, or the server ignored our Range header
@@ -267,7 +280,8 @@ final class LiteRtModelDownloader {
       receivedBytes = 0;
       sink = partFile.openWrite(mode: FileMode.writeOnly);
     } else {
-      await response.stream.drain<void>();
+      final sub = response.stream.listen((_) {});
+      await sub.cancel();
       throw LiteRtDownloadFailedException(
         LiteRtDownloadFailureCode.httpError,
         'HTTP ${response.statusCode}',
@@ -288,6 +302,9 @@ final class LiteRtModelDownloader {
       );
       while (await _moveNextOrCancel(iterator, token)) {
         final chunk = iterator.current;
+        if (receivedBytes + chunk.length > entry.sizeBytes) {
+          throw const LiteRtDownloadFailedException(LiteRtDownloadFailureCode.incompleteTransfer);
+        }
         sink.add(chunk);
         receivedBytes += chunk.length;
         onProgress?.call(
