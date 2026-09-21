@@ -918,6 +918,34 @@ and `chat_api_custom_request_precedence_test.dart` all pass unchanged
 (the new parameter is additive and defaults preserve every existing
 call site's behavior).
 
+## Full Android build results
+
+`flutter build apk --debug --target-platform=android-arm64` (real Gradle
+`assembleDebug`, not just `compileDebugKotlin` -- exercises every plugin's
+Kotlin compilation, resource/asset merging, manifest merging, dexing, and
+packaging against Kotlin 2.4.0 + AGP 8.11.1): **succeeded**, `Running
+Gradle task 'assembleDebug'... 340.1s`, `✓ Built build/app/outputs/
+flutter-apk/app-debug.apk`.
+
+`python3 tool/verify_apk_arm64.py build/app/outputs/flutter-apk/
+app-debug.apk` on the real built artifact (124316477 bytes,
+sha256 `e8f70a49e1610ef6e92fbfd9272ae6e2a31aa65cb5ab6b02d1e730b1cbd21d2`):
+single ABI `arm64-v8a` (no other architecture leaked in), and
+**`liblitertlm_jni.so` is present** among the packaged native libraries
+alongside every other expected Android-only-feature library (`libproot_
+exec.so`/`libproot_loader.so`/`libtermux_pty.so` for the embedded Linux
+env and terminal, `libsherpa-onnx-*.so` for ASR, `libsqlite3.so` for
+Drift) -- confirms the LiteRT-LM native library is actually built into a
+real APK, not just resolved as a Gradle dependency.
+
+(A first build attempt was accidentally killed mid-run by an unrelated
+`pkill` used to stop a stale background `flutter test` process in this
+same session -- caught immediately by the missing APK output, re-ran
+cleanly to the result above. Not a build problem; noted here only so
+future re-reads of this log aren't confused by the dangling
+`manifest-merger-debug-report.txt` an interrupted run leaves behind.)
+
 ## Next
-Record the full Android build + JVM test results above (in progress),
-then start slice 4 (verified catalog + resumable download).
+Record the JVM unit test (`gradle :app:testDebugUnitTest`) result above
+(in progress), then start slice 4 (verified catalog + resumable
+download).
