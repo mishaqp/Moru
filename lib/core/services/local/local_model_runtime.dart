@@ -247,10 +247,7 @@ class LocalModelRuntime {
         systemInstruction: split.systemInstruction,
         initialMessages: [
           for (final m in priorHistory)
-            (
-              (m['role'] ?? 'user').toString(),
-              (m['content'] ?? '').toString(),
-            ),
+            ((m['role'] ?? 'user').toString(), (m['content'] ?? '').toString()),
         ],
       );
       _activeConversationKey = conversationId;

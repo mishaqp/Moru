@@ -38,135 +38,129 @@ import '../../../support/collect_generation.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test(
-    'a local generation makes zero HTTP requests, touches no OAuth client, '
-    'and never advertises or invokes a tool',
-    () async {
-      final trapServer = await HttpServer.bind(
-        InternetAddress.loopbackIPv4,
-        0,
-      );
-      var trapHits = 0;
-      final trapSub = trapServer.listen((request) {
-        trapHits++;
-        request.response.statusCode = HttpStatus.internalServerError;
-        unawaited(request.response.close());
-      });
-      addTearDown(() async {
-        await trapSub.cancel();
-        await trapServer.close(force: true);
-      });
+  test('a local generation makes zero HTTP requests, touches no OAuth client, '
+      'and never advertises or invokes a tool', () async {
+    final trapServer = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    var trapHits = 0;
+    final trapSub = trapServer.listen((request) {
+      trapHits++;
+      request.response.statusCode = HttpStatus.internalServerError;
+      unawaited(request.response.close());
+    });
+    addTearDown(() async {
+      await trapSub.cancel();
+      await trapServer.close(force: true);
+    });
 
-      final messenger =
-          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-      const methodChannel = MethodChannel(kLiteRtMethodChannel);
-      const eventChannel = EventChannel(kLiteRtEventChannel);
-      MockStreamHandlerEventSink? sink;
-      final sentMessages = <MethodCall>[];
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    const methodChannel = MethodChannel(kLiteRtMethodChannel);
+    const eventChannel = EventChannel(kLiteRtEventChannel);
+    MockStreamHandlerEventSink? sink;
+    final sentMessages = <MethodCall>[];
 
-      messenger.setMockMethodCallHandler(methodChannel, (call) async {
-        switch (call.method) {
-          case 'loadModel':
-            return <String, Object?>{'backend': 'cpu'};
-          case 'startConversation':
-            return null;
-          case 'sendMessage':
-            sentMessages.add(call);
-            return null;
-          case 'cancel':
-            return true;
-          case 'unloadModel':
-            return null;
-          default:
-            return null;
-        }
-      });
-      messenger.setMockStreamHandler(
-        eventChannel,
-        MockStreamHandler.inline(onListen: (args, s) => sink = s),
-      );
-      addTearDown(() {
-        messenger.setMockMethodCallHandler(methodChannel, null);
-        messenger.setMockStreamHandler(eventChannel, null);
-      });
+    messenger.setMockMethodCallHandler(methodChannel, (call) async {
+      switch (call.method) {
+        case 'loadModel':
+          return <String, Object?>{'backend': 'cpu'};
+        case 'startConversation':
+          return null;
+        case 'sendMessage':
+          sentMessages.add(call);
+          return null;
+        case 'cancel':
+          return true;
+        case 'unloadModel':
+          return null;
+        default:
+          return null;
+      }
+    });
+    messenger.setMockStreamHandler(
+      eventChannel,
+      MockStreamHandler.inline(onListen: (args, s) => sink = s),
+    );
+    addTearDown(() {
+      messenger.setMockMethodCallHandler(methodChannel, null);
+      messenger.setMockStreamHandler(eventChannel, null);
+    });
 
-      const modelId = 'local-isolation-test-model';
-      final config = ProviderConfig(
-        id: 'litert-local',
-        enabled: true,
-        name: 'Local',
-        apiKey: '',
-        // Deliberately points at the trap server: local must never build a
-        // request from this at all, let alone send one.
-        baseUrl: 'http://${trapServer.address.address}:${trapServer.port}',
-        providerType: ProviderKind.local,
-        // No oauthProvider -- exactly like every real local ProviderConfig
-        // (nothing in the app ever runs local through the OAuth login
-        // flow), which is what makes `config.isOAuth` false and both
-        // `ProviderOAuthService.resolve`/`authenticatedClient` no-ops.
-        modelOverrides: {
-          modelId: {'localModelPath': '/models/isolation-test.litertlm'},
-        },
-      );
+    const modelId = 'local-isolation-test-model';
+    final config = ProviderConfig(
+      id: 'litert-local',
+      enabled: true,
+      name: 'Local',
+      apiKey: '',
+      // Deliberately points at the trap server: local must never build a
+      // request from this at all, let alone send one.
+      baseUrl: 'http://${trapServer.address.address}:${trapServer.port}',
+      providerType: ProviderKind.local,
+      // No oauthProvider -- exactly like every real local ProviderConfig
+      // (nothing in the app ever runs local through the OAuth login
+      // flow), which is what makes `config.isOAuth` false and both
+      // `ProviderOAuthService.resolve`/`authenticatedClient` no-ops.
+      modelOverrides: {
+        modelId: {'localModelPath': '/models/isolation-test.litertlm'},
+      },
+    );
 
-      var toolCallInvoked = false;
-      final chunksFuture = ChatApiService.sendMessageStream(
-        config: config,
-        modelId: modelId,
-        messages: const [
-          {'role': 'user', 'content': 'hello'},
-        ],
-        tools: const [
-          {
-            'type': 'function',
-            'function': {
-              'name': 'search',
-              'description': 'search the web',
-              'parameters': {
-                'type': 'object',
-                'properties': {
-                  'query': {'type': 'string'},
-                },
+    var toolCallInvoked = false;
+    final chunksFuture = ChatApiService.sendMessageStream(
+      config: config,
+      modelId: modelId,
+      messages: const [
+        {'role': 'user', 'content': 'hello'},
+      ],
+      tools: const [
+        {
+          'type': 'function',
+          'function': {
+            'name': 'search',
+            'description': 'search the web',
+            'parameters': {
+              'type': 'object',
+              'properties': {
+                'query': {'type': 'string'},
               },
             },
           },
-        ],
-        onToolCall: (name, args, {toolCallId}) async {
-          toolCallInvoked = true;
-          fail('onToolCall must never be invoked for a local generation');
         },
-      ).toList();
+      ],
+      onToolCall: (name, args, {toolCallId}) async {
+        toolCallInvoked = true;
+        fail('onToolCall must never be invoked for a local generation');
+      },
+    ).toList();
 
-      // Let the request reach the mocked native side, then answer it.
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
-      expect(sentMessages, hasLength(1));
-      final requestId = sentMessages.single.arguments['requestId'] as String;
-      sink?.success({
-        'type': 'textDelta',
-        'requestId': requestId,
-        'text': 'hi there',
-      });
-      sink?.success({'type': 'done', 'requestId': requestId});
+    // Let the request reach the mocked native side, then answer it.
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+    expect(sentMessages, hasLength(1));
+    final requestId = sentMessages.single.arguments['requestId'] as String;
+    sink?.success({
+      'type': 'textDelta',
+      'requestId': requestId,
+      'text': 'hi there',
+    });
+    sink?.success({'type': 'done', 'requestId': requestId});
 
-      final chunks = await chunksFuture;
+    final chunks = await chunksFuture;
 
-      expect(
-        chunks.isGenerationDone,
-        isTrue,
-        reason: 'local generation should complete normally',
-      );
-      expect(chunks.joinedContent, 'hi there');
-      expect(
-        trapHits,
-        0,
-        reason:
-            'local generation must never send an HTTP request, even when '
-            'baseUrl is set',
-      );
-      expect(toolCallInvoked, isFalse);
-    },
-  );
+    expect(
+      chunks.isGenerationDone,
+      isTrue,
+      reason: 'local generation should complete normally',
+    );
+    expect(chunks.joinedContent, 'hi there');
+    expect(
+      trapHits,
+      0,
+      reason:
+          'local generation must never send an HTTP request, even when '
+          'baseUrl is set',
+    );
+    expect(toolCallInvoked, isFalse);
+  });
 
   test(
     'a stale local model id falls back to the only installed model',

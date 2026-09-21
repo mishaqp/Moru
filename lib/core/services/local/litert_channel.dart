@@ -76,7 +76,8 @@ class LiteRtException implements Exception {
   final String? message;
 
   @override
-  String toString() => 'LiteRtException($code${message == null ? '' : ': $message'})';
+  String toString() =>
+      'LiteRtException($code${message == null ? '' : ': $message'})';
 }
 
 /// Thin typed client over the `app.litert` / `app.litert/events` channels.

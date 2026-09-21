@@ -54,9 +54,8 @@ class InstalledLocalModel {
       sizeBytes: (override['localSizeBytes'] as num?)?.toInt() ?? 0,
       backend: (override['localBackend'] ?? 'cpu').toString(),
       sourceLabel: (override['localSourceLabel'] ?? '').toString(),
-      installedAtMillis: (override['localInstalledAtMillis'] as num?)
-              ?.toInt() ??
-          0,
+      installedAtMillis:
+          (override['localInstalledAtMillis'] as num?)?.toInt() ?? 0,
     );
   }
 }

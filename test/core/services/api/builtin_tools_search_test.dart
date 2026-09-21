@@ -200,30 +200,27 @@ void main() {
       );
     });
 
-    test(
-      'ProviderKind.local never advertises built-in search, even for a '
-      'model whose override explicitly requests it',
-      () {
-        expect(
-          BuiltInToolsHelper.supportsSearch(
-            kind: ProviderKind.local,
+    test('ProviderKind.local never advertises built-in search, even for a '
+        'model whose override explicitly requests it', () {
+      expect(
+        BuiltInToolsHelper.supportsSearch(
+          kind: ProviderKind.local,
+          useResponseApi: false,
+          modelId: 'any-local-model',
+        ),
+        isFalse,
+      );
+      expect(
+        BuiltInToolsHelper.supportsBuiltInSearchForModel(
+          cfg: _cfg(
+            baseUrl: '',
             useResponseApi: false,
-            modelId: 'any-local-model',
-          ),
-          isFalse,
-        );
-        expect(
-          BuiltInToolsHelper.supportsBuiltInSearchForModel(
-            cfg: _cfg(
-              baseUrl: '',
-              useResponseApi: false,
-              modelId: 'local-model',
-            ).copyWith(providerType: ProviderKind.local),
             modelId: 'local-model',
-          ),
-          isFalse,
-        );
-      },
-    );
+          ).copyWith(providerType: ProviderKind.local),
+          modelId: 'local-model',
+        ),
+        isFalse,
+      );
+    });
   });
 }

@@ -54,17 +54,6 @@ jobs:
           dart format $files
           git diff --exit-code -- $files
 
-      - name: Capture Dart formatter patch
-        if: failure()
-        run: git diff --binary > dart-format.patch
-
-      - name: Upload Dart formatter patch
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dart-format-patch
-          path: dart-format.patch
-
       - name: Generate l10n and ensure committed outputs
         run: |
           flutter gen-l10n

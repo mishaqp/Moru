@@ -88,7 +88,8 @@ class _LocalModelsPageState extends State<LocalModelsPage> {
     );
 
     final targetDir = await AppDirectories.getLocalModelsDirectory();
-    final targetName = '${DateTime.now().millisecondsSinceEpoch}_${picked.name}';
+    final targetName =
+        '${DateTime.now().millisecondsSinceEpoch}_${picked.name}';
     final outcome = await importLocalModelFile(
       source: picked.readStream,
       totalBytes: picked.size > 0 ? picked.size : null,
@@ -313,9 +314,9 @@ class _InstalledModelTile extends StatelessWidget {
                 Text(
                   '${_formatBytes(model.sizeBytes)} · $backendLabel'
                   '${model.sourceLabel.isNotEmpty ? ' · ${model.sourceLabel}' : ''}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
               ],
             ),

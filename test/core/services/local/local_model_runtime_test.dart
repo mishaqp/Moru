@@ -57,10 +57,9 @@ class _FakeNative {
 
   void emit(Map<String, Object?> event) => sink?.success(event);
 
-  Map<String, Object?> argsOf(String method) =>
-      Map<String, Object?>.from(
-        calls.lastWhere((c) => c.method == method).arguments as Map,
-      );
+  Map<String, Object?> argsOf(String method) => Map<String, Object?>.from(
+    calls.lastWhere((c) => c.method == method).arguments as Map,
+  );
 }
 
 void main() {
@@ -169,40 +168,46 @@ void main() {
     },
   );
 
-  test('a cancellation mid-stream calls native cancel and ends cleanly', () async {
-    final cancelCompleter = Completer<void>();
-    final stream = generateOnce(
-      conversationId: 'c1',
-      messages: const [
-        {'role': 'user', 'content': 'hi'},
-      ],
-      cancelCompleter: cancelCompleter,
-    );
-    final chunks = <StreamChunk>[];
-    final errors = <Object>[];
-    final done = Completer<void>();
-    stream.listen(chunks.add, onError: errors.add, onDone: done.complete);
+  test(
+    'a cancellation mid-stream calls native cancel and ends cleanly',
+    () async {
+      final cancelCompleter = Completer<void>();
+      final stream = generateOnce(
+        conversationId: 'c1',
+        messages: const [
+          {'role': 'user', 'content': 'hi'},
+        ],
+        cancelCompleter: cancelCompleter,
+      );
+      final chunks = <StreamChunk>[];
+      final errors = <Object>[];
+      final done = Completer<void>();
+      stream.listen(chunks.add, onError: errors.add, onDone: done.complete);
 
-    final rid = await requestIdOfLastSendMessage();
-    fake.emit({'type': 'textDelta', 'requestId': rid, 'text': 'Hel'});
-    await Future<void>.delayed(Duration.zero);
+      final rid = await requestIdOfLastSendMessage();
+      fake.emit({'type': 'textDelta', 'requestId': rid, 'text': 'Hel'});
+      await Future<void>.delayed(Duration.zero);
 
-    cancelCompleter.complete();
-    await Future<void>.delayed(Duration.zero);
-    expect(fake.argsOf('cancel')['requestId'], rid);
+      cancelCompleter.complete();
+      await Future<void>.delayed(Duration.zero);
+      expect(fake.argsOf('cancel')['requestId'], rid);
 
-    fake.emit({
-      'type': 'error',
-      'requestId': rid,
-      'message': 'cancelled',
-      'cancelled': true,
-    });
-    await done.future;
+      fake.emit({
+        'type': 'error',
+        'requestId': rid,
+        'message': 'cancelled',
+        'cancelled': true,
+      });
+      await done.future;
 
-    // Cancellation is a clean stop, not a stream error.
-    expect(errors, isEmpty);
-    expect(chunks.last, isA<Finish>().having((c) => c.finishReason, 'reason', 'cancelled'));
-  });
+      // Cancellation is a clean stop, not a stream error.
+      expect(errors, isEmpty);
+      expect(
+        chunks.last,
+        isA<Finish>().having((c) => c.finishReason, 'reason', 'cancelled'),
+      );
+    },
+  );
 
   test('a genuine native error is delivered as a stream error', () async {
     final stream = generateOnce(
@@ -228,163 +233,151 @@ void main() {
     expect(errors.single, isA<LiteRtException>());
   });
 
-  test(
-    'consecutive turns in the same conversation reuse the native '
-    'Conversation -- only one startConversation call',
-    () async {
-      final first = generateOnce(
-        conversationId: 'c1',
-        messages: const [
-          {'role': 'user', 'content': 'turn one'},
-        ],
-      );
-      final firstDone = Completer<void>();
-      first.listen((_) {}, onDone: firstDone.complete);
-      final rid1 = await requestIdOfLastSendMessage();
-      fake.emit({'type': 'textDelta', 'requestId': rid1, 'text': 'reply one'});
-      fake.emit({'type': 'done', 'requestId': rid1});
-      await firstDone.future;
+  test('consecutive turns in the same conversation reuse the native '
+      'Conversation -- only one startConversation call', () async {
+    final first = generateOnce(
+      conversationId: 'c1',
+      messages: const [
+        {'role': 'user', 'content': 'turn one'},
+      ],
+    );
+    final firstDone = Completer<void>();
+    first.listen((_) {}, onDone: firstDone.complete);
+    final rid1 = await requestIdOfLastSendMessage();
+    fake.emit({'type': 'textDelta', 'requestId': rid1, 'text': 'reply one'});
+    fake.emit({'type': 'done', 'requestId': rid1});
+    await firstDone.future;
 
-      expect(fake.startConversationCount, 1);
+    expect(fake.startConversationCount, 1);
 
-      // Turn two: the full history Moru would actually resend, including
-      // the model's own reply to turn one.
-      final second = generateOnce(
-        conversationId: 'c1',
-        messages: const [
-          {'role': 'user', 'content': 'turn one'},
-          {'role': 'assistant', 'content': 'reply one'},
-          {'role': 'user', 'content': 'turn two'},
-        ],
-      );
-      final secondDone = Completer<void>();
-      second.listen((_) {}, onDone: secondDone.complete);
-      final rid2 = await requestIdOfLastSendMessage();
-      expect(fake.argsOf('sendMessage')['text'], 'turn two');
-      fake.emit({'type': 'done', 'requestId': rid2});
-      await secondDone.future;
+    // Turn two: the full history Moru would actually resend, including
+    // the model's own reply to turn one.
+    final second = generateOnce(
+      conversationId: 'c1',
+      messages: const [
+        {'role': 'user', 'content': 'turn one'},
+        {'role': 'assistant', 'content': 'reply one'},
+        {'role': 'user', 'content': 'turn two'},
+      ],
+    );
+    final secondDone = Completer<void>();
+    second.listen((_) {}, onDone: secondDone.complete);
+    final rid2 = await requestIdOfLastSendMessage();
+    expect(fake.argsOf('sendMessage')['text'], 'turn two');
+    fake.emit({'type': 'done', 'requestId': rid2});
+    await secondDone.future;
 
-      // Still one -- turn two was a pure continuation, reused the
-      // existing native Conversation instead of recreating it.
-      expect(fake.startConversationCount, 1);
-    },
-  );
+    // Still one -- turn two was a pure continuation, reused the
+    // existing native Conversation instead of recreating it.
+    expect(fake.startConversationCount, 1);
+  });
 
-  test(
-    'switching to a different conversation recreates the native '
-    'Conversation',
-    () async {
-      final first = generateOnce(
-        conversationId: 'c1',
-        messages: const [
-          {'role': 'user', 'content': 'hi'},
-        ],
-      );
-      final firstDone = Completer<void>();
-      first.listen((_) {}, onDone: firstDone.complete);
-      final rid1 = await requestIdOfLastSendMessage();
-      fake.emit({'type': 'done', 'requestId': rid1});
-      await firstDone.future;
-      expect(fake.startConversationCount, 1);
+  test('switching to a different conversation recreates the native '
+      'Conversation', () async {
+    final first = generateOnce(
+      conversationId: 'c1',
+      messages: const [
+        {'role': 'user', 'content': 'hi'},
+      ],
+    );
+    final firstDone = Completer<void>();
+    first.listen((_) {}, onDone: firstDone.complete);
+    final rid1 = await requestIdOfLastSendMessage();
+    fake.emit({'type': 'done', 'requestId': rid1});
+    await firstDone.future;
+    expect(fake.startConversationCount, 1);
 
-      final second = generateOnce(
-        conversationId: 'c2',
-        messages: const [
-          {'role': 'user', 'content': 'different chat'},
-        ],
-      );
-      final secondDone = Completer<void>();
-      second.listen((_) {}, onDone: secondDone.complete);
-      final rid2 = await requestIdOfLastSendMessage();
-      fake.emit({'type': 'done', 'requestId': rid2});
-      await secondDone.future;
+    final second = generateOnce(
+      conversationId: 'c2',
+      messages: const [
+        {'role': 'user', 'content': 'different chat'},
+      ],
+    );
+    final secondDone = Completer<void>();
+    second.listen((_) {}, onDone: secondDone.complete);
+    final rid2 = await requestIdOfLastSendMessage();
+    fake.emit({'type': 'done', 'requestId': rid2});
+    await secondDone.future;
 
-      expect(fake.startConversationCount, 2);
-    },
-  );
+    expect(fake.startConversationCount, 2);
+  });
 
-  test(
-    'regenerating the same turn recreates the conversation instead of '
-    'appending a duplicate user message',
-    () async {
-      final first = generateOnce(
-        conversationId: 'c1',
-        messages: const [
-          {'role': 'user', 'content': 'hi'},
-        ],
-      );
-      final firstDone = Completer<void>();
-      first.listen((_) {}, onDone: firstDone.complete);
-      final rid1 = await requestIdOfLastSendMessage();
-      fake.emit({'type': 'textDelta', 'requestId': rid1, 'text': 'first reply'});
-      fake.emit({'type': 'done', 'requestId': rid1});
-      await firstDone.future;
-      expect(fake.startConversationCount, 1);
+  test('regenerating the same turn recreates the conversation instead of '
+      'appending a duplicate user message', () async {
+    final first = generateOnce(
+      conversationId: 'c1',
+      messages: const [
+        {'role': 'user', 'content': 'hi'},
+      ],
+    );
+    final firstDone = Completer<void>();
+    first.listen((_) {}, onDone: firstDone.complete);
+    final rid1 = await requestIdOfLastSendMessage();
+    fake.emit({'type': 'textDelta', 'requestId': rid1, 'text': 'first reply'});
+    fake.emit({'type': 'done', 'requestId': rid1});
+    await firstDone.future;
+    expect(fake.startConversationCount, 1);
 
-      // Regenerate: the exact same history is resent (no assistant reply
-      // appended yet) -- this must NOT be treated as "extends by one".
-      final regen = generateOnce(
-        conversationId: 'c1',
-        messages: const [
-          {'role': 'user', 'content': 'hi'},
-        ],
-      );
-      final regenDone = Completer<void>();
-      regen.listen((_) {}, onDone: regenDone.complete);
-      final rid2 = await requestIdOfLastSendMessage();
-      // A fresh conversation means initialMessages is empty and the turn
-      // itself is sent as the message.
-      expect(fake.argsOf('startConversation')['initialMessages'], isEmpty);
-      expect(fake.argsOf('sendMessage')['text'], 'hi');
-      fake.emit({'type': 'done', 'requestId': rid2});
-      await regenDone.future;
+    // Regenerate: the exact same history is resent (no assistant reply
+    // appended yet) -- this must NOT be treated as "extends by one".
+    final regen = generateOnce(
+      conversationId: 'c1',
+      messages: const [
+        {'role': 'user', 'content': 'hi'},
+      ],
+    );
+    final regenDone = Completer<void>();
+    regen.listen((_) {}, onDone: regenDone.complete);
+    final rid2 = await requestIdOfLastSendMessage();
+    // A fresh conversation means initialMessages is empty and the turn
+    // itself is sent as the message.
+    expect(fake.argsOf('startConversation')['initialMessages'], isEmpty);
+    expect(fake.argsOf('sendMessage')['text'], 'hi');
+    fake.emit({'type': 'done', 'requestId': rid2});
+    await regenDone.future;
 
-      expect(fake.startConversationCount, 2);
-    },
-  );
+    expect(fake.startConversationCount, 2);
+  });
 
-  test(
-    'a second generate() call is queued behind the first, never runs '
-    'concurrently',
-    () async {
-      final order = <String>[];
-      final first = generateOnce(
-        conversationId: 'c1',
-        messages: const [
-          {'role': 'user', 'content': 'first'},
-        ],
-      );
-      final firstDone = Completer<void>();
-      first.listen((c) {
-        if (c is Finish) order.add('first-finish');
-      }, onDone: firstDone.complete);
+  test('a second generate() call is queued behind the first, never runs '
+      'concurrently', () async {
+    final order = <String>[];
+    final first = generateOnce(
+      conversationId: 'c1',
+      messages: const [
+        {'role': 'user', 'content': 'first'},
+      ],
+    );
+    final firstDone = Completer<void>();
+    first.listen((c) {
+      if (c is Finish) order.add('first-finish');
+    }, onDone: firstDone.complete);
 
-      final second = generateOnce(
-        conversationId: 'c1',
-        messages: const [
-          {'role': 'user', 'content': 'second (background task)'},
-        ],
-      );
-      final secondDone = Completer<void>();
-      second.listen((c) {
-        if (c is Finish) order.add('second-finish');
-      }, onDone: secondDone.complete);
+    final second = generateOnce(
+      conversationId: 'c1',
+      messages: const [
+        {'role': 'user', 'content': 'second (background task)'},
+      ],
+    );
+    final secondDone = Completer<void>();
+    second.listen((c) {
+      if (c is Finish) order.add('second-finish');
+    }, onDone: secondDone.complete);
 
-      // Only the first call's sendMessage should have reached native yet.
-      await Future<void>.delayed(Duration.zero);
-      expect(fake.calls.where((c) => c.method == 'sendMessage'), hasLength(1));
+    // Only the first call's sendMessage should have reached native yet.
+    await Future<void>.delayed(Duration.zero);
+    expect(fake.calls.where((c) => c.method == 'sendMessage'), hasLength(1));
 
-      final rid1 = fake.argsOf('sendMessage')['requestId'] as String;
-      fake.emit({'type': 'done', 'requestId': rid1});
-      await firstDone.future;
+    final rid1 = fake.argsOf('sendMessage')['requestId'] as String;
+    fake.emit({'type': 'done', 'requestId': rid1});
+    await firstDone.future;
 
-      final rid2 = await requestIdOfLastSendMessage();
-      fake.emit({'type': 'done', 'requestId': rid2});
-      await secondDone.future;
+    final rid2 = await requestIdOfLastSendMessage();
+    fake.emit({'type': 'done', 'requestId': rid2});
+    await secondDone.future;
 
-      expect(order, ['first-finish', 'second-finish']);
-    },
-  );
+    expect(order, ['first-finish', 'second-finish']);
+  });
 
   test('the model is loaded once and not reloaded for the same path', () async {
     final first = generateOnce(
@@ -415,137 +408,131 @@ void main() {
     expect(fake.loadModelCount, 1);
   });
 
-  test(
-    'a file the SDK rejects at load time (header-valid but corrupt or '
-    'otherwise unloadable) surfaces as a clean stream error, not a hang '
-    'or a silently-treated-as-ready engine',
-    () async {
-      // The magic-byte check in local_model_import.dart only proves the
-      // file *header* is well-formed -- it is not proof the file is a
-      // loadable model (see docs/litert-lm-progress.md). This is what the
-      // real SDK is expected to do next: Engine.initialize() throws,
-      // LiteRtEngineManager.kt's try/catch turns that into a method-channel
-      // error result, and it must reach the caller as a normal stream
-      // error instead of hanging forever or leaving the runtime thinking a
-      // model is loaded.
-      fake.loadModelError = PlatformException(
-        code: 'litert_native',
-        message: 'failed to parse model: invalid or corrupt container',
-      );
+  test('a file the SDK rejects at load time (header-valid but corrupt or '
+      'otherwise unloadable) surfaces as a clean stream error, not a hang '
+      'or a silently-treated-as-ready engine', () async {
+    // The magic-byte check in local_model_import.dart only proves the
+    // file *header* is well-formed -- it is not proof the file is a
+    // loadable model (see docs/litert-lm-progress.md). This is what the
+    // real SDK is expected to do next: Engine.initialize() throws,
+    // LiteRtEngineManager.kt's try/catch turns that into a method-channel
+    // error result, and it must reach the caller as a normal stream
+    // error instead of hanging forever or leaving the runtime thinking a
+    // model is loaded.
+    fake.loadModelError = PlatformException(
+      code: 'litert_native',
+      message: 'failed to parse model: invalid or corrupt container',
+    );
 
-      final stream = generateOnce(
-        conversationId: 'c1',
-        messages: const [
-          {'role': 'user', 'content': 'hi'},
-        ],
-      );
-      final errors = <Object>[];
-      final done = Completer<void>();
-      stream.listen((_) {}, onError: errors.add, onDone: done.complete);
+    final stream = generateOnce(
+      conversationId: 'c1',
+      messages: const [
+        {'role': 'user', 'content': 'hi'},
+      ],
+    );
+    final errors = <Object>[];
+    final done = Completer<void>();
+    stream.listen((_) {}, onError: errors.add, onDone: done.complete);
 
-      await done.future;
+    await done.future;
 
-      expect(errors, hasLength(1));
-      expect(errors.single, isA<LiteRtException>());
-      expect(fake.loadModelCount, 1);
-      // The failed load must not be mistaken for a successfully loaded
-      // model on the next attempt.
-      expect(runtime.loadedModelPath, isNull);
+    expect(errors, hasLength(1));
+    expect(errors.single, isA<LiteRtException>());
+    expect(fake.loadModelCount, 1);
+    // The failed load must not be mistaken for a successfully loaded
+    // model on the next attempt.
+    expect(runtime.loadedModelPath, isNull);
 
-      // Recovery: once the underlying file/model is fixed (simulated here
-      // by clearing the injected failure), a later generate() call must
-      // still work -- a failed load must not permanently wedge the queue
-      // or the runtime's own state.
-      fake.loadModelError = null;
-      final retry = generateOnce(
-        conversationId: 'c1',
-        messages: const [
-          {'role': 'user', 'content': 'hi again'},
-        ],
-      );
-      final retryChunks = <StreamChunk>[];
-      final retryDone = Completer<void>();
-      retry.listen(retryChunks.add, onDone: retryDone.complete);
-      final rid = await requestIdOfLastSendMessage();
-      fake.emit({'type': 'done', 'requestId': rid});
-      await retryDone.future;
+    // Recovery: once the underlying file/model is fixed (simulated here
+    // by clearing the injected failure), a later generate() call must
+    // still work -- a failed load must not permanently wedge the queue
+    // or the runtime's own state.
+    fake.loadModelError = null;
+    final retry = generateOnce(
+      conversationId: 'c1',
+      messages: const [
+        {'role': 'user', 'content': 'hi again'},
+      ],
+    );
+    final retryChunks = <StreamChunk>[];
+    final retryDone = Completer<void>();
+    retry.listen(retryChunks.add, onDone: retryDone.complete);
+    final rid = await requestIdOfLastSendMessage();
+    fake.emit({'type': 'done', 'requestId': rid});
+    await retryDone.future;
 
-      expect(retryChunks, contains(isA<Finish>()));
-      expect(runtime.loadedModelPath, isNotNull);
-    },
-  );
+    expect(retryChunks, contains(isA<Finish>()));
+    expect(runtime.loadedModelPath, isNotNull);
+  });
 
-  test(
-    'a background call tagged with the active conversation\'s own id is '
-    'never mistaken for a continuation of it, and never corrupts what the '
-    'real conversation recreates with afterwards',
-    () async {
-      // Real turn 1 of conversation c1.
-      final first = generateOnce(
-        conversationId: 'c1',
-        messages: const [
-          {'role': 'user', 'content': 'turn one'},
-        ],
-      );
-      final firstDone = Completer<void>();
-      first.listen((_) {}, onDone: firstDone.complete);
-      final rid1 = await requestIdOfLastSendMessage();
-      fake.emit({'type': 'textDelta', 'requestId': rid1, 'text': 'reply one'});
-      fake.emit({'type': 'done', 'requestId': rid1});
-      await firstDone.future;
-      expect(fake.startConversationCount, 1);
+  test('a background call tagged with the active conversation\'s own id is '
+      'never mistaken for a continuation of it, and never corrupts what the '
+      'real conversation recreates with afterwards', () async {
+    // Real turn 1 of conversation c1.
+    final first = generateOnce(
+      conversationId: 'c1',
+      messages: const [
+        {'role': 'user', 'content': 'turn one'},
+      ],
+    );
+    final firstDone = Completer<void>();
+    first.listen((_) {}, onDone: firstDone.complete);
+    final rid1 = await requestIdOfLastSendMessage();
+    fake.emit({'type': 'textDelta', 'requestId': rid1, 'text': 'reply one'});
+    fake.emit({'type': 'done', 'requestId': rid1});
+    await firstDone.future;
+    expect(fake.startConversationCount, 1);
 
-      // A background call (title-gen) tagged with the SAME id, c1 -- but
-      // it is not a continuation, so it must not be able to answer "yes"
-      // to "is this a continuation of c1" no matter what native
-      // conversationToken it lands under.
-      final bg = generateBackground(
-        conversationId: 'c1',
-        messages: const [
-          {'role': 'user', 'content': 'give this chat a short title'},
-        ],
-      );
-      final bgDone = Completer<void>();
-      bg.listen((_) {}, onDone: bgDone.complete);
-      final rid2 = await requestIdOfLastSendMessage();
-      // A background call is never treated as a continuation of anything
-      // (it is always the first and only turn of its own throwaway
-      // context), so it always starts a fresh native conversation -- its
-      // own `initialMessages` must be empty, never c1's real history.
-      expect(fake.startConversationCount, 2);
-      expect(fake.argsOf('startConversation')['initialMessages'], isEmpty);
-      fake.emit({'type': 'done', 'requestId': rid2});
-      await bgDone.future;
+    // A background call (title-gen) tagged with the SAME id, c1 -- but
+    // it is not a continuation, so it must not be able to answer "yes"
+    // to "is this a continuation of c1" no matter what native
+    // conversationToken it lands under.
+    final bg = generateBackground(
+      conversationId: 'c1',
+      messages: const [
+        {'role': 'user', 'content': 'give this chat a short title'},
+      ],
+    );
+    final bgDone = Completer<void>();
+    bg.listen((_) {}, onDone: bgDone.complete);
+    final rid2 = await requestIdOfLastSendMessage();
+    // A background call is never treated as a continuation of anything
+    // (it is always the first and only turn of its own throwaway
+    // context), so it always starts a fresh native conversation -- its
+    // own `initialMessages` must be empty, never c1's real history.
+    expect(fake.startConversationCount, 2);
+    expect(fake.argsOf('startConversation')['initialMessages'], isEmpty);
+    fake.emit({'type': 'done', 'requestId': rid2});
+    await bgDone.future;
 
-      // Turn two of c1: LocalModelRuntime holds only one native
-      // Conversation at a time (by design -- "one model, one generation
-      // in memory"), so *any* intervening call, background or not, evicts
-      // it and turn two must recreate -- that eviction is an accepted,
-      // unavoidable cost of the single-slot design, not what this test is
-      // about. What actually matters: the recreated conversation is seeded
-      // from c1's own real prior history, not from the background call's
-      // throwaway prompt or some corrupted mix of the two.
-      final second = generateOnce(
-        conversationId: 'c1',
-        messages: const [
-          {'role': 'user', 'content': 'turn one'},
-          {'role': 'assistant', 'content': 'reply one'},
-          {'role': 'user', 'content': 'turn two'},
-        ],
-      );
-      final secondDone = Completer<void>();
-      second.listen((_) {}, onDone: secondDone.complete);
-      final rid3 = await requestIdOfLastSendMessage();
-      expect(fake.startConversationCount, 3);
-      expect(fake.argsOf('startConversation')['initialMessages'], [
-        {'role': 'user', 'text': 'turn one'},
-        {'role': 'assistant', 'text': 'reply one'},
-      ]);
-      expect(fake.argsOf('sendMessage')['text'], 'turn two');
-      fake.emit({'type': 'done', 'requestId': rid3});
-      await secondDone.future;
-    },
-  );
+    // Turn two of c1: LocalModelRuntime holds only one native
+    // Conversation at a time (by design -- "one model, one generation
+    // in memory"), so *any* intervening call, background or not, evicts
+    // it and turn two must recreate -- that eviction is an accepted,
+    // unavoidable cost of the single-slot design, not what this test is
+    // about. What actually matters: the recreated conversation is seeded
+    // from c1's own real prior history, not from the background call's
+    // throwaway prompt or some corrupted mix of the two.
+    final second = generateOnce(
+      conversationId: 'c1',
+      messages: const [
+        {'role': 'user', 'content': 'turn one'},
+        {'role': 'assistant', 'content': 'reply one'},
+        {'role': 'user', 'content': 'turn two'},
+      ],
+    );
+    final secondDone = Completer<void>();
+    second.listen((_) {}, onDone: secondDone.complete);
+    final rid3 = await requestIdOfLastSendMessage();
+    expect(fake.startConversationCount, 3);
+    expect(fake.argsOf('startConversation')['initialMessages'], [
+      {'role': 'user', 'text': 'turn one'},
+      {'role': 'assistant', 'text': 'reply one'},
+    ]);
+    expect(fake.argsOf('sendMessage')['text'], 'turn two');
+    fake.emit({'type': 'done', 'requestId': rid3});
+    await secondDone.future;
+  });
 
   test(
     'a background call is rejected, not allowed to evict, when a '
@@ -592,43 +579,40 @@ void main() {
     },
   );
 
-  test(
-    'a background call proceeds normally when it targets the same model '
-    'already loaded, or when nothing is loaded yet',
-    () async {
-      // Nothing loaded yet -- a background call is free to load the
-      // first model, same as any other first call would.
-      final bg1 = generateBackground(
-        conversationId: 'c1',
-        messages: const [
-          {'role': 'user', 'content': 'summarize this'},
-        ],
-      );
-      final bg1Chunks = <StreamChunk>[];
-      final bg1Done = Completer<void>();
-      bg1.listen(bg1Chunks.add, onDone: bg1Done.complete);
-      final rid1 = await requestIdOfLastSendMessage();
-      fake.emit({'type': 'done', 'requestId': rid1});
-      await bg1Done.future;
-      expect(bg1Chunks, contains(isA<Finish>()));
-      expect(fake.loadModelCount, 1);
+  test('a background call proceeds normally when it targets the same model '
+      'already loaded, or when nothing is loaded yet', () async {
+    // Nothing loaded yet -- a background call is free to load the
+    // first model, same as any other first call would.
+    final bg1 = generateBackground(
+      conversationId: 'c1',
+      messages: const [
+        {'role': 'user', 'content': 'summarize this'},
+      ],
+    );
+    final bg1Chunks = <StreamChunk>[];
+    final bg1Done = Completer<void>();
+    bg1.listen(bg1Chunks.add, onDone: bg1Done.complete);
+    final rid1 = await requestIdOfLastSendMessage();
+    fake.emit({'type': 'done', 'requestId': rid1});
+    await bg1Done.future;
+    expect(bg1Chunks, contains(isA<Finish>()));
+    expect(fake.loadModelCount, 1);
 
-      // Same model as what is already loaded -- no conflict, proceeds.
-      final bg2 = generateBackground(
-        conversationId: 'c1',
-        messages: const [
-          {'role': 'user', 'content': 'give this chat a short title'},
-        ],
-      );
-      final bg2Chunks = <StreamChunk>[];
-      final bg2Done = Completer<void>();
-      bg2.listen(bg2Chunks.add, onDone: bg2Done.complete);
-      final rid2 = await requestIdOfLastSendMessage();
-      fake.emit({'type': 'done', 'requestId': rid2});
-      await bg2Done.future;
-      expect(bg2Chunks, contains(isA<Finish>()));
-      // Still one -- the same model path never triggers an unload/reload.
-      expect(fake.loadModelCount, 1);
-    },
-  );
+    // Same model as what is already loaded -- no conflict, proceeds.
+    final bg2 = generateBackground(
+      conversationId: 'c1',
+      messages: const [
+        {'role': 'user', 'content': 'give this chat a short title'},
+      ],
+    );
+    final bg2Chunks = <StreamChunk>[];
+    final bg2Done = Completer<void>();
+    bg2.listen(bg2Chunks.add, onDone: bg2Done.complete);
+    final rid2 = await requestIdOfLastSendMessage();
+    fake.emit({'type': 'done', 'requestId': rid2});
+    await bg2Done.future;
+    expect(bg2Chunks, contains(isA<Finish>()));
+    // Still one -- the same model path never triggers an unload/reload.
+    expect(fake.loadModelCount, 1);
+  });
 }

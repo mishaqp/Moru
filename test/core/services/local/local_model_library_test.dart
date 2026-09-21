@@ -30,30 +30,33 @@ void main() {
     return file.path;
   }
 
-  test('registering a model creates the provider config on first use', () async {
-    expect(settings.providerConfigs[kLocalModelProviderKey], isNull);
+  test(
+    'registering a model creates the provider config on first use',
+    () async {
+      expect(settings.providerConfigs[kLocalModelProviderKey], isNull);
 
-    final path = await writeFakeModelFile('a.litertlm');
-    final installed = await library.registerInstalledModel(
-      settings,
-      filePath: path,
-      sizeBytes: 4,
-      displayName: 'Test Model',
-      sourceLabel: 'a.litertlm',
-    );
+      final path = await writeFakeModelFile('a.litertlm');
+      final installed = await library.registerInstalledModel(
+        settings,
+        filePath: path,
+        sizeBytes: 4,
+        displayName: 'Test Model',
+        sourceLabel: 'a.litertlm',
+      );
 
-    final cfg = settings.providerConfigs[kLocalModelProviderKey];
-    expect(cfg, isNotNull);
-    expect(cfg!.providerType, ProviderKind.local);
-    expect(cfg.enabled, isTrue);
-    expect(cfg.models, [installed.id]);
+      final cfg = settings.providerConfigs[kLocalModelProviderKey];
+      expect(cfg, isNotNull);
+      expect(cfg!.providerType, ProviderKind.local);
+      expect(cfg.enabled, isTrue);
+      expect(cfg.models, [installed.id]);
 
-    final list = library.installedModels(settings);
-    expect(list, hasLength(1));
-    expect(list.single.displayName, 'Test Model');
-    expect(list.single.filePath, path);
-    expect(list.single.sizeBytes, 4);
-  });
+      final list = library.installedModels(settings);
+      expect(list, hasLength(1));
+      expect(list.single.displayName, 'Test Model');
+      expect(list.single.filePath, path);
+      expect(list.single.sizeBytes, 4);
+    },
+  );
 
   test('registering a second model appends to the existing config', () async {
     await library.registerInstalledModel(
@@ -111,26 +114,8 @@ void main() {
     expect(first.id, hasLength(71));
   });
 
-  test('deleting a model removes it from the config and deletes its file', () async {
-    final path = await writeFakeModelFile('a.litertlm');
-    final installed = await library.registerInstalledModel(
-      settings,
-      filePath: path,
-      sizeBytes: 4,
-      displayName: 'A',
-      sourceLabel: 'a.litertlm',
-    );
-    expect(File(path).existsSync(), isTrue);
-
-    await library.deleteModel(settings, installed.id);
-
-    expect(library.installedModels(settings), isEmpty);
-    expect(File(path).existsSync(), isFalse);
-  });
-
   test(
-    'deleting a model whose file path is reported in-use is refused, and '
-    'the file survives',
+    'deleting a model removes it from the config and deletes its file',
     () async {
       final path = await writeFakeModelFile('a.litertlm');
       final installed = await library.registerInstalledModel(
@@ -140,26 +125,44 @@ void main() {
         displayName: 'A',
         sourceLabel: 'a.litertlm',
       );
-
-      await expectLater(
-        library.deleteModel(
-          settings,
-          installed.id,
-          isPathInUse: (p) => p == path,
-        ),
-        throwsA(
-          isA<LocalModelLibraryException>().having(
-            (e) => e.code,
-            'code',
-            'model_in_use',
-          ),
-        ),
-      );
-
       expect(File(path).existsSync(), isTrue);
-      expect(library.installedModels(settings), hasLength(1));
+
+      await library.deleteModel(settings, installed.id);
+
+      expect(library.installedModels(settings), isEmpty);
+      expect(File(path).existsSync(), isFalse);
     },
   );
+
+  test('deleting a model whose file path is reported in-use is refused, and '
+      'the file survives', () async {
+    final path = await writeFakeModelFile('a.litertlm');
+    final installed = await library.registerInstalledModel(
+      settings,
+      filePath: path,
+      sizeBytes: 4,
+      displayName: 'A',
+      sourceLabel: 'a.litertlm',
+    );
+
+    await expectLater(
+      library.deleteModel(
+        settings,
+        installed.id,
+        isPathInUse: (p) => p == path,
+      ),
+      throwsA(
+        isA<LocalModelLibraryException>().having(
+          (e) => e.code,
+          'code',
+          'model_in_use',
+        ),
+      ),
+    );
+
+    expect(File(path).existsSync(), isTrue);
+    expect(library.installedModels(settings), hasLength(1));
+  });
 
   test(
     'deleting a model whose file path is not in use proceeds normally',
