@@ -702,14 +702,90 @@ dedicated tests that actually run the real code path:
   local config -- no built-in-tool toggle (search, code execution, etc.)
   is ever offered in the model edit sheet for an on-device model.
 
+## Magic bytes prove the header, not compatibility -- what actually
+## happens when a header-valid file is corrupt or unloadable
+
+Re-read the pinned `v0.17.1` source (still cloned at
+`/home/user/google-ai-edge/litert-lm`) specifically to answer this,
+rather than assuming the Dart-side header check is a substitute for real
+SDK validation. Findings:
+
+- **Native format detection trusts the file *extension* first, content
+  second**: `runtime/util/file_format_util.cc`'s `GetFileFormat(path,
+  scoped_file)` — "Trust the extension of the file path, if it matches a
+  known format" — returns `FileFormat::LITERT_LM` for any `*.litertlm`
+  path *without inspecting contents at all*; the magic-byte check
+  (`GetFileFormatFromFileContents`) only runs as a fallback when there's
+  no recognized extension. This means the native side's own first-stage
+  dispatch would NOT catch a `.litertlm`-named file with a different or
+  garbage format on its own -- confirms the Dart-side
+  `local_model_import.dart` magic-byte check (which does inspect real
+  content, unconditionally) is not redundant with anything native does
+  at this stage, and existing code comments already correctly scope it
+  as a header/format check, never as "compatibility" (verified: no
+  Dart/ARB string in this branch uses "compatib*"/"совместим*" about
+  format validation).
+- **Past that dispatch, actual parsing is `absl::Status`-based
+  throughout**: `BuildLiteRtCompiledModelResources` →
+  `BuildModelResourcesFromLitertLmFormat` (both `StatusOr`-returning,
+  standard Google C++ error-propagation, not exceptions/asserts) is the
+  real LITERT_LM container parser. This is the right pattern for a
+  malformed-but-header-valid container to fail as a clean, structured
+  error rather than crash -- but it is evidence of good engineering
+  practice, not a guarantee: a parsing bug (an unchecked buffer read on
+  genuinely adversarial/corrupted bytes) could still misbehave natively,
+  and nothing in this repo proves otherwise for every possible malformed
+  input.
+- **The one boundary that cannot be verified from source at all**:
+  `Engine.kt`'s `initialize()` calls `LiteRtLmJni.nativeCreateEngine(...)`
+  -- a JNI entry point. The C++/JNI glue that translates an internal
+  `absl::Status` failure into either a thrown Java exception or a raw
+  native crash is compiled into `liblitertlm_jni.so` and is **not**
+  present in the public source tree (only the `.kt`/`.cc` call sites
+  are). Whether a genuinely corrupt file throws cleanly or can reach a
+  native crash (SIGSEGV) is therefore *not provable by reading source or
+  by any Kotlin/Dart-level test* -- exactly the boundary the task brief
+  already warned about: a Kotlin `try/catch` cannot be promised to catch
+  a native crash. This can only be settled by the already-planned
+  on-device manual test with a deliberately corrupted file (see the
+  device-verification checklist).
+- **What *is* fully verified, at every layer this codebase controls**:
+  `LiteRtEngineManager.loadModel` (`android/app/.../litert/
+  LiteRtEngineManager.kt`) wraps `Engine.initialize()` in try/catch and
+  reports failure via `onResult(Result.failure(...))`;
+  `LiteRtPlugin.kt`'s `loadModel` handler turns that into
+  `result.error(errorCode(it), it.message, null)` -- a real
+  `PlatformException`, never swallowed. `LiteRtChannel._invoke` normalizes
+  that into `LiteRtException`. `LocalModelRuntime.generate()`'s
+  `_enqueue(...).catchError(...)` delivers it as a normal stream error
+  and closes the controller -- no hang. `ChatApiService.sendMessageStream`
+  returns the same `Stream<StreamChunk>` shape for every provider, so
+  `chat_actions.dart`'s existing `_handleStreamError` (generic, provider-
+  agnostic, already shipped) shows it as a normal error message, not a
+  frozen screen -- no local-specific UI code needed or added.
+  Added a new test,
+  `local_model_runtime_test.dart`: "a file the SDK rejects at load time
+  ... surfaces as a clean stream error, not a hang", which simulates
+  exactly this scenario (the mocked `loadModel` method-channel call
+  throws a `PlatformException`, standing in for a real SDK rejection) and
+  additionally proves recovery: `loadedModelPath` stays `null` after the
+  failure (never mistaken for a loaded model) and a later `generate()`
+  call still works normally -- a failed load does not wedge the
+  single-flight queue or the runtime's own state permanently.
+  `flutter test test/core/services/local/local_model_runtime_test.dart`
+  -- 9/9 pass (was 8; this is the new one).
+
+**Honest summary for this item**: everything this codebase is responsible
+for (Dart header check, Kotlin catch+propagate, Dart error normalization,
+generic chat UI error display) is verified, including by a new automated
+test for the load-failure path. What genuinely cannot be verified without
+a device is the native JNI boundary's behavior on adversarial/corrupted
+*content* specifically (as opposed to a wrong-format file, which the
+Dart-side header check already rejects before any file bytes ever reach
+the SDK) -- this stays on the device-verification checklist, not claimed
+as done here.
+
 ## Next
-Magic-byte import validation only proves the file *header* is well-formed
--- it is not proof the file is a compatible, loadable model (task
-explicitly warns against conflating the two). Need to verify what
-`LiteRtEngineManager.loadModel` actually does with a header-valid but
-otherwise corrupt/incompatible `.litertlm` file: does the real SDK reject
-it cleanly (a `PlatformException` surfaced as `LiteRtException`), or can it
-crash/hang the native side? Then: pin exact Kotlin/LiteRT-LM versions
-explicitly in the progress log and run a full Android build (not just
-`compileDebugKotlin`) including JVM tests, and close the background-
-generation queuing policy before starting slice 4.
+Pin exact Kotlin/LiteRT-LM versions explicitly in this log and run a full
+Android build (not just `compileDebugKotlin`) including JVM tests, then
+close the background-generation queuing policy before starting slice 4.

@@ -28,11 +28,18 @@ class _FakeNative {
   int startConversationCount = 0;
   int loadModelCount = 0;
 
+  /// Set to simulate the real SDK rejecting a header-valid but corrupt or
+  /// otherwise unloadable `.litertlm` file at `Engine.initialize()` --
+  /// LiteRtEngineManager.kt wraps that call in try/catch and reports it
+  /// through the method channel's error result exactly like this.
+  PlatformException? loadModelError;
+
   Future<Object?> _handle(MethodCall call) async {
     calls.add(call);
     switch (call.method) {
       case 'loadModel':
         loadModelCount++;
+        if (loadModelError != null) throw loadModelError!;
         return <String, Object?>{'backend': 'cpu'};
       case 'unloadModel':
         return null;
@@ -386,4 +393,64 @@ void main() {
 
     expect(fake.loadModelCount, 1);
   });
+
+  test(
+    'a file the SDK rejects at load time (header-valid but corrupt or '
+    'otherwise unloadable) surfaces as a clean stream error, not a hang '
+    'or a silently-treated-as-ready engine',
+    () async {
+      // The magic-byte check in local_model_import.dart only proves the
+      // file *header* is well-formed -- it is not proof the file is a
+      // loadable model (see docs/litert-lm-progress.md). This is what the
+      // real SDK is expected to do next: Engine.initialize() throws,
+      // LiteRtEngineManager.kt's try/catch turns that into a method-channel
+      // error result, and it must reach the caller as a normal stream
+      // error instead of hanging forever or leaving the runtime thinking a
+      // model is loaded.
+      fake.loadModelError = PlatformException(
+        code: 'litert_native',
+        message: 'failed to parse model: invalid or corrupt container',
+      );
+
+      final stream = generateOnce(
+        conversationId: 'c1',
+        messages: const [
+          {'role': 'user', 'content': 'hi'},
+        ],
+      );
+      final errors = <Object>[];
+      final done = Completer<void>();
+      stream.listen((_) {}, onError: errors.add, onDone: done.complete);
+
+      await done.future;
+
+      expect(errors, hasLength(1));
+      expect(errors.single, isA<LiteRtException>());
+      expect(fake.loadModelCount, 1);
+      // The failed load must not be mistaken for a successfully loaded
+      // model on the next attempt.
+      expect(runtime.loadedModelPath, isNull);
+
+      // Recovery: once the underlying file/model is fixed (simulated here
+      // by clearing the injected failure), a later generate() call must
+      // still work -- a failed load must not permanently wedge the queue
+      // or the runtime's own state.
+      fake.loadModelError = null;
+      final retry = generateOnce(
+        conversationId: 'c1',
+        messages: const [
+          {'role': 'user', 'content': 'hi again'},
+        ],
+      );
+      final retryChunks = <StreamChunk>[];
+      final retryDone = Completer<void>();
+      retry.listen(retryChunks.add, onDone: retryDone.complete);
+      final rid = await requestIdOfLastSendMessage();
+      fake.emit({'type': 'done', 'requestId': rid});
+      await retryDone.future;
+
+      expect(retryChunks, contains(isA<Finish>()));
+      expect(runtime.loadedModelPath, isNotNull);
+    },
+  );
 }
