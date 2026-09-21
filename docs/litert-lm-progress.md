@@ -528,3 +528,51 @@ format check, progress/cancel for a large copy) and a minimal local model
 management page/entry point in Settings -- this is what actually
 populates `ProviderConfig.modelOverrides[modelId]['localModelPath']` that
 `sendLiteRtStream` already reads.
+
+## Vertical slice 3 — import backend (in progress)
+
+- **Real format validation, not extension-only**: confirmed via the
+  LiteRT-LM C++ source itself (`runtime/util/file_format_util.cc`,
+  `GetFileFormatFromFileContents`) that a genuine `.litertlm` file's first
+  8 bytes are the literal ASCII string `"LITERTLM"`, and a GGUF file's
+  first 4 bytes are `"GGUF"`. `lib/core/services/local/local_model_import.dart`
+  checks these real magic bytes before trusting any imported file --
+  rejects GGUF with a distinct reason (`ggufNotSupported`) from "not
+  LiteRT-LM at all" (`notLiteRtLmFormat`), and a `.litertlm`-named file
+  that isn't really one is caught the same way (extension alone proves
+  nothing, per the task brief).
+- `importLocalModelFile` streams (never buffers the whole file in memory)
+  into a `.part` sibling, only renaming to the final name once the full
+  stream is written and validated -- a reader can never observe a
+  half-written file at the final path. Polls `isCancelled` between chunks
+  and cleans up the partial file on cancel or on a stream error (rethrown
+  after cleanup).
+- `AppDirectories.getLocalModelsDirectory()` -- `<appData>/litert_models`,
+  same tier as `environment/` (outside cache, never added to
+  `data_sync.dart`'s `_assetRootNames` backup whitelist -- confirmed no
+  code change needed there, it's a fixed allow-list).
+- `local_model_library.dart`: keeps a dedicated `ProviderConfig` (key
+  `litert-local`, `providerType: ProviderKind.local`) whose `models`/
+  `modelOverrides` list installed models -- reuses `SettingsProvider.
+  deleteModels` (already handles clearing per-assistant/per-chat model
+  selections) rather than reinventing that bookkeeping. `deleteModel`
+  refuses (throws `LocalModelLibraryException('model_in_use')`, file and
+  config left untouched) when an injectable `isPathInUse` predicate says
+  the file is the one currently loaded -- defaults to checking
+  `LocalModelRuntime.instance.loadedModelPath` in production, injectable
+  in tests.
+- 17 new tests (`local_model_import_test.dart` 11, `local_model_library_test.dart`
+  6), all passing on first real run (no debugging needed this time -- the
+  earlier deadlock lesson was applied: this module has no
+  StreamController-closes-itself pattern). Full `test/core/services/local/`
+  now 29/29.
+
+## Next
+Wire the SAF file pick into this backend
+(`FilePicker.platform.pickFiles(withReadStream: true)` -- confirmed via the
+installed `file_picker: ^10.3.10` package's own source that `PlatformFile.
+readStream`/`.size` exist for exactly this "stream a large picked file
+without loading it into memory" case, and this is the same package Moru's
+own backup-import flow already uses, so no new dependency/pattern), then
+the "Локальные модели · LiteRT" settings page (Каталог/Установленные/
+Импортировать) and its entry point in the provider list.

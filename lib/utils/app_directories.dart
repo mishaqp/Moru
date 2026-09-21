@@ -72,6 +72,15 @@ class AppDirectories {
   static Future<Directory> getEnvironmentDirectory() =>
       _ensureSubdir('environment');
 
+  /// Installed local (on-device LiteRT-LM) model weight files:
+  /// `<appData>/litert_models`. Deliberately outside the cache directory
+  /// (Android may reclaim cache under storage pressure) and, like
+  /// `environment/`, deliberately never added to `data_sync.dart`'s
+  /// `_assetRootNames` backup whitelist -- these files are large,
+  /// re-downloadable/re-importable, and not backup data.
+  static Future<Directory> getLocalModelsDirectory() =>
+      _ensureSubdir('litert_models');
+
   /// Files root for a managed workspace: `<appData>/workspaces/<id>/files`.
   static Future<Directory> workspaceFilesDir(String workspaceId) {
     return _ensurePath('workspaces/$workspaceId/files');

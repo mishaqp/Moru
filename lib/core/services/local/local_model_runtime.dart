@@ -31,6 +31,11 @@ class LocalModelRuntime {
   String? _activeConversationKey;
   List<Map<String, dynamic>>? _lastFullHistory;
 
+  /// The file path of the model currently loaded in the native engine, or
+  /// `null` if none is. Read by the model-management UI to guard against
+  /// deleting a model file that is in active use.
+  String? get loadedModelPath => _loadedModelPath;
+
   void _ensureListening() {
     _eventSub ??= _channel.events.listen((event) {
       final rid = switch (event) {
