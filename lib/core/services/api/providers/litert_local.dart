@@ -41,7 +41,14 @@ Stream<StreamChunk> sendLiteRtStream({
   required CancelToken sessionToken,
   bool isConversationTurn = false,
 }) {
-  final overrides = config.modelOverrides[modelId] as Map?;
+  Map? overrides = config.modelOverrides[modelId] as Map?;
+  // Older builds assigned a random UUID on every import. A chat could keep
+  // that stale UUID after the same model was reimported. When exactly one
+  // local model is installed there is no ambiguity, so keep the chat usable
+  // and resolve it to that sole installed model.
+  if (overrides == null && config.models.length == 1) {
+    overrides = config.modelOverrides[config.models.single] as Map?;
+  }
   final modelPath = overrides?['localModelPath']?.toString();
   if (modelPath == null || modelPath.isEmpty) {
     return Stream<StreamChunk>.error(

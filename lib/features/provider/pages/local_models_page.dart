@@ -102,13 +102,18 @@ class _LocalModelsPageState extends State<LocalModelsPage> {
     Navigator.of(context, rootNavigator: true).maybePop();
 
     switch (outcome) {
-      case LocalModelImportSuccess(:final filePath, :final sizeBytes):
+      case LocalModelImportSuccess(
+        :final filePath,
+        :final sizeBytes,
+        :final sha256,
+      ):
         await _library.registerInstalledModel(
           settings,
           filePath: filePath,
           sizeBytes: sizeBytes,
           displayName: _stripExtension(picked.name),
           sourceLabel: l10n.localModelsSourceImportedLabel,
+          contentSha256: sha256,
         );
         if (!mounted) return;
         setState(() {});

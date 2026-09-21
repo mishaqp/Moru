@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:uuid/uuid.dart';
+import 'package:crypto/crypto.dart';
 
 import '../../providers/settings_provider.dart';
 import 'local_model_runtime.dart';
@@ -101,6 +101,7 @@ class LocalModelLibrary {
     required String displayName,
     required String sourceLabel,
     String backend = 'cpu',
+    String? contentSha256,
   }) async {
     final existing = settings.providerConfigs[kLocalModelProviderKey];
     final cfg =
@@ -120,9 +121,34 @@ class LocalModelLibrary {
           modelOverrides: const {},
         );
 
-    final modelId = const Uuid().v4();
-    final nextModels = [...cfg.models, modelId];
     final nextOverrides = Map<String, dynamic>.from(cfg.modelOverrides);
+    final hash = contentSha256 ?? await _sha256OfFile(filePath);
+    String? matchingId;
+    String? replacedFilePath;
+    for (final id in cfg.models) {
+      final raw = (nextOverrides[id] as Map?)?.cast<String, dynamic>();
+      if (raw == null) continue;
+      var existingHash = (raw['localSha256'] ?? '').toString();
+      final existingPath = (raw['localModelPath'] ?? '').toString();
+      if (existingHash.isEmpty && existingPath.isNotEmpty) {
+        final existingFile = File(existingPath);
+        if (await existingFile.exists()) {
+          existingHash = await _sha256OfFile(existingPath);
+          raw['localSha256'] = existingHash;
+          nextOverrides[id] = raw;
+        }
+      }
+      if (existingHash == hash) {
+        matchingId = id;
+        replacedFilePath = existingPath;
+        break;
+      }
+    }
+
+    final modelId = matchingId ?? 'litert-$hash';
+    final nextModels = matchingId == null
+        ? [...cfg.models, modelId]
+        : cfg.models;
     nextOverrides[modelId] = {
       'name': displayName,
       'type': 'chat',
@@ -134,6 +160,7 @@ class LocalModelLibrary {
       'localSizeBytes': sizeBytes,
       'localSourceLabel': sourceLabel,
       'localInstalledAtMillis': DateTime.now().millisecondsSinceEpoch,
+      'localSha256': hash,
     };
 
     final updated = cfg.copyWith(
@@ -142,11 +169,20 @@ class LocalModelLibrary {
       modelOverrides: nextOverrides,
     );
     await settings.setProviderConfig(kLocalModelProviderKey, updated);
+    if (replacedFilePath != null &&
+        replacedFilePath != filePath &&
+        LocalModelRuntime.instance.loadedModelPath != replacedFilePath) {
+      final replacedFile = File(replacedFilePath);
+      if (await replacedFile.exists()) await replacedFile.delete();
+    }
     return InstalledLocalModel.fromOverride(
       modelId,
       nextOverrides[modelId] as Map<String, dynamic>,
     );
   }
+
+  Future<String> _sha256OfFile(String filePath) async =>
+      (await sha256.bind(File(filePath).openRead()).first).toString();
 
   /// Removes [modelId] from the provider config (and every place that had
   /// it selected, via [SettingsProvider.deleteModels]) and deletes its

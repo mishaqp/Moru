@@ -75,6 +75,42 @@ void main() {
     expect(list.map((m) => m.displayName).toSet(), {'A', 'B'});
   });
 
+  test('reimporting identical weights preserves the model id', () async {
+    final firstPath = await writeFakeModelFile('first.litertlm');
+    final first = await library.registerInstalledModel(
+      settings,
+      filePath: firstPath,
+      sizeBytes: 4,
+      displayName: 'Qwen',
+      sourceLabel: 'first.litertlm',
+    );
+    final secondPath = await writeFakeModelFile('second.litertlm');
+    final second = await library.registerInstalledModel(
+      settings,
+      filePath: secondPath,
+      sizeBytes: 4,
+      displayName: 'Qwen reimported',
+      sourceLabel: 'second.litertlm',
+    );
+
+    expect(second.id, first.id);
+    expect(library.installedModels(settings), hasLength(1));
+    expect(library.installedModels(settings).single.filePath, secondPath);
+  });
+
+  test('new model ids are stable for identical content', () async {
+    final first = await library.registerInstalledModel(
+      settings,
+      filePath: await writeFakeModelFile('a.litertlm'),
+      sizeBytes: 4,
+      displayName: 'A',
+      sourceLabel: 'a.litertlm',
+    );
+
+    expect(first.id, startsWith('litert-'));
+    expect(first.id, hasLength(71));
+  });
+
   test('deleting a model removes it from the config and deletes its file', () async {
     final path = await writeFakeModelFile('a.litertlm');
     final installed = await library.registerInstalledModel(

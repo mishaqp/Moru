@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/services/local/local_model_import.dart';
@@ -42,6 +43,7 @@ void main() {
     expect(result, isA<LocalModelImportSuccess>());
     final success = result as LocalModelImportSuccess;
     expect(success.sizeBytes, bytes.length);
+    expect(success.sha256, sha256.convert(bytes).toString());
     expect(File(success.filePath).existsSync(), isTrue);
     expect(File(success.filePath).readAsBytesSync(), bytes);
     // No leftover .part file.

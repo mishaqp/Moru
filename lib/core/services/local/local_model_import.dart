@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+
+import 'package:crypto/crypto.dart';
 
 /// Progress while streaming a picked file into the local models directory.
 class LocalModelImportProgress {
@@ -24,10 +27,12 @@ final class LocalModelImportSuccess extends LocalModelImportResult {
   const LocalModelImportSuccess({
     required this.filePath,
     required this.sizeBytes,
+    required this.sha256,
   });
 
   final String filePath;
   final int sizeBytes;
+  final String sha256;
 }
 
 /// Why an import did not produce an installed model. [reason] is a stable
@@ -110,18 +115,33 @@ Future<LocalModelImportResult> importLocalModelFile({
   final partFile = File('${targetDirectory.path}/$targetFileName.part');
   final finalFile = File('${targetDirectory.path}/$targetFileName');
   final sink = partFile.openWrite();
+  Digest? contentDigest;
+  var hashSinkClosed = false;
+  final hashSink = sha256.startChunkedConversion(
+    ByteConversionSink.withCallback((bytes) {
+      contentDigest = Digest(bytes);
+    }),
+  );
+
+  void closeHashSink() {
+    if (hashSinkClosed) return;
+    hashSinkClosed = true;
+    hashSink.close();
+  }
 
   var written = 0;
   var headerChecked = false;
   final headerBuffer = <int>[];
 
   Future<LocalModelImportResult> abort(LocalModelImportResult result) async {
+    closeHashSink();
     await sink.close();
     if (await partFile.exists()) await partFile.delete();
     return result;
   }
 
   Future<void> cleanUpAfterError() async {
+    closeHashSink();
     await sink.close();
     if (await partFile.exists()) await partFile.delete();
   }
@@ -151,6 +171,7 @@ Future<LocalModelImportResult> importLocalModelFile({
           }
         }
       }
+      hashSink.add(chunk);
       sink.add(chunk);
       written += chunk.length;
       onProgress?.call(
@@ -179,9 +200,14 @@ Future<LocalModelImportResult> importLocalModelFile({
 
   await sink.flush();
   await sink.close();
+  closeHashSink();
   if (await finalFile.exists()) await finalFile.delete();
   await partFile.rename(finalFile.path);
-  return LocalModelImportSuccess(filePath: finalFile.path, sizeBytes: written);
+  return LocalModelImportSuccess(
+    filePath: finalFile.path,
+    sizeBytes: written,
+    sha256: contentDigest!.toString(),
+  );
 }
 
 /// Deletes every stray `*.part` file in [directory] -- an import that was
