@@ -248,7 +248,13 @@ void main() {
         },
       };
 
-      for (final kind in ProviderKind.values) {
+      // ProviderKind.local is excluded: it has no tool-calling support in
+      // this release, so its sanitizer intentionally strips a schema down
+      // to nothing (see ToolHandlerService's own switch) rather than
+      // preserving the payload shape this test asserts on.
+      for (final kind in ProviderKind.values.where(
+        (k) => k != ProviderKind.local,
+      )) {
         final output = ToolHandlerService.sanitizeToolParametersForProvider(
           schema,
           kind,

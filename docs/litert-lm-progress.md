@@ -488,3 +488,43 @@ integration_test` clean. The `ProviderKind.local`-exclusion in
 HTTP kinds (openai/google/claude) run, local correctly skipped.
 Full `flutter test` run in progress to check for regressions elsewhere
 before committing.
+
+## Vertical slice 2 — full regression run result
+
+Full `flutter test` (6004 tests) surfaced 3 failures, 1 real (caused by
+this diff, now fixed) and 2 pre-existing/unrelated:
+
+- **Real, fixed**: `tool_handler_service_test.dart`'s tuple-form-fan-out
+  test iterates `for (final kind in ProviderKind.values)` to check tool
+  schema sanitization generically -- now that `.values` includes `local`,
+  it hit `ToolHandlerService`'s new `case ProviderKind.local: allowed =
+  const {};` (tool calling is out of scope for the local provider, so its
+  sanitizer intentionally empties a schema down to nothing). Fixed the
+  same way as the earlier `chat_api_custom_request_precedence_test.dart`
+  fix: excluded `.local` from that one loop with a comment, since the test
+  is inherently about tool-schema shaping for providers that use tools.
+- **Pre-existing, unrelated** (confirmed by re-running in isolation,
+  neither file touched by this diff):
+  - `desktop_process_runtime_test.dart`: "cancel kills the process tree
+    including child sleep" -- fails even standalone in this sandbox
+    ("child still alive after cancellation"), a real-process
+    SIGTERM/SIGKILL delivery timing issue specific to this container, not
+    something introduced here (unrelated subsystem: desktop workspace
+    process/PTY execution).
+  - `chat_input_bar_attachment_cleanup_test.dart`: relies on `chmod 0555`
+    to simulate a permission failure, which this sandbox's root user
+    bypasses (same root cause identified in the prior browser-feature
+    session).
+
+After the fix: `dart analyze --fatal-infos lib test integration_test`
+clean; `tool_handler_service_test.dart` 14/14 pass;
+`chat_api_custom_request_precedence_test.dart` 3/3 pass;
+`test/core/services/local/` 12/12 pass.
+
+## Next
+Vertical slice 3: model import (Android SAF `content://` picker, copy
+into a private app-data directory outside cache, `.litertlm` vs. GGUF
+format check, progress/cancel for a large copy) and a minimal local model
+management page/entry point in Settings -- this is what actually
+populates `ProviderConfig.modelOverrides[modelId]['localModelPath']` that
+`sendLiteRtStream` already reads.
