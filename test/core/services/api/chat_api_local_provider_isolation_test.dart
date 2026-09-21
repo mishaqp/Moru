@@ -163,27 +163,21 @@ void main() {
     expect(toolCallInvoked, isFalse);
   });
 
-  test(
-    'a stale local model id falls back to the only installed model',
-    () {
-      const currentId = 'litert-current';
-      final config = ProviderConfig(
-        id: kLocalModelProviderKey,
-        enabled: true,
-        name: 'Local',
-        apiKey: '',
-        baseUrl: '',
-        providerType: ProviderKind.local,
-        models: const [currentId],
-        modelOverrides: const {
-          currentId: {'localModelPath': '/models/current.litertlm'},
-        },
-      );
-      final resolved = resolveLiteRtModelOverride(
-        config,
-        'deleted-random-uuid',
-      );
-      expect(resolved?['localModelPath'], '/models/current.litertlm');
-    },
-  );
+  test('a stale local model id falls back to the only installed model', () {
+    const currentId = 'litert-current';
+    final config = ProviderConfig(
+      id: kLocalModelProviderKey,
+      enabled: true,
+      name: 'Local',
+      apiKey: '',
+      baseUrl: '',
+      providerType: ProviderKind.local,
+      models: const [currentId],
+      modelOverrides: const {
+        currentId: {'localModelPath': '/models/current.litertlm'},
+      },
+    );
+    final resolved = resolveLiteRtModelOverride(config, 'deleted-random-uuid');
+    expect(resolved?['localModelPath'], '/models/current.litertlm');
+  });
 }
