@@ -85,5 +85,16 @@ jobs:
       - name: dart analyze (root package only)
         run: dart analyze --fatal-infos lib test integration_test
 
+      - name: Capture analyzer output
+        if: failure()
+        run: dart analyze --fatal-infos lib test integration_test > dart-analyze.txt 2>&1 || true
+
+      - name: Upload analyzer output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dart-analyze-output
+          path: dart-analyze.txt
+
       - name: flutter test
         run: flutter test
