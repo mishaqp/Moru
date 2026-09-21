@@ -12335,4 +12335,80 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get browserApprovalHeadingUnknownSite =>
       'Moru хочет выполнить действие в браузере';
+
+  @override
+  String get localModelsProviderName => 'Локальные модели · LiteRT';
+
+  @override
+  String get localModelsInstalledSectionTitle => 'Установленные';
+
+  @override
+  String get localModelsCatalogSectionTitle => 'Каталог';
+
+  @override
+  String get localModelsCatalogComingSoon =>
+      'Проверенный каталог появится в одном из следующих обновлений. Пока импортируйте уже скачанный файл .litertlm.';
+
+  @override
+  String get localModelsImportAction => 'Импортировать файл';
+
+  @override
+  String get localModelsEmptyTitle => 'Нет установленных моделей';
+
+  @override
+  String get localModelsEmptySubtitle =>
+      'Импортируйте файл .litertlm, чтобы начать использовать локальную модель — после установки не нужны ни аккаунт, ни интернет.';
+
+  @override
+  String get localModelsDeleteAction => 'Удалить';
+
+  @override
+  String get localModelsDeleteConfirmTitle => 'Удалить эту модель?';
+
+  @override
+  String get localModelsDeleteConfirmContent =>
+      'Файл модели будет удалён с устройства. Это действие нельзя отменить.';
+
+  @override
+  String get localModelsDeleteConfirmCancel => 'Отмена';
+
+  @override
+  String get localModelsDeleteConfirmOk => 'Удалить';
+
+  @override
+  String get localModelsDeleteInUseError =>
+      'Сначала выгрузите модель из памяти, чтобы удалить её.';
+
+  @override
+  String get localModelsImportingLabel => 'Импорт…';
+
+  @override
+  String get localModelsImportSuccess => 'Модель импортирована';
+
+  @override
+  String get localModelsImportRejectedGguf =>
+      'Это файл в формате GGUF. Moru поддерживает только формат .litertlm — GGUF не поддерживается.';
+
+  @override
+  String get localModelsImportRejectedFormat =>
+      'Файл не распознан как модель LiteRT-LM (.litertlm). Совпадение расширения имени файла само по себе не гарантирует формат.';
+
+  @override
+  String get localModelsImportRejectedNoStream =>
+      'Не удалось прочитать выбранный файл.';
+
+  @override
+  String get localModelsImportCancelled => 'Импорт отменён';
+
+  @override
+  String get localModelsImportFailedGeneric => 'Не удалось импортировать файл.';
+
+  @override
+  String get localModelsBackendCpuLabel => 'CPU';
+
+  @override
+  String get localModelsBackendGpuLabel => 'GPU';
+
+  @override
+  String get localModelsSourceImportedLabel => 'Импортирована';
 }

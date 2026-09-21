@@ -576,3 +576,69 @@ without loading it into memory" case, and this is the same package Moru's
 own backup-import flow already uses, so no new dependency/pattern), then
 the "Локальные модели · LiteRT" settings page (Каталог/Установленные/
 Импортировать) and its entry point in the provider list.
+
+## Vertical slice 3 — UI wired in (import + installed list + delete)
+
+- `lib/features/provider/pages/local_models_page.dart`: `LocalModelsPage`,
+  a `StatefulWidget` following the existing `SectionCard`/Lucide/theme-token
+  patterns (no Material `Icons.*`). Installed-models list with delete (and
+  an empty state), a "Каталог" section that's honestly a
+  `localModelsCatalogComingSoon` placeholder (slice 4 fills this in --
+  no fake catalog rows), and an import button.
+  - Import: `FilePicker.platform.pickFiles(type: FileType.custom,
+    allowedExtensions: ['litertlm'], withReadStream: true)`, a
+    non-dismissible progress dialog (`ValueListenableBuilder` over
+    `LocalModelImportProgress`, real byte counts, a cancel button that
+    flips an `isCancelled` flag the import loop polls), then
+    `importLocalModelFile` into `AppDirectories.getLocalModelsDirectory()`
+    and, on success, `LocalModelLibrary.registerInstalledModel`. Every
+    `LocalModelImportRejectReason` (gguf/format/no-stream) and the
+    cancelled/success outcomes each get their own localized snackbar --
+    no generic "import failed".
+  - Delete: confirmation dialog, catches `LocalModelLibraryException`
+    (the `model_in_use` case) and shows `localModelsDeleteInUseError`
+    instead of silently failing or deleting a file still loaded.
+- **Entry point**: `providers_page.dart`'s static `_providers()` catalog
+  gets one more row (`kLocalModelProviderKey` = `'litert-local'`, name
+  `l10n.localModelsProviderName`) so the provider is visible before any
+  model is ever imported (unlike a real provider config, which
+  `getProviderConfig` only materializes on first read/write -- confirmed
+  this row's `enabled: false` initial state is cosmetic only, since
+  `_ProviderRow` always re-reads `cfg.enabled` fresh from settings, not
+  the static list's own field).
+  - **Deliberately routes on `provider.keyName == kLocalModelProviderKey`,
+    not on `cfg.providerType == ProviderKind.local`**: before the first
+    import, no `ProviderConfig` exists yet for this key, so
+    `getProviderConfig` falls through to `ProviderConfig.defaultsFor`,
+    whose `classify()` has no substring match for `litert-local` and
+    silently returns `ProviderKind.openai` for the *unpersisted, read-only*
+    default it hands back for display. Routing on `providerType` would
+    have sent a first-time user into the generic OpenAI-style
+    `ProviderDetailPage` instead of `LocalModelsPage`. Routing on the key
+    is correct in both the pre-import and post-import state and needed no
+    change to `classify()`/`defaultsFor()`'s existing exhaustive `.local`
+    branch (which stays correctly marked "unreachable in practice" --
+    still true, since real local configs are only ever created explicitly
+    by `LocalModelLibrary.registerInstalledModel`, never inferred from a
+    typed key).
+- **Found and fixed a real i18n bug while wiring this in**:
+  `LocalModelLibrary.registerInstalledModel`'s fallback `ProviderConfig`
+  (created on first-ever import) hardcoded `name: 'Локальные модели ·
+  LiteRT'`. `providers_page.dart` prefers `cfg.name` over the static
+  list's localized `provider.name` whenever `cfg.name` is non-empty, so
+  after a single import the row's displayed name would have frozen to
+  Russian regardless of the app's language (en/zh users would see
+  Cyrillic text). Fixed by leaving `name: ''`, which makes every render
+  path correctly fall back to `l10n.localModelsProviderName` again.
+- Verification: `dart analyze --fatal-infos lib test integration_test` --
+  clean. `flutter test test/core/services/local/` -- 29/29 pass (unchanged
+  by the i18n fix; no test asserted the old hardcoded name). Full
+  `flutter test` run in progress; will record the result before this
+  slice's commit.
+
+## Next
+Full-suite `flutter test` confirmation, commit this UI slice, then decide
+and note the two still-open design questions before slice 4 (verified
+catalog + resumable download): the background-task (title-gen etc.)
+skip/defer policy against the single-flight local queue, and the
+`GenerationForegroundService` service-type fit for long local inference.

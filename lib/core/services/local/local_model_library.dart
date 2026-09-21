@@ -107,7 +107,11 @@ class LocalModelLibrary {
         ProviderConfig(
           id: kLocalModelProviderKey,
           enabled: true,
-          name: 'Локальные модели · LiteRT',
+          // Left empty on purpose: the providers list falls back to its own
+          // localized name (l10n.localModelsProviderName) whenever cfg.name
+          // is empty, so this stays correct across locales instead of
+          // freezing the display name in one language at first-import time.
+          name: '',
           apiKey: '',
           baseUrl: '',
           providerType: ProviderKind.local,
