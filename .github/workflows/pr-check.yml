@@ -86,4 +86,13 @@ jobs:
         run: dart analyze --fatal-infos lib test integration_test
 
       - name: flutter test
-        run: flutter test
+        run: |
+          set -o pipefail
+          flutter test 2>&1 | tee flutter-test-output.txt
+
+      - name: Upload failed Flutter test output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-test-output
+          path: flutter-test-output.txt
