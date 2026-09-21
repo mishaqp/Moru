@@ -12,8 +12,9 @@ const String kLocalModelProviderKey = 'litert-local';
 
 /// One installed local model, derived from `ProviderConfig.models` /
 /// `modelOverrides` for [kLocalModelProviderKey] -- there is no separate
-/// database table; the provider config already persists (SharedPreferences,
-/// included in backups) and is the single source of truth.
+/// database table; the provider config already persists via
+/// [SettingsProvider] (included in backups) and is the single source of
+/// truth.
 class InstalledLocalModel {
   const InstalledLocalModel({
     required this.id,
