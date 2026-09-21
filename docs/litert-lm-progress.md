@@ -945,7 +945,63 @@ cleanly to the result above. Not a build problem; noted here only so
 future re-reads of this log aren't confused by the dangling
 `manifest-merger-debug-report.txt` an interrupted run leaves behind.)
 
+## Android JVM unit test results (`gradle :app:testDebugUnitTest`)
+
+First attempt used the wrong tool: the sandbox's global `/opt/gradle/bin/
+gradle` binary is version 8.14.3, not the project's own pinned wrapper
+version (8.14, `gradle-wrapper.properties`) -- caused unrelated artifact-
+transform failures in `:audioplayers_android` plus a real "No space left
+on device" (this session's disk allowance was exhausted by the earlier
+successful APK build's Gradle caches). Fixed by using the project's own
+`./gradlew` (matches exactly what `flutter build apk` already used) and
+freeing disk space (deleted the unused `8.14.3`/`9.5.0` Gradle version
+caches -- safe, since the project only ever uses `8.14`).
+
+With the right tool, `:app:compileDebugUnitTestKotlin` **failed to
+compile** -- a real, Kotlin-2.4.0-specific error, not a version-mismatch
+artifact: `IncomingShareHandlerTest.kt:196`, `MatrixCursor(...).apply {
+addRow(arrayOf(name, reportedSize)) }` where `name: String` and
+`reportedSize: Long?`. Kotlin 2.2.20 silently inferred a common
+supertype for `arrayOf`'s reified type parameter; Kotlin 2.4.0 treats the
+resulting intersection type (`Comparable<*>? & Serializable?`) as a
+compile error instead of a warning. This is exactly the class of problem
+`compileDebugKotlin` alone (only the main `app` source set) could never
+have caught -- it only surfaced by actually compiling the JVM test source
+set against the pinned toolchain, confirming the task brief's instinct
+that a full build is not optional. Fixed with an explicit
+`arrayOf<Any?>(name, reportedSize)` -- same values, no behavior change,
+searched the whole `android/app/src/test` tree and confirmed this was the
+only such call.
+
+With that fixed, `:app:testDebugUnitTest` ran: **122 tests, 104 passed,
+18 failed** -- all 18 failures are in `WorkspaceDocumentsProviderTest`
+(symlink-handling tests: `hidesEscapingSymlinksWhileAllowingInternal
+Links`, `refusesRedirectedWorkspaceRoots`, etc.), every one throwing
+`java.nio.file.FileSystemException`/`UnixException` from
+`Files.createSymbolicLink(...)` calls the test itself makes (lines
+331/332/341) -- this sandboxed container's filesystem does not permit
+creating symlinks at the OS syscall level, unrelated to root/permissions
+and unrelated to anything this branch changed. Confirmed via
+`git diff master...HEAD --stat -- android/app/src/main/kotlin/com/psyche/
+kelivo/workspace/ android/app/src/test/kotlin/com/psyche/kelivo/
+workspace/` returning **empty** -- this branch has not touched the
+workspace provider or its test in any way; the failure is a pre-existing
+sandbox limitation (same category as the two previously-documented Dart-
+side sandbox-specific failures, `desktop_process_runtime_test.dart` and
+`chat_input_bar_attachment_cleanup_test.dart`), not a regression, and not
+something this branch is positioned to fix (the underlying capability the
+container lacks). Needs verification in a real CI/device environment
+that does permit symlink creation, not in this sandbox.
+
+**Honest summary for item 4**: exact versions are pinned and recorded
+above. The main app compiles and packages into a real, verified arm64
+APK against the full pinned toolchain (Kotlin 2.4.0 + AGP 8.11.1 + Gradle
+8.14). The JVM/unit test source set also compiles clean against that same
+toolchain, after fixing one genuine Kotlin-2.4.0 compile error the full
+build (not `compileDebugKotlin` alone) caught. 104/122 JVM unit tests
+pass; the 18 failures are a pre-existing, unrelated sandbox limitation
+(no symlink support), not a regression from this branch or from the
+Kotlin/AGP pin.
+
 ## Next
-Record the JVM unit test (`gradle :app:testDebugUnitTest`) result above
-(in progress), then start slice 4 (verified catalog + resumable
-download).
+Start slice 4 (verified catalog + resumable download).
