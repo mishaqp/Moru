@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -45,6 +44,18 @@ final class LocalModelImportRejected extends LocalModelImportResult {
 
 final class LocalModelImportCancelled extends LocalModelImportResult {
   const LocalModelImportCancelled();
+}
+
+final class _DigestSink implements Sink<Digest> {
+  _DigestSink(this.onDigest);
+
+  final void Function(Digest digest) onDigest;
+
+  @override
+  void add(Digest data) => onDigest(data);
+
+  @override
+  void close() {}
 }
 
 enum LocalModelImportRejectReason {
@@ -118,9 +129,7 @@ Future<LocalModelImportResult> importLocalModelFile({
   Digest? contentDigest;
   var hashSinkClosed = false;
   final hashSink = sha256.startChunkedConversion(
-    ByteConversionSink.withCallback((bytes) {
-      contentDigest = Digest(bytes);
-    }),
+    _DigestSink((digest) => contentDigest = digest),
   );
 
   void closeHashSink() {
