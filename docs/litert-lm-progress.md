@@ -1003,5 +1003,28 @@ pass; the 18 failures are a pre-existing, unrelated sandbox limitation
 (no symlink support), not a regression from this branch or from the
 Kotlin/AGP pin.
 
+## CI confirmation (`moru-android.yml`, `workflow_dispatch`, debug variant)
+
+Dispatched the repo's own approved workflow on this branch (run
+[35552057919](https://github.com/mishaqp/Moru/actions/runs/35552057919),
+commit `591d0c5`) to get an installable test APK too large to hand over
+directly. **Result: `success`, end to end**, including the `:app:
+testDebugUnitTest` step, which has no `continue-on-error` -- so this is
+independent, real-CI confirmation on a normal Ubuntu runner (where
+symlinks work) that **all 122/122 JVM unit tests pass**, settling the
+open question from the section above: the 18 failures seen in this
+sandbox really were that sandbox's own missing-symlink-support artifact,
+not a real defect.
+
+CI's own `verify_apk_arm64.py` + `apksigner`/`aapt2` reports on its
+independently-built APK (`Moru-arm64-v8a-debug.apk`, sha256
+`6ad8daffb483e6b14cdc3dfafe90d2c4c0eb95673b7ffbf4eb5f4b890d990dfc`, 124308913
+bytes): single `arm64-v8a` ABI, `liblitertlm_jni.so` present, package
+`com.mishaqp.moru` versionCode 14 / versionName 0.1.13, minSdk 24 /
+targetSdk 36 -- all matching this branch's own local build exactly except
+for the debug-keystore signature bytes (expected: each machine's
+auto-generated debug keystore differs, hence a different sha256 from the
+locally-built APK despite otherwise-identical content).
+
 ## Next
 Start slice 4 (verified catalog + resumable download).
