@@ -68,10 +68,36 @@ class LocalModelRuntime {
     _lastFullHistory = null;
   });
 
+  /// Fixed runtime-conversation key for every background/utility call (see
+  /// [generate]'s `isConversationTurn` parameter). Deliberately not shaped
+  /// like a real conversation id (those are UUIDs) so it can never collide
+  /// with one -- a background call is tagged with the real conversation's
+  /// own id purely for logging/grouping, not because it continues it, and
+  /// must never be mistaken for, or evict the reuse state of, that real
+  /// conversation's own native context.
+  static const String _utilityConversationKey = '__moru_litert_utility__';
+
   /// Streams one local generation turn. [messages] is the full message
   /// history Moru already assembled for this turn (system/user/assistant),
   /// exactly like every cloud provider receives -- the last entry is the
   /// new user turn to answer.
+  ///
+  /// [isConversationTurn] (default `true`, matching every call before this
+  /// parameter existed) marks this as the actual next turn of an ongoing
+  /// conversation. Pass `false` for a one-shot background/utility prompt
+  /// (title/summary/translation/OCR/memory-organize/...) that happens to
+  /// be tagged with a real conversation's [conversationId] for logging
+  /// purposes only. Two protections apply only when `false`:
+  ///  - the reuse/eviction bookkeeping (`_activeConversationKey`,
+  ///    `_lastFullHistory`, and the native `conversationToken` itself) uses
+  ///    [_utilityConversationKey] instead of [conversationId], so a
+  ///    background call can never be mistaken for, or silently overwrite,
+  ///    a real conversation's own native context.
+  ///  - if a *different* model is already loaded, the call is rejected
+  ///    with [backgroundModelConflict] instead of unloading it -- a
+  ///    background task must never evict the model the user's own
+  ///    conversation is actively using (task brief: "background tasks must
+  ///    not start a second model").
   Stream<StreamChunk> generate({
     required String conversationId,
     required String modelPath,
@@ -79,18 +105,22 @@ class LocalModelRuntime {
     required List<Map<String, dynamic>> messages,
     required Future<void> whenCancelled,
     required bool Function() isCancelled,
+    bool isConversationTurn = true,
   }) {
     final controller = StreamController<StreamChunk>();
     unawaited(
       _enqueue(
         () => _runGenerate(
           controller: controller,
-          conversationId: conversationId,
+          conversationId: isConversationTurn
+              ? conversationId
+              : _utilityConversationKey,
           modelPath: modelPath,
           backend: backend,
           messages: messages,
           whenCancelled: whenCancelled,
           isCancelled: isCancelled,
+          isConversationTurn: isConversationTurn,
         ),
       ).catchError((Object error, StackTrace stackTrace) {
         if (!controller.isClosed) {
@@ -166,12 +196,35 @@ class LocalModelRuntime {
     required List<Map<String, dynamic>> messages,
     required Future<void> whenCancelled,
     required bool Function() isCancelled,
+    required bool isConversationTurn,
   }) async {
     if (isCancelled()) {
       await controller.close();
       return;
     }
     _ensureListening();
+
+    if (!isConversationTurn &&
+        _loadedModelPath != null &&
+        _loadedModelPath != modelPath) {
+      // A background/utility call would have to evict the model the
+      // user's own conversation already has loaded to run a different
+      // one -- never do that silently. The caller (title/summary/... --
+      // see litert_local.dart) already treats a generation error as
+      // "this background task failed this time", so a clean, named
+      // rejection is enough; no unload/reload is attempted.
+      controller.addError(
+        const LiteRtException(
+          'background_model_conflict',
+          'A different local model is already loaded for the active '
+              'conversation; skipping this background request instead of '
+              'evicting it.',
+        ),
+      );
+      await controller.close();
+      return;
+    }
+
     await _ensureModelLoaded(modelPath, backend);
 
     final split = _splitSystem(messages);

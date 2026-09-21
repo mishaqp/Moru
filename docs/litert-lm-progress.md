@@ -785,7 +785,139 @@ Dart-side header check already rejects before any file bytes ever reach
 the SDK) -- this stays on the device-verification checklist, not claimed
 as done here.
 
+## Exact pinned versions (explicit record, not "check the build files")
+
+All of these are literal, exact versions -- no ranges, no
+`latest.release`, no floating `+`/`x.x.+` selectors, anywhere in this
+branch's build config:
+
+| Component | Version | Where pinned |
+|---|---|---|
+| `com.google.ai.edge.litertlm:litertlm-android` | `0.17.1` | `android/app/build.gradle.kts` |
+| Kotlin Gradle plugin (`org.jetbrains.kotlin.android`) | `2.4.0` | `android/settings.gradle.kts` |
+| Android Gradle Plugin (`com.android.application`) | `8.11.1` | `android/settings.gradle.kts` (pre-existing, unchanged by this branch) |
+| Gradle distribution | `8.14` (`-all`) | `android/gradle/wrapper/gradle-wrapper.properties` (pre-existing, unchanged) |
+| JDK used to build | `21.0.10` (OpenJDK, Ubuntu build) | this sandbox's `java -version`; not itself pinned in the repo, matches AGP 8.11's supported range |
+
+Kotlin `2.4.0` is a deliberate exact match to what `litertlm-android:0.17.1`
+was compiled with (its own `.class` files carry Kotlin 2.4.0 metadata,
+confirmed by the original compile failure against 2.2.20 -- "compiled
+with an incompatible version of Kotlin"), not the newest available
+Kotlin release (`2.4.20` at research time) -- the smallest change that
+fixes the real, observed error, per the task's own "pin exactly, no
+guessing" and "minimal fix" rules.
+
+Left un-pinned, by design: `kotlin-reflect`, `kotlinx-coroutines-android`,
+`gson` -- these are transitive dependencies pulled in by
+`litertlm-android`'s own POM (`2.4.0`, `1.11.0`, `2.14.0` respectively,
+recorded earlier in this log), not depended on directly by Moru. Gradle's
+conflict resolution picks the highest version requested across the whole
+graph; the next step (full Android build below) is what actually proves
+those resolve to versions litertlm-android's own compiled classes are
+compatible with, rather than assuming the POM's stated versions win.
+
+## Full Android build (not just `compileDebugKotlin`)
+
+The Kotlin-version fix in slice 1 was only proven against
+`gradle :app:compileDebugKotlin` -- one compilation task, not proof the
+whole app (every other plugin, the JVM unit test source set, resource
+merging, dexing) builds cleanly against Kotlin 2.4.0. Running the full
+pipeline now: `flutter build apk --debug --target-platform=android-arm64`
+(exercises the complete Gradle build: all plugins' Kotlin compilation,
+resource/asset merging, dexing, packaging) plus `gradle :app:
+testDebugUnitTest` (the actual JVM/Robolectric-less unit test source set
+under `android/app/src/test/`, separate from Flutter's own `flutter test`)
+against the Kotlin 2.4.0 + AGP 8.11.1 combination.
+
+(Results recorded below once the build finishes -- see the next entry in
+this log.)
+
+## Background-generation queuing policy (closed)
+
+Investigated what actually happens when a background/utility call (title
+generation being the concrete, auto-triggered example --
+`generateTitleOnFinish: true` fires it right after the user's own reply
+finishes) shares the local provider with the user's real chat. Traced the
+exact call chain: `home_view_model.dart`'s `_maybeGenerateTitleFor` calls
+`ChatApiService.generateText(conversationId: convo.id, ...)` -- **the
+same `conversationId` value** the real streaming chat turn uses
+(`chat_actions.dart`, both the streaming and non-streaming-output paths).
+`LocalModelRuntime`'s reuse/eviction bookkeeping is keyed by exactly that
+value. Found two real, distinct issues from this collision, fixed both:
+
+1. **Key collision**: a background call and the real conversation's own
+   turns shared one runtime key. In practice `_sameHistory`'s content
+   comparison already prevented a background prompt from being *wrongly
+   reused as* real conversation content (verified: an empty
+   `priorHistory` for a one-shot prompt can never content-match a real
+   conversation's non-empty `_lastFullHistory`) -- so this was not a
+   silent-data-corruption bug. It was still a real problem: `status()`'s
+   `conversationToken` could report a real conversation's id while the
+   native context actually held an unrelated background prompt, and nothing
+   stopped a future change to the reuse check (e.g. a key-only fast path)
+   from turning the theoretical risk into a real one.
+2. **Model eviction** (the more serious one): if a background call is
+   configured to use a *different* local model than the one already
+   loaded (e.g. a separate title-generation model setting), it would
+   force-unload the user's actively-loaded chat model to load its own --
+   directly violating the task brief's "background tasks must not start a
+   second model". `LiteRtEngineManager.kt`'s own doc comment already notes
+   model loads can take real time (~10s per `Engine.kt`'s own doc), so this
+   would have meant every auto-title-generation with a different local
+   title model forces two reloads (evict for title-gen, reload again for
+   the user's next real message).
+
+**Fix** (`isConversationTurn` parameter, threaded end to end): added to
+`ChatApiService.sendMessageStream`/`generateMessage` (default `false`,
+safe for every existing/future one-shot utility caller -- title, summary,
+translation, OCR, memory-organize, chat-suggestions) and set to `true`
+only at the two call sites in `chat_actions.dart` that stream/return the
+actual next turn of a real conversation. `sendLiteRtStream` forwards it
+into `LocalModelRuntime.generate` (also defaulting `true`, preserving
+every pre-existing call site/test unchanged), which now:
+ - routes every `isConversationTurn: false` call through a fixed sentinel
+   runtime key (`_utilityConversationKey`, not shaped like a real
+   conversation UUID) instead of the passed `conversationId`, for both the
+   Dart-side bookkeeping and the actual native `conversationToken` sent
+   over the channel -- a background call can never be mistaken for, or
+   report itself as, a real conversation's own context;
+ - rejects (not evicts) a background call outright when a *different*
+   model is already loaded, with a clean, named error
+   (`LiteRtException('background_model_conflict', ...)`) that the existing
+   background-task error handling (`onBackgroundTaskError`, already
+   catches and logs any generation failure) absorbs without any UI change
+   needed -- title-gen already treats "failed this time" as a normal,
+   silent-to-the-user outcome.
+
+**What this does *not* claim to fix**: `LocalModelRuntime` holds exactly
+one native `Conversation` at a time by design ("one model, one generation
+in memory"), so *any* intervening call -- background or a second real
+conversation -- still evicts whatever was cached and forces the next real
+turn to recreate from scratch. That eviction is an accepted, unavoidable
+cost of the single-slot design, not something `isConversationTurn`
+changes or was meant to change; the fix is specifically about identity
+(never colliding keys) and never evicting the *loaded model itself* for a
+background purpose, not about avoiding all reuse loss.
+
+Verified with 3 new tests in `local_model_runtime_test.dart` (now
+15/15 total, all passing): a background call tagged with the active
+conversation's own id (a) always starts its own fresh native conversation
+with empty `initialMessages` (never inherits real chat history) and (b)
+never corrupts what the real conversation recreates with afterwards
+(asserts the recreated conversation's `initialMessages` exactly matches
+the real prior turns, not the background prompt); a background call
+requesting a different already-loaded model is rejected with
+`background_model_conflict` and triggers zero `loadModel`/`unloadModel`
+calls; a background call targeting the same model already loaded, or
+loading the very first model, proceeds normally. `dart analyze
+--fatal-infos lib test integration_test` clean; the full
+`test/core/services/local/` suite plus `chat_api_local_provider_isolation
+_test.dart`, `home_view_model_title_test.dart`,
+`home_view_model_summary_test.dart`, `chat_api_generate_message_test.dart`,
+and `chat_api_custom_request_precedence_test.dart` all pass unchanged
+(the new parameter is additive and defaults preserve every existing
+call site's behavior).
+
 ## Next
-Pin exact Kotlin/LiteRT-LM versions explicitly in this log and run a full
-Android build (not just `compileDebugKotlin`) including JVM tests, then
-close the background-generation queuing policy before starting slice 4.
+Record the full Android build + JVM test results above (in progress),
+then start slice 4 (verified catalog + resumable download).

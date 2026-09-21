@@ -99,15 +99,36 @@ void main() {
     required String conversationId,
     required List<Map<String, dynamic>> messages,
     Completer<void>? cancelCompleter,
+    String modelPath = '/models/a.litertlm',
   }) {
     final cancel = cancelCompleter ?? Completer<void>();
     return runtime.generate(
       conversationId: conversationId,
-      modelPath: '/models/a.litertlm',
+      modelPath: modelPath,
       backend: 'cpu',
       messages: messages,
       whenCancelled: cancel.future,
       isCancelled: () => cancel.isCompleted,
+    );
+  }
+
+  /// A one-shot background/utility call (title-gen, summary-gen, ...) --
+  /// tagged with a real conversation's id purely for logging, exactly like
+  /// the real callers in home_view_model.dart do.
+  Stream<StreamChunk> generateBackground({
+    required String conversationId,
+    required List<Map<String, dynamic>> messages,
+    String modelPath = '/models/a.litertlm',
+  }) {
+    final cancel = Completer<void>();
+    return runtime.generate(
+      conversationId: conversationId,
+      modelPath: modelPath,
+      backend: 'cpu',
+      messages: messages,
+      whenCancelled: cancel.future,
+      isCancelled: () => cancel.isCompleted,
+      isConversationTurn: false,
     );
   }
 
@@ -451,6 +472,163 @@ void main() {
 
       expect(retryChunks, contains(isA<Finish>()));
       expect(runtime.loadedModelPath, isNotNull);
+    },
+  );
+
+  test(
+    'a background call tagged with the active conversation\'s own id is '
+    'never mistaken for a continuation of it, and never corrupts what the '
+    'real conversation recreates with afterwards',
+    () async {
+      // Real turn 1 of conversation c1.
+      final first = generateOnce(
+        conversationId: 'c1',
+        messages: const [
+          {'role': 'user', 'content': 'turn one'},
+        ],
+      );
+      final firstDone = Completer<void>();
+      first.listen((_) {}, onDone: firstDone.complete);
+      final rid1 = await requestIdOfLastSendMessage();
+      fake.emit({'type': 'textDelta', 'requestId': rid1, 'text': 'reply one'});
+      fake.emit({'type': 'done', 'requestId': rid1});
+      await firstDone.future;
+      expect(fake.startConversationCount, 1);
+
+      // A background call (title-gen) tagged with the SAME id, c1 -- but
+      // it is not a continuation, so it must not be able to answer "yes"
+      // to "is this a continuation of c1" no matter what native
+      // conversationToken it lands under.
+      final bg = generateBackground(
+        conversationId: 'c1',
+        messages: const [
+          {'role': 'user', 'content': 'give this chat a short title'},
+        ],
+      );
+      final bgDone = Completer<void>();
+      bg.listen((_) {}, onDone: bgDone.complete);
+      final rid2 = await requestIdOfLastSendMessage();
+      // A background call is never treated as a continuation of anything
+      // (it is always the first and only turn of its own throwaway
+      // context), so it always starts a fresh native conversation -- its
+      // own `initialMessages` must be empty, never c1's real history.
+      expect(fake.startConversationCount, 2);
+      expect(fake.argsOf('startConversation')['initialMessages'], isEmpty);
+      fake.emit({'type': 'done', 'requestId': rid2});
+      await bgDone.future;
+
+      // Turn two of c1: LocalModelRuntime holds only one native
+      // Conversation at a time (by design -- "one model, one generation
+      // in memory"), so *any* intervening call, background or not, evicts
+      // it and turn two must recreate -- that eviction is an accepted,
+      // unavoidable cost of the single-slot design, not what this test is
+      // about. What actually matters: the recreated conversation is seeded
+      // from c1's own real prior history, not from the background call's
+      // throwaway prompt or some corrupted mix of the two.
+      final second = generateOnce(
+        conversationId: 'c1',
+        messages: const [
+          {'role': 'user', 'content': 'turn one'},
+          {'role': 'assistant', 'content': 'reply one'},
+          {'role': 'user', 'content': 'turn two'},
+        ],
+      );
+      final secondDone = Completer<void>();
+      second.listen((_) {}, onDone: secondDone.complete);
+      final rid3 = await requestIdOfLastSendMessage();
+      expect(fake.startConversationCount, 3);
+      expect(fake.argsOf('startConversation')['initialMessages'], [
+        {'role': 'user', 'text': 'turn one'},
+        {'role': 'assistant', 'text': 'reply one'},
+      ]);
+      expect(fake.argsOf('sendMessage')['text'], 'turn two');
+      fake.emit({'type': 'done', 'requestId': rid3});
+      await secondDone.future;
+    },
+  );
+
+  test(
+    'a background call is rejected, not allowed to evict, when a '
+    'different model is already loaded for the active conversation',
+    () async {
+      final chat = generateOnce(
+        conversationId: 'c1',
+        modelPath: '/models/chat-model.litertlm',
+        messages: const [
+          {'role': 'user', 'content': 'hi'},
+        ],
+      );
+      final chatDone = Completer<void>();
+      chat.listen((_) {}, onDone: chatDone.complete);
+      final rid = await requestIdOfLastSendMessage();
+      fake.emit({'type': 'done', 'requestId': rid});
+      await chatDone.future;
+      expect(fake.loadModelCount, 1);
+      expect(runtime.loadedModelPath, '/models/chat-model.litertlm');
+
+      // A background call configured to use a DIFFERENT local model (the
+      // user's title-generation model setting, say) must not unload the
+      // conversation's own model to run itself.
+      final bg = generateBackground(
+        conversationId: 'c1',
+        modelPath: '/models/title-model.litertlm',
+        messages: const [
+          {'role': 'user', 'content': 'give this chat a short title'},
+        ],
+      );
+      final bgErrors = <Object>[];
+      final bgDone = Completer<void>();
+      bg.listen((_) {}, onError: bgErrors.add, onDone: bgDone.complete);
+      await bgDone.future;
+
+      expect(bgErrors, hasLength(1));
+      expect(
+        (bgErrors.single as LiteRtException).code,
+        'background_model_conflict',
+      );
+      // No unload/reload was attempted at all.
+      expect(fake.loadModelCount, 1);
+      expect(runtime.loadedModelPath, '/models/chat-model.litertlm');
+    },
+  );
+
+  test(
+    'a background call proceeds normally when it targets the same model '
+    'already loaded, or when nothing is loaded yet',
+    () async {
+      // Nothing loaded yet -- a background call is free to load the
+      // first model, same as any other first call would.
+      final bg1 = generateBackground(
+        conversationId: 'c1',
+        messages: const [
+          {'role': 'user', 'content': 'summarize this'},
+        ],
+      );
+      final bg1Chunks = <StreamChunk>[];
+      final bg1Done = Completer<void>();
+      bg1.listen(bg1Chunks.add, onDone: bg1Done.complete);
+      final rid1 = await requestIdOfLastSendMessage();
+      fake.emit({'type': 'done', 'requestId': rid1});
+      await bg1Done.future;
+      expect(bg1Chunks, contains(isA<Finish>()));
+      expect(fake.loadModelCount, 1);
+
+      // Same model as what is already loaded -- no conflict, proceeds.
+      final bg2 = generateBackground(
+        conversationId: 'c1',
+        messages: const [
+          {'role': 'user', 'content': 'give this chat a short title'},
+        ],
+      );
+      final bg2Chunks = <StreamChunk>[];
+      final bg2Done = Completer<void>();
+      bg2.listen(bg2Chunks.add, onDone: bg2Done.complete);
+      final rid2 = await requestIdOfLastSendMessage();
+      fake.emit({'type': 'done', 'requestId': rid2});
+      await bg2Done.future;
+      expect(bg2Chunks, contains(isA<Finish>()));
+      // Still one -- the same model path never triggers an unload/reload.
+      expect(fake.loadModelCount, 1);
     },
   );
 }

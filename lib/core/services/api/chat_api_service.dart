@@ -168,6 +168,18 @@ class ChatApiService {
     bool skipImageParsing = false,
     bool parseMarkdownImageLinks = true,
     AutoRetryOptions? retryOverride,
+    // Only [ProviderKind.local] reads this. `false` (the default) means
+    // `messages`/`conversationId` are an ad hoc one-shot prompt (title,
+    // summary, translation, OCR, memory-organize, ...) rather than the
+    // next turn of an actual ongoing conversation -- see the doc comment
+    // on `sendLiteRtStream` in providers/litert_local.dart for why this
+    // matters: the local runtime keys its native-conversation reuse
+    // decision by `conversationId`, and every one-shot caller happens to
+    // pass the real conversation's own id (for logging/grouping), which
+    // would otherwise collide with and overwrite that conversation's own
+    // native context. Only the two call sites that actually stream/return
+    // the next turn of a real conversation should pass `true`.
+    bool isConversationTurn = false,
   }) async* {
     final sessionToken = CancelToken();
     final toolCancellation = ToolCallCancellation(
@@ -290,6 +302,7 @@ class ChatApiService {
           sessionToken: sessionToken,
           retryRound: retryRound,
           conversationId: conversationId,
+          isConversationTurn: isConversationTurn,
         ),
       );
     } finally {
@@ -357,6 +370,7 @@ class ChatApiService {
     required CancelToken sessionToken,
     required StreamRoundRunner retryRound,
     String? conversationId,
+    bool isConversationTurn = false,
   }) async* {
     if (sessionToken.isCancelled) {
       throw http.ClientException('cancelled');
@@ -370,6 +384,7 @@ class ChatApiService {
         modelId: modelId,
         messages: messages,
         conversationId: conversationId ?? config.id,
+        isConversationTurn: isConversationTurn,
         sessionToken: sessionToken,
       );
       return;
@@ -553,6 +568,13 @@ class ChatApiService {
     bool parseMarkdownImageLinks = true,
     AutoRetryOptions? retryOverride,
     void Function(RetryPending? pending)? onRetry,
+    // See sendMessageStream's doc comment on this same parameter -- pass
+    // `true` only when `messages`/`conversationId` are the actual next
+    // turn of an ongoing conversation (the non-streaming-output chat
+    // path), never for a one-shot utility prompt (title/summary/
+    // translation/OCR/memory-organize/...), which is this parameter's
+    // default and the overwhelming majority of generateMessage's callers.
+    bool isConversationTurn = false,
   }) async {
     final handler = StreamChunkHandler(
       onRetry: onRetry == null ? null : (pending) => onRetry(pending),
@@ -573,6 +595,7 @@ class ChatApiService {
       stream: false,
       requestId: requestId,
       conversationId: conversationId,
+      isConversationTurn: isConversationTurn,
       allowImagesApiRouting: allowImagesApiRouting,
       ocrActive: ocrActive,
       builtInSearchOnly: builtInSearchOnly,
