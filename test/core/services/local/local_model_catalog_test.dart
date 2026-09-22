@@ -10,7 +10,7 @@ void main() {
     )!;
 
     expect(entry.isDownloadable, isTrue);
-    expect(entry.sizeBytes, 344437808);
+    expect(entry.sizeBytes, 344671744);
     expect(
       entry.sha256,
       'e3e290109da4388d65a17510a0c66af91c8039f52d2c465868dbc43c09a776cf',
