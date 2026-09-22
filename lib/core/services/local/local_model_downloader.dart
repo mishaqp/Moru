@@ -117,11 +117,10 @@ final class LiteRtModelDownloader {
     http.Client? httpClient,
     Directory? modelsDirectory,
     LiteRtFileSha256? sha256OfFile,
-  })
-    : _httpClient = httpClient ?? http.Client(),
-      _ownsHttpClient = httpClient == null,
-      _injectedModelsDirectory = modelsDirectory,
-      _sha256OfFile = sha256OfFile ?? _defaultSha256OfFile;
+  }) : _httpClient = httpClient ?? http.Client(),
+       _ownsHttpClient = httpClient == null,
+       _injectedModelsDirectory = modelsDirectory,
+       _sha256OfFile = sha256OfFile ?? _defaultSha256OfFile;
 
   final http.Client _httpClient;
   final bool _ownsHttpClient;

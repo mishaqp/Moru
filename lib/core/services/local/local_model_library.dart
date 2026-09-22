@@ -244,11 +244,7 @@ class LocalModelLibrary {
     String modelId, {
     bool Function(String filePath)? isPathInUse,
   }) => _serializeMutation(
-    () => _deleteModel(
-      settings,
-      modelId,
-      isPathInUse: isPathInUse,
-    ),
+    () => _deleteModel(settings, modelId, isPathInUse: isPathInUse),
   );
 
   Future<void> _deleteModel(

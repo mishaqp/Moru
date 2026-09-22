@@ -83,9 +83,14 @@ abstract final class LiteRtModelCatalog {
       audio: true,
       thinking: true,
       tools: true,
-      repoUrl: Uri.parse('https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm'),
-      sha256: '181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c',
-      downloadUrl: Uri.parse('https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/6e5c4f1e395deb959c494953478fa5cec4b8008f/gemma-4-E2B-it.litertlm'),
+      repoUrl: Uri.parse(
+        'https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm',
+      ),
+      sha256:
+          '181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c',
+      downloadUrl: Uri.parse(
+        'https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/6e5c4f1e395deb959c494953478fa5cec4b8008f/gemma-4-E2B-it.litertlm',
+      ),
     ),
     LiteRtCatalogEntry(
       id: 'litert-community/gemma-4-E4B-it-litert-lm',
@@ -99,9 +104,14 @@ abstract final class LiteRtModelCatalog {
       audio: true,
       thinking: true,
       tools: true,
-      repoUrl: Uri.parse('https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm'),
-      sha256: '0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0',
-      downloadUrl: Uri.parse('https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/28299f30ee4d43294517a4ac93abd6163412f07f/gemma-4-E4B-it.litertlm'),
+      repoUrl: Uri.parse(
+        'https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm',
+      ),
+      sha256:
+          '0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0',
+      downloadUrl: Uri.parse(
+        'https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/28299f30ee4d43294517a4ac93abd6163412f07f/gemma-4-E4B-it.litertlm',
+      ),
     ),
     LiteRtCatalogEntry(
       id: 'litert-community/qwen3-0.6b-dynamic-int4',
@@ -143,8 +153,11 @@ abstract final class LiteRtModelCatalog {
       audio: true,
       thinking: false,
       tools: false,
-      repoUrl: Uri.parse('https://huggingface.co/google/gemma-3n-E2B-it-litert-lm'),
-      sha256: '2ed7bc3a0026c93d5b8a4544b352d9d00cd66ff0bac3ef6a20ac3d2cba4010d6',
+      repoUrl: Uri.parse(
+        'https://huggingface.co/google/gemma-3n-E2B-it-litert-lm',
+      ),
+      sha256:
+          '2ed7bc3a0026c93d5b8a4544b352d9d00cd66ff0bac3ef6a20ac3d2cba4010d6',
     ),
     LiteRtCatalogEntry(
       id: 'google/gemma-3n-E4B-it-litert-lm',
@@ -158,8 +171,11 @@ abstract final class LiteRtModelCatalog {
       audio: true,
       thinking: false,
       tools: false,
-      repoUrl: Uri.parse('https://huggingface.co/google/gemma-3n-E4B-it-litert-lm'),
-      sha256: '2e67a6cd51dfe0f793431e6bd4ed8d029c88e10f52ca0469ad38445e3cd3c1f4',
+      repoUrl: Uri.parse(
+        'https://huggingface.co/google/gemma-3n-E4B-it-litert-lm',
+      ),
+      sha256:
+          '2e67a6cd51dfe0f793431e6bd4ed8d029c88e10f52ca0469ad38445e3cd3c1f4',
     ),
     LiteRtCatalogEntry(
       id: 'litert-community/Qwen2.5-1.5B-Instruct',
@@ -173,14 +189,20 @@ abstract final class LiteRtModelCatalog {
       audio: false,
       thinking: false,
       tools: false,
-      repoUrl: Uri.parse('https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct'),
-      sha256: 'faa60663b333290c1496c499828b21d3e3254a788cacd8cce917ce0f761a2dc9',
-      downloadUrl: Uri.parse('https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/19edb84c69a0212f29a6ef17ba0d6f278b6a1614/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm'),
+      repoUrl: Uri.parse(
+        'https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct',
+      ),
+      sha256:
+          'faa60663b333290c1496c499828b21d3e3254a788cacd8cce917ce0f761a2dc9',
+      downloadUrl: Uri.parse(
+        'https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/19edb84c69a0212f29a6ef17ba0d6f278b6a1614/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm',
+      ),
     ),
     LiteRtCatalogEntry(
       id: 'litert-community/DeepSeek-R1-Distill-Qwen-1.5B',
       displayName: 'DeepSeek-R1-Distill-Qwen-1.5B',
-      fileName: 'DeepSeek-R1-Distill-Qwen-1.5B_multi-prefill-seq_q8_ekv4096.litertlm',
+      fileName:
+          'DeepSeek-R1-Distill-Qwen-1.5B_multi-prefill-seq_q8_ekv4096.litertlm',
       sizeBytes: 1833451520,
       license: 'MIT',
       contextTokens: 4096,
@@ -189,9 +211,14 @@ abstract final class LiteRtModelCatalog {
       audio: false,
       thinking: true,
       tools: false,
-      repoUrl: Uri.parse('https://huggingface.co/litert-community/DeepSeek-R1-Distill-Qwen-1.5B'),
-      sha256: '69b35f01759eed765641ab4af589bbe98131fd2825662a086d9037409b8c1295',
-      downloadUrl: Uri.parse('https://huggingface.co/litert-community/DeepSeek-R1-Distill-Qwen-1.5B/resolve/e34bb88632342d1f9640bad579a45134eb1cf988/DeepSeek-R1-Distill-Qwen-1.5B_multi-prefill-seq_q8_ekv4096.litertlm'),
+      repoUrl: Uri.parse(
+        'https://huggingface.co/litert-community/DeepSeek-R1-Distill-Qwen-1.5B',
+      ),
+      sha256:
+          '69b35f01759eed765641ab4af589bbe98131fd2825662a086d9037409b8c1295',
+      downloadUrl: Uri.parse(
+        'https://huggingface.co/litert-community/DeepSeek-R1-Distill-Qwen-1.5B/resolve/e34bb88632342d1f9640bad579a45134eb1cf988/DeepSeek-R1-Distill-Qwen-1.5B_multi-prefill-seq_q8_ekv4096.litertlm',
+      ),
     ),
   ]);
 
