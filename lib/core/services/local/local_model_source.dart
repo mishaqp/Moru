@@ -47,15 +47,18 @@ class LiteRtModelSource {
     final response = await _client
         .get(api)
         .timeout(const Duration(seconds: 30));
-    if (response.statusCode == 401 || response.statusCode == 403)
+    if (response.statusCode == 401 || response.statusCode == 403) {
       throw const LiteRtModelSourceException('access');
-    if (response.statusCode != 200)
+    }
+    if (response.statusCode != 200) {
       throw const LiteRtModelSourceException('metadata');
+    }
     final dynamic decoded = jsonDecode(response.body);
     if (decoded is! Map) throw const LiteRtModelSourceException('metadata');
     final commit = decoded['sha']?.toString() ?? '';
-    if (!RegExp(r'^[a-fA-F0-9]{40}$').hasMatch(commit))
+    if (!RegExp(r'^[a-fA-F0-9]{40}$').hasMatch(commit)) {
       throw const LiteRtModelSourceException('metadata');
+    }
     final siblings = decoded['siblings'];
     if (siblings is! List) throw const LiteRtModelSourceException('metadata');
     for (final item in siblings) {
@@ -66,8 +69,9 @@ class LiteRtModelSource {
       final size = lfs['size'];
       if (!RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(hash) ||
           size is! int ||
-          size <= 8)
+          size <= 8) {
         break;
+      }
       return LiteRtCatalogEntry(
         id: '$repo/$file@$commit',
         displayName: parts.last.substring(0, parts.last.length - 9),
