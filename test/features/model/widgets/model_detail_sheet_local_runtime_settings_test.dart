@@ -131,10 +131,13 @@ void main() {
       await tester.pumpAndSettle();
 
       final backend = find.byKey(const ValueKey('local-runtime-backend'));
+      await tester.ensureVisible(backend);
+      await tester.pumpAndSettle();
       final gpuOption = find.descendant(
         of: backend,
         matching: find.text('GPU'),
       );
+      expect(gpuOption, findsOneWidget);
       await tester.ensureVisible(gpuOption);
       await tester.pumpAndSettle();
       await tester.tap(gpuOption);
