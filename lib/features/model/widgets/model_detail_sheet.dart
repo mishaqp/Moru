@@ -8,6 +8,7 @@ import '../../../core/services/model_override_resolver.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ios_settings_rows.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
@@ -91,9 +92,18 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
   _TabKind _tab = _TabKind.basic;
   late final TabController _tabCtrl;
   late final bool _showBuiltinToolsTab;
+  late final bool _isLocalProvider;
 
   late TextEditingController _idCtrl;
   late TextEditingController _nameCtrl;
+  late TextEditingController _localContextCtrl;
+  late TextEditingController _localTemperatureCtrl;
+  late TextEditingController _localTopKCtrl;
+  late TextEditingController _localTopPCtrl;
+  late TextEditingController _localThinkingBudgetCtrl;
+  String _localBackend = 'cpu';
+  bool _localAudio = false;
+  bool _localKeepLoaded = true;
   bool _nameEdited = false;
   ModelType _type = ModelType.chat;
   final Set<Modality> _input = {Modality.text};
@@ -116,6 +126,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
     super.initState();
     final settings = context.read<SettingsProvider>();
     final cfg = settings.getProviderConfig(widget.providerKey);
+    _isLocalProvider = cfg.providerType == ProviderKind.local;
     // Determine tab count: 3 when the provider exposes editable built-in
     // tools, 2 for others
     _showBuiltinToolsTab = BuiltInToolsHelper.modelSettingsToolNames(
@@ -153,6 +164,33 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
       }
     }
     _idCtrl = TextEditingController(text: displayModelId);
+    _localContextCtrl = TextEditingController(
+      text: _positiveIntOrDefault(initialOv?['localMaxNumTokens'], 4096)
+          .toString(),
+    );
+    _localTemperatureCtrl = TextEditingController(
+      text: _nonNegativeDoubleOrDefault(
+        initialOv?['localTemperature'],
+        1.0,
+      ).toString(),
+    );
+    _localTopKCtrl = TextEditingController(
+      text: _positiveIntOrDefault(initialOv?['localTopK'], 64).toString(),
+    );
+    _localTopPCtrl = TextEditingController(
+      text: _probabilityOrDefault(initialOv?['localTopP'], 0.95).toString(),
+    );
+    _localThinkingBudgetCtrl = TextEditingController(
+      text: _thinkingBudgetOrDefault(
+        initialOv?['localThinkingBudget'],
+        -1,
+      ).toString(),
+    );
+    _localBackend = initialOv?['localBackend']?.toString() == 'gpu'
+        ? 'gpu'
+        : 'cpu';
+    _localAudio = initialOv?['localAudio'] == true;
+    _localKeepLoaded = initialOv?['localKeepLoaded'] != false;
     // Defaults from inferred base if id provided; otherwise generic defaults for new
     final base = ModelRegistry.infer(
       ModelInfo(
@@ -169,7 +207,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
             applyDisplayName: true,
           );
     _nameCtrl = TextEditingController(text: effective.displayName);
-    _type = effective.type;
+    _type = _isLocalProvider ? ModelType.chat : effective.type;
     _input
       ..clear()
       ..addAll(effective.input);
@@ -179,6 +217,13 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
     _abilities
       ..clear()
       ..addAll(effective.abilities);
+    if (_isLocalProvider) {
+      if (initialOv?['localVision'] == true) _input.add(Modality.image);
+      if (initialOv?['localThinking'] == true) {
+        _abilities.add(ModelAbility.reasoning);
+      }
+      if (initialOv?['localTools'] == true) _abilities.add(ModelAbility.tool);
+    }
     if (_type == ModelType.embedding) {
       if (_input.isEmpty) _input.add(Modality.text);
       _cachedEmbeddingInput = {..._input};
@@ -250,6 +295,11 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
     _tabCtrl.dispose();
     _idCtrl.dispose();
     _nameCtrl.dispose();
+    _localContextCtrl.dispose();
+    _localTemperatureCtrl.dispose();
+    _localTopKCtrl.dispose();
+    _localTopPCtrl.dispose();
+    _localThinkingBudgetCtrl.dispose();
     for (final h in _headers) {
       h.name.dispose();
       h.value.dispose();
@@ -485,18 +535,20 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
               ),
             ),
             const SizedBox(height: 12),
-            _label(context, l10n.modelDetailSheetModelTypeLabel),
-            const SizedBox(height: 6),
-            _SegmentedSingle(
-              options: [
-                l10n.modelDetailSheetChatType,
-                l10n.modelDetailSheetEmbeddingType,
-              ],
-              value: _type == ModelType.chat ? 0 : 1,
-              onChanged: (i) => setState(
-                () => _setType(i == 0 ? ModelType.chat : ModelType.embedding),
+            if (!_isLocalProvider) ...[
+              _label(context, l10n.modelDetailSheetModelTypeLabel),
+              const SizedBox(height: 6),
+              _SegmentedSingle(
+                options: [
+                  l10n.modelDetailSheetChatType,
+                  l10n.modelDetailSheetEmbeddingType,
+                ],
+                value: _type == ModelType.chat ? 0 : 1,
+                onChanged: (i) => setState(
+                  () => _setType(i == 0 ? ModelType.chat : ModelType.embedding),
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -527,28 +579,30 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
               }),
             ),
             if (_type == ModelType.chat) ...[
-              const SizedBox(height: 12),
-              _label(context, l10n.modelDetailSheetOutputModesLabel),
-              const SizedBox(height: 6),
-              _SegmentedMulti(
-                options: [
-                  l10n.modelDetailSheetTextMode,
-                  l10n.modelDetailSheetImageMode,
-                ],
-                isSelected: [
-                  _output.contains(Modality.text),
-                  _output.contains(Modality.image),
-                ],
-                onChanged: (idx) => setState(() {
-                  final mod = idx == 0 ? Modality.text : Modality.image;
-                  if (_output.contains(mod)) {
-                    _output.remove(mod);
-                    if (_output.isEmpty) _output.add(Modality.text);
-                  } else {
-                    _output.add(mod);
-                  }
-                }),
-              ),
+              if (!_isLocalProvider) ...[
+                const SizedBox(height: 12),
+                _label(context, l10n.modelDetailSheetOutputModesLabel),
+                const SizedBox(height: 6),
+                _SegmentedMulti(
+                  options: [
+                    l10n.modelDetailSheetTextMode,
+                    l10n.modelDetailSheetImageMode,
+                  ],
+                  isSelected: [
+                    _output.contains(Modality.text),
+                    _output.contains(Modality.image),
+                  ],
+                  onChanged: (idx) => setState(() {
+                    final mod = idx == 0 ? Modality.text : Modality.image;
+                    if (_output.contains(mod)) {
+                      _output.remove(mod);
+                      if (_output.isEmpty) _output.add(Modality.text);
+                    } else {
+                      _output.add(mod);
+                    }
+                  }),
+                ),
+              ],
               const SizedBox(height: 12),
               _label(context, l10n.modelDetailSheetAbilitiesLabel),
               const SizedBox(height: 6),
@@ -581,6 +635,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
   }
 
   List<Widget> _buildAdvanced(BuildContext context, AppLocalizations l10n) {
+    if (_isLocalProvider) return _buildLocalRuntimeSettings(context, l10n);
     return [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -639,6 +694,162 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
         ),
       ),
     ];
+  }
+
+  List<Widget> _buildLocalRuntimeSettings(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) => [
+    Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Text(
+        l10n.localModelsRuntimeSettingsDescription,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+          fontSize: 13,
+        ),
+      ),
+    ),
+    Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _label(context, l10n.localModelsRuntimeBackendLabel),
+          const SizedBox(height: 6),
+          _SegmentedSingle(
+            key: const ValueKey('local-runtime-backend'),
+            options: [
+              l10n.localModelsBackendCpuLabel,
+              l10n.localModelsBackendGpuLabel,
+            ],
+            value: _localBackend == 'gpu' ? 1 : 0,
+            onChanged: (index) =>
+                setState(() => _localBackend = index == 1 ? 'gpu' : 'cpu'),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.localModelsRuntimeBackendHint,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _localRuntimeField(
+            context,
+            label: l10n.localModelsRuntimeContextLabel,
+            controller: _localContextCtrl,
+            key: const ValueKey('local-runtime-context'),
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 12),
+          _localRuntimeField(
+            context,
+            label: l10n.localModelsRuntimeTemperatureLabel,
+            controller: _localTemperatureCtrl,
+            key: const ValueKey('local-runtime-temperature'),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
+          const SizedBox(height: 12),
+          _localRuntimeField(
+            context,
+            label: l10n.localModelsRuntimeTopKLabel,
+            controller: _localTopKCtrl,
+            key: const ValueKey('local-runtime-top-k'),
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 12),
+          _localRuntimeField(
+            context,
+            label: l10n.localModelsRuntimeTopPLabel,
+            controller: _localTopPCtrl,
+            key: const ValueKey('local-runtime-top-p'),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
+          if (_abilities.contains(ModelAbility.reasoning)) ...[
+            const SizedBox(height: 12),
+            _localRuntimeField(
+              context,
+              label: l10n.localModelsRuntimeThinkingBudgetLabel,
+              helperText: l10n.localModelsRuntimeThinkingBudgetHint,
+              controller: _localThinkingBudgetCtrl,
+              key: const ValueKey('local-runtime-thinking-budget'),
+              keyboardType: const TextInputType.numberWithOptions(
+                signed: true,
+              ),
+            ),
+          ],
+        ],
+      ),
+    ),
+    Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+      child: Column(
+        children: [
+          IosSwitchRow(
+            key: const ValueKey('local-runtime-audio-switch'),
+            label: l10n.localModelsRuntimeAudioLabel,
+            subtitle: l10n.localModelsRuntimeAudioHint,
+            value: _localAudio,
+            onChanged: (value) => setState(() => _localAudio = value),
+          ),
+          IosSwitchRow(
+            key: const ValueKey('local-runtime-keep-loaded-switch'),
+            label: l10n.localModelsRuntimeKeepLoadedLabel,
+            subtitle: l10n.localModelsRuntimeKeepLoadedHint,
+            value: _localKeepLoaded,
+            onChanged: (value) => setState(() => _localKeepLoaded = value),
+          ),
+        ],
+      ),
+    ),
+  ];
+
+  Widget _localRuntimeField(
+    BuildContext context, {
+    required String label,
+    required TextEditingController controller,
+    required Key key,
+    required TextInputType keyboardType,
+    String? helperText,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _label(context, label),
+        const SizedBox(height: 6),
+        TextField(
+          key: key,
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            helperText: helperText,
+            filled: true,
+            fillColor: context.appColors.surfaceCard,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: cs.outlineVariant.withValues(alpha: 0.4),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: cs.outlineVariant.withValues(alpha: 0.4),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: cs.primary.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   void _toggleBuiltIn(String name, bool on) {
@@ -732,19 +943,61 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
   Future<void> _save() async {
     final settings = context.read<SettingsProvider>();
     final old = settings.getProviderConfig(widget.providerKey);
+    final l10n = AppLocalizations.of(context)!;
     // Logical key used inside configs (stable across edits)
     final String prevKey = widget.modelId;
     // Upstream/vendor model id typed by the user
     final String apiModelId = _idCtrl.text.trim();
     // Basic validation
     if (apiModelId.isEmpty || apiModelId.length < 2) {
-      final l10n = AppLocalizations.of(context)!;
       showAppSnackBar(
         context,
         message: l10n.modelDetailSheetInvalidIdError,
         type: NotificationType.error,
       );
       return;
+    }
+
+    Map<String, dynamic>? localRuntimeSettings;
+    if (_isLocalProvider) {
+      final contextSize = int.tryParse(_localContextCtrl.text.trim());
+      final temperature = double.tryParse(_localTemperatureCtrl.text.trim());
+      final topK = int.tryParse(_localTopKCtrl.text.trim());
+      final topP = double.tryParse(_localTopPCtrl.text.trim());
+      final thinkingBudget = int.tryParse(_localThinkingBudgetCtrl.text.trim());
+      if (contextSize == null ||
+          contextSize <= 0 ||
+          temperature == null ||
+          !temperature.isFinite ||
+          temperature < 0 ||
+          topK == null ||
+          topK <= 0 ||
+          topP == null ||
+          !topP.isFinite ||
+          topP < 0 ||
+          topP > 1 ||
+          thinkingBudget == null ||
+          thinkingBudget < -1) {
+        showAppSnackBar(
+          context,
+          message: l10n.localModelsRuntimeInvalidSettings,
+          type: NotificationType.error,
+        );
+        return;
+      }
+      localRuntimeSettings = {
+        'localBackend': _localBackend,
+        'localMaxNumTokens': contextSize,
+        'localTemperature': temperature,
+        'localTopK': topK,
+        'localTopP': topP,
+        'localThinkingBudget': thinkingBudget,
+        'localThinking': _abilities.contains(ModelAbility.reasoning),
+        'localVision': _input.contains(Modality.image),
+        'localAudio': _localAudio,
+        'localTools': _abilities.contains(ModelAbility.tool),
+        'localKeepLoaded': _localKeepLoaded,
+      };
     }
 
     final ov = Map<String, dynamic>.from(old.modelOverrides);
@@ -778,7 +1031,9 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
       ...modelSyncMetadata(prev),
       'apiModelId': apiModelId,
       'name': _nameCtrl.text.trim(),
-      'type': _type == ModelType.chat ? 'chat' : 'embedding',
+      'type': _isLocalProvider || _type == ModelType.chat
+          ? 'chat'
+          : 'embedding',
       'input': _input
           .map((e) => e == Modality.image ? 'image' : 'text')
           .toList(),
@@ -793,6 +1048,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
       'headers': headers,
       'body': bodies,
       if (!isEmbedding && builtInTools.isNotEmpty) 'builtInTools': builtInTools,
+      if (localRuntimeSettings != null) ...localRuntimeSettings,
     };
 
     // Apply updates to provider config
@@ -830,8 +1086,34 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
   }
 }
 
+int _positiveIntOrDefault(Object? value, int fallback) {
+  final parsed = value is num ? value.toInt() : int.tryParse('$value');
+  return parsed != null && parsed > 0 ? parsed : fallback;
+}
+
+double _nonNegativeDoubleOrDefault(Object? value, double fallback) {
+  final parsed = value is num ? value.toDouble() : double.tryParse('$value');
+  return parsed != null && parsed.isFinite && parsed >= 0 ? parsed : fallback;
+}
+
+double _probabilityOrDefault(Object? value, double fallback) {
+  final parsed = value is num ? value.toDouble() : double.tryParse('$value');
+  return parsed != null &&
+          parsed.isFinite &&
+          parsed >= 0 &&
+          parsed <= 1
+      ? parsed
+      : fallback;
+}
+
+int _thinkingBudgetOrDefault(Object? value, int fallback) {
+  final parsed = value is num ? value.toInt() : int.tryParse('$value');
+  return parsed != null && parsed >= -1 ? parsed : fallback;
+}
+
 class _SegmentedSingle extends StatelessWidget {
   const _SegmentedSingle({
+    super.key,
     required this.options,
     required this.value,
     required this.onChanged,

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/local/local_model_library.dart';
 import 'package:Kelivo/features/model/widgets/model_detail_sheet.dart';
+import 'package:Kelivo/features/provider/pages/local_models_page.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import '../../../support/business_test_harness.dart';
 
@@ -198,5 +199,34 @@ void main() {
                 .modelOverrides['litert-test-model']
             as Map<String, dynamic>;
     expect(saved['localTemperature'], 1.0);
+  });
+
+  testWidgets('installed model edit action opens its runtime settings', (
+    tester,
+  ) async {
+    final settings = await settingsWithInstalledModel(tester);
+    await tester.pumpWidget(
+      ChangeNotifierProvider<SettingsProvider>.value(
+        value: settings,
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const LocalModelsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.tap(find.byTooltip(l10n.providerDetailPageEditTooltip));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.modelDetailSheetAdvancedTab));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('local-runtime-context')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('local-runtime-temperature')),
+      findsOneWidget,
+    );
   });
 }

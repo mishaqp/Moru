@@ -39,10 +39,10 @@
 - Consumes: local model overrides in `ProviderConfig.modelOverrides[modelId]`.
 - Produces: local-only advanced controls; saving updates the existing model override and closes with `true`.
 
-- [ ] **Step 1: Write a widget test first.** Open `showModelDetailSheet` with a seeded local override, switch to Advanced, and assert the runtime context/backend fields exist. Enter context 8192, temperature 0.4, Top K 32, Top P 0.8 and budget 256; save and assert the persisted keys and original path/hash are retained.
-- [ ] **Step 2: Run the test to confirm the missing local runtime controls fail.** Run `flutter test test/features/model/widgets/model_detail_sheet_local_runtime_settings_test.dart`; expected: the context field key is not found.
-- [ ] **Step 3: Add local-only state, defaults, validation, and controls.** When `ProviderKind.local`, hide model type/output controls and show backend, context, temperature, Top K, Top P, thinking budget when reasoning is enabled, audio and keep-loaded switches. Map the existing input/ability choices to vision/tools/thinking flags and merge values over `modelSyncMetadata(prev)`.
-- [ ] **Step 4: Add matching strings to the five ARB files and generated localization Dart files.**
+- [x] **Step 1: Write a widget test first.** Open `showModelDetailSheet` with a seeded local override, switch to Advanced, and assert the runtime context/backend fields exist. Enter context 8192, temperature 0.4, Top K 32, Top P 0.8 and budget 256; save and assert the persisted keys and original path/hash are retained.
+- [x] **Step 2: Run the test to confirm the missing local runtime controls fail.** Run `flutter test test/features/model/widgets/model_detail_sheet_local_runtime_settings_test.dart`; expected: the context field key is not found.
+- [x] **Step 3: Add local-only state, defaults, validation, and controls.** When `ProviderKind.local`, hide model type/output controls and show backend, context, temperature, Top K, Top P, thinking budget when reasoning is enabled, audio and keep-loaded switches. Map the existing input/ability choices to vision/tools/thinking flags and merge values over `modelSyncMetadata(prev)`.
+- [x] **Step 4: Add matching strings to the five ARB files and generated localization Dart files.**
 - [ ] **Step 5: Run the widget test and format/analyze checks.** Expected: the settings round-trip test passes and no formatter/analyzer errors are reported.
 - [ ] **Step 6: Commit the task.**
 

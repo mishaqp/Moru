@@ -12446,6 +12446,55 @@ class AppLocalizationsRu extends AppLocalizations {
   String get localModelsImportFailedGeneric => 'Не удалось импортировать файл.';
 
   @override
+  String get localModelsRuntimeSettingsDescription =>
+      'Настройте, как LiteRT-LM запускает эту модель на устройстве.';
+
+  @override
+  String get localModelsRuntimeBackendLabel => 'Вычислительный режим';
+
+  @override
+  String get localModelsRuntimeBackendHint =>
+      'GPU может работать быстрее. Доступность зависит от устройства и модели.';
+
+  @override
+  String get localModelsRuntimeContextLabel => 'Размер контекста (токены)';
+
+  @override
+  String get localModelsRuntimeTemperatureLabel => 'Температура';
+
+  @override
+  String get localModelsRuntimeTopKLabel => 'Top K';
+
+  @override
+  String get localModelsRuntimeTopPLabel => 'Top P';
+
+  @override
+  String get localModelsRuntimeThinkingBudgetLabel =>
+      'Бюджет токенов рассуждения';
+
+  @override
+  String get localModelsRuntimeThinkingBudgetHint =>
+      '−1 — значение модели по умолчанию, 0 — отключить рассуждение, положительное число — лимит токенов.';
+
+  @override
+  String get localModelsRuntimeAudioLabel => 'Включить аудиоввод';
+
+  @override
+  String get localModelsRuntimeAudioHint =>
+      'Включите аудиоввод для моделей с поддержкой аудио.';
+
+  @override
+  String get localModelsRuntimeKeepLoadedLabel => 'Не выгружать модель';
+
+  @override
+  String get localModelsRuntimeKeepLoadedHint =>
+      'Держать модель в памяти между запросами, чтобы не загружать её заново.';
+
+  @override
+  String get localModelsRuntimeInvalidSettings =>
+      'Проверьте настройки: контекст и Top K должны быть больше нуля, температура — неотрицательной, Top P — от 0 до 1, а бюджет рассуждения — не меньше −1.';
+
+  @override
   String get localModelsBackendCpuLabel => 'CPU';
 
   @override
