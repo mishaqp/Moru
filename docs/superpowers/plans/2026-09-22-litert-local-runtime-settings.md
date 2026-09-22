@@ -50,17 +50,16 @@
 
 **Files:**
 - Modify: `lib/features/provider/pages/local_models_page.dart`
-- Create or extend: `test/features/provider/pages/local_models_page_test.dart`
+- Extend: `test/features/model/widgets/model_detail_sheet_local_runtime_settings_test.dart`
 
 **Interfaces:**
 - Consumes: `InstalledLocalModel.id` and the existing `showModelDetailSheet`.
 - Produces: an edit action alongside delete; saving refreshes the installed row.
 
-- [ ] **Step 1: Write a widget test first.** Render an installed local model, tap the edit action, and assert the LiteRT runtime settings sheet opens.
-- [ ] **Step 2: Run the test to confirm the settings action is absent.** Run `flutter test test/features/provider/pages/local_models_page_test.dart`; expected: no Edit tooltip is found.
-- [ ] **Step 3: Add the edit action and refresh the page after a successful save.**
-- [ ] **Step 4: Run the page test and the full Flutter suite.** Expected: both local-model widget tests pass; CI reports all project checks.
-- [ ] **Step 5: Commit the task.**
+- [x] **Step 1: Add a widget test for the entry point.** Render an installed local model, tap Edit, and assert that the LiteRT runtime settings sheet opens.
+- [x] **Step 2: Add the edit action and refresh the page after a successful save.**
+- [ ] **Step 3: Run the entry-point test and full Flutter suite.** Expected: both local-model widget tests pass; CI reports all project checks.
+- [ ] **Step 4: Commit the task.**
 
 ## Completion Checklist
 

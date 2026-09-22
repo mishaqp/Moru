@@ -14,12 +14,10 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/section_card.dart';
 import '../../../utils/app_directories.dart';
+import '../../model/widgets/model_detail_sheet.dart';
 
-/// Settings page for the built-in "Локальные модели · LiteRT" provider:
-/// installed on-device models (with delete) and file import. The catalog
-/// (section 8/9 of the task this shipped for) is a later addition --
-/// this page ships with import-only, which is enough to actually use a
-/// local model end to end.
+/// Settings page for the built-in LiteRT local-model provider: installed
+/// models, the curated download catalog, and file import.
 class LocalModelsPage extends StatefulWidget {
   const LocalModelsPage({super.key});
 
@@ -248,6 +246,15 @@ class _LocalModelsPageState extends State<LocalModelsPage> {
     }
   }
 
+  Future<void> _edit(InstalledLocalModel model) async {
+    final saved = await showModelDetailSheet(
+      context,
+      providerKey: kLocalModelProviderKey,
+      modelId: model.id,
+    );
+    if (saved == true && mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -301,6 +308,7 @@ class _LocalModelsPageState extends State<LocalModelsPage> {
                 for (final model in models)
                   _InstalledModelTile(
                     model: model,
+                    onEdit: () => _edit(model),
                     onDelete: () => _delete(model),
                   ),
               ],
@@ -484,9 +492,14 @@ class _CatalogEntryTile extends StatelessWidget {
 }
 
 class _InstalledModelTile extends StatelessWidget {
-  const _InstalledModelTile({required this.model, required this.onDelete});
+  const _InstalledModelTile({
+    required this.model,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final InstalledLocalModel model;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -521,6 +534,16 @@ class _InstalledModelTile extends StatelessWidget {
                   ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
               ],
+            ),
+          ),
+          Semantics(
+            button: true,
+            label: l10n.providerDetailPageEditTooltip,
+            child: IconButton(
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              tooltip: l10n.providerDetailPageEditTooltip,
+              icon: const Icon(Lucide.Settings2, size: 18),
+              onPressed: onEdit,
             ),
           ),
           Semantics(
