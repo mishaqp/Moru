@@ -9,6 +9,7 @@ import 'package:Kelivo/core/services/api/chat_api_service.dart';
 import 'package:Kelivo/core/services/api/providers/litert_local.dart';
 import 'package:Kelivo/core/services/local/litert_channel.dart';
 import 'package:Kelivo/core/services/local/local_model_library.dart';
+import 'package:Kelivo/core/utils/multimodal_input_utils.dart';
 
 import '../../../support/collect_generation.dart';
 
@@ -28,9 +29,9 @@ import '../../../support/collect_generation.dart';
 ///    a corollary: `ProviderOAuthService.resolve`/`authenticatedClient`
 ///    are both no-ops unless a request actually reaches an OAuth-configured
 ///    client, which this proves never happens);
-///  - a non-trivial `tools` schema and an `onToolCall` handler that fails
-///    the test if invoked, proving the local branch neither forwards tool
-///    definitions to the engine nor ever calls back into tool handling.
+///  - model/request options and local media paths, proving the local branch
+///    forwards LiteRT-specific engine and conversation settings without ever
+///    turning them into an HTTP request.
 ///
 /// The native engine itself is mocked at the platform-channel level (same
 /// technique as litert_channel_test.dart / local_model_runtime_test.dart)
@@ -39,8 +40,8 @@ import '../../../support/collect_generation.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('a local generation makes zero HTTP requests, touches no OAuth client, '
-      'and never advertises or invokes a tool', () async {
+  test('a local generation makes zero HTTP requests and forwards its model '
+      'settings plus media to LiteRT', () async {
     final trapServer = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     var trapHits = 0;
     final trapSub = trapServer.listen((request) {
@@ -58,16 +59,16 @@ void main() {
     const methodChannel = MethodChannel(kLiteRtMethodChannel);
     const eventChannel = EventChannel(kLiteRtEventChannel);
     MockStreamHandlerEventSink? sink;
-    final sentMessages = <MethodCall>[];
+    final nativeCalls = <MethodCall>[];
 
     messenger.setMockMethodCallHandler(methodChannel, (call) async {
+      nativeCalls.add(call);
       switch (call.method) {
         case 'loadModel':
           return <String, Object?>{'backend': 'cpu'};
         case 'startConversation':
           return null;
         case 'sendMessage':
-          sentMessages.add(call);
           return null;
         case 'cancel':
           return true;
@@ -101,43 +102,51 @@ void main() {
       // flow), which is what makes `config.isOAuth` false and both
       // `ProviderOAuthService.resolve`/`authenticatedClient` no-ops.
       modelOverrides: {
-        modelId: {'localModelPath': '/models/isolation-test.litertlm'},
+        modelId: {
+          'localModelPath': '/models/isolation-test.litertlm',
+          'localBackend': 'gpu',
+          'localMaxNumTokens': 8192,
+          'localTemperature': 0.25,
+          'localTopK': 32,
+          'localTopP': 0.8,
+          'localThinking': true,
+          'localThinkingBudget': 256,
+          'localVision': true,
+          'localAudio': true,
+          'localKeepLoaded': true,
+          'input': ['text', 'image', 'audio'],
+          'abilities': ['reasoning'],
+        },
       },
     );
 
-    var toolCallInvoked = false;
     final chunksFuture = ChatApiService.sendMessageStream(
       config: config,
       modelId: modelId,
       messages: const [
-        {'role': 'user', 'content': 'hello'},
-      ],
-      tools: const [
         {
-          'type': 'function',
-          'function': {
-            'name': 'search',
-            'description': 'search the web',
-            'parameters': {
-              'type': 'object',
-              'properties': {
-                'query': {'type': 'string'},
-              },
-            },
-          },
+          'role': 'user',
+          'content': 'hello',
+          multimodalInternalMediaPathsKey: [
+            '/tmp/local-photo.png',
+            '/tmp/local-voice.wav',
+          ],
         },
       ],
-      onToolCall: (name, args, {toolCallId}) async {
-        toolCallInvoked = true;
-        fail('onToolCall must never be invoked for a local generation');
-      },
+      temperature: 0.7,
+      topP: 0.9,
+      maxTokens: 512,
+      thinkingBudget: 1024,
     ).toList();
 
     // Let the request reach the mocked native side, then answer it.
     await Future<void>.delayed(Duration.zero);
     await Future<void>.delayed(Duration.zero);
-    expect(sentMessages, hasLength(1));
-    final requestId = sentMessages.single.arguments['requestId'] as String;
+    final sendMessages = nativeCalls
+        .where((call) => call.method == 'sendMessage')
+        .toList();
+    expect(sendMessages, hasLength(1));
+    final requestId = sendMessages.single.arguments['requestId'] as String;
     sink?.success({
       'type': 'textDelta',
       'requestId': requestId,
@@ -160,7 +169,37 @@ void main() {
           'local generation must never send an HTTP request, even when '
           'baseUrl is set',
     );
-    expect(toolCallInvoked, isFalse);
+
+    final load = Map<String, Object?>.from(
+      nativeCalls.singleWhere((call) => call.method == 'loadModel').arguments
+          as Map,
+    );
+    expect(load, containsPair('backend', 'gpu'));
+    expect(load, containsPair('maxNumTokens', 8192));
+    expect(load, containsPair('visionEnabled', true));
+    expect(load, containsPair('audioEnabled', true));
+
+    final start = Map<String, Object?>.from(
+      nativeCalls
+              .singleWhere((call) => call.method == 'startConversation')
+              .arguments
+          as Map,
+    );
+    expect(start, containsPair('temperature', 0.25));
+    expect(start, containsPair('topK', 32));
+    expect(start, containsPair('topP', 0.8));
+    expect(start, containsPair('maxOutputTokens', 512));
+    expect(start, containsPair('thinkingEnabled', true));
+    expect(start, containsPair('thinkingBudget', 256));
+
+    final send = Map<String, Object?>.from(
+      sendMessages.single.arguments as Map,
+    );
+    expect(send['contents'], [
+      {'type': 'text', 'text': 'hello'},
+      {'type': 'image', 'path': '/tmp/local-photo.png'},
+      {'type': 'audio', 'path': '/tmp/local-voice.wav'},
+    ]);
   });
 
   test('a stale local model id falls back to the only installed model', () {
