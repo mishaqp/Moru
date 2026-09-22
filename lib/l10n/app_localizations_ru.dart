@@ -12463,10 +12463,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get localModelsRuntimeTemperatureLabel => 'Температура';
 
   @override
-  String get localModelsRuntimeTopKLabel => 'Top K';
+  String get localModelsRuntimeTopKLabel => 'Количество вариантов (Top K)';
 
   @override
-  String get localModelsRuntimeTopPLabel => 'Top P';
+  String get localModelsRuntimeTopPLabel => 'Порог вероятности (Top P)';
 
   @override
   String get localModelsRuntimeThinkingBudgetLabel =>

@@ -131,10 +131,13 @@ void main() {
       await tester.pumpAndSettle();
 
       final backend = find.byKey(const ValueKey('local-runtime-backend'));
-      await tester.ensureVisible(backend);
-      await tester.tap(
-        find.descendant(of: backend, matching: find.text('GPU')),
+      final gpuOption = find.descendant(
+        of: backend,
+        matching: find.text('GPU'),
       );
+      await tester.ensureVisible(gpuOption);
+      await tester.pumpAndSettle();
+      await tester.tap(gpuOption);
       final audioSwitch = find.byKey(
         const ValueKey('local-runtime-audio-switch'),
       );
@@ -199,6 +202,11 @@ void main() {
                 .modelOverrides['litert-test-model']
             as Map<String, dynamic>;
     expect(saved['localTemperature'], 1.0);
+
+    // Validation reports through a 3-second app snackbar; elapse it so the
+    // widget test does not leave the snackbar timer pending at teardown.
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('installed model edit action opens its runtime settings', (
