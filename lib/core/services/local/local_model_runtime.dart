@@ -356,29 +356,18 @@ class LocalModelRuntime {
       final ids = StreamChunkIds('litert-$requestId');
       final replyBuffer = StringBuffer();
       var startedText = false;
-      var startedReasoning = false;
       var settled = false;
       var toolCallCount = 0;
-
-      void endReasoning() {
-        if (!startedReasoning) return;
-        controller.add(ReasoningEnd(id: ids.reasoning()));
-        startedReasoning = false;
-      }
 
       try {
         await for (final event in events.stream) {
           switch (event) {
-            case LiteRtReasoningDelta(:final text):
-              if (text.isEmpty) continue;
-              if (!startedReasoning) {
-                startedReasoning = true;
-                controller.add(ReasoningStart(id: ids.reasoning()));
-              }
-              controller.add(ReasoningDelta(id: ids.reasoning(), text: text));
+            // Reasoning events are deliberately discarded: they are internal
+            // model thoughts, not assistant content to persist in the chat.
+            case LiteRtReasoningDelta():
+              continue;
             case LiteRtTextDelta(:final text):
               if (text.isEmpty) continue;
-              endReasoning();
               if (!startedText) {
                 startedText = true;
                 controller.add(TextStart(ids.text()));
@@ -386,7 +375,6 @@ class LocalModelRuntime {
               replyBuffer.write(text);
               controller.add(TextDelta(id: ids.text(), text: text));
             case LiteRtToolCalls(:final calls):
-              endReasoning();
               if (calls.isEmpty) continue;
               if (onToolCall == null) {
                 throw const LiteRtException(
@@ -460,7 +448,6 @@ class LocalModelRuntime {
               }
             case LiteRtDone():
               settled = true;
-              endReasoning();
               if (startedText) controller.add(TextEnd(ids.text()));
               controller.add(const Finish());
               _lastFullHistory = [
@@ -474,7 +461,6 @@ class LocalModelRuntime {
               _activeConversationKey = null;
               _activeConversationSignature = null;
               _lastFullHistory = null;
-              endReasoning();
               if (startedText) controller.add(TextEnd(ids.text()));
               if (cancelled) {
                 controller.add(const Finish(finishReason: 'cancelled'));

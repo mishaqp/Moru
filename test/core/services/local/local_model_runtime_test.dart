@@ -778,7 +778,7 @@ void main() {
   );
 
   test(
-    'reasoning channel becomes reasoning chunks before answer text',
+    'model-internal reasoning channel is omitted while the final answer streams',
     () async {
       final stream = generateWithFeatures(
         thinkingEnabled: true,
@@ -805,10 +805,10 @@ void main() {
       fake.emit({'type': 'done', 'requestId': requestId});
       await done.future;
 
+      expect(chunks.whereType<ReasoningStart>(), isEmpty);
+      expect(chunks.whereType<ReasoningDelta>(), isEmpty);
+      expect(chunks.whereType<ReasoningEnd>(), isEmpty);
       expect(chunks, [
-        isA<ReasoningStart>(),
-        isA<ReasoningDelta>().having((chunk) => chunk.text, 'text', 'plan'),
-        isA<ReasoningEnd>(),
         isA<TextStart>(),
         isA<TextDelta>().having((chunk) => chunk.text, 'text', 'answer'),
         isA<TextEnd>(),

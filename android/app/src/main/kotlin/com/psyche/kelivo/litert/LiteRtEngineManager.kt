@@ -345,17 +345,8 @@ class LiteRtEngineManager(private val events: LiteRtEvents) {
 
     private fun callbackFor(generation: ActiveGeneration) = object : MessageCallback {
         override fun onMessage(message: Message) {
-            for (reasoning in message.channels.values) {
-                if (reasoning.isNotEmpty()) {
-                    events.emit(
-                        mapOf(
-                            "type" to "reasoningDelta",
-                            "requestId" to generation.requestId,
-                            "text" to reasoning,
-                        ),
-                    )
-                }
-            }
+            // SDK channel data can contain private model reasoning (for example
+            // DeepSeek's analysis channel). Never forward it into chat history/UI.
             val text = message.toString()
             if (text.isNotEmpty()) {
                 events.emit(
