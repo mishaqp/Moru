@@ -193,11 +193,7 @@ class LocalModelLibrary {
       ...initialSettings,
       'name': displayName,
       'type': 'chat',
-      'input': [
-        'text',
-        if (initialSettings['localVision'] == true) 'image',
-        if (initialSettings['localAudio'] == true) 'audio',
-      ],
+      'input': ['text', if (initialSettings['localVision'] == true) 'image'],
       'output': ['text'],
       'abilities': <String>[
         if (initialSettings['localThinking'] == true) 'reasoning',

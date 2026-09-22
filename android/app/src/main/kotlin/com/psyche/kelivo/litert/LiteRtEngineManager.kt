@@ -1,6 +1,7 @@
 package com.psyche.kelivo.litert
 
 import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.ConversationConfig
@@ -8,41 +9,50 @@ import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
 import com.google.ai.edge.litertlm.MessageCallback
-import com.google.ai.edge.litertlm.Role
+import com.google.ai.edge.litertlm.OpenApiTool
 import com.google.ai.edge.litertlm.SamplerConfig
+import com.google.ai.edge.litertlm.ThinkingConfig
+import com.google.ai.edge.litertlm.ToolCall
+import com.google.ai.edge.litertlm.tool
+import com.google.gson.Gson
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/**
- * Owns the single in-memory LiteRT-LM [Engine]/[Conversation] pair for the
- * whole process. Every command (load, unload, start a conversation, send a
- * message, cancel) is funneled through [commandExecutor], a single-threaded
- * executor, so they never interleave with each other -- matches the "one
- * model, one generation at a time, fully serialized" requirement from the
- * task brief. A `sendMessage` call itself only *starts* native generation;
- * the actual token stream arrives later via [MessageCallback] on a JNI
- * thread, so [state] plus the latch in [activeGeneration] are the real
- * source of truth `unloadModel`/a second `sendMessage` check against, not
- * just "is the executor free".
- *
- * Cancellation: [cancel] calls [Conversation.cancelProcess], the one
- * verified-real native cancel entry point (see docs/litert-lm-progress.md --
- * cancelling the Kotlin Flow/coroutine alone does **not** stop native
- * inference, confirmed by reading the SDK's own source). [unloadModel]
- * always cancels first and waits for the generation's own terminal callback
- * before calling [Conversation.close]/[Engine.close], so close() is never
- * called concurrently with an active native call.
- */
+data class LiteRtContent(
+    val type: String,
+    val text: String? = null,
+    val path: String? = null,
+    val name: String? = null,
+    val response: Any? = null,
+)
+
+data class LiteRtToolCall(val name: String, val arguments: Map<String, Any?>)
+
+data class LiteRtMessage(
+    val role: String,
+    val contents: List<LiteRtContent>,
+    val toolCalls: List<LiteRtToolCall> = emptyList(),
+)
+
+data class LiteRtToolResponse(val name: String, val response: Any?)
+
+/** Owns the process-wide LiteRT-LM engine and conversation. */
 class LiteRtEngineManager(private val events: LiteRtEvents) {
     enum class State { NOT_LOADED, LOADING, READY, GENERATING, STOPPING, UNLOADING, ERROR }
 
     private class ActiveGeneration(val requestId: String, val conversation: Conversation) {
         val latch = CountDownLatch(1)
+
+        @Volatile
+        var awaitingToolResponse = false
+
+        var callback: MessageCallback? = null
     }
 
     private val commandExecutor = Executors.newSingleThreadExecutor()
     private val lock = Any()
+    private val gson = Gson()
 
     private var engine: Engine? = null
     private var conversation: Conversation? = null
@@ -56,7 +66,6 @@ class LiteRtEngineManager(private val events: LiteRtEvents) {
             events.emit(mapOf("type" to "engineState", "state" to value.name.lowercase()))
         }
 
-    /** Posts [block] onto the single command executor, reporting exceptions as `onError`. */
     private fun post(onError: (Throwable) -> Unit, block: () -> Unit) {
         commandExecutor.execute {
             try {
@@ -72,6 +81,8 @@ class LiteRtEngineManager(private val events: LiteRtEvents) {
         backend: String,
         cacheDir: String?,
         maxNumTokens: Int?,
+        visionEnabled: Boolean,
+        audioEnabled: Boolean,
         onResult: (Result<String>) -> Unit,
     ) {
         post({ onResult(Result.failure(it)) }) {
@@ -83,17 +94,30 @@ class LiteRtEngineManager(private val events: LiteRtEvents) {
             val requestedGpu = backend == "gpu"
             var actualBackend = if (requestedGpu) "gpu" else "cpu"
             val loaded = try {
-                initializeEngine(modelPath, if (requestedGpu) Backend.GPU() else Backend.CPU(), cacheDir, maxNumTokens)
+                initializeEngine(
+                    modelPath,
+                    if (requestedGpu) Backend.GPU() else Backend.CPU(),
+                    cacheDir,
+                    maxNumTokens,
+                    visionEnabled,
+                    audioEnabled,
+                )
             } catch (primaryError: Throwable) {
                 if (!requestedGpu) {
                     synchronized(lock) { state = State.ERROR }
                     onResult(Result.failure(primaryError))
                     return@post
                 }
-                // One honest, one-time fallback to CPU -- never a retry loop.
                 actualBackend = "cpu"
                 try {
-                    initializeEngine(modelPath, Backend.CPU(), cacheDir, maxNumTokens)
+                    initializeEngine(
+                        modelPath,
+                        Backend.CPU(),
+                        cacheDir,
+                        maxNumTokens,
+                        visionEnabled,
+                        audioEnabled,
+                    )
                 } catch (cpuError: Throwable) {
                     synchronized(lock) { state = State.ERROR }
                     onResult(Result.failure(cpuError))
@@ -113,16 +137,25 @@ class LiteRtEngineManager(private val events: LiteRtEvents) {
         backend: Backend,
         cacheDir: String?,
         maxNumTokens: Int?,
+        visionEnabled: Boolean,
+        audioEnabled: Boolean,
     ): Engine {
         val config = EngineConfig(
             modelPath = modelPath,
             backend = backend,
+            visionBackend = if (visionEnabled) backend else null,
+            audioBackend = if (audioEnabled) backend else null,
             maxNumTokens = maxNumTokens,
             cacheDir = cacheDir,
         )
         val instance = Engine(config)
-        instance.initialize()
-        return instance
+        try {
+            instance.initialize()
+            return instance
+        } catch (error: Throwable) {
+            runCatching { instance.close() }
+            throw error
+        }
     }
 
     fun unloadModel(onResult: (Result<Unit>) -> Unit) {
@@ -131,10 +164,11 @@ class LiteRtEngineManager(private val events: LiteRtEvents) {
             if (pending != null) {
                 synchronized(lock) { state = State.STOPPING }
                 runCatching { pending.conversation.cancelProcess() }
-                // Bounded wait: the SDK gives no hard upper bound on how long a
-                // cancelled call takes to actually unwind, so this is a safety
-                // ceiling, not a normal-path timeout.
-                pending.latch.await(10, TimeUnit.SECONDS)
+                if (!pending.latch.await(10, TimeUnit.SECONDS)) {
+                    synchronized(lock) { state = State.ERROR }
+                    onResult(Result.failure(IllegalStateException("cancel_timeout")))
+                    return@post
+                }
             }
             synchronized(lock) {
                 state = State.UNLOADING
@@ -153,10 +187,14 @@ class LiteRtEngineManager(private val events: LiteRtEvents) {
     fun startConversation(
         token: String,
         systemInstruction: String?,
-        initialMessages: List<Pair<String, String>>,
+        initialMessages: List<LiteRtMessage>,
         temperature: Double?,
         topK: Int?,
         topP: Double?,
+        maxOutputTokens: Int?,
+        thinkingEnabled: Boolean,
+        thinkingBudget: Int?,
+        tools: List<Map<String, Any?>>,
         onResult: (Result<Unit>) -> Unit,
     ) {
         post({ onResult(Result.failure(it)) }) {
@@ -169,7 +207,6 @@ class LiteRtEngineManager(private val events: LiteRtEvents) {
                 conversation = null
                 conversationToken = null
             }
-            val messages = initialMessages.map { (role, text) -> messageFor(role, text) }
             val sampler = if (temperature != null && topK != null && topP != null) {
                 SamplerConfig(topK = topK, topP = topP, temperature = temperature)
             } else {
@@ -177,8 +214,15 @@ class LiteRtEngineManager(private val events: LiteRtEvents) {
             }
             val config = ConversationConfig(
                 systemInstruction = systemInstruction?.let { Contents.of(it) },
-                initialMessages = messages,
+                initialMessages = initialMessages.map(::messageFor),
+                tools = tools.map(::openApiTool),
                 samplerConfig = sampler,
+                automaticToolCalling = false,
+                maxOutputToken = maxOutputTokens,
+                thinkingConfig = ThinkingConfig(
+                    enableThinking = thinkingEnabled,
+                    thinkingTokenBudget = thinkingBudget ?: -1,
+                ),
             )
             val created = currentEngine.createConversation(config)
             synchronized(lock) {
@@ -190,66 +234,177 @@ class LiteRtEngineManager(private val events: LiteRtEvents) {
         }
     }
 
-    private fun messageFor(role: String, text: String): Message = when (role) {
-        "system" -> Message.system(text)
-        "model", "assistant" -> Message.model(text)
-        "tool" -> Message.tool(Contents.of(text))
-        else -> Message.user(text)
+    private fun openApiTool(raw: Map<String, Any?>) = tool(
+        object : OpenApiTool {
+            override fun getToolDescriptionJsonString(): String {
+                val description = (raw["function"] as? Map<*, *>) ?: raw
+                return gson.toJson(description)
+            }
+
+            override fun execute(paramsJsonString: String): String =
+                error("Automatic tool execution is disabled")
+        },
+    )
+
+    private fun messageFor(message: LiteRtMessage): Message {
+        val contents = contentsFor(message.contents)
+        return when (message.role) {
+            "system" -> Message.system(contents)
+            "model", "assistant" -> Message.model(
+                contents = contents,
+                toolCalls = message.toolCalls.map { ToolCall(it.name, it.arguments) },
+            )
+            "tool" -> Message.tool(contents)
+            else -> Message.user(contents)
+        }
     }
+
+    private fun contentsFor(contents: List<LiteRtContent>): Contents = Contents.of(
+        contents.mapNotNull { content ->
+            when (content.type) {
+                "text" -> content.text?.let(Content::Text)
+                "image" -> content.path?.let(Content::ImageFile)
+                "audio" -> content.path?.let(Content::AudioFile)
+                "tool_response" -> content.name?.let {
+                    Content.ToolResponse(it, content.response)
+                }
+                else -> null
+            }
+        },
+    )
 
     fun sendMessage(
         requestId: String,
         conversationToken: String,
-        text: String,
+        contents: List<LiteRtContent>,
+        onAccepted: (Result<Unit>) -> Unit,
+    ) {
+        post({ onAccepted(Result.failure(it)) }) {
+            val target = createGeneration(requestId, conversationToken)
+            sendAsync(target, Message.user(contentsFor(contents)), onAccepted)
+        }
+    }
+
+    fun sendToolResponses(
+        requestId: String,
+        conversationToken: String,
+        responses: List<LiteRtToolResponse>,
         onAccepted: (Result<Unit>) -> Unit,
     ) {
         post({ onAccepted(Result.failure(it)) }) {
             val target = synchronized(lock) {
-                check(state == State.READY) { "busy" }
+                val active = activeGeneration ?: throw IllegalStateException("not_generating")
+                check(active.requestId == requestId) { "stale_request" }
                 check(this.conversationToken == conversationToken) { "stale_conversation" }
-                val c = conversation ?: throw IllegalStateException("not_loaded")
-                val generation = ActiveGeneration(requestId, c)
-                activeGeneration = generation
-                state = State.GENERATING
-                generation
+                check(active.awaitingToolResponse) { "not_awaiting_tool" }
+                active.awaitingToolResponse = false
+                active
             }
+            val contents = Contents.of(
+                responses.map { Content.ToolResponse(it.name, it.response) },
+            )
+            sendAsync(target, Message.tool(contents), onAccepted)
+        }
+    }
+
+    private fun createGeneration(requestId: String, token: String): ActiveGeneration =
+        synchronized(lock) {
+            check(state == State.READY) { "busy" }
+            check(conversationToken == token) { "stale_conversation" }
+            val current = conversation ?: throw IllegalStateException("not_loaded")
+            ActiveGeneration(requestId, current).also {
+                activeGeneration = it
+                state = State.GENERATING
+            }
+        }
+
+    private fun sendAsync(
+        generation: ActiveGeneration,
+        message: Message,
+        onAccepted: (Result<Unit>) -> Unit,
+    ) {
+        val callback = generation.callback ?: callbackFor(generation).also {
+            generation.callback = it
+        }
+        try {
+            generation.conversation.sendMessageAsync(message, callback)
             onAccepted(Result.success(Unit))
-            target.conversation.sendMessageAsync(
-                text,
-                object : MessageCallback {
-                    override fun onMessage(message: Message) {
-                        events.emit(
-                            mapOf(
-                                "type" to "textDelta",
-                                "requestId" to requestId,
-                                "text" to message.toString(),
-                            ),
-                        )
-                    }
+        } catch (error: Throwable) {
+            finishGeneration(generation)
+            events.emit(
+                mapOf(
+                    "type" to "error",
+                    "requestId" to generation.requestId,
+                    "cancelled" to false,
+                    "message" to (error.message ?: error.toString()),
+                ),
+            )
+            onAccepted(Result.failure(error))
+        }
+    }
 
-                    override fun onDone() {
-                        finishGeneration(target, cancelled = false, error = null)
-                        events.emit(mapOf("type" to "done", "requestId" to requestId))
+    private fun callbackFor(generation: ActiveGeneration) = object : MessageCallback {
+        override fun onMessage(message: Message) {
+            for (reasoning in message.channels.values) {
+                if (reasoning.isNotEmpty()) {
+                    events.emit(
+                        mapOf(
+                            "type" to "reasoningDelta",
+                            "requestId" to generation.requestId,
+                            "text" to reasoning,
+                        ),
+                    )
+                }
+            }
+            val text = message.toString()
+            if (text.isNotEmpty()) {
+                events.emit(
+                    mapOf(
+                        "type" to "textDelta",
+                        "requestId" to generation.requestId,
+                        "text" to text,
+                    ),
+                )
+            }
+            if (message.toolCalls.isNotEmpty()) {
+                synchronized(lock) {
+                    if (activeGeneration === generation) {
+                        generation.awaitingToolResponse = true
                     }
+                }
+                events.emit(
+                    mapOf(
+                        "type" to "toolCalls",
+                        "requestId" to generation.requestId,
+                        "calls" to message.toolCalls.map {
+                            mapOf("name" to it.name, "arguments" to it.arguments)
+                        },
+                    ),
+                )
+            }
+        }
 
-                    override fun onError(throwable: Throwable) {
-                        val cancelled = throwable is java.util.concurrent.CancellationException
-                        finishGeneration(target, cancelled = cancelled, error = throwable)
-                        events.emit(
-                            mapOf(
-                                "type" to "error",
-                                "requestId" to requestId,
-                                "cancelled" to cancelled,
-                                "message" to (throwable.message ?: throwable.toString()),
-                            ),
-                        )
-                    }
-                },
+        override fun onDone() {
+            if (generation.awaitingToolResponse) return
+            finishGeneration(generation)
+            events.emit(mapOf("type" to "done", "requestId" to generation.requestId))
+        }
+
+        override fun onError(throwable: Throwable) {
+            val cancelled = throwable is java.util.concurrent.CancellationException
+            finishGeneration(generation)
+            events.emit(
+                mapOf(
+                    "type" to "error",
+                    "requestId" to generation.requestId,
+                    "cancelled" to cancelled,
+                    "message" to (throwable.message ?: throwable.toString()),
+                ),
             )
         }
     }
 
-    private fun finishGeneration(generation: ActiveGeneration, cancelled: Boolean, error: Throwable?) {
+    private fun finishGeneration(generation: ActiveGeneration) {
         synchronized(lock) {
             if (activeGeneration === generation) {
                 activeGeneration = null
@@ -261,11 +416,6 @@ class LiteRtEngineManager(private val events: LiteRtEvents) {
         generation.latch.countDown()
     }
 
-    /**
-     * Cancels [requestId] if it is the currently active generation. A no-op
-     * (returns `false`) if nothing matches -- e.g. Stop arriving after the
-     * model already finished on its own.
-     */
     fun cancel(requestId: String, onResult: (Result<Boolean>) -> Unit) {
         post({ onResult(Result.failure(it)) }) {
             val generation = synchronized(lock) { activeGeneration }
@@ -285,6 +435,7 @@ class LiteRtEngineManager(private val events: LiteRtEvents) {
             "loaded" to (engine != null),
             "conversationToken" to conversationToken,
             "activeRequestId" to activeGeneration?.requestId,
+            "awaitingToolResponse" to (activeGeneration?.awaitingToolResponse == true),
         )
     }
 }

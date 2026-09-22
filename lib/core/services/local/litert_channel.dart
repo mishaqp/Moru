@@ -19,6 +19,19 @@ sealed class LiteRtEvent {
           requestId: (map['requestId'] ?? '').toString(),
           text: (map['text'] ?? '').toString(),
         );
+      case 'reasoningDelta':
+        return LiteRtReasoningDelta(
+          requestId: (map['requestId'] ?? '').toString(),
+          text: (map['text'] ?? '').toString(),
+        );
+      case 'toolCalls':
+        return LiteRtToolCalls(
+          requestId: (map['requestId'] ?? '').toString(),
+          calls: [
+            for (final raw in (map['calls'] as List?) ?? const [])
+              if (raw is Map) LiteRtNativeToolCall.fromMap(raw),
+          ],
+        );
       case 'done':
         return LiteRtDone(requestId: (map['requestId'] ?? '').toString());
       case 'error':
@@ -39,6 +52,34 @@ final class LiteRtTextDelta extends LiteRtEvent {
   const LiteRtTextDelta({required this.requestId, required this.text});
   final String requestId;
   final String text;
+}
+
+final class LiteRtReasoningDelta extends LiteRtEvent {
+  const LiteRtReasoningDelta({required this.requestId, required this.text});
+  final String requestId;
+  final String text;
+}
+
+final class LiteRtNativeToolCall {
+  const LiteRtNativeToolCall({required this.name, required this.arguments});
+
+  factory LiteRtNativeToolCall.fromMap(Map raw) => LiteRtNativeToolCall(
+    name: (raw['name'] ?? '').toString(),
+    arguments: raw['arguments'] is Map
+        ? (raw['arguments'] as Map).map(
+            (key, value) => MapEntry(key.toString(), value),
+          )
+        : const <String, dynamic>{},
+  );
+
+  final String name;
+  final Map<String, dynamic> arguments;
+}
+
+final class LiteRtToolCalls extends LiteRtEvent {
+  const LiteRtToolCalls({required this.requestId, required this.calls});
+  final String requestId;
+  final List<LiteRtNativeToolCall> calls;
 }
 
 final class LiteRtDone extends LiteRtEvent {
@@ -109,6 +150,9 @@ class LiteRtChannel {
   Future<Map<Object?, Object?>> status() =>
       _invoke<Map<Object?, Object?>>('status');
 
+  Future<Map<Object?, Object?>> storageInfo() =>
+      _invoke<Map<Object?, Object?>>('storageInfo');
+
   /// Returns the backend actually used ("cpu" or "gpu" -- may differ from
   /// [backend] if GPU initialization failed and the engine fell back).
   Future<String> loadModel({
@@ -116,12 +160,16 @@ class LiteRtChannel {
     required String backend,
     String? cacheDir,
     int? maxNumTokens,
+    bool visionEnabled = false,
+    bool audioEnabled = false,
   }) async {
     final result = await _invoke<Map<Object?, Object?>>('loadModel', {
       'modelPath': modelPath,
       'backend': backend,
       if (cacheDir != null) 'cacheDir': cacheDir,
       if (maxNumTokens != null) 'maxNumTokens': maxNumTokens,
+      'visionEnabled': visionEnabled,
+      'audioEnabled': audioEnabled,
     });
     return (result['backend'] ?? backend).toString();
   }
@@ -131,29 +179,45 @@ class LiteRtChannel {
   Future<void> startConversation({
     required String conversationToken,
     String? systemInstruction,
-    required List<(String role, String text)> initialMessages,
+    required List<Map<String, dynamic>> initialMessages,
     double? temperature,
     int? topK,
     double? topP,
+    int? maxOutputTokens,
+    bool thinkingEnabled = false,
+    int? thinkingBudget,
+    List<Map<String, dynamic>> tools = const [],
   }) => _invoke<void>('startConversation', {
     'conversationToken': conversationToken,
     if (systemInstruction != null) 'systemInstruction': systemInstruction,
-    'initialMessages': [
-      for (final (role, text) in initialMessages) {'role': role, 'text': text},
-    ],
+    'initialMessages': initialMessages,
     if (temperature != null) 'temperature': temperature,
     if (topK != null) 'topK': topK,
     if (topP != null) 'topP': topP,
+    if (maxOutputTokens != null) 'maxOutputTokens': maxOutputTokens,
+    'thinkingEnabled': thinkingEnabled,
+    if (thinkingBudget != null) 'thinkingBudget': thinkingBudget,
+    'tools': tools,
   });
 
   Future<void> sendMessage({
     required String requestId,
     required String conversationToken,
-    required String text,
+    required List<Map<String, dynamic>> contents,
   }) => _invoke<void>('sendMessage', {
     'requestId': requestId,
     'conversationToken': conversationToken,
-    'text': text,
+    'contents': contents,
+  });
+
+  Future<void> sendToolResponses({
+    required String requestId,
+    required String conversationToken,
+    required List<Map<String, dynamic>> responses,
+  }) => _invoke<void>('sendToolResponses', {
+    'requestId': requestId,
+    'conversationToken': conversationToken,
+    'responses': responses,
   });
 
   /// Returns whether [requestId] was actually the active generation.

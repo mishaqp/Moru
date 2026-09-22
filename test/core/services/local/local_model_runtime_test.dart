@@ -324,7 +324,9 @@ void main() {
     final secondDone = Completer<void>();
     second.listen((_) {}, onDone: secondDone.complete);
     final rid2 = await requestIdOfLastSendMessage();
-    expect(fake.argsOf('sendMessage')['text'], 'turn two');
+    expect(fake.argsOf('sendMessage')['contents'], [
+      {'type': 'text', 'text': 'turn two'},
+    ]);
     fake.emit({'type': 'done', 'requestId': rid2});
     await secondDone.future;
 
@@ -393,7 +395,9 @@ void main() {
     // A fresh conversation means initialMessages is empty and the turn
     // itself is sent as the message.
     expect(fake.argsOf('startConversation')['initialMessages'], isEmpty);
-    expect(fake.argsOf('sendMessage')['text'], 'hi');
+    expect(fake.argsOf('sendMessage')['contents'], [
+      {'type': 'text', 'text': 'hi'},
+    ]);
     fake.emit({'type': 'done', 'requestId': rid2});
     await regenDone.future;
 
@@ -587,10 +591,22 @@ void main() {
     final rid3 = await requestIdOfLastSendMessage();
     expect(fake.startConversationCount, 3);
     expect(fake.argsOf('startConversation')['initialMessages'], [
-      {'role': 'user', 'text': 'turn one'},
-      {'role': 'assistant', 'text': 'reply one'},
+      {
+        'role': 'user',
+        'contents': [
+          {'type': 'text', 'text': 'turn one'},
+        ],
+      },
+      {
+        'role': 'assistant',
+        'contents': [
+          {'type': 'text', 'text': 'reply one'},
+        ],
+      },
     ]);
-    expect(fake.argsOf('sendMessage')['text'], 'turn two');
+    expect(fake.argsOf('sendMessage')['contents'], [
+      {'type': 'text', 'text': 'turn two'},
+    ]);
     fake.emit({'type': 'done', 'requestId': rid3});
     await secondDone.future;
   });

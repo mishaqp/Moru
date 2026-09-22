@@ -114,7 +114,7 @@ void main() {
           'localVision': true,
           'localAudio': true,
           'localKeepLoaded': true,
-          'input': ['text', 'image', 'audio'],
+          'input': ['text', 'image'],
           'abilities': ['reasoning'],
         },
       },

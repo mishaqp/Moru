@@ -1,103 +1,108 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:uuid/uuid.dart';
 
+import '../../../utils/mcp_structured_image.dart';
+import '../../utils/multimodal_input_utils.dart';
+import '../api/chat_api_helpers.dart';
 import '../api/stream/stream_chunk.dart';
 import '../api/stream/stream_chunk_ids.dart';
 import 'litert_channel.dart';
 
-/// Owns the single in-memory LiteRT-LM engine for the whole app (Dart-side
-/// counterpart of `LiteRtEngineManager` on the Kotlin side). Every
-/// load/unload/generate call -- whether the user's own chat turn or a
-/// background call (title/summary/suggestions/memory-organize) -- is
-/// funneled through [_enqueue], a strict FIFO queue: only one local-model
-/// operation ever runs at a time, matching "one model, one generation in
-/// memory" from the task brief. There is no priority lane -- a background
-/// call simply waits its turn behind whatever is already running, and the
-/// next call waits behind it.
+final class _EngineKey {
+  const _EngineKey({
+    required this.modelPath,
+    required this.backend,
+    required this.maxNumTokens,
+    required this.visionEnabled,
+    required this.audioEnabled,
+  });
+
+  final String modelPath;
+  final String backend;
+  final int? maxNumTokens;
+  final bool visionEnabled;
+  final bool audioEnabled;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _EngineKey &&
+      other.modelPath == modelPath &&
+      other.backend == backend &&
+      other.maxNumTokens == maxNumTokens &&
+      other.visionEnabled == visionEnabled &&
+      other.audioEnabled == audioEnabled;
+
+  @override
+  int get hashCode => Object.hash(
+    modelPath,
+    backend,
+    maxNumTokens,
+    visionEnabled,
+    audioEnabled,
+  );
+}
+
+/// Owns the single in-memory LiteRT-LM engine for the whole app. Calls are
+/// serialized through [_enqueue], matching the native manager's one-engine,
+/// one-generation contract.
 class LocalModelRuntime {
   LocalModelRuntime({LiteRtChannel? channel})
     : _channel = channel ?? LiteRtChannel();
 
   static final LocalModelRuntime instance = LocalModelRuntime();
 
+  static const String _utilityConversationKey = '__moru_litert_utility__';
+  static const int _maxToolCallsPerTurn = 25;
+
   final LiteRtChannel _channel;
   final Map<String, StreamController<LiteRtEvent>> _byRequestId = {};
   StreamSubscription<LiteRtEvent>? _eventSub;
   Future<void> _queue = Future<void>.value();
 
-  String? _loadedModelPath;
-  String? _loadedBackend;
+  _EngineKey? _loadedEngineKey;
   String? _activeConversationKey;
+  String? _activeConversationSignature;
   List<Map<String, dynamic>>? _lastFullHistory;
 
-  /// The file path of the model currently loaded in the native engine, or
-  /// `null` if none is. Read by the model-management UI to guard against
-  /// deleting a model file that is in active use.
-  String? get loadedModelPath => _loadedModelPath;
+  String? get loadedModelPath => _loadedEngineKey?.modelPath;
 
   void _ensureListening() {
     _eventSub ??= _channel.events.listen((event) {
-      final rid = switch (event) {
+      final requestId = switch (event) {
         LiteRtTextDelta(:final requestId) => requestId,
+        LiteRtReasoningDelta(:final requestId) => requestId,
+        LiteRtToolCalls(:final requestId) => requestId,
         LiteRtDone(:final requestId) => requestId,
         LiteRtError(:final requestId) => requestId,
         _ => null,
       };
-      if (rid != null) _byRequestId[rid]?.add(event);
+      if (requestId != null) _byRequestId[requestId]?.add(event);
     });
   }
 
-  /// Runs [action] after every previously queued local-model operation has
-  /// finished (successfully or not). A failure in one queued operation never
-  /// wedges the queue for the next caller.
   Future<T> _enqueue<T>(Future<T> Function() action) {
     final started = _queue.then((_) => action());
     _queue = started.then((_) {}, onError: (_) {});
     return started;
   }
 
-  /// Unloads the currently loaded model, if any. Safe to call when nothing
-  /// is loaded. Queued like every other operation.
-  Future<void> unload() => _enqueue(() async {
-    if (_loadedModelPath == null) return;
+  Future<void> unload() => _enqueue(_unloadNow);
+
+  Future<void> _unloadNow() async {
+    if (_loadedEngineKey == null) return;
     await _channel.unloadModel();
-    _loadedModelPath = null;
-    _loadedBackend = null;
+    _clearLoadedState();
+  }
+
+  void _clearLoadedState() {
+    _loadedEngineKey = null;
     _activeConversationKey = null;
+    _activeConversationSignature = null;
     _lastFullHistory = null;
-  });
+  }
 
-  /// Fixed runtime-conversation key for every background/utility call (see
-  /// [generate]'s `isConversationTurn` parameter). Deliberately not shaped
-  /// like a real conversation id (those are UUIDs) so it can never collide
-  /// with one -- a background call is tagged with the real conversation's
-  /// own id purely for logging/grouping, not because it continues it, and
-  /// must never be mistaken for, or evict the reuse state of, that real
-  /// conversation's own native context.
-  static const String _utilityConversationKey = '__moru_litert_utility__';
-
-  /// Streams one local generation turn. [messages] is the full message
-  /// history Moru already assembled for this turn (system/user/assistant),
-  /// exactly like every cloud provider receives -- the last entry is the
-  /// new user turn to answer.
-  ///
-  /// [isConversationTurn] (default `true`, matching every call before this
-  /// parameter existed) marks this as the actual next turn of an ongoing
-  /// conversation. Pass `false` for a one-shot background/utility prompt
-  /// (title/summary/translation/OCR/memory-organize/...) that happens to
-  /// be tagged with a real conversation's [conversationId] for logging
-  /// purposes only. Two protections apply only when `false`:
-  ///  - the reuse/eviction bookkeeping (`_activeConversationKey`,
-  ///    `_lastFullHistory`, and the native `conversationToken` itself) uses
-  ///    [_utilityConversationKey] instead of [conversationId], so a
-  ///    background call can never be mistaken for, or silently overwrite,
-  ///    a real conversation's own native context.
-  ///  - if a *different* model is already loaded, the call is rejected
-  ///    with [backgroundModelConflict] instead of unloading it -- a
-  ///    background task must never evict the model the user's own
-  ///    conversation is actively using (task brief: "background tasks must
-  ///    not start a second model").
   Stream<StreamChunk> generate({
     required String conversationId,
     required String modelPath,
@@ -106,8 +111,28 @@ class LocalModelRuntime {
     required Future<void> whenCancelled,
     required bool Function() isCancelled,
     bool isConversationTurn = true,
+    int? maxNumTokens,
+    double? temperature,
+    int? topK,
+    double? topP,
+    int? maxOutputTokens,
+    bool visionEnabled = false,
+    bool audioEnabled = false,
+    bool thinkingEnabled = false,
+    int? thinkingBudget,
+    List<Map<String, dynamic>> tools = const [],
+    ToolCallHandler? onToolCall,
+    bool keepLoaded = true,
+    List<String> additionalMediaPaths = const [],
   }) {
     final controller = StreamController<StreamChunk>();
+    final engineKey = _EngineKey(
+      modelPath: modelPath,
+      backend: backend,
+      maxNumTokens: maxNumTokens,
+      visionEnabled: visionEnabled,
+      audioEnabled: audioEnabled,
+    );
     unawaited(
       _enqueue(
         () => _runGenerate(
@@ -115,12 +140,21 @@ class LocalModelRuntime {
           conversationId: isConversationTurn
               ? conversationId
               : _utilityConversationKey,
-          modelPath: modelPath,
-          backend: backend,
+          engineKey: engineKey,
           messages: messages,
           whenCancelled: whenCancelled,
           isCancelled: isCancelled,
           isConversationTurn: isConversationTurn,
+          temperature: temperature,
+          topK: topK,
+          topP: topP,
+          maxOutputTokens: maxOutputTokens,
+          thinkingEnabled: thinkingEnabled,
+          thinkingBudget: thinkingBudget,
+          tools: tools,
+          onToolCall: onToolCall,
+          keepLoaded: keepLoaded,
+          additionalMediaPaths: additionalMediaPaths,
         ),
       ).catchError((Object error, StackTrace stackTrace) {
         if (!controller.isClosed) {
@@ -132,21 +166,20 @@ class LocalModelRuntime {
     return controller.stream;
   }
 
-  Future<void> _ensureModelLoaded(String modelPath, String backend) async {
-    if (_loadedModelPath == modelPath && _loadedBackend != null) return;
-    if (_loadedModelPath != null && _loadedModelPath != modelPath) {
+  Future<void> _ensureModelLoaded(_EngineKey requested) async {
+    if (_loadedEngineKey == requested) return;
+    if (_loadedEngineKey != null) {
       await _channel.unloadModel();
-      _loadedModelPath = null;
-      _loadedBackend = null;
-      _activeConversationKey = null;
-      _lastFullHistory = null;
+      _clearLoadedState();
     }
-    final actualBackend = await _channel.loadModel(
-      modelPath: modelPath,
-      backend: backend,
+    await _channel.loadModel(
+      modelPath: requested.modelPath,
+      backend: requested.backend,
+      maxNumTokens: requested.maxNumTokens,
+      visionEnabled: requested.visionEnabled,
+      audioEnabled: requested.audioEnabled,
     );
-    _loadedModelPath = modelPath;
-    _loadedBackend = actualBackend;
+    _loadedEngineKey = requested;
   }
 
   ({String? systemInstruction, List<Map<String, dynamic>> history})
@@ -156,7 +189,7 @@ class LocalModelRuntime {
     for (final message in messages) {
       final role = (message['role'] ?? 'user').toString();
       if (role == 'system') {
-        final text = (message['content'] ?? '').toString();
+        final text = _textFromContent(message['content']);
         if (text.isNotEmpty) {
           if (buffer.isNotEmpty) buffer.writeln();
           buffer.write(text);
@@ -175,172 +208,492 @@ class LocalModelRuntime {
     List<Map<String, dynamic>> a,
     List<Map<String, dynamic>> b,
   ) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if ((a[i]['role'] ?? '').toString() != (b[i]['role'] ?? '').toString()) {
-        return false;
-      }
-      if ((a[i]['content'] ?? '').toString() !=
-          (b[i]['content'] ?? '').toString()) {
-        return false;
-      }
+    try {
+      return jsonEncode(a) == jsonEncode(b);
+    } catch (_) {
+      return a.toString() == b.toString();
     }
-    return true;
   }
+
+  String _conversationSignature({
+    required double? temperature,
+    required int? topK,
+    required double? topP,
+    required int? maxOutputTokens,
+    required bool thinkingEnabled,
+    required int? thinkingBudget,
+    required List<Map<String, dynamic>> tools,
+  }) => jsonEncode({
+    'temperature': temperature,
+    'topK': topK,
+    'topP': topP,
+    'maxOutputTokens': maxOutputTokens,
+    'thinkingEnabled': thinkingEnabled,
+    'thinkingBudget': thinkingBudget,
+    'tools': tools,
+  });
 
   Future<void> _runGenerate({
     required StreamController<StreamChunk> controller,
     required String conversationId,
-    required String modelPath,
-    required String backend,
+    required _EngineKey engineKey,
     required List<Map<String, dynamic>> messages,
     required Future<void> whenCancelled,
     required bool Function() isCancelled,
     required bool isConversationTurn,
+    required double? temperature,
+    required int? topK,
+    required double? topP,
+    required int? maxOutputTokens,
+    required bool thinkingEnabled,
+    required int? thinkingBudget,
+    required List<Map<String, dynamic>> tools,
+    required ToolCallHandler? onToolCall,
+    required bool keepLoaded,
+    required List<String> additionalMediaPaths,
   }) async {
-    if (isCancelled()) {
-      await controller.close();
-      return;
-    }
-    _ensureListening();
-
-    if (!isConversationTurn &&
-        _loadedModelPath != null &&
-        _loadedModelPath != modelPath) {
-      // A background/utility call would have to evict the model the
-      // user's own conversation already has loaded to run a different
-      // one -- never do that silently. The caller (title/summary/... --
-      // see litert_local.dart) already treats a generation error as
-      // "this background task failed this time", so a clean, named
-      // rejection is enough; no unload/reload is attempted.
-      controller.addError(
-        const LiteRtException(
-          'background_model_conflict',
-          'A different local model is already loaded for the active '
-              'conversation; skipping this background request instead of '
-              'evicting it.',
-        ),
-      );
-      await controller.close();
-      return;
-    }
-
-    await _ensureModelLoaded(modelPath, backend);
-
-    final split = _splitSystem(messages);
-    final history = split.history;
-    if (history.isEmpty) {
-      await controller.close();
-      return;
-    }
-    final newTurn = history.last;
-    final priorHistory = history.sublist(0, history.length - 1);
-
-    final canReuse =
-        _activeConversationKey == conversationId &&
-        _lastFullHistory != null &&
-        _sameHistory(priorHistory, _lastFullHistory!);
-
-    if (!canReuse) {
-      await _channel.startConversation(
-        conversationToken: conversationId,
-        systemInstruction: split.systemInstruction,
-        initialMessages: [
-          for (final m in priorHistory)
-            ((m['role'] ?? 'user').toString(), (m['content'] ?? '').toString()),
-        ],
-      );
-      _activeConversationKey = conversationId;
-    }
-
-    final requestId = const Uuid().v4();
-    final events = StreamController<LiteRtEvent>();
-    _byRequestId[requestId] = events;
-
-    final cancelSub = whenCancelled.asStream().listen((_) {
-      if (!isCancelled()) return;
-      unawaited(_channel.cancel(requestId));
-    });
-
+    var loadedForThisCall = false;
     try {
-      await _channel.sendMessage(
-        requestId: requestId,
-        conversationToken: conversationId,
-        text: (newTurn['content'] ?? '').toString(),
+      if (isCancelled()) {
+        await controller.close();
+        return;
+      }
+      _ensureListening();
+
+      if (!isConversationTurn &&
+          _loadedEngineKey != null &&
+          _loadedEngineKey != engineKey) {
+        controller.addError(
+          const LiteRtException(
+            'background_model_conflict',
+            'A different local model is already loaded for the active '
+                'conversation; skipping this background request instead of '
+                'evicting it.',
+          ),
+        );
+        await controller.close();
+        return;
+      }
+
+      await _ensureModelLoaded(engineKey);
+      loadedForThisCall = true;
+
+      final split = _splitSystem(messages);
+      final history = split.history;
+      if (history.isEmpty) {
+        await controller.close();
+        return;
+      }
+      final newTurn = history.last;
+      final priorHistory = history.sublist(0, history.length - 1);
+      final signature = _conversationSignature(
+        temperature: temperature,
+        topK: topK,
+        topP: topP,
+        maxOutputTokens: maxOutputTokens,
+        thinkingEnabled: thinkingEnabled,
+        thinkingBudget: thinkingBudget,
+        tools: tools,
       );
-    } catch (_) {
-      await cancelSub.cancel();
-      _byRequestId.remove(requestId);
-      await events.close();
-      rethrow;
+
+      final canReuse =
+          _activeConversationKey == conversationId &&
+          _activeConversationSignature == signature &&
+          _lastFullHistory != null &&
+          _sameHistory(priorHistory, _lastFullHistory!);
+
+      if (!canReuse) {
+        await _channel.startConversation(
+          conversationToken: conversationId,
+          systemInstruction: split.systemInstruction,
+          initialMessages: [
+            for (final message in priorHistory)
+              _nativeMessage(
+                message,
+                visionEnabled: engineKey.visionEnabled,
+                audioEnabled: engineKey.audioEnabled,
+              ),
+          ],
+          temperature: temperature,
+          topK: topK,
+          topP: topP,
+          maxOutputTokens: maxOutputTokens,
+          thinkingEnabled: thinkingEnabled,
+          thinkingBudget: thinkingBudget,
+          tools: tools,
+        );
+        _activeConversationKey = conversationId;
+        _activeConversationSignature = signature;
+      }
+
+      final requestId = const Uuid().v4();
+      final events = StreamController<LiteRtEvent>();
+      _byRequestId[requestId] = events;
+      final cancelSub = whenCancelled.asStream().listen((_) {
+        if (!isCancelled()) return;
+        unawaited(_channel.cancel(requestId));
+      });
+
+      final newContents = _contentsFor(
+        newTurn,
+        visionEnabled: engineKey.visionEnabled,
+        audioEnabled: engineKey.audioEnabled,
+        additionalMediaPaths: additionalMediaPaths,
+      );
+      try {
+        await _channel.sendMessage(
+          requestId: requestId,
+          conversationToken: conversationId,
+          contents: newContents,
+        );
+      } catch (_) {
+        await cancelSub.cancel();
+        _byRequestId.remove(requestId);
+        await events.close();
+        rethrow;
+      }
+
+      final ids = StreamChunkIds('litert-$requestId');
+      final replyBuffer = StringBuffer();
+      var startedText = false;
+      var startedReasoning = false;
+      var settled = false;
+      var toolCallCount = 0;
+
+      void endReasoning() {
+        if (!startedReasoning) return;
+        controller.add(ReasoningEnd(id: ids.reasoning()));
+        startedReasoning = false;
+      }
+
+      try {
+        await for (final event in events.stream) {
+          switch (event) {
+            case LiteRtReasoningDelta(:final text):
+              if (text.isEmpty) continue;
+              if (!startedReasoning) {
+                startedReasoning = true;
+                controller.add(ReasoningStart(id: ids.reasoning()));
+              }
+              controller.add(ReasoningDelta(id: ids.reasoning(), text: text));
+            case LiteRtTextDelta(:final text):
+              if (text.isEmpty) continue;
+              endReasoning();
+              if (!startedText) {
+                startedText = true;
+                controller.add(TextStart(ids.text()));
+              }
+              replyBuffer.write(text);
+              controller.add(TextDelta(id: ids.text(), text: text));
+            case LiteRtToolCalls(:final calls):
+              endReasoning();
+              if (calls.isEmpty) continue;
+              if (onToolCall == null) {
+                throw const LiteRtException(
+                  'tool_handler_missing',
+                  'The local model requested a tool but no handler is active.',
+                );
+              }
+              if (toolCallCount + calls.length > _maxToolCallsPerTurn) {
+                throw const LiteRtException(
+                  'tool_call_limit',
+                  'The local model exceeded the per-turn tool-call limit.',
+                );
+              }
+              final responses = <Map<String, dynamic>>[];
+              for (final call in calls) {
+                final id = ids.next('tool-${++toolCallCount}');
+                controller.add(ToolCallStart(id: id, toolName: call.name));
+                if (call.arguments.isNotEmpty) {
+                  controller.add(
+                    ToolCallDelta(
+                      id: id,
+                      inputDelta: jsonEncode(call.arguments),
+                    ),
+                  );
+                }
+                controller.add(ToolCallEnd(id));
+                Object? raw;
+                try {
+                  raw = await onToolCall(
+                    call.name,
+                    call.arguments,
+                    toolCallId: id,
+                  );
+                } catch (_) {
+                  if (isCancelled()) {
+                    settled = true;
+                    _activeConversationKey = null;
+                    _activeConversationSignature = null;
+                    _lastFullHistory = null;
+                    controller.add(const Finish(finishReason: 'cancelled'));
+                    unawaited(events.close());
+                    break;
+                  }
+                  rethrow;
+                }
+                if (isCancelled()) {
+                  settled = true;
+                  _activeConversationKey = null;
+                  _activeConversationSignature = null;
+                  _lastFullHistory = null;
+                  controller.add(const Finish(finishReason: 'cancelled'));
+                  unawaited(events.close());
+                  break;
+                }
+                final result = _normalizeToolResult(raw);
+                controller.add(
+                  ToolCallResult(
+                    id: id,
+                    output: result.content,
+                    metadata: result.metadata,
+                  ),
+                );
+                responses.add({'name': call.name, 'response': result.content});
+              }
+              if (!settled && responses.isNotEmpty) {
+                await _channel.sendToolResponses(
+                  requestId: requestId,
+                  conversationToken: conversationId,
+                  responses: responses,
+                );
+              }
+            case LiteRtDone():
+              settled = true;
+              endReasoning();
+              if (startedText) controller.add(TextEnd(ids.text()));
+              controller.add(const Finish());
+              _lastFullHistory = [
+                ...priorHistory,
+                newTurn,
+                {'role': 'assistant', 'content': replyBuffer.toString()},
+              ];
+              unawaited(events.close());
+            case LiteRtError(:final cancelled, :final message):
+              settled = true;
+              _activeConversationKey = null;
+              _activeConversationSignature = null;
+              _lastFullHistory = null;
+              endReasoning();
+              if (startedText) controller.add(TextEnd(ids.text()));
+              if (cancelled) {
+                controller.add(const Finish(finishReason: 'cancelled'));
+              } else {
+                controller.addError(
+                  LiteRtException('generation_failed', message),
+                );
+              }
+              unawaited(events.close());
+            case LiteRtEngineStateChanged():
+            case LiteRtUnknownEvent():
+              continue;
+          }
+        }
+      } catch (_) {
+        _activeConversationKey = null;
+        _activeConversationSignature = null;
+        _lastFullHistory = null;
+        unawaited(_channel.cancel(requestId));
+        rethrow;
+      } finally {
+        await cancelSub.cancel();
+        _byRequestId.remove(requestId);
+        if (!events.isClosed) await events.close();
+      }
+      if (!settled) {
+        _activeConversationKey = null;
+        _activeConversationSignature = null;
+        _lastFullHistory = null;
+        controller.addError(
+          const LiteRtException('generation_interrupted', null),
+        );
+      }
+      await controller.close();
+    } finally {
+      if (!keepLoaded && loadedForThisCall) {
+        await _unloadNow();
+      }
+    }
+  }
+
+  ClientToolResult _normalizeToolResult(Object? raw) {
+    if (raw == null || raw is num || raw is bool || raw is Map || raw is List) {
+      try {
+        return ClientToolResult(jsonEncode(raw));
+      } catch (_) {}
+    }
+    return ClientToolResult.fromHandler(raw);
+  }
+
+  Map<String, dynamic> _nativeMessage(
+    Map<String, dynamic> message, {
+    required bool visionEnabled,
+    required bool audioEnabled,
+  }) {
+    final role = (message['role'] ?? 'user').toString();
+    return {
+      'role': role,
+      'contents': _contentsFor(
+        message,
+        visionEnabled: visionEnabled,
+        audioEnabled: audioEnabled,
+      ),
+      if (message['tool_calls'] is List)
+        'toolCalls': _toolCallsForHistory(message['tool_calls'] as List),
+    };
+  }
+
+  List<Map<String, dynamic>> _toolCallsForHistory(List rawCalls) {
+    final out = <Map<String, dynamic>>[];
+    for (final raw in rawCalls.whereType<Map>()) {
+      final function = raw['function'];
+      if (function is! Map) continue;
+      final name = (function['name'] ?? '').toString();
+      if (name.isEmpty) continue;
+      out.add({
+        'name': name,
+        'arguments': _argumentsMap(function['arguments']),
+      });
+    }
+    return out;
+  }
+
+  Map<String, dynamic> _argumentsMap(Object? raw) {
+    if (raw is Map) {
+      return raw.map((key, value) => MapEntry(key.toString(), value));
+    }
+    if (raw is String && raw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) {
+          return decoded.map((key, value) => MapEntry(key.toString(), value));
+        }
+      } catch (_) {}
+    }
+    return const <String, dynamic>{};
+  }
+
+  List<Map<String, dynamic>> _contentsFor(
+    Map<String, dynamic> message, {
+    required bool visionEnabled,
+    required bool audioEnabled,
+    List<String> additionalMediaPaths = const [],
+  }) {
+    final role = (message['role'] ?? 'user').toString();
+    if (role == 'tool') {
+      return [
+        {
+          'type': 'tool_response',
+          'name': (message['name'] ?? 'tool').toString(),
+          'response': message['content'] ?? '',
+        },
+      ];
     }
 
-    final ids = StreamChunkIds('litert-$requestId');
-    final replyBuffer = StringBuffer();
-    var startedText = false;
-    var settled = false;
-
-    await for (final event in events.stream) {
-      switch (event) {
-        case LiteRtTextDelta(:final text):
-          if (text.isEmpty) continue;
-          if (!startedText) {
-            startedText = true;
-            controller.add(TextStart(ids.text()));
-          }
-          replyBuffer.write(text);
-          controller.add(TextDelta(id: ids.text(), text: text));
-        case LiteRtDone():
-          settled = true;
-          if (startedText) controller.add(TextEnd(ids.text()));
-          controller.add(const Finish());
-          // The native conversation's own KV-cache now reflects [newTurn]
-          // plus its own reply -- record that so the next call's history
-          // can be recognized as a pure continuation and reuse it.
-          _lastFullHistory = [
-            ...priorHistory,
-            newTurn,
-            {'role': 'assistant', 'content': replyBuffer.toString()},
-          ];
-          // Not awaited: close()'s returned future only completes once the
-          // stream has notified its listener of "done" -- but this *is*
-          // that listener, still running this very callback, so awaiting
-          // it here would deadlock against itself. The bare call still
-          // marks the controller closed, which ends this `await for` on
-          // its next iteration once this event finishes processing.
-          unawaited(events.close());
-        case LiteRtError(:final cancelled, :final message):
-          settled = true;
-          // The SDK does not roll back partial state on cancel (see
-          // docs/litert-lm-progress.md) -- never reuse this conversation
-          // again; the next turn always recreates it fresh.
-          _activeConversationKey = null;
-          _lastFullHistory = null;
-          if (startedText) controller.add(TextEnd(ids.text()));
-          if (!cancelled) {
-            controller.addError(LiteRtException('generation_failed', message));
-          } else {
-            controller.add(const Finish(finishReason: 'cancelled'));
-          }
-          // See the LiteRtDone case above: must not be awaited here.
-          unawaited(events.close());
-        case LiteRtEngineStateChanged():
-        case LiteRtUnknownEvent():
-          continue;
+    final out = <Map<String, dynamic>>[];
+    void addContent(Object? raw) {
+      if (raw is String) {
+        if (raw.isNotEmpty) out.add({'type': 'text', 'text': raw});
+        return;
+      }
+      if (raw is List) {
+        for (final item in raw) {
+          addContent(item);
+        }
+        return;
+      }
+      if (raw is! Map) return;
+      final type = (raw['type'] ?? '').toString();
+      if (type == 'text' || type == 'input_text' || type == 'output_text') {
+        final text = (raw['text'] ?? '').toString();
+        if (text.isNotEmpty) out.add({'type': 'text', 'text': text});
+        return;
+      }
+      if (type == 'image' || type == 'image_url' || type == 'input_image') {
+        final path = _pathFromContent(raw, image: true);
+        if (visionEnabled && path != null) {
+          out.add({'type': 'image', 'path': path});
+        }
+        return;
+      }
+      if (type == 'audio' || type == 'input_audio') {
+        final path = _pathFromContent(raw, image: false);
+        if (audioEnabled && path != null) {
+          out.add({'type': 'audio', 'path': path});
+        }
       }
     }
 
-    await cancelSub.cancel();
-    _byRequestId.remove(requestId);
-    if (!settled) {
-      // The event stream closed without a done/error -- e.g. the engine
-      // was torn down from under us. Never leave the caller hanging.
-      _activeConversationKey = null;
-      _lastFullHistory = null;
-      controller.addError(
-        const LiteRtException('generation_interrupted', null),
-      );
+    addContent(message['content']);
+    final rawPaths = message[multimodalInternalMediaPathsKey];
+    final paths = <String>[
+      if (rawPaths is List)
+        for (final path in rawPaths)
+          if (path is String) path,
+      ...additionalMediaPaths,
+    ];
+    final existing = {
+      for (final content in out)
+        if (content['path'] is String) content['path'] as String,
+    };
+    for (final path in paths) {
+      if (path.isEmpty || !existing.add(path)) continue;
+      if (_isAudioPath(path)) {
+        if (audioEnabled) out.add({'type': 'audio', 'path': path});
+      } else if (visionEnabled) {
+        out.add({'type': 'image', 'path': path});
+      }
     }
-    await controller.close();
+    return out;
+  }
+
+  String? _pathFromContent(Map raw, {required bool image}) {
+    Object? value = raw['path'];
+    if (value == null && image) {
+      value = raw['image_url'];
+      if (value is Map) value = value['url'];
+    }
+    if (value == null && !image) value = raw['audio_url'];
+    final text = value?.toString().trim() ?? '';
+    if (text.isEmpty || text.startsWith('data:') || text.startsWith('http')) {
+      return null;
+    }
+    if (text.startsWith('file:')) {
+      try {
+        return Uri.parse(text).toFilePath();
+      } catch (_) {
+        return null;
+      }
+    }
+    return text;
+  }
+
+  String _textFromContent(Object? content) {
+    if (content is String) return content;
+    if (content is Map) return _textFromContent([content]);
+    if (content is! List) return content?.toString() ?? '';
+    final parts = <String>[];
+    for (final item in content.whereType<Map>()) {
+      final type = (item['type'] ?? '').toString();
+      if (type == 'text' || type == 'input_text' || type == 'output_text') {
+        final text = (item['text'] ?? '').toString();
+        if (text.isNotEmpty) parts.add(text);
+      }
+    }
+    return parts.join('\n');
+  }
+
+  bool _isAudioPath(String path) {
+    final withoutQuery = path.split('?').first.toLowerCase();
+    return const [
+      '.aac',
+      '.amr',
+      '.flac',
+      '.m4a',
+      '.mp3',
+      '.ogg',
+      '.opus',
+      '.wav',
+    ].any(withoutQuery.endsWith);
   }
 }

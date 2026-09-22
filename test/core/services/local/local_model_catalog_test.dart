@@ -13,7 +13,7 @@ void main() {
     expect(entry.sizeBytes, 344671744);
     expect(
       entry.sha256,
-      'e3e290109da4388d65a17510a0c66af91c8039f52d2c465868dbc43c09a776cf',
+      '03e7da1eb1108b50dffaa9bb52cc7bcbad2eb0c66ca990267f480c1e545d2856',
     );
     expect(entry.license, 'Apache-2.0');
     expect(
