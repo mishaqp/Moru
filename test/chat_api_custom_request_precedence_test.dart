@@ -82,11 +82,22 @@ Map<String, dynamic> _responseFor(ProviderKind kind) {
           'totalTokenCount': 2,
         },
       };
+    case ProviderKind.local:
+      // Never reached -- ProviderKind.local is excluded from the loop
+      // below (it makes no HTTP request this response would answer).
+      throw UnsupportedError('local has no HTTP response shape');
   }
 }
 
 void main() {
-  for (final kind in ProviderKind.values) {
+  // ProviderKind.local is deliberately excluded: it never builds an HTTP
+  // request at all (no baseUrl, no custom headers/body merging, no
+  // network retry -- see chat_api_service.dart's `kind == ProviderKind.local`
+  // short-circuit), so this HTTP-request-precedence suite does not apply to
+  // it.
+  for (final kind in ProviderKind.values.where(
+    (k) => k != ProviderKind.local,
+  )) {
     test(
       '${kind.name} sends merged custom request with expected priority',
       () async {

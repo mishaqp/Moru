@@ -21898,6 +21898,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Moru wants to perform a browser action'**
   String get browserApprovalHeadingUnknownSite;
+
+  /// No description provided for @localModelsProviderName.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Models · LiteRT'**
+  String get localModelsProviderName;
+
+  /// No description provided for @localModelsInstalledSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed'**
+  String get localModelsInstalledSectionTitle;
+
+  /// No description provided for @localModelsCatalogSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Catalog'**
+  String get localModelsCatalogSectionTitle;
+
+  /// No description provided for @localModelsCatalogDownloadAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get localModelsCatalogDownloadAction;
+
+  /// No description provided for @localModelsCatalogCancelAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get localModelsCatalogCancelAction;
+
+  /// No description provided for @localModelsCatalogDownloadingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading…'**
+  String get localModelsCatalogDownloadingLabel;
+
+  /// No description provided for @localModelsCatalogInstalledBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed'**
+  String get localModelsCatalogInstalledBadge;
+
+  /// No description provided for @localModelsCatalogOpenPageAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Open model page'**
+  String get localModelsCatalogOpenPageAction;
+
+  /// No description provided for @localModelsCatalogGatedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'License-gated -- Moru can\'t download this automatically. Open the model page, accept the license (sign in if needed), download the file in your browser, then use \"Import file\" below.'**
+  String get localModelsCatalogGatedNote;
+
+  /// No description provided for @localModelsCatalogContextLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Context: {tokens} tokens'**
+  String localModelsCatalogContextLabel(int tokens);
+
+  /// No description provided for @localModelsCatalogDownloadFailedHttp.
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed (server error).'**
+  String get localModelsCatalogDownloadFailedHttp;
+
+  /// No description provided for @localModelsCatalogDownloadFailedIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Download ended before it finished -- try again.'**
+  String get localModelsCatalogDownloadFailedIncomplete;
+
+  /// No description provided for @localModelsCatalogDownloadFailedFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'The downloaded file isn\'t a valid LiteRT-LM model -- try again.'**
+  String get localModelsCatalogDownloadFailedFormat;
+
+  /// No description provided for @localModelsCatalogDownloadFailedChecksum.
+  ///
+  /// In en, this message translates to:
+  /// **'The downloaded file didn\'t match the expected checksum -- try again.'**
+  String get localModelsCatalogDownloadFailedChecksum;
+
+  /// No description provided for @localModelsCatalogDownloadCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Download cancelled'**
+  String get localModelsCatalogDownloadCancelled;
+
+  /// No description provided for @localModelsCatalogDownloadSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Model installed'**
+  String get localModelsCatalogDownloadSuccess;
+
+  /// No description provided for @localModelsImportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Import file'**
+  String get localModelsImportAction;
+
+  /// No description provided for @localModelsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No models installed'**
+  String get localModelsEmptyTitle;
+
+  /// No description provided for @localModelsEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a .litertlm file to start using a local model -- no account or internet connection needed once it\'s installed.'**
+  String get localModelsEmptySubtitle;
+
+  /// No description provided for @localModelsDeleteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get localModelsDeleteAction;
+
+  /// No description provided for @localModelsDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this model?'**
+  String get localModelsDeleteConfirmTitle;
+
+  /// No description provided for @localModelsDeleteConfirmContent.
+  ///
+  /// In en, this message translates to:
+  /// **'The model file will be removed from this device. This cannot be undone.'**
+  String get localModelsDeleteConfirmContent;
+
+  /// No description provided for @localModelsDeleteConfirmCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get localModelsDeleteConfirmCancel;
+
+  /// No description provided for @localModelsDeleteConfirmOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get localModelsDeleteConfirmOk;
+
+  /// No description provided for @localModelsDeleteInUseError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unload this model from memory before deleting it.'**
+  String get localModelsDeleteInUseError;
+
+  /// No description provided for @localModelsImportingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing…'**
+  String get localModelsImportingLabel;
+
+  /// No description provided for @localModelsImportSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Model imported'**
+  String get localModelsImportSuccess;
+
+  /// No description provided for @localModelsImportRejectedGguf.
+  ///
+  /// In en, this message translates to:
+  /// **'This is a GGUF file. Moru only supports the .litertlm format -- GGUF is not supported.'**
+  String get localModelsImportRejectedGguf;
+
+  /// No description provided for @localModelsImportRejectedFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'This file was not recognized as a LiteRT-LM (.litertlm) model. A matching file extension alone doesn\'t guarantee the format.'**
+  String get localModelsImportRejectedFormat;
+
+  /// No description provided for @localModelsImportRejectedNoStream.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read the selected file.'**
+  String get localModelsImportRejectedNoStream;
+
+  /// No description provided for @localModelsImportCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Import cancelled'**
+  String get localModelsImportCancelled;
+
+  /// No description provided for @localModelsImportFailedGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed.'**
+  String get localModelsImportFailedGeneric;
+
+  /// No description provided for @localModelsBackendCpuLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'CPU'**
+  String get localModelsBackendCpuLabel;
+
+  /// No description provided for @localModelsBackendGpuLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'GPU'**
+  String get localModelsBackendGpuLabel;
+
+  /// No description provided for @localModelsSourceImportedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported'**
+  String get localModelsSourceImportedLabel;
 }
 
 class _AppLocalizationsDelegate

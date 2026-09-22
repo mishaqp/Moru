@@ -248,7 +248,13 @@ void main() {
         },
       };
 
-      for (final kind in ProviderKind.values) {
+      // ProviderKind.local is excluded: it has no tool-calling support in
+      // this release, so its sanitizer intentionally strips a schema down
+      // to nothing (see ToolHandlerService's own switch) rather than
+      // preserving the payload shape this test asserts on.
+      for (final kind in ProviderKind.values.where(
+        (k) => k != ProviderKind.local,
+      )) {
         final output = ToolHandlerService.sanitizeToolParametersForProvider(
           schema,
           kind,
@@ -263,6 +269,34 @@ void main() {
           'type': 'string',
         });
       }
+    });
+
+    test('ProviderKind.local strips every schema key -- it never advertises '
+        'a tool parameter, not just this one payload shape', () {
+      final schema = <String, dynamic>{
+        'type': 'object',
+        'description': 'a real, non-trivial tool schema',
+        'properties': {
+          'query': {'type': 'string', 'description': 'search text'},
+          'limit': {'type': 'integer'},
+        },
+        'required': ['query'],
+        'additionalProperties': false,
+      };
+
+      final output = ToolHandlerService.sanitizeToolParametersForProvider(
+        schema,
+        ProviderKind.local,
+      );
+
+      expect(
+        output,
+        isEmpty,
+        reason:
+            'local has no tool-calling support in this release -- every '
+            'top-level schema key, including "type" and "properties", '
+            'must be dropped rather than partially preserved',
+      );
     });
 
     test(

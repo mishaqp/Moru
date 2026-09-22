@@ -12202,4 +12202,122 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get browserApprovalHeadingUnknownSite =>
       'Moru wants to perform a browser action';
+
+  @override
+  String get localModelsProviderName => 'Local Models · LiteRT';
+
+  @override
+  String get localModelsInstalledSectionTitle => 'Installed';
+
+  @override
+  String get localModelsCatalogSectionTitle => 'Catalog';
+
+  @override
+  String get localModelsCatalogDownloadAction => 'Download';
+
+  @override
+  String get localModelsCatalogCancelAction => 'Cancel';
+
+  @override
+  String get localModelsCatalogDownloadingLabel => 'Downloading…';
+
+  @override
+  String get localModelsCatalogInstalledBadge => 'Installed';
+
+  @override
+  String get localModelsCatalogOpenPageAction => 'Open model page';
+
+  @override
+  String get localModelsCatalogGatedNote =>
+      'License-gated -- Moru can\'t download this automatically. Open the model page, accept the license (sign in if needed), download the file in your browser, then use \"Import file\" below.';
+
+  @override
+  String localModelsCatalogContextLabel(int tokens) {
+    return 'Context: $tokens tokens';
+  }
+
+  @override
+  String get localModelsCatalogDownloadFailedHttp =>
+      'Download failed (server error).';
+
+  @override
+  String get localModelsCatalogDownloadFailedIncomplete =>
+      'Download ended before it finished -- try again.';
+
+  @override
+  String get localModelsCatalogDownloadFailedFormat =>
+      'The downloaded file isn\'t a valid LiteRT-LM model -- try again.';
+
+  @override
+  String get localModelsCatalogDownloadFailedChecksum =>
+      'The downloaded file didn\'t match the expected checksum -- try again.';
+
+  @override
+  String get localModelsCatalogDownloadCancelled => 'Download cancelled';
+
+  @override
+  String get localModelsCatalogDownloadSuccess => 'Model installed';
+
+  @override
+  String get localModelsImportAction => 'Import file';
+
+  @override
+  String get localModelsEmptyTitle => 'No models installed';
+
+  @override
+  String get localModelsEmptySubtitle =>
+      'Import a .litertlm file to start using a local model -- no account or internet connection needed once it\'s installed.';
+
+  @override
+  String get localModelsDeleteAction => 'Delete';
+
+  @override
+  String get localModelsDeleteConfirmTitle => 'Delete this model?';
+
+  @override
+  String get localModelsDeleteConfirmContent =>
+      'The model file will be removed from this device. This cannot be undone.';
+
+  @override
+  String get localModelsDeleteConfirmCancel => 'Cancel';
+
+  @override
+  String get localModelsDeleteConfirmOk => 'Delete';
+
+  @override
+  String get localModelsDeleteInUseError =>
+      'Unload this model from memory before deleting it.';
+
+  @override
+  String get localModelsImportingLabel => 'Importing…';
+
+  @override
+  String get localModelsImportSuccess => 'Model imported';
+
+  @override
+  String get localModelsImportRejectedGguf =>
+      'This is a GGUF file. Moru only supports the .litertlm format -- GGUF is not supported.';
+
+  @override
+  String get localModelsImportRejectedFormat =>
+      'This file was not recognized as a LiteRT-LM (.litertlm) model. A matching file extension alone doesn\'t guarantee the format.';
+
+  @override
+  String get localModelsImportRejectedNoStream =>
+      'Couldn\'t read the selected file.';
+
+  @override
+  String get localModelsImportCancelled => 'Import cancelled';
+
+  @override
+  String get localModelsImportFailedGeneric => 'Import failed.';
+
+  @override
+  String get localModelsBackendCpuLabel => 'CPU';
+
+  @override
+  String get localModelsBackendGpuLabel => 'GPU';
+
+  @override
+  String get localModelsSourceImportedLabel => 'Imported';
 }

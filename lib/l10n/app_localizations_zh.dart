@@ -11664,6 +11664,118 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get browserApprovalHeadingUnknownSite => 'Moru 想执行一个浏览器操作';
+
+  @override
+  String get localModelsProviderName => '本地模型 · LiteRT';
+
+  @override
+  String get localModelsInstalledSectionTitle => '已安装';
+
+  @override
+  String get localModelsCatalogSectionTitle => '模型库';
+
+  @override
+  String get localModelsCatalogDownloadAction => '下载';
+
+  @override
+  String get localModelsCatalogCancelAction => '取消';
+
+  @override
+  String get localModelsCatalogDownloadingLabel => '下载中…';
+
+  @override
+  String get localModelsCatalogInstalledBadge => '已安装';
+
+  @override
+  String get localModelsCatalogOpenPageAction => '打开模型页面';
+
+  @override
+  String get localModelsCatalogGatedNote =>
+      '该模型受许可证限制，Moru 无法自动下载。请打开模型页面，接受许可证（如需要请登录），在浏览器中下载文件，然后使用下方的“导入文件”。';
+
+  @override
+  String localModelsCatalogContextLabel(int tokens) {
+    return '上下文：$tokens 个 token';
+  }
+
+  @override
+  String get localModelsCatalogDownloadFailedHttp => '下载失败（服务器错误）。';
+
+  @override
+  String get localModelsCatalogDownloadFailedIncomplete => '下载中途结束，请重试。';
+
+  @override
+  String get localModelsCatalogDownloadFailedFormat =>
+      '下载的文件不是有效的 LiteRT-LM 模型，请重试。';
+
+  @override
+  String get localModelsCatalogDownloadFailedChecksum => '下载的文件与预期校验和不匹配，请重试。';
+
+  @override
+  String get localModelsCatalogDownloadCancelled => '已取消下载';
+
+  @override
+  String get localModelsCatalogDownloadSuccess => '模型已安装';
+
+  @override
+  String get localModelsImportAction => '导入文件';
+
+  @override
+  String get localModelsEmptyTitle => '尚未安装任何模型';
+
+  @override
+  String get localModelsEmptySubtitle =>
+      '导入 .litertlm 文件即可开始使用本地模型——安装后无需账号，也无需联网。';
+
+  @override
+  String get localModelsDeleteAction => '删除';
+
+  @override
+  String get localModelsDeleteConfirmTitle => '删除此模型？';
+
+  @override
+  String get localModelsDeleteConfirmContent => '模型文件将从设备中删除，此操作无法撤销。';
+
+  @override
+  String get localModelsDeleteConfirmCancel => '取消';
+
+  @override
+  String get localModelsDeleteConfirmOk => '删除';
+
+  @override
+  String get localModelsDeleteInUseError => '请先将模型从内存中卸载，然后再删除。';
+
+  @override
+  String get localModelsImportingLabel => '正在导入…';
+
+  @override
+  String get localModelsImportSuccess => '模型已导入';
+
+  @override
+  String get localModelsImportRejectedGguf =>
+      '这是一个 GGUF 格式的文件。Moru 仅支持 .litertlm 格式，不支持 GGUF。';
+
+  @override
+  String get localModelsImportRejectedFormat =>
+      '该文件未被识别为 LiteRT-LM(.litertlm)模型。文件扩展名匹配并不能保证文件格式正确。';
+
+  @override
+  String get localModelsImportRejectedNoStream => '无法读取所选文件。';
+
+  @override
+  String get localModelsImportCancelled => '已取消导入';
+
+  @override
+  String get localModelsImportFailedGeneric => '导入失败。';
+
+  @override
+  String get localModelsBackendCpuLabel => 'CPU';
+
+  @override
+  String get localModelsBackendGpuLabel => 'GPU';
+
+  @override
+  String get localModelsSourceImportedLabel => '已导入';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -23252,6 +23364,118 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get browserApprovalHeadingUnknownSite => 'Moru 想执行一个浏览器操作';
+
+  @override
+  String get localModelsProviderName => '本地模型 · LiteRT';
+
+  @override
+  String get localModelsInstalledSectionTitle => '已安装';
+
+  @override
+  String get localModelsCatalogSectionTitle => '模型库';
+
+  @override
+  String get localModelsCatalogDownloadAction => '下载';
+
+  @override
+  String get localModelsCatalogCancelAction => '取消';
+
+  @override
+  String get localModelsCatalogDownloadingLabel => '下载中…';
+
+  @override
+  String get localModelsCatalogInstalledBadge => '已安装';
+
+  @override
+  String get localModelsCatalogOpenPageAction => '打开模型页面';
+
+  @override
+  String get localModelsCatalogGatedNote =>
+      '该模型受许可证限制，Moru 无法自动下载。请打开模型页面，接受许可证（如需要请登录），在浏览器中下载文件，然后使用下方的“导入文件”。';
+
+  @override
+  String localModelsCatalogContextLabel(int tokens) {
+    return '上下文：$tokens 个 token';
+  }
+
+  @override
+  String get localModelsCatalogDownloadFailedHttp => '下载失败（服务器错误）。';
+
+  @override
+  String get localModelsCatalogDownloadFailedIncomplete => '下载中途结束，请重试。';
+
+  @override
+  String get localModelsCatalogDownloadFailedFormat =>
+      '下载的文件不是有效的 LiteRT-LM 模型，请重试。';
+
+  @override
+  String get localModelsCatalogDownloadFailedChecksum => '下载的文件与预期校验和不匹配，请重试。';
+
+  @override
+  String get localModelsCatalogDownloadCancelled => '已取消下载';
+
+  @override
+  String get localModelsCatalogDownloadSuccess => '模型已安装';
+
+  @override
+  String get localModelsImportAction => '导入文件';
+
+  @override
+  String get localModelsEmptyTitle => '尚未安装任何模型';
+
+  @override
+  String get localModelsEmptySubtitle =>
+      '导入 .litertlm 文件即可开始使用本地模型——安装后无需账号，也无需联网。';
+
+  @override
+  String get localModelsDeleteAction => '删除';
+
+  @override
+  String get localModelsDeleteConfirmTitle => '删除此模型？';
+
+  @override
+  String get localModelsDeleteConfirmContent => '模型文件将从设备中删除，此操作无法撤销。';
+
+  @override
+  String get localModelsDeleteConfirmCancel => '取消';
+
+  @override
+  String get localModelsDeleteConfirmOk => '删除';
+
+  @override
+  String get localModelsDeleteInUseError => '请先将模型从内存中卸载，然后再删除。';
+
+  @override
+  String get localModelsImportingLabel => '正在导入…';
+
+  @override
+  String get localModelsImportSuccess => '模型已导入';
+
+  @override
+  String get localModelsImportRejectedGguf =>
+      '这是一个 GGUF 格式的文件。Moru 仅支持 .litertlm 格式，不支持 GGUF。';
+
+  @override
+  String get localModelsImportRejectedFormat =>
+      '该文件未被识别为 LiteRT-LM(.litertlm)模型。文件扩展名匹配并不能保证文件格式正确。';
+
+  @override
+  String get localModelsImportRejectedNoStream => '无法读取所选文件。';
+
+  @override
+  String get localModelsImportCancelled => '已取消导入';
+
+  @override
+  String get localModelsImportFailedGeneric => '导入失败。';
+
+  @override
+  String get localModelsBackendCpuLabel => 'CPU';
+
+  @override
+  String get localModelsBackendGpuLabel => 'GPU';
+
+  @override
+  String get localModelsSourceImportedLabel => '已导入';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -34919,4 +35143,116 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get browserApprovalHeadingUnknownSite => 'Moru 想執行一個瀏覽器操作';
+
+  @override
+  String get localModelsProviderName => '本地模型 · LiteRT';
+
+  @override
+  String get localModelsInstalledSectionTitle => '已安裝';
+
+  @override
+  String get localModelsCatalogSectionTitle => '模型庫';
+
+  @override
+  String get localModelsCatalogDownloadAction => '下載';
+
+  @override
+  String get localModelsCatalogCancelAction => '取消';
+
+  @override
+  String get localModelsCatalogDownloadingLabel => '下載中…';
+
+  @override
+  String get localModelsCatalogInstalledBadge => '已安裝';
+
+  @override
+  String get localModelsCatalogOpenPageAction => '開啟模型頁面';
+
+  @override
+  String get localModelsCatalogGatedNote =>
+      '該模型受授權限制，Moru 無法自動下載。請開啟模型頁面，接受授權條款（如需要請登入），在瀏覽器中下載檔案，然後使用下方的「匯入檔案」。';
+
+  @override
+  String localModelsCatalogContextLabel(int tokens) {
+    return '上下文：$tokens 個 token';
+  }
+
+  @override
+  String get localModelsCatalogDownloadFailedHttp => '下載失敗（伺服器錯誤）。';
+
+  @override
+  String get localModelsCatalogDownloadFailedIncomplete => '下載中途結束，請重試。';
+
+  @override
+  String get localModelsCatalogDownloadFailedFormat =>
+      '下載的檔案不是有效的 LiteRT-LM 模型，請重試。';
+
+  @override
+  String get localModelsCatalogDownloadFailedChecksum => '下載的檔案與預期校驗碼不符，請重試。';
+
+  @override
+  String get localModelsCatalogDownloadCancelled => '已取消下載';
+
+  @override
+  String get localModelsCatalogDownloadSuccess => '模型已安裝';
+
+  @override
+  String get localModelsImportAction => '匯入檔案';
+
+  @override
+  String get localModelsEmptyTitle => '尚未安裝任何模型';
+
+  @override
+  String get localModelsEmptySubtitle =>
+      '匯入 .litertlm 檔案即可開始使用本地模型——安裝後無需帳號，也無需連網。';
+
+  @override
+  String get localModelsDeleteAction => '刪除';
+
+  @override
+  String get localModelsDeleteConfirmTitle => '刪除此模型？';
+
+  @override
+  String get localModelsDeleteConfirmContent => '模型檔案將從裝置中刪除，此操作無法復原。';
+
+  @override
+  String get localModelsDeleteConfirmCancel => '取消';
+
+  @override
+  String get localModelsDeleteConfirmOk => '刪除';
+
+  @override
+  String get localModelsDeleteInUseError => '請先將模型從記憶體中卸載，然後再刪除。';
+
+  @override
+  String get localModelsImportingLabel => '正在匯入…';
+
+  @override
+  String get localModelsImportSuccess => '模型已匯入';
+
+  @override
+  String get localModelsImportRejectedGguf =>
+      '這是一個 GGUF 格式的檔案。Moru 僅支援 .litertlm 格式，不支援 GGUF。';
+
+  @override
+  String get localModelsImportRejectedFormat =>
+      '該檔案未被識別為 LiteRT-LM(.litertlm)模型。副檔名相符並不能保證檔案格式正確。';
+
+  @override
+  String get localModelsImportRejectedNoStream => '無法讀取所選檔案。';
+
+  @override
+  String get localModelsImportCancelled => '已取消匯入';
+
+  @override
+  String get localModelsImportFailedGeneric => '匯入失敗。';
+
+  @override
+  String get localModelsBackendCpuLabel => 'CPU';
+
+  @override
+  String get localModelsBackendGpuLabel => 'GPU';
+
+  @override
+  String get localModelsSourceImportedLabel => '已匯入';
 }

@@ -193,7 +193,7 @@ class IncomingShareHandlerTest {
         override fun onCreate() = true
         override fun getType(uri: Uri) = "image/png"
         override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor =
-            MatrixCursor(arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE)).apply { addRow(arrayOf(name, reportedSize)) }
+            MatrixCursor(arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE)).apply { addRow(arrayOf<Any?>(name, reportedSize)) }
         override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
             openCount++
             return ParcelFileDescriptor.open(source, ParcelFileDescriptor.MODE_READ_ONLY)

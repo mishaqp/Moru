@@ -538,6 +538,8 @@ abstract class BuiltInToolsHelper {
           return isGlmBuiltInSearchSupportedModel(upstreamModelId);
         }
         return false;
+      case ProviderKind.local:
+        return false;
     }
   }
 
@@ -1044,6 +1046,8 @@ abstract class BuiltInToolsHelper {
         if (isMimoBuiltInSearchSupportedModel(modelId)) return true;
         if (isKimiK3Model(modelId)) return true;
         if (isGlmBuiltInSearchSupportedModel(modelId)) return true;
+        return false;
+      case ProviderKind.local:
         return false;
     }
   }

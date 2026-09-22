@@ -5,6 +5,15 @@ import '../../../l10n/app_localizations.dart';
 
 /// Catalog metadata is not editable in the model form. Read it from the latest
 /// override at save time so a catalog refresh during editing is preserved too.
+///
+/// This also covers the local (LiteRT) provider's own installed-model
+/// metadata (`local*`): [ModelSelectSheet]'s model tiles open this same
+/// generic edit form on long-press for every provider, local models
+/// included, even though none of `local*` is user-editable here. Without
+/// preserving it, saving would silently overwrite the override with a form
+/// that never had `localModelPath` to begin with, leaving the model listed
+/// (its `name` survives) but pointing at no file -- see
+/// `litert_local.dart`'s "No local model file is configured" error.
 Map<String, dynamic> modelSyncMetadata(Map<String, dynamic> override) => {
   for (final key in const [
     'oauthProtocol',
@@ -12,6 +21,12 @@ Map<String, dynamic> modelSyncMetadata(Map<String, dynamic> override) => {
     'oauthThinkingRequired',
     'oauthThinkingEfforts',
     'oauthThinkingDefaultEffort',
+    'localModelPath',
+    'localBackend',
+    'localSizeBytes',
+    'localSourceLabel',
+    'localInstalledAtMillis',
+    'localSha256',
   ])
     if (override.containsKey(key)) key: override[key],
 };
@@ -248,6 +263,9 @@ class ModelBuiltInToolTiles {
             available: responses,
           ),
         ];
+      case ProviderKind.local:
+        // No built-in tools for the local provider in this release.
+        return const <ModelBuiltInToolTile>[];
     }
   }
 }

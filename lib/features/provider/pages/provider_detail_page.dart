@@ -2027,6 +2027,11 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           return 'Claude';
         case ProviderKind.openai:
           return 'OpenAI';
+        case ProviderKind.local:
+          // This generic HTTP-provider editor never edits a local
+          // provider (it gets its own dedicated management page) --
+          // unreachable here, kept exhaustive only.
+          return 'Local';
       }
     }
 
