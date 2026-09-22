@@ -81,6 +81,36 @@ void main() {
     expect(list.map((m) => m.displayName).toSet(), {'A', 'B'});
   });
 
+  test('concurrent registrations preserve both models', () async {
+    final firstPath = await writeFakeModelFile('a.litertlm');
+    final secondPath = await writeFakeModelFile('b.litertlm', [5, 6, 7, 8]);
+
+    await Future.wait([
+      library.registerInstalledModel(
+        settings,
+        filePath: firstPath,
+        sizeBytes: 4,
+        displayName: 'A',
+        sourceLabel: 'a.litertlm',
+      ),
+      library.registerInstalledModel(
+        settings,
+        filePath: secondPath,
+        sizeBytes: 4,
+        displayName: 'B',
+        sourceLabel: 'b.litertlm',
+      ),
+    ]);
+
+    expect(
+      library
+          .installedModels(settings)
+          .map((model) => model.displayName)
+          .toSet(),
+      {'A', 'B'},
+    );
+  });
+
   test('reimporting identical weights preserves the model id', () async {
     final firstPath = await writeFakeModelFile('first.litertlm');
     final first = await library.registerInstalledModel(

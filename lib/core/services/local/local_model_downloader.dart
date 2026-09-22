@@ -38,6 +38,8 @@ final class LiteRtDownloadProgress {
 typedef LiteRtDownloadProgressCallback =
     void Function(LiteRtDownloadProgress progress);
 
+typedef LiteRtFileSha256 = Future<String> Function(File file);
+
 final class LiteRtDownloadCancellationToken {
   final Completer<void> _cancelledCompleter = Completer<void>();
 
@@ -111,14 +113,20 @@ final class LiteRtDownloadFailedException implements Exception {
 /// the file and throws -- nothing partially-verified is ever registered as
 /// an installed model.
 final class LiteRtModelDownloader {
-  LiteRtModelDownloader({http.Client? httpClient, Directory? modelsDirectory})
+  LiteRtModelDownloader({
+    http.Client? httpClient,
+    Directory? modelsDirectory,
+    LiteRtFileSha256? sha256OfFile,
+  })
     : _httpClient = httpClient ?? http.Client(),
       _ownsHttpClient = httpClient == null,
-      _injectedModelsDirectory = modelsDirectory;
+      _injectedModelsDirectory = modelsDirectory,
+      _sha256OfFile = sha256OfFile ?? _defaultSha256OfFile;
 
   final http.Client _httpClient;
   final bool _ownsHttpClient;
   final Directory? _injectedModelsDirectory;
+  final LiteRtFileSha256 _sha256OfFile;
   final Map<String, LiteRtDownloadCancellationToken> _activeTokens = {};
 
   bool isDownloading(String entryId) => _activeTokens.containsKey(entryId);
@@ -186,8 +194,8 @@ final class LiteRtModelDownloader {
           LiteRtDownloadFailureCode.formatMismatch,
         );
       }
-      final actualSha256 = (await sha256.bind(partFile.openRead()).first)
-          .toString();
+      final actualSha256 = await _sha256OfFile(partFile);
+      token.throwIfCancelled();
       if (actualSha256 != entry.sha256) {
         await _deleteFileIfPresent(partFile);
         throw LiteRtDownloadFailedException(
@@ -196,11 +204,8 @@ final class LiteRtModelDownloader {
         );
       }
 
-      final finalName =
-          '${DateTime.now().millisecondsSinceEpoch}_'
-          '${p.basename(entry.fileName)}';
-      final finalFile = File(p.join(dir.path, finalName));
-      if (await finalFile.exists()) await finalFile.delete();
+      final finalFile = await _availableFinalFile(dir, entry);
+      token.throwIfCancelled();
       await partFile.rename(finalFile.path);
 
       return _library.registerInstalledModel(
@@ -211,9 +216,14 @@ final class LiteRtModelDownloader {
         sourceLabel: entry.fileName,
         contentSha256: entry.sha256,
         initialSettings: {
-          'localVision': entry.vision, 'localAudio': entry.audio,
-          'localThinking': entry.thinking, 'localTools': entry.tools,
-          if (entry.contextTokens > 0) 'localMaxNumTokens': entry.contextTokens > 4096 ? 4096 : entry.contextTokens,
+          'localVision': entry.vision,
+          'localAudio': entry.audio,
+          'localThinking': entry.thinking,
+          'localTools': entry.tools,
+          if (entry.contextTokens > 0)
+            'localMaxNumTokens': entry.contextTokens > 4096
+                ? 4096
+                : entry.contextTokens,
         },
       );
     } on LiteRtDownloadCancelledException {
@@ -223,10 +233,28 @@ final class LiteRtModelDownloader {
     }
   }
 
-  static String partialFileName(LiteRtCatalogEntry entry) =>
-      '.catalog-${sha256.convert(utf8.encode('${entry.id}:${entry.sha256}:${entry.sizeBytes}'))}.part';
+  static String partialFileName(LiteRtCatalogEntry entry) {
+    final identity = '${entry.id}:${entry.sha256}:${entry.sizeBytes}';
+    return '.catalog-${sha256.convert(utf8.encode(identity))}.part';
+  }
 
   static const _library = LocalModelLibrary();
+
+  Future<File> _availableFinalFile(
+    Directory directory,
+    LiteRtCatalogEntry entry,
+  ) async {
+    final basename = p.basename(entry.fileName);
+    var candidate = File(p.join(directory.path, '${entry.sha256}_$basename'));
+    var suffix = 1;
+    while (await candidate.exists()) {
+      candidate = File(
+        p.join(directory.path, '${entry.sha256}-$suffix-$basename'),
+      );
+      suffix++;
+    }
+    return candidate;
+  }
 
   Future<int> _downloadToPartFile(
     LiteRtCatalogEntry entry,
@@ -265,11 +293,19 @@ final class LiteRtModelDownloader {
     var receivedBytes = resumeFrom;
     IOSink sink;
     if (response.statusCode == HttpStatus.partialContent && resumeFrom > 0) {
-      final match = RegExp(r'^bytes (\d+)-(\d+)/(\d+)$').firstMatch(response.headers['content-range'] ?? '');
-      if (match == null || int.parse(match[1]!) != resumeFrom || int.parse(match[3]!) != entry.sizeBytes || int.parse(match[2]!) != entry.sizeBytes - 1) {
+      final contentRange = response.headers['content-range'] ?? '';
+      final match = RegExp(
+        r'^bytes (\d+)-(\d+)/(\d+)$',
+      ).firstMatch(contentRange);
+      if (match == null ||
+          int.parse(match[1]!) != resumeFrom ||
+          int.parse(match[2]!) != entry.sizeBytes - 1 ||
+          int.parse(match[3]!) != entry.sizeBytes) {
         final sub = response.stream.listen((_) {});
         await sub.cancel();
-        throw const LiteRtDownloadFailedException(LiteRtDownloadFailureCode.incompleteTransfer);
+        throw const LiteRtDownloadFailedException(
+          LiteRtDownloadFailureCode.incompleteTransfer,
+        );
       }
       sink = partFile.openWrite(mode: FileMode.append);
     } else if (response.statusCode == HttpStatus.ok) {
@@ -303,7 +339,9 @@ final class LiteRtModelDownloader {
       while (await _moveNextOrCancel(iterator, token)) {
         final chunk = iterator.current;
         if (receivedBytes + chunk.length > entry.sizeBytes) {
-          throw const LiteRtDownloadFailedException(LiteRtDownloadFailureCode.incompleteTransfer);
+          throw const LiteRtDownloadFailedException(
+            LiteRtDownloadFailureCode.incompleteTransfer,
+          );
         }
         sink.add(chunk);
         receivedBytes += chunk.length;
@@ -352,3 +390,6 @@ int? _positiveOrNull(int? value) => value != null && value > 0 ? value : null;
 Future<void> _deleteFileIfPresent(File file) async {
   if (await file.exists()) await file.delete();
 }
+
+Future<String> _defaultSha256OfFile(File file) async =>
+    (await sha256.bind(file.openRead()).first).toString();
