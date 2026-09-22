@@ -77,6 +77,15 @@ class _FakeNative {
     }
     fail('Timed out waiting for native $method call #${after + 1}');
   }
+
+  Future<void> waitForCall(String method, {int after = 0}) async {
+    for (var attempt = 0; attempt < 100; attempt++) {
+      final matching = calls.where((call) => call.method == method).length;
+      if (matching > after) return;
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+    }
+    fail('Timed out waiting for native $method call #${after + 1}');
+  }
 }
 
 void main() {
@@ -891,7 +900,7 @@ void main() {
     fake.emit({'type': 'done', 'requestId': send['requestId']});
     await done.future;
 
-    await fake.waitForArgs('unloadModel');
+    await fake.waitForCall('unloadModel');
     expect(runtime.loadedModelPath, isNull);
   });
 }

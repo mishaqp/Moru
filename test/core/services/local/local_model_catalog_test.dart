@@ -18,7 +18,7 @@ void main() {
     expect(entry.license, 'Apache-2.0');
     expect(
       entry.downloadUrl.toString(),
-      'https://huggingface.co/litert-community/Qwen3-0.6B/resolve/main/'
+      'https://huggingface.co/litert-community/Qwen3-0.6B/resolve/a3c5d805ae362dff7f580bc25f2dfb9a5a7eaa76/'
       'Qwen3-0.6B_dynamic_wi4b32_afp32.litertlm',
     );
   });
