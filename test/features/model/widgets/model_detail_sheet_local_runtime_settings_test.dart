@@ -150,9 +150,11 @@ void main() {
       await tester.tap(find.text(l10n.modelDetailSheetConfirmButton));
       await tester.pumpAndSettle();
 
-      final saved = settings
-          .getProviderConfig(kLocalModelProviderKey)
-          .modelOverrides['litert-test-model'] as Map<String, dynamic>;
+      final saved =
+          settings
+                  .getProviderConfig(kLocalModelProviderKey)
+                  .modelOverrides['litert-test-model']
+              as Map<String, dynamic>;
       expect(saved['localBackend'], 'gpu');
       expect(saved['localMaxNumTokens'], 8192);
       expect(saved['localTemperature'], 0.4);
@@ -190,9 +192,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.modelDetailSheetEditModel), findsOneWidget);
-    final saved = settings
-        .getProviderConfig(kLocalModelProviderKey)
-        .modelOverrides['litert-test-model'] as Map<String, dynamic>;
+    final saved =
+        settings
+                .getProviderConfig(kLocalModelProviderKey)
+                .modelOverrides['litert-test-model']
+            as Map<String, dynamic>;
     expect(saved['localTemperature'], 1.0);
   });
 }
