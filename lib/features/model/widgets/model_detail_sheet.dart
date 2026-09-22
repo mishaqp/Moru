@@ -165,8 +165,10 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
     }
     _idCtrl = TextEditingController(text: displayModelId);
     _localContextCtrl = TextEditingController(
-      text: _positiveIntOrDefault(initialOv?['localMaxNumTokens'], 4096)
-          .toString(),
+      text: _positiveIntOrDefault(
+        initialOv?['localMaxNumTokens'],
+        4096,
+      ).toString(),
     );
     _localTemperatureCtrl = TextEditingController(
       text: _nonNegativeDoubleOrDefault(
@@ -775,9 +777,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
               helperText: l10n.localModelsRuntimeThinkingBudgetHint,
               controller: _localThinkingBudgetCtrl,
               key: const ValueKey('local-runtime-thinking-budget'),
-              keyboardType: const TextInputType.numberWithOptions(
-                signed: true,
-              ),
+              keyboardType: const TextInputType.numberWithOptions(signed: true),
             ),
           ],
         ],
@@ -842,9 +842,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                color: cs.primary.withValues(alpha: 0.5),
-              ),
+              borderSide: BorderSide(color: cs.primary.withValues(alpha: 0.5)),
             ),
           ),
         ),
@@ -1098,10 +1096,7 @@ double _nonNegativeDoubleOrDefault(Object? value, double fallback) {
 
 double _probabilityOrDefault(Object? value, double fallback) {
   final parsed = value is num ? value.toDouble() : double.tryParse('$value');
-  return parsed != null &&
-          parsed.isFinite &&
-          parsed >= 0 &&
-          parsed <= 1
+  return parsed != null && parsed.isFinite && parsed >= 0 && parsed <= 1
       ? parsed
       : fallback;
 }
