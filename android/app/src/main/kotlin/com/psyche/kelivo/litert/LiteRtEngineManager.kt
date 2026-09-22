@@ -1,6 +1,7 @@
 package com.psyche.kelivo.litert
 
 import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Channel
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Conversation
@@ -218,6 +219,10 @@ class LiteRtEngineManager(private val events: LiteRtEvents) {
                 tools = tools.map(::openApiTool),
                 samplerConfig = sampler,
                 automaticToolCalling = false,
+                // DeepSeek-R1/Qwen emit their scratchpad between these tokens.
+                // Register it as a non-user-visible channel so it is removed from
+                // Message.contents before the text callback reaches the chat.
+                channels = listOf(Channel("analysis", "<think>", "</think>")),
                 maxOutputToken = maxOutputTokens,
                 thinkingConfig = ThinkingConfig(
                     enableThinking = thinkingEnabled,
