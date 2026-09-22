@@ -248,13 +248,7 @@ void main() {
         },
       };
 
-      // ProviderKind.local is excluded: it has no tool-calling support in
-      // this release, so its sanitizer intentionally strips a schema down
-      // to nothing (see ToolHandlerService's own switch) rather than
-      // preserving the payload shape this test asserts on.
-      for (final kind in ProviderKind.values.where(
-        (k) => k != ProviderKind.local,
-      )) {
+      for (final kind in ProviderKind.values) {
         final output = ToolHandlerService.sanitizeToolParametersForProvider(
           schema,
           kind,
@@ -271,8 +265,8 @@ void main() {
       }
     });
 
-    test('ProviderKind.local strips every schema key -- it never advertises '
-        'a tool parameter, not just this one payload shape', () {
+    test('ProviderKind.local preserves the JSON-schema subset accepted by '
+        'LiteRT OpenApiTool', () {
       final schema = <String, dynamic>{
         'type': 'object',
         'description': 'a real, non-trivial tool schema',
@@ -291,11 +285,8 @@ void main() {
 
       expect(
         output,
-        isEmpty,
-        reason:
-            'local has no tool-calling support in this release -- every '
-            'top-level schema key, including "type" and "properties", '
-            'must be dropped rather than partially preserved',
+        schema,
+        reason: 'LiteRT accepts the same portable schema subset as OpenAI',
       );
     });
 
