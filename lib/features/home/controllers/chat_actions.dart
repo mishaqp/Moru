@@ -44,6 +44,18 @@ final class UnsupportedAudioAttachmentException implements Exception {
   String toString() => 'audio_attachment_unsupported';
 }
 
+/// Raised when a generation finished without any output: no text, reasoning,
+/// tool call or image. Its [toString] is the localized text shown in place of
+/// the reply, so the run is stored as failed instead of an empty completed card.
+final class EmptyAssistantReplyException implements Exception {
+  const EmptyAssistantReplyException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 final class _BarrierStreamSubscription<T> implements StreamSubscription<T> {
   _BarrierStreamSubscription(this._delegate, this._cancelWithBarrier);
 
@@ -869,6 +881,15 @@ class ChatActions {
       return [...parts, TextPart(displayContent)];
     }
     return List<MessagePart>.of(parts);
+  }
+
+  /// Whether a finished reply carries nothing the user could read or act on.
+  @visibleForTesting
+  static bool isEmptyAssistantReply(ChatMessage message) {
+    if ((message.reasoningText ?? '').trim().isNotEmpty) return false;
+    return message.parts.every(
+      (part) => part is TextPart && part.text.trim().isEmpty,
+    );
   }
 
   @visibleForTesting
@@ -2681,6 +2702,8 @@ class ChatActions {
   }) async {
     final messageId = state.messageId;
     final conversationId = state.conversationId;
+    // Read before the awaits below; only used for an empty-reply error.
+    final l10n = AppLocalizations.of(contextProvider);
 
     // Mark streaming as ended to allow UI rebuilds again
     streamController.markStreamingEnded(messageId);
@@ -2700,6 +2723,21 @@ class ChatActions {
         state.titleQueued = true;
         onMaybeGenerateTitle?.call(conversationId);
       }
+      return;
+    }
+    final snapshot = _streamingMessageSnapshot(state);
+    if (!isStopping(conversationId) && isEmptyAssistantReply(snapshot)) {
+      final model = snapshot.modelId ?? '?';
+      FlutterLogger.log(
+        '[Generation] Empty reply from ${snapshot.providerId}/$model',
+        tag: 'ChatActions',
+      );
+      await _handleStreamError(
+        EmptyAssistantReplyException(
+          l10n?.chatEmptyAssistantReply(model) ?? 'empty_response',
+        ),
+        state,
+      );
       return;
     }
     state.finishHandled = true;
@@ -2843,7 +2881,11 @@ class ChatActions {
       await _finalizeStreamingCheckpoint(
         errorMessage,
         terminalState: GenerationRunState.failed,
-        errorCode: oauthFailure ? 'oauth_login_required' : 'generation_failed',
+        errorCode: oauthFailure
+            ? 'oauth_login_required'
+            : e is EmptyAssistantReplyException
+            ? 'empty_response'
+            : 'generation_failed',
       );
       state.terminalPersisted = true;
     } finally {

@@ -64,8 +64,8 @@
   "storageSpaceCategoryImages": "Изображения",
   "storageSpaceCategoryFiles": "Файлы",
   "storageSpaceCategoryFonts": "Шрифты",
-  "storageSpaceCategoryLocalModels": "Локальные модели",
-  "storageSpaceOtherHint": "Шрифты, загруженные локальные модели и другие файлы приложения.",
+  "storageSpaceCategoryLocalModels": "Модели распознавания речи",
+  "storageSpaceOtherHint": "Шрифты, модели распознавания речи и другие файлы приложения.",
   "storageSpaceSubOtherApp": "Файлы приложения",
   "storageSpaceCategoryChatData": "История чатов",
   "storageSpaceCategoryLegacyChatData": "История чатов (старая)",
@@ -5612,5 +5612,9 @@
   },
   "workspaceBindingUndoDefault": "Отменить",
   "workspaceEntryDefaultWorkspaceAutomaticSubtitle": "Первая рабочая область, которую вы привяжете к диалогу, будет запомнена для новых диалогов.",
-  "workspaceEntryDefaultWorkspaceUnset": "Не задано"
+  "workspaceEntryDefaultWorkspaceUnset": "Не задано",
+  "chatEmptyAssistantReply": "Модель {model} вернула пустой ответ. Повторите запрос или проверьте настройки провайдера и модели.",
+  "toolApprovalsSectionTitle": "Подтверждения инструментов",
+  "toolApprovalsFullTrustTitle": "Я понимаю риск — разрешать всё",
+  "toolApprovalsFullTrustDescription": "Не спрашивать подтверждение перед действиями ИИ. Действует для браузера, MCP, shell, записи файлов и других инструментов, которые обычно требуют подтверждения."
 }

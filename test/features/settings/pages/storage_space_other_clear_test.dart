@@ -100,7 +100,7 @@ void main() {
 
       await tester.tap(find.text('Other').last);
       await _pumpUntilFound(tester, find.text('Fonts'));
-      await _pumpUntilFound(tester, find.text('Local Models'));
+      await _pumpUntilFound(tester, find.text('Speech Recognition Models'));
       expect(find.text('Clear'), findsNWidgets(2));
 
       final fontsClear = find.ancestor(
@@ -122,11 +122,14 @@ void main() {
       );
       tester.widget<GestureDetector>(modelsClear).onTap?.call();
       await tester.pump();
-      await _pumpUntilFound(tester, find.text('Clear Local Models?'));
+      await _pumpUntilFound(
+        tester,
+        find.text('Clear Speech Recognition Models?'),
+      );
 
       await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
       await tester.pump();
-      expect(find.text('Clear Local Models?'), findsNothing);
+      expect(find.text('Clear Speech Recognition Models?'), findsNothing);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

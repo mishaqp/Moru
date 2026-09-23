@@ -4492,5 +4492,9 @@
   "phoneControlAssistantHint": "需要同时完成两项设置：在系统无障碍设置中启用“Kelivo 手机控制”，并在要使用的助手 → 本地工具中开启“手机控制”（也可从对话工具菜单开启）。每个助手单独配置，执行任务时请保持手机解锁。",
   "phoneControlRestrictedTitle": "无法开启无障碍？",
   "phoneControlRestrictedHint": "部分下载的 APK 需要先在应用信息右上角菜单中选择“允许受限制的设置”。点击打开 Kelivo 应用信息，完成后再返回无障碍设置。",
-  "phoneControlEnableAssistant": "允许此助手使用手机控制"
+  "phoneControlEnableAssistant": "允许此助手使用手机控制",
+  "chatEmptyAssistantReply": "模型 {model} 返回了空响应。请重试，或检查供应商和模型设置。",
+  "toolApprovalsSectionTitle": "工具确认",
+  "toolApprovalsFullTrustTitle": "完全信任模式（危险）",
+  "toolApprovalsFullTrustDescription": "跳过浏览器、MCP、Shell、文件写入等通常需要确认的工具的逐次确认。"
 }

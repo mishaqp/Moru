@@ -363,13 +363,13 @@ abstract class AppLocalizations {
   /// No description provided for @storageSpaceCategoryLocalModels.
   ///
   /// In en, this message translates to:
-  /// **'Local Models'**
+  /// **'Speech Recognition Models'**
   String get storageSpaceCategoryLocalModels;
 
   /// No description provided for @storageSpaceOtherHint.
   ///
   /// In en, this message translates to:
-  /// **'Fonts, downloaded local models, and other app files.'**
+  /// **'Fonts, speech recognition models, and other app files.'**
   String get storageSpaceOtherHint;
 
   /// No description provided for @storageSpaceSubOtherApp.
@@ -22495,6 +22495,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Allow this assistant to use phone control'**
   String get phoneControlEnableAssistant;
+
+  /// No description provided for @chatEmptyAssistantReply.
+  ///
+  /// In en, this message translates to:
+  /// **'The model {model} returned an empty response. Try again or check the provider and model settings.'**
+  String chatEmptyAssistantReply(String model);
+
+  /// No description provided for @toolApprovalsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tool approvals'**
+  String get toolApprovalsSectionTitle;
+
+  /// No description provided for @toolApprovalsFullTrustTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Full trust mode (dangerous)'**
+  String get toolApprovalsFullTrustTitle;
+
+  /// No description provided for @toolApprovalsFullTrustDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip per-action confirmations for browser, MCP, shell, file writes, and other tools that normally require approval.'**
+  String get toolApprovalsFullTrustDescription;
 }
 
 class _AppLocalizationsDelegate
