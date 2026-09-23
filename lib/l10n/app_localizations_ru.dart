@@ -12335,5 +12335,4 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get browserApprovalHeadingUnknownSite =>
       'Moru хочет выполнить действие в браузере';
-
 }

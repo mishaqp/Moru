@@ -53,7 +53,10 @@ class ModelDisplayInfo {
   final pinned = settings.perChatModelEnabled ? conversation : null;
   for (final selection in [
     (providerKey: pinned?.chatModelProvider, modelId: pinned?.chatModelId),
-    (providerKey: assistant?.chatModelProvider, modelId: assistant?.chatModelId),
+    (
+      providerKey: assistant?.chatModelProvider,
+      modelId: assistant?.chatModelId,
+    ),
     (
       providerKey: settings.currentModelProvider,
       modelId: settings.currentModelId,
@@ -62,7 +65,8 @@ class ModelDisplayInfo {
     final provider = selection.providerKey;
     if (provider == null || selection.modelId == null) continue;
     if (provider == SettingsProvider.retiredLocalModelProviderKey ||
-        settings.providerConfigs[provider]?.providerType == ProviderKind.local) {
+        settings.providerConfigs[provider]?.providerType ==
+            ProviderKind.local) {
       continue;
     }
     return selection;

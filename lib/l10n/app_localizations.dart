@@ -21898,7 +21898,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Moru wants to perform a browser action'**
   String get browserApprovalHeadingUnknownSite;
-
 }
 
 class _AppLocalizationsDelegate

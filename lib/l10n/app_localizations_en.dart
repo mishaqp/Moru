@@ -12202,5 +12202,4 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get browserApprovalHeadingUnknownSite =>
       'Moru wants to perform a browser action';
-
 }

@@ -1562,11 +1562,14 @@ class SettingsProvider extends ChangeNotifier {
         );
       } catch (_) {}
     }
-    for (final key in _providerConfigs.keys.where(
-      (key) =>
-          key == retiredLocalModelProviderKey ||
-          _providerConfigs[key]?.providerType == ProviderKind.local,
-    ).toList()) {
+    for (final key
+        in _providerConfigs.keys
+            .where(
+              (key) =>
+                  key == retiredLocalModelProviderKey ||
+                  _providerConfigs[key]?.providerType == ProviderKind.local,
+            )
+            .toList()) {
       await removeProviderConfig(key);
     }
     if (_providerConfigs.isEmpty) {

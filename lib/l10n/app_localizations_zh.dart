@@ -11664,7 +11664,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get browserApprovalHeadingUnknownSite => 'Moru 想执行一个浏览器操作';
-
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -23253,7 +23252,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get browserApprovalHeadingUnknownSite => 'Moru 想执行一个浏览器操作';
-
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -34921,5 +34919,4 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get browserApprovalHeadingUnknownSite => 'Moru 想執行一個瀏覽器操作';
-
 }

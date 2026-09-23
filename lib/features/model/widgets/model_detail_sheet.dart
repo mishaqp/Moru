@@ -793,7 +793,6 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
       'headers': headers,
       'body': bodies,
       if (!isEmbedding && builtInTools.isNotEmpty) 'builtInTools': builtInTools,
-
     };
 
     // Apply updates to provider config
