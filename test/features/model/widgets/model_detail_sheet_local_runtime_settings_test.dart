@@ -142,10 +142,12 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(gpuOption);
       await tester.pumpAndSettle();
-      final runtimeScrollable = find.descendant(
-        of: find.byType(ListView),
-        matching: find.byType(Scrollable),
-      ).first;
+      final runtimeScrollable = find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first;
       expect(
         tester.widget<Scrollable>(runtimeScrollable).axisDirection,
         AxisDirection.down,
