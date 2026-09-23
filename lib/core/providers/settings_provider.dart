@@ -1586,9 +1586,12 @@ class SettingsProvider extends ChangeNotifier {
     }
 
     // Imported/downloaded LiteRT files are app-owned copies. The original
-    // files picked from Downloads remain where the user placed them. Run
-    // this in the background so a slow or unavailable path provider (e.g.
-    // in unit tests that never mock it) cannot stall settings load.
+    // files picked from Downloads remain where the user placed them. Run in
+    // the background, like the connectivity kick-off below: a testWidgets
+    // test that never mocks PathProviderPlatform leaves an unmocked
+    // platform-channel call pending forever (its own Future.timeout cannot
+    // help -- widget tests run Timers on a fake clock that only advances
+    // when the test pumps it), so this must not gate settings load.
     _removeRetiredLocalModelCopies();
 
     // kick off a one-time connectivity test for services (exclude local Bing)
@@ -2305,7 +2308,7 @@ class SettingsProvider extends ChangeNotifier {
     } on FileSystemException catch (error) {
       debugPrint('Could not remove retired model copies: $error');
     } catch (_) {
-      // Path provider may be unavailable in non-platform unit tests.
+      // Path provider may be unavailable, or unresponsive, in unit tests.
     }
   }
 

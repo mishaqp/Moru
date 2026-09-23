@@ -82,6 +82,15 @@ void main() {
       final settings = SettingsProvider(harness.preferences);
       await settings.loaded;
 
+      // The stale-copy cleanup runs in the background so a slow or
+      // unmocked path provider can never stall settings load; poll for it.
+      for (
+        var attempt = 0;
+        await modelCopies.exists() && attempt < 100;
+        attempt++
+      ) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
       expect(await modelCopies.exists(), isFalse);
       expect(await File('${speechModels.path}/speech.bin').exists(), isTrue);
       expect(await File('${workspaces.path}/notes.txt').exists(), isTrue);
