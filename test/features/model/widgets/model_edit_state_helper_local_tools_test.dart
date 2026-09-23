@@ -43,7 +43,17 @@ void main() {
         'abilities': <String>[],
         'localModelPath': '/data/user/0/.../models/qwen3-0.6b.litertlm',
         'localBackend': 'cpu',
-        'localSizeBytes': 344437808,
+        'localMaxNumTokens': 8192,
+        'localTemperature': 0.25,
+        'localTopK': 32,
+        'localTopP': 0.8,
+        'localThinking': true,
+        'localThinkingBudget': 256,
+        'localVision': true,
+        'localAudio': true,
+        'localTools': true,
+        'localKeepLoaded': false,
+        'localSizeBytes': 344671744,
         'localSourceLabel': 'Qwen3-0.6B_dynamic_wi4b32_afp32.litertlm',
         'localInstalledAtMillis': 1758000000000,
         'localSha256':
@@ -54,7 +64,17 @@ void main() {
 
       expect(preserved['localModelPath'], installed['localModelPath']);
       expect(preserved['localBackend'], 'cpu');
-      expect(preserved['localSizeBytes'], 344437808);
+      expect(preserved['localMaxNumTokens'], 8192);
+      expect(preserved['localTemperature'], 0.25);
+      expect(preserved['localTopK'], 32);
+      expect(preserved['localTopP'], 0.8);
+      expect(preserved['localThinking'], isTrue);
+      expect(preserved['localThinkingBudget'], 256);
+      expect(preserved['localVision'], isTrue);
+      expect(preserved['localAudio'], isTrue);
+      expect(preserved['localTools'], isTrue);
+      expect(preserved['localKeepLoaded'], isFalse);
+      expect(preserved['localSizeBytes'], 344671744);
       expect(preserved['localSourceLabel'], installed['localSourceLabel']);
       expect(
         preserved['localInstalledAtMillis'],

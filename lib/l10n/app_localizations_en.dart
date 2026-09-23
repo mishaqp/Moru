@@ -12313,6 +12313,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String get localModelsImportFailedGeneric => 'Import failed.';
 
   @override
+  String get localModelsRuntimeSettingsDescription =>
+      'Controls how LiteRT-LM runs this model on your device.';
+
+  @override
+  String get localModelsRuntimeBackendLabel => 'Compute backend';
+
+  @override
+  String get localModelsRuntimeBackendHint =>
+      'GPU may run faster, but availability depends on your device and model.';
+
+  @override
+  String get localModelsRuntimeContextLabel => 'Context size (tokens)';
+
+  @override
+  String get localModelsRuntimeTemperatureLabel => 'Temperature';
+
+  @override
+  String get localModelsRuntimeTopKLabel => 'Top K';
+
+  @override
+  String get localModelsRuntimeTopPLabel => 'Top P';
+
+  @override
+  String get localModelsRuntimeThinkingBudgetLabel => 'Thinking token budget';
+
+  @override
+  String get localModelsRuntimeThinkingBudgetHint =>
+      '-1 uses the model default, 0 disables thinking, and a positive value sets a token limit.';
+
+  @override
+  String get localModelsRuntimeAudioLabel => 'Enable audio input';
+
+  @override
+  String get localModelsRuntimeAudioHint =>
+      'Turn on audio input for models that support it.';
+
+  @override
+  String get localModelsRuntimeKeepLoadedLabel => 'Keep model loaded';
+
+  @override
+  String get localModelsRuntimeKeepLoadedHint =>
+      'Keep the model in memory between requests to avoid loading it again.';
+
+  @override
+  String get localModelsRuntimeInvalidSettings =>
+      'Check the runtime settings: context and Top K must be positive, temperature must be non-negative, Top P must be between 0 and 1, and thinking budget must be at least -1.';
+
+  @override
   String get localModelsBackendCpuLabel => 'CPU';
 
   @override

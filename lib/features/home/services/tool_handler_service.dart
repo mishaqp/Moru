@@ -193,6 +193,7 @@ class ToolHandlerService {
         break;
       case ProviderKind.openai:
       case ProviderKind.claude:
+      case ProviderKind.local:
         allowed = {
           'type',
           'description',
@@ -202,11 +203,6 @@ class ToolHandlerService {
           'enum',
           'additionalProperties',
         };
-        break;
-      case ProviderKind.local:
-        // Tool calling is out of scope for the local provider in this
-        // release -- unreachable in practice, kept exhaustive only.
-        allowed = const {};
         break;
     }
     m.removeWhere((k, v) => !allowed.contains(k));

@@ -22091,6 +22091,90 @@ abstract class AppLocalizations {
   /// **'Import failed.'**
   String get localModelsImportFailedGeneric;
 
+  /// No description provided for @localModelsRuntimeSettingsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Controls how LiteRT-LM runs this model on your device.'**
+  String get localModelsRuntimeSettingsDescription;
+
+  /// No description provided for @localModelsRuntimeBackendLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Compute backend'**
+  String get localModelsRuntimeBackendLabel;
+
+  /// No description provided for @localModelsRuntimeBackendHint.
+  ///
+  /// In en, this message translates to:
+  /// **'GPU may run faster, but availability depends on your device and model.'**
+  String get localModelsRuntimeBackendHint;
+
+  /// No description provided for @localModelsRuntimeContextLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Context size (tokens)'**
+  String get localModelsRuntimeContextLabel;
+
+  /// No description provided for @localModelsRuntimeTemperatureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Temperature'**
+  String get localModelsRuntimeTemperatureLabel;
+
+  /// No description provided for @localModelsRuntimeTopKLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Top K'**
+  String get localModelsRuntimeTopKLabel;
+
+  /// No description provided for @localModelsRuntimeTopPLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Top P'**
+  String get localModelsRuntimeTopPLabel;
+
+  /// No description provided for @localModelsRuntimeThinkingBudgetLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Thinking token budget'**
+  String get localModelsRuntimeThinkingBudgetLabel;
+
+  /// No description provided for @localModelsRuntimeThinkingBudgetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'-1 uses the model default, 0 disables thinking, and a positive value sets a token limit.'**
+  String get localModelsRuntimeThinkingBudgetHint;
+
+  /// No description provided for @localModelsRuntimeAudioLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable audio input'**
+  String get localModelsRuntimeAudioLabel;
+
+  /// No description provided for @localModelsRuntimeAudioHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on audio input for models that support it.'**
+  String get localModelsRuntimeAudioHint;
+
+  /// No description provided for @localModelsRuntimeKeepLoadedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep model loaded'**
+  String get localModelsRuntimeKeepLoadedLabel;
+
+  /// No description provided for @localModelsRuntimeKeepLoadedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the model in memory between requests to avoid loading it again.'**
+  String get localModelsRuntimeKeepLoadedHint;
+
+  /// No description provided for @localModelsRuntimeInvalidSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the runtime settings: context and Top K must be positive, temperature must be non-negative, Top P must be between 0 and 1, and thinking budget must be at least -1.'**
+  String get localModelsRuntimeInvalidSettings;
+
   /// No description provided for @localModelsBackendCpuLabel.
   ///
   /// In en, this message translates to:

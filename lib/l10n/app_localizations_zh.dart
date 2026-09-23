@@ -11769,6 +11769,51 @@ class AppLocalizationsZh extends AppLocalizations {
   String get localModelsImportFailedGeneric => '导入失败。';
 
   @override
+  String get localModelsRuntimeSettingsDescription =>
+      '配置 LiteRT-LM 在此设备上运行模型的方式。';
+
+  @override
+  String get localModelsRuntimeBackendLabel => '计算后端';
+
+  @override
+  String get localModelsRuntimeBackendHint => 'GPU 可能运行得更快，具体取决于设备和模型是否支持。';
+
+  @override
+  String get localModelsRuntimeContextLabel => '上下文长度（令牌）';
+
+  @override
+  String get localModelsRuntimeTemperatureLabel => '温度';
+
+  @override
+  String get localModelsRuntimeTopKLabel => 'Top K';
+
+  @override
+  String get localModelsRuntimeTopPLabel => 'Top P';
+
+  @override
+  String get localModelsRuntimeThinkingBudgetLabel => '思考令牌预算';
+
+  @override
+  String get localModelsRuntimeThinkingBudgetHint =>
+      '−1 使用模型默认值，0 关闭思考，正数设置令牌上限。';
+
+  @override
+  String get localModelsRuntimeAudioLabel => '启用音频输入';
+
+  @override
+  String get localModelsRuntimeAudioHint => '为支持音频的模型启用音频输入。';
+
+  @override
+  String get localModelsRuntimeKeepLoadedLabel => '保持模型加载';
+
+  @override
+  String get localModelsRuntimeKeepLoadedHint => '在请求之间将模型保留在内存中，避免再次加载。';
+
+  @override
+  String get localModelsRuntimeInvalidSettings =>
+      '请检查运行设置：上下文长度和 Top K 必须大于 0，温度不能为负数，Top P 必须介于 0 和 1 之间，思考预算不能小于 −1。';
+
+  @override
   String get localModelsBackendCpuLabel => 'CPU';
 
   @override
@@ -23467,6 +23512,51 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get localModelsImportFailedGeneric => '导入失败。';
+
+  @override
+  String get localModelsRuntimeSettingsDescription =>
+      '配置 LiteRT-LM 在此设备上运行模型的方式。';
+
+  @override
+  String get localModelsRuntimeBackendLabel => '计算后端';
+
+  @override
+  String get localModelsRuntimeBackendHint => 'GPU 可能运行得更快，具体取决于设备和模型是否支持。';
+
+  @override
+  String get localModelsRuntimeContextLabel => '上下文长度（令牌）';
+
+  @override
+  String get localModelsRuntimeTemperatureLabel => '温度';
+
+  @override
+  String get localModelsRuntimeTopKLabel => 'Top K';
+
+  @override
+  String get localModelsRuntimeTopPLabel => 'Top P';
+
+  @override
+  String get localModelsRuntimeThinkingBudgetLabel => '思考令牌预算';
+
+  @override
+  String get localModelsRuntimeThinkingBudgetHint =>
+      '−1 使用模型默认值，0 关闭思考，正数设置令牌上限。';
+
+  @override
+  String get localModelsRuntimeAudioLabel => '启用音频输入';
+
+  @override
+  String get localModelsRuntimeAudioHint => '为支持音频的模型启用音频输入。';
+
+  @override
+  String get localModelsRuntimeKeepLoadedLabel => '保持模型加载';
+
+  @override
+  String get localModelsRuntimeKeepLoadedHint => '在请求之间将模型保留在内存中，避免再次加载。';
+
+  @override
+  String get localModelsRuntimeInvalidSettings =>
+      '请检查运行设置：上下文长度和 Top K 必须大于 0，温度不能为负数，Top P 必须介于 0 和 1 之间，思考预算不能小于 −1。';
 
   @override
   String get localModelsBackendCpuLabel => 'CPU';
@@ -35246,6 +35336,51 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get localModelsImportFailedGeneric => '匯入失敗。';
+
+  @override
+  String get localModelsRuntimeSettingsDescription =>
+      '設定 LiteRT-LM 在此裝置上執行模型的方式。';
+
+  @override
+  String get localModelsRuntimeBackendLabel => '運算後端';
+
+  @override
+  String get localModelsRuntimeBackendHint => 'GPU 可能執行得更快，實際情況取決於裝置和模型是否支援。';
+
+  @override
+  String get localModelsRuntimeContextLabel => '上下文長度（權杖）';
+
+  @override
+  String get localModelsRuntimeTemperatureLabel => '溫度';
+
+  @override
+  String get localModelsRuntimeTopKLabel => 'Top K';
+
+  @override
+  String get localModelsRuntimeTopPLabel => 'Top P';
+
+  @override
+  String get localModelsRuntimeThinkingBudgetLabel => '思考權杖預算';
+
+  @override
+  String get localModelsRuntimeThinkingBudgetHint =>
+      '−1 使用模型預設值，0 關閉思考，正數設定權杖上限。';
+
+  @override
+  String get localModelsRuntimeAudioLabel => '啟用音訊輸入';
+
+  @override
+  String get localModelsRuntimeAudioHint => '為支援音訊的模型啟用音訊輸入。';
+
+  @override
+  String get localModelsRuntimeKeepLoadedLabel => '保持模型載入';
+
+  @override
+  String get localModelsRuntimeKeepLoadedHint => '在要求之間將模型保留在記憶體中，避免再次載入。';
+
+  @override
+  String get localModelsRuntimeInvalidSettings =>
+      '請檢查執行設定：上下文長度和 Top K 必須大於 0，溫度不得為負數，Top P 必須介於 0 和 1 之間，思考預算不得小於 −1。';
 
   @override
   String get localModelsBackendCpuLabel => 'CPU';

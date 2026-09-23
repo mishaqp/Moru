@@ -61,7 +61,13 @@ void main() {
     });
 
     await expectLater(
-      channel.sendMessage(requestId: 'r1', conversationToken: 'c1', text: 'hi'),
+      channel.sendMessage(
+        requestId: 'r1',
+        conversationToken: 'c1',
+        contents: const [
+          {'type': 'text', 'text': 'hi'},
+        ],
+      ),
       throwsA(
         isA<LiteRtException>()
             .having((e) => e.code, 'code', 'busy')

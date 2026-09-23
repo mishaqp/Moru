@@ -13,6 +13,11 @@ on:
         default: debug
         type: choice
         options: [debug, release]
+      publish:
+        description: 'Publish a GitHub release after a release build (opt-in)'
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
 concurrency:
@@ -151,14 +156,13 @@ jobs:
   publish:
     name: Publish verified stable arm64 release
     needs: android
-    # A release APK is published from master, whether the run came from a
-    # version bump on the branch or from a manual release dispatch: the
-    # build that was verified is the build that ships, so publication must
-    # not depend on which event produced it.
+    # A master version bump produces a signed APK artifact only. Publishing
+    # a GitHub Release is a separate, explicit workflow_dispatch opt-in.
     if: >-
       github.ref == 'refs/heads/master' &&
-      (github.event_name == 'push' ||
-       (github.event_name == 'workflow_dispatch' && inputs.variant == 'release'))
+      github.event_name == 'workflow_dispatch' &&
+      inputs.variant == 'release' &&
+      inputs.publish == true
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

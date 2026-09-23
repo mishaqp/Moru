@@ -85,6 +85,14 @@ class LocalModelLibraryException implements Exception {
 class LocalModelLibrary {
   const LocalModelLibrary();
 
+  static Future<void> _mutationQueue = Future<void>.value();
+
+  Future<T> _serializeMutation<T>(Future<T> Function() action) {
+    final result = _mutationQueue.then((_) => action());
+    _mutationQueue = result.then<void>((_) {}, onError: (_, _) {});
+    return result;
+  }
+
   List<InstalledLocalModel> installedModels(SettingsProvider settings) {
     final cfg = settings.providerConfigs[kLocalModelProviderKey];
     if (cfg == null) return const [];
@@ -110,6 +118,29 @@ class LocalModelLibrary {
     required String sourceLabel,
     String backend = 'cpu',
     String? contentSha256,
+    Map<String, dynamic> initialSettings = const {},
+  }) => _serializeMutation(
+    () => _registerInstalledModel(
+      settings,
+      filePath: filePath,
+      sizeBytes: sizeBytes,
+      displayName: displayName,
+      sourceLabel: sourceLabel,
+      backend: backend,
+      contentSha256: contentSha256,
+      initialSettings: initialSettings,
+    ),
+  );
+
+  Future<InstalledLocalModel> _registerInstalledModel(
+    SettingsProvider settings, {
+    required String filePath,
+    required int sizeBytes,
+    required String displayName,
+    required String sourceLabel,
+    required String backend,
+    required String? contentSha256,
+    required Map<String, dynamic> initialSettings,
   }) async {
     final existing = settings.providerConfigs[kLocalModelProviderKey];
     final cfg =
@@ -157,14 +188,20 @@ class LocalModelLibrary {
     final nextModels = matchingId == null
         ? [...cfg.models, modelId]
         : cfg.models;
+    final previous = (nextOverrides[modelId] as Map?)?.cast<String, dynamic>();
     nextOverrides[modelId] = {
+      ...initialSettings,
       'name': displayName,
       'type': 'chat',
-      'input': ['text'],
+      'input': ['text', if (initialSettings['localVision'] == true) 'image'],
       'output': ['text'],
-      'abilities': <String>[],
+      'abilities': <String>[
+        if (initialSettings['localThinking'] == true) 'reasoning',
+        if (initialSettings['localTools'] == true) 'tool',
+      ],
+      ...?previous,
       'localModelPath': filePath,
-      'localBackend': backend,
+      'localBackend': previous?['localBackend'] ?? backend,
       'localSizeBytes': sizeBytes,
       'localSourceLabel': sourceLabel,
       'localInstalledAtMillis': DateTime.now().millisecondsSinceEpoch,
@@ -199,6 +236,14 @@ class LocalModelLibrary {
   /// [LocalModelRuntime] -- the caller must unload it first. Never deletes
   /// a file that isn't actually this model's own private copy.
   Future<void> deleteModel(
+    SettingsProvider settings,
+    String modelId, {
+    bool Function(String filePath)? isPathInUse,
+  }) => _serializeMutation(
+    () => _deleteModel(settings, modelId, isPathInUse: isPathInUse),
+  );
+
+  Future<void> _deleteModel(
     SettingsProvider settings,
     String modelId, {
     bool Function(String filePath)? isPathInUse,

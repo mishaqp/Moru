@@ -28,13 +28,15 @@ Uint8List _fixturePayload(int length) {
 
 LiteRtCatalogEntry _fixtureEntry({
   required List<int> payload,
+  String id = 'fixture-entry',
+  String fileName = 'fixture.litertlm',
   Uri? downloadUrl,
 }) {
   final digest = sha256.convert(payload).toString();
   return LiteRtCatalogEntry(
-    id: 'fixture-entry',
+    id: id,
     displayName: 'Fixture Model',
-    fileName: 'fixture.litertlm',
+    fileName: fileName,
     sizeBytes: payload.length,
     license: 'Apache-2.0',
     contextTokens: 4096,
@@ -83,6 +85,11 @@ void main() {
 
       expect(installed.displayName, 'Fixture Model');
       expect(await File(installed.filePath).readAsBytes(), payload);
+      expect(
+        p.basename(installed.filePath),
+        '${entry.sha256}_fixture.litertlm',
+        reason: 'verified weights need a collision-proof content address',
+      );
       expect(events.last.receivedBytes, payload.length);
       expect(events.last.fraction, 1);
 
@@ -249,6 +256,10 @@ void main() {
         Stream<List<int>>.fromIterable([remaining]),
         HttpStatus.partialContent,
         contentLength: remaining.length,
+        headers: {
+          'content-range':
+              'bytes ${firstChunk.length}-${payload.length - 1}/${payload.length}',
+        },
       );
     });
     final secondDownloader = LiteRtModelDownloader(
@@ -270,7 +281,9 @@ void main() {
     final dir = tempDir;
     // Pre-seed a stale/mismatched partial file, as if an earlier attempt
     // had left behind bytes that don't even form a valid prefix.
-    final partFile = File(p.join(dir.path, '.catalog-${entry.id}.part'));
+    final partFile = File(
+      p.join(dir.path, LiteRtModelDownloader.partialFileName(entry)),
+    );
     await partFile.writeAsBytes(List<int>.filled(1200, 0xAA));
 
     final client = _StreamingClient(
@@ -290,6 +303,84 @@ void main() {
 
     expect(await File(installed.filePath).readAsBytes(), payload);
   });
+
+  test(
+    'cancellation that arrives while hashing never installs the model',
+    () async {
+      final payload = _fixturePayload(4096);
+      final entry = _fixtureEntry(payload: payload);
+      final token = LiteRtDownloadCancellationToken();
+      final client = MockClient(
+        (request) async => http.Response.bytes(payload, HttpStatus.ok),
+      );
+      final downloader = LiteRtModelDownloader(
+        httpClient: client,
+        modelsDirectory: tempDir,
+        sha256OfFile: (file) async {
+          token.cancel();
+          return sha256.convert(await file.readAsBytes()).toString();
+        },
+      );
+      addTearDown(downloader.dispose);
+
+      await expectLater(
+        downloader.download(entry, settings, cancellationToken: token),
+        throwsA(isA<LiteRtDownloadCancelledException>()),
+      );
+
+      expect(settings.providerConfigs[kLocalModelProviderKey], isNull);
+      expect(
+        await tempDir
+            .list()
+            .where((entity) => !entity.path.endsWith('.part'))
+            .toList(),
+        isEmpty,
+      );
+    },
+  );
+
+  test(
+    'different verified contents with the same source name never overwrite',
+    () async {
+      final firstPayload = _fixturePayload(4096);
+      final secondPayload = Uint8List.fromList(_fixturePayload(4097));
+      secondPayload[2048] ^= 0x7F;
+      final entries = [
+        _fixtureEntry(
+          payload: firstPayload,
+          id: 'first',
+          downloadUrl: Uri.parse('https://example.invalid/first'),
+        ),
+        _fixtureEntry(
+          payload: secondPayload,
+          id: 'second',
+          downloadUrl: Uri.parse('https://example.invalid/second'),
+        ),
+      ];
+      final bodies = <String, List<int>>{
+        entries[0].downloadUrl.toString(): firstPayload,
+        entries[1].downloadUrl.toString(): secondPayload,
+      };
+      final client = MockClient((request) async {
+        return http.Response.bytes(
+          bodies[request.url.toString()]!,
+          HttpStatus.ok,
+        );
+      });
+      final downloader = LiteRtModelDownloader(
+        httpClient: client,
+        modelsDirectory: tempDir,
+      );
+      addTearDown(downloader.dispose);
+
+      final first = await downloader.download(entries[0], settings);
+      final second = await downloader.download(entries[1], settings);
+
+      expect(first.filePath, isNot(second.filePath));
+      expect(await File(first.filePath).readAsBytes(), firstPayload);
+      expect(await File(second.filePath).readAsBytes(), secondPayload);
+    },
+  );
 }
 
 final class _StreamingClient extends http.BaseClient {

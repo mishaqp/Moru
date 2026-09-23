@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,6 +49,8 @@ class _FakeNative {
         return null;
       case 'sendMessage':
         return null;
+      case 'sendToolResponses':
+        return null;
       case 'cancel':
         return true;
       default:
@@ -60,6 +63,29 @@ class _FakeNative {
   Map<String, Object?> argsOf(String method) => Map<String, Object?>.from(
     calls.lastWhere((c) => c.method == method).arguments as Map,
   );
+
+  Future<Map<String, Object?>> waitForArgs(
+    String method, {
+    int after = 0,
+  }) async {
+    for (var attempt = 0; attempt < 100; attempt++) {
+      final matching = calls.where((call) => call.method == method).toList();
+      if (matching.length > after) {
+        return Map<String, Object?>.from(matching[after].arguments as Map);
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+    }
+    fail('Timed out waiting for native $method call #${after + 1}');
+  }
+
+  Future<void> waitForCall(String method, {int after = 0}) async {
+    for (var attempt = 0; attempt < 100; attempt++) {
+      final matching = calls.where((call) => call.method == method).length;
+      if (matching > after) return;
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+    }
+    fail('Timed out waiting for native $method call #${after + 1}');
+  }
 }
 
 void main() {
@@ -129,6 +155,50 @@ void main() {
       isCancelled: () => cancel.isCompleted,
       isConversationTurn: false,
     );
+  }
+
+  Stream<StreamChunk> generateWithFeatures({
+    required List<Map<String, dynamic>> messages,
+    int? maxNumTokens,
+    double? temperature,
+    int? topK,
+    double? topP,
+    int? maxOutputTokens,
+    bool visionEnabled = false,
+    bool audioEnabled = false,
+    bool thinkingEnabled = false,
+    int? thinkingBudget,
+    List<Map<String, dynamic>> tools = const [],
+    Future<Object?> Function(
+      String name,
+      Map<String, dynamic> args, {
+      String? toolCallId,
+    })?
+    onToolCall,
+    bool keepLoaded = true,
+  }) {
+    final cancel = Completer<void>();
+    return Function.apply(runtime.generate, const [], <Symbol, dynamic>{
+          #conversationId: 'feature-conversation',
+          #modelPath: '/models/features.litertlm',
+          #backend: 'gpu',
+          #messages: messages,
+          #whenCancelled: cancel.future,
+          #isCancelled: () => cancel.isCompleted,
+          #maxNumTokens: maxNumTokens,
+          #temperature: temperature,
+          #topK: topK,
+          #topP: topP,
+          #maxOutputTokens: maxOutputTokens,
+          #visionEnabled: visionEnabled,
+          #audioEnabled: audioEnabled,
+          #thinkingEnabled: thinkingEnabled,
+          #thinkingBudget: thinkingBudget,
+          #tools: tools,
+          #onToolCall: onToolCall,
+          #keepLoaded: keepLoaded,
+        })
+        as Stream<StreamChunk>;
   }
 
   /// Lets the fake native side answer the just-issued `sendMessage` call
@@ -263,7 +333,9 @@ void main() {
     final secondDone = Completer<void>();
     second.listen((_) {}, onDone: secondDone.complete);
     final rid2 = await requestIdOfLastSendMessage();
-    expect(fake.argsOf('sendMessage')['text'], 'turn two');
+    expect(fake.argsOf('sendMessage')['contents'], [
+      {'type': 'text', 'text': 'turn two'},
+    ]);
     fake.emit({'type': 'done', 'requestId': rid2});
     await secondDone.future;
 
@@ -332,7 +404,9 @@ void main() {
     // A fresh conversation means initialMessages is empty and the turn
     // itself is sent as the message.
     expect(fake.argsOf('startConversation')['initialMessages'], isEmpty);
-    expect(fake.argsOf('sendMessage')['text'], 'hi');
+    expect(fake.argsOf('sendMessage')['contents'], [
+      {'type': 'text', 'text': 'hi'},
+    ]);
     fake.emit({'type': 'done', 'requestId': rid2});
     await regenDone.future;
 
@@ -526,10 +600,22 @@ void main() {
     final rid3 = await requestIdOfLastSendMessage();
     expect(fake.startConversationCount, 3);
     expect(fake.argsOf('startConversation')['initialMessages'], [
-      {'role': 'user', 'text': 'turn one'},
-      {'role': 'assistant', 'text': 'reply one'},
+      {
+        'role': 'user',
+        'contents': [
+          {'type': 'text', 'text': 'turn one'},
+        ],
+      },
+      {
+        'role': 'assistant',
+        'contents': [
+          {'type': 'text', 'text': 'reply one'},
+        ],
+      },
     ]);
-    expect(fake.argsOf('sendMessage')['text'], 'turn two');
+    expect(fake.argsOf('sendMessage')['contents'], [
+      {'type': 'text', 'text': 'turn two'},
+    ]);
     fake.emit({'type': 'done', 'requestId': rid3});
     await secondDone.future;
   });
@@ -614,5 +700,207 @@ void main() {
     expect(bg2Chunks, contains(isA<Finish>()));
     // Still one -- the same model path never triggers an unload/reload.
     expect(fake.loadModelCount, 1);
+  });
+
+  test('engine and conversation settings reach the native bridge without '
+      'mixing their lifetimes', () async {
+    final chunks = generateWithFeatures(
+      maxNumTokens: 8192,
+      temperature: 0.25,
+      topK: 32,
+      topP: 0.8,
+      maxOutputTokens: 512,
+      visionEnabled: true,
+      audioEnabled: true,
+      thinkingEnabled: true,
+      thinkingBudget: 256,
+      messages: const [
+        {'role': 'user', 'content': 'hello'},
+      ],
+    );
+    final done = Completer<void>();
+    chunks.listen((_) {}, onDone: done.complete);
+
+    final send = await fake.waitForArgs('sendMessage');
+    final requestId = send['requestId'] as String;
+    fake.emit({'type': 'done', 'requestId': requestId});
+    await done.future;
+
+    expect(fake.argsOf('loadModel'), containsPair('maxNumTokens', 8192));
+    expect(fake.argsOf('loadModel'), containsPair('visionEnabled', true));
+    expect(fake.argsOf('loadModel'), containsPair('audioEnabled', true));
+    expect(fake.argsOf('startConversation'), containsPair('temperature', 0.25));
+    expect(fake.argsOf('startConversation'), containsPair('topK', 32));
+    expect(fake.argsOf('startConversation'), containsPair('topP', 0.8));
+    expect(
+      fake.argsOf('startConversation'),
+      containsPair('maxOutputTokens', 512),
+    );
+    expect(
+      fake.argsOf('startConversation'),
+      containsPair('thinkingEnabled', true),
+    );
+    expect(
+      fake.argsOf('startConversation'),
+      containsPair('thinkingBudget', 256),
+    );
+  });
+
+  test(
+    'multimodal contents are sent as structured image and audio paths',
+    () async {
+      final chunks = generateWithFeatures(
+        visionEnabled: true,
+        audioEnabled: true,
+        messages: const [
+          {
+            'role': 'user',
+            'content': [
+              {'type': 'text', 'text': 'Describe these files'},
+              {'type': 'image', 'path': '/tmp/photo.png'},
+              {'type': 'audio', 'path': '/tmp/voice.wav'},
+            ],
+          },
+        ],
+      );
+      final done = Completer<void>();
+      chunks.listen((_) {}, onDone: done.complete);
+
+      final send = await fake.waitForArgs('sendMessage');
+      expect(send['contents'], [
+        {'type': 'text', 'text': 'Describe these files'},
+        {'type': 'image', 'path': '/tmp/photo.png'},
+        {'type': 'audio', 'path': '/tmp/voice.wav'},
+      ]);
+      fake.emit({'type': 'done', 'requestId': send['requestId']});
+      await done.future;
+    },
+  );
+
+  test(
+    'model-internal reasoning channel is omitted while the final answer streams',
+    () async {
+      final stream = generateWithFeatures(
+        thinkingEnabled: true,
+        messages: const [
+          {'role': 'user', 'content': 'think first'},
+        ],
+      );
+      final chunks = <StreamChunk>[];
+      final done = Completer<void>();
+      stream.listen(chunks.add, onDone: done.complete);
+
+      final send = await fake.waitForArgs('sendMessage');
+      final requestId = send['requestId'] as String;
+      fake.emit({
+        'type': 'reasoningDelta',
+        'requestId': requestId,
+        'text': 'plan',
+      });
+      fake.emit({
+        'type': 'textDelta',
+        'requestId': requestId,
+        'text': 'answer',
+      });
+      fake.emit({'type': 'done', 'requestId': requestId});
+      await done.future;
+
+      expect(chunks.whereType<ReasoningStart>(), isEmpty);
+      expect(chunks.whereType<ReasoningDelta>(), isEmpty);
+      expect(chunks.whereType<ReasoningEnd>(), isEmpty);
+      expect(chunks, [
+        isA<TextStart>(),
+        isA<TextDelta>().having((chunk) => chunk.text, 'text', 'answer'),
+        isA<TextEnd>(),
+        isA<Finish>(),
+      ]);
+    },
+  );
+
+  test('native tool calls execute through the existing handler and resume '
+      'the same request with tool responses', () async {
+    final invoked = <({String name, Map<String, dynamic> args, String? id})>[];
+    final stream = generateWithFeatures(
+      tools: const [
+        {
+          'type': 'function',
+          'function': {
+            'name': 'search',
+            'description': 'Search locally',
+            'parameters': {
+              'type': 'object',
+              'properties': {
+                'query': {'type': 'string'},
+              },
+              'required': ['query'],
+            },
+          },
+        },
+      ],
+      onToolCall: (name, args, {toolCallId}) async {
+        invoked.add((name: name, args: args, id: toolCallId));
+        return const {'result': 'found'};
+      },
+      messages: const [
+        {'role': 'user', 'content': 'find it'},
+      ],
+    );
+    final chunks = <StreamChunk>[];
+    final done = Completer<void>();
+    stream.listen(chunks.add, onDone: done.complete);
+
+    final send = await fake.waitForArgs('sendMessage');
+    final requestId = send['requestId'] as String;
+    fake.emit({
+      'type': 'toolCalls',
+      'requestId': requestId,
+      'calls': [
+        {
+          'name': 'search',
+          'arguments': {'query': 'LiteRT'},
+        },
+      ],
+    });
+
+    final response = await fake.waitForArgs('sendToolResponses');
+    expect(invoked, hasLength(1));
+    expect(invoked.single.name, 'search');
+    expect(invoked.single.args, {'query': 'LiteRT'});
+    expect(invoked.single.id, isNotEmpty);
+    expect(response['requestId'], requestId);
+    expect(response['responses'], [
+      {
+        'name': 'search',
+        'response': jsonEncode({'result': 'found'}),
+      },
+    ]);
+
+    fake.emit({'type': 'textDelta', 'requestId': requestId, 'text': 'done'});
+    fake.emit({'type': 'done', 'requestId': requestId});
+    await done.future;
+
+    expect(chunks.whereType<ToolCallStart>(), hasLength(1));
+    expect(chunks.whereType<ToolCallDelta>(), hasLength(1));
+    expect(chunks.whereType<ToolCallEnd>(), hasLength(1));
+    expect(chunks.whereType<ToolCallResult>(), hasLength(1));
+    expect(chunks.last, isA<Finish>());
+  });
+
+  test('keepLoaded false unloads after the request completes', () async {
+    final stream = generateWithFeatures(
+      keepLoaded: false,
+      messages: const [
+        {'role': 'user', 'content': 'one shot'},
+      ],
+    );
+    final done = Completer<void>();
+    stream.listen((_) {}, onDone: done.complete);
+
+    final send = await fake.waitForArgs('sendMessage');
+    fake.emit({'type': 'done', 'requestId': send['requestId']});
+    await done.future;
+
+    await fake.waitForCall('unloadModel');
+    expect(runtime.loadedModelPath, isNull);
   });
 }
