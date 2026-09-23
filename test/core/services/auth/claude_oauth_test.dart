@@ -716,7 +716,7 @@ void main() {
             );
             expect(
               request.headers['user-agent'],
-              'claude-cli/2.1.257 (external, cli)',
+              'claude-cli/2.1.280 (external, cli)',
             );
             calls++;
             if (calls == 1) {
@@ -792,8 +792,8 @@ void main() {
   // Generated independently with Bun.hash.xxHash64 (OMP 6f2c14b3), including
   // a UTF-16 surrogate at fingerprint index 4 and a Unicode request body.
   for (final vector in [
-    ('Hello', '468', '87936'),
-    ('编码测试🙂cache校验字符串with emoji', 'edf', '4270f'),
+    ('Hello', '790', '48ad2'),
+    ('编码测试🙂cache校验字符串with emoji', '05c', '3e8a3'),
   ]) {
     test(
       'Claude billing fingerprint and cch match the Bun oracle for ${vector.$1}',
@@ -813,7 +813,7 @@ void main() {
         );
         expect(
           (jsonDecode(encoded)['system'] as List).first['text'],
-          'x-anthropic-billing-header: cc_version=2.1.257.${vector.$2}; cc_entrypoint=cli; cch=${vector.$3};',
+          'x-anthropic-billing-header: cc_version=2.1.280.${vector.$2}; cc_entrypoint=cli; cch=${vector.$3};',
         );
       },
     );
@@ -859,7 +859,7 @@ void main() {
         // Independent SHA-256 vector from OMP: first text "hi" -> 9c3.
         expect(
           (body['system'] as List).first['text'],
-          contains('cc_version=2.1.257.9c3;'),
+          contains('cc_version=2.1.280.d7b;'),
         );
       },
     );
@@ -942,7 +942,7 @@ void main() {
             expect(request.headers, isNot(contains('x-api-key')));
             expect(
               request.headers['user-agent'],
-              'claude-cli/2.1.257 (external, cli)',
+              'claude-cli/2.1.280 (external, cli)',
             );
             expect(
               request.headers['anthropic-beta'],
