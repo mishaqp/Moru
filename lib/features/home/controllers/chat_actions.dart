@@ -944,7 +944,15 @@ class ChatActions {
             pausedForBacklog = false;
             sourceSubscription.resume();
           }
-          if (events.isNotEmpty && budget.elapsed >= processingBudget) {
+          // Finish a queued terminal event before yielding to the event loop.
+          // Otherwise a blocked checkpoint can resume and persist a redundant
+          // full snapshot just before onDone replaces it with the final write.
+          final nextIsTerminal =
+              events.isNotEmpty &&
+              (events.first.done || events.first.error != null);
+          if (events.isNotEmpty &&
+              !nextIsTerminal &&
+              budget.elapsed >= processingBudget) {
             // Awaiting an already-completed handler only yields to microtasks.
             // Give input, vsync and the other conversations an event-loop turn.
             await Future<void>.delayed(Duration.zero);
