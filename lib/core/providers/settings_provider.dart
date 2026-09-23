@@ -1586,16 +1586,10 @@ class SettingsProvider extends ChangeNotifier {
     }
 
     // Imported/downloaded LiteRT files are app-owned copies. The original
-    // files picked from Downloads remain where the user placed them.
-    try {
-      final root = await AppDirectories.getAppDataDirectory();
-      final directory = Directory(p.join(root.path, 'litert_models'));
-      if (await directory.exists()) await directory.delete(recursive: true);
-    } on FileSystemException catch (error) {
-      debugPrint('Could not remove retired model copies: $error');
-    } catch (_) {
-      // Path provider may be unavailable in non-platform unit tests.
-    }
+    // files picked from Downloads remain where the user placed them. Run
+    // this in the background so a slow or unavailable path provider (e.g.
+    // in unit tests that never mock it) cannot stall settings load.
+    _removeRetiredLocalModelCopies();
 
     // kick off a one-time connectivity test for services (exclude local Bing)
     if (_searchAutoTestOnLaunch) {
@@ -2301,6 +2295,18 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = _preferences;
     await prefs.setString(_s3ConfigKey, jsonEncode(cfg.toJson()));
+  }
+
+  Future<void> _removeRetiredLocalModelCopies() async {
+    try {
+      final root = await AppDirectories.getAppDataDirectory();
+      final directory = Directory(p.join(root.path, 'litert_models'));
+      if (await directory.exists()) await directory.delete(recursive: true);
+    } on FileSystemException catch (error) {
+      debugPrint('Could not remove retired model copies: $error');
+    } catch (_) {
+      // Path provider may be unavailable in non-platform unit tests.
+    }
   }
 
   Future<void> _initSearchConnectivityTests() async {
