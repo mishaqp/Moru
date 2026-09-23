@@ -502,7 +502,9 @@ bool _isClaudeAdaptiveOnlyThinkingModel(String modelId) {
 
 bool _isClaudeThinkingAlwaysOnModel(String modelId) {
   final lower = modelId.trim().toLowerCase();
-  return lower.contains('claude-fable') || lower.contains('claude-mythos');
+  return lower.contains('claude-fable') ||
+      lower.contains('claude-mythos') ||
+      RegExp(r'claude-opus-5[-.]5(?:$|[._:@/-])').hasMatch(lower);
 }
 
 String _claudeEffortForBudget(int? budget) {
@@ -612,8 +614,8 @@ Map<String, dynamic>? claudeOutputConfig(
     };
   }
   if (_isClaudeThinkingAlwaysOnModel(modelId)) {
-    // Adaptive thinking cannot be disabled. Omitting effort defaults to high,
-    // so UI "off" must send the lowest legal level instead.
+    // Adaptive thinking cannot be disabled; UI "off" selects the lowest
+    // legal effort level instead of sending thinking.type=disabled.
     var effort = _claudeEffortForBudget(budget);
     if (effort == 'off') effort = 'low';
     effort = _normalizeClaudeEffort(effort, modelId);
