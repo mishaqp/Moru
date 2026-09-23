@@ -2,7 +2,6 @@ package com.psyche.kelivo
 
 import android.app.Application
 import com.psyche.kelivo.background.BackgroundRuntime
-import com.psyche.kelivo.litert.LiteRtPlugin
 import com.psyche.kelivo.workspace.WorkspacePlugin
 import com.psyche.kelivo.scheduled.ScheduledTasks
 import io.flutter.embedding.engine.FlutterEngine
@@ -14,7 +13,6 @@ class KelivoApplication : Application() {
     val scheduledTasks by lazy { ScheduledTasks(this) }
     val workspace by lazy { WorkspacePlugin(this) }
     val deviceTools by lazy { DeviceLocalToolsHandler(this) }
-    val litert by lazy { LiteRtPlugin(this) }
 
     private val engineHolder = lazy {
         FlutterEngine(this).also { engine ->
@@ -23,7 +21,6 @@ class KelivoApplication : Application() {
             scheduledTasks.configure(messenger)
             workspace.configure(messenger)
             deviceTools.configure(messenger)
-            litert.configure(messenger)
             engine.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint.createDefault())
         }
     }

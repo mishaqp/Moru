@@ -62,6 +62,37 @@ void main() {
     expect(resolved.modelId, 'assistant-model');
   });
 
+  test('a retired on-device model pin falls back to the assistant', () async {
+    await settings.setPerChatModelEnabled(true);
+    final resolved = resolveChatModel(
+      settings,
+      conversation: conversationWithModel(
+        providerKey: 'litert-local',
+        modelId: 'old-model',
+      ),
+      assistant: assistantWithModel(
+        providerKey: 'AssistantProvider',
+        modelId: 'assistant-model',
+      ),
+    );
+
+    expect(resolved.providerKey, 'AssistantProvider');
+    expect(resolved.modelId, 'assistant-model');
+  });
+
+  test('a retired assistant model falls back to the global model', () {
+    final resolved = resolveChatModel(
+      settings,
+      assistant: assistantWithModel(
+        providerKey: 'litert-local',
+        modelId: 'old-model',
+      ),
+    );
+
+    expect(resolved.providerKey, 'GlobalProvider');
+    expect(resolved.modelId, 'global-model');
+  });
+
   test('the conversation outranks the assistant when enabled', () async {
     await settings.setPerChatModelEnabled(true);
 

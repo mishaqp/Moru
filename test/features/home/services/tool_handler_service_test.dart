@@ -265,31 +265,6 @@ void main() {
       }
     });
 
-    test('ProviderKind.local preserves the JSON-schema subset accepted by '
-        'LiteRT OpenApiTool', () {
-      final schema = <String, dynamic>{
-        'type': 'object',
-        'description': 'a real, non-trivial tool schema',
-        'properties': {
-          'query': {'type': 'string', 'description': 'search text'},
-          'limit': {'type': 'integer'},
-        },
-        'required': ['query'],
-        'additionalProperties': false,
-      };
-
-      final output = ToolHandlerService.sanitizeToolParametersForProvider(
-        schema,
-        ProviderKind.local,
-      );
-
-      expect(
-        output,
-        schema,
-        reason: 'LiteRT accepts the same portable schema subset as OpenAI',
-      );
-    });
-
     test(
       'Google additionalProperties fan-out still advertises payload fields',
       () {

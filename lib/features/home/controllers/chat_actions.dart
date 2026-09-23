@@ -2262,7 +2262,6 @@ class ChatActions {
             extraBody: ctx.extraBody,
             requestId: conversationId,
             conversationId: conversationId,
-            isConversationTurn: true,
             allowImagesApiRouting: ctx.allowImagesApiRouting,
             ocrActive: ctx.ocrActive,
             parseMarkdownImageLinks:
@@ -2318,7 +2317,6 @@ class ChatActions {
         extraBody: ctx.extraBody,
         requestId: conversationId,
         conversationId: conversationId,
-        isConversationTurn: true,
         allowImagesApiRouting: ctx.allowImagesApiRouting,
         ocrActive: ctx.ocrActive,
         parseMarkdownImageLinks: ctx.settings.sendMarkdownImageLinksAsImages,

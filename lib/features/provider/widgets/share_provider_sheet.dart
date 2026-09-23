@@ -30,9 +30,7 @@ String encodeProviderConfig(ProviderConfig cfg) {
       type = 'openai';
       break;
     case ProviderKind.local:
-      // A local provider has no apiKey/baseUrl to share -- it references a
-      // model file that only exists on this device. The share entry point
-      // must not be offered for it (model-management UI, not this sheet).
+      // Legacy persisted value, rejected by settings migration.
       throw UnsupportedError(
         'Local model providers cannot be shared via QR/link.',
       );
