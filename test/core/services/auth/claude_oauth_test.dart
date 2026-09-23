@@ -789,14 +789,14 @@ void main() {
     },
   );
 
-  // Generated independently with Bun.hash.xxHash64 (OMP 6f2c14b3), including
-  // a UTF-16 surrogate at fingerprint index 4 and a Unicode request body.
+  // Reference XXHash64 vectors with OMP's seed, cross-checked against the
+  // previous Bun fixtures, including Unicode in the request body.
   for (final vector in [
     ('Hello', '790', '48ad2'),
     ('编码测试🙂cache校验字符串with emoji', '05c', '3e8a3'),
   ]) {
     test(
-      'Claude billing fingerprint and cch match the Bun oracle for ${vector.$1}',
+      'Claude billing fingerprint and cch match reference for ${vector.$1}',
       () {
         final encoded = encodeClaudeOAuthRequest(
           {
