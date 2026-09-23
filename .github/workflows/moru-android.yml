@@ -113,6 +113,12 @@ jobs:
           cp "${apks[0]}" "out/Moru-arm64-v8a-$BUILD_VARIANT.apk"
           python3 tool/verify_apk_arm64.py "out/Moru-arm64-v8a-$BUILD_VARIANT.apk" > reports/apk-abi.json
           cat reports/apk-abi.json
+      # Robolectric needs Java 21 to run the API 36 refresh-rate tests.
+      # Keep the APK build on the existing Java 17 toolchain above.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - name: Run Android JVM unit tests without building another architecture
         working-directory: android
         run: |
