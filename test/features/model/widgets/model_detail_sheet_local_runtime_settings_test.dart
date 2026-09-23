@@ -142,13 +142,18 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(gpuOption);
       await tester.pumpAndSettle();
+      final runtimeScrollable = find.descendant(
+        of: find.byType(ListView),
+        matching: find.byType(Scrollable),
+      ).first;
+      expect(tester.widget<Scrollable>(runtimeScrollable).axisDirection, AxisDirection.down);
       final audioSwitch = find.byKey(
         const ValueKey('local-runtime-audio-switch'),
       );
       await tester.scrollUntilVisible(
         audioSwitch,
         200,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: runtimeScrollable,
       );
       await tester.pumpAndSettle();
       await tester.tap(audioSwitch);
@@ -159,7 +164,7 @@ void main() {
       await tester.scrollUntilVisible(
         keepLoadedSwitch,
         200,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: runtimeScrollable,
       );
       await tester.pumpAndSettle();
       await tester.tap(keepLoadedSwitch);
