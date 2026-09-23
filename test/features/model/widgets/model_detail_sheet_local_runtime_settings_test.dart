@@ -141,15 +141,27 @@ void main() {
       await tester.ensureVisible(gpuOption);
       await tester.pumpAndSettle();
       await tester.tap(gpuOption);
+      await tester.pumpAndSettle();
       final audioSwitch = find.byKey(
         const ValueKey('local-runtime-audio-switch'),
       );
-      await tester.ensureVisible(audioSwitch);
+      await tester.scrollUntilVisible(
+        audioSwitch,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(audioSwitch);
+      await tester.pumpAndSettle();
       final keepLoadedSwitch = find.byKey(
         const ValueKey('local-runtime-keep-loaded-switch'),
       );
-      await tester.ensureVisible(keepLoadedSwitch);
+      await tester.scrollUntilVisible(
+        keepLoadedSwitch,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(keepLoadedSwitch);
       await tester.pumpAndSettle();
 
