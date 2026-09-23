@@ -16,7 +16,7 @@ void main() {
   });
 
   testWidgets(
-    'mobile settings lists Tools & permissions below Logs and above Sponsor',
+    'mobile settings keeps Tools & permissions below Logs without info links',
     (tester) async {
       tester.view.physicalSize = const Size(400, 4000);
       tester.view.devicePixelRatio = 1.0;
@@ -46,10 +46,9 @@ void main() {
         labels.indexOf('Tools & permissions'),
         greaterThan(labels.indexOf('Logs')),
       );
-      expect(
-        labels.indexOf('Sponsor'),
-        greaterThan(labels.indexOf('Tools & permissions')),
-      );
+      for (final label in ['About', 'Documentation', 'Sponsor']) {
+        expect(labels, isNot(contains(label)));
+      }
       expect(
         labels.indexOf('Tools & permissions'),
         greaterThan(labels.indexOf('Search')),
