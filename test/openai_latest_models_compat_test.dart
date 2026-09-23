@@ -109,6 +109,8 @@ void main() {
       expect(openAINormalizeReasoningEffort('off', 'grok-4.6'), 'low');
       expect(openAINormalizeReasoningEffort('xhigh', 'grok-4.6'), 'xhigh');
       expect(openAINormalizeReasoningEffort('max', 'x-ai/grok-4.6'), 'xhigh');
+      expect(openAINormalizeReasoningEffort('off', 'grok-4.7'), 'low');
+      expect(openAINormalizeReasoningEffort('max', 'x-ai/grok-4.7'), 'xhigh');
       expect(openAINormalizeReasoningEffort('off', 'deepseek-v4-pro'), 'off');
       expect(
         openAINormalizeReasoningEffort('medium', 'deepseek-v4-flash'),

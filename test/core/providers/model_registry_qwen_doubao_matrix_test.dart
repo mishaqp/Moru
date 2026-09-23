@@ -3,6 +3,21 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ModelRegistry Qwen / Doubao matrix', () {
+    test('MiMo v2.6 accepts images without changing v2.5-pro', () {
+      for (final id in const [
+        'mimo-v2.6-flash',
+        'xiaomi/mimo-v2.6-pro',
+        'mimo-v2.6-ultraspeed',
+      ]) {
+        final model = ModelRegistry.infer(ModelInfo(id: id, displayName: id));
+        expect(model.input, contains(Modality.image), reason: id);
+      }
+      final textOnly = ModelRegistry.infer(
+        ModelInfo(id: 'mimo-v2.5-pro', displayName: 'mimo-v2.5-pro'),
+      );
+      expect(textOnly.input, isNot(contains(Modality.image)));
+    });
+
     test('Qwen vision is precise for 3.7/3.8', () {
       final plus = ModelRegistry.infer(
         ModelInfo(id: 'qwen3.7-plus', displayName: 'qwen3.7-plus'),
