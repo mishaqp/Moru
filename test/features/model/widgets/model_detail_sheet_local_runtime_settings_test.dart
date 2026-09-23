@@ -146,7 +146,10 @@ void main() {
         of: find.byType(ListView),
         matching: find.byType(Scrollable),
       ).first;
-      expect(tester.widget<Scrollable>(runtimeScrollable).axisDirection, AxisDirection.down);
+      expect(
+        tester.widget<Scrollable>(runtimeScrollable).axisDirection,
+        AxisDirection.down,
+      );
       final audioSwitch = find.byKey(
         const ValueKey('local-runtime-audio-switch'),
       );
