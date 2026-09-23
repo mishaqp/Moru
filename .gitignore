@@ -75,3 +75,7 @@ internationalization.md
 key.properties
 android/key.properties
 android/app/moru-release.jks
+
+# Local iOS profiling tools and device measurements
+/docs/performance/ios-device-*/
+/tool/ios_performance/

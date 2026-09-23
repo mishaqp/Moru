@@ -503,7 +503,7 @@ abstract class BuiltInToolsHelper {
         if (isOpenRouterProvider(cfg)) {
           return true;
         }
-        if (isGrokModel(upstreamModelId)) return true;
+        if (isGrokModel(upstreamModelId)) return cfg.useResponseApi == true;
         if (cfg.useResponseApi == true) {
           if (isOpenAIResponsesBuiltInSearchSupportedModel(upstreamModelId)) {
             return true;
@@ -562,7 +562,6 @@ abstract class BuiltInToolsHelper {
   }) {
     final configured = _configuredTools(cfg, modelId, configuredTools);
     final tools = <Map<String, dynamic>>[];
-    final body = <String, dynamic>{};
 
     void add(Map<String, dynamic> tool) {
       final type = (tool['type'] ?? '').toString();
@@ -599,8 +598,9 @@ abstract class BuiltInToolsHelper {
       return BuiltInToolsRequestPayload(tools: tools);
     }
     if (isGrokModel(upstreamModelId)) {
-      body['search_parameters'] = {'mode': 'auto', 'return_citations': true};
-      return BuiltInToolsRequestPayload(tools: tools, body: body);
+      add({'type': 'web_search'});
+      add({'type': 'x_search'});
+      return BuiltInToolsRequestPayload(tools: tools);
     }
 
     final supportsSearch =
@@ -671,16 +671,6 @@ abstract class BuiltInToolsHelper {
     }
     if (!configured.contains(BuiltInToolNames.search)) {
       return const BuiltInToolsRequestPayload();
-    }
-    if (isGrokModel(upstreamModelId)) {
-      return const BuiltInToolsRequestPayload(
-        body: <String, dynamic>{
-          'search_parameters': <String, dynamic>{
-            'mode': 'auto',
-            'return_citations': true,
-          },
-        },
-      );
     }
     if (isDashScopeProvider(cfg) &&
         isDashScopeChatBuiltInSearchSupportedModel(upstreamModelId)) {
@@ -1028,7 +1018,7 @@ abstract class BuiltInToolsHelper {
       case ProviderKind.claude:
         return true;
       case ProviderKind.openai:
-        // OpenAI requires Responses API, or Grok models
+        // OpenAI and native Grok search require Responses API.
         if (useResponseApi &&
             isOpenAIResponsesBuiltInSearchSupportedModel(modelId)) {
           return true;
@@ -1041,7 +1031,7 @@ abstract class BuiltInToolsHelper {
             isDoubaoResponsesBuiltInSearchSupportedModel(modelId)) {
           return true;
         }
-        if (isGrokModel(modelId)) return true;
+        if (isGrokModel(modelId)) return useResponseApi;
         if (isDashScopeChatBuiltInSearchSupportedModel(modelId)) return true;
         if (isMimoBuiltInSearchSupportedModel(modelId)) return true;
         if (isKimiK3Model(modelId)) return true;

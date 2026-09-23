@@ -30,6 +30,8 @@ class _BackgroundTask {
     required this.cancel,
     required this.startedAt,
     required this.scheduled,
+    this.scheduledNotify = true,
+    this.scheduledPreview = true,
   });
 
   final String id;
@@ -38,6 +40,7 @@ class _BackgroundTask {
   final Future<void> Function() cancel;
   final DateTime startedAt;
   final bool scheduled;
+  final bool scheduledNotify, scheduledPreview;
   BackgroundTaskPhase phase = BackgroundTaskPhase.requesting;
   String toolName = '';
   int tokens = 0;
@@ -149,6 +152,8 @@ class MobileBackgroundCoordinator extends ChangeNotifier
     required String title,
     required Future<void> Function() cancel,
     bool scheduled = false,
+    bool scheduledNotify = true,
+    bool scheduledPreview = true,
   }) async {
     if (!supported || _tasks.containsKey(id)) return;
     _tasks[id] = _BackgroundTask(
@@ -158,6 +163,8 @@ class MobileBackgroundCoordinator extends ChangeNotifier
       cancel: cancel,
       startedAt: DateTime.now(),
       scheduled: scheduled,
+      scheduledNotify: scheduledNotify,
+      scheduledPreview: scheduledPreview,
     );
     await initialize();
     await _sync();
@@ -208,7 +215,9 @@ class MobileBackgroundCoordinator extends ChangeNotifier
           _foreground &&
           (visibleBrowserAskAiTask?.call(id, task.conversationId) ?? false);
       if (resultPersisted &&
-          (_settings.notificationsEnabled || task.scheduled) &&
+          (task.scheduled
+              ? task.scheduledNotify
+              : _settings.notificationsEnabled) &&
           outcome != BackgroundTaskOutcome.cancelled &&
           !(_foreground &&
               visibleConversation?.call() == task.conversationId) &&
@@ -221,6 +230,7 @@ class MobileBackgroundCoordinator extends ChangeNotifier
                 : task.title,
             body:
                 task.scheduled &&
+                    task.scheduledPreview &&
                     !_settings.privacyMode &&
                     outcome == BackgroundTaskOutcome.completed &&
                     replyPreview?.trim().isNotEmpty == true

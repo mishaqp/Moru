@@ -344,6 +344,8 @@ class ChatActions {
     return _background.start(
       id: _backgroundTaskId(ctx),
       scheduled: ctx.scheduled,
+      scheduledNotify: ctx.scheduledNotify,
+      scheduledPreview: ctx.scheduledPreview,
       conversationId: conversationId,
       title: chatService.getConversation(conversationId)?.title ?? 'Kelivo',
       cancel: () async {
@@ -368,7 +370,7 @@ class ChatActions {
           ? BackgroundTaskPhase.retrying
           : activeTool != null
           ? BackgroundTaskPhase.tool
-          : state.fullContentRaw.isEmpty && state.reasoningStartAt != null
+          : !state.hasContent && state.reasoningStartAt != null
           ? BackgroundTaskPhase.thinking
           : BackgroundTaskPhase.generating,
       tokens: state.totalTokens,
@@ -883,6 +885,12 @@ class ChatActions {
   }
 
   @visibleForTesting
+  Future<void> debugHandleStreamChunk(
+    StreamChunk chunk,
+    stream_ctrl.StreamingState state,
+  ) => _handleStreamChunk(chunk, state);
+
+  @visibleForTesting
   static StreamSubscription<T> listenSequentiallyToStream<T>({
     required Stream<T> stream,
     required Future<void> Function(T chunk) onData,
@@ -894,6 +902,12 @@ class ChatActions {
     late final StreamSubscription<T> sourceSubscription;
     Future<void>? drainFuture;
     var terminalQueued = false;
+    var pausedForBacklog = false;
+    // Leave room for a short burst, but stop reading when a slow handler falls
+    // behind. Resume below the low-water mark to avoid pause/resume per delta.
+    const highWaterMark = 128;
+    const lowWaterMark = 64;
+    const processingBudget = Duration(milliseconds: 4);
 
     Future<void> reportError(Object error, StackTrace stackTrace) async {
       try {
@@ -912,6 +926,7 @@ class ChatActions {
     }
 
     Future<void> drain() async {
+      final budget = Stopwatch()..start();
       try {
         while (events.isNotEmpty) {
           final event = events.removeFirst();
@@ -927,6 +942,16 @@ class ChatActions {
             return;
           }
           await onData(event.data as T);
+          if (pausedForBacklog && events.length <= lowWaterMark) {
+            pausedForBacklog = false;
+            sourceSubscription.resume();
+          }
+          if (events.isNotEmpty && budget.elapsed >= processingBudget) {
+            // Awaiting an already-completed handler only yields to microtasks.
+            // Give input, vsync and the other conversations an event-loop turn.
+            await Future<void>.delayed(Duration.zero);
+            budget.reset();
+          }
         }
       } catch (error, stackTrace) {
         terminalQueued = true;
@@ -948,6 +973,10 @@ class ChatActions {
       ({T? data, Object? error, StackTrace? stackTrace, bool done}) event,
     ) {
       events.add(event);
+      if (!pausedForBacklog && events.length >= highWaterMark) {
+        pausedForBacklog = true;
+        sourceSubscription.pause();
+      }
       scheduleDrain();
     }
 
@@ -1173,6 +1202,8 @@ class ChatActions {
     ({String providerKey, String modelId})? modelOverride,
     ValueChanged<String>? onGenerationStarted,
     bool scheduled = false,
+    bool scheduledNotify = true,
+    bool scheduledPreview = true,
   }) async {
     final claimToken = ++_sendInFlightClaimSerial;
     if (isSendInFlight(conversation.id)) {
@@ -1187,6 +1218,8 @@ class ChatActions {
         modelOverride: modelOverride,
         onGenerationStarted: onGenerationStarted,
         scheduled: scheduled,
+        scheduledNotify: scheduledNotify,
+        scheduledPreview: scheduledPreview,
       );
     } finally {
       if (_sendInFlightClaims[conversation.id] == claimToken) {
@@ -1202,6 +1235,8 @@ class ChatActions {
     ({String providerKey, String modelId})? modelOverride,
     ValueChanged<String>? onGenerationStarted,
     bool scheduled = false,
+    bool scheduledNotify = true,
+    bool scheduledPreview = true,
   }) async {
     final content = input.text.trim();
     if (content.isEmpty &&
@@ -1312,6 +1347,8 @@ class ChatActions {
         conversation: conversation,
         settings: settings,
         scheduled: scheduled,
+        scheduledNotify: scheduledNotify,
+        scheduledPreview: scheduledPreview,
         assistant: assistant,
         assistantId: assistantId,
         providerKey: providerKey,
@@ -1334,6 +1371,8 @@ class ChatActions {
     required Conversation conversation,
     required SettingsProvider settings,
     required bool scheduled,
+    required bool scheduledNotify,
+    required bool scheduledPreview,
     required Assistant? assistant,
     required String? assistantId,
     required String providerKey,
@@ -1429,6 +1468,8 @@ class ChatActions {
         supportsReasoning: supportsReasoning,
         enableReasoning: enableReasoning,
         scheduled: scheduled,
+        scheduledNotify: scheduledNotify,
+        scheduledPreview: scheduledPreview,
         generateTitleOnFinish: true,
         generationRunId: generationRunId,
       );
@@ -1555,6 +1596,8 @@ class ChatActions {
     bool preserveFollowingMessages = false,
     ValueChanged<String>? onGenerationStarted,
     bool scheduled = false,
+    bool scheduledNotify = true,
+    bool scheduledPreview = true,
   }) async {
     final claimToken = ++_sendInFlightClaimSerial;
     if (isSendInFlight(conversation.id)) {
@@ -1572,6 +1615,8 @@ class ChatActions {
         preserveFollowingMessages: preserveFollowingMessages,
         onGenerationStarted: onGenerationStarted,
         scheduled: scheduled,
+        scheduledNotify: scheduledNotify,
+        scheduledPreview: scheduledPreview,
       );
     } finally {
       if (_sendInFlightClaims[conversation.id] == claimToken) {
@@ -1590,6 +1635,8 @@ class ChatActions {
     bool preserveFollowingMessages = false,
     ValueChanged<String>? onGenerationStarted,
     bool scheduled = false,
+    bool scheduledNotify = true,
+    bool scheduledPreview = true,
   }) async {
     // Avoid using BuildContext across async gaps (this class holds a BuildContext).
     final settings = contextProvider.read<SettingsProvider>();
@@ -1825,6 +1872,8 @@ class ChatActions {
           supportsReasoning: supportsReasoning,
           enableReasoning: enableReasoning,
           scheduled: scheduled,
+          scheduledNotify: scheduledNotify,
+          scheduledPreview: scheduledPreview,
           generateTitleOnFinish: false,
           generationRunId: begin.runId,
         );
@@ -2504,11 +2553,13 @@ class ChatActions {
   void _publishAssistantParts(stream_ctrl.StreamingState state) {
     if (!state.ctx.streamOutput || state.finishHandled) return;
     streamController.streamingContentNotifier.getNotifier(state.messageId);
-    streamController.streamingContentNotifier.updateContent(
+    streamController.schedulePartsUpdate(
       state.messageId,
-      _transformAssistantContent(state),
-      state.totalTokens,
-      parts: _assistantPartsForState(state),
+      state.conversationId,
+      contentBuilder: () => _transformAssistantContent(state),
+      partsBuilder: (visibleText) =>
+          _assistantPartsForState(state, visibleText: visibleText),
+      totalTokens: state.totalTokens,
     );
   }
 
@@ -2915,7 +2966,7 @@ class ChatActions {
 
   void _recordContent(stream_ctrl.StreamingState state, String chunkContent) {
     if (chunkContent.isNotEmpty) {
-      state.fullContentRaw += chunkContent;
+      state.appendContent(chunkContent);
     }
   }
 }
