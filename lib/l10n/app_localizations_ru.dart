@@ -818,9 +818,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get assistantEditPageNotFound => 'Ассистент не найден';
 
   @override
-  String get assistantEditPageWorkspaceTab => 'Рабочее пространство';
-
-  @override
   String get assistantEditPageBasicTab => 'Основное';
 
   @override
@@ -4936,6 +4933,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String get desktopSettingsFontsTitle => 'Шрифты';
 
   @override
+  String get linuxHideTitleBarTitle => 'Скрыть системную панель заголовка';
+
+  @override
+  String get linuxHideTitleBarDescription =>
+      'Также скрывает кнопки окна. Перемещайте, изменяйте размер и закрывайте окно средствами вашего оконного менеджера.';
+
+  @override
+  String get linuxHideTitleBarError =>
+      'Не удалось изменить панель заголовка. Попробуйте ещё раз.';
+
+  @override
   String get displaySettingsPageTrayTitle => 'Системный трей';
 
   @override
@@ -5809,6 +5817,20 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get searchProviderAnySearchDescription =>
       'Единый поиск для ИИ-агентов с автоматическим выбором веб-источников и специализированных данных. API-ключ необязателен.';
+
+  @override
+  String get searchServiceNameKagi => 'Kagi';
+
+  @override
+  String get searchProviderKagiDescription =>
+      'Kagi Search API. Возвращает премиальные результаты веб-поиска Kagi.';
+
+  @override
+  String get searchServiceNameKimi => 'Kimi';
+
+  @override
+  String get searchProviderKimiDescription =>
+      'Kimi Search API. Pro возвращает релевантные фрагменты содержимого страниц; Basic — заголовки, ссылки и краткие описания.';
 
   @override
   String get searchServiceNameParallel => 'Parallel';
@@ -9989,6 +10011,30 @@ class AppLocalizationsRu extends AppLocalizations {
       'Новые диалоги с этим ассистентом будут привязаны к этому рабочему пространству.';
 
   @override
+  String get workspaceEntryDefaultWorkspaceUnset => 'Не задано';
+
+  @override
+  String get workspaceEntryDefaultWorkspaceAutomaticSubtitle =>
+      'Первая рабочая область, которую вы привяжете к диалогу, будет запомнена для новых диалогов.';
+
+  @override
+  String workspaceBindingRememberedDefault(String assistant) {
+    return 'Запомнена как рабочая область по умолчанию для «$assistant». Новые диалоги будут использовать её.';
+  }
+
+  @override
+  String workspaceBindingSuggestDefault(String assistant) {
+    return 'Использовать эту рабочую область и для будущих диалогов с «$assistant»?';
+  }
+
+  @override
+  String get workspaceBindingUndoDefault => 'Отменить';
+
+  @override
+  String get workspaceBindingUseAsDefault =>
+      'Сделать рабочей областью по умолчанию';
+
+  @override
   String get workspaceEntryNone => 'Нет';
 
   @override
@@ -12059,6 +12105,229 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get scheduledTasksPreparation => 'Выполнение и уведомления';
+
+  @override
+  String get scheduledTasksAllowPreparation =>
+      'Разрешить заблаговременную подготовку';
+
+  @override
+  String get scheduledTasksPreparationDetail =>
+      'Заблаговременная подготовка подходит для текстовых задач, не требующих актуальной информации. Она не может использовать инструменты, вложения или выполнять внешние действия.';
+
+  @override
+  String get scheduledTasksIOSDetail =>
+      'Ограничения фонового режима iOS не позволяют Moru просыпаться в заданное время для запуска модели. Вместо этого содержимое готовится, пока приложение может работать, а система показывает уведомление в назначенное время. Готовится только следующее срабатывание. Подготовка может не завершиться после выхода из приложения — откройте Moru снова, чтобы подготовить последующие срабатывания.';
+
+  @override
+  String get scheduledTasksContextPolicy => 'Контекст диалога';
+
+  @override
+  String get scheduledTasksContextLatest => 'Следовать за последним диалогом';
+
+  @override
+  String get scheduledTasksContextSnapshot =>
+      'Использовать снимок на момент подготовки';
+
+  @override
+  String get scheduledTasksUnavailable => 'Если выполнение недоступно';
+
+  @override
+  String get scheduledTasksRemind => 'Только отправить напоминание';
+
+  @override
+  String get scheduledTasksSkip => 'Пропустить это срабатывание';
+
+  @override
+  String get scheduledTasksNotify => 'Уведомления о результате';
+
+  @override
+  String get scheduledTasksShowPreview =>
+      'Показывать текст результата в уведомлении';
+
+  @override
+  String get scheduledTasksPreparationWindow =>
+      'Готовить заранее не более чем за';
+
+  @override
+  String get scheduledTasksPreparationAttempts =>
+      'Лимит автоматических попыток';
+
+  @override
+  String get scheduledTasksPreparationCooldown =>
+      'Минимальный интервал (минуты)';
+
+  @override
+  String get scheduledTasksPreparationBudget =>
+      'Одновременно готовится не более одной задачи из всех. Автоматическая подготовка приостанавливается после шести попыток в час суммарно, включая отменённые запросы. «Подготовить сейчас» не ограничено числом попыток.';
+
+  @override
+  String get scheduledTasksPreparing => 'Подготовка результата';
+
+  @override
+  String get scheduledTasksPrepared => 'Результат подготовлен';
+
+  @override
+  String get scheduledTasksPendingPreparation => 'Ещё не подготовлено';
+
+  @override
+  String get scheduledTasksNotificationRegistered =>
+      'Уведомление запланировано';
+
+  @override
+  String get scheduledTasksNotificationUnavailable =>
+      'Уведомление не запланировано';
+
+  @override
+  String get scheduledTasksReminded => 'Наступил срок · только напоминание';
+
+  @override
+  String get scheduledTasksSkipped => 'Пропущено';
+
+  @override
+  String get scheduledTasksCancelled => 'Отменено';
+
+  @override
+  String get scheduledTasksReminderBody =>
+      'Наступил срок запланированной задачи. Откройте Moru, чтобы продолжить.';
+
+  @override
+  String get scheduledTasksResultBody =>
+      'Результат запланированной задачи готов.';
+
+  @override
+  String get scheduledTasksNotificationPermission =>
+      'Разрешить уведомления о задачах';
+
+  @override
+  String get scheduledTasksPreparationCost =>
+      'Подготовка вызывает модель и может стоить дополнительно. При выборе «Следовать за последним диалогом» новые сообщения до наступления срока могут сделать подготовленный результат недействительным. Неиспользованный или отменённый результат всё равно может быть оплачен, а повторная подготовка — это ещё один запрос к модели.';
+
+  @override
+  String get scheduledTasksAllowPreparationTip =>
+      'Готовить следующий результат заранее, пока Moru может работать в фоне. Результат не появится в чате до наступления срока. Подготовка использует только текст, без инструментов, вложений и собственного тела запроса. Может расходовать лимиты модели.';
+
+  @override
+  String get scheduledTasksContextPolicyTip =>
+      'Следовать за последним диалогом: до наступления срока новые сообщения, правки или переключение версии сообщения делают подготовленный результат недействительным; повторная подготовка расходует ещё одну попытку и может стоить дополнительно. По наступлении срока сохранённый результат добавляется в чат без изменений.\n\nИспользовать снимок на момент подготовки: подготовленный результат сохраняется даже при изменении диалога. Он не будет учитывать более поздние сообщения.';
+
+  @override
+  String get scheduledTasksPreparationWindowTip =>
+      'Насколько заранее до назначенного времени может начаться подготовка — до 24 часов. Например, открытие Moru в полдень может подготовить напоминание на следующее утро. Больший интервал даёт больше шансов подготовить результат, но он может быть менее актуальным. Это не меняет само время задачи и не гарантирует фонового выполнения. «Подготовить сейчас» обходит это автоматическое ожидание и все лимиты попыток.';
+
+  @override
+  String get scheduledTasksPreparationAttemptsTip =>
+      'Автоматическая подготовка приостанавливается, когда это срабатывание достигает общего лимита попыток. Первые попытки, ошибки, отмены и ручная подготовка учитываются в этом счётчике. «Подготовить сейчас» может выполниться и после достижения лимита. Больше попыток — больше возможных расходов на модель; это не лимит трат.';
+
+  @override
+  String get scheduledTasksPreparationCooldownTip =>
+      'Минимальное время между началом попыток подготовки для одного и того же срабатывания. Больший интервал снижает число повторных запросов. Повтор всё равно требует, чтобы приложение могло выполниться — это не фоновый таймер. «Подготовить сейчас» обходит это автоматическое ожидание и все лимиты попыток.';
+
+  @override
+  String get scheduledTasksUnavailableTip =>
+      'Если подготовленный результат недоступен и задачу нельзя выполнить в срок — отправить напоминание или пропустить срабатывание. Напоминание не содержит сгенерированного ответа и требует включённых уведомлений. Если Moru открыто в момент наступления срока, задача может выполниться сразу.';
+
+  @override
+  String get scheduledTasksNotifyTip =>
+      'Разрешить уведомления о результате и запасные напоминания. Отключение не останавливает задачу и вызовы модели и не отменяет расходы на подготовку. Также требуется системное разрешение на уведомления.';
+
+  @override
+  String get scheduledTasksShowPreviewTip =>
+      'Показывать текст подготовленного результата в уведомлении, включая экран блокировки, если это разрешено системными настройками. Отключите, чтобы показывать общее уведомление — полный результат останется доступен в чате. Также действуют глобальные настройки приватности уведомлений.';
+
+  @override
+  String scheduledTasksHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count часа',
+      many: '$count часов',
+      few: '$count часа',
+      one: '$count час',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String scheduledTasksMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count минуты',
+      many: '$count минут',
+      few: '$count минуты',
+      one: '$count минута',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get scheduledTasksPreparationOff => 'Подготовка выключена';
+
+  @override
+  String get scheduledTasksPreparationQueued => 'В очереди';
+
+  @override
+  String get scheduledTasksPreparationQueuedDetail =>
+      'Готовится другая задача. Подходящие задачи готовятся по очереди в порядке наступления срока.';
+
+  @override
+  String get scheduledTasksPreparationIdle => 'Ожидание чата';
+
+  @override
+  String get scheduledTasksPreparationIdleDetail =>
+      'Подготовка возобновится после завершения текущих ответов и стабилизации контекста этой задачи.';
+
+  @override
+  String get scheduledTasksPreparationWindowWaiting => 'Вне окна подготовки';
+
+  @override
+  String get scheduledTasksPreparationCooldownWaiting => 'Ожидание повтора';
+
+  @override
+  String scheduledTasksPreparationRetryAt(String time) {
+    return 'Повторить можно после $time';
+  }
+
+  @override
+  String get scheduledTasksPreparationLimitReached =>
+      'Достигнут лимит автоматических попыток';
+
+  @override
+  String scheduledTasksPreparationAttemptsUsed(int count, int limit) {
+    return 'Для этого срабатывания использовано попыток: $count, автоматический лимит — $limit. Используйте «Подготовить сейчас», чтобы продолжить вручную.';
+  }
+
+  @override
+  String get scheduledTasksPreparationHourlyLimit => 'Достигнут часовой лимит';
+
+  @override
+  String get scheduledTasksPreparationHourlyLimitDetail =>
+      'Автоматическая подготовка приостановлена до восстановления часовой квоты. «Подготовить сейчас» по-прежнему доступно.';
+
+  @override
+  String get scheduledTasksPreparationUnavailable => 'Подготовка недоступна';
+
+  @override
+  String get scheduledTasksPreparationReadFailed =>
+      'Не удалось прочитать контекст задачи. Проверка будет повторена в ближайшее время; подробности — в истории выполнения.';
+
+  @override
+  String get scheduledTasksPreparationResultRetained =>
+      'Не удалось проверить контекст. Подготовленный результат сохранён и будет проверен ещё раз.';
+
+  @override
+  String get scheduledTasksPreparationContextChanged =>
+      'Диалог или контекст задачи изменились, поэтому прежний результат отброшен.';
+
+  @override
+  String get scheduledTasksPreparationPublishing => 'Ожидает добавления в чат';
+
+  @override
+  String get scheduledTasksPreparationPublishingDetail =>
+      'Сохранённый результат будет добавлен в диалог после завершения текущего ответа.';
+
+  @override
   String get moruChatNotificationChannel => 'Фоновая работа чата';
 
   @override
@@ -12335,4 +12604,124 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get browserApprovalHeadingUnknownSite =>
       'Moru хочет выполнить действие в браузере';
+
+  @override
+  String get scheduledTasksPreparationPrompt => 'Промпт подготовки';
+
+  @override
+  String get scheduledTasksPreparationPromptTip =>
+      'Дополнительные системные инструкции, используемые только при заблаговременной подготовке этой задачи, отдельно от текста самой задачи. Можно изменить тон или убрать эти инструкции полностью. Инструменты и актуальная информация всё равно недоступны. Изменение этого промпта делает недействительным любой результат, подготовленный до наступления срока — повторная подготовка может стоить ещё один запрос к модели.';
+
+  @override
+  String get scheduledTasksPreparationPromptEmpty =>
+      'Оставьте пустым, чтобы не добавлять инструкций для подготовки';
+
+  @override
+  String scheduledTasksPreparationPromptVariables(
+    String timeVariable,
+    String offsetVariable,
+  ) {
+    return 'Доступные подстановки: $timeVariable — запланированное локальное время доставки, $offsetVariable — его смещение UTC. Они подставляются при подготовке результата.';
+  }
+
+  @override
+  String get scheduledTasksPrepareNow => 'Подготовить сейчас';
+
+  @override
+  String get scheduledTasksPrepareNowDetail =>
+      'Подготовить следующий результат прямо сейчас и доставить его в назначенное время. Автоматические ожидания и лимиты попыток не применяются. Может расходовать лимиты модели. Уже подготовленный результат используется повторно.';
+
+  @override
+  String get scheduledTasksPrepareNowReady =>
+      'Следующий результат уже подготовлен. Дополнительный запрос к модели не выполнялся.';
+
+  @override
+  String get scheduledTasksPrepareNowStarted =>
+      'Готовим следующий результат к назначенному времени.';
+
+  @override
+  String get scheduledTasksPrepareNowBusy =>
+      'Готовится другая задача. Повторите попытку после её завершения.';
+
+  @override
+  String get scheduledTasksPrepareNowChatBusy =>
+      'Дождитесь завершения текущего ответа и повторите попытку.';
+
+  @override
+  String get scheduledTasksPrepareNowDisabled =>
+      'Сначала включите задачу и заблаговременную подготовку. Задачи с режимом «пересоздавать» нельзя подготовить заранее.';
+
+  @override
+  String get scheduledTasksPrepareNowUnavailable =>
+      'Подготовка пока недоступна. Повторите попытку немного позже.';
+
+  @override
+  String get scheduledTasksPrepareNowNoUpcoming =>
+      'Нет предстоящего срабатывания для подготовки. Проверьте время задачи и её включённость.';
+
+  @override
+  String get phoneControlTitle => 'Управление телефоном';
+
+  @override
+  String get phoneControlSubtitle =>
+      'Чтение экрана и выполнение действий через Специальные возможности';
+
+  @override
+  String get phoneControlAccessibilityService =>
+      'Служба специальных возможностей';
+
+  @override
+  String get phoneControlOpenSettings =>
+      'Открыть настройки специальных возможностей';
+
+  @override
+  String get phoneControlRefresh => 'Обновить статус';
+
+  @override
+  String get phoneControlChecking => 'Проверка статуса службы…';
+
+  @override
+  String get phoneControlReady => 'Включено и подключено';
+
+  @override
+  String get phoneControlDisabled => 'Не включено';
+
+  @override
+  String get phoneControlDisconnected =>
+      'Включено, но не подключено. Попробуйте выключить и снова включить службу в системных настройках, затем обновите статус.';
+
+  @override
+  String get phoneControlStatusUnavailable =>
+      'Не удалось прочитать статус службы. Обновите, чтобы попробовать снова.';
+
+  @override
+  String get phoneControlSettingsUnavailable =>
+      'Не удалось открыть настройки. Перейдите вручную: Настройки Android → Специальные возможности.';
+
+  @override
+  String get phoneControlUsageTitle => 'Как это работает';
+
+  @override
+  String get phoneControlDisclosure =>
+      'Для задач управления телефоном, которые вы запрашиваете в диалоге, ассистент может читать текущий экран, нажимать, вводить текст, прокручивать, перемещаться по экранам и открывать приложения. Содержимое экрана отправляется провайдеру модели, настроенному для этого диалога, и сохраняется в результатах инструмента. Поля паролей скрываются. Служба не записывает содержимое экрана непрерывно. Вы можете в любой момент отключить этот инструмент для ассистента или отключить службу в системных настройках.';
+
+  @override
+  String get phoneControlAssistantTitle =>
+      'Включите инструмент для вашего ассистента';
+
+  @override
+  String get phoneControlAssistantHint =>
+      'Нужны оба разрешения: включите управление телефоном Moru в системных настройках специальных возможностей, затем включите «Управление телефоном» в локальных инструментах вашего ассистента (также доступно в меню инструментов чата). Каждый ассистент настраивается отдельно. Держите телефон разблокированным во время выполнения задачи.';
+
+  @override
+  String get phoneControlRestrictedTitle =>
+      'Переключатель специальных возможностей недоступен?';
+
+  @override
+  String get phoneControlRestrictedHint =>
+      'Для некоторых скачанных APK Android сначала требует включить «Разрешить ограниченные настройки» в меню сведений о приложении. Нажмите, чтобы открыть сведения о приложении Moru, затем вернитесь в настройки специальных возможностей.';
+
+  @override
+  String get phoneControlEnableAssistant =>
+      'Разрешить этому ассистенту использовать управление телефоном';
 }
