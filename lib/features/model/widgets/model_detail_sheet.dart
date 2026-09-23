@@ -8,7 +8,7 @@ import '../../../core/services/model_override_resolver.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/ios_settings_rows.dart';
+import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
@@ -832,7 +832,6 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
 
 class _SegmentedSingle extends StatelessWidget {
   const _SegmentedSingle({
-    super.key,
     required this.options,
     required this.value,
     required this.onChanged,
