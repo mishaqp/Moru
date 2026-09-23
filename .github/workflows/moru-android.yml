@@ -4,7 +4,7 @@ on:
     branches: ['master']
   push:
     branches: ['master']
-    paths: ['pubspec.yaml']
+    paths: ['pubspec.yaml', '.github/workflows/moru-android.yml']
   workflow_dispatch:
     inputs:
       variant:
@@ -30,7 +30,7 @@ jobs:
   android:
     name: Android arm64 APK and native tests
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
         with:
@@ -162,8 +162,8 @@ jobs:
   publish:
     name: Publish verified stable arm64 release
     needs: android
-    # A master version bump produces a signed APK artifact only. Publishing
-    # a GitHub Release is a separate, explicit workflow_dispatch opt-in.
+    # A master version bump or release workflow change produces a signed APK
+    # artifact only. Publishing is a separate workflow_dispatch opt-in.
     if: >-
       github.ref == 'refs/heads/master' &&
       github.event_name == 'workflow_dispatch' &&
