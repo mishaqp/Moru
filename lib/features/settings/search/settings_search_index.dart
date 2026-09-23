@@ -488,20 +488,13 @@ class SettingsSearchIndex {
         keywords: 'log debug request flutter context 日志 日誌 调试 偵錯 请求 請求',
       );
     }
-    add(
-      'about',
-      SettingsSearchDestination.about,
-      (l) => l.settingsPageAbout,
-      page: true,
-      keywords: 'about version update 关于 關於 版本 更新',
-    );
-    if (!desktop) {
+    if (desktop) {
       add(
-        'sponsor',
-        SettingsSearchDestination.sponsor,
-        (l) => l.settingsPageSponsor,
+        'about',
+        SettingsSearchDestination.about,
+        (l) => l.settingsPageAbout,
         page: true,
-        keywords: 'sponsor donate 赞助 贊助 支持',
+        keywords: 'about version update 关于 關於 版本 更新',
       );
     }
 
