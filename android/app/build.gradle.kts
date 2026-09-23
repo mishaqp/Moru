@@ -118,9 +118,6 @@ tasks.findByName("preBuild")?.dependsOn("fetchProot")
 dependencies {
     implementation("androidx.browser:browser:1.9.0")
     implementation("org.tukaani:xz:1.10")
-    // Pinned exact release -- never latest.release/a floating range. Verified
-    // against Google Maven's own maven-metadata.xml (docs/litert-lm-progress.md).
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.17.1")
     // Required for core library desugaring (used by flutter_local_notifications)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     testImplementation("junit:junit:4.13.2")

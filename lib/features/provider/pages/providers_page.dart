@@ -3,9 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../icons/lucide_adapter.dart';
 import 'provider_detail_page.dart';
-import 'local_models_page.dart';
-import '../../../core/services/local/local_model_library.dart'
-    show kLocalModelProviderKey;
 import '../widgets/import_provider_sheet.dart';
 import '../widgets/add_provider_sheet.dart';
 // grid reorder removed in favor of iOS-style list reordering
@@ -487,12 +484,6 @@ class _ProvidersPageState extends State<ProvidersPage> {
     _p(l10n.providersPageAliyunName, 'Aliyun', enabled: false, models: 0),
     _p(l10n.providersPageZhipuName, 'Zhipu AI', enabled: false, models: 0),
     _p('Claude', 'Claude', enabled: false, models: 0),
-    _p(
-      l10n.localModelsProviderName,
-      kLocalModelProviderKey,
-      enabled: false,
-      models: 0,
-    ),
     // _p(zh ? '腾讯混元' : 'Hunyuan', 'Hunyuan', enabled: false, models: 0),
     // _p('InternLM', 'InternLM', enabled: true, models: 0),
     // _p('Kimi', 'Kimi', enabled: false, models: 0),
@@ -1259,9 +1250,7 @@ class _ProviderRow extends StatelessWidget {
         } else {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => provider.keyName == kLocalModelProviderKey
-                  ? const LocalModelsPage()
-                  : cfg.isOAuth
+              builder: (_) => cfg.isOAuth
                   ? OAuthProviderDetailPage(providerId: provider.keyName)
                   : ProviderDetailPage(
                       keyName: provider.keyName,

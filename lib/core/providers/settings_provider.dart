@@ -64,6 +64,8 @@ enum MobileMessageNavButtonsMode { always, scroll, never }
 enum ImageUploadQuality { original, high, balanced, saver, custom }
 
 class SettingsProvider extends ChangeNotifier {
+  /// Kept only to retire old saved settings without losing other providers.
+  static const String retiredLocalModelProviderKey = 'litert-local';
   static const String _providersOrderKey = 'providers_order_v1';
   static const String _providerGroupsKey =
       'provider_groups_v1'; // [{id,name,createdAt}]
@@ -707,6 +709,9 @@ class SettingsProvider extends ChangeNotifier {
   // Explicitly ensure a provider config exists in memory (without persisting to storage).
   // Useful for seeding first-run defaults.
   ProviderConfig ensureProviderConfig(String key, {String? defaultName}) {
+    if (key == retiredLocalModelProviderKey) {
+      throw StateError('The built-in local model provider has been removed.');
+    }
     final existed = _providerConfigs[key];
     if (existed != null) return existed;
     final cfg = ProviderConfig.defaultsFor(key, displayName: defaultName);
@@ -1557,6 +1562,16 @@ class SettingsProvider extends ChangeNotifier {
         );
       } catch (_) {}
     }
+    for (final key
+        in _providerConfigs.keys
+            .where(
+              (key) =>
+                  key == retiredLocalModelProviderKey ||
+                  _providerConfigs[key]?.providerType == ProviderKind.local,
+            )
+            .toList()) {
+      await removeProviderConfig(key);
+    }
     if (_providerConfigs.isEmpty) {
       // Seed a couple of sensible defaults on first launch, but do not recreate
       // providers implicitly during later reads (e.g., when switching chats).
@@ -1569,6 +1584,15 @@ class SettingsProvider extends ChangeNotifier {
       );
       await prefs.setString(_providerConfigsKey, jsonEncode(seededConfigs));
     }
+
+    // Imported/downloaded LiteRT files are app-owned copies. The original
+    // files picked from Downloads remain where the user placed them. Run in
+    // the background, like the connectivity kick-off below: a testWidgets
+    // test that never mocks PathProviderPlatform leaves an unmocked
+    // platform-channel call pending forever (its own Future.timeout cannot
+    // help -- widget tests run Timers on a fake clock that only advances
+    // when the test pumps it), so this must not gate settings load.
+    _removeRetiredLocalModelCopies();
 
     // kick off a one-time connectivity test for services (exclude local Bing)
     if (_searchAutoTestOnLaunch) {
@@ -2274,6 +2298,18 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = _preferences;
     await prefs.setString(_s3ConfigKey, jsonEncode(cfg.toJson()));
+  }
+
+  Future<void> _removeRetiredLocalModelCopies() async {
+    try {
+      final root = await AppDirectories.getAppDataDirectory();
+      final directory = Directory(p.join(root.path, 'litert_models'));
+      if (await directory.exists()) await directory.delete(recursive: true);
+    } on FileSystemException catch (error) {
+      debugPrint('Could not remove retired model copies: $error');
+    } catch (_) {
+      // Path provider may be unavailable, or unresponsive, in unit tests.
+    }
   }
 
   Future<void> _initSearchConnectivityTests() async {
@@ -3153,6 +3189,10 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> followSystem() => setThemeMode(ThemeMode.system);
 
   Future<void> setProviderConfig(String key, ProviderConfig config) async {
+    if (key == retiredLocalModelProviderKey ||
+        config.providerType == ProviderKind.local) {
+      throw StateError('The built-in local model provider has been removed.');
+    }
     _providerConfigs[key] = config;
     notifyListeners();
     final prefs = _preferences;
@@ -6698,11 +6738,7 @@ class ProviderConfig {
           claudePromptCachingEnabled: false,
         );
       case ProviderKind.local:
-        // classify(key) (no explicitType) never returns .local -- the
-        // local provider is always created with an explicit providerType
-        // through its own dedicated entry point, never inferred from a
-        // typed-in key name. Unreachable in practice; a minimal, harmless
-        // default keeps this switch exhaustive.
+        // Legacy persisted value; no new local providers are created.
         return ProviderConfig(
           id: key,
           enabled: false,

@@ -11,6 +11,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class AndroidOnlyPolicyTest(unittest.TestCase):
+    def test_on_device_llm_is_not_packaged(self):
+        gradle = (ROOT / 'android/app/build.gradle.kts').read_text()
+        manifest = (ROOT / 'android/app/src/main/AndroidManifest.xml').read_text()
+        application = (ROOT / 'android/app/src/main/kotlin/com/psyche/kelivo/KelivoApplication.kt').read_text()
+        self.assertNotIn('litertlm-android', gradle)
+        self.assertNotIn('LiteRtPlugin', application)
+        self.assertNotIn('libOpenCL.so', manifest)
+        self.assertFalse((ROOT / 'android/app/src/main/kotlin/com/psyche/kelivo/litert').exists())
+
     def test_gradle_has_only_arm64_native_targets(self):
         source = (ROOT / 'android/app/build.gradle.kts').read_text()
         self.assertNotRegex(source, r'armeabi-v7a|x86_64')

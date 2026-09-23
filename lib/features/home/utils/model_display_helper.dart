@@ -51,13 +51,27 @@ class ModelDisplayInfo {
   Assistant? assistant,
 }) {
   final pinned = settings.perChatModelEnabled ? conversation : null;
-  final providerKey =
-      pinned?.chatModelProvider ??
-      assistant?.chatModelProvider ??
-      settings.currentModelProvider;
-  final modelId =
-      pinned?.chatModelId ?? assistant?.chatModelId ?? settings.currentModelId;
-  return (providerKey: providerKey, modelId: modelId);
+  for (final selection in [
+    (providerKey: pinned?.chatModelProvider, modelId: pinned?.chatModelId),
+    (
+      providerKey: assistant?.chatModelProvider,
+      modelId: assistant?.chatModelId,
+    ),
+    (
+      providerKey: settings.currentModelProvider,
+      modelId: settings.currentModelId,
+    ),
+  ]) {
+    final provider = selection.providerKey;
+    if (provider == null || selection.modelId == null) continue;
+    if (provider == SettingsProvider.retiredLocalModelProviderKey ||
+        settings.providerConfigs[provider]?.providerType ==
+            ProviderKind.local) {
+      continue;
+    }
+    return selection;
+  }
+  return (providerKey: null, modelId: null);
 }
 
 /// Extracts model display information from settings, conversation and assistant.
