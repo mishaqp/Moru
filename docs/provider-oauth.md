@@ -2,6 +2,10 @@
 
 入口：设置 → 供应商 → 添加 → 账号登录。支持 ChatGPT（Codex）、Grok、Kimi Code、Claude。账号登录后会同步可用模型，也可以在账号详情手动同步、刷新用量。
 
+截至 2026-09-23，Codex 目录请求及聊天标识对应稳定版 `0.156.1`，Claude OAuth 请求标识对应 Claude Code `2.1.280`。Claude Opus 5.5 的模型 ID 是 `claude-opus-5-5`；其思考不能关闭，选择“关闭”思考时应用发送最低的 `low` effort。版本标识的更新不等于安装这两个 CLI，也不能替代真实账号的授权与发消息测试。
+
+Claude.ai 订阅账号在此个人分支中的 OAuth 登录属于实验性兼容：Anthropic [明确要求第三方应用使用 API key 或受支持的云提供商](https://code.claude.com/docs/en/legal-and-compliance#authentication-and-credential-use)，并不承诺此登录方式可用。若授权或发消息被拒绝，应在供应商设置中使用 Claude API key；不要把版本标识升级视为绕过限制的办法。
+
 ## 登录与请求
 
 | 供应商 | 登录方式 | 聊天与模型 | 额度 |

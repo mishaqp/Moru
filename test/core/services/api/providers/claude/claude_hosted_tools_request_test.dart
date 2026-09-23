@@ -53,6 +53,7 @@ void main() {
           'claude-fable-5-1',
           'claude-mythos-5',
           'claude-opus-5',
+          'claude-opus-5-5',
           'claude-sonnet-5',
         ]) {
           expect(

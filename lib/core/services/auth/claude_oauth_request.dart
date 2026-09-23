@@ -9,7 +9,7 @@ import '../../models/provider_oauth.dart';
 import '../../providers/settings_provider.dart';
 
 // OMP 6f2c14b3, providers/claude-code-fingerprint.ts and anthropic.ts.
-const claudeCodeVersion = '2.1.257';
+const claudeCodeVersion = '2.1.280';
 const claudeCodeSdkVersion = '0.112.1';
 const claudeCodeSystemInstruction =
     "You are Claude Code, Anthropic's official CLI for Claude.";

@@ -37,6 +37,10 @@ void main() {
     ]);
   });
 
+  test('Codex model discovery identifies the current stable client', () {
+    expect(codexClientVersion, '0.156.1');
+  });
+
   test('email-only identity is accepted without using sub as a workspace', () {
     final credentials = adapter.credentials({
       'access_token': jwt({
