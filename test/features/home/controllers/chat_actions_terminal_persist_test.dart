@@ -309,6 +309,121 @@ void main() {
     expect(notifications, ['Generation failed. Open the chat for details.']);
   });
 
+  test('isEmptyAssistantReply only matches replies with nothing to show', () {
+    ChatMessage reply({String content = '', List<MessagePart>? parts}) =>
+        ChatMessage(
+          id: 'a',
+          role: 'assistant',
+          content: content,
+          parts: parts,
+          conversationId: 'c',
+        );
+    expect(ChatActions.isEmptyAssistantReply(reply()), isTrue);
+    expect(ChatActions.isEmptyAssistantReply(reply(content: ' \n ')), isTrue);
+    expect(ChatActions.isEmptyAssistantReply(reply(content: 'hi')), isFalse);
+    expect(
+      ChatActions.isEmptyAssistantReply(
+        reply().copyWith(reasoningText: 'thinking'),
+      ),
+      isFalse,
+    );
+    expect(
+      ChatActions.isEmptyAssistantReply(
+        reply(parts: [const TextPart(''), ReasoningPart('thinking')]),
+      ),
+      isFalse,
+    );
+  });
+
+  testWidgets(
+    'empty completed reply is stored as failed with a visible error',
+    (tester) async {
+      final service = _ThrowingFinalizeChatService(failCompletion: false);
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      final background = MobileBackgroundCoordinator(
+        platform: TargetPlatform.linux,
+      );
+      addTearDown(background.dispose);
+      addTearDown(settings.dispose);
+      final streamErrors = <String>[];
+      final titleRequests = <String>[];
+      var assistantFinishedCount = 0;
+      late ChatActions actions;
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+            ChangeNotifierProvider<ChatService>.value(value: service),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                actions = _actionsFor(
+                  context,
+                  service,
+                  settings,
+                  background,
+                ).actions;
+                actions.onStreamError = streamErrors.add;
+                actions.onMaybeGenerateTitle = titleRequests.add;
+                actions.onAssistantMessageFinished = (_) {
+                  assistantFinishedCount++;
+                };
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+      );
+      final state = StreamingState(
+        GenerationContext(
+          assistantMessage: ChatMessage(
+            id: 'assistant-1',
+            role: 'assistant',
+            content: '',
+            modelId: 'test-model',
+            conversationId: 'conversation-1',
+            isStreaming: true,
+          ),
+          apiMessages: const [],
+          userImagePaths: const [],
+          allowImagesApiRouting: false,
+          providerKey: 'test',
+          modelId: 'test-model',
+          assistant: null,
+          settings: settings,
+          config: ProviderConfig(
+            id: 'test',
+            enabled: true,
+            name: 'Test',
+            apiKey: '',
+            baseUrl: '',
+          ),
+          toolDefs: const [],
+          supportsReasoning: false,
+          enableReasoning: false,
+          streamOutput: true,
+        ),
+      );
+
+      await actions.debugFinishStreaming(state);
+
+      final expected = (await AppLocalizations.delegate.load(
+        const Locale('en'),
+      )).chatEmptyAssistantReply('test-model');
+      expect(state.terminalPersisted, isTrue);
+      expect(service.terminalStates, [GenerationRunState.failed]);
+      expect(service.lastErrorCode, 'empty_response');
+      expect(service.lastMessage!.content, expected);
+      expect(service.lastMessage!.isStreaming, isFalse);
+      expect(streamErrors, [expected]);
+      expect(assistantFinishedCount, 0);
+      expect(titleRequests, isEmpty);
+    },
+  );
+
   testWidgets(
     'generation waits for narration handoff through the ViewModel callback',
     (tester) async {

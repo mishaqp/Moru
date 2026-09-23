@@ -107,14 +107,14 @@ class _ToolSchemaSettingsPageState extends State<ToolSchemaSettingsPage> {
 
   Widget _approvalSection(BuildContext context, SettingsProvider settings) {
     final cs = Theme.of(context).colorScheme;
-    final ru = Localizations.localeOf(context).languageCode == 'ru';
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
           child: Text(
-            ru ? 'Подтверждения инструментов' : 'Tool approvals',
+            l10n.toolApprovalsSectionTitle,
             style: TextStyle(
               fontSize: 13,
               fontWeight: AppFontWeights.semibold,
@@ -134,19 +134,12 @@ class _ToolSchemaSettingsPageState extends State<ToolSchemaSettingsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        ru
-                            ? 'Я понимаю риск — разрешать всё'
-                            : 'Full trust mode (dangerous)',
+                        l10n.toolApprovalsFullTrustTitle,
                         style: TextStyle(fontWeight: AppFontWeights.semibold),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        ru
-                            ? 'Не спрашивать подтверждение перед действиями ИИ. '
-                                  'Действует для браузера, MCP, shell, записи файлов и '
-                                  'других инструментов, которые обычно требуют подтверждения.'
-                            : 'Skip per-action confirmations for browser, MCP, shell, '
-                                  'file writes, and other tools that normally require approval.',
+                        l10n.toolApprovalsFullTrustDescription,
                         style: TextStyle(
                           fontSize: 12.5,
                           height: 1.35,

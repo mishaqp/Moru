@@ -153,11 +153,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storageSpaceCategoryFonts => 'Fonts';
 
   @override
-  String get storageSpaceCategoryLocalModels => 'Local Models';
+  String get storageSpaceCategoryLocalModels => 'Speech Recognition Models';
 
   @override
   String get storageSpaceOtherHint =>
-      'Fonts, downloaded local models, and other app files.';
+      'Fonts, speech recognition models, and other app files.';
 
   @override
   String get storageSpaceSubOtherApp => 'App files';
@@ -12575,4 +12575,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get phoneControlEnableAssistant =>
       'Allow this assistant to use phone control';
+
+  @override
+  String chatEmptyAssistantReply(String model) {
+    return 'The model $model returned an empty response. Try again or check the provider and model settings.';
+  }
+
+  @override
+  String get toolApprovalsSectionTitle => 'Tool approvals';
+
+  @override
+  String get toolApprovalsFullTrustTitle => 'Full trust mode (dangerous)';
+
+  @override
+  String get toolApprovalsFullTrustDescription =>
+      'Skip per-action confirmations for browser, MCP, shell, file writes, and other tools that normally require approval.';
 }

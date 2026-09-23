@@ -155,11 +155,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get storageSpaceCategoryFonts => 'Шрифты';
 
   @override
-  String get storageSpaceCategoryLocalModels => 'Локальные модели';
+  String get storageSpaceCategoryLocalModels => 'Модели распознавания речи';
 
   @override
   String get storageSpaceOtherHint =>
-      'Шрифты, загруженные локальные модели и другие файлы приложения.';
+      'Шрифты, модели распознавания речи и другие файлы приложения.';
 
   @override
   String get storageSpaceSubOtherApp => 'Файлы приложения';
@@ -12724,4 +12724,19 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get phoneControlEnableAssistant =>
       'Разрешить этому ассистенту использовать управление телефоном';
+
+  @override
+  String chatEmptyAssistantReply(String model) {
+    return 'Модель $model вернула пустой ответ. Повторите запрос или проверьте настройки провайдера и модели.';
+  }
+
+  @override
+  String get toolApprovalsSectionTitle => 'Подтверждения инструментов';
+
+  @override
+  String get toolApprovalsFullTrustTitle => 'Я понимаю риск — разрешать всё';
+
+  @override
+  String get toolApprovalsFullTrustDescription =>
+      'Не спрашивать подтверждение перед действиями ИИ. Действует для браузера, MCP, shell, записи файлов и других инструментов, которые обычно требуют подтверждения.';
 }

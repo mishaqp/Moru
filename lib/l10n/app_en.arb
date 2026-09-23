@@ -63,8 +63,8 @@
   "storageSpaceCategoryImages": "Images",
   "storageSpaceCategoryFiles": "Files",
   "storageSpaceCategoryFonts": "Fonts",
-  "storageSpaceCategoryLocalModels": "Local Models",
-  "storageSpaceOtherHint": "Fonts, downloaded local models, and other app files.",
+  "storageSpaceCategoryLocalModels": "Speech Recognition Models",
+  "storageSpaceOtherHint": "Fonts, speech recognition models, and other app files.",
   "storageSpaceSubOtherApp": "App files",
   "storageSpaceCategoryChatData": "Chat Records",
   "storageSpaceCategoryLegacyChatData": "Chat Records (Old)",
@@ -5628,5 +5628,16 @@
   "phoneControlAssistantHint": "Both permissions are required: enable Kelivo phone control in system Accessibility settings, then enable Phone Control under your assistant’s Local Tools (also available in the chat tools menu). Each assistant is configured separately. Keep the phone unlocked while running a task.",
   "phoneControlRestrictedTitle": "Accessibility switch unavailable?",
   "phoneControlRestrictedHint": "For some downloaded APKs, Android requires “Allow restricted settings” in the app info menu first. Tap to open Kelivo’s app info, then return to Accessibility settings.",
-  "phoneControlEnableAssistant": "Allow this assistant to use phone control"
+  "phoneControlEnableAssistant": "Allow this assistant to use phone control",
+  "chatEmptyAssistantReply": "The model {model} returned an empty response. Try again or check the provider and model settings.",
+  "@chatEmptyAssistantReply": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "toolApprovalsSectionTitle": "Tool approvals",
+  "toolApprovalsFullTrustTitle": "Full trust mode (dangerous)",
+  "toolApprovalsFullTrustDescription": "Skip per-action confirmations for browser, MCP, shell, file writes, and other tools that normally require approval."
 }

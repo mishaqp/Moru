@@ -19,7 +19,10 @@ build workflows have been removed, not replaced with disabled matrix options.
 - `flutter build apk --release --target-platform=android-arm64` for signed release.
 - No split-per-ABI or universal/multi-ABI build.
 - Android `ndk.abiFilters`, CMake ABI and PRoot downloads all select arm64-v8a.
-- The four existing arm64 PRoot SHA-256 pins are unchanged.
+- The four arm64 PRoot libraries are pinned by SHA-256 in `tool/proot_checksums.txt`.
+  Termux keeps only one proot build in its pool, so the pinned version and the
+  `libproot_exec.so` checksum are bumped together when the old build disappears
+  (last bump: 5.1.107.94, v0.1.16).
 - Verify actual ZIP library paths **and ELF architecture**, not the APK filename.
 - Keep the existing full Dart analyzer/Flutter test PR gates and add Android JVM
   tests plus an actual arm64 build.
@@ -30,14 +33,12 @@ Release signing is manual, master-only and requires the existing keystore secret
 plus `.github/moru-signing-cert-sha256.txt`. It fails rather than silently choosing
 a new signing key. Never commit a private key or print it in logs.
 
-## Integration with Russian localization
+## Release identity
 
-This change is deliberately separate from `feat/russian-android-arm64` so it does
-not overwrite its in-progress ARB translations. Import this PR's build constraints
-when integrating that branch. It does not claim Russian localization is complete,
-and does not change application ID/version/signing identity as a side effect.
-Before the first independently branded Moru release, verify the chosen identity,
-full RU locale contract and permanent signature together.
+Signed Moru releases are published on GitHub Releases as package
+`com.mishaqp.moru`, with the permanent certificate recorded in
+`.github/moru-signing-cert-sha256.txt` and a complete RU locale. Keep the
+application ID and signing certificate unchanged across releases.
 
 ## Regression evidence
 

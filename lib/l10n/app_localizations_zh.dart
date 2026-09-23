@@ -12004,6 +12004,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get phoneControlEnableAssistant => '允许此助手使用手机控制';
+
+  @override
+  String chatEmptyAssistantReply(String model) {
+    return '模型 $model 返回了空响应。请重试，或检查供应商和模型设置。';
+  }
+
+  @override
+  String get toolApprovalsSectionTitle => '工具确认';
+
+  @override
+  String get toolApprovalsFullTrustTitle => '完全信任模式（危险）';
+
+  @override
+  String get toolApprovalsFullTrustDescription =>
+      '跳过浏览器、MCP、Shell、文件写入等通常需要确认的工具的逐次确认。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -23932,6 +23947,21 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get phoneControlEnableAssistant => '允许此助手使用手机控制';
+
+  @override
+  String chatEmptyAssistantReply(String model) {
+    return '模型 $model 返回了空响应。请重试，或检查供应商和模型设置。';
+  }
+
+  @override
+  String get toolApprovalsSectionTitle => '工具确认';
+
+  @override
+  String get toolApprovalsFullTrustTitle => '完全信任模式（危险）';
+
+  @override
+  String get toolApprovalsFullTrustDescription =>
+      '跳过浏览器、MCP、Shell、文件写入等通常需要确认的工具的逐次确认。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -35939,4 +35969,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get phoneControlEnableAssistant => '允許此助手使用手機控制';
+
+  @override
+  String chatEmptyAssistantReply(String model) {
+    return '模型 $model 傳回了空回應。請重試，或檢查供應商與模型設定。';
+  }
+
+  @override
+  String get toolApprovalsSectionTitle => '工具確認';
+
+  @override
+  String get toolApprovalsFullTrustTitle => '完全信任模式（危險）';
+
+  @override
+  String get toolApprovalsFullTrustDescription =>
+      '略過瀏覽器、MCP、Shell、檔案寫入等通常需要確認的工具的逐次確認。';
 }
