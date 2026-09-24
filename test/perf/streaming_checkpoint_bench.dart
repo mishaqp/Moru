@@ -76,4 +76,81 @@ void main() {
       await root.delete(recursive: true);
     }
   });
+
+  test('checkpoint cost of a long agent reply', () async {
+    final root = await Directory.systemTemp.createTemp('checkpoint-bench-');
+    final file = File('${root.path}/chat.db');
+    final repository = ChatDatabaseRepository.open(file: file);
+    await repository.ensureReady();
+    const tools = 80;
+    final output = List.generate(
+      150,
+      (l) => 'line $l of output for a step with some text',
+    ).join('\n');
+    final parts = <MessagePart>[
+      for (var i = 0; i < tools; i++) ...[
+        TextPart('Step $i text. '),
+        ToolCallPart(
+          jsonEncode({
+            'id': 'call_$i',
+            'name': 'read_file',
+            'arguments': {'path': 'lib/a$i.dart'},
+          }),
+        ),
+      ],
+    ];
+    final events = [
+      for (var i = 0; i < tools; i++)
+        {
+          'id': 'call_$i',
+          'name': 'read_file',
+          'arguments': {'path': 'lib/a$i.dart'},
+          'content': output,
+          'metadata': {'stdoutPreview': output.substring(0, 4000)},
+        },
+    ];
+    final message = ChatMessage(
+      id: 'reply',
+      role: 'assistant',
+      conversationId: 'conversation',
+      isStreaming: true,
+      parts: parts,
+    );
+    await repository.putMigrationBatch(
+      conversations: [
+        Conversation(
+          id: 'conversation',
+          title: 'Bench',
+          messageIds: const ['reply'],
+        ),
+      ],
+      messages: [(message: message, messageOrder: 0)],
+      toolEventsByMessageId: const {},
+      geminiSignaturesByMessageId: const {},
+    );
+    try {
+      final samples = <int>[];
+      for (var i = 1; i <= 40; i++) {
+        final watch = Stopwatch()..start();
+        await repository.updateStreamingCheckpoint(
+          message.copyWith(
+            parts: [...parts, TextPart(List.filled(i * 64, 'a').join())],
+          ),
+          // Each checkpoint receives shallow copies, as ChatActions sends.
+          [for (final e in events) Map<String, dynamic>.from(e)],
+        );
+        watch.stop();
+        if (i > 5) samples.add(watch.elapsedMicroseconds);
+      }
+      samples.sort();
+      // ignore: avoid_print
+      print(
+        'AGENT_CHECKPOINT tools=$tools medianUs=${samples[samples.length ~/ 2]} '
+        'p95Us=${samples[(samples.length * .95).floor()]}',
+      );
+    } finally {
+      await repository.close();
+      await root.delete(recursive: true);
+    }
+  });
 }
