@@ -1168,5 +1168,49 @@ void main() {
         ],
       });
     });
+
+    test('a tool result changed between checkpoints reaches the row', () async {
+      const part = ToolCallPart('{"id":"call_1","name":"shell"}');
+      ChatMessage snapshot() => ChatMessage(
+        id: 'streaming',
+        role: 'assistant',
+        conversationId: 'conversation',
+        isStreaming: true,
+        parts: const [part],
+      );
+      final metadata = <String, dynamic>{'status': 'running'};
+      final event = <String, dynamic>{
+        'id': 'call_1',
+        'name': 'shell',
+        'content': 'partial',
+        'metadata': metadata,
+      };
+
+      await repository.updateStreamingCheckpoint(snapshot(), [event]);
+      // Same objects, changed in place: the unchanged-payload reuse must
+      // compare content, not identity.
+      event['content'] = 'done';
+      metadata['status'] = 'ok';
+      await repository.updateStreamingCheckpoint(snapshot(), [event]);
+      var stored = (await repository.getToolEvents('streaming')).single;
+      expect(stored['content'], 'done');
+      expect(stored['metadata'], {'status': 'ok'});
+
+      // A fresh copy with equal content keeps the stored row as it is.
+      await repository.updateStreamingCheckpoint(snapshot(), [
+        Map<String, dynamic>.from(event),
+      ]);
+      stored = (await repository.getToolEvents('streaming')).single;
+      expect(stored['content'], 'done');
+
+      await repository.updateStreamingCheckpoint(
+        snapshot().copyWith(isStreaming: false),
+        [
+          {...event, 'content': 'final'},
+        ],
+      );
+      stored = (await repository.getToolEvents('streaming')).single;
+      expect(stored['content'], 'final');
+    });
   });
 }

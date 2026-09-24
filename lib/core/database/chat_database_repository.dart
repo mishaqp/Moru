@@ -7078,7 +7078,7 @@ class ChatDatabaseRepository {
     }
     if (toolEvents != null) {
       if (parts.any((part) => part is ToolCallPart)) {
-        parts = _applyToolEventsToParts(parts, toolEvents);
+        parts = _applyToolEventsToParts(parts, toolEvents, message: message);
       } else if (toolEvents.isNotEmpty) {
         parts = [
           ...parts,
@@ -7092,10 +7092,26 @@ class ChatDatabaseRepository {
     return parts;
   }
 
+  /// Decoded tool-call payloads of the replies being streamed, keyed by
+  /// message id and then by payload. A streaming reply is checkpointed several
+  /// times a second with every tool result it has so far; decoding and
+  /// re-encoding each unchanged result again on the UI isolate made long
+  /// agent replies stutter.
+  final Map<String, Map<String, _ToolPayloadEntry>> _streamingToolPayloads =
+      <String, Map<String, _ToolPayloadEntry>>{};
+
   List<MessagePart> _applyToolEventsToParts(
     List<MessagePart> parts,
-    List<Map<String, dynamic>> toolEvents,
-  ) {
+    List<Map<String, dynamic>> toolEvents, {
+    required ChatMessage message,
+  }) {
+    final previous = _streamingToolPayloads.remove(message.id);
+    final entries = <String, _ToolPayloadEntry>{};
+    _ToolPayloadEntry entryFor(ToolCallPart part) =>
+        entries[part.payloadJson] ??=
+            previous?[part.payloadJson] ??
+            _ToolPayloadEntry.decode(part.payloadJson);
+
     final partCount = parts.whereType<ToolCallPart>().length;
     if (partCount != toolEvents.length) {
       debugPrint(
@@ -7120,14 +7136,14 @@ class ChatDatabaseRepository {
     for (var i = 0; i < parts.length; i++) {
       final part = parts[i];
       if (part is! ToolCallPart) continue;
-      final partId = _toolCallPartId(part) ?? '';
+      final partId = entryFor(part).id ?? '';
       if (partId.isEmpty) continue;
       matchedByPart[i] = takeById(partId);
     }
     for (var i = 0; i < parts.length; i++) {
       final part = parts[i];
       if (part is! ToolCallPart) continue;
-      if ((_toolCallPartId(part) ?? '').isNotEmpty) continue;
+      if ((entryFor(part).id ?? '').isNotEmpty) continue;
       if (unused.isEmpty) break;
       matchedByPart[i] = unused.removeAt(0);
     }
@@ -7142,7 +7158,15 @@ class ChatDatabaseRepository {
       }
       final matched = matchedByPart[i];
       if (matched != null) {
-        out.add(ToolCallPart(jsonEncode(_mergeToolPayload(part, matched))));
+        final entry = entryFor(part);
+        out.add(
+          ToolCallPart(
+            entry.mergedWith(
+              matched,
+              () => jsonEncode(_mergeToolPayload(entry.decoded, matched)),
+            ),
+          ),
+        );
       } else {
         out.add(part);
       }
@@ -7155,20 +7179,20 @@ class ChatDatabaseRepository {
       final insertAt = lastToolIndex >= 0 ? lastToolIndex + 1 : out.length;
       out.insertAll(insertAt, extras);
     }
+    if (message.isStreaming) {
+      // Parallel generations stream at most a few replies at once.
+      if (_streamingToolPayloads.length >= 8) {
+        _streamingToolPayloads.remove(_streamingToolPayloads.keys.first);
+      }
+      _streamingToolPayloads[message.id] = entries;
+    }
     return out;
   }
 
   Map<String, dynamic> _mergeToolPayload(
-    ToolCallPart part,
+    Map<String, dynamic> base,
     Map<String, dynamic> event,
   ) {
-    Map<String, dynamic> base = const <String, dynamic>{};
-    try {
-      final decoded = jsonDecode(part.payloadJson);
-      if (decoded is Map) {
-        base = Map<String, dynamic>.from(decoded);
-      }
-    } catch (_) {}
     final merged = Map<String, dynamic>.from(base);
     for (final entry in event.entries) {
       if (_isEmptyToolOverlay(entry.value) &&
@@ -7223,17 +7247,6 @@ class ChatDatabaseRepository {
         if (decoded is Map) return Map<String, dynamic>.from(decoded);
       } catch (_) {}
     }
-    return null;
-  }
-
-  String? _toolCallPartId(ToolCallPart part) {
-    try {
-      final decoded = jsonDecode(part.payloadJson);
-      if (decoded is Map) {
-        final id = (decoded['id'] ?? '').toString();
-        return id.isEmpty ? null : id;
-      }
-    } catch (_) {}
     return null;
   }
 
@@ -8096,4 +8109,67 @@ class ChatStorageMetaKeys {
   static const sandboxPathVersion = 'sandbox_path_migration_version';
   static const assetReferenceBackfillVersion =
       'asset_reference_backfill_version';
+}
+
+/// One tool-call payload decoded once, with the last result merged into it.
+class _ToolPayloadEntry {
+  _ToolPayloadEntry._(this.decoded, this.id);
+
+  factory _ToolPayloadEntry.decode(String payloadJson) {
+    try {
+      final decoded = jsonDecode(payloadJson);
+      if (decoded is Map) {
+        final map = Map<String, dynamic>.unmodifiable(decoded);
+        final id = (map['id'] ?? '').toString();
+        return _ToolPayloadEntry._(map, id.isEmpty ? null : id);
+      }
+    } catch (_) {}
+    return _ToolPayloadEntry._(const <String, dynamic>{}, null);
+  }
+
+  final Map<String, dynamic> decoded;
+  final String? id;
+
+  Object? _event;
+  String? _merged;
+
+  /// The encoding [encode] produces for [event], reused while the event
+  /// carries the same content. A copy is kept, so an event changed in place
+  /// is still seen as new.
+  String mergedWith(Map<String, dynamic> event, String Function() encode) {
+    final merged = _merged;
+    if (merged != null && _jsonEquals(_event, event)) return merged;
+    _event = _jsonCopy(event);
+    return _merged = encode();
+  }
+
+  static Object? _jsonCopy(Object? value) {
+    if (value is Map) {
+      return {
+        for (final entry in value.entries) entry.key: _jsonCopy(entry.value),
+      };
+    }
+    if (value is List) return [for (final item in value) _jsonCopy(item)];
+    return value;
+  }
+
+  static bool _jsonEquals(Object? a, Object? b) {
+    if (identical(a, b)) return true;
+    if (a is Map && b is Map) {
+      if (a.length != b.length) return false;
+      for (final entry in a.entries) {
+        if (!b.containsKey(entry.key)) return false;
+        if (!_jsonEquals(entry.value, b[entry.key])) return false;
+      }
+      return true;
+    }
+    if (a is List && b is List) {
+      if (a.length != b.length) return false;
+      for (var i = 0; i < a.length; i++) {
+        if (!_jsonEquals(a[i], b[i])) return false;
+      }
+      return true;
+    }
+    return a == b;
+  }
 }
