@@ -3480,21 +3480,23 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                               onNext: widget.onNextVersion,
                             ),
                           ],
-                          if (widget.showTokenStats &&
-                              widget.message.totalTokens != null) ...[
-                            const Spacer(),
-                            TokenDisplayWidget(
-                              totalTokens: widget.message.totalTokens!,
-                              promptTokens: widget.message.promptTokens,
-                              completionTokens: widget.message.completionTokens,
-                              cachedTokens: widget.message.cachedTokens,
-                              durationMs: widget.message.durationMs,
-                            ),
-                          ],
                         ],
                       ),
                     ),
             ),
+            if (widget.showTokenStats &&
+                !widget.message.isStreaming &&
+                widget.message.totalTokens != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 6, 0, 0),
+                child: TokenStatsRow(
+                  totalTokens: widget.message.totalTokens!,
+                  promptTokens: widget.message.promptTokens,
+                  completionTokens: widget.message.completionTokens,
+                  cachedTokens: widget.message.cachedTokens,
+                  durationMs: widget.message.durationMs,
+                ),
+              ),
             if (!widget.message.isStreaming &&
                 widget.suggestions.isNotEmpty &&
                 widget.onSuggestionTap != null) ...[
