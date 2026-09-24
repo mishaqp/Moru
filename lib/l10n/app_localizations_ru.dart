@@ -9423,6 +9423,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceToolChangedFiles => 'Изменённые файлы';
 
   @override
+  String replyChangedFilesSummary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Изменено $count файлов',
+      few: 'Изменено $count файла',
+      one: 'Изменён $count файл',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get workspaceToolCancel => 'Отмена';
 
   @override
@@ -11230,14 +11242,14 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get backgroundNotificationsDetail =>
-      'Уведомлять о завершении и ошибках задач вне просматриваемого чата. Не управляет обязательным постоянным уведомлением Android.';
+      'Уведомлять о завершении и ошибках задач вне просматриваемого чата; у готового ответа видно его начало. Не управляет обязательным постоянным уведомлением Android.';
 
   @override
   String get backgroundPrivacy => 'Конфиденциальность статуса задач';
 
   @override
   String get backgroundPrivacyDetail =>
-      'Скрывать названия диалогов и подробности инструментов в уведомлениях и текущем статусе. Отображаются только общий статус, число задач и прошедшее время.';
+      'Скрывать названия диалогов, текст ответа и подробности инструментов в уведомлениях и текущем статусе. Отображаются только общий статус, число задач и прошедшее время.';
 
   @override
   String get backgroundLiveActivities => 'Текущие активности';

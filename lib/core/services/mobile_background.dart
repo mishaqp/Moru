@@ -229,8 +229,7 @@ class MobileBackgroundCoordinator extends ChangeNotifier
                 ? (l10n?.backgroundTaskTitle ?? 'Kelivo')
                 : task.title,
             body:
-                task.scheduled &&
-                    task.scheduledPreview &&
+                (!task.scheduled || task.scheduledPreview) &&
                     !_settings.privacyMode &&
                     outcome == BackgroundTaskOutcome.completed &&
                     replyPreview?.trim().isNotEmpty == true

@@ -9,10 +9,12 @@ import 'package:flutter/material.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tool_metadata.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
+import 'package:Kelivo/shared/widgets/custom_bottom_sheet.dart';
 import 'package:Kelivo/shared/widgets/ios_tactile.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
+import 'unified_diff_view.dart';
 import 'workspace_tool_ui.dart';
 
 class ProducedFileEntry {
@@ -43,6 +45,46 @@ List<ProducedFileEntry> collectProducedFileEntries(
   return entries.values.toList();
 }
 
+/// One edit a reply made to a file.
+class ReplyFileEdit {
+  const ReplyFileEdit({
+    required this.path,
+    required this.diff,
+    required this.added,
+    required this.removed,
+    required this.truncated,
+  });
+
+  final String path;
+  final String diff;
+  final int added;
+  final int removed;
+  final bool truncated;
+}
+
+/// Successful edits with a diff, in the order the reply made them.
+List<ReplyFileEdit> collectReplyFileEdits(Iterable<WorkspaceToolPart> parts) {
+  final edits = <ReplyFileEdit>[];
+  for (final part in parts) {
+    final meta = workspaceMetadataFrom(part.metadata);
+    final diff = meta?.diff ?? '';
+    if (part.loading || meta == null || meta.status != 'ok' || diff.isEmpty) {
+      continue;
+    }
+    final counts = countUnifiedDiffChanges(diff);
+    edits.add(
+      ReplyFileEdit(
+        path: meta.path ?? '',
+        diff: diff,
+        added: meta.added ?? counts.added,
+        removed: meta.removed ?? counts.removed,
+        truncated: meta.diffTruncated == true,
+      ),
+    );
+  }
+  return edits;
+}
+
 /// Deduped chips / image thumbs for files written or edited in a turn.
 class ProducedFilesRow extends StatelessWidget {
   const ProducedFilesRow({
@@ -54,6 +96,9 @@ class ProducedFilesRow extends StatelessWidget {
   static const ValueKey<String> rowKey = ValueKey<String>('produced-files-row');
   static const ValueKey<String> moreKey = ValueKey<String>(
     'produced-files-more',
+  );
+  static const ValueKey<String> editsSummaryKey = ValueKey<String>(
+    'reply-edits-summary',
   );
 
   final List<WorkspaceToolPart> parts;
@@ -73,7 +118,8 @@ class ProducedFilesRow extends StatelessWidget {
         : entries.sublist(0, kProducedFilesLimit);
     final overflow = entries.length - visible.length;
     final l10n = AppLocalizations.of(context)!;
-    return Wrap(
+    final edits = collectReplyFileEdits(parts);
+    final chips = Wrap(
       key: rowKey,
       spacing: 8,
       runSpacing: 8,
@@ -124,6 +170,109 @@ class ProducedFilesRow extends StatelessWidget {
             ),
           ),
       ],
+    );
+    if (edits.isEmpty) return chips;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _ReplyEditsSummary(edits: edits),
+        const SizedBox(height: 8),
+        chips,
+      ],
+    );
+  }
+}
+
+/// "3 files changed · +120 −40"; opens every diff of the reply at once.
+class _ReplyEditsSummary extends StatelessWidget {
+  const _ReplyEditsSummary({required this.edits});
+
+  final List<ReplyFileEdit> edits;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final files = {for (final edit in edits) edit.path}.length;
+    var added = 0;
+    var removed = 0;
+    for (final edit in edits) {
+      added += edit.added;
+      removed += edit.removed;
+    }
+    final muted = cs.onSurface.withValues(alpha: 0.7);
+    return IosCardPress(
+      key: ProducedFilesRow.editsSummaryKey,
+      borderRadius: BorderRadius.circular(10),
+      baseColor: context.appColors.surfaceFill,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      onTap: () => unawaited(_open(context)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Lucide.FileDiff, size: 15, color: muted),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              l10n.replyChangedFilesSummary(files),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: AppFontWeights.medium,
+                color: cs.onSurface,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          WorkspaceAddedRemovedCounts(added: added, removed: removed),
+          const SizedBox(width: 4),
+          Icon(Lucide.ChevronRight, size: 15, color: muted),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _open(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    return showCustomBottomSheet<void>(
+      context: context,
+      title: l10n.workspaceToolChangedFiles,
+      count: {for (final edit in edits) edit.path}.length,
+      builder: (context, controller) => ListView.separated(
+        controller: controller,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        itemCount: edits.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final edit = edits[index];
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              UnifiedDiffView(
+                diff: edit.diff,
+                showHeader: true,
+                fileName: edit.path,
+                added: edit.added,
+                removed: edit.removed,
+              ),
+              if (edit.truncated)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    l10n.workspaceToolDiffTruncated,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cs.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

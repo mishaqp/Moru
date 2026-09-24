@@ -16749,6 +16749,12 @@ abstract class AppLocalizations {
   /// **'Changed files'**
   String get workspaceToolChangedFiles;
 
+  /// No description provided for @replyChangedFilesSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 file changed} other{{count} files changed}}'**
+  String replyChangedFilesSummary(int count);
+
   /// No description provided for @workspaceToolCancel.
   ///
   /// In en, this message translates to:
@@ -19910,7 +19916,7 @@ abstract class AppLocalizations {
   /// No description provided for @backgroundNotificationsDetail.
   ///
   /// In en, this message translates to:
-  /// **'Notify when a task completes or fails outside the chat you are viewing. Does not control Android’s required ongoing notification.'**
+  /// **'Notify when a task completes or fails outside the chat you are viewing; a finished reply shows how its answer begins. Does not control Android’s required ongoing notification.'**
   String get backgroundNotificationsDetail;
 
   /// No description provided for @backgroundPrivacy.
@@ -19922,7 +19928,7 @@ abstract class AppLocalizations {
   /// No description provided for @backgroundPrivacyDetail.
   ///
   /// In en, this message translates to:
-  /// **'Hide conversation titles and tool details in notifications and live status. Only generic status, task count and elapsed time are shown.'**
+  /// **'Hide conversation titles, reply text and tool details in notifications and live status. Only generic status, task count and elapsed time are shown.'**
   String get backgroundPrivacyDetail;
 
   /// No description provided for @backgroundLiveActivities.

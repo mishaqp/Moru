@@ -8906,6 +8906,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get workspaceToolChangedFiles => '变更的文件';
 
   @override
+  String replyChangedFilesSummary(int count) {
+    return '已修改 $count 个文件';
+  }
+
+  @override
   String get workspaceToolCancel => '取消';
 
   @override
@@ -10621,13 +10626,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get backgroundNotificationsDetail =>
-      '在当前查看的会话之外完成或失败时通知。此开关不控制 Android 必需的常驻通知。';
+      '在当前查看的会话之外完成或失败时通知；完成的回复会显示开头内容。此开关不控制 Android 必需的常驻通知。';
 
   @override
   String get backgroundPrivacy => '任务状态隐私';
 
   @override
-  String get backgroundPrivacyDetail => '在通知和实时状态中隐藏会话标题及工具详情，仅显示通用状态、任务数量和耗时。';
+  String get backgroundPrivacyDetail =>
+      '在通知和实时状态中隐藏会话标题、回复内容及工具详情，仅显示通用状态、任务数量和耗时。';
 
   @override
   String get backgroundLiveActivities => '实时活动';
@@ -20924,6 +20930,11 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get workspaceToolChangedFiles => '变更的文件';
 
   @override
+  String replyChangedFilesSummary(int count) {
+    return '已修改 $count 个文件';
+  }
+
+  @override
   String get workspaceToolCancel => '取消';
 
   @override
@@ -22639,13 +22650,14 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get backgroundNotificationsDetail =>
-      '在当前查看的会话之外完成或失败时通知。此开关不控制 Android 必需的常驻通知。';
+      '在当前查看的会话之外完成或失败时通知；完成的回复会显示开头内容。此开关不控制 Android 必需的常驻通知。';
 
   @override
   String get backgroundPrivacy => '任务状态隐私';
 
   @override
-  String get backgroundPrivacyDetail => '在通知和实时状态中隐藏会话标题及工具详情，仅显示通用状态、任务数量和耗时。';
+  String get backgroundPrivacyDetail =>
+      '在通知和实时状态中隐藏会话标题、回复内容及工具详情，仅显示通用状态、任务数量和耗时。';
 
   @override
   String get backgroundLiveActivities => '实时活动';
@@ -33017,6 +33029,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get workspaceToolChangedFiles => '變更的檔案';
 
   @override
+  String replyChangedFilesSummary(int count) {
+    return '已修改 $count 個檔案';
+  }
+
+  @override
   String get workspaceToolCancel => '取消';
 
   @override
@@ -34734,13 +34751,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backgroundNotificationsDetail =>
-      '在目前查看的對話之外完成或失敗時通知。此開關不控制 Android 必需的常駐通知。';
+      '在目前查看的對話之外完成或失敗時通知；完成的回覆會顯示開頭內容。此開關不控制 Android 必需的常駐通知。';
 
   @override
   String get backgroundPrivacy => '任務狀態隱私';
 
   @override
-  String get backgroundPrivacyDetail => '在通知和即時狀態中隱藏對話標題及工具詳情，僅顯示通用狀態、任務數量和耗時。';
+  String get backgroundPrivacyDetail =>
+      '在通知和即時狀態中隱藏對話標題、回覆內容及工具詳情，僅顯示通用狀態、任務數量和耗時。';
 
   @override
   String get backgroundLiveActivities => '即時動態';

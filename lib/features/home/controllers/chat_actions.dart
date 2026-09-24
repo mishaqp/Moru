@@ -8,6 +8,7 @@ import '../../../core/models/assistant.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/message_part.dart';
+import '../../../shared/widgets/markdown_line_lexer.dart';
 import '../../../utils/app_directories.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../core/models/conversation.dart';
@@ -742,6 +743,23 @@ class ChatActions {
     } else {
       events[index] = mergeStreamingToolEventRecord(events[index], record);
     }
+  }
+
+  /// Plain text of how the reply's answer begins, for the completion
+  /// notification. An agent reply's last text block is its answer; the ones
+  /// before it narrate the steps.
+  @visibleForTesting
+  static String replyPreviewText(ChatMessage message) {
+    var text = message.content;
+    for (final part in message.parts.reversed) {
+      if (part is TextPart && part.text.trim().isNotEmpty) {
+        text = part.text;
+        break;
+      }
+    }
+    return markdownToPlainText(
+      ThinkingTagParser.parseWithRanges(text).visibleContent,
+    ).trim();
   }
 
   @visibleForTesting
@@ -2807,9 +2825,7 @@ class ChatActions {
         await _background.finish(
           _backgroundTaskId(state.ctx),
           BackgroundTaskOutcome.completed,
-          replyPreview: ThinkingTagParser.parseWithRanges(
-            finalizedMessage.content,
-          ).visibleContent,
+          replyPreview: replyPreviewText(finalizedMessage),
         );
       }
       // UI lifecycle cleanup is independent from terminal persistence success.
