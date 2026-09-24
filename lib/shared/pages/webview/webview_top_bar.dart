@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/ios_tactile.dart';
+import '../../widgets/ios_tactile.dart';
 import '../../../theme/app_font_weights.dart';
 
 /// The single address surface for the browser page: a close button, one

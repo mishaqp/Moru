@@ -43,8 +43,6 @@ import '../../../shared/widgets/custom_bottom_sheet.dart';
 import '../../../shared/widgets/ios_checkbox.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/thinking_sheen.dart';
-import '../../../desktop/desktop_context_menu.dart';
-import '../../../desktop/menu_anchor.dart';
 import '../../../shared/widgets/emoji_text.dart';
 import '../../../utils/platform_utils.dart';
 import '../../home/services/ask_user_interaction_service.dart';
@@ -1858,22 +1856,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
           const SizedBox(height: 8),
           // Message content (context menu: long-press on mobile, right-click on desktop)
           GestureDetector(
-            onLongPressStart: (_) {
-              final isDesktop =
-                  defaultTargetPlatform == TargetPlatform.macOS ||
-                  defaultTargetPlatform == TargetPlatform.windows ||
-                  defaultTargetPlatform == TargetPlatform.linux;
-              if (isDesktop) return; // Desktop uses right-click menu
-              _showUserContextMenu();
-            },
-            onSecondaryTapDown: (details) {
-              final isDesktop =
-                  defaultTargetPlatform == TargetPlatform.macOS ||
-                  defaultTargetPlatform == TargetPlatform.windows ||
-                  defaultTargetPlatform == TargetPlatform.linux;
-              if (!isDesktop) return; // Mobile keeps long-press
-              _showUserContextMenuAt(details.globalPosition);
-            },
+            onLongPressStart: (_) => _showUserContextMenu(),
             behavior: HitTestBehavior.translucent,
             child: Container(
               key: _userBubbleKey,
@@ -1968,31 +1951,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                         child: Center(
                           child: GestureDetector(
                             key: _moreBtnKey1,
-                            onTapDown: (d) {
-                              final isDesktop =
-                                  defaultTargetPlatform ==
-                                      TargetPlatform.macOS ||
-                                  defaultTargetPlatform ==
-                                      TargetPlatform.windows ||
-                                  defaultTargetPlatform == TargetPlatform.linux;
-                              if (isDesktop) {
-                                try {
-                                  DesktopMenuAnchor.setPosition(
-                                    d.globalPosition,
-                                  );
-                                } catch (_) {}
-                              }
-                            },
                             onTap: () {
-                              final isDesktop =
-                                  defaultTargetPlatform ==
-                                      TargetPlatform.macOS ||
-                                  defaultTargetPlatform ==
-                                      TargetPlatform.windows ||
-                                  defaultTargetPlatform == TargetPlatform.linux;
-                              if (isDesktop) {
-                                _setAnchorFromKey(_moreBtnKey1);
-                              }
                               widget.onMore?.call();
                             },
                             child: IosIconButton(
@@ -2023,63 +1982,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         ],
       ),
     );
-  }
-
-  void _showUserContextMenuAt(Offset globalPosition) async {
-    final l10n = AppLocalizations.of(context)!;
-    // Haptic feedback
-    try {
-      Haptics.light();
-    } catch (_) {}
-    await showDesktopContextMenuAt(
-      context,
-      globalPosition: globalPosition,
-      items: [
-        DesktopContextMenuItem(
-          icon: Lucide.Copy,
-          label: l10n.shareProviderSheetCopyButton,
-          onTap: () async {
-            if (widget.onCopy != null) {
-              widget.onCopy!.call();
-            } else {
-              await Clipboard.setData(
-                ClipboardData(text: widget.message.content),
-              );
-              if (mounted) {
-                showAppSnackBar(
-                  context,
-                  message: l10n.chatMessageWidgetCopiedToClipboard,
-                  type: NotificationType.success,
-                );
-              }
-            }
-          },
-        ),
-        if (widget.onEdit != null)
-          DesktopContextMenuItem(
-            icon: Lucide.Pencil,
-            label: l10n.messageMoreSheetEdit,
-            onTap: () => widget.onEdit?.call(),
-          ),
-        DesktopContextMenuItem(
-          icon: Lucide.Trash2,
-          label: l10n.messageMoreSheetDelete,
-          danger: true,
-          onTap: () => (widget.onDelete ?? widget.onMore)?.call(),
-        ),
-      ],
-    );
-  }
-
-  void _setAnchorFromKey(GlobalKey key) {
-    final rb = key.currentContext?.findRenderObject() as RenderBox?;
-    if (rb == null) return;
-    try {
-      final center = rb.localToGlobal(
-        Offset(rb.size.width / 2, rb.size.height),
-      );
-      DesktopMenuAnchor.setPosition(center);
-    } catch (_) {}
   }
 
   /// Number of text lines kept visible when a long user message is collapsed.
@@ -3389,33 +3291,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                               child: GestureDetector(
                                 key: _translateBtnKey2,
                                 behavior: HitTestBehavior.opaque,
-                                onTapDown: (d) {
-                                  final isDesktop =
-                                      defaultTargetPlatform ==
-                                          TargetPlatform.macOS ||
-                                      defaultTargetPlatform ==
-                                          TargetPlatform.windows ||
-                                      defaultTargetPlatform ==
-                                          TargetPlatform.linux;
-                                  if (isDesktop) {
-                                    try {
-                                      DesktopMenuAnchor.setPosition(
-                                        d.globalPosition,
-                                      );
-                                    } catch (_) {}
-                                  }
-                                },
                                 onTap: () {
-                                  final isDesktop =
-                                      defaultTargetPlatform ==
-                                          TargetPlatform.macOS ||
-                                      defaultTargetPlatform ==
-                                          TargetPlatform.windows ||
-                                      defaultTargetPlatform ==
-                                          TargetPlatform.linux;
-                                  if (isDesktop) {
-                                    _setAnchorFromKey(_translateBtnKey2);
-                                  }
                                   widget.onTranslate?.call();
                                 },
                                 child: IosIconButton(
@@ -3435,33 +3311,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                             child: Center(
                               child: GestureDetector(
                                 key: _moreBtnKey2,
-                                onTapDown: (d) {
-                                  final isDesktop =
-                                      defaultTargetPlatform ==
-                                          TargetPlatform.macOS ||
-                                      defaultTargetPlatform ==
-                                          TargetPlatform.windows ||
-                                      defaultTargetPlatform ==
-                                          TargetPlatform.linux;
-                                  if (isDesktop) {
-                                    try {
-                                      DesktopMenuAnchor.setPosition(
-                                        d.globalPosition,
-                                      );
-                                    } catch (_) {}
-                                  }
-                                },
                                 onTap: () {
-                                  final isDesktop =
-                                      defaultTargetPlatform ==
-                                          TargetPlatform.macOS ||
-                                      defaultTargetPlatform ==
-                                          TargetPlatform.windows ||
-                                      defaultTargetPlatform ==
-                                          TargetPlatform.linux;
-                                  if (isDesktop) {
-                                    _setAnchorFromKey(_moreBtnKey2);
-                                  }
                                   widget.onMore?.call();
                                 },
                                 child: IosIconButton(

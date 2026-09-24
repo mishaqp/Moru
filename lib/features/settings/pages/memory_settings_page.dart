@@ -5,7 +5,6 @@ import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/memory/memory_prompts.dart';
-import '../../../desktop/setting/memory_dialogs.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
@@ -305,19 +304,6 @@ Future<String?> _showInjectionCountInput(
   required String initialValue,
 }) {
   final l10n = AppLocalizations.of(context)!;
-  if (PlatformUtils.isDesktopTarget) {
-    return showDesktopMemoryTextInputDialog(
-      context,
-      title: l10n.memorySettingsInjectionMaxItemsCustomTitle,
-      label: l10n.memorySettingsInjectionMaxItemsCustomLabel,
-      hintText: l10n.memorySettingsInjectionMaxItemsCustomHint,
-      description: l10n.memorySettingsInjectionMaxItemsCustomDescription,
-      initialValue: initialValue,
-      minLines: 1,
-      maxLines: 1,
-      keyboardType: TextInputType.number,
-    );
-  }
   final controller = TextEditingController(text: initialValue);
   return showDialog<String>(
     context: context,
@@ -367,50 +353,30 @@ Future<String?> _showInjectionCountInput(
 }
 
 Future<void> _openMemoryEntries(BuildContext context) async {
-  if (PlatformUtils.isDesktopTarget) {
-    await showDesktopMemoryEntriesDialog(context);
-    return;
-  }
   await Navigator.of(
     context,
   ).push(MaterialPageRoute(builder: (_) => const MemoryEntriesPage()));
 }
 
 Future<void> _openUserProfile(BuildContext context) async {
-  if (PlatformUtils.isDesktopTarget) {
-    await showDesktopUserProfileMemoryDialog(context);
-    return;
-  }
   await Navigator.of(
     context,
   ).push(MaterialPageRoute(builder: (_) => const UserProfilePage()));
 }
 
 Future<void> _openLegacyMemory(BuildContext context) async {
-  if (PlatformUtils.isDesktopTarget) {
-    await showDesktopLegacyMemoryDialog(context);
-    return;
-  }
   await Navigator.of(
     context,
   ).push(MaterialPageRoute(builder: (_) => const LegacyMemoryPage()));
 }
 
 Future<void> _openMemoryTrace(BuildContext context) async {
-  if (PlatformUtils.isDesktopTarget) {
-    await showDesktopMemoryTraceDialog(context);
-    return;
-  }
   await Navigator.of(
     context,
   ).push(MaterialPageRoute(builder: (_) => const MemoryTracePage()));
 }
 
 Future<void> _openMemoryAbout(BuildContext context) async {
-  if (PlatformUtils.isDesktopTarget) {
-    await showDesktopMemoryAboutDialog(context);
-    return;
-  }
   await Navigator.of(
     context,
   ).push(MaterialPageRoute(builder: (_) => const MemoryAboutPage()));

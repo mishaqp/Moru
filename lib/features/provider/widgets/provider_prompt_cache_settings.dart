@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/providers/settings_provider.dart';
-import '../../../desktop/widgets/desktop_select_dropdown.dart';
+import '../../../shared/widgets/select_dropdown.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_settings_rows.dart';
 import '../../../shared/widgets/ios_switch.dart';

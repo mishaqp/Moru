@@ -1,6 +1,5 @@
 import 'dart:async';
-import '../../../desktop/desktop_context_menu.dart';
-import '../../../desktop/widgets/desktop_scheduled_task_tile.dart';
+import '../widgets/scheduled_task_wide_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -164,32 +163,14 @@ class _ScheduledTasksPageState extends State<ScheduledTasksPage>
         ),
       ],
     ];
-    if (action == null) {
-      if (service.isDesktop) {
-        await showDesktopContextMenuAt(
-          context,
-          globalPosition: position!,
-          items: [
-            for (final item in items)
-              DesktopContextMenuItem(
-                icon: item.icon,
-                label: item.label,
-                danger: item.value == 'delete',
-                onTap: () => action = item.value,
-              ),
-          ],
-        );
-      } else {
-        action = await showOptionSheet<String>(
-          context,
-          title: original.name,
-          items: items,
-          footer: service.isIOS && !original.running
-              ? IosSectionFooter(text: l.scheduledTasksPrepareNowDetail)
-              : null,
-        );
-      }
-    }
+    action ??= await showOptionSheet<String>(
+      context,
+      title: original.name,
+      items: items,
+      footer: service.isIOS && !original.running
+          ? IosSectionFooter(text: l.scheduledTasksPrepareNowDetail)
+          : null,
+    );
     if (!mounted) return;
     switch (action) {
       case 'prepare':

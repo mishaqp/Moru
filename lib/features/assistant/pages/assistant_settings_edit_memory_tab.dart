@@ -142,10 +142,6 @@ class _MemoryTabState extends State<_MemoryTab> {
   }
 
   Future<void> _goMemorySettings() async {
-    if (PlatformUtils.isDesktopTarget) {
-      await showDesktopMemorySettingsDialog(context);
-      return;
-    }
     await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const MemorySettingsPage()));
@@ -648,20 +644,6 @@ Future<String?> _showMemoryTextSheet(
   TextInputType? keyboardType,
   bool allowEmpty = false,
 }) {
-  if (PlatformUtils.isDesktopTarget) {
-    return showDesktopMemoryTextInputDialog(
-      context,
-      title: title,
-      label: label,
-      initialValue: initialValue,
-      hintText: hintText,
-      description: description,
-      minLines: minLines,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      allowEmpty: allowEmpty,
-    );
-  }
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,

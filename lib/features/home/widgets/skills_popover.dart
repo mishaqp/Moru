@@ -3,15 +3,15 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-import '../core/models/assistant.dart';
-import '../features/workspace/pages/skills_page.dart';
-import '../features/workspace/widgets/desktop_workspace_button.dart';
-import '../features/workspace/widgets/skills/conversation_skills_sheet.dart';
-import '../icons/lucide_adapter.dart';
-import '../l10n/app_localizations.dart';
-import '../shared/widgets/ios_tactile.dart';
-import '../theme/app_font_weights.dart';
-import '../theme/design_tokens.dart';
+import '../../../core/models/assistant.dart';
+import '../../workspace/pages/skills_page.dart';
+import '../../workspace/widgets/desktop_workspace_button.dart';
+import '../../workspace/widgets/skills/conversation_skills_sheet.dart';
+import '../../../icons/lucide_adapter.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ios_tactile.dart';
+import '../../../theme/app_font_weights.dart';
+import '../../../theme/design_tokens.dart';
 
 const desktopSkillsPopoverKey = ValueKey('desktop-skills-popover');
 

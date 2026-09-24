@@ -1068,6 +1068,8 @@ class WorkspaceToolsService {
       await _waitForRun(run, Duration(seconds: waitSeconds));
     }
     final running = run.status == ToolRunStatus.running;
+    // A stopped job's exit code is the signal that killed it, not a result.
+    final stopped = run.status == ToolRunStatus.cancelled;
     final stdout = run.stdoutSoFar;
     final stderr = run.stderrSoFar;
     final payload = <String, Object?>{
@@ -1080,7 +1082,7 @@ class WorkspaceToolsService {
         ToolRunStatus.cancelled => 'stopped',
         ToolRunStatus.timedOut => 'timed_out',
       },
-      if (!running) 'exit_code': run.exitCode,
+      if (!running && !stopped) 'exit_code': run.exitCode,
       'elapsed_seconds': DateTime.now().difference(run.startedAt).inSeconds,
       'stdout': utf16SafeCut(stdout, _jobStdoutTail, keepTail: true),
       'stderr': utf16SafeCut(stderr, _jobStderrTail, keepTail: true),
@@ -1091,7 +1093,8 @@ class WorkspaceToolsService {
       tool: tool,
       status: 'ok',
       command: run.command,
-      exitCode: running ? null : run.exitCode,
+      exitCode: running || stopped ? null : run.exitCode,
+      cancelled: stopped,
       stdoutPreview: utf16SafeCut(stdout, _previewLimit, keepTail: true),
       stderrPreview: utf16SafeCut(stderr, _previewLimit, keepTail: true),
     );

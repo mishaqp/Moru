@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 
 import '../../providers/model_provider.dart';
 import '../../providers/settings_provider.dart';
-import '../../services/api_key_manager.dart';
+import '../api_key_manager.dart';
 import '../../utils/multimodal_input_utils.dart';
 import '../../utils/openai_model_compat.dart';
 import '../../../utils/sandbox_path_resolver.dart';

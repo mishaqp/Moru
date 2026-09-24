@@ -1,6 +1,6 @@
-import '../../services/memory/memory_prompts.dart';
-import '../../services/memory/memory_tools.dart';
-import '../../services/search/search_tool_service.dart';
+import '../memory/memory_prompts.dart';
+import '../memory/memory_tools.dart';
+import '../search/search_tool_service.dart';
 import '../../../features/home/services/local_tools_service.dart';
 import '../workspace/workspace_tools_service.dart';
 

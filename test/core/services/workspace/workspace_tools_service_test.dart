@@ -723,6 +723,8 @@ void main() {
       );
       expect(runtime.cancelled, [jobId]);
       expect(stopped['status'], 'stopped');
+      // The kill signal is not an exit code the model should reason about.
+      expect(stopped.containsKey('exit_code'), isFalse);
 
       final unknown = jsonOf(
         await tools.handle(ctx(), 'shell_output', {
