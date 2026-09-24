@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -60,13 +63,13 @@ void main() {
       conversationId: 'c1',
       runtimeRunId: 'run-1',
     );
-    await tester.pumpAndSettle();
+    // The live dot pulses forever, so frames are stepped explicitly.
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('npm install'), findsOneWidget);
-    expect(find.textContaining('Running'), findsOneWidget);
     expect(find.text('sleep 9'), findsNothing);
 
     run.complete(status: ToolRunStatus.succeeded, exitCode: 0);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('npm install'), findsNothing);
   });
 
@@ -100,5 +103,31 @@ void main() {
     await tester.pumpWidget(_host(registry: registry, runtime: runtime));
     expect(find.text('second'), findsOneWidget);
     expect(find.textContaining('+1'), findsOneWidget);
+  });
+
+  testWidgets('shows the latest output line live', (tester) async {
+    final registry = ToolRunRegistry();
+    final runtime = WorkspaceRuntimeProvider()..register(_RecordingRuntime());
+    final run = registry.start(
+      'call-1',
+      'shell',
+      command: 'npm install',
+      conversationId: 'c1',
+    );
+
+    await tester.pumpWidget(_host(registry: registry, runtime: runtime));
+    Text tail() => tester.widget<Text>(find.byKey(RunningToolBar.tailKey));
+    expect(tail().data, '…');
+
+    run.appendStdout(Uint8List.fromList(utf8.encode('step 16\nstep 17\n\n')));
+    await tester.pump(ToolRun.notifyInterval);
+    expect(tail().data, 'step 17');
+
+    run.appendStderr(Uint8List.fromList(utf8.encode('warn: slow')));
+    await tester.pump(ToolRun.notifyInterval);
+    expect(tail().data, 'warn: slow');
+
+    run.complete(status: ToolRunStatus.succeeded, exitCode: 0);
+    await tester.pump(const Duration(milliseconds: 300));
   });
 }

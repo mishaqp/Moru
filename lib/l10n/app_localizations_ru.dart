@@ -4694,7 +4694,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get displaySettingsPageCollapseThinkingStepsSubtitle =>
-      'Показывать только последние этапы до раскрытия';
+      'Во время ответа показывать последние этапы, после — сворачивать в одну строку';
 
   @override
   String get displaySettingsPageShowToolResultSummaryTitle =>
@@ -4739,6 +4739,16 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get chainOfThoughtCollapse => 'Свернуть';
+
+  @override
+  String chainOfThoughtProcessedIn(Object seconds) {
+    return 'Обработано · $seconds с';
+  }
+
+  @override
+  String chainOfThoughtProcessedSteps(Object count) {
+    return 'Обработано · шагов: $count';
+  }
 
   @override
   String get displaySettingsPageShowChatListDateTitle =>

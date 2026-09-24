@@ -20,6 +20,7 @@ class RunningToolBar extends StatelessWidget {
   final String? conversationId;
 
   static const Key stopKey = ValueKey<String>('running-tool-bar-stop');
+  static const Key tailKey = ValueKey<String>('running-tool-bar-tail');
 
   @override
   Widget build(BuildContext context) {
@@ -123,33 +124,61 @@ class _RunningToolTileState extends State<_RunningToolTile> {
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
       child: Material(
         color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
           onTap: _openDetail,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+            padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
             child: Row(
               children: [
-                Icon(Lucide.SquareTerminal, size: 16, color: cs.primary),
-                const SizedBox(width: 8),
+                const _PulsingTerminalIcon(),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontFamily: 'monospace',
-                      color: cs.onSurface,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontFamily: 'monospace',
+                          fontWeight: AppFontWeights.semibold,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      // Live tail: the run notifies at most every 50 ms.
+                      ListenableBuilder(
+                        listenable: run,
+                        builder: (context, _) {
+                          final tail = run.tailLines
+                              .where((line) => line.trim().isNotEmpty)
+                              .lastOrNull;
+                          return Text(
+                            tail?.trim() ?? '…',
+                            key: RunningToolBar.tailKey,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontFamily: 'monospace',
+                              color: cs.onSurface.withValues(alpha: 0.6),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
-                    vertical: 2,
+                    vertical: 3,
                   ),
                   decoration: BoxDecoration(
                     color: cs.primary.withValues(alpha: 0.14),
@@ -157,13 +186,13 @@ class _RunningToolTileState extends State<_RunningToolTile> {
                   ),
                   child: Text(
                     widget.moreCount > 0
-                        ? '${l10n.workspaceToolRunning} · ${_elapsed()} · '
-                              '+${widget.moreCount}'
-                        : '${l10n.workspaceToolRunning} · ${_elapsed()}',
+                        ? '${_elapsed()} · +${widget.moreCount}'
+                        : _elapsed(),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: AppFontWeights.semibold,
                       color: cs.primary,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
                 ),
@@ -172,12 +201,76 @@ class _RunningToolTileState extends State<_RunningToolTile> {
                   tooltip: l10n.workspaceToolCancel,
                   visualDensity: VisualDensity.compact,
                   onPressed: _stopping ? null : _stop,
-                  icon: Icon(Lucide.CircleStop, size: 18, color: cs.error),
+                  icon: Icon(Lucide.CircleStop, size: 20, color: cs.error),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A terminal glyph with a softly breathing "live" dot.
+class _PulsingTerminalIcon extends StatefulWidget {
+  const _PulsingTerminalIcon();
+
+  @override
+  State<_PulsingTerminalIcon> createState() => _PulsingTerminalIconState();
+}
+
+class _PulsingTerminalIconState extends State<_PulsingTerminalIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+    lowerBound: 0.35,
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: 30,
+      height: 30,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            alignment: Alignment.center,
+            child: Icon(Lucide.SquareTerminal, size: 16, color: cs.primary),
+          ),
+          Positioned(
+            right: -2,
+            top: -2,
+            child: FadeTransition(
+              opacity: _pulse,
+              child: Container(
+                width: 9,
+                height: 9,
+                decoration: BoxDecoration(
+                  color: Colors.greenAccent.shade400,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: cs.surfaceContainerHigh,
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -2070,7 +2070,7 @@
   "displaySettingsPageAutoCollapseThinkingTitle": "Автоматически сворачивать рассуждения",
   "displaySettingsPageAutoCollapseThinkingSubtitle": "Сворачивать рассуждения после завершения",
   "displaySettingsPageCollapseThinkingStepsTitle": "Сворачивать этапы рассуждений",
-  "displaySettingsPageCollapseThinkingStepsSubtitle": "Показывать только последние этапы до раскрытия",
+  "displaySettingsPageCollapseThinkingStepsSubtitle": "Во время ответа показывать последние этапы, после — сворачивать в одну строку",
   "displaySettingsPageShowToolResultSummaryTitle": "Показывать сводку результатов инструментов",
   "displaySettingsPageInsertSuggestionOnlyTitle": "Вставлять подсказки без отправки",
   "displaySettingsPageShowToolResultSummarySubtitle": "Показывать краткий результат под этапами работы инструментов",
@@ -2087,6 +2087,8 @@
     }
   },
   "chainOfThoughtCollapse": "Свернуть",
+  "chainOfThoughtProcessedIn": "Обработано · {seconds} с",
+  "chainOfThoughtProcessedSteps": "Обработано · шагов: {count}",
   "displaySettingsPageShowChatListDateTitle": "Показывать даты в списке чатов",
   "displaySettingsPageShowChatListDateSubtitle": "Группировать диалоги по датам и показывать подписи групп",
   "displaySettingsPageEnableImageCropperTitle": "Обрезка изображений",

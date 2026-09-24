@@ -1351,7 +1351,7 @@ class _HomePageState extends State<HomePage>
   }
 
   double _chatTopOverlayInset(BuildContext context) {
-    return kToolbarHeight + MediaQuery.paddingOf(context).top;
+    return kChatHeaderHeight + MediaQuery.paddingOf(context).top;
   }
 
   Widget _buildMessageListView(

@@ -16,7 +16,10 @@ import '../../workspace/workspace_navigation.dart';
 /// terminal appear only when the chat has a workspace; the browser segment
 /// is highlighted while the browser runs minimized.
 class ChatHeaderSwitcher extends StatelessWidget {
-  const ChatHeaderSwitcher({super.key});
+  const ChatHeaderSwitcher({super.key, this.large = false});
+
+  /// The centered header variant: bigger segments with a soft outline.
+  final bool large;
 
   static const Key filesKey = ValueKey<String>('chat-header-files');
   static const Key terminalKey = ValueKey<String>('chat-header-terminal');
@@ -34,11 +37,14 @@ class ChatHeaderSwitcher extends StatelessWidget {
     });
 
     return Container(
-      height: 34,
+      height: large ? 40 : 34,
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: cs.onSurface.withValues(alpha: 0.06),
+        color: cs.onSurface.withValues(alpha: large ? 0.05 : 0.06),
         borderRadius: BorderRadius.circular(999),
+        border: large
+            ? Border.all(color: cs.onSurface.withValues(alpha: 0.08))
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -48,12 +54,14 @@ class ChatHeaderSwitcher extends StatelessWidget {
               key: filesKey,
               icon: Lucide.Braces,
               tooltip: l10n.chatHeaderFiles,
+              large: large,
               onTap: () => WorkspaceNavigation.openWorkspaceFiles(context),
             ),
             _Segment(
               key: terminalKey,
               icon: Lucide.SquareTerminal,
               tooltip: l10n.chatHeaderTerminal,
+              large: large,
               onTap: () => WorkspaceNavigation.openTerminal(context),
             ),
           ],
@@ -63,6 +71,7 @@ class ChatHeaderSwitcher extends StatelessWidget {
               key: browserKey,
               icon: Lucide.Globe,
               tooltip: l10n.chatHeaderBrowser,
+              large: large,
               active: minimized,
               onTap: () => unawaited(openSharedBrowser()),
             ),
@@ -80,8 +89,10 @@ class _Segment extends StatelessWidget {
     required this.tooltip,
     required this.onTap,
     this.active = false,
+    this.large = false,
   });
 
+  final bool large;
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
@@ -99,11 +110,11 @@ class _Segment extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           onTap: onTap,
           child: SizedBox(
-            width: 36,
-            height: 30,
+            width: large ? 48 : 36,
+            height: large ? 34 : 30,
             child: Icon(
               icon,
-              size: 17,
+              size: large ? 19 : 17,
               semanticLabel: tooltip,
               color: active ? cs.primary : cs.onSurface.withValues(alpha: 0.75),
             ),

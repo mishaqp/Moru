@@ -4630,7 +4630,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get displaySettingsPageCollapseThinkingStepsSubtitle =>
-      'Show only the latest steps until expanded';
+      'Show only the latest steps while replying; fold finished ones into one line';
 
   @override
   String get displaySettingsPageShowToolResultSummaryTitle =>
@@ -4675,6 +4675,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chainOfThoughtCollapse => 'Collapse';
+
+  @override
+  String chainOfThoughtProcessedIn(Object seconds) {
+    return 'Processed · $seconds s';
+  }
+
+  @override
+  String chainOfThoughtProcessedSteps(Object count) {
+    return 'Processed · $count steps';
+  }
 
   @override
   String get displaySettingsPageShowChatListDateTitle => 'Show Chat List Dates';

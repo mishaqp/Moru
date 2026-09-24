@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:ui' as ui;
@@ -23,10 +21,18 @@ import '../widgets/assistant_entry_actions.dart';
 import '../widgets/chat_header_switcher.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 
+/// Height of the name · model line under the header switcher.
+const double kChatHeaderTitleLineHeight = 22;
+
+/// Full chat header height below the status bar.
+const double kChatHeaderHeight = kToolbarHeight + kChatHeaderTitleLineHeight;
+
 /// Mobile layout scaffold for the home page
 /// This widget handles only the structural layout - AppBar, drawer, body structure
 /// All message list rendering and input bar logic remain in home_page.dart
 class HomeMobileScaffold extends StatelessWidget {
+  static const Key modelLineKey = ValueKey<String>('chat-header-model');
+
   const HomeMobileScaffold({
     super.key,
     required this.scaffoldKey,
@@ -139,10 +145,6 @@ class HomeMobileScaffold extends StatelessWidget {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context, ColorScheme cs) {
-    final isDesktopPlatform =
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux;
     final useNewAssistantAvatarUx = context
         .watch<SettingsProvider>()
         .useNewAssistantAvatarUx;
@@ -182,91 +184,15 @@ class HomeMobileScaffold extends StatelessWidget {
           );
         },
       ),
-      titleSpacing: 2,
-      title: useNewAssistantAvatarUx
-          ? Row(
-              children: [
-                _buildAssistantTitleAvatar(context),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AnimatedTextSwap(
-                        text: title,
-                        style: TextStyle(
-                          fontSize: isDesktopPlatform ? 14 : 16,
-                          fontWeight: AppFontWeights.medium,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (providerName != null && modelDisplay != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(6),
-                            onTap: onSelectModel,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 0),
-                              child: AnimatedTextSwap(
-                                text: '$modelDisplay ($providerName)',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: cs.onSurface.withValues(alpha: 0.6),
-                                  fontWeight: AppFontWeights.medium,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedTextSwap(
-                  text: title,
-                  style: TextStyle(
-                    fontSize: isDesktopPlatform ? 14 : 16,
-                    fontWeight: AppFontWeights.medium,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (providerName != null && modelDisplay != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(6),
-                      onTap: onSelectModel,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 0),
-                        child: AnimatedTextSwap(
-                          text: '$modelDisplay ($providerName)',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: cs.onSurface.withValues(alpha: 0.6),
-                            fontWeight: AppFontWeights.medium,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+      centerTitle: true,
+      title: const ChatHeaderSwitcher(large: true),
+      // The chat's name and model sit on one quiet full-width line under
+      // the switcher, so neither squeezes the other.
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(kChatHeaderTitleLineHeight),
+        child: _buildTitleLine(context, cs, useNewAssistantAvatarUx),
+      ),
       actions: [
-        const ChatHeaderSwitcher(),
-        const SizedBox(width: 2),
         IosIconButton(
           size: 20,
           minSize: 44,
@@ -305,7 +231,66 @@ class HomeMobileScaffold extends StatelessWidget {
     );
   }
 
-  Widget _buildAssistantTitleAvatar(BuildContext context) {
+  Widget _buildTitleLine(
+    BuildContext context,
+    ColorScheme cs,
+    bool withAvatar,
+  ) {
+    final muted = cs.onSurface.withValues(alpha: 0.55);
+    final hasModel = providerName != null && modelDisplay != null;
+    return SizedBox(
+      height: kChatHeaderTitleLineHeight,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (withAvatar) ...[
+              _buildAssistantTitleAvatar(context, size: 16),
+              const SizedBox(width: 6),
+            ],
+            Flexible(
+              child: AnimatedTextSwap(
+                text: title,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: AppFontWeights.medium,
+                  color: cs.onSurface.withValues(alpha: 0.85),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (hasModel) ...[
+              Text('  ·  ', style: TextStyle(fontSize: 12, color: muted)),
+              Flexible(
+                child: Tooltip(
+                  message: '$modelDisplay ($providerName)',
+                  child: InkWell(
+                    key: modelLineKey,
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: onSelectModel,
+                    child: AnimatedTextSwap(
+                      text: modelDisplay!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: muted,
+                        fontWeight: AppFontWeights.medium,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssistantTitleAvatar(BuildContext context, {double size = 28}) {
     final assistantProvider = context.watch<AssistantProvider>();
     final currentAssistant = assistantProvider.currentAssistant;
     final currentAssistantId = assistantProvider.currentAssistantId;
@@ -331,7 +316,7 @@ class HomeMobileScaffold extends StatelessWidget {
       child: AssistantAvatar(
         assistant: currentAssistant,
         fallbackName: _getAssistantName(context),
-        size: 28,
+        size: size,
       ),
     );
   }

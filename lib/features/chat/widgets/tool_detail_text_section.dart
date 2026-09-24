@@ -15,6 +15,7 @@ class ToolDetailTextSection extends StatelessWidget {
     this.textStyle = const TextStyle(fontSize: 12),
     this.trailing,
     this.belowLabel,
+    this.decoration,
   });
 
   /// Above this many lines (or characters) the text is chunked and built lazily.
@@ -35,6 +36,9 @@ class ToolDetailTextSection extends StatelessWidget {
 
   /// Optional content rendered between the label row and the text box.
   final Widget? belowLabel;
+
+  /// Replaces the default quiet box, e.g. for the terminal-styled shell view.
+  final BoxDecoration? decoration;
 
   static bool shouldChunk(String text) {
     if (text.length > lazyCharThreshold) return true;
@@ -61,11 +65,13 @@ class ToolDetailTextSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final decoration = BoxDecoration(
-      color: context.appColors.surfaceFill,
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.2)),
-    );
+    final decoration =
+        this.decoration ??
+        BoxDecoration(
+          color: context.appColors.surfaceFill,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.2)),
+        );
 
     final labelStyle = TextStyle(
       fontSize: 12,
