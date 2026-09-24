@@ -223,6 +223,7 @@ class Lucide {
   static const IconData Syringe = lucide.LucideIcons.syringe;
   static const IconData Route = lucide.LucideIcons.route;
   static const IconData FilePen = lucide.LucideIcons.filePen;
+  static const IconData FileDiff = lucide.LucideIcons.fileDiff;
   static const IconData FilePlus = lucide.LucideIcons.filePlus;
   static const IconData FileSearch = lucide.LucideIcons.fileSearch;
   static const IconData TextSearch = lucide.LucideIcons.textSearch;

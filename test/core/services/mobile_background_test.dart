@@ -472,4 +472,35 @@ void main() {
       expect(notifications, isEmpty);
     },
   );
+
+  test('a chat reply notifies with how its answer begins', () async {
+    await coordinator.configure(
+      const MobileBackgroundSettings(notificationsEnabled: true),
+      l10n,
+    );
+    coordinator.didChangeAppLifecycleState(AppLifecycleState.paused);
+    await start('reply');
+    await coordinator.finish(
+      'reply',
+      BackgroundTaskOutcome.completed,
+      replyPreview: 'Build is green.',
+    );
+    expect(notifications.single['title'], 'Private reply');
+    expect(notifications.single['body'], 'Build is green.');
+
+    await coordinator.configure(
+      const MobileBackgroundSettings(
+        notificationsEnabled: true,
+        privacyMode: true,
+      ),
+      l10n,
+    );
+    await start('secret');
+    await coordinator.finish(
+      'secret',
+      BackgroundTaskOutcome.completed,
+      replyPreview: 'Secret reply',
+    );
+    expect(notifications.last['body'], l10n.backgroundCompleted);
+  });
 }

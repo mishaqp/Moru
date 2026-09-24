@@ -9306,6 +9306,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceToolChangedFiles => 'Changed files';
 
   @override
+  String replyChangedFilesSummary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files changed',
+      one: '1 file changed',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get workspaceToolCancel => 'Cancel';
 
   @override
@@ -11099,14 +11110,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backgroundNotificationsDetail =>
-      'Notify when a task completes or fails outside the chat you are viewing. Does not control Android’s required ongoing notification.';
+      'Notify when a task completes or fails outside the chat you are viewing; a finished reply shows how its answer begins. Does not control Android’s required ongoing notification.';
 
   @override
   String get backgroundPrivacy => 'Task status privacy';
 
   @override
   String get backgroundPrivacyDetail =>
-      'Hide conversation titles and tool details in notifications and live status. Only generic status, task count and elapsed time are shown.';
+      'Hide conversation titles, reply text and tool details in notifications and live status. Only generic status, task count and elapsed time are shown.';
 
   @override
   String get backgroundLiveActivities => 'Live Activities';

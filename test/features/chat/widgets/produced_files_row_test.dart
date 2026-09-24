@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tool_metadata.dart';
 import 'package:Kelivo/core/services/workspace/file_link_resolver.dart';
 import 'package:Kelivo/features/chat/widgets/produced_files_row.dart';
+import 'package:Kelivo/features/chat/widgets/unified_diff_view.dart';
 import 'package:Kelivo/features/chat/widgets/workspace_tool_ui.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 
@@ -206,6 +207,76 @@ void main() {
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('file_14.txt'), 300);
     expect(find.text('file_14.txt'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('sums the reply edits and opens every diff', (tester) async {
+    WorkspaceToolPart edit(
+      String id,
+      String path,
+      String diff, {
+      String status = 'ok',
+    }) => WorkspaceToolPart(
+      id: id,
+      toolName: 'edit_file',
+      metadata: WorkspaceToolMetadata(
+        tool: 'edit_file',
+        status: status,
+        path: path,
+        diff: diff,
+        files: [
+          WorkspaceToolFile(
+            path: path,
+            link: 'kelivo://workspace/$path',
+            role: WorkspaceFileRole.modified,
+          ),
+        ],
+      ).toJson(),
+    );
+    final parts = [
+      edit('e1', 'a.dart', '@@ -1 +1,2 @@\n-old\n+new\n+more'),
+      edit('e2', 'b.dart', '@@ -1 +1 @@\n-x\n+y'),
+      edit('e3', 'a.dart', '@@ -3 +3 @@\n+tail'),
+      edit('e4', 'c.dart', '@@ -1 +1 @@\n-z\n+w', status: 'error'),
+    ];
+    expect(collectReplyFileEdits(parts).map((e) => e.path), [
+      'a.dart',
+      'b.dart',
+      'a.dart',
+    ]);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => SettingsProvider(createBusinessTestPreferences()),
+        child: MaterialApp(
+          locale: const Locale('ru'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ProducedFilesRow(parts: parts, conversationId: 'c1'),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final summary = find.byKey(ProducedFilesRow.editsSummaryKey);
+    expect(
+      find.descendant(of: summary, matching: find.text('Изменено 2 файла')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: summary, matching: find.text('+4')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: summary, matching: find.text('−2')),
+      findsOneWidget,
+    );
+
+    await tester.tap(summary);
+    await tester.pumpAndSettle();
+    expect(find.byType(UnifiedDiffView), findsNWidgets(3));
     expect(tester.takeException(), isNull);
   });
 }

@@ -87,6 +87,22 @@ final class MarkdownLineLexer {
   }
 }
 
+/// Readable plain text of [markdown] for speech and notifications: code,
+/// images and markup are dropped, link labels kept, whitespace collapsed.
+String markdownToPlainText(String markdown) {
+  var s = markdownRemoveCode(markdown);
+  s = s.replaceAllMapped(
+    RegExp(r'\[([^\]]+)\]\([^\)]+\)'),
+    (m) => m.group(1) ?? '',
+  );
+  s = s.replaceAll(RegExp(r'!\[[^\]]*\]\([^\)]*\)'), ' ');
+  s = s.replaceAll(RegExp(r'^[#>\-\*\+]+\s*', multiLine: true), '');
+  s = s.replaceAll(RegExp(r'[*_~]{1,3}'), '');
+  s = s.replaceAll('|', ' ');
+  s = s.replaceAll(RegExp(r'\s+'), ' ');
+  return s;
+}
+
 /// Removes fenced and inline code while preserving the surrounding line
 /// structure. Fence and backtick pairing stay identical to the renderer's
 /// structural scan.

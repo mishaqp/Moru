@@ -4156,6 +4156,14 @@
   "workspaceToolStderr": "stderr",
   "workspaceToolOpenFullOutput": "Open full output",
   "workspaceToolChangedFiles": "Changed files",
+  "replyChangedFilesSummary": "{count, plural, =1{1 file changed} other{{count} files changed}}",
+  "@replyChangedFilesSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "workspaceToolCancel": "Cancel",
   "workspaceToolCopyCommand": "Copy command",
   "workspaceToolCopyOutput": "Copy output",
@@ -5023,9 +5031,9 @@
   "backgroundIosEnabled": "Enhanced background execution",
   "backgroundIosEnabledDetail": "Request time to finish current tasks. Enable location or silent audio separately for additional background support.",
   "backgroundNotifications": "Task notifications",
-  "backgroundNotificationsDetail": "Notify when a task completes or fails outside the chat you are viewing. Does not control Android’s required ongoing notification.",
+  "backgroundNotificationsDetail": "Notify when a task completes or fails outside the chat you are viewing; a finished reply shows how its answer begins. Does not control Android’s required ongoing notification.",
   "backgroundPrivacy": "Task status privacy",
-  "backgroundPrivacyDetail": "Hide conversation titles and tool details in notifications and live status. Only generic status, task count and elapsed time are shown.",
+  "backgroundPrivacyDetail": "Hide conversation titles, reply text and tool details in notifications and live status. Only generic status, task count and elapsed time are shown.",
   "backgroundLiveActivities": "Live Activities",
   "backgroundLiveActivitiesDetail": "Show current tasks on the Lock Screen and Dynamic Island. Availability and visibility depend on the system.",
   "backgroundOverlay": "Floating task status",
