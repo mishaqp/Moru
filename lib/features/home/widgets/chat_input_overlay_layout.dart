@@ -11,7 +11,7 @@ class ChatInputOverlayLayout extends StatelessWidget {
     this.backgroundImageActive = false,
   });
 
-  static const double _topOverlayTailHeight = 16;
+  static const double _topOverlayTailHeight = 24;
   static const double _bottomOverlayFadeHeight = 180;
 
   final double topInset;
@@ -37,6 +37,7 @@ class ChatInputOverlayLayout extends StatelessWidget {
                         topInset + _topOverlayTailHeight,
                       ),
                       child: _TopBackgroundFade(
+                        solidHeight: topInset,
                         height: topInset + _topOverlayTailHeight,
                         child: IgnorePointer(
                           key: const Key('chat-input-overlay-top-background'),
@@ -54,7 +55,10 @@ class ChatInputOverlayLayout extends StatelessWidget {
                   right: 0,
                   top: 0,
                   height: topInset + _topOverlayTailHeight,
-                  child: const _TopOverlayFade(),
+                  child: _TopOverlayFade(
+                    solidFraction:
+                        topInset / (topInset + _topOverlayTailHeight),
+                  ),
                 ),
               if (backgroundImageActive && topBackground != null)
                 Positioned.fill(
@@ -176,8 +180,14 @@ class _BottomOverlayClipper extends CustomClipper<Rect> {
 }
 
 class _TopBackgroundFade extends StatelessWidget {
-  const _TopBackgroundFade({required this.height, required this.child});
+  const _TopBackgroundFade({
+    required this.solidHeight,
+    required this.height,
+    required this.child,
+  });
 
+  /// The header stays fully covered; only the tail below it fades.
+  final double solidHeight;
   final double height;
   final Widget child;
 
@@ -190,13 +200,8 @@ class _TopBackgroundFade extends StatelessWidget {
         return LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          stops: const [0.0, 0.48, 0.78, 1.0],
-          colors: [
-            surface,
-            surface,
-            surface.withValues(alpha: 0.9),
-            surface.withValues(alpha: 0),
-          ],
+          stops: [0.0, height <= 0 ? 0.0 : solidHeight / height, 1.0],
+          colors: [surface, surface, surface.withValues(alpha: 0)],
         ).createShader(Rect.fromLTWH(0, 0, bounds.width, height));
       },
       child: child,
@@ -237,7 +242,11 @@ class _BottomBackgroundFade extends StatelessWidget {
 }
 
 class _TopOverlayFade extends StatelessWidget {
-  const _TopOverlayFade();
+  const _TopOverlayFade({required this.solidFraction});
+
+  /// Share of the height behind the header, kept (nearly) opaque so the
+  /// chat never shows through the title line; the rest fades out.
+  final double solidFraction;
 
   @override
   Widget build(BuildContext context) {
@@ -247,11 +256,10 @@ class _TopOverlayFade extends StatelessWidget {
     final gradient = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      stops: const [0.0, 0.48, 0.78, 1.0],
+      stops: [0.0, solidFraction, 1.0],
       colors: [
         surface.withValues(alpha: 1.0),
-        surface.withValues(alpha: isDark ? 0.96 : 0.99),
-        surface.withValues(alpha: isDark ? 0.74 : 0.88),
+        surface.withValues(alpha: isDark ? 0.97 : 0.99),
         surface.withValues(alpha: 0),
       ],
     );

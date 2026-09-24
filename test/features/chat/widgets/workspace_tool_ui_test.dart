@@ -502,7 +502,9 @@ void main() {
     expect(find.text('outputs'), findsNothing);
   });
 
-  testWidgets('live tail updates from an injected ToolRun', (tester) async {
+  testWidgets('the card leaves live output to the running strip', (
+    tester,
+  ) async {
     final registry = ToolRunRegistry();
     final run = registry.start(
       'live-1',
@@ -528,6 +530,10 @@ void main() {
     expect(find.byKey(WorkspaceStatusBadge.runningKey), findsOneWidget);
 
     run.appendStdout(utf8.encode('alpha\nbeta\ngamma\n'));
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(find.textContaining('gamma'), findsNothing);
+
+    run.complete(status: ToolRunStatus.succeeded, exitCode: 0);
     await tester.pump(const Duration(milliseconds: 60));
     expect(find.textContaining('gamma'), findsOneWidget);
     expect(find.textContaining('beta'), findsOneWidget);

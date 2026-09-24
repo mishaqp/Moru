@@ -708,6 +708,7 @@ class _HomePageState extends State<HomePage>
       scroll_ctrl.ChatAutoFollowScrollController();
   String? _scrollConversationId;
   final GlobalKey _inputBarKey = GlobalKey();
+  final GlobalKey _composerAreaKey = GlobalKey();
   final GlobalKey _selectionMiniMapKey = GlobalKey();
   final GlobalKey _selectionActionBarKey = GlobalKey();
   bool _scrollNavHovering = false;
@@ -740,6 +741,7 @@ class _HomePageState extends State<HomePage>
       vsync: this,
       scaffoldKey: _scaffoldKey,
       inputBarKey: _inputBarKey,
+      composerAreaKey: _composerAreaKey,
       inputFocus: _inputFocus,
       inputController: _inputController,
       mediaController: _mediaController,
@@ -1072,7 +1074,7 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildMobileBody(BuildContext context, ColorScheme cs) {
-    final bottomContentPadding = _controller.inputBarHeight + 16;
+    final bottomContentPadding = _controller.composerAreaHeight + 16;
     final topContentPadding = _chatTopOverlayInset(context) + 8;
     final backgroundImageActive = _assistantBackgroundActive(context);
 
@@ -1117,6 +1119,7 @@ class _HomePageState extends State<HomePage>
                 return false;
               },
               child: SizeChangedLayoutNotifier(
+                key: _composerAreaKey,
                 child: Builder(
                   builder: (context) =>
                       _buildChatInputBar(context, isTablet: false),
@@ -1267,7 +1270,7 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildTabletBody(BuildContext context, ColorScheme cs) {
-    final bottomContentPadding = _controller.inputBarHeight + 16;
+    final bottomContentPadding = _controller.composerAreaHeight + 16;
     final topContentPadding = _chatTopOverlayInset(context) + 8;
     final backgroundImageActive = _assistantBackgroundActive(context);
 
@@ -1692,7 +1695,7 @@ class _HomePageState extends State<HomePage>
                   setState(() => _scrollNavHovering = hovering);
                 }
               : null,
-          bottomOffset: _controller.inputBarHeight + 12,
+          bottomOffset: _controller.composerAreaHeight + 12,
           onScrollToTop: () => _controller.scrollToTop(animate: false),
           onPreviousMessage: _controller.jumpToPreviousQuestion,
           onNextMessage: _controller.jumpToNextQuestion,

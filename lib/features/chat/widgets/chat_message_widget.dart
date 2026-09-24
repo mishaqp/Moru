@@ -48,6 +48,7 @@ import '../../../desktop/menu_anchor.dart';
 import '../../../shared/widgets/emoji_text.dart';
 import '../../../utils/platform_utils.dart';
 import '../../home/services/ask_user_interaction_service.dart';
+import '../utils/tool_timing.dart';
 import '../../home/services/assistant_manager_tool.dart';
 import '../../home/services/local_tools_service.dart';
 import '../../home/services/tool_approval_service.dart';
@@ -2968,9 +2969,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 showToolCards: showToolCards,
                 isPendingApproval: isPending,
               );
-              final thinkingBlockCount = visibleBlocks
-                  .where((block) => block.isThinking)
-                  .length;
               if (visibleBlocks.isEmpty &&
                   widget.message.isStreaming &&
                   visualContent.isEmpty) {
@@ -3078,11 +3076,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                     showThinkingCards: showThinkingCards,
                     showToolCards: showToolCards,
                     settled: !widget.message.isStreaming,
-                    // The reply's time only describes the steps when they
-                    // all sit in one card.
-                    durationMs: thinkingBlockCount == 1
-                        ? widget.message.durationMs
-                        : null,
                     onRecoveredAnswer: widget.onRecoveredAskUserAnswer,
                   ),
                 );
@@ -4473,7 +4466,6 @@ class _ChainOfThoughtCard extends StatefulWidget {
     required this.showThinkingCards,
     required this.showToolCards,
     this.settled = false,
-    this.durationMs,
     this.onRecoveredAnswer,
   });
 
@@ -4486,7 +4478,6 @@ class _ChainOfThoughtCard extends StatefulWidget {
 
   /// The reply finished: its steps fold into one "Processed · 12 s" line.
   final bool settled;
-  final int? durationMs;
   final Future<void> Function(ToolUIPart part, AskUserResult result)?
   onRecoveredAnswer;
 
@@ -4498,12 +4489,33 @@ class _ChainOfThoughtCardState extends State<_ChainOfThoughtCard> {
   bool _showAllSteps = false;
   bool _summaryOpen = false;
 
-  String _summaryLabel(AppLocalizations l10n, int stepCount) {
-    final ms = widget.durationMs;
-    if (ms == null || ms <= 0) {
-      return l10n.chainOfThoughtProcessedSteps(stepCount);
+  /// Wall time from the first step's start to the last step's end, or
+  /// null when a step lacks its marks (e.g. replies saved before 0.1.23).
+  static Duration? _stepsSpan(List<_TimelineStepData> steps) {
+    DateTime? first;
+    DateTime? last;
+    for (final step in steps) {
+      final reasoning = step.reasoning;
+      final start = reasoning != null
+          ? reasoning.startAt
+          : toolTimeOf(step.tool?.metadata, kToolStartedAtMsKey);
+      final end = reasoning != null
+          ? reasoning.finishedAt
+          : toolTimeOf(step.tool?.metadata, kToolFinishedAtMsKey);
+      if (start == null || end == null) return null;
+      if (first == null || start.isBefore(first)) first = start;
+      if (last == null || end.isAfter(last)) last = end;
     }
-    final seconds = ms / 1000;
+    if (first == null || last == null || last.isBefore(first)) return null;
+    return last.difference(first);
+  }
+
+  String _summaryLabel(AppLocalizations l10n, List<_TimelineStepData> steps) {
+    final span = _stepsSpan(steps);
+    if (span == null) {
+      return l10n.chainOfThoughtProcessedSteps(steps.length);
+    }
+    final seconds = span.inMilliseconds / 1000;
     return l10n.chainOfThoughtProcessedIn(
       seconds < 10 ? seconds.toStringAsFixed(1) : '${seconds.round()}',
     );
@@ -4512,7 +4524,7 @@ class _ChainOfThoughtCardState extends State<_ChainOfThoughtCard> {
   Widget _summaryRow(
     AppLocalizations l10n,
     ChatSurfaceForegroundPalette fg,
-    int stepCount,
+    List<_TimelineStepData> steps,
   ) {
     return IosCardPress(
       key: _ChainOfThoughtCard.summaryKey,
@@ -4527,7 +4539,7 @@ class _ChainOfThoughtCardState extends State<_ChainOfThoughtCard> {
           Icon(Lucide.ListChecks, size: 15, color: fg.muted),
           const SizedBox(width: 6),
           Text(
-            _summaryLabel(l10n, stepCount),
+            _summaryLabel(l10n, steps),
             style: TextStyle(
               fontSize: 13,
               color: fg.muted,
@@ -4657,7 +4669,7 @@ class _ChainOfThoughtCardState extends State<_ChainOfThoughtCard> {
     if (foldable && !_summaryOpen) {
       return Align(
         alignment: Alignment.centerLeft,
-        child: _summaryRow(l10n, fg, filteredSteps.length),
+        child: _summaryRow(l10n, fg, filteredSteps),
       );
     }
     final enableAdaptiveWidth =
@@ -4821,7 +4833,7 @@ class _ChainOfThoughtCardState extends State<_ChainOfThoughtCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
-      children: [_summaryRow(l10n, fg, filteredSteps.length), aligned],
+      children: [_summaryRow(l10n, fg, filteredSteps), aligned],
     );
   }
 }

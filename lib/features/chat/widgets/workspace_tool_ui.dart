@@ -989,6 +989,9 @@ class WorkspaceToolCardBody extends StatelessWidget {
   ) {
     switch (part.toolName) {
       case 'shell':
+        // While it runs, the live output belongs to the running strip above
+        // the composer; the card keeps just its command line.
+        if (liveRun?.status == ToolRunStatus.running) return null;
         return _ShellTail(part: part, meta: meta, run: liveRun);
       case 'write_file':
       case 'edit_file':
