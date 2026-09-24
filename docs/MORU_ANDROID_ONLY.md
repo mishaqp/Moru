@@ -9,8 +9,11 @@ not a Linux application target.
 
 Keep the embedded PRoot/Linux environment, workspace, terminal/PTY, skills and
 STDIO MCP. They are functionality of the Android app, not separate Linux apps.
-Upstream non-Android source files remain inert for merge compatibility; their
-build workflows have been removed, not replaced with disabled matrix options.
+The native iOS, macOS, Windows, Linux and Web projects have been removed from
+the repository, together with their build workflows. `flutter pub get` still
+writes plugin registrants into those folders; `.gitignore` keeps them out of
+git. When merging upstream Kelivo, resolve its changes to those folders by
+deleting them.
 
 ## Build contract
 

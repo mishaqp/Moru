@@ -5,12 +5,22 @@ Run with: python3 -m unittest discover -s tool -p 'test_android_only_policy.py' 
 """
 from pathlib import Path
 import re
+import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class AndroidOnlyPolicyTest(unittest.TestCase):
+    def test_non_android_native_projects_are_not_tracked(self):
+        # flutter pub get regenerates plugin registrants in these folders, so
+        # check what git tracks rather than what exists on disk.
+        tracked = subprocess.run(
+            ['git', 'ls-files', '--', 'ios', 'macos', 'windows', 'linux', 'web'],
+            cwd=ROOT, capture_output=True, text=True, check=True,
+        ).stdout.split()
+        self.assertEqual(tracked, [])
+
     def test_on_device_llm_is_not_packaged(self):
         gradle = (ROOT / 'android/app/build.gradle.kts').read_text()
         manifest = (ROOT / 'android/app/src/main/AndroidManifest.xml').read_text()

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart'
     show TargetPlatform, debugDefaultTargetPlatformOverride;
@@ -40,15 +39,6 @@ void main() {
       );
     },
   );
-
-  test('macOS bundle declares speech-recognition privacy usage', () {
-    final infoPlist = File('macos/Runner/Info.plist').readAsStringSync();
-
-    expect(
-      infoPlist,
-      contains('<key>NSSpeechRecognitionUsageDescription</key>'),
-    );
-  });
 
   group('SystemAsrService', () {
     test(
