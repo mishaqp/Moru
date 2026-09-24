@@ -12295,6 +12295,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserAddressEditorGo => 'Go';
 
   @override
+  String get browserMinimize => 'Minimize';
+
+  @override
+  String get browserMiniExpand => 'Expand';
+
+  @override
+  String get browserMiniTitle => 'Browser';
+
+  @override
+  String get chatHeaderFiles => 'Files';
+
+  @override
+  String get chatHeaderTerminal => 'Terminal';
+
+  @override
+  String get chatHeaderBrowser => 'Browser';
+
+  @override
   String get browserMenuTooltip => 'More options';
 
   @override

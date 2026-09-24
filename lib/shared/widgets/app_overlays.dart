@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../pages/webview/browser_mini_window.dart';
 import 'snackbar.dart';
 import 'tts_floating_player.dart';
 
@@ -18,6 +19,7 @@ class AppOverlays extends StatelessWidget {
             type: MaterialType.transparency,
             child: TtsFloatingPlayer(),
           ),
+          const BrowserMiniWindow(),
         ],
       ),
     );

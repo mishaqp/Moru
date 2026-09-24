@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../utils/utf16_safe_cut.dart';
@@ -296,6 +297,71 @@ class BrowserAgentSession {
 
   bool get isAttached => _controller != null;
 
+  /// The live controller, for the mini window and a page re-expanding it.
+  WebViewController? get controller => _controller;
+
+  /// True while the browser page is closed but its WebView lives on in the
+  /// floating mini window. `browser_use` keeps working against it.
+  final ValueNotifier<bool> minimized = ValueNotifier<bool>(false);
+
+  /// The controller is parked for a page to take back. Separate from
+  /// [minimized] because the mini window must drop its WebView a frame
+  /// before the page shows the same native view.
+  bool _parked = false;
+
+  /// Hands the page's controller over to the mini window instead of closing
+  /// the session: navigation keeps feeding [pageStarted]/[pageFinished], and
+  /// `browser_use: close` or [closeMinimized] ends it.
+  void minimize(WebViewController controller) {
+    if (!identical(_controller, controller)) return;
+    isRouteCurrent = false;
+    _closeHandler = closeMinimized;
+    controller.setNavigationDelegate(
+      NavigationDelegate(
+        onPageStarted: pageStarted,
+        onPageFinished: pageFinished,
+      ),
+    );
+    _parked = true;
+    // Called from the page's dispose, while the tree is locked: show the
+    // mini window once this frame is done.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_parked && identical(_controller, controller)) minimized.value = true;
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  /// Hides the mini window and waits a frame so its WebView is gone before a
+  /// page shows the same controller.
+  Future<void> releaseMiniWindow() async {
+    if (!minimized.value) return;
+    minimized.value = false;
+    await WidgetsBinding.instance.endOfFrame;
+  }
+
+  /// The page taking the parked controller back; it registers itself again
+  /// as the session owner.
+  WebViewController? takeMinimized() {
+    if (!_parked) return null;
+    _parked = false;
+    // Normally already hidden by [releaseMiniWindow]; this runs from a
+    // page's initState, so never notify synchronously here.
+    if (minimized.value) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_parked) minimized.value = false;
+      });
+    }
+    return _controller;
+  }
+
+  /// Closes a minimized browser: the same cleanup as closing the page.
+  Future<void> closeMinimized() async {
+    final controller = _controller;
+    _parked = false;
+    minimized.value = false;
+    if (controller != null) unregister(controller);
+  }
+
   void expectNavigation() {
     _loading = true;
     _readyCompleter = Completer<void>();
@@ -317,6 +383,8 @@ class BrowserAgentSession {
     _controller = null;
     _closeHandler = null;
     _attachedCompleter = null;
+    _parked = false;
+    minimized.value = false;
     _loading = false;
     _history.clear();
     ownerConversationId = null;

@@ -55,6 +55,12 @@ package name does not require building other platforms.
   go through the tool approval prompt, and it cannot delete the assistant
   running the chat or the last one. Extend its settings schema when
   `Assistant` gains a user-facing field.
+- **Floating browser**: the agent `WebViewPage` can minimize into
+  `BrowserMiniWindow` (in `AppOverlays`). `BrowserAgentSession.minimize`
+  parks the live `WebViewController`, and the next agent `WebViewPage` adopts
+  it without reloading; `openSharedBrowser` opens or expands it. The chat
+  header's `ChatHeaderSwitcher` and the composer's `RunningToolBar` are the
+  entry points for files, terminal, browser and running commands.
 
 ## Pre-commit checklist
 

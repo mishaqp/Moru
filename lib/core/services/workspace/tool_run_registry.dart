@@ -163,6 +163,15 @@ class ToolRunRegistry extends ChangeNotifier {
       runtimeRunId: runtimeRunId,
       command: command,
     );
+    // Watchers of the registry (running strips, busy badges) must see a run
+    // finish, not only its own listeners.
+    void onRunChanged() {
+      if (run.status == ToolRunStatus.running) return;
+      run.removeListener(onRunChanged);
+      notifyListeners();
+    }
+
+    run.addListener(onRunChanged);
     _runs[key] = run;
     _lru.add(key);
     _evictOverflow();
@@ -189,6 +198,14 @@ class ToolRunRegistry extends ChangeNotifier {
       _runs.values.where((run) => run.status == ToolRunStatus.running);
 
   Iterable<ToolRun> get all => _runs.values;
+
+  /// Runs still going in [conversationId], oldest first.
+  List<ToolRun> runningIn(String? conversationId) => [
+    for (final entry in _runs.entries)
+      if (entry.key.$1 == conversationId &&
+          entry.value.status == ToolRunStatus.running)
+        entry.value,
+  ]..sort((a, b) => a.startedAt.compareTo(b.startedAt));
 
   void _touch(_RunKey id) {
     _lru.remove(id);

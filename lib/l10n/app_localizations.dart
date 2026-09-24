@@ -22007,6 +22007,42 @@ abstract class AppLocalizations {
   /// **'Go'**
   String get browserAddressEditorGo;
 
+  /// No description provided for @browserMinimize.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimize'**
+  String get browserMinimize;
+
+  /// No description provided for @browserMiniExpand.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand'**
+  String get browserMiniExpand;
+
+  /// No description provided for @browserMiniTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser'**
+  String get browserMiniTitle;
+
+  /// No description provided for @chatHeaderFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get chatHeaderFiles;
+
+  /// No description provided for @chatHeaderTerminal.
+  ///
+  /// In en, this message translates to:
+  /// **'Terminal'**
+  String get chatHeaderTerminal;
+
+  /// No description provided for @chatHeaderBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser'**
+  String get chatHeaderBrowser;
+
   /// No description provided for @browserMenuTooltip.
   ///
   /// In en, this message translates to:

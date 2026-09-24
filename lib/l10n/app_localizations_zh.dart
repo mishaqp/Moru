@@ -11742,6 +11742,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserAddressEditorGo => '前往';
 
   @override
+  String get browserMinimize => '最小化';
+
+  @override
+  String get browserMiniExpand => '展开';
+
+  @override
+  String get browserMiniTitle => '浏览器';
+
+  @override
+  String get chatHeaderFiles => '文件';
+
+  @override
+  String get chatHeaderTerminal => '终端';
+
+  @override
+  String get chatHeaderBrowser => '浏览器';
+
+  @override
   String get browserMenuTooltip => '更多';
 
   @override
@@ -23713,6 +23731,24 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get browserAddressEditorGo => '前往';
+
+  @override
+  String get browserMinimize => '最小化';
+
+  @override
+  String get browserMiniExpand => '展开';
+
+  @override
+  String get browserMiniTitle => '浏览器';
+
+  @override
+  String get chatHeaderFiles => '文件';
+
+  @override
+  String get chatHeaderTerminal => '终端';
+
+  @override
+  String get chatHeaderBrowser => '浏览器';
 
   @override
   String get browserMenuTooltip => '更多';
@@ -35765,6 +35801,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get browserAddressEditorGo => '前往';
+
+  @override
+  String get browserMinimize => '最小化';
+
+  @override
+  String get browserMiniExpand => '展開';
+
+  @override
+  String get browserMiniTitle => '瀏覽器';
+
+  @override
+  String get chatHeaderFiles => '檔案';
+
+  @override
+  String get chatHeaderTerminal => '終端機';
+
+  @override
+  String get chatHeaderBrowser => '瀏覽器';
 
   @override
   String get browserMenuTooltip => '更多';

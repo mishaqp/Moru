@@ -20,6 +20,7 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
     required this.currentUrl,
     required this.title,
     required this.onClose,
+    this.onMinimize,
     this.onTapAddress,
     this.onCopyLink,
     this.onOpenExternally,
@@ -31,6 +32,9 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
   final String? currentUrl;
   final String? title;
   final VoidCallback onClose;
+
+  /// Shrinks the page into the floating mini window; agent sessions only.
+  final VoidCallback? onMinimize;
   final VoidCallback? onTapAddress;
   final VoidCallback? onCopyLink;
   final VoidCallback? onOpenExternally;
@@ -118,6 +122,16 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
               ),
             ),
       actions: [
+        if (onMinimize != null)
+          IosIconButton(
+            key: const ValueKey('browser_minimize'),
+            icon: Lucide.Minimize2,
+            color: cs.onSurface,
+            size: 20,
+            minSize: 44,
+            semanticLabel: l10n.browserMinimize,
+            onTap: onMinimize,
+          ),
         PopupMenuButton<String>(
           tooltip: l10n.browserMenuTooltip,
           icon: Icon(Lucide.MoreVertical, color: cs.onSurface),

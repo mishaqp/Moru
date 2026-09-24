@@ -20,6 +20,7 @@ import '../../chat/widgets/frosted/chat_frosted_backdrop.dart';
 import '../../chat/widgets/chat_assistant_background.dart';
 import '../widgets/assistant_avatar.dart';
 import '../widgets/assistant_entry_actions.dart';
+import '../widgets/chat_header_switcher.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 
 /// Mobile layout scaffold for the home page
@@ -198,6 +199,8 @@ class HomeMobileScaffold extends StatelessWidget {
                           fontSize: isDesktopPlatform ? 14 : 16,
                           fontWeight: AppFontWeights.medium,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       if (providerName != null && modelDisplay != null)
                         Padding(
@@ -235,6 +238,8 @@ class HomeMobileScaffold extends StatelessWidget {
                     fontSize: isDesktopPlatform ? 14 : 16,
                     fontWeight: AppFontWeights.medium,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 if (providerName != null && modelDisplay != null)
                   Padding(
@@ -260,6 +265,8 @@ class HomeMobileScaffold extends StatelessWidget {
               ],
             ),
       actions: [
+        const ChatHeaderSwitcher(),
+        const SizedBox(width: 2),
         IosIconButton(
           size: 20,
           minSize: 44,

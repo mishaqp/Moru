@@ -12439,6 +12439,24 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserAddressEditorGo => 'Перейти';
 
   @override
+  String get browserMinimize => 'Свернуть';
+
+  @override
+  String get browserMiniExpand => 'Развернуть';
+
+  @override
+  String get browserMiniTitle => 'Браузер';
+
+  @override
+  String get chatHeaderFiles => 'Файлы';
+
+  @override
+  String get chatHeaderTerminal => 'Терминал';
+
+  @override
+  String get chatHeaderBrowser => 'Браузер';
+
+  @override
   String get browserMenuTooltip => 'Ещё';
 
   @override
