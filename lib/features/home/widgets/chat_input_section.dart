@@ -22,8 +22,7 @@ import '../../../features/workspace/workspace_navigation.dart';
 import '../../../theme/design_tokens.dart';
 import 'chat_input_bar.dart';
 import 'model_icon.dart';
-import 'running_tool_bar.dart';
-import 'task_plan_bar.dart';
+import 'composer_status_strip.dart';
 
 /// Callback for checking if a model supports tool calling.
 typedef IsToolModelCallback = bool Function(String providerKey, String modelId);
@@ -262,8 +261,7 @@ class ChatInputSection extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TaskPlanBar(conversationId: conversationId),
-        RunningToolBar(conversationId: conversationId),
+        ComposerStatusStrip(conversationId: conversationId),
         if (showEnvChip)
           Padding(
             padding: const EdgeInsets.fromLTRB(

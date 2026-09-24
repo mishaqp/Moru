@@ -528,6 +528,7 @@ double _estimateWorkspaceToolCardExtra({
   final pattern = (arguments['pattern'] ?? '').toString().trim();
   final hasSummary = switch (toolName) {
     'shell' => command.isNotEmpty,
+    'shell_output' => _workspaceMetaString(metadata, 'command').isNotEmpty,
     'glob' || 'grep' => pattern.isNotEmpty || path.isNotEmpty,
     _ => path.isNotEmpty,
   };
@@ -536,7 +537,7 @@ double _estimateWorkspaceToolCardExtra({
   if (toolName == 'update_plan') {
     final steps = TaskPlan.fromArguments(arguments)?.steps.length ?? 0;
     if (steps > 0) extra += 6 + steps * kEstimatePlanStepRow;
-  } else if (toolName == 'shell') {
+  } else if (toolName == 'shell' || toolName == 'shell_output') {
     final tail = _workspaceEstimateTailLineCount(content, metadata);
     if (tail > 0) extra += tail * kEstimateWorkspaceTailLine;
   } else {
