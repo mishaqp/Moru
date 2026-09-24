@@ -26,6 +26,7 @@ import '../../../core/services/workspace/workspace_tools_service.dart';
 import '../../../core/providers/workspace_provider.dart';
 import '../../../core/services/browser/browser_agent_session.dart';
 import 'ask_user_interaction_service.dart';
+import 'assistant_manager_tool.dart';
 import 'built_in_tool_names.dart';
 import 'local_tools_service.dart';
 import 'tool_approval_service.dart';
@@ -564,6 +565,28 @@ class ToolHandlerService {
           }
         }
 
+        if (name == LocalToolNames.assistantManager &&
+            assistant != null &&
+            LocalToolsService.isEnabledForAssistant(name, assistant)) {
+          // Changes are only made after the approval prompt above; a caller
+          // without one (e.g. a background run) may only read.
+          if (approvalService == null &&
+              AssistantManagerTool.requiresApproval(args)) {
+            return _toolError(
+              error: 'approval_unavailable',
+              message:
+                  'Changing assistants needs the user\'s confirmation, '
+                  'which is not available here.',
+              tool: name,
+            );
+          }
+          return AssistantManagerTool(
+            assistants: assistantProvider,
+            catalog: _assistantManagerCatalog(settings, mcp),
+            callerAssistantId: assistant.id,
+          ).execute(args);
+        }
+
         // Local tools
         final localResult = await LocalToolsService.tryHandleToolCall(
           name,
@@ -635,6 +658,56 @@ class ToolHandlerService {
         );
       }
     };
+  }
+
+  AssistantManagerCatalog _assistantManagerCatalog(
+    SettingsProvider settings,
+    McpProvider mcp,
+  ) {
+    final configs = settings.providerConfigs;
+    final keys = [
+      ...settings.providersOrder.where(configs.containsKey),
+      ...configs.keys.where((k) => !settings.providersOrder.contains(k)),
+    ];
+    return AssistantManagerCatalog(
+      providers: [
+        for (final key in keys)
+          AssistantManagerProvider(
+            key: key,
+            name: configs[key]!.name,
+            enabled: configs[key]!.enabled,
+            models: configs[key]!.models,
+          ),
+      ],
+      mcpServers: [
+        for (final server in mcp.servers)
+          AssistantManagerOption(
+            id: server.id,
+            name: server.name,
+            enabled: server.enabled,
+          ),
+      ],
+      skills: [
+        for (final skill in contextProvider.read<SkillsService>().skills)
+          AssistantManagerOption(
+            id: skill.record.id,
+            name: skill.name,
+            description: skill.description,
+            enabled: skill.record.enabled,
+          ),
+      ],
+      workspaces: [
+        for (final workspace
+            in contextProvider.read<WorkspaceProvider>().workspaces)
+          AssistantManagerOption(id: workspace.id, name: workspace.name),
+      ],
+      localToolIds: [
+        for (final id in LocalToolNames.all)
+          if (LocalToolsService.isAvailableOnThisPlatform(id) &&
+              id != LocalToolNames.browserUse)
+            id,
+      ],
+    );
   }
 
   /// Handle memory tool calls (§10).

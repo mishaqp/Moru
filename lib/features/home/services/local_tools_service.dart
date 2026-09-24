@@ -7,6 +7,7 @@ import 'package:math_expressions/math_expressions.dart';
 
 import '../../../core/models/assistant.dart';
 import '../../../core/models/health_data_type.dart';
+import 'assistant_manager_tool.dart';
 import 'browser_agent_tool.dart';
 
 typedef TextToSpeechStarter = Future<void> Function(String text);
@@ -30,6 +31,7 @@ class LocalToolNames {
   static const String remindersQuery = 'reminders_query';
   static const String remindersCreate = 'reminders_create';
   static const String remindersComplete = 'reminders_complete';
+  static const String assistantManager = AssistantManagerTool.toolName;
 
   static const List<String> all = [
     timeInfo,
@@ -48,6 +50,7 @@ class LocalToolNames {
     remindersQuery,
     remindersCreate,
     remindersComplete,
+    assistantManager,
   ];
 
   static const List<String> requiresUserApproval = [
@@ -58,6 +61,9 @@ class LocalToolNames {
 
   static bool requiresApprovalFor(String name, Map<String, dynamic> arguments) {
     if (requiresUserApproval.contains(name)) return true;
+    if (name == assistantManager) {
+      return AssistantManagerTool.requiresApproval(arguments);
+    }
     if (name != browserUse) return false;
     final action = (arguments['action'] ?? '').toString().trim().toLowerCase();
     return action == 'click' ||
@@ -494,6 +500,8 @@ class LocalToolsService {
         return _remindersCreateDefinition();
       case LocalToolNames.remindersComplete:
         return _remindersCompleteDefinition;
+      case LocalToolNames.assistantManager:
+        return AssistantManagerTool.definition;
       default:
         throw ArgumentError.value(name, 'name', 'Unknown local tool');
     }

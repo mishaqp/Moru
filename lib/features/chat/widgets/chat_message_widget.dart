@@ -48,6 +48,7 @@ import '../../../desktop/menu_anchor.dart';
 import '../../../shared/widgets/emoji_text.dart';
 import '../../../utils/platform_utils.dart';
 import '../../home/services/ask_user_interaction_service.dart';
+import '../../home/services/assistant_manager_tool.dart';
 import '../../home/services/local_tools_service.dart';
 import '../../home/services/tool_approval_service.dart';
 import '../utils/assistant_paragraph_splitter.dart';
@@ -488,6 +489,7 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
     LocalToolNames.remindersQuery => Lucide.ListTodo,
     LocalToolNames.remindersCreate => Lucide.ListPlus,
     LocalToolNames.remindersComplete => Lucide.CheckCircle,
+    LocalToolNames.assistantManager => Lucide.Bot,
     _ => null,
   };
 }
@@ -524,7 +526,26 @@ String? _localToolTitleFor(
       l10n.assistantEditLocalToolRemindersCreateTitle,
     LocalToolNames.remindersComplete =>
       l10n.assistantEditLocalToolRemindersCompleteTitle,
+    LocalToolNames.assistantManager => _assistantManagerTitleFor(l10n, args),
     _ => null,
+  };
+}
+
+String _assistantManagerTitleFor(
+  AppLocalizations l10n,
+  Map<String, dynamic> args,
+) {
+  return switch (AssistantManagerTool.actionOf(args)) {
+    AssistantManagerTool.actionList => l10n.assistantManagerActionList,
+    AssistantManagerTool.actionGet => l10n.assistantManagerActionGet,
+    AssistantManagerTool.actionOptions => l10n.assistantManagerActionOptions,
+    AssistantManagerTool.actionCreate => l10n.assistantManagerActionCreate,
+    AssistantManagerTool.actionUpdate => l10n.assistantManagerActionUpdate,
+    AssistantManagerTool.actionDuplicate =>
+      l10n.assistantManagerActionDuplicate,
+    AssistantManagerTool.actionSwitch => l10n.assistantManagerActionSwitch,
+    AssistantManagerTool.actionDelete => l10n.assistantManagerActionDelete,
+    _ => l10n.assistantManagerToolTitle,
   };
 }
 
