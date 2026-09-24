@@ -14,6 +14,9 @@ the repository, together with their build workflows. `flutter pub get` still
 writes plugin registrants into those folders; `.gitignore` keeps them out of
 git. When merging upstream Kelivo, resolve its changes to those folders by
 deleting them.
+`tool/test_android_only_policy.py` fails if a merge brings those folders, the
+removed desktop packages or new `lib/desktop/` files back; see "Updating Moru"
+in `AGENTS.md`.
 
 ## Build contract
 

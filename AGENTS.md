@@ -63,6 +63,48 @@ Format only changed Dart files. `pr-check.yml` enforces the existing analyzer,
 tests and localization gates. `moru-android.yml` additionally builds one arm64
 APK, runs Android JVM tests and inspects actual APK libraries/signature.
 
+## Updating Moru (upstream Kelivo merges, any AI tool)
+
+Upstream is `https://github.com/Chevey339/kelivo` (`master`). Work on a branch
+and land it through a PR; never push to `master` directly.
+
+1. `git remote add upstream https://github.com/Chevey339/kelivo.git` (once),
+   then `git fetch upstream && git merge upstream/master` (merge, not rebase).
+2. Resolve every conflict in `ios/`, `macos/`, `windows/`, `linux/`, `web/`
+   and in new or modified `lib/desktop/` files by deleting them (`git rm`).
+   Keep Moru's side for `android/`, `pubspec.yaml` identity/version,
+   `.github/`, `tool/`, `docs/releases/` and Russian ARB strings.
+3. Do not re-add the removed desktop packages (`bitsdojo_window`,
+   `screen_retriever`, `tray_manager`, `hotkey_manager`,
+   `reorderable_grid_view`, `system_fonts`) or on-device LLM packages.
+4. Add Russian translations for new ARB keys, run `flutter gen-l10n`, and run
+   the whole pre-commit checklist before pushing.
+
+`tool/test_android_only_policy.py` fails when a merge brings back a native
+platform folder, a removed desktop package or a new `lib/desktop/` file; fix the
+merge, never the allowlist. The file list in
+`test_desktop_dart_code_only_shrinks` may only lose entries.
+
+## Tests must be deterministic
+
+A red test is a bug in the code or in the test, never "a flake" to re-run.
+Find the race or order dependency and remove it. Do not skip, disable, retry
+or loosen tests to get CI green.
+
+- Dart: debug hooks that simulate a stuck native call (`debug*HangSeconds`)
+  start before any cancellation check, so a cancel from the progress callback
+  cannot overtake them.
+- Robolectric: declare custom shadows on the test class, not on single test
+  methods. The sandbox is shared, and mixing shadows per method makes
+  results depend on test order.
+
+## Releases
+
+Bump `version:` in `pubspec.yaml` (`x.y.z+N`, `N` = previous build + 1) and add
+`docs/releases/vX.Y.Z.md` in Russian in the same PR. After it merges, the push
+to `master` builds a signed APK; publishing is a manual `moru-android.yml`
+dispatch on `master` with `variant=release`, `publish=true`.
+
 ## Benchmarks are not tests
 
 `test/perf/*_bench.dart` print timings and contain no `expect()`, so they cannot
