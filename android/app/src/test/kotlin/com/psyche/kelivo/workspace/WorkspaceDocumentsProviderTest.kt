@@ -37,7 +37,10 @@ import java.nio.file.Files
 import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28], manifest = Config.NONE)
+// Every test shares one FileObserver shadow: Robolectric reuses the sandbox
+// across tests, and mixing shadows per method let an observer created under
+// one shadow dispatch stopWatching() to the other (ClassCastException).
+@Config(sdk = [28], manifest = Config.NONE, shadows = [SharedPathFileObserverShadow::class])
 class WorkspaceDocumentsProviderTest {
     private lateinit var appData: File
     private lateinit var database: SQLiteDatabase
@@ -187,7 +190,6 @@ class WorkspaceDocumentsProviderTest {
     }
 
     @Test
-    @Config(shadows = [SharedPathFileObserverShadow::class])
     fun cursorReplacementKeepsFileAndRegistryNotificationsWorking() {
         val root = workspace()
         var current = children("workspace/one")
@@ -214,7 +216,6 @@ class WorkspaceDocumentsProviderTest {
     }
 
     @Test
-    @Config(shadows = [SharedPathFileObserverShadow::class])
     fun multipleDirectoriesShareRegistryWatchUntilTheLastCursorCloses() {
         workspace()
         workspace("two")
@@ -254,7 +255,6 @@ class WorkspaceDocumentsProviderTest {
     }
 
     @Test
-    @Config(shadows = [SharedPathFileObserverShadow::class])
     fun closingCursorCancelsQueuedNotificationsAndAllowsReopening() {
         val root = workspace()
         val resolver = RuntimeEnvironment.getApplication().contentResolver
@@ -277,7 +277,6 @@ class WorkspaceDocumentsProviderTest {
     }
 
     @Test
-    @Config(shadows = [SharedPathFileObserverShadow::class])
     fun replacingADirectoryRearmsItsWatchWithoutOldCursorInterference() {
         val root = workspace()
         val old = children("workspace/one")
