@@ -282,11 +282,14 @@ class _BottomOverlayFade extends StatelessWidget {
     final gradient = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      stops: const [0.0, 0.48, 1.0],
+      // The strip under the composer (gesture bar) is fully covered, so a
+      // reply scrolling past never shows below the input.
+      stops: const [0.0, 0.48, 0.8, 1.0],
       colors: [
         surface.withValues(alpha: 0),
         surface.withValues(alpha: isDark ? 0.64 : 0.82),
-        surface.withValues(alpha: isDark ? 0.92 : 0.98),
+        surface,
+        surface,
       ],
     );
 
