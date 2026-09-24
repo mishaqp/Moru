@@ -38,6 +38,7 @@ import '../../../utils/assistant_regex.dart';
 import '../../chat/models/message_edit_result.dart';
 import '../../chat/widgets/chat_message_widget.dart' show ToolUIPart;
 import '../../chat/widgets/message_edit_sheet.dart';
+import '../pages/home_mobile_layout.dart' show kChatHeaderHeight;
 import '../../chat/widgets/message_export_sheet.dart';
 import '../../../desktop/message_edit_dialog.dart';
 import '../../../desktop/hotkeys/chat_action_bus.dart';
@@ -622,7 +623,7 @@ class HomePageController extends ChangeNotifier {
       getAutoScrollIdleSeconds: () =>
           _context.read<SettingsProvider>().autoScrollIdleSeconds,
       getTopRevealInset: () =>
-          kToolbarHeight + MediaQuery.paddingOf(_context).top,
+          kChatHeaderHeight + MediaQuery.paddingOf(_context).top,
       isGenerating: () => _chatController.isCurrentConversationLoading,
     );
   }
