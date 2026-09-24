@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../core/models/message_part.dart';
+import '../../home/services/ask_user_interaction_service.dart';
 import '../utils/thinking_tag_parser.dart';
 import 'timeline_visibility.dart';
 
@@ -189,12 +190,32 @@ class VisibleTimelineBlock {
   const VisibleTimelineBlock({
     required this.visibleSteps,
     required this.hiddenCount,
+    this.folded = false,
   });
 
   final List<TimelineProjectedStep> visibleSteps;
   final int hiddenCount;
 
-  bool get hasExpandRow => hiddenCount > 0;
+  /// The finished block shows only its "Processed · 12 s" summary line.
+  final bool folded;
+
+  bool get hasExpandRow => hiddenCount > 0 && !folded;
+}
+
+/// Whether a finished reply's steps may fold into one summary line: nothing
+/// in them still runs or waits on the user.
+bool timelineStepsFoldable(
+  List<TimelineProjectedStep> steps, {
+  required bool Function(TimelineToolRef tool) isPendingApproval,
+}) {
+  return !steps.any((step) {
+    final tool = step.tool;
+    if (tool == null) return step.reasoning?.loading ?? false;
+    return tool.loading ||
+        isPendingApproval(tool) ||
+        (tool.toolName == AskUserToolNames.askUser &&
+            tool.content?.trim().isNotEmpty != true);
+  });
 }
 
 /// Shared [fromParts] decision plus the blocks the renderer and estimator walk.
@@ -794,6 +815,7 @@ VisibleTimelineBlock? _visibleThinkingFromProjected(
   required bool showThinkingCards,
   required bool showToolCards,
   required bool collapseThinkingSteps,
+  required bool settled,
   required bool Function(TimelineToolRef tool) isPendingApproval,
 }) {
   final filtered = _filteredThinkingSteps(
@@ -806,19 +828,25 @@ VisibleTimelineBlock? _visibleThinkingFromProjected(
   final collapsed = collapseTimelineSteps(
     filtered,
     collapseThinkingSteps: collapseThinkingSteps,
+    fold:
+        settled &&
+        timelineStepsFoldable(filtered, isPendingApproval: isPendingApproval),
   );
   return VisibleTimelineBlock(
     visibleSteps: collapsed.visibleSteps,
     hiddenCount: collapsed.hiddenCount,
+    folded: collapsed.folded,
   );
 }
 
 /// Visibility filter + per-block collapse. Expand-row is [VisibleTimelineBlock.hasExpandRow].
+/// A [settled] (finished) reply folds each block into its summary line.
 List<VisibleTimelineBlock> collapseProjectedTimeline(
   List<TimelineProjectedBlock> blocks, {
   required bool showThinkingCards,
   required bool showToolCards,
   required bool collapseThinkingSteps,
+  bool settled = false,
   required bool Function(TimelineToolRef tool) isPendingApproval,
 }) {
   return [
@@ -828,6 +856,7 @@ List<VisibleTimelineBlock> collapseProjectedTimeline(
             showThinkingCards: showThinkingCards,
             showToolCards: showToolCards,
             collapseThinkingSteps: collapseThinkingSteps,
+            settled: settled,
             isPendingApproval: isPendingApproval,
           )
           case final visible?)

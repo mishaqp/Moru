@@ -277,6 +277,7 @@ void main() {
       role: 'assistant',
       content: '',
       conversationId: 'conversation-1',
+      isStreaming: true,
     );
 
     final collapsed = await _estimateExtent(
@@ -294,6 +295,41 @@ void main() {
     expect(collapsed, closeTo(96 + 36 + 2 * _workspaceReadFileCard, 0.1));
     expect(expanded, closeTo(96 + 30 * _workspaceReadFileCard, 0.1));
     expect(collapsed, lessThan(expanded * 0.25));
+  });
+
+  testWidgets('a finished reply estimates its steps as one summary line', (
+    tester,
+  ) async {
+    final tools = <ToolUIPart>[
+      for (var i = 0; i < 30; i++)
+        ToolUIPart(
+          id: 'tool-$i',
+          toolName: 'read_file',
+          arguments: {'path': 'lib/foo_$i.dart'},
+          content: 'ok',
+        ),
+    ];
+    final message = ChatMessage(
+      id: 'tools-folded',
+      role: 'assistant',
+      content: '',
+      conversationId: 'conversation-1',
+    );
+
+    final folded = await _estimateExtent(
+      tester,
+      message: message,
+      toolParts: {'tools-folded': tools},
+      collapseThinkingSteps: true,
+    );
+    final expanded = await _estimateExtent(
+      tester,
+      message: message,
+      toolParts: {'tools-folded': tools},
+    );
+
+    expect(folded, closeTo(96 + 30, 0.1));
+    expect(expanded, closeTo(96 + 30 * _workspaceReadFileCard, 0.1));
   });
 
   testWidgets('builtin_search-only tools add no timeline height', (
@@ -601,6 +637,8 @@ void main() {
         role: 'assistant',
         conversationId: 'conversation-1',
         parts: parts,
+        // While streaming only the latest two steps show.
+        isStreaming: true,
       );
       final projected = projectAssistantTimeline(
         parts: parts,
@@ -981,6 +1019,8 @@ void main() {
               role: 'assistant',
               conversationId: 'conversation-1',
               parts: List<MessagePart>.of(parts),
+              // Still streaming: a finished reply folds to its summary line.
+              isStreaming: true,
             ),
           ],
           collapseThinkingSteps: true,

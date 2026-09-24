@@ -539,6 +539,7 @@ class _MessageListViewState extends State<MessageListView> {
 
   /// Expand-steps row shown when a timeline block is collapsed.
   static const double _estimateExpandRow = 36.0;
+  static const double _estimateSummaryRow = 30.0;
 
   /// Characters scanned before a message's line density is extrapolated.
   static const int _estimateScanLimit = 8000;
@@ -937,7 +938,17 @@ class _MessageListViewState extends State<MessageListView> {
       final collapsed = collapseTimelineSteps(
         block.thinkingSteps,
         collapseThinkingSteps: settings.collapseThinkingSteps,
+        fold:
+            !message.isStreaming &&
+            timelineStepsFoldable(
+              block.thinkingSteps,
+              isPendingApproval: isPending,
+            ),
       );
+      if (collapsed.folded) {
+        addVisible(_estimateSummaryRow);
+        continue;
+      }
       addVisible(
         _estimateVisibleThinkingHeight(
           VisibleTimelineBlock(

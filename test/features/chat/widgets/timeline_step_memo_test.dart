@@ -353,6 +353,9 @@ void main() {
                 role: 'assistant',
                 content: '',
                 conversationId: 'c1',
+                // Streaming keeps the latest two steps; a finished reply
+                // folds to its summary line.
+                isStreaming: true,
               ),
               showModelIcon: false,
               toolParts: tools,
@@ -440,6 +443,9 @@ void main() {
                 role: 'assistant',
                 content: '',
                 conversationId: 'c1',
+                // Streaming keeps the latest two steps; a finished reply
+                // folds to its summary line.
+                isStreaming: true,
               ),
               showModelIcon: false,
               toolParts: tools,

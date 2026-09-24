@@ -278,23 +278,34 @@ bool isTimelineToolVisible({
   return loading && pendingApproval;
 }
 
-/// Collapse a timeline block to the last two steps plus an expand row.
+/// Collapse a timeline block to the last two steps plus an expand row, or,
+/// with [fold], to a single "Processed · 12 s" summary line.
 class CollapsedTimelineBlock<T> {
   const CollapsedTimelineBlock({
     required this.visibleSteps,
     required this.hiddenCount,
+    this.folded = false,
   });
 
   final List<T> visibleSteps;
   final int hiddenCount;
+  final bool folded;
 
-  bool get hasExpandRow => hiddenCount > 0;
+  bool get hasExpandRow => hiddenCount > 0 && !folded;
 }
 
 CollapsedTimelineBlock<T> collapseTimelineSteps<T>(
   List<T> steps, {
   required bool collapseThinkingSteps,
+  bool fold = false,
 }) {
+  if (collapseThinkingSteps && fold && steps.isNotEmpty) {
+    return CollapsedTimelineBlock<T>(
+      visibleSteps: List<T>.empty(),
+      hiddenCount: steps.length,
+      folded: true,
+    );
+  }
   if (!collapseThinkingSteps || steps.length <= 2) {
     return CollapsedTimelineBlock<T>(
       visibleSteps: List<T>.of(steps),

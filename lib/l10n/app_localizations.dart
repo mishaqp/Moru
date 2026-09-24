@@ -8520,7 +8520,7 @@ abstract class AppLocalizations {
   /// No description provided for @displaySettingsPageCollapseThinkingStepsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Show only the latest steps until expanded'**
+  /// **'Show only the latest steps while replying; fold finished ones into one line'**
   String get displaySettingsPageCollapseThinkingStepsSubtitle;
 
   /// No description provided for @displaySettingsPageShowToolResultSummaryTitle.
@@ -8588,6 +8588,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Collapse'**
   String get chainOfThoughtCollapse;
+
+  /// No description provided for @chainOfThoughtProcessedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Processed · {seconds} s'**
+  String chainOfThoughtProcessedIn(Object seconds);
+
+  /// No description provided for @chainOfThoughtProcessedSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'Processed · {count} steps'**
+  String chainOfThoughtProcessedSteps(Object count);
 
   /// No description provided for @displaySettingsPageShowChatListDateTitle.
   ///

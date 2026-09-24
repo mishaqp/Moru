@@ -2968,6 +2968,9 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 showToolCards: showToolCards,
                 isPendingApproval: isPending,
               );
+              final thinkingBlockCount = visibleBlocks
+                  .where((block) => block.isThinking)
+                  .length;
               if (visibleBlocks.isEmpty &&
                   widget.message.isStreaming &&
                   visualContent.isEmpty) {
@@ -3074,6 +3077,12 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                     conversationId: widget.message.conversationId,
                     showThinkingCards: showThinkingCards,
                     showToolCards: showToolCards,
+                    settled: !widget.message.isStreaming,
+                    // The reply's time only describes the steps when they
+                    // all sit in one card.
+                    durationMs: thinkingBlockCount == 1
+                        ? widget.message.durationMs
+                        : null,
                     onRecoveredAnswer: widget.onRecoveredAskUserAnswer,
                   ),
                 );
@@ -4463,13 +4472,21 @@ class _ChainOfThoughtCard extends StatefulWidget {
     required this.conversationId,
     required this.showThinkingCards,
     required this.showToolCards,
+    this.settled = false,
+    this.durationMs,
     this.onRecoveredAnswer,
   });
+
+  static const Key summaryKey = ValueKey<String>('chain-of-thought-summary');
 
   final List<_TimelineStepData> steps;
   final String conversationId;
   final bool showThinkingCards;
   final bool showToolCards;
+
+  /// The reply finished: its steps fold into one "Processed · 12 s" line.
+  final bool settled;
+  final int? durationMs;
   final Future<void> Function(ToolUIPart part, AskUserResult result)?
   onRecoveredAnswer;
 
@@ -4479,6 +4496,54 @@ class _ChainOfThoughtCard extends StatefulWidget {
 
 class _ChainOfThoughtCardState extends State<_ChainOfThoughtCard> {
   bool _showAllSteps = false;
+  bool _summaryOpen = false;
+
+  String _summaryLabel(AppLocalizations l10n, int stepCount) {
+    final ms = widget.durationMs;
+    if (ms == null || ms <= 0) {
+      return l10n.chainOfThoughtProcessedSteps(stepCount);
+    }
+    final seconds = ms / 1000;
+    return l10n.chainOfThoughtProcessedIn(
+      seconds < 10 ? seconds.toStringAsFixed(1) : '${seconds.round()}',
+    );
+  }
+
+  Widget _summaryRow(
+    AppLocalizations l10n,
+    ChatSurfaceForegroundPalette fg,
+    int stepCount,
+  ) {
+    return IosCardPress(
+      key: _ChainOfThoughtCard.summaryKey,
+      onTap: () => setState(() => _summaryOpen = !_summaryOpen),
+      borderRadius: BorderRadius.circular(12),
+      baseColor: Colors.transparent,
+      pressedScale: 1,
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Lucide.ListChecks, size: 15, color: fg.muted),
+          const SizedBox(width: 6),
+          Text(
+            _summaryLabel(l10n, stepCount),
+            style: TextStyle(
+              fontSize: 13,
+              color: fg.muted,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(width: 2),
+          AnimatedRotation(
+            turns: _summaryOpen ? 0.25 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: Icon(Lucide.ChevronRight, size: 15, color: fg.muted),
+          ),
+        ],
+      ),
+    );
+  }
 
   Object _reasoningStepSignature({
     required ReasoningSegment step,
@@ -4578,11 +4643,29 @@ class _ChainOfThoughtCardState extends State<_ChainOfThoughtCard> {
       });
     });
     final l10n = AppLocalizations.of(context)!;
+    // Nothing waiting on the user may hide behind the fold.
+    final foldable =
+        collapseThinkingSteps &&
+        widget.settled &&
+        pendingApprovalIds.ids.isEmpty &&
+        !filteredSteps.any(
+          (step) =>
+              step.loading ||
+              (step.tool?.toolName == AskUserToolNames.askUser &&
+                  step.tool?.content?.trim().isNotEmpty != true),
+        );
+    if (foldable && !_summaryOpen) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: _summaryRow(l10n, fg, filteredSteps.length),
+      );
+    }
     final enableAdaptiveWidth =
         filteredSteps.isNotEmpty &&
         filteredSteps.every((step) => step.isReasoning) &&
         !filteredSteps.any((step) => step.isReasoning && step.loading);
-    final canCollapse = collapseThinkingSteps && filteredSteps.length > 2;
+    final canCollapse =
+        collapseThinkingSteps && !foldable && filteredSteps.length > 2;
     final hiddenCount = canCollapse && !_showAllSteps
         ? filteredSteps.length - 2
         : 0;
@@ -4729,10 +4812,16 @@ class _ChainOfThoughtCardState extends State<_ChainOfThoughtCard> {
       ),
     );
 
-    return Align(
+    final aligned = Align(
       alignment: Alignment.centerLeft,
       widthFactor: fillWidth ? null : 1,
       child: card,
+    );
+    if (!foldable) return aligned;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [_summaryRow(l10n, fg, filteredSteps.length), aligned],
     );
   }
 }

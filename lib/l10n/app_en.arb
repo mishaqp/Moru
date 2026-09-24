@@ -2069,7 +2069,7 @@
   "displaySettingsPageAutoCollapseThinkingTitle": "Auto-collapse Thinking",
   "displaySettingsPageAutoCollapseThinkingSubtitle": "Collapse reasoning after finish",
   "displaySettingsPageCollapseThinkingStepsTitle": "Collapse Thinking Steps",
-  "displaySettingsPageCollapseThinkingStepsSubtitle": "Show only the latest steps until expanded",
+  "displaySettingsPageCollapseThinkingStepsSubtitle": "Show only the latest steps while replying; fold finished ones into one line",
   "displaySettingsPageShowToolResultSummaryTitle": "Show Tool Result Summary",
   "displaySettingsPageInsertSuggestionOnlyTitle": "Insert suggestions without sending",
   "displaySettingsPageShowToolResultSummarySubtitle": "Display the summary text below tool steps",
@@ -2086,6 +2086,8 @@
     }
   },
   "chainOfThoughtCollapse": "Collapse",
+  "chainOfThoughtProcessedIn": "Processed · {seconds} s",
+  "chainOfThoughtProcessedSteps": "Processed · {count} steps",
   "displaySettingsPageShowChatListDateTitle": "Show Chat List Dates",
   "displaySettingsPageShowChatListDateSubtitle": "Display date group labels in the conversation list",
   "displaySettingsPageEnableImageCropperTitle": "Enable Image Cropping",

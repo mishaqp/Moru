@@ -4465,7 +4465,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get displaySettingsPageCollapseThinkingStepsSubtitle =>
-      '默认只显示最新步骤，展开后查看全部';
+      '回复时只显示最新步骤，完成后折叠为一行';
 
   @override
   String get displaySettingsPageShowToolResultSummaryTitle => '显示工具结果摘要';
@@ -4505,6 +4505,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chainOfThoughtCollapse => '收起';
+
+  @override
+  String chainOfThoughtProcessedIn(Object seconds) {
+    return '已处理 · $seconds 秒';
+  }
+
+  @override
+  String chainOfThoughtProcessedSteps(Object count) {
+    return '已处理 · $count 个步骤';
+  }
 
   @override
   String get displaySettingsPageShowChatListDateTitle => '显示对话列表日期';
@@ -16530,7 +16540,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageCollapseThinkingStepsSubtitle =>
-      '默认只显示最新步骤，展开后查看全部';
+      '回复时只显示最新步骤，完成后折叠为一行';
 
   @override
   String get displaySettingsPageShowToolResultSummaryTitle => '显示工具结果摘要';
@@ -16570,6 +16580,16 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get chainOfThoughtCollapse => '收起';
+
+  @override
+  String chainOfThoughtProcessedIn(Object seconds) {
+    return '已处理 · $seconds 秒';
+  }
+
+  @override
+  String chainOfThoughtProcessedSteps(Object count) {
+    return '已处理 · $count 个步骤';
+  }
 
   @override
   String get displaySettingsPageShowChatListDateTitle => '显示对话列表日期';
@@ -28520,7 +28540,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageCollapseThinkingStepsSubtitle =>
-      '預設只顯示最新步驟，展開後查看全部';
+      '回覆時只顯示最新步驟，完成後摺疊為一行';
 
   @override
   String get displaySettingsPageShowToolResultSummaryTitle => '顯示工具結果摘要';
@@ -28560,6 +28580,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chainOfThoughtCollapse => '收起';
+
+  @override
+  String chainOfThoughtProcessedIn(Object seconds) {
+    return '已處理 · $seconds 秒';
+  }
+
+  @override
+  String chainOfThoughtProcessedSteps(Object count) {
+    return '已處理 · $count 個步驟';
+  }
 
   @override
   String get displaySettingsPageShowChatListDateTitle => '顯示對話列表日期';
