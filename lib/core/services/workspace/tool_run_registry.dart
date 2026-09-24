@@ -186,6 +186,18 @@ class ToolRunRegistry extends ChangeNotifier {
     return run;
   }
 
+  /// The run a background job id ([ToolRun.runtimeRunId]) names in
+  /// [conversationId], if it is still tracked.
+  ToolRun? byRuntimeRunId(String runtimeRunId, {String? conversationId}) {
+    for (final entry in _runs.entries) {
+      if (entry.key.$1 == conversationId &&
+          entry.value.runtimeRunId == runtimeRunId) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
+
   void evict(String toolCallId, {String? conversationId}) {
     final key = (conversationId, toolCallId);
     final run = _runs.remove(key);

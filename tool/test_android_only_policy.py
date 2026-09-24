@@ -42,16 +42,12 @@ class AndroidOnlyPolicyTest(unittest.TestCase):
         allowed = {
             'chat_history_dialog.dart', 'desktop_context_menu.dart',
             'desktop_settings_navigation_bus.dart', 'hotkeys/chat_action_bus.dart',
-            'hotkeys/sidebar_tab_bus.dart', 'html_preview_dialog.dart',
-            'instruction_injection_popover.dart', 'menu_anchor.dart',
-            'message_edit_dialog.dart', 'mini_map_popover.dart',
-            'quick_phrase_popover.dart', 'reasoning_budget_popover.dart',
-            'search_provider_popover.dart', 'select_copy_dialog.dart',
-            'setting/memory_dialogs.dart', 'skills_popover.dart', 'tools_popover.dart',
+            'hotkeys/sidebar_tab_bus.dart', 'menu_anchor.dart',
+            'message_edit_dialog.dart', 'setting/memory_dialogs.dart',
+            'skills_popover.dart',
             'widgets/desktop_scheduled_task_form.dart',
             'widgets/desktop_scheduled_task_tile.dart',
-            'widgets/desktop_select_dropdown.dart', 'workspace_dialog.dart',
-            'world_book_popover.dart',
+            'widgets/desktop_select_dropdown.dart',
         }
         tracked = subprocess.run(
             ['git', 'ls-files', '--', 'lib/desktop'],

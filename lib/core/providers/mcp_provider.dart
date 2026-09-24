@@ -1677,11 +1677,18 @@ class McpProvider extends ChangeNotifier {
           (error.statusCode == 403 && _isInsufficientScope(error));
     }
     final message = error.toString().toLowerCase();
-    return message.contains('401') ||
+    return mentionsHttp401(message) ||
         message.contains('unauthorized') ||
         message.contains('invalid_token') ||
         message.contains('authentication failed');
   }
+
+  /// "401" as a number of its own: a port or id that merely contains the
+  /// digits (a dropped socket reports `http://127.0.0.1:40157/mcp`) is not
+  /// an authorization failure.
+  @visibleForTesting
+  static bool mentionsHttp401(String message) =>
+      RegExp(r'(?<!\d)401(?!\d)').hasMatch(message);
 
   bool _isHttpUnauthorized(Object error) =>
       error is mcp.McpHttpError && error.statusCode == 401;

@@ -11,7 +11,9 @@ import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/services/workspace/shell_output_buffer.dart';
 import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
+import 'package:Kelivo/core/services/workspace/task_plan.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tools_service.dart';
+import 'package:Kelivo/features/home/widgets/task_plan_bar.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
 import 'package:Kelivo/features/settings/widgets/custom_theme_widgets.dart';
 import 'package:Kelivo/features/workspace/workspace_file_navigation.dart';
@@ -149,6 +151,8 @@ bool workspaceReadWasImage({
 String workspaceToolTitle(AppLocalizations l10n, String toolName) {
   return switch (toolName) {
     'shell' => l10n.workspaceToolTitleShell,
+    WorkspaceToolsService.shellOutputTool => l10n.workspaceToolTitleShellOutput,
+    WorkspaceToolsService.planTool => l10n.workspaceToolTitleUpdatePlan,
     'read_file' => l10n.workspaceToolTitleReadFile,
     'write_file' => l10n.workspaceToolTitleWriteFile,
     'edit_file' => l10n.workspaceToolTitleEditFile,
@@ -162,6 +166,8 @@ String workspaceToolTitle(AppLocalizations l10n, String toolName) {
 IconData workspaceToolIcon(String toolName) {
   return switch (toolName) {
     'shell' => Lucide.Terminal,
+    WorkspaceToolsService.shellOutputTool => Lucide.SquareTerminal,
+    WorkspaceToolsService.planTool => Lucide.ListChecks,
     'read_file' => Lucide.FileText,
     'write_file' => Lucide.FilePlus,
     'edit_file' => Lucide.FilePen,
@@ -993,6 +999,9 @@ class WorkspaceToolCardBody extends StatelessWidget {
         // the composer; the card keeps just its command line.
         if (liveRun?.status == ToolRunStatus.running) return null;
         return _ShellTail(part: part, meta: meta, run: liveRun);
+      case WorkspaceToolsService.planTool:
+        final plan = TaskPlan.fromArguments(part.arguments);
+        return plan == null ? null : TaskPlanChecklist(plan: plan);
       case 'write_file':
       case 'edit_file':
       case 'read_file':

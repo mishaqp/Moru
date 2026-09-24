@@ -9357,6 +9357,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceToolTitleGrep => 'Grep';
 
   @override
+  String get workspaceToolTitleUpdatePlan => 'Plan';
+
+  @override
+  String taskPlanProgress(Object done, Object total) {
+    return 'Plan · $done/$total';
+  }
+
+  @override
+  String get workspaceToolTitleShellOutput => 'Background job';
+
+  @override
   String workspaceToolCount(int count) {
     return '$count';
   }
@@ -10668,6 +10679,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspaceToolHelpGrep => 'Search text inside files.';
+
+  @override
+  String get workspaceToolHelpUpdatePlan =>
+      'Let the model keep a step checklist shown above the input.';
+
+  @override
+  String get workspaceToolHelpShellOutput =>
+      'Read, wait for or stop commands started in the background.';
 
   @override
   String get workspaceEnvVariablesTitle => 'Environment variables';

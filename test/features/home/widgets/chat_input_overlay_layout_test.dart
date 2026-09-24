@@ -123,7 +123,10 @@ void main() {
     expect(gradient.end, Alignment.bottomCenter);
     expect(gradient.colors.first.a, 0);
     expect(gradient.colors[1].a, greaterThan(0.80));
-    expect(gradient.colors.last.a, greaterThan(0.95));
+    // Opaque over the last fifth, where the gesture bar sits.
+    expect(gradient.stops, const [0.0, 0.48, 0.8, 1.0]);
+    expect(gradient.colors[2].a, 1);
+    expect(gradient.colors.last.a, 1);
   });
 
   testWidgets('顶部导航栏后方有渐变遮罩隔开消息内容', (tester) async {

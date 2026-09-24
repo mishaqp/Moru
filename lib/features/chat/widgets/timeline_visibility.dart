@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
+import '../../../core/services/workspace/task_plan.dart';
 import '../../../shared/widgets/markdown_line_lexer.dart';
 import '../../../utils/mcp_structured_image.dart';
 import '../../home/services/ask_user_interaction_service.dart';
@@ -348,13 +349,21 @@ List<List<T>> splitToolsIntoTimelineBlocks<T>(
 /// Workspace tools that use the 44px timeline-step shell plus an inline body.
 const Set<String> _workspaceToolNames = {
   'shell',
+  'shell_output',
   'read_file',
   'write_file',
   'edit_file',
   'list_dir',
   'glob',
   'grep',
+  'update_plan',
 };
+
+/// One row of the update_plan checklist (13px / 1.35 plus 6px padding).
+const double kEstimatePlanStepRow = 23.5;
+
+/// One source row of the web search preview.
+const double kEstimateSearchSourceRow = 20.0;
 
 /// Second line under the workspace tool title (path / command / pattern).
 const double kEstimateWorkspaceSummaryLine = 16.0;
@@ -439,6 +448,9 @@ double estimateToolExtraHeight({
   final summaryLineHeight = summaryFontSize * 1.4;
   var hasSummary = false;
 
+  final previewExtra = showToolResultSummary
+      ? _structuredPreviewExtra(toolName, arguments, content, fontScale)
+      : null;
   if (pendingApproval) {
     extra += _estimatePendingApprovalExtra(
       arguments,
@@ -448,6 +460,9 @@ double estimateToolExtraHeight({
       wrappedLineCount: wrappedLineCount,
     );
     hasSummary = showToolResultSummary;
+  } else if (previewExtra != null) {
+    extra += previewExtra;
+    hasSummary = previewExtra > 0;
   } else if (showToolResultSummary && !isWorkspace) {
     final summary = cleanText.trim();
     if (summary.isNotEmpty) {
@@ -473,6 +488,34 @@ double estimateToolExtraHeight({
   return extra;
 }
 
+/// Height of [structuredToolPreview] for search and browser results; null
+/// when the plain text summary shows instead.
+double? _structuredPreviewExtra(
+  String toolName,
+  Map<String, dynamic> arguments,
+  String? content,
+  double fontScale,
+) {
+  if (toolName != 'search_web' && toolName != LocalToolNames.browserUse) {
+    return null;
+  }
+  Map<String, dynamic>? result;
+  try {
+    final decoded = content == null ? null : jsonDecode(content);
+    if (decoded is Map) result = Map<String, dynamic>.from(decoded);
+  } catch (_) {}
+  final line = 12.0 * fontScale * 1.4;
+  if (toolName == 'search_web') {
+    if (result == null) return null;
+    if (result['error'] != null) return 2 * line;
+    final items = (result['items'] as List?)?.length ?? 0;
+    return items.clamp(0, 3) * kEstimateSearchSourceRow * fontScale +
+        (items > 3 ? line : 0);
+  }
+  final failed = result != null && result['ok'] == false;
+  return line + 4 + (failed ? 3 + 2 * line : 0);
+}
+
 /// Height the workspace tool body adds beyond the 44px timeline-step shell.
 double _estimateWorkspaceToolCardExtra({
   required String toolName,
@@ -490,7 +533,10 @@ double _estimateWorkspaceToolCardExtra({
   };
   var extra = hasSummary ? kEstimateWorkspaceSummaryLine : 0.0;
 
-  if (toolName == 'shell') {
+  if (toolName == 'update_plan') {
+    final steps = TaskPlan.fromArguments(arguments)?.steps.length ?? 0;
+    if (steps > 0) extra += 6 + steps * kEstimatePlanStepRow;
+  } else if (toolName == 'shell') {
     final tail = _workspaceEstimateTailLineCount(content, metadata);
     if (tail > 0) extra += tail * kEstimateWorkspaceTailLine;
   } else {

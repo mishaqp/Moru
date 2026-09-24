@@ -64,6 +64,7 @@ import 'token_display_widget.dart';
 import 'screen_time_tool_ui.dart';
 import 'weather_tool_ui.dart';
 import 'tool_detail_text_section.dart';
+import 'tool_result_previews.dart';
 import 'produced_files_row.dart';
 import 'workspace_tool_detail.dart';
 import 'workspace_tool_ui.dart';
@@ -5472,6 +5473,17 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
     final ttsText = widget.part.toolName == LocalToolNames.textToSpeech
         ? _textToSpeechToolText(widget.part.arguments)
         : '';
+    final structuredPreview =
+        !_isAskUser && !isWorkspace && approvalRequest == null
+        ? structuredToolPreview(
+            toolName: widget.part.toolName,
+            arguments: widget.part.arguments,
+            content: widget.part.loading ? null : widget.part.content,
+            textColor: fg.body,
+            mutedColor: fg.muted,
+            errorColor: cs.error,
+          )
+        : null;
     final Widget? summaryContent = _isAskUser
         ? _AskUserInlineBody(part: widget.part, compact: true)
         : isWorkspace
@@ -5496,6 +5508,8 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
           )
         : weatherResult != null && !weatherResult.isError
         ? WeatherToolSummary(result: weatherResult, textColor: fg.body)
+        : shouldShowSummary && structuredPreview != null
+        ? structuredPreview
         : !shouldShowSummary || summaryText.trim().isEmpty
         ? null
         : Text(

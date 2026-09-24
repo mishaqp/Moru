@@ -842,6 +842,18 @@ void main() {
     timeout: const Timeout(Duration(seconds: 10)),
   );
 
+  test('a port containing 401 is not an authorization failure', () {
+    expect(McpProvider.mentionsHttp401('http 401 unauthorized'), isTrue);
+    expect(McpProvider.mentionsHttp401('status: 401'), isTrue);
+    expect(
+      McpProvider.mentionsHttp401(
+        'connection closed, uri=http://127.0.0.1:40157/mcp',
+      ),
+      isFalse,
+    );
+    expect(McpProvider.mentionsHttp401('port 54012'), isFalse);
+  });
+
   test(
     'unknown tool result is never replayed after a socket drop',
     () async {

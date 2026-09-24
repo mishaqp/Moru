@@ -27,15 +27,7 @@ import '../../../core/services/android_process_text.dart';
 import '../../../core/services/incoming_share_service.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../utils/platform_utils.dart';
-import '../../../desktop/search_provider_popover.dart';
-import '../../../desktop/reasoning_budget_popover.dart';
-import '../../../desktop/tools_popover.dart';
-import '../../../desktop/workspace_dialog.dart';
 import '../../../desktop/skills_popover.dart';
-import '../../../desktop/mini_map_popover.dart';
-import '../../../desktop/quick_phrase_popover.dart';
-import '../../../desktop/instruction_injection_popover.dart';
-import '../../../desktop/world_book_popover.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../chat/widgets/bottom_tools_sheet.dart';
 import '../../chat/widgets/chat_tools_sheet.dart';
@@ -1208,23 +1200,6 @@ class _HomePageState extends State<HomePage>
     if (!mounted) return;
     if (collapsed.isEmpty) return;
 
-    if (PlatformUtils.isDesktop &&
-        _selectionActionBarKey.currentContext != null) {
-      await showDesktopMiniMapPopover(
-        context,
-        anchorKey: _selectionActionBarKey,
-        messages: collapsed,
-        selecting: true,
-        selectedMessageIds: _controller.selectedItems,
-        selectionListenable: _controller,
-        onToggleSelection: (id) => _controller.toggleSelection(
-          id,
-          !_controller.selectedItems.contains(id),
-        ),
-      );
-      return;
-    }
-
     await showMiniMapSheet(
       context,
       collapsed,
@@ -1522,19 +1497,7 @@ class _HomePageState extends State<HomePage>
           context,
         ).push(MaterialPageRoute(builder: (_) => const ProvidersPage()));
       },
-      onOpenWorkspace: () {
-        final a = context.read<AssistantProvider>().currentAssistant;
-        if (PlatformUtils.isDesktop) {
-          showDesktopWorkspaceDialog(
-            context,
-            conversationListenable: _controller,
-            conversationId: () => _controller.currentConversation?.id,
-            assistantId: a?.id,
-          );
-        } else {
-          _toggleTools();
-        }
-      },
+      onOpenWorkspace: _toggleTools,
       onOpenSkills: () async {
         final assistant = context.read<AssistantProvider>().currentAssistant;
         final id = await ensureConversationId(
@@ -1553,20 +1516,12 @@ class _HomePageState extends State<HomePage>
       onOpenTools: () {
         final a = context.read<AssistantProvider>().currentAssistant;
         if (a == null) return;
-        if (PlatformUtils.isDesktop) {
-          showDesktopToolsPopover(
-            context,
-            anchorKey: _inputBarKey,
-            assistantId: a.id,
-          );
-        } else {
-          _controller.dismissKeyboard();
-          showChatToolsSheet(
-            context,
-            assistantId: a.id,
-            conversationId: _controller.currentConversation?.id,
-          );
-        }
+        _controller.dismissKeyboard();
+        showChatToolsSheet(
+          context,
+          assistantId: a.id,
+          conversationId: _controller.currentConversation?.id,
+        );
       },
       onLongPressTools: () {
         Navigator.of(
@@ -1576,23 +1531,9 @@ class _HomePageState extends State<HomePage>
       onOpenSearch: _openSearchSettings,
       onConfigureReasoning: () async {
         final assistantProvider = context.read<AssistantProvider>();
-        final settingsProvider = context.read<SettingsProvider>();
         final assistant = assistantProvider.currentAssistant;
         if (assistant == null) return;
-        if (PlatformUtils.isDesktop) {
-          // Desktop popover keeps the legacy global-settings sync flow.
-          if (assistant.thinkingBudget != null) {
-            settingsProvider.setThinkingBudget(assistant.thinkingBudget);
-          }
-          await _openReasoningSettings();
-          if (!mounted) return;
-          final chosen = settingsProvider.thinkingBudget;
-          await assistantProvider.updateAssistant(
-            assistant.copyWith(thinkingBudget: chosen),
-          );
-          return;
-        }
-        // Mobile: seed the sheet via initialBudget instead of pre-writing
+        // Seed the sheet via initialBudget instead of pre-writing
         // global settings. setThinkingBudget notifies synchronously and would
         // rebuild the home page (message list, input bar, drawer) on the
         // first frames of the sheet's entrance animation, dropping frames.
@@ -1744,20 +1685,11 @@ class _HomePageState extends State<HomePage>
     if (!mounted) return;
     if (collapsed.isEmpty) return;
 
-    String? selectedId;
-    if (PlatformUtils.isDesktop) {
-      selectedId = await showDesktopMiniMapPopover(
-        context,
-        anchorKey: _inputBarKey,
-        messages: collapsed,
-      );
-    } else {
-      selectedId = await showMiniMapSheet(
-        context,
-        collapsed,
-        onSearch: (query) => _controller.searchMiniMapMatches(query),
-      );
-    }
+    final selectedId = await showMiniMapSheet(
+      context,
+      collapsed,
+      onSearch: (query) => _controller.searchMiniMapMatches(query),
+    );
     if (!mounted) return;
     if (selectedId != null && selectedId.isNotEmpty) {
       await _controller.scrollToMessageId(selectedId, useRikkaTransition: true);
@@ -1846,20 +1778,11 @@ class _HomePageState extends State<HomePage>
 
   void _openSearchSettings() {
     final model = _resolvedChatModel();
-    if (PlatformUtils.isDesktop) {
-      showDesktopSearchProviderPopover(
-        context,
-        anchorKey: _inputBarKey,
-        chatModelProviderKey: model.providerKey,
-        chatModelId: model.modelId,
-      );
-    } else {
-      showSearchSettingsSheet(
-        context,
-        chatModelProviderKey: model.providerKey,
-        chatModelId: model.modelId,
-      );
-    }
+    showSearchSettingsSheet(
+      context,
+      chatModelProviderKey: model.providerKey,
+      chatModelId: model.modelId,
+    );
   }
 
   Future<void> _openReasoningSettings({
@@ -1867,26 +1790,16 @@ class _HomePageState extends State<HomePage>
     ValueChanged<int>? onChanged,
   }) async {
     final model = _resolvedChatModel();
-    if (PlatformUtils.isDesktop) {
-      await showDesktopReasoningBudgetPopover(
-        context,
-        anchorKey: _inputBarKey,
-        modelProvider: model.providerKey,
-        modelId: model.modelId,
-      );
-    } else {
-      await showReasoningBudgetSheet(
-        context,
-        modelProvider: model.providerKey,
-        modelId: model.modelId,
-        initialBudget: initialBudget,
-        onChanged: onChanged,
-      );
-    }
+    await showReasoningBudgetSheet(
+      context,
+      modelProvider: model.providerKey,
+      modelId: model.modelId,
+      initialBudget: initialBudget,
+      onChanged: onChanged,
+    );
   }
 
   Future<void> _openInstructionInjectionPopover() async {
-    final isDesktop = PlatformUtils.isDesktop;
     final assistantId = context.read<AssistantProvider>().currentAssistantId;
     final provider = context.read<InstructionInjectionProvider>();
     await provider.initialize();
@@ -1908,25 +1821,14 @@ class _HomePageState extends State<HomePage>
           )
         : null;
     if (!mounted || (scoped && scopeId == null)) return;
-    if (isDesktop) {
-      await showDesktopInstructionInjectionPopover(
-        context,
-        anchorKey: _inputBarKey,
-        items: items,
-        assistantId: assistantId,
-        conversationId: scopeId,
-      );
-    } else {
-      await showInstructionInjectionSheet(
-        context,
-        assistantId: assistantId,
-        conversationId: scopeId,
-      );
-    }
+    await showInstructionInjectionSheet(
+      context,
+      assistantId: assistantId,
+      conversationId: scopeId,
+    );
   }
 
   Future<void> _openWorldBookPopover() async {
-    final isDesktop = PlatformUtils.isDesktop;
     final assistantId = context.read<AssistantProvider>().currentAssistantId;
     final provider = context.read<WorldBookProvider>();
     await provider.initialize();
@@ -1948,21 +1850,11 @@ class _HomePageState extends State<HomePage>
           )
         : null;
     if (!mounted || (scoped && scopeId == null)) return;
-    if (isDesktop) {
-      await showDesktopWorldBookPopover(
-        context,
-        anchorKey: _inputBarKey,
-        books: books,
-        assistantId: assistantId,
-        conversationId: scopeId,
-      );
-    } else {
-      await showWorldBookSheet(
-        context,
-        assistantId: assistantId,
-        conversationId: scopeId,
-      );
-    }
+    await showWorldBookSheet(
+      context,
+      assistantId: assistantId,
+      conversationId: scopeId,
+    );
   }
 
   Future<void> _showLearningPromptSheet() async {
@@ -2119,20 +2011,11 @@ class _HomePageState extends State<HomePage>
 
     _controller.dismissKeyboard();
 
-    QuickPhrase? selected;
-    if (PlatformUtils.isDesktop) {
-      selected = await showDesktopQuickPhrasePopover(
-        context,
-        anchorKey: _inputBarKey,
-        phrases: allAvailable,
-      );
-    } else {
-      selected = await showQuickPhraseMenu(
-        context: context,
-        phrases: allAvailable,
-        position: position,
-      );
-    }
+    final selected = await showQuickPhraseMenu(
+      context: context,
+      phrases: allAvailable,
+      position: position,
+    );
 
     if (selected != null && mounted) {
       await _controller.handleQuickPhraseSelection(selected);
