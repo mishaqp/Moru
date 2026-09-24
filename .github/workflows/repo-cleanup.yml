@@ -1,0 +1,77 @@
+name: Repository cleanup
+# Manual housekeeping. Nothing runs automatically.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only list what would be deleted'
+        required: true
+        default: true
+        type: boolean
+      keep_runs:
+        description: 'Newest completed runs to keep per existing workflow'
+        required: true
+        default: '10'
+      keep_releases:
+        description: 'Newest releases to keep (older ones are deleted with their tags)'
+        required: true
+        default: '3'
+permissions:
+  contents: write
+  actions: write
+  pull-requests: read
+concurrency:
+  group: repo-cleanup
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    name: Delete stale branches, runs and releases
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      R: ${{ github.repository }}
+      DRY: ${{ inputs.dry_run }}
+      KEEP_RUNS: ${{ inputs.keep_runs }}
+      KEEP_RELEASES: ${{ inputs.keep_releases }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Delete branches except the default branch and open PR heads
+        shell: bash
+        run: |
+          set -euo pipefail
+          default="$(gh api "repos/$R" -q .default_branch)"
+          open_heads="$(gh api "repos/$R/pulls?state=open&per_page=100" --paginate -q '.[].head.ref')"
+          gh api "repos/$R/branches?per_page=100" --paginate -q '.[].name' | while read -r b; do
+            [ "$b" = "$default" ] && continue
+            if grep -qxF "$b" <<<"$open_heads"; then echo "keep (open PR): $b"; continue; fi
+            echo "delete branch: $b"
+            [ "$DRY" = true ] || gh api -X DELETE "repos/$R/git/refs/heads/$b" >/dev/null
+          done
+      - name: Delete runs of removed workflows and old runs of existing ones
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$R/actions/workflows?per_page=100" --paginate \
+            -q '.workflows[] | "\(.id) \(.path)"' | while read -r id path; do
+            if [ -f "$path" ]; then keep="$KEEP_RUNS"; else keep=0; fi
+            gh api "repos/$R/actions/workflows/$id/runs?per_page=100" --paginate \
+              -q '.workflow_runs[] | select(.status == "completed") | .id' \
+              | tail -n +"$((keep + 1))" | while read -r run; do
+                [ "$run" = "$GITHUB_RUN_ID" ] && continue
+                echo "delete run $run ($path)"
+                [ "$DRY" = true ] || gh api -X DELETE "repos/$R/actions/runs/$run" >/dev/null
+              done
+          done
+      - name: Delete old releases and their tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release list -R "$R" -L 200 --json tagName,publishedAt \
+            -q 'sort_by(.publishedAt) | reverse | .[].tagName' \
+            | tail -n +"$((KEEP_RELEASES + 1))" | while read -r tag; do
+              echo "delete release and tag: $tag"
+              [ "$DRY" = true ] || gh release delete "$tag" -R "$R" --cleanup-tag -y
+            done
