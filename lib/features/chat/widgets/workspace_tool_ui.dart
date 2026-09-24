@@ -149,6 +149,7 @@ bool workspaceReadWasImage({
 String workspaceToolTitle(AppLocalizations l10n, String toolName) {
   return switch (toolName) {
     'shell' => l10n.workspaceToolTitleShell,
+    WorkspaceToolsService.shellOutputTool => l10n.workspaceToolTitleShellOutput,
     'read_file' => l10n.workspaceToolTitleReadFile,
     'write_file' => l10n.workspaceToolTitleWriteFile,
     'edit_file' => l10n.workspaceToolTitleEditFile,
@@ -162,6 +163,7 @@ String workspaceToolTitle(AppLocalizations l10n, String toolName) {
 IconData workspaceToolIcon(String toolName) {
   return switch (toolName) {
     'shell' => Lucide.Terminal,
+    WorkspaceToolsService.shellOutputTool => Lucide.SquareTerminal,
     'read_file' => Lucide.FileText,
     'write_file' => Lucide.FilePlus,
     'edit_file' => Lucide.FilePen,

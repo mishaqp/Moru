@@ -8957,6 +8957,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get workspaceToolTitleGrep => 'Grep';
 
   @override
+  String get workspaceToolTitleShellOutput => '后台任务';
+
+  @override
   String workspaceToolCount(int count) {
     return '$count';
   }
@@ -10211,6 +10214,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get workspaceToolHelpGrep => '搜索文件中的文本内容。';
+
+  @override
+  String get workspaceToolHelpShellOutput => '读取、等待或停止在后台启动的命令。';
 
   @override
   String get workspaceEnvVariablesTitle => '环境变量';
@@ -20958,6 +20964,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get workspaceToolTitleGrep => 'Grep';
 
   @override
+  String get workspaceToolTitleShellOutput => '后台任务';
+
+  @override
   String workspaceToolCount(int count) {
     return '$count';
   }
@@ -22212,6 +22221,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get workspaceToolHelpGrep => '搜索文件中的文本内容。';
+
+  @override
+  String get workspaceToolHelpShellOutput => '读取、等待或停止在后台启动的命令。';
 
   @override
   String get workspaceEnvVariablesTitle => '环境变量';
@@ -33034,6 +33046,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get workspaceToolTitleGrep => 'Grep';
 
   @override
+  String get workspaceToolTitleShellOutput => '背景任務';
+
+  @override
   String workspaceToolCount(int count) {
     return '$count';
   }
@@ -34290,6 +34305,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get workspaceToolHelpGrep => '搜尋檔案中的文字內容。';
+
+  @override
+  String get workspaceToolHelpShellOutput => '讀取、等待或停止在背景啟動的命令。';
 
   @override
   String get workspaceEnvVariablesTitle => '環境變數';

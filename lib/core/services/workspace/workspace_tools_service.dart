@@ -54,6 +54,7 @@ class WorkspaceToolsService {
 
   static const Set<String> toolNames = {
     'shell',
+    shellOutputTool,
     'read_file',
     'write_file',
     'edit_file',
@@ -61,6 +62,15 @@ class WorkspaceToolsService {
     'glob',
     'grep',
   };
+
+  /// Reads, waits for or stops a command started with `background: true`.
+  static const String shellOutputTool = 'shell_output';
+
+  static const int _backgroundTimeoutDefault = 3600;
+  static const int _backgroundTimeoutMax = 86400;
+  static const int _jobStdoutTail = 8000;
+  static const int _jobStderrTail = 4000;
+  static const int _jobWaitMaxSeconds = 120;
 
   static const int _previewLimit = WorkspaceToolMetadata.previewMaxChars;
   static const int _changedFilesCap = 50;
@@ -83,9 +93,12 @@ class WorkspaceToolsService {
   final bool Function(String workspaceId, String tool)? isToolEnabled;
   final Future<EnvironmentExecutionConfig> Function()? loadEnvironment;
 
-  bool _enabled(WorkspaceToolContext ctx, String name) =>
-      isToolEnabled?.call(ctx.workspace.id, name) ??
-      ctx.workspace.isToolEnabled(name);
+  bool _enabled(WorkspaceToolContext ctx, String name) {
+    // Background jobs only exist where shell does.
+    if (name == shellOutputTool && !_enabled(ctx, 'shell')) return false;
+    return isToolEnabled?.call(ctx.workspace.id, name) ??
+        ctx.workspace.isToolEnabled(name);
+  }
 
   static Future<WorkspaceToolContext?> resolve({
     required String? conversationId,
@@ -221,13 +234,47 @@ class WorkspaceToolsService {
           },
           'timeout_seconds': {
             'type': 'integer',
-            'description': 'Timeout in seconds (default 120, max 600).',
-            'default': 120,
+            'description':
+                'Timeout in seconds (default 120, max 600; with background: '
+                'default $_backgroundTimeoutDefault, max $_backgroundTimeoutMax).',
             'minimum': 1,
-            'maximum': 600,
+            'maximum': _backgroundTimeoutMax,
+          },
+          'background': {
+            'type': 'boolean',
+            'description':
+                'Start a long-running command (dev server, watcher, long build) '
+                'and return at once with a job_id. Read its output, wait for '
+                'it or stop it with $shellOutputTool.',
           },
         },
         ['command'],
+      ),
+      _fn(
+        shellOutputTool,
+        [
+          'Read the output of a background shell job started in this chat.',
+          'Optionally wait for it to finish, or stop it.',
+        ],
+        {
+          'job_id': {
+            'type': 'string',
+            'description': 'job_id returned by shell with background: true.',
+          },
+          'wait_seconds': {
+            'type': 'integer',
+            'description':
+                'Wait up to this many seconds for the job to finish '
+                '(default 0, max $_jobWaitMaxSeconds).',
+            'minimum': 0,
+            'maximum': _jobWaitMaxSeconds,
+          },
+          'stop': {
+            'type': 'boolean',
+            'description': 'Stop the job before reading its output.',
+          },
+        },
+        ['job_id'],
       ),
       _fn(
         'read_file',
@@ -499,6 +546,8 @@ class WorkspaceToolsService {
             conversationId: conversationId,
             environment: environment,
           );
+        case shellOutputTool:
+          return await _handleShellOutput(ctx, args, conversationId);
         case 'read_file':
           return await _handleReadFile(ctx, args);
         case 'write_file':
@@ -688,10 +737,13 @@ class WorkspaceToolsService {
     );
     if (denied != null) return denied;
 
-    final timeoutSeconds = (_intArg(args, 'timeout_seconds') ?? 120).clamp(
-      1,
-      600,
-    );
+    final background = _boolArg(args, 'background');
+    final timeoutSeconds = background
+        ? (_intArg(args, 'timeout_seconds') ?? _backgroundTimeoutDefault).clamp(
+            1,
+            _backgroundTimeoutMax,
+          )
+        : (_intArg(args, 'timeout_seconds') ?? 120).clamp(1, 600);
     final cwd = ctx.paths.normalizeCwd(
       _stringArg(args, 'cwd', fallback: ctx.cwd),
     );
@@ -714,6 +766,36 @@ class WorkspaceToolsService {
       conversationId: conversationId ?? ctx.conversationId,
       runtimeRunId: runtimeRunId,
     );
+    final request = CommandRequest(
+      runId: runtimeRunId,
+      isCancelled: background ? null : cancellation?.isCancelled,
+      command: command,
+      cwd: cwd,
+      timeout: Duration(seconds: timeoutSeconds),
+      env: env,
+      mounts: ctx.paths.mounts,
+    );
+    if (background) {
+      // The job outlives this reply: ending or stopping the reply leaves it
+      // running; the running strip and shell_output can stop it.
+      unawaited(_driveBackgroundJob(runtime, request, run));
+      await _markToolsUsed(ctx, conversationId: conversationId, status: 'ok');
+      return ClientToolResult(
+        jsonEncode(<String, Object?>{
+          'background': true,
+          'job_id': runtimeRunId,
+          'status': 'running',
+          'hint':
+              'Call $shellOutputTool with this job_id to read output, wait '
+              'for it or stop it.',
+        }),
+        metadata: WorkspaceToolMetadata(
+          tool: tool,
+          status: 'ok',
+          command: command,
+        ).toJson(),
+      );
+    }
     final before = await FileSnapshot.snapshot([
       Directory(ctx.paths.workspaceHostRoot),
       ctx.sessionDir,
@@ -730,17 +812,7 @@ class WorkspaceToolsService {
           if (executing) await runtime.cancel(runtimeRunId);
         }),
       );
-      await for (final event in runtime.run(
-        CommandRequest(
-          runId: runtimeRunId,
-          isCancelled: cancellation?.isCancelled,
-          command: command,
-          cwd: cwd,
-          timeout: Duration(seconds: timeoutSeconds),
-          env: env,
-          mounts: ctx.paths.mounts,
-        ),
-      )) {
+      await for (final event in runtime.run(request)) {
         switch (event) {
           case CommandStarted():
             break;
@@ -885,6 +957,134 @@ class WorkspaceToolsService {
       status: metaStatus,
     );
     return ClientToolResult(jsonEncode(payload), metadata: meta.toJson());
+  }
+
+  Future<void> _driveBackgroundJob(
+    WorkspaceRuntime runtime,
+    CommandRequest request,
+    ToolRun run,
+  ) async {
+    CommandExited? exited;
+    try {
+      await for (final event in runtime.run(request)) {
+        switch (event) {
+          case CommandStarted():
+            break;
+          case CommandOutput(:final kind, :final bytes):
+            if (kind == OutputStreamKind.stdout) {
+              run.appendStdout(bytes);
+            } else {
+              run.appendStderr(bytes);
+            }
+          case CommandExited():
+            exited = event;
+        }
+      }
+    } catch (error) {
+      debugPrint('Background job ${request.runId} failed: $error');
+    }
+    final done = exited;
+    run.complete(
+      status: done == null
+          ? ToolRunStatus.failed
+          : done.cancelled
+          ? ToolRunStatus.cancelled
+          : done.timedOut
+          ? ToolRunStatus.timedOut
+          : done.exitCode == 0
+          ? ToolRunStatus.succeeded
+          : ToolRunStatus.failed,
+      exitCode: done?.exitCode,
+    );
+    try {
+      await onShellCompleted?.call();
+    } catch (error) {
+      debugPrint('Workspace post-command refresh failed: $error');
+    }
+  }
+
+  Future<Object?> _handleShellOutput(
+    WorkspaceToolContext ctx,
+    Map<String, dynamic> args,
+    String? conversationId,
+  ) async {
+    const tool = shellOutputTool;
+    final jobId = _stringArg(args, 'job_id');
+    final run = jobId.isEmpty
+        ? null
+        : registry.byRuntimeRunId(
+            jobId,
+            conversationId: conversationId ?? ctx.conversationId,
+          );
+    if (run == null) {
+      return _errorResult(
+        tool: tool,
+        error: 'unknown_job',
+        message: 'No background job $jobId in this chat',
+      );
+    }
+    if (_boolArg(args, 'stop') && run.status == ToolRunStatus.running) {
+      await runtimeProvider.runtime?.cancel(run.runtimeRunId);
+      await _waitForRun(run, const Duration(seconds: 5));
+    }
+    final waitSeconds = (_intArg(args, 'wait_seconds') ?? 0).clamp(
+      0,
+      _jobWaitMaxSeconds,
+    );
+    if (waitSeconds > 0) {
+      await _waitForRun(run, Duration(seconds: waitSeconds));
+    }
+    final running = run.status == ToolRunStatus.running;
+    final stdout = run.stdoutSoFar;
+    final stderr = run.stderrSoFar;
+    final payload = <String, Object?>{
+      'job_id': run.runtimeRunId,
+      'command': run.command,
+      'status': switch (run.status) {
+        ToolRunStatus.running => 'running',
+        ToolRunStatus.succeeded => 'succeeded',
+        ToolRunStatus.failed => 'failed',
+        ToolRunStatus.cancelled => 'stopped',
+        ToolRunStatus.timedOut => 'timed_out',
+      },
+      if (!running) 'exit_code': run.exitCode,
+      'elapsed_seconds': DateTime.now().difference(run.startedAt).inSeconds,
+      'stdout': utf16SafeCut(stdout, _jobStdoutTail, keepTail: true),
+      'stderr': utf16SafeCut(stderr, _jobStderrTail, keepTail: true),
+      if (stdout.length > _jobStdoutTail || stderr.length > _jobStderrTail)
+        'truncated': true,
+    };
+    final meta = WorkspaceToolMetadata(
+      tool: tool,
+      status: 'ok',
+      command: run.command,
+      exitCode: running ? null : run.exitCode,
+      stdoutPreview: utf16SafeCut(stdout, _previewLimit, keepTail: true),
+      stderrPreview: utf16SafeCut(stderr, _previewLimit, keepTail: true),
+    );
+    return ClientToolResult(jsonEncode(payload), metadata: meta.toJson());
+  }
+
+  /// Completes when [run] finishes, [limit] passes or the reply is stopped.
+  static Future<void> _waitForRun(ToolRun run, Duration limit) async {
+    if (run.status != ToolRunStatus.running) return;
+    final finished = Completer<void>();
+    void onChange() {
+      if (run.status != ToolRunStatus.running && !finished.isCompleted) {
+        finished.complete();
+      }
+    }
+
+    run.addListener(onChange);
+    try {
+      await Future.any<void>([
+        finished.future,
+        Future<void>.delayed(limit),
+        if (ToolCallCancellation.current case final cancel?) cancel.cancelled,
+      ]);
+    } finally {
+      run.removeListener(onChange);
+    }
   }
 
   Future<Object?> _handleReadFile(

@@ -9357,6 +9357,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceToolTitleGrep => 'Grep';
 
   @override
+  String get workspaceToolTitleShellOutput => 'Background job';
+
+  @override
   String workspaceToolCount(int count) {
     return '$count';
   }
@@ -10668,6 +10671,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspaceToolHelpGrep => 'Search text inside files.';
+
+  @override
+  String get workspaceToolHelpShellOutput =>
+      'Read, wait for or stop commands started in the background.';
 
   @override
   String get workspaceEnvVariablesTitle => 'Environment variables';

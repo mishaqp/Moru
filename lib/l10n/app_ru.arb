@@ -4165,6 +4165,7 @@
   "workspaceToolTitleListDir": "Содержимое каталога",
   "workspaceToolTitleGlob": "Поиск файлов по шаблону",
   "workspaceToolTitleGrep": "Поиск по содержимому",
+  "workspaceToolTitleShellOutput": "Фоновая задача",
   "workspaceToolCount": "{count}",
   "@workspaceToolCount": {
     "placeholders": {
@@ -4865,6 +4866,7 @@
   "workspaceToolHelpList": "Просмотр каталогов и их содержимого.",
   "workspaceToolHelpGlob": "Поиск файлов по имени или шаблону пути.",
   "workspaceToolHelpGrep": "Поиск текста внутри файлов.",
+  "workspaceToolHelpShellOutput": "Чтение, ожидание и остановка команд, запущенных в фоне.",
   "workspaceEnvVariablesTitle": "Переменные окружения",
   "workspaceEnvVariablesEntryDetail": "Переменные команд и настройки сокрытия значений в выводе",
   "workspaceEnvVariablesEmpty": "Переменных пока нет. Добавьте API-ключи или другие настройки инструментов.",

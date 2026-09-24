@@ -4173,6 +4173,7 @@
   "workspaceToolTitleListDir": "List directory",
   "workspaceToolTitleGlob": "Glob",
   "workspaceToolTitleGrep": "Grep",
+  "workspaceToolTitleShellOutput": "Background job",
   "workspaceToolCount": "{count}",
   "@workspaceToolCount": {
     "placeholders": {
@@ -4889,6 +4890,7 @@
   "workspaceToolHelpList": "Browse directories and their entries.",
   "workspaceToolHelpGlob": "Find files by name or path pattern.",
   "workspaceToolHelpGrep": "Search text inside files.",
+  "workspaceToolHelpShellOutput": "Read, wait for or stop commands started in the background.",
   "workspaceEnvVariablesTitle": "Environment variables",
   "workspaceEnvVariablesEntryDetail": "Variables for commands, with output privacy controls",
   "workspaceEnvVariablesEmpty": "No variables yet. Add API keys or other configuration for your tools.",

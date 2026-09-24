@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -53,6 +54,33 @@ class _InterruptedWriter extends FakeWorkspaceRuntime {
     yield const CommandStarted();
     File(p.join(request.cwd, 'partial.txt')).writeAsStringSync('saved');
     if (throwError) throw StateError('stream interrupted');
+  }
+}
+
+/// A runtime whose single job the test drives by hand.
+class _ManualRuntime extends FakeWorkspaceRuntime {
+  final StreamController<CommandEvent> job = StreamController<CommandEvent>();
+  final List<String> cancelled = <String>[];
+
+  @override
+  Stream<CommandEvent> run(CommandRequest request) {
+    requests.add(request);
+    return job.stream;
+  }
+
+  @override
+  Future<void> cancel(String runId) async {
+    cancelled.add(runId);
+    job.add(
+      const CommandExited(
+        exitCode: 143,
+        timedOut: false,
+        cancelled: true,
+        interrupted: false,
+        duration: Duration(seconds: 1),
+      ),
+    );
+    await job.close();
   }
 }
 
@@ -397,7 +425,10 @@ void main() {
       var enabled = true;
       final tools = WorkspaceToolsService(isToolEnabled: (_, _) => enabled);
       final context = ctx();
-      expect(tools.buildToolDefinitions(context), hasLength(7));
+      expect(
+        tools.buildToolDefinitions(context),
+        hasLength(WorkspaceToolsService.toolNames.length),
+      );
       enabled = false;
       expect(
         jsonOf(
@@ -615,6 +646,102 @@ void main() {
         expect(File(p.join(workspaceDir.path, 'new.txt')).existsSync(), isTrue);
       },
     );
+
+    test(
+      'background returns a job at once and shell_output reads it',
+      () async {
+        final runtime = _ManualRuntime();
+        final tools = service(runtime: runtime);
+        final started = jsonOf(
+          await tools.handle(ctx(), 'shell', {
+            'command': 'npm run dev',
+            'background': true,
+          }, toolCallId: 'bg'),
+        );
+        expect(started['background'], isTrue);
+        expect(started['status'], 'running');
+        final jobId = started['job_id'] as String;
+        expect(runtime.requests.single.timeout, const Duration(seconds: 3600));
+        // A background job does not follow the reply's cancellation.
+        expect(runtime.requests.single.isCancelled, isNull);
+
+        runtime.job.add(
+          CommandOutput(
+            OutputStreamKind.stdout,
+            utf8.encode('ready on :3000\n'),
+          ),
+        );
+        await pumpEventQueue();
+        final peek = jsonOf(
+          await tools.handle(ctx(), 'shell_output', {
+            'job_id': jobId,
+          }, toolCallId: 'peek'),
+        );
+        expect(peek['status'], 'running');
+        expect(peek['stdout'], contains('ready on :3000'));
+        expect(peek.containsKey('exit_code'), isFalse);
+
+        runtime.job.add(
+          const CommandExited(
+            exitCode: 0,
+            timedOut: false,
+            cancelled: false,
+            interrupted: false,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        await runtime.job.close();
+        final done = jsonOf(
+          await tools.handle(ctx(), 'shell_output', {
+            'job_id': jobId,
+            'wait_seconds': 5,
+          }, toolCallId: 'wait'),
+        );
+        expect(done['status'], 'succeeded');
+        expect(done['exit_code'], 0);
+      },
+    );
+
+    test('shell_output stops a job and rejects unknown ids', () async {
+      final runtime = _ManualRuntime();
+      final tools = service(runtime: runtime);
+      final jobId =
+          jsonOf(
+                await tools.handle(ctx(), 'shell', {
+                  'command': 'sleep 999',
+                  'background': true,
+                }, toolCallId: 'bg'),
+              )['job_id']
+              as String;
+
+      final stopped = jsonOf(
+        await tools.handle(ctx(), 'shell_output', {
+          'job_id': jobId,
+          'stop': true,
+        }, toolCallId: 'stop'),
+      );
+      expect(runtime.cancelled, [jobId]);
+      expect(stopped['status'], 'stopped');
+
+      final unknown = jsonOf(
+        await tools.handle(ctx(), 'shell_output', {
+          'job_id': 'nope',
+        }, toolCallId: 'x'),
+      );
+      expect(unknown['error'], 'unknown_job');
+    });
+
+    test('shell_output is offered only together with shell', () {
+      final tools = service(runtime: FakeWorkspaceRuntime());
+      List<String> names(Set<String> disabled) => [
+        for (final def in tools.buildToolDefinitions(
+          ctx(disabledTools: disabled),
+        ))
+          (def['function'] as Map)['name'] as String,
+      ];
+      expect(names(const {}), contains('shell_output'));
+      expect(names(const {'shell'}), isNot(contains('shell_output')));
+    });
 
     test('environment_not_ready when runtime is null', () async {
       final tools = service(registerRuntime: false);

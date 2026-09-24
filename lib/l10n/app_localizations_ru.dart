@@ -9474,6 +9474,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceToolTitleGrep => 'Поиск по содержимому';
 
   @override
+  String get workspaceToolTitleShellOutput => 'Фоновая задача';
+
+  @override
   String workspaceToolCount(int count) {
     return '$count';
   }
@@ -10796,6 +10799,10 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspaceToolHelpGrep => 'Поиск текста внутри файлов.';
+
+  @override
+  String get workspaceToolHelpShellOutput =>
+      'Чтение, ожидание и остановка команд, запущенных в фоне.';
 
   @override
   String get workspaceEnvVariablesTitle => 'Переменные окружения';

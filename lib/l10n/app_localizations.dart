@@ -16851,6 +16851,12 @@ abstract class AppLocalizations {
   /// **'Grep'**
   String get workspaceToolTitleGrep;
 
+  /// No description provided for @workspaceToolTitleShellOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'Background job'**
+  String get workspaceToolTitleShellOutput;
+
   /// No description provided for @workspaceToolCount.
   ///
   /// In en, this message translates to:
@@ -19144,6 +19150,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search text inside files.'**
   String get workspaceToolHelpGrep;
+
+  /// No description provided for @workspaceToolHelpShellOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'Read, wait for or stop commands started in the background.'**
+  String get workspaceToolHelpShellOutput;
 
   /// No description provided for @workspaceEnvVariablesTitle.
   ///
