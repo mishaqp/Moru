@@ -45,6 +45,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          # Restores ~/.gradle (dependencies and wrapper) keyed on the Gradle
+          # build files; the later Java 21 step reuses the same directory.
+          cache: gradle
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
