@@ -21,6 +21,45 @@ class AndroidOnlyPolicyTest(unittest.TestCase):
         ).stdout.split()
         self.assertEqual(tracked, [])
 
+    def test_removed_desktop_packages_do_not_return(self):
+        # Upstream Kelivo merges re-add these; the desktop shell that used them
+        # is gone, so they only add weight and plugin registrations.
+        pubspec = (ROOT / 'pubspec.yaml').read_text()
+        for package in ('bitsdojo_window', 'screen_retriever', 'tray_manager',
+                        'hotkey_manager', 'reorderable_grid_view', 'system_fonts'):
+            self.assertIsNone(re.search(rf'(?m)^\s+{package}\s*:', pubspec), package)
+        tracked = subprocess.run(
+            ['git', 'ls-files', '--', 'dependencies/tray_manager',
+             'dependencies/flutter-permission-handler', 'lib/core/providers/hotkey_provider.dart'],
+            cwd=ROOT, capture_output=True, text=True, check=True,
+        ).stdout.split()
+        self.assertEqual(tracked, [])
+
+    def test_desktop_dart_code_only_shrinks(self):
+        # These lib/desktop files are still reached from mobile screens and are
+        # removed or moved to lib/shared in later steps. Any other file under
+        # lib/desktop is desktop code brought back by a merge: delete it.
+        allowed = {
+            'chat_history_dialog.dart', 'desktop_context_menu.dart',
+            'desktop_settings_navigation_bus.dart', 'hotkeys/chat_action_bus.dart',
+            'hotkeys/sidebar_tab_bus.dart', 'html_preview_dialog.dart',
+            'instruction_injection_popover.dart', 'menu_anchor.dart',
+            'message_edit_dialog.dart', 'mini_map_popover.dart',
+            'quick_phrase_popover.dart', 'reasoning_budget_popover.dart',
+            'search_provider_popover.dart', 'select_copy_dialog.dart',
+            'setting/memory_dialogs.dart', 'skills_popover.dart', 'tools_popover.dart',
+            'widgets/desktop_scheduled_task_form.dart',
+            'widgets/desktop_scheduled_task_tile.dart',
+            'widgets/desktop_select_dropdown.dart', 'workspace_dialog.dart',
+            'world_book_popover.dart',
+        }
+        tracked = subprocess.run(
+            ['git', 'ls-files', '--', 'lib/desktop'],
+            cwd=ROOT, capture_output=True, text=True, check=True,
+        ).stdout.split()
+        unexpected = sorted(p for p in tracked if p.removeprefix('lib/desktop/') not in allowed)
+        self.assertEqual(unexpected, [])
+
     def test_on_device_llm_is_not_packaged(self):
         gradle = (ROOT / 'android/app/build.gradle.kts').read_text()
         manifest = (ROOT / 'android/app/src/main/AndroidManifest.xml').read_text()

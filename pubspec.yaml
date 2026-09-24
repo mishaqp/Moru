@@ -11,12 +11,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # build by specifying --build-name and --build-number, respectively.
 # In Android, build-name is used as versionName while build-number used as versionCode.
 # Read more about Android versioning at https://developer.android.com/studio/publish/versioning
-# In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
-# Read more about iOS versioning at
-# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-# In Windows, build-name is used as the major, minor, and patch parts
-# of the product and file versions while build-number is used as the build suffix.
-version: 0.1.17+18
+version: 0.1.18+19
 
 environment:
   sdk: ^3.12.1
@@ -157,10 +152,6 @@ dependency_overrides:
 # The following section is specific to Flutter packages.
 flutter:
   generate: true
-  config:
-    # Existing iOS plugins require incompatible TOCropViewController ranges.
-    # Keep CocoaPods until those plugins can share an SPM dependency graph.
-    enable-swift-package-manager: false
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -171,8 +162,6 @@ flutter:
   assets:
     - assets/icons/
     - assets/app_icon.png
-    - assets/app_icon.ico
-    - assets/icon_mac.png
     - assets/mermaid.min.js
     - assets/html/mark.html
     - assets/skills/skill-creator/
@@ -209,11 +198,7 @@ flutter:
 #      fonts:
 #        - asset: assets/fonts/JetBrainsMono-Regular.ttf
 
-flutter_launcher_icons:
-  android: true
-  image_path: assets/app_icon_foreground.png
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: assets/app_icon_foreground.png
+# Launcher icons are configured in flutter_launcher_icons.yaml (Android only).
 
 flutter_native_splash:
   android: true
