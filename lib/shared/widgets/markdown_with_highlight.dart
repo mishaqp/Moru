@@ -40,7 +40,6 @@ import 'package:flutter_math_fork/flutter_math.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/workspace/file_link_resolver.dart';
 import '../../features/workspace/workspace_file_navigation.dart';
-import 'package:Kelivo/desktop/html_preview_dialog.dart';
 import '../cache/byte_lru_cache.dart';
 import 'incremental_markdown_document.dart';
 import 'markdown_block_list.dart';
@@ -3097,32 +3096,21 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
   }
 
   void _previewHtml(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    if (Platform.isAndroid || Platform.isIOS) {
-      Navigator.of(context).push(
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => HtmlPreviewPage(html: widget.code),
-          transitionDuration: const Duration(milliseconds: 300),
-          reverseTransitionDuration: const Duration(milliseconds: 240),
-          transitionsBuilder: (context, anim, sec, child) {
-            final curved = CurvedAnimation(
-              parent: anim,
-              curve: Curves.easeOutCubic,
-              reverseCurve: Curves.easeInCubic,
-            );
-            return FadeTransition(opacity: curved, child: child);
-          },
-        ),
-      );
-    } else if (Platform.isLinux) {
-      showAppSnackBar(
-        context,
-        message: l10n.htmlPreviewNotSupportedOnLinux,
-        type: NotificationType.warning,
-      );
-    } else {
-      showHtmlPreviewDesktopDialog(context, html: widget.code);
-    }
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => HtmlPreviewPage(html: widget.code),
+        transitionDuration: const Duration(milliseconds: 300),
+        reverseTransitionDuration: const Duration(milliseconds: 240),
+        transitionsBuilder: (context, anim, sec, child) {
+          final curved = CurvedAnimation(
+            parent: anim,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+          return FadeTransition(opacity: curved, child: child);
+        },
+      ),
+    );
   }
 
   String _collapsedHighlightedCode(SettingsProvider settings) {

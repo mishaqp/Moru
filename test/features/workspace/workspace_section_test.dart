@@ -1,7 +1,5 @@
 import 'dart:io';
 
-import 'package:Kelivo/desktop/workspace_dialog.dart';
-
 import 'package:Kelivo/core/database/app_database.dart';
 import 'package:Kelivo/core/database/extension_entity_store.dart';
 import 'package:Kelivo/core/models/conversation.dart';
@@ -265,82 +263,6 @@ void main() {
     if (created == null) fail('assistant create failed');
     return created;
   }
-
-  testWidgets('desktop workspace launcher can create and bind a workspace', (
-    tester,
-  ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-    addTearDown(() => debugDefaultTargetPlatformOverride = null);
-    tester.view.physicalSize = const Size(1200, 800);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final chat = _FakeChatService(Conversation(title: 'Desktop chat'));
-    final anchor = GlobalKey();
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<SettingsProvider>.value(value: settings),
-          ChangeNotifierProvider(
-            create: (_) =>
-                AssistantProvider(preferences: createBusinessTestPreferences()),
-          ),
-          ChangeNotifierProvider<WorkspaceProvider>.value(value: workspaces),
-          ChangeNotifierProvider<ChatService>.value(value: chat),
-          ChangeNotifierProvider(create: (_) => WorkspaceRuntimeProvider()),
-          ChangeNotifierProvider<EnvironmentProvider>.value(value: environment),
-        ],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Builder(
-            builder: (context) => Scaffold(
-              body: Align(
-                alignment: Alignment.bottomCenter,
-                child: TextButton(
-                  key: anchor,
-                  onPressed: () => showDesktopWorkspaceDialog(
-                    context,
-                    conversationListenable: chat,
-                    conversationId: () => chat.conversation?.id,
-                  ),
-                  child: const Text('workspace-launcher'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.tap(find.text('workspace-launcher'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(WorkspaceSection.bindKey));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(WorkspaceSection.createKey));
-    await tester.pumpAndSettle();
-    expect(find.byType(TextField), findsOneWidget);
-    await tester.enterText(find.byType(TextField), 'Desktop project');
-    await tester.pump();
-    await tester.tap(find.text('Create').last);
-    for (var i = 0; i < 80 && workspaces.workspaces.isEmpty; i++) {
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 25)),
-      );
-      await tester.pump();
-    }
-    await tester.pumpAndSettle();
-    expect(workspaces.workspaces.single.name, 'Desktop project');
-    expect(
-      WorkspaceBinding.fromExtras(chat.conversation!.extras).workspaceId,
-      workspaces.workspaces.single.id,
-    );
-    expect(tester.takeException(), isNull);
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 100)),
-    );
-    await tester.pumpWidget(const SizedBox.shrink());
-    debugDefaultTargetPlatformOverride = null;
-  });
 
   testWidgets('not-bound shows Bind row', (tester) async {
     final chat = _FakeChatService(Conversation(title: 'Chat'));

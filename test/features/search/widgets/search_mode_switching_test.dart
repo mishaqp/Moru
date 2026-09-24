@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/builtin_tools.dart';
-import 'package:Kelivo/desktop/search_provider_popover.dart';
 import 'package:Kelivo/features/search/widgets/search_settings_sheet.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 
@@ -110,50 +109,6 @@ void main() {
 
       expect(find.text('Built-in Search'), findsOneWidget);
       expect(find.text('Web Search'), findsOneWidget);
-      expect(find.text('Bing (Local)'), findsOneWidget);
-
-      await tester.tap(find.text('Bing (Local)'));
-      await tester.pumpAndSettle();
-
-      _expectExternalSearchEnabled(fixture);
-    },
-  );
-
-  testWidgets(
-    'desktop popover keeps external providers visible and switches modes',
-    (tester) async {
-      final fixture = await _createFixture();
-      final anchorKey = GlobalKey();
-
-      await tester.pumpWidget(
-        _app(
-          fixture: fixture,
-          home: Align(
-            alignment: Alignment.bottomCenter,
-            child: Builder(
-              builder: (context) => SizedBox(
-                key: anchorKey,
-                width: 500,
-                height: 48,
-                child: FilledButton(
-                  onPressed: () => showDesktopSearchProviderPopover(
-                    context,
-                    anchorKey: anchorKey,
-                    chatModelProviderKey: _providerKey,
-                    chatModelId: _modelId,
-                  ),
-                  child: const Text('Open desktop search'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Open desktop search'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Built-in Search'), findsOneWidget);
       expect(find.text('Bing (Local)'), findsOneWidget);
 
       await tester.tap(find.text('Bing (Local)'));
