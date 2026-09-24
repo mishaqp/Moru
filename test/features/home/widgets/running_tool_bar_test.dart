@@ -1,0 +1,104 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+
+import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
+import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
+import 'package:Kelivo/features/home/widgets/running_tool_bar.dart';
+import 'package:Kelivo/l10n/app_localizations.dart';
+
+import '../../../support/fake_workspace_runtime.dart';
+
+class _RecordingRuntime extends FakeWorkspaceRuntime {
+  final List<String> cancelled = <String>[];
+
+  @override
+  Future<void> cancel(String runId) async {
+    cancelled.add(runId);
+    await super.cancel(runId);
+  }
+}
+
+Widget _host({
+  required ToolRunRegistry registry,
+  required WorkspaceRuntimeProvider runtime,
+  String? conversationId = 'c1',
+}) {
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<ToolRunRegistry>.value(value: registry),
+      ChangeNotifierProvider<WorkspaceRuntimeProvider>.value(value: runtime),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: Align(
+          alignment: Alignment.bottomCenter,
+          child: RunningToolBar(conversationId: conversationId),
+        ),
+      ),
+    ),
+  );
+}
+
+void main() {
+  testWidgets('shows only this conversation\'s running command', (
+    tester,
+  ) async {
+    final registry = ToolRunRegistry();
+    final runtime = WorkspaceRuntimeProvider()..register(_RecordingRuntime());
+    registry.start('other', 'shell', command: 'sleep 9', conversationId: 'c2');
+
+    await tester.pumpWidget(_host(registry: registry, runtime: runtime));
+    expect(find.byKey(RunningToolBar.stopKey), findsNothing);
+
+    final run = registry.start(
+      'call-1',
+      'shell',
+      command: 'npm install\necho done',
+      conversationId: 'c1',
+      runtimeRunId: 'run-1',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('npm install'), findsOneWidget);
+    expect(find.textContaining('Running'), findsOneWidget);
+    expect(find.text('sleep 9'), findsNothing);
+
+    run.complete(status: ToolRunStatus.succeeded, exitCode: 0);
+    await tester.pumpAndSettle();
+    expect(find.text('npm install'), findsNothing);
+  });
+
+  testWidgets('stop cancels the runtime run once', (tester) async {
+    final registry = ToolRunRegistry();
+    final fake = _RecordingRuntime();
+    final runtime = WorkspaceRuntimeProvider()..register(fake);
+    registry.start(
+      'call-1',
+      'shell',
+      command: 'make',
+      conversationId: 'c1',
+      runtimeRunId: 'run-1',
+    );
+
+    await tester.pumpWidget(_host(registry: registry, runtime: runtime));
+    await tester.tap(find.byKey(RunningToolBar.stopKey));
+    await tester.pump();
+    await tester.tap(find.byKey(RunningToolBar.stopKey));
+    await tester.pump();
+
+    expect(fake.cancelled, ['run-1']);
+  });
+
+  testWidgets('counts other runs of the same conversation', (tester) async {
+    final registry = ToolRunRegistry();
+    final runtime = WorkspaceRuntimeProvider()..register(_RecordingRuntime());
+    registry.start('a', 'shell', command: 'first', conversationId: 'c1');
+    registry.start('b', 'shell', command: 'second', conversationId: 'c1');
+
+    await tester.pumpWidget(_host(registry: registry, runtime: runtime));
+    expect(find.text('second'), findsOneWidget);
+    expect(find.textContaining('+1'), findsOneWidget);
+  });
+}

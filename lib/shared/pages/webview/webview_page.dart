@@ -49,8 +49,20 @@ class WebViewPage extends StatefulWidget {
   State<WebViewPage> createState() => _WebViewPageState();
 }
 
+/// Console messages of the shared agent WebView go to whichever page shows it
+/// now; its JavaScript channel is registered once and outlives the page.
+void Function(JavaScriptMessage message)? _agentConsoleSink;
+
 class _WebViewPageState extends State<WebViewPage> with RouteAware {
   late final WebViewController _controller;
+
+  /// True when this page took over a browser from the mini window, so the
+  /// page is already loaded and must not load again.
+  bool _adopted = false;
+
+  /// Set right before popping to minimize: dispose hands the controller to
+  /// the mini window instead of closing the session.
+  bool _minimizing = false;
   String? _title;
   String? _currentUrl;
   bool _isLoading = true;
@@ -87,62 +99,74 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
   @override
   void initState() {
     super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..addJavaScriptChannel('Console', onMessageReceived: _onConsoleMessage)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (p) {
-            if (!mounted) return;
-            setState(() {
-              _isLoading = p < 100;
-              _progress = p;
-            });
-          },
-          onPageStarted: (url) {
-            _navGeneration++;
-            if (!mounted) return;
-            setState(() {
-              _isLoading = true;
-              _currentUrl = url;
-              _mainFrameError = null;
-            });
-            if (widget.agentSession) {
-              BrowserAgentSession.instance.pageStarted(url);
-            }
-          },
-          onPageFinished: (url) async {
-            final generation = _navGeneration;
-            if (!mounted) return;
-            setState(() {
-              _isLoading = false;
-              _progress = 100;
-              _currentUrl = url;
-            });
-            if (widget.agentSession) {
-              BrowserAgentSession.instance.pageFinished(url);
-            }
-            await _refreshCanGoStates(generation);
-            await _updateTitle(generation);
-          },
-          onWebResourceError: (err) {
-            // Only a main-frame failure replaces the page with an error
-            // screen. A subresource error (isForMainFrame == false), and
-            // conservatively a `null` value too (Android's implementation
-            // should always populate this; an unexpected null is treated as
-            // "not main frame" rather than guessed at), stays exactly as
-            // before: logged to the diagnostics console only.
-            if (err.isForMainFrame == true) {
-              if (mounted) setState(() => _mainFrameError = err);
-            }
-            _pushConsole(
-              level: 'error',
-              message: 'Web error ${err.errorCode}: ${err.description}',
-              source: _currentUrl,
-            );
-          },
-        ),
-      );
+    final adopted = widget.agentSession
+        ? BrowserAgentSession.instance.takeMinimized()
+        : null;
+    _adopted = adopted != null;
+    if (widget.agentSession) _agentConsoleSink = _onConsoleMessage;
+    _controller =
+        adopted ??
+        (WebViewController()
+          ..setJavaScriptMode(JavaScriptMode.unrestricted)
+          ..addJavaScriptChannel(
+            'Console',
+            onMessageReceived: (message) => widget.agentSession
+                ? _agentConsoleSink?.call(message)
+                : _onConsoleMessage(message),
+          ));
+    _controller.setNavigationDelegate(
+      NavigationDelegate(
+        onProgress: (p) {
+          if (!mounted) return;
+          setState(() {
+            _isLoading = p < 100;
+            _progress = p;
+          });
+        },
+        onPageStarted: (url) {
+          _navGeneration++;
+          if (!mounted) return;
+          setState(() {
+            _isLoading = true;
+            _currentUrl = url;
+            _mainFrameError = null;
+          });
+          if (widget.agentSession) {
+            BrowserAgentSession.instance.pageStarted(url);
+          }
+        },
+        onPageFinished: (url) async {
+          final generation = _navGeneration;
+          if (!mounted) return;
+          setState(() {
+            _isLoading = false;
+            _progress = 100;
+            _currentUrl = url;
+          });
+          if (widget.agentSession) {
+            BrowserAgentSession.instance.pageFinished(url);
+          }
+          await _refreshCanGoStates(generation);
+          await _updateTitle(generation);
+        },
+        onWebResourceError: (err) {
+          // Only a main-frame failure replaces the page with an error
+          // screen. A subresource error (isForMainFrame == false), and
+          // conservatively a `null` value too (Android's implementation
+          // should always populate this; an unexpected null is treated as
+          // "not main frame" rather than guessed at), stays exactly as
+          // before: logged to the diagnostics console only.
+          if (err.isForMainFrame == true) {
+            if (mounted) setState(() => _mainFrameError = err);
+          }
+          _pushConsole(
+            level: 'error',
+            message: 'Web error ${err.errorCode}: ${err.description}',
+            source: _currentUrl,
+          );
+        },
+      ),
+    );
     if (widget.agentSession) {
       BrowserAgentSession.instance.register(
         _controller,
@@ -159,8 +183,12 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
         _onSessionActivityChanged,
       );
     }
-    // Initial load
-    scheduleMicrotask(_initialLoad);
+    if (_adopted) {
+      _isLoading = false;
+      scheduleMicrotask(_restoreAdoptedState);
+    } else {
+      scheduleMicrotask(_initialLoad);
+    }
   }
 
   @override
@@ -188,7 +216,14 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
   void dispose() {
     if (widget.agentSession) {
       routeObserver.unsubscribe(this);
-      BrowserAgentSession.instance.unregister(_controller);
+      if (identical(_agentConsoleSink, _onConsoleMessage)) {
+        _agentConsoleSink = null;
+      }
+      if (_minimizing) {
+        BrowserAgentSession.instance.minimize(_controller);
+      } else {
+        BrowserAgentSession.instance.unregister(_controller);
+      }
       BrowserAgentSession.instance.recentActivityNotifier.removeListener(
         _onSessionActivityChanged,
       );
@@ -197,7 +232,9 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     // the route being popped some other way), any Ask-AI request this
     // page's own composer started must not keep running invisibly once the
     // UI is gone. A no-op when there is no active request.
-    _askAiController?.cancelForClose();
+    // Minimizing keeps the page (and a running Ask-AI request) alive in the
+    // mini window, so only a real close cancels.
+    if (!_minimizing) _askAiController?.cancelForClose();
     _askAiController?.removeListener(_onAskAiControllerChanged);
     _askAiController?.dispose();
     super.dispose();
@@ -267,6 +304,24 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
         _canGoForward = fwd;
       });
     } catch (_) {}
+  }
+
+  Future<void> _restoreAdoptedState() async {
+    final generation = _navGeneration;
+    final url = await _controller.currentUrl();
+    if (!mounted || generation != _navGeneration) return;
+    setState(() => _currentUrl = url);
+    await _refreshCanGoStates(generation);
+    await _updateTitle(generation);
+  }
+
+  /// Closes the page but keeps the browser running in the mini window.
+  Future<void> _minimize() async {
+    if (!mounted) return;
+    setState(() => _minimizing = true);
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    await Navigator.of(context).maybePop();
   }
 
   Future<void> _initialLoad() async {
@@ -465,9 +520,9 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     final ru = Localizations.localeOf(context).languageCode == 'ru';
 
     return PopScope(
-      canPop: _forceAgentClose || !_canGoBack,
+      canPop: _forceAgentClose || _minimizing || !_canGoBack,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop || _forceAgentClose) return;
+        if (didPop || _forceAgentClose || _minimizing) return;
         if (_canGoBack) {
           _controller.goBack();
         }
@@ -479,6 +534,7 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
           onClose: widget.agentSession
               ? () => _closeAgentSession(WebViewCloseReason.manual)
               : _closeNonAgentPage,
+          onMinimize: widget.agentSession ? _minimize : null,
           onTapAddress: contentMode ? null : _openAddressEditor,
           onCopyLink: contentMode ? null : _copyLink,
           onOpenExternally: contentMode ? null : _openExternally,

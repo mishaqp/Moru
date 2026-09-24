@@ -22,6 +22,7 @@ import '../../../features/workspace/workspace_navigation.dart';
 import '../../../theme/design_tokens.dart';
 import 'chat_input_bar.dart';
 import 'model_icon.dart';
+import 'running_tool_bar.dart';
 
 /// Callback for checking if a model supports tool calling.
 typedef IsToolModelCallback = bool Function(String providerKey, String modelId);
@@ -255,12 +256,13 @@ class ChatInputSection extends StatelessWidget {
       inputBackgroundOpacityDark: settings.chatInputBackgroundOpacityDark,
     );
 
-    if (!showEnvChip || !workspaceBound) return bar;
+    if (!workspaceBound) return bar;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (showEnvChip && workspaceBound)
+        RunningToolBar(conversationId: conversationId),
+        if (showEnvChip)
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.sm,
