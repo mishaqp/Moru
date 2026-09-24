@@ -961,10 +961,12 @@ final class RestoreBundleStaging {
         detail: 'candidate-revalidate',
       ),
     );
-    ctx.throwIfCancelled();
+    // The debug hang models a native call that is already running when the
+    // progress-triggered cancel lands, so it must start before the cancel check.
     if (args.hangSeconds > 0) {
       debugNativeSleepIgnoringKill(args.hangSeconds);
     }
+    ctx.throwIfCancelled();
     if (args.stallMs > 0) {
       final until = DateTime.now().add(Duration(milliseconds: args.stallMs));
       while (DateTime.now().isBefore(until)) {
@@ -1012,10 +1014,12 @@ final class RestoreBundleStaging {
         detail: 'candidate-db',
       ),
     );
-    ctx.throwIfCancelled();
+    // The debug hang models a native call that is already running when the
+    // progress-triggered cancel lands, so it must start before the cancel check.
     if (args.hangSeconds > 0) {
       debugNativeSleepIgnoringKill(args.hangSeconds);
     }
+    ctx.throwIfCancelled();
     if (args.stallMs > 0) {
       final until = DateTime.now().add(Duration(milliseconds: args.stallMs));
       while (DateTime.now().isBefore(until)) {
