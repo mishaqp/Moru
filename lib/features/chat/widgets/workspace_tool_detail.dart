@@ -19,6 +19,7 @@ import 'package:Kelivo/shared/widgets/ios_tile_button.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 
+import 'chat_surface.dart';
 import 'tool_detail_text_section.dart';
 import 'unified_diff_view.dart';
 import 'workspace_tool_ui.dart';
@@ -365,6 +366,11 @@ class _UnifiedDetailState extends State<_UnifiedDetail> {
     }
   }
 
+  void _stop() {
+    final runtime = maybeRead<WorkspaceRuntimeProvider>(context)?.runtime;
+    unawaited(runtime?.cancel(widget.run!.runtimeRunId));
+  }
+
   void _jumpIfFollowing() {
     if (!_running || !_pinnedToBottom) return;
     if (!_scroll.hasClients) return;
@@ -404,56 +410,100 @@ class _UnifiedDetailState extends State<_UnifiedDetail> {
       hasSection = true;
     }
 
+    // A shell run reads as a terminal window: command and output share one
+    // dark frame whose title bar carries the status, the time and "stop".
+    final terminal = <Widget>[];
+    final sectionBox = isShell
+        ? BoxDecoration(
+            color: _TerminalWindow.innerColor,
+            borderRadius: BorderRadius.circular(8),
+          )
+        : null;
+    final commandColor = isShell
+        ? _TerminalWindow.textColor
+        : cs.onSurface.withValues(alpha: 0.9);
+    final outputColor = isShell
+        ? _TerminalWindow.textColor.withValues(
+            alpha: output.isEmpty ? 0.45 : 0.9,
+          )
+        : cs.onSurface.withValues(alpha: output.isEmpty ? 0.45 : 0.82);
+
     if (command.isNotEmpty) {
+      final section = ToolDetailTextSection(
+        label: _primarySectionLabel(l10n),
+        text: isShell ? '\$ $command' : command,
+        decoration: sectionBox,
+        textStyle: TextStyle(
+          fontFamily: fontFamily,
+          fontSize: 13,
+          height: 1.4,
+          color: commandColor,
+        ),
+        trailing: _CopyIcon(
+          tooltip: l10n.workspaceToolCopyCommand,
+          text: command,
+        ),
+      );
+      if (isShell) {
+        terminal.add(section);
+      } else {
+        addGap();
+        slivers.add(section);
+      }
+    }
+    if (showOutput) {
+      final section = ToolDetailTextSection(
+        label: l10n.workspaceToolSectionOutput,
+        text: outputDisplay,
+        decoration: sectionBox,
+        textStyle: TextStyle(
+          fontFamily: fontFamily,
+          fontSize: 12,
+          height: 1.4,
+          color: outputColor,
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_running && !isShell)
+              const Padding(
+                padding: EdgeInsets.only(right: 6),
+                child: CupertinoActivityIndicator(radius: 6),
+              ),
+            _CopyIcon(tooltip: l10n.workspaceToolCopyOutput, text: output),
+          ],
+        ),
+        belowLabel: isShell && (_stdout.isNotEmpty || _stderr.isNotEmpty)
+            ? _StreamToggle(
+                showStderr: _showStderr,
+                onChanged: (stderr) => setState(() => _showStderr = stderr),
+              )
+            : null,
+      );
+      if (isShell) {
+        if (terminal.isNotEmpty) {
+          terminal.add(const SliverToBoxAdapter(child: SizedBox(height: 12)));
+        }
+        terminal.add(section);
+      } else {
+        addGap();
+        slivers.add(section);
+      }
+    }
+    if (isShell) {
       addGap();
       slivers.add(
-        ToolDetailTextSection(
-          label: _primarySectionLabel(l10n),
-          text: command,
-          textStyle: TextStyle(
-            fontFamily: fontFamily,
-            fontSize: 13,
-            height: 1.4,
-            color: cs.onSurface.withValues(alpha: 0.9),
-          ),
-          trailing: _CopyIcon(
-            tooltip: l10n.workspaceToolCopyCommand,
-            text: command,
-          ),
+        _TerminalWindow(
+          part: widget.part,
+          run: widget.run,
+          conversationId: widget.conversationId,
+          running: _running,
+          onStop: _running ? _stop : null,
+          sections: terminal,
         ),
       );
     }
     if (showOutput) {
-      addGap();
-      slivers.add(
-        ToolDetailTextSection(
-          label: l10n.workspaceToolSectionOutput,
-          text: outputDisplay,
-          textStyle: TextStyle(
-            fontFamily: fontFamily,
-            fontSize: 12,
-            height: 1.4,
-            color: cs.onSurface.withValues(alpha: output.isEmpty ? 0.45 : 0.82),
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_running)
-                const Padding(
-                  padding: EdgeInsets.only(right: 6),
-                  child: CupertinoActivityIndicator(radius: 6),
-                ),
-              _CopyIcon(tooltip: l10n.workspaceToolCopyOutput, text: output),
-            ],
-          ),
-          belowLabel: isShell && (_stdout.isNotEmpty || _stderr.isNotEmpty)
-              ? _StreamToggle(
-                  showStderr: _showStderr,
-                  onChanged: (stderr) => setState(() => _showStderr = stderr),
-                )
-              : null,
-        ),
-      );
       for (final log in logs) {
         slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 8)));
         slivers.add(
@@ -578,21 +628,197 @@ class _UnifiedDetailState extends State<_UnifiedDetail> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(child: scrolling),
-        if (_running) ...[
+        if (_running && !isShell) ...[
           const SizedBox(height: 8),
           IosTileButton(
             icon: Lucide.X,
             label: l10n.workspaceToolCancel,
             backgroundColor: cs.error,
-            onTap: () {
-              final runtime = maybeRead<WorkspaceRuntimeProvider>(
-                context,
-              )?.runtime;
-              unawaited(runtime?.cancel(widget.run!.runtimeRunId));
-            },
+            onTap: _stop,
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Dark terminal frame around a shell run: traffic-light dots, the status
+/// ("Running 0:12", "exit 0 · 2.1s") and a stop button while it runs.
+class _TerminalWindow extends StatefulWidget {
+  const _TerminalWindow({
+    required this.part,
+    required this.run,
+    required this.conversationId,
+    required this.running,
+    required this.onStop,
+    required this.sections,
+  });
+
+  static const Color frameColor = Color(0xFF16181D);
+  static const Color innerColor = Color(0xFF1F2229);
+  static const Color textColor = Color(0xFFE3E6EB);
+  static const Key stopKey = ValueKey<String>('workspace-terminal-stop');
+
+  final WorkspaceToolPart part;
+  final ToolRun? run;
+  final String? conversationId;
+  final bool running;
+  final VoidCallback? onStop;
+  final List<Widget> sections;
+
+  @override
+  State<_TerminalWindow> createState() => _TerminalWindowState();
+}
+
+class _TerminalWindowState extends State<_TerminalWindow> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncTicker();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TerminalWindow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncTicker();
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  void _syncTicker() {
+    if (widget.running) {
+      _ticker ??= Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    } else {
+      _ticker?.cancel();
+      _ticker = null;
+    }
+  }
+
+  /// A detail opened from the running strip holds a loading snapshot; once
+  /// the live run ends, its outcome is final even before the reply updates.
+  WorkspaceToolPart get _settledPart {
+    final part = widget.part;
+    if (!part.loading || widget.run == null) return part;
+    return WorkspaceToolPart(
+      id: part.id,
+      toolName: part.toolName,
+      arguments: part.arguments,
+      content: part.content,
+      metadata: part.metadata,
+    );
+  }
+
+  String _elapsed() {
+    final start = widget.run?.startedAt;
+    if (start == null) return '';
+    final seconds = DateTime.now().difference(start).inSeconds;
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '${seconds ~/ 60}:$s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final base = Theme.of(context);
+    final dark = base.copyWith(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: base.colorScheme.primary,
+        brightness: Brightness.dark,
+      ),
+    );
+    const dots = [Color(0xFFFF5F57), Color(0xFFFEBC2E), Color(0xFF28C840)];
+    final muted = _TerminalWindow.textColor.withValues(alpha: 0.6);
+
+    final titleBar = Padding(
+      padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
+      child: Row(
+        children: [
+          for (final color in dots)
+            Container(
+              width: 10,
+              height: 10,
+              margin: const EdgeInsets.only(right: 6),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: widget.running
+                ? Row(
+                    children: [
+                      const CupertinoActivityIndicator(radius: 6),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          '${l10n.workspaceToolRunning} · ${_elapsed()}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: muted,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : ChatSurfaceTheme(
+                    // Light-on-dark regardless of the chat bubble style.
+                    palette: ChatSurfaceForegroundPalette(
+                      strong: _TerminalWindow.textColor,
+                      medium: _TerminalWindow.textColor,
+                      muted: muted,
+                      body: _TerminalWindow.textColor,
+                      divider: muted,
+                      accent: dark.colorScheme.primary,
+                    ),
+                    child: WorkspaceToolStatusText(
+                      part: _settledPart,
+                      run: widget.run,
+                      conversationId: widget.conversationId,
+                    ),
+                  ),
+          ),
+          SizedBox(
+            height: 32,
+            child: widget.onStop == null
+                ? null
+                : IconButton(
+                    key: _TerminalWindow.stopKey,
+                    tooltip: l10n.workspaceToolCancel,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: widget.onStop,
+                    icon: Icon(Lucide.CircleStop, size: 18, color: dots.first),
+                  ),
+          ),
+        ],
+      ),
+    );
+
+    return Theme(
+      data: dark,
+      child: DecoratedSliver(
+        decoration: BoxDecoration(
+          color: _TerminalWindow.frameColor,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        sliver: SliverMainAxisGroup(
+          slivers: [
+            SliverToBoxAdapter(child: titleBar),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+              sliver: SliverMainAxisGroup(slivers: widget.sections),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

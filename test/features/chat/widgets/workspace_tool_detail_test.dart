@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
+import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tool_metadata.dart';
 import 'package:Kelivo/features/chat/widgets/workspace_tool_detail.dart';
 import 'package:Kelivo/features/chat/widgets/workspace_tool_ui.dart';
@@ -14,6 +15,17 @@ import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 
 import '../../../support/business_test_harness.dart';
+import '../../../support/fake_workspace_runtime.dart';
+
+class _RecordingRuntime extends FakeWorkspaceRuntime {
+  final List<String> cancelled = <String>[];
+
+  @override
+  Future<void> cancel(String runId) async {
+    cancelled.add(runId);
+    await super.cancel(runId);
+  }
+}
 
 WorkspaceToolPart _shellPart({
   required String command,
@@ -253,4 +265,51 @@ void main() {
       variant: TargetPlatformVariant({TargetPlatform.macOS}),
     );
   }
+
+  testWidgets('shell runs in a terminal window with stop in its title bar', (
+    tester,
+  ) async {
+    final registry = ToolRunRegistry();
+    final fake = _RecordingRuntime();
+    final runtime = WorkspaceRuntimeProvider()..register(fake);
+    final run = registry.start(
+      'tc-shell',
+      'shell',
+      command: 'make',
+      runtimeRunId: 'run-1',
+    );
+    addTearDown(() {
+      for (final run in registry.all) {
+        run.dispose();
+      }
+      registry.dispose();
+    });
+    const part = WorkspaceToolPart(
+      id: 'tc-shell',
+      toolName: 'shell',
+      arguments: {'command': 'make'},
+      loading: true,
+    );
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: registry),
+          ChangeNotifierProvider.value(value: runtime),
+        ],
+        child: _harness(child: const WorkspaceToolDetailBody(part: part)),
+      ),
+    );
+
+    expect(find.text('\$ make'), findsOneWidget);
+    expect(find.textContaining('Running'), findsOneWidget);
+    await tester.tap(find.byTooltip('Cancel'));
+    await tester.pump();
+    expect(fake.cancelled, ['run-1']);
+
+    run.complete(status: ToolRunStatus.failed, exitCode: 2);
+    await tester.pump();
+    expect(find.textContaining('Running'), findsNothing);
+    expect(find.textContaining('exit 2'), findsOneWidget);
+    expect(find.byTooltip('Cancel'), findsNothing);
+  });
 }
