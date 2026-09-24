@@ -35,14 +35,12 @@ import '../../../shared/widgets/snackbar.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
 import '../../../utils/platform_utils.dart';
 import '../../../utils/assistant_regex.dart';
-import '../../chat/models/message_edit_result.dart';
 import '../../chat/widgets/chat_message_widget.dart' show ToolUIPart;
 import '../../chat/widgets/message_edit_sheet.dart';
 import '../pages/home_mobile_layout.dart' show kChatHeaderHeight;
 import '../../chat/widgets/message_export_sheet.dart';
-import '../../../desktop/message_edit_dialog.dart';
-import '../../../desktop/hotkeys/chat_action_bus.dart';
-import '../../../desktop/hotkeys/sidebar_tab_bus.dart';
+import 'chat_action_bus.dart';
+import 'sidebar_tab_bus.dart';
 import 'chat_actions.dart';
 import 'chat_controller.dart';
 import 'stream_controller.dart' as stream_ctrl;
@@ -1794,11 +1792,7 @@ class HomePageController extends ChangeNotifier {
     final keepThinkingAndToolCards = ctx
         .read<SettingsProvider>()
         .keepThinkingAndToolCardsWhenEditingAssistant;
-    final isDesktop = isDesktopPlatform;
-    final Future<MessageEditResult?> future = isDesktop
-        ? showMessageEditDesktopDialog(ctx, message: message)
-        : showMessageEditSheet(ctx, message: message);
-    final MessageEditResult? result = await future;
+    final result = await showMessageEditSheet(ctx, message: message);
     if (result == null) return;
 
     if (currentConversation != null) {

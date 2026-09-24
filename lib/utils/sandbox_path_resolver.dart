@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
-import './app_directories.dart';
-import './kelivo_file_uri.dart';
+import 'app_directories.dart';
+import 'kelivo_file_uri.dart';
 
 /// Resolves persisted absolute file paths that include the iOS sandbox UUID
 /// to the current app container path after an app update.

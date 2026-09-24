@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../shared/widgets/ios_tactile.dart';
-import '../../shared/widgets/section_card.dart';
-import '../../theme/app_semantic_colors.dart';
+import '../../../shared/widgets/ios_tactile.dart';
+import '../../../shared/widgets/section_card.dart';
+import '../../../theme/app_semantic_colors.dart';
 
 /// The same compact label/control arrangement used in desktop preferences.
 class DesktopScheduledTaskRow extends StatelessWidget {

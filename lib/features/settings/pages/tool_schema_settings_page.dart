@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../core/models/tool_schema_override.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/tools/built_in_tool_catalog.dart';
-import '../../../features/home/services/local_tools_service.dart';
+import '../../home/services/local_tools_service.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';

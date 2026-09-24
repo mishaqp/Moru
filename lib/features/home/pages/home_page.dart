@@ -27,7 +27,7 @@ import '../../../core/services/android_process_text.dart';
 import '../../../core/services/incoming_share_service.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../utils/platform_utils.dart';
-import '../../../desktop/skills_popover.dart';
+import '../widgets/skills_popover.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../chat/widgets/bottom_tools_sheet.dart';
 import '../../chat/widgets/chat_tools_sheet.dart';

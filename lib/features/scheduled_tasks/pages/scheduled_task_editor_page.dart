@@ -8,8 +8,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../desktop/widgets/desktop_scheduled_task_form.dart';
-import '../../../desktop/widgets/desktop_select_dropdown.dart';
+import '../widgets/scheduled_task_form_rows.dart';
+import '../../../shared/widgets/select_dropdown.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../workspace/widgets/desktop_workspace_text_field.dart';
 import '../../../core/models/assistant.dart';

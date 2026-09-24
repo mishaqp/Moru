@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:Kelivo/core/models/workspace.dart';
 import 'package:Kelivo/core/providers/workspace_provider.dart';
 import 'package:Kelivo/core/services/haptics.dart';
-import 'package:Kelivo/desktop/menu_anchor.dart';
+import 'package:Kelivo/shared/widgets/menu_anchor.dart';
 import 'package:Kelivo/features/settings/widgets/custom_theme_widgets.dart';
 import 'package:Kelivo/features/workspace/pages/workspace_files_page.dart';
 import 'package:Kelivo/features/workspace/pages/workspaces_desktop_layout.dart';

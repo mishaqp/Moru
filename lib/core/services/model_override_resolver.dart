@@ -3,7 +3,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 
 import '../models/model_types.dart';
-import '../services/logging/flutter_logger.dart';
+import 'logging/flutter_logger.dart';
 
 /// Shared utilities for parsing and applying per-model override maps.
 class ModelOverrideResolver {

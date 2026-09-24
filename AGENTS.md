@@ -11,7 +11,7 @@ Preserve the embedded PRoot/Linux environment, workspace, terminal/PTY and STDIO
 MCP: these are Android features. The native `ios/`, `macos/`, `windows/`,
 `linux/` and `web/` projects are removed and must not return; when merging
 upstream Kelivo, resolve its changes to those folders by deleting them, and do
-the same for upstream changes to removed files under `lib/desktop/`. The
+the same for upstream changes under `lib/desktop/`. The
 remaining desktop/iOS Dart code under `lib/` is removed in separate, reviewed
 steps. New UI work only needs Android/mobile layouts, not a parallel
 desktop implementation.
@@ -29,7 +29,7 @@ package name does not require building other platforms.
 ## Architecture
 
 - **Feature-based structure**: `lib/features/<feature>/` with `pages/`, `widgets/`, `models/`, `utils/` subdirectories.
-- **Desktop code**: the desktop app shell (window, tray, hotkeys, desktop home and settings panes) is removed. `lib/desktop/` still holds desktop branches reached from mobile screens and a few shared menu widgets; those are removed or moved to `lib/shared/` in later steps. Use the Android/mobile path for Moru tasks and do not add new desktop code.
+- **Desktop code**: the desktop app shell (window, tray, hotkeys, desktop home and settings panes) and `lib/desktop/` are removed. The shared context menu, pointer anchor and select dropdown live in `lib/shared/widgets/`. Wide Android screens (tablet, foldable, landscape) still use `HomeDesktopScaffold` from `home_desktop_layout.dart`; scheduled tasks and a few screens keep `isDesktop` branches that are removed in later steps. Use the Android/mobile path for Moru tasks and do not add new desktop code.
 - **State management**: Provider (`lib/core/providers/`).
 - **Database**: Drift (`lib/core/database/`). Schema versions tracked in `drift_schemas/`.
 - **Localization**: ARB-based (`lib/l10n/`), English template (`app_en.arb`). Edit source ARB, run `flutter gen-l10n`, and commit generated output. Preserve English and Chinese translations when adding Russian.
@@ -90,7 +90,7 @@ and land it through a PR; never push to `master` directly.
 1. `git remote add upstream https://github.com/Chevey339/kelivo.git` (once),
    then `git fetch upstream && git merge upstream/master` (merge, not rebase).
 2. Resolve every conflict in `ios/`, `macos/`, `windows/`, `linux/`, `web/`
-   and in new or modified `lib/desktop/` files by deleting them (`git rm`).
+   and in any `lib/desktop/` file by deleting it (`git rm`).
    Keep Moru's side for `android/`, `pubspec.yaml` identity/version,
    `.github/`, `tool/`, `docs/releases/` and Russian ARB strings.
 3. Do not re-add the removed desktop packages (`bitsdojo_window`,
@@ -100,9 +100,8 @@ and land it through a PR; never push to `master` directly.
    the whole pre-commit checklist before pushing.
 
 `tool/test_android_only_policy.py` fails when a merge brings back a native
-platform folder, a removed desktop package or a new `lib/desktop/` file; fix the
-merge, never the allowlist. The file list in
-`test_desktop_dart_code_only_shrinks` may only lose entries.
+platform folder, a removed desktop package or any `lib/desktop/` file; fix the
+merge, never the test.
 
 ## Tests must be deterministic
 

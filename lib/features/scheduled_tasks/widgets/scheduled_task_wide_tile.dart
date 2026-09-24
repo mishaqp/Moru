@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../l10n/app_localizations.dart';
-import '../../shared/widgets/ios_switch.dart';
-import '../../shared/widgets/ios_tactile.dart';
-import '../../shared/widgets/section_card.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ios_switch.dart';
+import '../../../shared/widgets/ios_tactile.dart';
+import '../../../shared/widgets/section_card.dart';
 
 class DesktopScheduledTaskTile extends StatelessWidget {
   const DesktopScheduledTaskTile({

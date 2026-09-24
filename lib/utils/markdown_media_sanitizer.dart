@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
-import './app_directories.dart';
-import './sandbox_path_resolver.dart';
+import 'app_directories.dart';
+import 'sandbox_path_resolver.dart';
 
 class MarkdownMediaSanitizer {
   static final Uuid _uuid = const Uuid();

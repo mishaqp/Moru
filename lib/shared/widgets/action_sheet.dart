@@ -1,9 +1,6 @@
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 
 import 'package:Kelivo/core/services/haptics.dart';
-import 'package:Kelivo/desktop/desktop_context_menu.dart';
 import 'package:Kelivo/shared/widgets/ios_tactile.dart';
 import 'package:Kelivo/shared/widgets/section_card.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
@@ -28,12 +25,6 @@ class ActionSheetItem {
   final Key? key;
 }
 
-bool _isDesktopPlatform() {
-  return defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux;
-}
-
 /// Mobile ⋯ menu matching `showMessageMoreSheet` (overlaySurface, top
 /// radius 20, handle, h48 r14 tiles).
 ///
@@ -54,31 +45,14 @@ Future<void> showMobileActionSheet(
   );
 }
 
-/// Desktop: [showDesktopContextMenuAt] with `danger:` from
-/// [ActionSheetItem.destructive]. Mobile: [showMobileActionSheet].
-///
-/// Platform branch matches `message_more_sheet.dart`.
+/// The ⋯ action menu as a bottom sheet. [anchor] is kept for callers that
+/// pass the tap position.
 Future<void> showAdaptiveActionMenu(
   BuildContext context, {
   required Offset anchor,
   String? title,
   required List<ActionSheetItem> items,
 }) {
-  if (_isDesktopPlatform()) {
-    return showDesktopContextMenuAt(
-      context,
-      globalPosition: anchor,
-      items: [
-        for (final item in items)
-          DesktopContextMenuItem(
-            icon: item.icon,
-            label: item.label,
-            danger: item.destructive,
-            onTap: item.onTap,
-          ),
-      ],
-    );
-  }
   return showMobileActionSheet(context, title: title, items: items);
 }
 

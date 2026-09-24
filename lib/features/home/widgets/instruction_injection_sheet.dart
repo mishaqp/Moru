@@ -9,7 +9,7 @@ import '../../../core/providers/instruction_injection_group_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../core/services/haptics.dart';
-import '../../../features/instruction_injection/pages/instruction_injection_page.dart';
+import '../../instruction_injection/pages/instruction_injection_page.dart';
 import '../../../theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 import '../../../shared/widgets/section_card.dart';

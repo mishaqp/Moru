@@ -7,7 +7,6 @@ import '../../../core/models/assistant.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../controllers/chat_actions.dart';
 import '../../../core/providers/tag_provider.dart';
-import '../../../desktop/desktop_context_menu.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
@@ -15,7 +14,6 @@ import '../../../shared/widgets/section_card.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../assistant/pages/assistant_settings_edit_page.dart';
 import '../../assistant/pages/tags_manager_page.dart';
-import '../../assistant/widgets/tags_manager_dialog.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
@@ -50,16 +48,6 @@ class AssistantEntryActions {
     Offset? globalPosition,
     VoidCallback? beforeAction,
   }) async {
-    if (_isDesktopPlatform) {
-      if (globalPosition == null) return;
-      await _showAssistantItemMenuDesktop(
-        context: context,
-        assistant: assistant,
-        globalPosition: globalPosition,
-        beforeAction: beforeAction,
-      );
-      return;
-    }
     await _showAssistantItemMenuMobile(
       context: context,
       assistant: assistant,
@@ -81,70 +69,6 @@ class AssistantEntryActions {
       context,
       message: l10n.assistantSettingsCopySuccess,
       type: NotificationType.success,
-    );
-  }
-
-  static Future<void> _showAssistantItemMenuDesktop({
-    required BuildContext context,
-    required Assistant assistant,
-    required Offset globalPosition,
-    VoidCallback? beforeAction,
-  }) async {
-    final l10n = AppLocalizations.of(context)!;
-    final tagProvider = context.read<TagProvider>();
-    final hasTag = tagProvider.tagOfAssistant(assistant.id) != null;
-
-    await showDesktopContextMenuAt(
-      context,
-      globalPosition: globalPosition,
-      items: [
-        DesktopContextMenuItem(
-          icon: Lucide.Pencil,
-          label: l10n.assistantTagsContextMenuEditAssistant,
-          onTap: () => openAssistantSettings(
-            context,
-            assistant.id,
-            beforeAction: beforeAction,
-          ),
-        ),
-        DesktopContextMenuItem(
-          icon: Lucide.Copy,
-          label: l10n.assistantSettingsCopyButton,
-          onTap: () async {
-            beforeAction?.call();
-            await _duplicateAssistantFromMenu(context, assistant);
-          },
-        ),
-        if (hasTag)
-          DesktopContextMenuItem(
-            icon: Lucide.Eraser,
-            label: l10n.assistantTagsClearTag,
-            onTap: () async {
-              beforeAction?.call();
-              await context.read<TagProvider>().unassignAssistant(assistant.id);
-            },
-          ),
-        DesktopContextMenuItem(
-          icon: Lucide.Bookmark,
-          label: l10n.assistantTagsContextMenuManageTags,
-          onTap: () async {
-            beforeAction?.call();
-            await showAssistantTagsManagerDialog(
-              context,
-              assistantId: assistant.id,
-            );
-          },
-        ),
-        DesktopContextMenuItem(
-          icon: Lucide.Trash2,
-          label: l10n.assistantTagsContextMenuDeleteAssistant,
-          danger: true,
-          onTap: () async {
-            beforeAction?.call();
-            await _deleteAssistant(context, assistant);
-          },
-        ),
-      ],
     );
   }
 

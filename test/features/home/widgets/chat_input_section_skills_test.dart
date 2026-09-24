@@ -10,7 +10,7 @@ import 'package:Kelivo/core/providers/quick_phrase_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/services/skills/skills_service.dart';
-import 'package:Kelivo/desktop/skills_popover.dart';
+import 'package:Kelivo/features/home/widgets/skills_popover.dart';
 import 'package:Kelivo/features/home/widgets/chat_input_bar.dart';
 import 'package:Kelivo/features/home/widgets/chat_input_section.dart';
 import 'package:Kelivo/features/workspace/widgets/skills/conversation_skills_sheet.dart';

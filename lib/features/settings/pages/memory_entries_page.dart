@@ -6,7 +6,7 @@ import '../../../core/models/memory_entry.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/memory_provider_v2.dart';
 import '../../../core/services/memory/memory_tools.dart';
-import '../../../desktop/widgets/desktop_select_dropdown.dart';
+import '../../../shared/widgets/select_dropdown.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:ui' as ui;
-import '../icons/lucide_adapter.dart';
-import '../shared/widgets/ios_tactile.dart';
-import '../core/services/haptics.dart';
+import '../../icons/lucide_adapter.dart';
+import 'ios_tactile.dart';
+import '../../core/services/haptics.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 
 /// Simple anchored context menu for desktop.

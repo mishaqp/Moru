@@ -7,7 +7,6 @@ import 'package:Kelivo/theme/app_semantic_colors.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
 import '../../../core/services/memory/memory_trace.dart';
-import '../../../desktop/setting/memory_dialogs.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/custom_bottom_sheet.dart';
@@ -16,7 +15,6 @@ import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/section_card.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../shared/widgets/snackbar.dart';
-import '../../../utils/platform_utils.dart';
 import '../widgets/memory_ui.dart';
 
 /// Debug viewer for the background memory pipeline (Gatekeeper → Extract →
@@ -129,10 +127,6 @@ class MemoryTraceContent extends StatelessWidget {
   }
 
   Future<void> _openTraceDetail(BuildContext context, MemoryTrace trace) async {
-    if (PlatformUtils.isDesktopTarget) {
-      await showDesktopMemoryTraceDetailDialog(context, trace: trace);
-      return;
-    }
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => MemoryTraceDetailPage(trace: trace)),
     );
@@ -144,55 +138,47 @@ class MemoryTraceContent extends StatelessWidget {
   ) async {
     final l10n = AppLocalizations.of(context)!;
     final bool cleared;
-    if (PlatformUtils.isDesktopTarget) {
-      cleared = await showDesktopMemoryConfirmDialog(
-        context,
-        title: l10n.memoryTraceClearSheetTitle,
-        message: l10n.memoryTraceClearSheetMessage,
-        confirmLabel: l10n.memoryTraceClearConfirm,
-      );
-    } else {
-      cleared =
-          await showCustomBottomSheet<bool>(
-            context: context,
-            title: l10n.memoryTraceClearSheetTitle,
-            partialHeightFactor: 0.36,
-            builder: (sheetContext, controller) {
-              final cs = Theme.of(sheetContext).colorScheme;
-              return SingleChildScrollView(
-                controller: controller,
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      l10n.memoryTraceClearSheetMessage,
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.35,
-                        color: cs.onSurface.withValues(alpha: 0.66),
-                      ),
+    cleared =
+        await showCustomBottomSheet<bool>(
+          context: context,
+          title: l10n.memoryTraceClearSheetTitle,
+          partialHeightFactor: 0.36,
+          builder: (sheetContext, controller) {
+            final cs = Theme.of(sheetContext).colorScheme;
+            return SingleChildScrollView(
+              controller: controller,
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.memoryTraceClearSheetMessage,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.35,
+                      color: cs.onSurface.withValues(alpha: 0.66),
                     ),
-                    const SizedBox(height: 18),
-                    IosTileButton(
-                      label: l10n.memoryTraceClearConfirm,
-                      icon: Lucide.Trash2,
-                      backgroundColor: cs.error,
-                      onTap: () => Navigator.of(sheetContext).pop(true),
-                    ),
-                    const SizedBox(height: 10),
-                    IosTileButton(
-                      label: l10n.memoryTraceCancel,
-                      icon: Lucide.X,
-                      onTap: () => Navigator.of(sheetContext).pop(false),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ) ==
-          true;
-    }
+                  ),
+                  const SizedBox(height: 18),
+                  IosTileButton(
+                    label: l10n.memoryTraceClearConfirm,
+                    icon: Lucide.Trash2,
+                    backgroundColor: cs.error,
+                    onTap: () => Navigator.of(sheetContext).pop(true),
+                  ),
+                  const SizedBox(height: 10),
+                  IosTileButton(
+                    label: l10n.memoryTraceCancel,
+                    icon: Lucide.X,
+                    onTap: () => Navigator.of(sheetContext).pop(false),
+                  ),
+                ],
+              ),
+            );
+          },
+        ) ==
+        true;
+
     if (!cleared) return;
     recorder.clear();
     if (!context.mounted) return;

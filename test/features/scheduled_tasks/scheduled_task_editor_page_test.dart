@@ -24,7 +24,7 @@ import 'package:Kelivo/shared/widgets/snackbar.dart';
 import 'package:Kelivo/theme/palettes.dart';
 import 'package:Kelivo/theme/theme_factory.dart';
 import 'package:flutter/material.dart';
-import 'package:Kelivo/desktop/widgets/desktop_scheduled_task_form.dart';
+import 'package:Kelivo/features/scheduled_tasks/widgets/scheduled_task_form_rows.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../core/services/haptics.dart';
-import '../../../desktop/desktop_context_menu.dart';
-import '../../../desktop/menu_anchor.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 import '../../../shared/widgets/section_card.dart';
@@ -88,77 +84,16 @@ const List<LanguageOption> supportedLanguages = [
   // LanguageOption(code: 'vi', displayName: 'Vietnamese', displayNameZh: 'Tiếng Việt', flag: '🇻🇳'),
 ];
 
-String _displayNameFor(AppLocalizations l10n, String languageCode) {
-  switch (languageCode) {
-    case 'zh-CN':
-      return l10n.languageDisplaySimplifiedChinese;
-    case 'en':
-      return l10n.languageDisplayEnglish;
-    case 'zh-TW':
-      return l10n.languageDisplayTraditionalChinese;
-    case 'ja':
-      return l10n.languageDisplayJapanese;
-    case 'ko':
-      return l10n.languageDisplayKorean;
-    case 'fr':
-      return l10n.languageDisplayFrench;
-    case 'de':
-      return l10n.languageDisplayGerman;
-    case 'it':
-      return l10n.languageDisplayItalian;
-    case 'es':
-      return l10n.languageDisplaySpanish;
-    default:
-      return languageCode;
-  }
-}
-
-Future<LanguageOption?> showLanguageSelector(BuildContext context) async {
-  final isDesktop =
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux;
-  if (!isDesktop) {
-    return showModalBottomSheet<LanguageOption>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: context.overlaySurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => const _LanguageSelectSheet(),
-    );
-  }
-
-  // Desktop anchored menu
-  final l10n = AppLocalizations.of(context)!;
-  LanguageOption? selected;
-  final items = [
-    ...supportedLanguages.map(
-      (lang) => DesktopContextMenuItem(
-        icon: null,
-        label: '${lang.flag} ${_displayNameFor(l10n, lang.code)}',
-        onTap: () => selected = lang,
-      ),
+Future<LanguageOption?> showLanguageSelector(BuildContext context) {
+  return showModalBottomSheet<LanguageOption>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: context.overlaySurface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    DesktopContextMenuItem(
-      icon: Lucide.X,
-      label: l10n.languageSelectSheetClearButton,
-      onTap: () => selected = const LanguageOption(
-        code: '__clear__',
-        displayName: 'Clear Translation',
-        displayNameZh: '清空翻译',
-        flag: '',
-      ),
-      danger: true,
-    ),
-  ];
-  await showDesktopContextMenuAt(
-    context,
-    globalPosition: DesktopMenuAnchor.positionOrCenter(context),
-    items: items,
+    builder: (ctx) => const _LanguageSelectSheet(),
   );
-  return selected;
 }
 
 class _LanguageSelectSheet extends StatefulWidget {

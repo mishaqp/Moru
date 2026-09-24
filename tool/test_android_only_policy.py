@@ -36,25 +36,14 @@ class AndroidOnlyPolicyTest(unittest.TestCase):
         self.assertEqual(tracked, [])
 
     def test_desktop_dart_code_only_shrinks(self):
-        # These lib/desktop files are still reached from mobile screens and are
-        # removed or moved to lib/shared in later steps. Any other file under
-        # lib/desktop is desktop code brought back by a merge: delete it.
-        allowed = {
-            'chat_history_dialog.dart', 'desktop_context_menu.dart',
-            'desktop_settings_navigation_bus.dart', 'hotkeys/chat_action_bus.dart',
-            'hotkeys/sidebar_tab_bus.dart', 'menu_anchor.dart',
-            'message_edit_dialog.dart', 'setting/memory_dialogs.dart',
-            'skills_popover.dart',
-            'widgets/desktop_scheduled_task_form.dart',
-            'widgets/desktop_scheduled_task_tile.dart',
-            'widgets/desktop_select_dropdown.dart',
-        }
+        # lib/desktop is gone: its live pieces moved to lib/shared and the
+        # features that use them. Any file here is desktop code brought back
+        # by a merge: delete it.
         tracked = subprocess.run(
             ['git', 'ls-files', '--', 'lib/desktop'],
             cwd=ROOT, capture_output=True, text=True, check=True,
         ).stdout.split()
-        unexpected = sorted(p for p in tracked if p.removeprefix('lib/desktop/') not in allowed)
-        self.assertEqual(unexpected, [])
+        self.assertEqual(tracked, [])
 
     def test_on_device_llm_is_not_packaged(self):
         gradle = (ROOT / 'android/app/build.gradle.kts').read_text()

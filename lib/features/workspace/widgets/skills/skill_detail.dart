@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:Kelivo/core/services/haptics.dart';
 import 'package:Kelivo/core/services/skills/skills_service.dart';
-import 'package:Kelivo/desktop/menu_anchor.dart';
+import 'package:Kelivo/shared/widgets/menu_anchor.dart';
 import 'package:Kelivo/features/settings/widgets/custom_theme_widgets.dart';
 import 'package:Kelivo/features/workspace/widgets/files/file_browser.dart';
 import 'package:Kelivo/features/workspace/widgets/files/workspace_prompts.dart';
