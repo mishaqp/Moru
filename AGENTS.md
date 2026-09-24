@@ -8,9 +8,12 @@ Windows, desktop Linux or Web applications. Do not add Nightly/scheduled builds.
 Ubuntu CI runners execute Android checks; they are not Linux application targets.
 
 Preserve the embedded PRoot/Linux environment, workspace, terminal/PTY and STDIO
-MCP: these are Android features. Retain unused upstream platform sources for
-merge compatibility; do not start a broad platform-removal refactor. New UI work
-only needs Android/mobile layouts, not a parallel desktop implementation.
+MCP: these are Android features. The native `ios/`, `macos/`, `windows/`,
+`linux/` and `web/` projects are removed and must not return; when merging
+upstream Kelivo, resolve its changes to those folders by deleting them. Dart
+desktop/iOS code under `lib/` is still present and is removed in separate,
+reviewed steps. New UI work only needs Android/mobile layouts, not a parallel
+desktop implementation.
 
 Preserve explicit user settings, existing chat data, application ID and signing
 identity unless a task explicitly changes them. Never publish an unsigned or

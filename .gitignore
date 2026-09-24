@@ -79,3 +79,11 @@ android/app/moru-release.jks
 # Local iOS profiling tools and device measurements
 /docs/performance/ios-device-*/
 /tool/ios_performance/
+
+# Moru is Android-only. Flutter still writes plugin registrants for these
+# platforms during pub get; they are generated and never committed.
+/ios/
+/macos/
+/windows/
+/linux/
+/web/
