@@ -121,6 +121,7 @@ class HomePageController extends ChangeNotifier {
     required TickerProvider vsync,
     required GlobalKey<ScaffoldState> scaffoldKey,
     required GlobalKey inputBarKey,
+    GlobalKey? composerAreaKey,
     required FocusNode inputFocus,
     required TextEditingController inputController,
     required ChatInputBarController mediaController,
@@ -131,6 +132,7 @@ class HomePageController extends ChangeNotifier {
          vsync,
          scaffoldKey,
          inputBarKey,
+         composerAreaKey,
          inputFocus,
          inputController,
          mediaController,
@@ -143,6 +145,7 @@ class HomePageController extends ChangeNotifier {
     this._vsync,
     this._scaffoldKey,
     this._inputBarKey,
+    this._composerAreaKey,
     this._inputFocus,
     this._inputController,
     this._mediaController,
@@ -160,6 +163,10 @@ class HomePageController extends ChangeNotifier {
   final TickerProvider _vsync;
   final GlobalKey<ScaffoldState> _scaffoldKey;
   final GlobalKey _inputBarKey;
+
+  /// Everything docked at the bottom: the input bar plus the running-command
+  /// strip and chips stacked above it.
+  final GlobalKey? _composerAreaKey;
   final FocusNode _inputFocus;
   final TextEditingController _inputController;
   final ChatInputBarController _mediaController;
@@ -284,6 +291,7 @@ class HomePageController extends ChangeNotifier {
 
   // Input bar measurement
   double _inputBarHeight = 72;
+  double? _composerAreaHeight;
 
   UserMessageEditState? _userMessageEditState;
   QueuedMessageEditState? _queuedEditState;
@@ -322,6 +330,9 @@ class HomePageController extends ChangeNotifier {
   double get embeddedSidebarWidth => _embeddedSidebarWidth;
   double get rightSidebarWidth => _rightSidebarWidth;
   double get inputBarHeight => _inputBarHeight;
+
+  /// Height the chat must keep clear at the bottom, strip included.
+  double get composerAreaHeight => _composerAreaHeight ?? _inputBarHeight;
   bool get desktopUiInited => _desktopUiInited;
   bool get isGlobalSearchMode => _isGlobalSearchMode;
   String get globalSearchQuery => _globalSearchQuery;
@@ -2646,16 +2657,24 @@ class HomePageController extends ChangeNotifier {
 
   void measureInputBar() {
     try {
-      final ctx = _inputBarKey.currentContext;
-      if (ctx == null) return;
-      final box = ctx.findRenderObject() as RenderBox?;
-      if (box == null) return;
-      final h = box.size.height;
-      if ((_inputBarHeight - h).abs() > 1.0) {
-        _inputBarHeight = h;
-        notifyListeners();
+      var changed = false;
+      final bar = _heightOf(_inputBarKey);
+      if (bar != null && (_inputBarHeight - bar).abs() > 1.0) {
+        _inputBarHeight = bar;
+        changed = true;
       }
+      final area = _heightOf(_composerAreaKey);
+      if (area != null && ((_composerAreaHeight ?? -10) - area).abs() > 1.0) {
+        _composerAreaHeight = area;
+        changed = true;
+      }
+      if (changed) notifyListeners();
     } catch (_) {}
+  }
+
+  static double? _heightOf(GlobalKey? key) {
+    final box = key?.currentContext?.findRenderObject() as RenderBox?;
+    return box?.hasSize == true ? box!.size.height : null;
   }
 
   // ============================================================================

@@ -10,6 +10,7 @@ import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/api/stream/stream_chunk.dart';
 import '../../../core/services/api/stream/stream_chunk_handler.dart';
 import '../../../core/services/api/stream/stream_text_buffer.dart';
+import '../../chat/utils/tool_timing.dart';
 import '../../chat/widgets/chat_message_widget.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
 import 'streaming_content_notifier.dart';
@@ -901,13 +902,14 @@ class StreamController {
       );
     }
 
+    final callMetadata = withToolStart(call.metadata, DateTime.now());
     final existing = List<ToolUIPart>.of(_toolParts[messageId] ?? const []);
     existing.add(
       ToolUIPart(
         id: call.id,
         toolName: call.name,
         arguments: call.arguments,
-        metadata: call.metadata,
+        metadata: callMetadata,
         loading: true,
       ),
     );
@@ -931,8 +933,7 @@ class StreamController {
           'arguments': call.arguments,
           'content': null,
           if (chunk is ServerToolStart) 'server': true,
-          if (call.metadata != null && call.metadata!.isNotEmpty)
-            'metadata': call.metadata,
+          'metadata': callMetadata,
         },
       ];
       await setToolEventsInDb(messageId, dedupeToolEvents(newEvents));
@@ -977,7 +978,13 @@ class StreamController {
         }
       }
     }
+    var resultMetadata = result.metadata;
     if (idx >= 0) {
+      resultMetadata = withToolFinish(
+        result.metadata ?? parts[idx].metadata,
+        started: parts[idx].metadata,
+        now: DateTime.now(),
+      );
       parts[idx] = ToolUIPart(
         id: parts[idx].id,
         toolName: parts[idx].toolName,
@@ -985,7 +992,7 @@ class StreamController {
             ? Map<String, dynamic>.from(result.arguments)
             : parts[idx].arguments,
         content: result.content,
-        metadata: result.metadata ?? parts[idx].metadata,
+        metadata: resultMetadata,
         loading: false,
       );
     } else if (result.id == 'builtin_search' &&
@@ -1012,7 +1019,7 @@ class StreamController {
         name: result.name,
         arguments: Map<String, dynamic>.from(result.arguments),
         content: result.content,
-        metadata: result.metadata,
+        metadata: resultMetadata,
       );
     } catch (_) {}
     _toolParts[messageId] = dedupeToolPartsList(parts);

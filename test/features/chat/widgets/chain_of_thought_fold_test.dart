@@ -8,6 +8,7 @@ import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/providers/tts_provider.dart';
 import 'package:Kelivo/core/providers/user_provider.dart';
+import 'package:Kelivo/features/chat/utils/tool_timing.dart';
 import 'package:Kelivo/features/chat/widgets/chat_message_widget.dart';
 import 'package:Kelivo/features/home/services/ask_user_interaction_service.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
@@ -16,6 +17,7 @@ import 'package:Kelivo/l10n/app_localizations.dart';
 import '../../../support/business_test_harness.dart';
 
 const _summary = ValueKey<String>('chain-of-thought-summary');
+const _t0 = 1700000000000;
 
 Future<void> _pump(
   WidgetTester tester, {
@@ -61,7 +63,8 @@ Future<void> _pump(
               content: 'Done.',
               conversationId: 'c1',
               isStreaming: streaming,
-              durationMs: 12400,
+              // The text-only generation time must not stand in for it.
+              durationMs: 2100,
             ),
             showModelIcon: false,
             toolParts:
@@ -73,6 +76,11 @@ Future<void> _pump(
                       toolName: 'search',
                       arguments: {'q': 'step $i'},
                       content: 'ok $i',
+                      // Four steps spread over 12.4 s of wall time.
+                      metadata: {
+                        kToolStartedAtMsKey: _t0 + i * 3000,
+                        kToolFinishedAtMsKey: _t0 + i * 3000 + 3400,
+                      },
                     ),
                 ],
           ),
@@ -155,5 +163,23 @@ void main() {
     );
     expect(find.byKey(_summary), findsNothing);
     expect(find.text('Which one?'), findsOneWidget);
+  });
+
+  testWidgets('steps without time marks show their count', (tester) async {
+    await _pump(
+      tester,
+      collapse: true,
+      streaming: false,
+      tools: [
+        for (var i = 0; i < 3; i++)
+          ToolUIPart(
+            id: 'old$i',
+            toolName: 'search',
+            arguments: {'q': 'old $i'},
+            content: 'ok',
+          ),
+      ],
+    );
+    expect(find.text('Processed · 3 steps'), findsOneWidget);
   });
 }
