@@ -4173,6 +4173,8 @@
   "workspaceToolTitleListDir": "List directory",
   "workspaceToolTitleGlob": "Glob",
   "workspaceToolTitleGrep": "Grep",
+  "workspaceToolTitleUpdatePlan": "Plan",
+  "taskPlanProgress": "Plan · {done}/{total}",
   "workspaceToolTitleShellOutput": "Background job",
   "workspaceToolCount": "{count}",
   "@workspaceToolCount": {
@@ -4890,6 +4892,7 @@
   "workspaceToolHelpList": "Browse directories and their entries.",
   "workspaceToolHelpGlob": "Find files by name or path pattern.",
   "workspaceToolHelpGrep": "Search text inside files.",
+  "workspaceToolHelpUpdatePlan": "Let the model keep a step checklist shown above the input.",
   "workspaceToolHelpShellOutput": "Read, wait for or stop commands started in the background.",
   "workspaceEnvVariablesTitle": "Environment variables",
   "workspaceEnvVariablesEntryDetail": "Variables for commands, with output privacy controls",

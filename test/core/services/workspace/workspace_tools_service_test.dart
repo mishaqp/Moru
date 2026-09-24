@@ -10,6 +10,7 @@ import 'package:Kelivo/core/models/workspace.dart';
 import 'package:Kelivo/core/models/environment_variable.dart';
 import 'package:Kelivo/core/models/workspace_binding.dart';
 import 'package:Kelivo/core/services/workspace/file_link_resolver.dart';
+import 'package:Kelivo/core/services/workspace/task_plan.dart';
 import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
 import 'package:Kelivo/core/services/workspace/workspace_paths.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
@@ -729,6 +730,29 @@ void main() {
         }, toolCallId: 'x'),
       );
       expect(unknown['error'], 'unknown_job');
+    });
+
+    test('update_plan stores the plan for the conversation', () async {
+      final plans = TaskPlanRegistry();
+      final tools = WorkspaceToolsService(registry: registry, plans: plans);
+      final result = jsonOf(
+        await tools.handle(ctx(), 'update_plan', {
+          'plan': [
+            {'step': 'Read', 'status': 'completed'},
+            {'step': 'Write', 'status': 'in_progress'},
+          ],
+        }, toolCallId: 'plan'),
+      );
+      expect(result, {'ok': true, 'completed': 1, 'total': 2});
+      expect(plans.of('conv-1')?.current?.text, 'Write');
+
+      final invalid = jsonOf(
+        await tools.handle(ctx(), 'update_plan', {
+          'plan': 'nope',
+        }, toolCallId: 'bad'),
+      );
+      expect(invalid['error'], 'invalid_arguments');
+      expect(plans.of('conv-1')?.steps, hasLength(2));
     });
 
     test('shell_output is offered only together with shell', () {

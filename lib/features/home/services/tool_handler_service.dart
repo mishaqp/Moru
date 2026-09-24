@@ -21,6 +21,7 @@ import '../../../core/services/search/search_tool_service.dart';
 import '../../../core/services/tools/tool_schema_overrides.dart';
 import '../../../core/services/skills/skills_service.dart';
 import '../../../core/services/workspace/tool_run_registry.dart';
+import '../../../core/services/workspace/task_plan.dart';
 import '../../../core/services/workspace/workspace_runtime.dart';
 import '../../../core/services/workspace/workspace_tools_service.dart';
 import '../../../core/providers/workspace_provider.dart';
@@ -42,6 +43,14 @@ class ToolHandlerService {
 
   /// Build context (used for accessing providers)
   final BuildContext contextProvider;
+
+  T? _optional<T>() {
+    try {
+      return contextProvider.read<T>();
+    } catch (_) {
+      return null;
+    }
+  }
 
   WorkspaceToolsService _workspaceTools() {
     try {
@@ -66,6 +75,7 @@ class ToolHandlerService {
             ?.loadExecutionConfig,
         isToolEnabled: (id, name) =>
             workspaces.byId(id)?.isToolEnabled(name) ?? false,
+        plans: _optional<TaskPlanRegistry>(),
       );
     } catch (_) {
       return WorkspaceToolsService();

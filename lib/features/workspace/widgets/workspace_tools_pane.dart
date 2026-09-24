@@ -130,6 +130,7 @@ class _WorkspaceToolsPaneState extends State<WorkspaceToolsPane> {
     'glob' => l10n.workspaceToolHelpGlob,
     'grep' => l10n.workspaceToolHelpGrep,
     WorkspaceToolsService.shellOutputTool => l10n.workspaceToolHelpShellOutput,
+    WorkspaceToolsService.planTool => l10n.workspaceToolHelpUpdatePlan,
     _ => name,
   };
 }

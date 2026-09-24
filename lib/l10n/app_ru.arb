@@ -4165,6 +4165,8 @@
   "workspaceToolTitleListDir": "Содержимое каталога",
   "workspaceToolTitleGlob": "Поиск файлов по шаблону",
   "workspaceToolTitleGrep": "Поиск по содержимому",
+  "workspaceToolTitleUpdatePlan": "План",
+  "taskPlanProgress": "План · {done}/{total}",
   "workspaceToolTitleShellOutput": "Фоновая задача",
   "workspaceToolCount": "{count}",
   "@workspaceToolCount": {
@@ -4866,6 +4868,7 @@
   "workspaceToolHelpList": "Просмотр каталогов и их содержимого.",
   "workspaceToolHelpGlob": "Поиск файлов по имени или шаблону пути.",
   "workspaceToolHelpGrep": "Поиск текста внутри файлов.",
+  "workspaceToolHelpUpdatePlan": "Модель ведёт чек-лист шагов, он виден над полем ввода.",
   "workspaceToolHelpShellOutput": "Чтение, ожидание и остановка команд, запущенных в фоне.",
   "workspaceEnvVariablesTitle": "Переменные окружения",
   "workspaceEnvVariablesEntryDetail": "Переменные команд и настройки сокрытия значений в выводе",

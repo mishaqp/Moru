@@ -21,6 +21,7 @@ import 'environment_output_redactor.dart';
 import 'file_link_resolver.dart';
 import 'host_file_tools.dart';
 import 'output_buffer.dart';
+import 'task_plan.dart';
 import 'tool_run_registry.dart';
 import 'workspace_paths.dart';
 import 'workspace_runtime.dart';
@@ -49,6 +50,7 @@ class WorkspaceToolsService {
     this.onShellCompleted,
     this.isToolEnabled,
     this.loadEnvironment,
+    this.plans,
   }) : registry = registry ?? ToolRunRegistry(),
        runtimeProvider = runtimeProvider ?? WorkspaceRuntimeProvider();
 
@@ -61,10 +63,14 @@ class WorkspaceToolsService {
     'list_dir',
     'glob',
     'grep',
+    planTool,
   };
 
   /// Reads, waits for or stops a command started with `background: true`.
   static const String shellOutputTool = 'shell_output';
+
+  /// Keeps the task checklist shown above the composer.
+  static const String planTool = 'update_plan';
 
   static const int _backgroundTimeoutDefault = 3600;
   static const int _backgroundTimeoutMax = 86400;
@@ -92,6 +98,7 @@ class WorkspaceToolsService {
   final Future<void> Function()? onShellCompleted;
   final bool Function(String workspaceId, String tool)? isToolEnabled;
   final Future<EnvironmentExecutionConfig> Function()? loadEnvironment;
+  final TaskPlanRegistry? plans;
 
   bool _enabled(WorkspaceToolContext ctx, String name) {
     // Background jobs only exist where shell does.
@@ -387,6 +394,30 @@ class WorkspaceToolsService {
         },
         ['pattern'],
       ),
+      _fn(
+        planTool,
+        [
+          'Keep a short checklist for multi-step work; the user sees it live.',
+          'Send the whole list each time; exactly one step in_progress.',
+        ],
+        {
+          'plan': {
+            'type': 'array',
+            'items': {
+              'type': 'object',
+              'properties': {
+                'step': {'type': 'string'},
+                'status': {
+                  'type': 'string',
+                  'enum': ['pending', 'in_progress', 'completed'],
+                },
+              },
+              'required': ['step', 'status'],
+            },
+          },
+        },
+        ['plan'],
+      ),
     ];
   }
 
@@ -440,7 +471,7 @@ class WorkspaceToolsService {
       ..writeln('- $tmp — scratch (writable, ephemeral)')
       ..writeln('cwd: ${ctx.cwd}')
       ..writeln(
-        'Enabled tools: ${toolNames.where(ctx.workspace.isToolEnabled).join(', ')}',
+        'Enabled tools: ${toolNames.where((name) => name != shellOutputTool && name != planTool && ctx.workspace.isToolEnabled(name)).join(', ')}',
       )
       ..writeln();
     if (ctx.workspace.isToolEnabled('shell')) {
@@ -548,6 +579,8 @@ class WorkspaceToolsService {
           );
         case shellOutputTool:
           return await _handleShellOutput(ctx, args, conversationId);
+        case planTool:
+          return _handlePlan(ctx, args, conversationId);
         case 'read_file':
           return await _handleReadFile(ctx, args);
         case 'write_file':
@@ -1063,6 +1096,32 @@ class WorkspaceToolsService {
       stderrPreview: utf16SafeCut(stderr, _previewLimit, keepTail: true),
     );
     return ClientToolResult(jsonEncode(payload), metadata: meta.toJson());
+  }
+
+  Object? _handlePlan(
+    WorkspaceToolContext ctx,
+    Map<String, dynamic> args,
+    String? conversationId,
+  ) {
+    const tool = planTool;
+    final plan = TaskPlan.fromArguments(args);
+    if (plan == null) {
+      return _errorResult(
+        tool: tool,
+        error: 'invalid_arguments',
+        message: 'plan must list at least one {step, status}',
+      );
+    }
+    final owner = conversationId ?? ctx.conversationId;
+    if (owner != null) plans?.set(owner, plan);
+    return ClientToolResult(
+      jsonEncode(<String, Object?>{
+        'ok': true,
+        'completed': plan.completed,
+        'total': plan.steps.length,
+      }),
+      metadata: const WorkspaceToolMetadata(tool: tool, status: 'ok').toJson(),
+    );
   }
 
   /// Completes when [run] finishes, [limit] passes or the reply is stopped.

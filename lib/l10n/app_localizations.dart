@@ -16851,6 +16851,18 @@ abstract class AppLocalizations {
   /// **'Grep'**
   String get workspaceToolTitleGrep;
 
+  /// No description provided for @workspaceToolTitleUpdatePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get workspaceToolTitleUpdatePlan;
+
+  /// No description provided for @taskPlanProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan · {done}/{total}'**
+  String taskPlanProgress(Object done, Object total);
+
   /// No description provided for @workspaceToolTitleShellOutput.
   ///
   /// In en, this message translates to:
@@ -19150,6 +19162,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search text inside files.'**
   String get workspaceToolHelpGrep;
+
+  /// No description provided for @workspaceToolHelpUpdatePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Let the model keep a step checklist shown above the input.'**
+  String get workspaceToolHelpUpdatePlan;
 
   /// No description provided for @workspaceToolHelpShellOutput.
   ///

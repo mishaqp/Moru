@@ -107,6 +107,9 @@ class Lucide {
   static const IconData RectangleHorizontal =
       lucide.LucideIcons.rectangleHorizontal;
   static const IconData CircleStop = lucide.LucideIcons.circleStop;
+  static const IconData Circle = lucide.LucideIcons.circle;
+  static const IconData CircleCheck = lucide.LucideIcons.circleCheck;
+  static const IconData CircleDot = lucide.LucideIcons.circleDot;
   static const IconData CircleX = lucide.LucideIcons.circleX;
   static const IconData Link2 = lucide.LucideIcons.link2;
   static const IconData Shield = lucide.LucideIcons.shield;

@@ -51,6 +51,7 @@ import 'core/services/sandbox/environment_manager.dart';
 import 'core/services/sandbox/mirror_service.dart';
 import 'core/services/skills/skills_service.dart';
 import 'core/services/workspace/tool_run_registry.dart';
+import 'core/services/workspace/task_plan.dart';
 import 'core/services/workspace/workspace_runtime.dart';
 import 'core/services/workspace/workspace_runtime_bootstrap.dart';
 import 'features/workspace/terminal/terminal_session_manager.dart';
@@ -695,6 +696,7 @@ class MyApp extends StatelessWidget {
           EnvironmentDependencies?
         >(update: (_, extras, __) => extras.dependencies),
         ChangeNotifierProvider(create: (_) => ToolRunRegistry()),
+        ChangeNotifierProvider(create: (_) => TaskPlanRegistry()),
         ChangeNotifierProvider(
           create: (ctx) {
             final environment = ctx.read<EnvironmentProvider>();

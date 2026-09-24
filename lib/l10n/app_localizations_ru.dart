@@ -9474,6 +9474,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceToolTitleGrep => 'Поиск по содержимому';
 
   @override
+  String get workspaceToolTitleUpdatePlan => 'План';
+
+  @override
+  String taskPlanProgress(Object done, Object total) {
+    return 'План · $done/$total';
+  }
+
+  @override
   String get workspaceToolTitleShellOutput => 'Фоновая задача';
 
   @override
@@ -10799,6 +10807,10 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspaceToolHelpGrep => 'Поиск текста внутри файлов.';
+
+  @override
+  String get workspaceToolHelpUpdatePlan =>
+      'Модель ведёт чек-лист шагов, он виден над полем ввода.';
 
   @override
   String get workspaceToolHelpShellOutput =>
