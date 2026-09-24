@@ -12515,6 +12515,37 @@ class AppLocalizationsEn extends AppLocalizations {
       'There is no upcoming occurrence to prepare. Check the task time and enabled state.';
 
   @override
+  String get assistantManagerToolTitle => 'Manage Assistants';
+
+  @override
+  String get assistantManagerToolSubtitle =>
+      'Create, configure, copy, switch and delete assistants from the chat. Every change asks for your confirmation.';
+
+  @override
+  String get assistantManagerActionList => 'List assistants';
+
+  @override
+  String get assistantManagerActionGet => 'Read assistant settings';
+
+  @override
+  String get assistantManagerActionOptions => 'Check available options';
+
+  @override
+  String get assistantManagerActionCreate => 'Create assistant';
+
+  @override
+  String get assistantManagerActionUpdate => 'Change assistant settings';
+
+  @override
+  String get assistantManagerActionDuplicate => 'Copy assistant';
+
+  @override
+  String get assistantManagerActionSwitch => 'Switch assistant';
+
+  @override
+  String get assistantManagerActionDelete => 'Delete assistant';
+
+  @override
   String get phoneControlTitle => 'Phone Control';
 
   @override

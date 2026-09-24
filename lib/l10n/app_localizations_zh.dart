@@ -11948,6 +11948,36 @@ class AppLocalizationsZh extends AppLocalizations {
       '没有可提前准备的下一次任务，请检查任务时间和启用状态。';
 
   @override
+  String get assistantManagerToolTitle => '管理助手';
+
+  @override
+  String get assistantManagerToolSubtitle => '在聊天中创建、配置、复制、切换和删除助手。每次更改都需要你确认。';
+
+  @override
+  String get assistantManagerActionList => '列出助手';
+
+  @override
+  String get assistantManagerActionGet => '读取助手设置';
+
+  @override
+  String get assistantManagerActionOptions => '查看可用选项';
+
+  @override
+  String get assistantManagerActionCreate => '创建助手';
+
+  @override
+  String get assistantManagerActionUpdate => '修改助手设置';
+
+  @override
+  String get assistantManagerActionDuplicate => '复制助手';
+
+  @override
+  String get assistantManagerActionSwitch => '切换助手';
+
+  @override
+  String get assistantManagerActionDelete => '删除助手';
+
+  @override
   String get phoneControlTitle => '手机控制';
 
   @override
@@ -23889,6 +23919,36 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get scheduledTasksPrepareNowNoUpcoming =>
       '没有可提前准备的下一次任务，请检查任务时间和启用状态。';
+
+  @override
+  String get assistantManagerToolTitle => '管理助手';
+
+  @override
+  String get assistantManagerToolSubtitle => '在聊天中创建、配置、复制、切换和删除助手。每次更改都需要你确认。';
+
+  @override
+  String get assistantManagerActionList => '列出助手';
+
+  @override
+  String get assistantManagerActionGet => '读取助手设置';
+
+  @override
+  String get assistantManagerActionOptions => '查看可用选项';
+
+  @override
+  String get assistantManagerActionCreate => '创建助手';
+
+  @override
+  String get assistantManagerActionUpdate => '修改助手设置';
+
+  @override
+  String get assistantManagerActionDuplicate => '复制助手';
+
+  @override
+  String get assistantManagerActionSwitch => '切换助手';
+
+  @override
+  String get assistantManagerActionDelete => '删除助手';
 
   @override
   String get phoneControlTitle => '手机控制';
@@ -35911,6 +35971,36 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get scheduledTasksPrepareNowNoUpcoming =>
       '沒有可提前準備的下一次任務，請檢查任務時間和啟用狀態。';
+
+  @override
+  String get assistantManagerToolTitle => '管理助理';
+
+  @override
+  String get assistantManagerToolSubtitle => '在聊天中建立、設定、複製、切換和刪除助理。每次變更都需要你確認。';
+
+  @override
+  String get assistantManagerActionList => '列出助理';
+
+  @override
+  String get assistantManagerActionGet => '讀取助理設定';
+
+  @override
+  String get assistantManagerActionOptions => '查看可用選項';
+
+  @override
+  String get assistantManagerActionCreate => '建立助理';
+
+  @override
+  String get assistantManagerActionUpdate => '修改助理設定';
+
+  @override
+  String get assistantManagerActionDuplicate => '複製助理';
+
+  @override
+  String get assistantManagerActionSwitch => '切換助理';
+
+  @override
+  String get assistantManagerActionDelete => '刪除助理';
 
   @override
   String get phoneControlTitle => '手機控制';

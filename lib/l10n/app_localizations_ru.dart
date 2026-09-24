@@ -12660,6 +12660,37 @@ class AppLocalizationsRu extends AppLocalizations {
       'Нет предстоящего срабатывания для подготовки. Проверьте время задачи и её включённость.';
 
   @override
+  String get assistantManagerToolTitle => 'Управление ассистентами';
+
+  @override
+  String get assistantManagerToolSubtitle =>
+      'Создавать, настраивать, копировать, переключать и удалять ассистентов прямо из чата. Каждое изменение требует вашего подтверждения.';
+
+  @override
+  String get assistantManagerActionList => 'Список ассистентов';
+
+  @override
+  String get assistantManagerActionGet => 'Чтение настроек ассистента';
+
+  @override
+  String get assistantManagerActionOptions => 'Проверка доступных вариантов';
+
+  @override
+  String get assistantManagerActionCreate => 'Создание ассистента';
+
+  @override
+  String get assistantManagerActionUpdate => 'Изменение настроек ассистента';
+
+  @override
+  String get assistantManagerActionDuplicate => 'Копирование ассистента';
+
+  @override
+  String get assistantManagerActionSwitch => 'Переключение ассистента';
+
+  @override
+  String get assistantManagerActionDelete => 'Удаление ассистента';
+
+  @override
   String get phoneControlTitle => 'Управление телефоном';
 
   @override

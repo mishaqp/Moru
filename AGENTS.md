@@ -48,6 +48,13 @@ package name does not require building other platforms.
   owns the FIFO, `HomeViewModel` drains it when a conversation goes idle, and
   `_QueuedInputPanel` in `chat_input_bar.dart` shows order, edit and remove. A
   pending item can be edited in the composer through `QueuedMessageEditState`.
+- **Assistant manager tool**: the opt-in local tool `manage_assistants`
+  (`AssistantManagerTool` in `lib/features/home/services/`) lets the model
+  list, read, create, update, duplicate, switch and delete assistants. It
+  validates every id against the live providers, create/update/duplicate/delete
+  go through the tool approval prompt, and it cannot delete the assistant
+  running the chat or the last one. Extend its settings schema when
+  `Assistant` gains a user-facing field.
 
 ## Pre-commit checklist
 

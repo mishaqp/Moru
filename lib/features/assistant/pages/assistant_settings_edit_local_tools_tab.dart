@@ -162,6 +162,17 @@ class _LocalToolsTab extends StatelessWidget {
                 onOpenSettings: () => PhoneControlSettingsPage.open(context),
               ),
             ],
+            _iosDivider(context),
+            _LocalToolRow(
+              icon: Lucide.Bot,
+              title: l10n.assistantManagerToolTitle,
+              subtitle: l10n.assistantManagerToolSubtitle,
+              enabled: assistant.localToolIds.contains(
+                LocalToolNames.assistantManager,
+              ),
+              onChanged: (value) =>
+                  toggleTool(LocalToolNames.assistantManager, value),
+            ),
             if (DeviceLocalTools.iosDeviceToolsSupported)
               FutureBuilder<bool>(
                 future: DeviceLocalTools.prefetchIosCapabilities(),

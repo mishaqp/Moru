@@ -22388,6 +22388,66 @@ abstract class AppLocalizations {
   /// **'There is no upcoming occurrence to prepare. Check the task time and enabled state.'**
   String get scheduledTasksPrepareNowNoUpcoming;
 
+  /// No description provided for @assistantManagerToolTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Assistants'**
+  String get assistantManagerToolTitle;
+
+  /// No description provided for @assistantManagerToolSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create, configure, copy, switch and delete assistants from the chat. Every change asks for your confirmation.'**
+  String get assistantManagerToolSubtitle;
+
+  /// No description provided for @assistantManagerActionList.
+  ///
+  /// In en, this message translates to:
+  /// **'List assistants'**
+  String get assistantManagerActionList;
+
+  /// No description provided for @assistantManagerActionGet.
+  ///
+  /// In en, this message translates to:
+  /// **'Read assistant settings'**
+  String get assistantManagerActionGet;
+
+  /// No description provided for @assistantManagerActionOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Check available options'**
+  String get assistantManagerActionOptions;
+
+  /// No description provided for @assistantManagerActionCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create assistant'**
+  String get assistantManagerActionCreate;
+
+  /// No description provided for @assistantManagerActionUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Change assistant settings'**
+  String get assistantManagerActionUpdate;
+
+  /// No description provided for @assistantManagerActionDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy assistant'**
+  String get assistantManagerActionDuplicate;
+
+  /// No description provided for @assistantManagerActionSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch assistant'**
+  String get assistantManagerActionSwitch;
+
+  /// No description provided for @assistantManagerActionDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete assistant'**
+  String get assistantManagerActionDelete;
+
   /// No description provided for @phoneControlTitle.
   ///
   /// In en, this message translates to:
