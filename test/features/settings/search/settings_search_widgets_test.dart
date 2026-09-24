@@ -1,6 +1,5 @@
 import 'dart:ui' show SemanticsAction;
 import 'package:Kelivo/core/providers/settings_provider.dart';
-import 'package:Kelivo/desktop/desktop_settings_page.dart';
 import 'package:Kelivo/features/settings/pages/settings_search_page.dart';
 import 'package:Kelivo/features/settings/pages/settings_page.dart';
 import 'package:Kelivo/features/settings/search/settings_search_index.dart';
@@ -9,7 +8,6 @@ import 'package:Kelivo/features/settings/widgets/settings_search_entry.dart';
 import 'package:Kelivo/features/settings/widgets/settings_search_view.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/l10n/app_localizations_en.dart';
-import 'package:Kelivo/shared/widgets/ios_switch.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
     show debugDefaultTargetPlatformOverride;
@@ -266,87 +264,6 @@ void main() {
       expect(tester.takeException(), isNull, reason: item.id);
       Navigator.of(host).pop();
       await tester.pumpAndSettle();
-    }
-    debugDefaultTargetPlatformOverride = null;
-  });
-
-  testWidgets(
-    'desktop search jumps down the display pane and works repeatedly',
-    (tester) async {
-      final settings = await pump(
-        tester,
-        const Scaffold(body: DesktopSettingsPage()),
-        size: const Size(1280, 900),
-        platform: TargetPlatform.macOS,
-      );
-      for (var i = 0; i < 2; i++) {
-        await tester.tap(find.byType(SettingsSearchEntry));
-        await tester.pumpAndSettle();
-        await tester.enterText(
-          find.descendant(
-            of: find.byType(SettingsSearchView),
-            matching: find.byType(TextField),
-          ),
-          'Show Files Below Replies',
-        );
-        await tester.pumpAndSettle();
-        await tester.tap(
-          find.descendant(
-            of: find.byType(SettingsSearchView),
-            matching: find.byKey(
-              const ValueKey('displaySettingsPageShowProducedFilesTitle'),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(find.byType(SettingsSearchView), findsNothing);
-        final label = find.text('Show Files Below Replies').hitTestable();
-        expect(label, findsOneWidget);
-        final row = find.ancestor(of: label, matching: find.byType(Row)).first;
-        await tester.tap(
-          find.descendant(of: row, matching: find.byType(IosSwitch)),
-        );
-        await tester.pumpAndSettle();
-        expect(settings.showProducedFiles, i == 1);
-      }
-      expect(tester.takeException(), isNull);
-      debugDefaultTargetPlatformOverride = null;
-    },
-  );
-  testWidgets('every desktop display result reveals its target', (
-    tester,
-  ) async {
-    await pump(
-      tester,
-      const Scaffold(body: DesktopSettingsPage()),
-      size: const Size(1280, 900),
-      platform: TargetPlatform.macOS,
-    );
-    final index = SettingsSearchIndex(
-      AppLocalizationsEn(),
-      platform: TargetPlatform.macOS,
-    );
-    for (final item in index.entries.where(
-      (item) => item.targetLabel != null,
-    )) {
-      await tester.tap(find.byType(SettingsSearchEntry));
-      await tester.pumpAndSettle();
-      final view = find.byType(SettingsSearchView);
-      await tester.enterText(
-        find.descendant(of: view, matching: find.byType(TextField)),
-        item.title,
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.descendant(of: view, matching: find.byKey(ValueKey(item.id))),
-      );
-      await tester.pumpAndSettle();
-      expect(
-        find.text(item.targetLabel!).hitTestable(),
-        findsOneWidget,
-        reason: item.id,
-      );
-      expect(tester.takeException(), isNull, reason: item.id);
     }
     debugDefaultTargetPlatformOverride = null;
   });

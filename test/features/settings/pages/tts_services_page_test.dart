@@ -4,7 +4,6 @@ import "../../../support/business_test_harness.dart";
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/providers/tts_provider.dart';
 import 'package:Kelivo/core/services/tts/network_tts.dart';
-import 'package:Kelivo/desktop/setting/tts_services_pane.dart';
 import 'package:Kelivo/features/settings/pages/tts_services_page.dart';
 import 'package:Kelivo/features/settings/widgets/voice_service_widgets.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
@@ -265,90 +264,6 @@ void main() {
     expect(find.text('Choose reference audio'), findsOneWidget);
   });
 
-  testWidgets('desktop TTS editor exposes provider advanced fields', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1200, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final settings = SettingsProvider(createBusinessTestPreferences());
-    final tts = TtsProvider(preferences: createBusinessTestPreferences());
-    addTearDown(tts.dispose);
-
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<SettingsProvider>.value(value: settings),
-          ChangeNotifierProvider<TtsProvider>.value(value: tts),
-        ],
-        child: const MaterialApp(
-          localizationsDelegates: [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(body: DesktopTtsServicesPane()),
-        ),
-      ),
-    );
-
-    await tester.tap(find.byTooltip('Add'));
-    await tester.pumpAndSettle();
-    expect(find.text('Add TTS Service'), findsOneWidget);
-    expect(find.byType(VoiceServiceSelectRow<String>), findsOneWidget);
-
-    Future<void> selectProvider(String current, String next) async {
-      await tester.tap(find.text(current).first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(next).last);
-      await tester.pumpAndSettle();
-    }
-
-    await selectProvider('OpenAI', 'Fish Audio');
-    expect(find.text('Temperature'), findsOneWidget);
-    expect(find.text('Top P'), findsOneWidget);
-    expect(find.text('Latency'), findsOneWidget);
-
-    await selectProvider('Fish Audio', 'MiniMax');
-    expect(find.text('Auto match'), findsOneWidget);
-    expect(find.text('Volume'), findsOneWidget);
-    expect(find.text('Generate subtitles'), findsNothing);
-    expect(find.byType(SwitchListTile), findsNothing);
-    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
-
-    await selectProvider('MiniMax', 'Qwen Audio');
-    expect(find.text('Workspace ID'), findsOneWidget);
-    expect(find.text('Region'), findsOneWidget);
-    expect(find.text('Audio format'), findsOneWidget);
-
-    await selectProvider('Qwen Audio', 'StepFun');
-    expect(find.text('Output format'), findsOneWidget);
-    expect(find.text('Style / voice description'), findsOneWidget);
-
-    await selectProvider('StepFun', 'MiMo');
-    expect(find.text('Style / voice description'), findsOneWidget);
-    expect(find.text('Streaming'), findsOneWidget);
-
-    final desktopModelField = find.byWidgetPredicate(
-      (widget) =>
-          widget is TextField && widget.controller?.text == 'mimo-v2.5-tts',
-    );
-    expect(desktopModelField, findsOneWidget);
-    await tester.enterText(desktopModelField, 'mimo-future-tts');
-    await tester.pump();
-    expect(find.text('mimo-future-tts'), findsOneWidget);
-
-    await selectProvider('MiMo', 'ElevenLabs');
-    expect(find.text('Output format'), findsOneWidget);
-
-    await selectProvider('ElevenLabs', 'Azure');
-    expect(find.text('Model'), findsNothing);
-    expect(find.text('Language'), findsOneWidget);
-  });
-
   testWidgets('mobile reorders network TTS after a long press', (tester) async {
     final settings = SettingsProvider(createBusinessTestPreferences());
     await settings.loaded;
@@ -358,12 +273,7 @@ void main() {
     ]);
     final tts = TtsProvider(preferences: createBusinessTestPreferences());
     addTearDown(tts.dispose);
-    await _pumpVoiceServices(
-      tester,
-      settings: settings,
-      tts: tts,
-      desktop: false,
-    );
+    await _pumpVoiceServices(tester, settings: settings, tts: tts);
 
     final first = tester.getCenter(find.text('Alpha Voice'));
     final second = tester.getCenter(find.text('Beta Voice'));
@@ -398,27 +308,34 @@ void main() {
     );
   });
 
-  testWidgets('desktop reorders TTS by dragging a card', (tester) async {
+  testWidgets('reordering keeps an in-flight TTS preview on the same service', (
+    tester,
+  ) async {
     final settings = SettingsProvider(createBusinessTestPreferences());
     await settings.loaded;
     await settings.setTtsServices([
       _tts('alpha', 'Alpha Voice'),
       _tts('beta', 'Beta Voice'),
+      _tts('gamma', 'Gamma Voice'),
     ]);
-    final tts = TtsProvider(preferences: createBusinessTestPreferences());
+    final tts = _HoldingTts(preferences: createBusinessTestPreferences());
     addTearDown(tts.dispose);
-    await _pumpVoiceServices(
-      tester,
-      settings: settings,
-      tts: tts,
-      desktop: true,
-    );
+    tester.view.physicalSize = const Size(430, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await _pumpVoiceServices(tester, settings: settings, tts: tts);
+    await tester.pump();
+
+    await tester.tap(_iconBeside('Beta Voice', Lucide.Volume2));
+    await tester.pump();
+    expect(_iconBeside('Beta Voice', Lucide.Loader), findsOneWidget);
 
     final first = tester.getCenter(find.text('Alpha Voice'));
-    final second = tester.getCenter(find.text('Beta Voice'));
+    final last = tester.getCenter(find.text('Gamma Voice'));
     final drag = await tester.startGesture(first);
-    await tester.pump();
-    final distance = second.dy - first.dy + 40;
+    await tester.pump(kLongPressTimeout);
+    final distance = last.dy - first.dy + 48;
     for (double dy = 8; dy <= distance; dy += 8) {
       await drag.moveTo(first + Offset(0, dy));
       await tester.pump(const Duration(milliseconds: 30));
@@ -428,76 +345,26 @@ void main() {
 
     expect(settings.ttsServices.map((service) => service.id), [
       'beta',
+      'gamma',
       'alpha',
     ]);
-  });
+    expect(_iconBeside('Beta Voice', Lucide.Loader), findsOneWidget);
+    expect(find.text('preview failed'), findsNothing);
 
-  testWidgets('reordering keeps an in-flight TTS preview on the same service', (
-    tester,
-  ) async {
-    for (final desktop in [false, true]) {
-      final settings = SettingsProvider(createBusinessTestPreferences());
-      await settings.loaded;
-      await settings.setTtsServices([
-        _tts('alpha', 'Alpha Voice'),
-        _tts('beta', 'Beta Voice'),
-        _tts('gamma', 'Gamma Voice'),
-      ]);
-      final tts = _HoldingTts(preferences: createBusinessTestPreferences());
-      addTearDown(tts.dispose);
-      if (!desktop) {
-        tester.view.physicalSize = const Size(430, 1400);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-      }
-      await _pumpVoiceServices(
-        tester,
-        settings: settings,
-        tts: tts,
-        desktop: desktop,
-      );
-      await tester.pump();
+    tts.pending['beta']!.complete('preview failed');
+    await tester.pump();
+    await tester.pump();
 
-      await tester.tap(_iconBeside('Beta Voice', Lucide.Volume2));
-      await tester.pump();
-      expect(_iconBeside('Beta Voice', Lucide.Loader), findsOneWidget);
-
-      final first = tester.getCenter(find.text('Alpha Voice'));
-      final last = tester.getCenter(find.text('Gamma Voice'));
-      final drag = await tester.startGesture(first);
-      if (!desktop) await tester.pump(kLongPressTimeout);
-      final distance = last.dy - first.dy + 48;
-      for (double dy = 8; dy <= distance; dy += 8) {
-        await drag.moveTo(first + Offset(0, dy));
-        await tester.pump(const Duration(milliseconds: 30));
-      }
-      await drag.up();
-      await tester.pumpAndSettle();
-
-      expect(settings.ttsServices.map((service) => service.id), [
-        'beta',
-        'gamma',
-        'alpha',
-      ]);
-      expect(_iconBeside('Beta Voice', Lucide.Loader), findsOneWidget);
-      expect(find.text('preview failed'), findsNothing);
-
-      tts.pending['beta']!.complete('preview failed');
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.byIcon(Lucide.Loader), findsNothing);
-      expect(find.text('preview failed'), findsOneWidget);
-      expect(
-        tester.getTopLeft(find.text('preview failed')).dy,
-        greaterThan(tester.getTopLeft(find.text('Beta Voice')).dy),
-      );
-      expect(
-        tester.getTopLeft(find.text('preview failed')).dy,
-        lessThan(tester.getTopLeft(find.text('Gamma Voice')).dy),
-      );
-    }
+    expect(find.byIcon(Lucide.Loader), findsNothing);
+    expect(find.text('preview failed'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('preview failed')).dy,
+      greaterThan(tester.getTopLeft(find.text('Beta Voice')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('preview failed')).dy,
+      lessThan(tester.getTopLeft(find.text('Gamma Voice')).dy),
+    );
   });
 }
 
@@ -538,14 +405,7 @@ Future<void> _pumpVoiceServices(
   WidgetTester tester, {
   required SettingsProvider settings,
   required TtsProvider tts,
-  required bool desktop,
 }) {
-  if (desktop) {
-    tester.view.physicalSize = const Size(1200, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-  }
   return tester.pumpWidget(
     MultiProvider(
       providers: [
@@ -560,9 +420,7 @@ Future<void> _pumpVoiceServices(
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
-        home: desktop
-            ? const Scaffold(body: DesktopTtsServicesPane())
-            : const TtsServicesPage(),
+        home: const TtsServicesPage(),
       ),
     ),
   );

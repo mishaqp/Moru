@@ -11,7 +11,6 @@ import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/providers/workspace_provider.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/features/mcp/widgets/mcp_server_edit_sheet.dart';
-import 'package:Kelivo/desktop/setting/mcp_edit_dialog.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -94,31 +93,6 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
-  );
-
-  testWidgets(
-    'desktop can clear a mobile binding without selecting a new one',
-    (tester) async {
-      final provider = await _openEditor(
-        tester,
-        [],
-        workspaceId: 'scripts',
-        desktop: true,
-      );
-      expect(
-        find.text(
-          'Workspace binding is available in the mobile Linux environment. Unbind it to run this server on desktop.',
-        ),
-        findsOneWidget,
-      );
-      await tester.tap(find.byKey(const ValueKey('mcp-workspace-unbind')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
-      expect(provider.getById('guest')!.workspaceId, isNull);
-      await tester.pumpWidget(const SizedBox.shrink());
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
   );
 
   testWidgets(
@@ -261,7 +235,6 @@ Future<McpProvider> _openEditor(
   String? workingDirectory,
   String? workspaceId,
   bool withWorkspaces = false,
-  bool desktop = false,
   Brightness brightness = Brightness.light,
   Size size = const Size(600, 1600),
 }) async {
@@ -334,9 +307,8 @@ Future<McpProvider> _openEditor(
         home: Scaffold(
           body: Builder(
             builder: (context) => TextButton(
-              onPressed: () => desktop
-                  ? showDesktopMcpEditDialog(context, serverId: 'guest')
-                  : showMcpServerEditSheet(context, serverId: 'guest'),
+              onPressed: () =>
+                  showMcpServerEditSheet(context, serverId: 'guest'),
               child: const Text('Open'),
             ),
           ),

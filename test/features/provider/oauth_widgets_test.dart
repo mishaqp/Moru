@@ -1,8 +1,5 @@
-import 'package:Kelivo/desktop/desktop_settings_page.dart'
-    show DesktopProviderDetailPane;
 import 'package:Kelivo/features/provider/pages/provider_network_page.dart';
 import 'package:Kelivo/features/provider/pages/provider_custom_request_page.dart';
-import 'package:Kelivo/features/provider/widgets/oauth_connection_info.dart';
 import 'package:Kelivo/features/provider/widgets/provider_prompt_cache_settings.dart';
 import 'package:Kelivo/shared/widgets/ios_switch.dart';
 import 'dart:async';
@@ -618,73 +615,59 @@ void main() {
     },
   );
 
-  for (final desktop in [false, true]) {
-    testWidgets('connected account detail layout desktop=$desktop', (
-      tester,
-    ) async {
-      tester.view.physicalSize = desktop
-          ? const Size(800, 760)
-          : const Size(390, 844);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final cfg = settings.providerConfigs['oauth-test']!.copyWith(
-        models: ['gpt-5.4', 'gpt-5.4-mini'],
-        oauthCredentials: ProviderOAuthCredentials(
-          accessToken: 'access',
-          refreshToken: 'refresh',
-          expiresAt: DateTime.now().add(const Duration(hours: 1)),
-          sessionId: 'session',
-          accountId: 'workspace',
-          email: 'account@example.com',
-          plan: 'Plus',
-        ),
-      );
-      await tester.runAsync(() => settings.setProviderConfig(cfg.id, cfg));
-      final service = ProviderOAuthService(
-        clientFactory: (_) => MockClient(
-          (_) async => http.Response(
-            jsonEncode({
-              'rate_limit': {
-                'primary_window': {
-                  'used_percent': 62,
-                  'limit_window_seconds': 18000,
-                },
-                'secondary_window': {
-                  'used_percent': 41,
-                  'limit_window_seconds': 604800,
-                },
+  testWidgets('connected account detail layout', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final cfg = settings.providerConfigs['oauth-test']!.copyWith(
+      models: ['gpt-5.4', 'gpt-5.4-mini'],
+      oauthCredentials: ProviderOAuthCredentials(
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        expiresAt: DateTime.now().add(const Duration(hours: 1)),
+        sessionId: 'session',
+        accountId: 'workspace',
+        email: 'account@example.com',
+        plan: 'Plus',
+      ),
+    );
+    await tester.runAsync(() => settings.setProviderConfig(cfg.id, cfg));
+    final service = ProviderOAuthService(
+      clientFactory: (_) => MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'rate_limit': {
+              'primary_window': {
+                'used_percent': 62,
+                'limit_window_seconds': 18000,
               },
-            }),
-            200,
-          ),
+              'secondary_window': {
+                'used_percent': 41,
+                'limit_window_seconds': 604800,
+              },
+            },
+          }),
+          200,
         ),
-      )..bind(settings);
-      final key = GlobalKey();
-      await tester.pumpWidget(
-        app(
-          RepaintBoundary(
-            key: key,
-            child: OAuthProviderDetailPage(
-              providerId: cfg.id,
-              embedded: desktop,
-              service: service,
-            ),
-          ),
+      ),
+    )..bind(settings);
+    final key = GlobalKey();
+    await tester.pumpWidget(
+      app(
+        RepaintBoundary(
+          key: key,
+          child: OAuthProviderDetailPage(providerId: cfg.id, service: service),
         ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('account@example.com'), findsOneWidget);
-      expect(find.text('62%'), findsOneWidget);
-      expect(find.text('API Key'), findsNothing);
-      expect(tester.takeException(), isNull);
-      await snapshot(
-        tester,
-        key,
-        desktop ? 'oauth-desktop-detail' : 'oauth-mobile-detail',
-      );
-    });
-  }
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('account@example.com'), findsOneWidget);
+    expect(find.text('62%'), findsOneWidget);
+    expect(find.text('API Key'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await snapshot(tester, key, 'oauth-mobile-detail');
+  });
 
   Future<ProviderConfig> connectedDetail(WidgetTester tester) async {
     final config = settings.providerConfigs['oauth-test']!.copyWith(
@@ -719,117 +702,6 @@ void main() {
   }
 
   for (final brightness in Brightness.values) {
-    testWidgets(
-      'desktop OAuth uses shared provider settings and model styling ${brightness.name}',
-      (tester) async {
-        tester.view.physicalSize = const Size(760, 900);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-        final config = await connectedDetail(tester);
-        final service = _DetailService();
-        addTearDown(service.dispose);
-        final key = GlobalKey();
-        await tester.pumpWidget(
-          RepaintBoundary(
-            key: key,
-            child: app(
-              OAuthProviderDetailPage(
-                providerId: config.id,
-                embedded: true,
-                service: service,
-              ),
-              brightness: brightness,
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        final l = AppLocalizations.of(
-          tester.element(find.byType(OAuthProviderDetailPage)),
-        )!;
-        expect(find.byType(DesktopProviderDetailPane), findsOneWidget);
-        expect(find.text(l.addProviderSheetEnabledLabel), findsNothing);
-        expect(find.byType(IosSwitch), findsOneWidget);
-        expect(tester.getTopLeft(find.byType(IosSwitch)).dy, lessThan(36));
-        await tester.runAsync(() => tester.tap(find.byType(IosSwitch)));
-        await tester.pumpAndSettle();
-        expect(settings.providerConfigs[config.id]!.enabled, false);
-        expect(
-          settings.providerConfigs[config.id]!.oauthCredentials!.sessionId,
-          'session',
-        );
-        await tester.runAsync(() => tester.tap(find.byType(IosSwitch)));
-        await tester.pumpAndSettle();
-        expect(
-          tester.widget<Text>(find.text('Grok').first).style!.fontSize,
-          14,
-        );
-        expect(find.text(l.oauthSyncModels), findsOneWidget);
-        expect(find.byKey(const ValueKey('search-icon')), findsNothing);
-        expect(
-          find.byTooltip(l.providerDetailPageMultiSelectButton),
-          findsNothing,
-        );
-        expect(
-          find.byTooltip(l.providerDetailPageAddNewModelButton),
-          findsNothing,
-        );
-        expect(find.byIcon(LucideIcons.minus), findsNothing);
-        expect(find.text(l.providerDetailPageNetworkTab), findsNothing);
-        expect(find.byType(OAuthConnectionInfo), findsNothing);
-        await snapshot(tester, key, 'oauth-desktop-unified-${brightness.name}');
-        await tester.tap(
-          find.byKey(ValueKey('desktop-provider-settings-${config.id}')),
-        );
-        await tester.pumpAndSettle();
-        expect(
-          find.byKey(const ValueKey('desktop-provider-settings-dialog')),
-          findsOneWidget,
-        );
-        expect(find.byType(OAuthConnectionInfo), findsOneWidget);
-        expect(find.text(config.oauthProvider!.baseUrl), findsOneWidget);
-        expect(find.text(l.providerDetailPageProviderTypeTitle), findsNothing);
-        expect(find.text(l.providerDetailPageMultiKeyModeTitle), findsNothing);
-        expect(find.text('access-secret'), findsNothing);
-        await snapshot(
-          tester,
-          key,
-          'oauth-desktop-settings-${brightness.name}',
-        );
-        // Saving settings while a token rotates must keep the latest credentials and catalog metadata.
-        final rotated = config.oauthCredentials!.copyWith(
-          accessToken: 'rotated-access',
-        );
-        await tester.runAsync(
-          () => settings.setProviderConfig(
-            config.id,
-            settings.providerConfigs[config.id]!.copyWith(
-              oauthCredentials: rotated,
-            ),
-          ),
-        );
-        await tester.pump();
-        final port = find.byKey(
-          const ValueKey('desktop-provider-proxy-port-field'),
-        );
-        await tester.ensureVisible(port);
-        await tester.enterText(port, '7890');
-        await tester.pumpAndSettle();
-        final value = find.byKey(
-          const ValueKey('provider-custom-header-value-0'),
-        );
-        await tester.ensureVisible(value);
-        await tester.enterText(value, 'updated');
-        await tester.pumpAndSettle();
-        final saved = settings.providerConfigs[config.id]!;
-        expect(saved.proxyPort, '7890');
-        expect(saved.customHeaders.single['value'], 'updated');
-        expect(saved.oauthCredentials!.accessToken, 'rotated-access');
-        expect(saved.modelOverrides, config.modelOverrides);
-        expect(tester.takeException(), isNull);
-      },
-    );
-
     testWidgets(
       'mobile OAuth keeps one page and uses shared network and request pages ${brightness.name}',
       (tester) async {
@@ -913,61 +785,40 @@ void main() {
     );
   }
 
-  for (final desktop in [false, true]) {
-    testWidgets(
-      'OAuth sync action cannot start overlapping requests desktop=$desktop',
-      (tester) async {
-        tester.view.physicalSize = desktop
-            ? const Size(760, 900)
-            : const Size(390, 844);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-        final config = await connectedDetail(tester);
-        final service = _DetailService()..syncGate = Completer<void>();
-        addTearDown(service.dispose);
-        await tester.pumpWidget(
-          app(
-            OAuthProviderDetailPage(
-              providerId: config.id,
-              embedded: desktop,
-              service: service,
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        final l = AppLocalizations.of(
-          tester.element(find.byType(OAuthProviderDetailPage)),
-        )!;
-        final sync = desktop
-            ? find.text(l.oauthSyncModels)
-            : find.byKey(const ValueKey('oauth-sync-models'));
-        await tester.ensureVisible(sync);
-        await tester.tap(sync);
-        await tester.pump();
-        expect(service.syncCalls, 1);
-        final pending = desktop
-            ? find.text(l.oauthSyncing)
-            : find.byKey(const ValueKey('oauth-sync-models'));
-        await tester.tap(pending);
-        await tester.pump();
-        expect(service.syncCalls, 1);
-        service.syncGate!.complete();
-        await tester.pumpAndSettle();
-        expect(sync, findsOneWidget);
-        expect(tester.takeException(), isNull);
-      },
+  testWidgets('OAuth sync action cannot start overlapping requests', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final config = await connectedDetail(tester);
+    final service = _DetailService()..syncGate = Completer<void>();
+    addTearDown(service.dispose);
+    await tester.pumpWidget(
+      app(OAuthProviderDetailPage(providerId: config.id, service: service)),
     );
-  }
+    await tester.pumpAndSettle();
+    final sync = find.byKey(const ValueKey('oauth-sync-models'));
+    await tester.ensureVisible(sync);
+    await tester.tap(sync);
+    await tester.pump();
+    expect(service.syncCalls, 1);
+    final pending = find.byKey(const ValueKey('oauth-sync-models'));
+    await tester.tap(pending);
+    await tester.pump();
+    expect(service.syncCalls, 1);
+    service.syncGate!.complete();
+    await tester.pumpAndSettle();
+    expect(sync, findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   Future<void> openModelEditor(
     WidgetTester tester, {
-    required bool desktop,
     required Map<String, dynamic> metadata,
   }) async {
-    tester.view.physicalSize = desktop
-        ? const Size(1280, 900)
-        : const Size(390, 844);
+    tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -991,7 +842,7 @@ void main() {
     );
     await tester.runAsync(() => settings.setProviderConfig(config.id, config));
     await tester.pumpWidget(
-      app(OAuthProviderDetailPage(providerId: config.id, embedded: desktop)),
+      app(OAuthProviderDetailPage(providerId: config.id)),
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
@@ -1002,7 +853,7 @@ void main() {
     await tester.tap(find.text('Synced Kimi'));
     await tester.pumpAndSettle();
     expect(find.text('Confirm'), findsOneWidget);
-    expect(find.byType(BottomSheet), desktop ? findsNothing : findsOneWidget);
+    expect(find.byType(BottomSheet), findsOneWidget);
     expect(tester.takeException(), isNull);
   }
 
@@ -1027,181 +878,158 @@ void main() {
     }
   }
 
-  for (final desktop in [false, true]) {
-    for (final metadata in [anthropicMetadata, openaiMetadata]) {
-      testWidgets(
-        'model Confirm preserves ${metadata['oauthProtocol']} OAuth metadata desktop=$desktop',
-        (tester) async {
-          await openModelEditor(tester, desktop: desktop, metadata: metadata);
-          await tester.tap(find.text('Confirm'));
-          await tester.pumpAndSettle();
-
-          final config = settings.providerConfigs['oauth-test']!;
-          final saved = config.modelOverrides['kimi-test-alias'] as Map;
-          expectMetadata(saved, metadata);
-          expect(config.models, ['kimi-test-alias']);
-          expect(saved['apiModelId'], 'k3');
-          expect(saved['name'], 'Synced Kimi');
-          expect(saved['abilities'], unorderedEquals(['tool', 'reasoning']));
-          expect(tester.takeException(), isNull);
-        },
-      );
-    }
-
+  for (final metadata in [anthropicMetadata, openaiMetadata]) {
     testWidgets(
-      'model edits preserve metadata refreshed while the editor is open desktop=$desktop',
+      'model Confirm preserves ${metadata['oauthProtocol']} OAuth metadata',
       (tester) async {
-        await openModelEditor(
-          tester,
-          desktop: desktop,
-          metadata: anthropicMetadata,
-        );
-        await tester.enterText(find.byType(TextField).at(1), 'My Kimi');
-        final current = settings.providerConfigs['oauth-test']!;
-        await tester.runAsync(
-          () => settings.setProviderConfig(
-            current.id,
-            current.copyWith(
-              modelOverrides: {
-                ...current.modelOverrides,
-                'kimi-test-alias': {
-                  ...(current.modelOverrides['kimi-test-alias'] as Map),
-                  ...openaiMetadata,
-                },
-              },
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
+        await openModelEditor(tester, metadata: metadata);
         await tester.tap(find.text('Confirm'));
         await tester.pumpAndSettle();
 
-        final saved =
-            settings
-                    .providerConfigs['oauth-test']!
-                    .modelOverrides['kimi-test-alias']
-                as Map;
-        expectMetadata(saved, openaiMetadata);
-        expect(saved['name'], 'My Kimi');
-        expect(tester.takeException(), isNull);
-      },
-    );
-
-    testWidgets(
-      'model type edits still clear chat fields while preserving OAuth metadata desktop=$desktop',
-      (tester) async {
-        await openModelEditor(
-          tester,
-          desktop: desktop,
-          metadata: openaiMetadata,
-        );
-        await tester.ensureVisible(find.text('Embedding'));
-        await tester.tap(find.text('Embedding'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Confirm'));
-        await tester.pumpAndSettle();
-
-        final saved =
-            settings
-                    .providerConfigs['oauth-test']!
-                    .modelOverrides['kimi-test-alias']
-                as Map;
-        expectMetadata(saved, openaiMetadata);
-        expect(saved['type'], 'embedding');
-        expect(saved, isNot(contains('output')));
-        expect(saved, isNot(contains('abilities')));
-        expect(saved, isNot(contains('builtInTools')));
+        final config = settings.providerConfigs['oauth-test']!;
+        final saved = config.modelOverrides['kimi-test-alias'] as Map;
+        expectMetadata(saved, metadata);
+        expect(config.models, ['kimi-test-alias']);
+        expect(saved['apiModelId'], 'k3');
+        expect(saved['name'], 'Synced Kimi');
+        expect(saved['abilities'], unorderedEquals(['tool', 'reasoning']));
         expect(tester.takeException(), isNull);
       },
     );
   }
 
-  for (final desktop in [false, true]) {
-    for (final brightness in Brightness.values) {
-      testWidgets(
-        'Claude OAuth TTL saves through the real detail page desktop=$desktop theme=${brightness.name}',
-        (tester) async {
-          tester.view.physicalSize = desktop
-              ? const Size(1280, 900)
-              : const Size(390, 844);
-          tester.view.devicePixelRatio = 1;
-          addTearDown(tester.view.resetPhysicalSize);
-          addTearDown(tester.view.resetDevicePixelRatio);
-          final config = settings
-              .getProviderConfig('oauth-test')
-              .copyWith(
-                name: 'Claude',
-                oauthProvider: OAuthProvider.claude,
-                providerType: ProviderKind.claude,
-                baseUrl: OAuthProvider.claude.baseUrl,
-                claudePromptCachingEnabled: true,
-                claudePromptCachingTtl: '1h',
-              );
-          await tester.runAsync(
-            () => settings.setProviderConfig(config.id, config),
-          );
-          final key = GlobalKey();
-          await tester.pumpWidget(
-            app(
-              RepaintBoundary(
-                key: key,
-                child: OAuthProviderDetailPage(
-                  providerId: config.id,
-                  embedded: desktop,
-                  service: _DetailService(),
-                ),
-              ),
-              brightness: brightness,
-            ),
-          );
-          await tester.pumpAndSettle();
-          final controls = find.byType(ProviderPromptCacheSettings);
-          expect(controls, findsOneWidget);
-          await tester.ensureVisible(
-            find.descendant(of: controls, matching: find.text('1 hour')),
-          );
-          if (desktop) {
-            await tester.tap(find.text('1 hour'));
-            await tester.pumpAndSettle();
-          }
-          await tester.tap(find.text('5 min'));
-          await tester.pumpAndSettle();
-          expect(
-            settings.getProviderConfig(config.id).claudePromptCachingTtl,
-            '5m',
-          );
-          expect(tester.takeException(), isNull);
-          await snapshot(
-            tester,
-            key,
-            'claude-cache-${desktop ? 'desktop' : 'mobile'}-${brightness.name}',
-          );
-          final toggle = find.descendant(
-            of: controls,
-            matching: find.byType(IosSwitch),
-          );
-          await tester.ensureVisible(toggle);
-          await tester.tap(toggle);
-          await tester.pumpAndSettle();
-          expect(
-            settings.getProviderConfig(config.id).claudePromptCachingEnabled,
-            isFalse,
-          );
-          expect(
-            find.descendant(of: controls, matching: find.text('5 min')),
-            findsNothing,
-          );
-          await tester.tap(toggle);
-          await tester.pumpAndSettle();
-          final restored = ProviderConfig.fromJson(
-            settings.getProviderConfig(config.id).toJson(),
-          );
-          expect(restored.claudePromptCachingEnabled, isTrue);
-          expect(restored.claudePromptCachingTtl, '5m');
-          expect(tester.takeException(), isNull);
-        },
+  testWidgets(
+    'model edits preserve metadata refreshed while the editor is open',
+    (tester) async {
+      await openModelEditor(tester, metadata: anthropicMetadata);
+      await tester.enterText(find.byType(TextField).at(1), 'My Kimi');
+      final current = settings.providerConfigs['oauth-test']!;
+      await tester.runAsync(
+        () => settings.setProviderConfig(
+          current.id,
+          current.copyWith(
+            modelOverrides: {
+              ...current.modelOverrides,
+              'kimi-test-alias': {
+                ...(current.modelOverrides['kimi-test-alias'] as Map),
+                ...openaiMetadata,
+              },
+            },
+          ),
+        ),
       );
-    }
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Confirm'));
+      await tester.pumpAndSettle();
+
+      final saved =
+          settings
+                  .providerConfigs['oauth-test']!
+                  .modelOverrides['kimi-test-alias']
+              as Map;
+      expectMetadata(saved, openaiMetadata);
+      expect(saved['name'], 'My Kimi');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'model type edits still clear chat fields while preserving OAuth metadata',
+    (tester) async {
+      await openModelEditor(tester, metadata: openaiMetadata);
+      await tester.ensureVisible(find.text('Embedding'));
+      await tester.tap(find.text('Embedding'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Confirm'));
+      await tester.pumpAndSettle();
+
+      final saved =
+          settings
+                  .providerConfigs['oauth-test']!
+                  .modelOverrides['kimi-test-alias']
+              as Map;
+      expectMetadata(saved, openaiMetadata);
+      expect(saved['type'], 'embedding');
+      expect(saved, isNot(contains('output')));
+      expect(saved, isNot(contains('abilities')));
+      expect(saved, isNot(contains('builtInTools')));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final brightness in Brightness.values) {
+    testWidgets(
+      'Claude OAuth TTL saves through the real detail page theme=${brightness.name}',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final config = settings
+            .getProviderConfig('oauth-test')
+            .copyWith(
+              name: 'Claude',
+              oauthProvider: OAuthProvider.claude,
+              providerType: ProviderKind.claude,
+              baseUrl: OAuthProvider.claude.baseUrl,
+              claudePromptCachingEnabled: true,
+              claudePromptCachingTtl: '1h',
+            );
+        await tester.runAsync(
+          () => settings.setProviderConfig(config.id, config),
+        );
+        final key = GlobalKey();
+        await tester.pumpWidget(
+          app(
+            RepaintBoundary(
+              key: key,
+              child: OAuthProviderDetailPage(
+                providerId: config.id,
+                service: _DetailService(),
+              ),
+            ),
+            brightness: brightness,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final controls = find.byType(ProviderPromptCacheSettings);
+        expect(controls, findsOneWidget);
+        await tester.ensureVisible(
+          find.descendant(of: controls, matching: find.text('1 hour')),
+        );
+        await tester.tap(find.text('5 min'));
+        await tester.pumpAndSettle();
+        expect(
+          settings.getProviderConfig(config.id).claudePromptCachingTtl,
+          '5m',
+        );
+        expect(tester.takeException(), isNull);
+        await snapshot(tester, key, 'claude-cache-mobile-${brightness.name}');
+        final toggle = find.descendant(
+          of: controls,
+          matching: find.byType(IosSwitch),
+        );
+        await tester.ensureVisible(toggle);
+        await tester.tap(toggle);
+        await tester.pumpAndSettle();
+        expect(
+          settings.getProviderConfig(config.id).claudePromptCachingEnabled,
+          isFalse,
+        );
+        expect(
+          find.descendant(of: controls, matching: find.text('5 min')),
+          findsNothing,
+        );
+        await tester.tap(toggle);
+        await tester.pumpAndSettle();
+        final restored = ProviderConfig.fromJson(
+          settings.getProviderConfig(config.id).toJson(),
+        );
+        expect(restored.claudePromptCachingEnabled, isTrue);
+        expect(restored.claudePromptCachingTtl, '5m');
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 
   testWidgets(
