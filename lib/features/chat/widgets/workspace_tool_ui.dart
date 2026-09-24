@@ -664,6 +664,7 @@ class _WorkspaceToolSummary extends StatelessWidget {
     final Widget child;
     switch (part.toolName) {
       case 'shell':
+      case WorkspaceToolsService.shellOutputTool:
         final command = workspaceCommandOf(part, meta: meta, run: run);
         if (command.isEmpty) return const SizedBox.shrink();
         child = Text(
@@ -863,7 +864,9 @@ class WorkspaceToolStatusText extends StatelessWidget {
       label = l10n.workspaceToolInterrupted;
       color = colors.warning;
       key = WorkspaceStatusBadge.interruptedKey;
-    } else if (part.toolName == 'shell' && exitCode != null) {
+    } else if ((part.toolName == 'shell' ||
+            part.toolName == WorkspaceToolsService.shellOutputTool) &&
+        exitCode != null) {
       label = l10n.workspaceToolExitCode(exitCode);
       final ok = exitCode == 0;
       color = ok ? fg.muted : cs.error;
@@ -999,6 +1002,8 @@ class WorkspaceToolCardBody extends StatelessWidget {
         // the composer; the card keeps just its command line.
         if (liveRun?.status == ToolRunStatus.running) return null;
         return _ShellTail(part: part, meta: meta, run: liveRun);
+      case WorkspaceToolsService.shellOutputTool:
+        return _ShellTail(part: part, meta: meta, run: null);
       case WorkspaceToolsService.planTool:
         final plan = TaskPlan.fromArguments(part.arguments);
         return plan == null ? null : TaskPlanChecklist(plan: plan);

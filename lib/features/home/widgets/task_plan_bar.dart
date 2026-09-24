@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../../core/services/workspace/task_plan.dart';
 import '../../../icons/lucide_adapter.dart';
@@ -71,101 +70,69 @@ class TaskPlanChecklist extends StatelessWidget {
   }
 }
 
-/// A strip above the composer with the conversation's open plan: progress
-/// and the current step, expanding to the whole checklist. Hidden when there
-/// is no plan or every step is done.
-class TaskPlanBar extends StatefulWidget {
-  const TaskPlanBar({super.key, required this.conversationId});
-
-  final String? conversationId;
+/// A compact chip with the plan's progress and current step; a tap opens
+/// or closes the whole checklist.
+class TaskPlanChip extends StatelessWidget {
+  const TaskPlanChip({
+    super.key,
+    required this.plan,
+    required this.expanded,
+    required this.onTap,
+  });
 
   static const Key toggleKey = ValueKey<String>('task-plan-bar-toggle');
 
-  @override
-  State<TaskPlanBar> createState() => _TaskPlanBarState();
-}
-
-class _TaskPlanBarState extends State<TaskPlanBar> {
-  bool _expanded = false;
+  final TaskPlan plan;
+  final bool expanded;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    TaskPlan? plan;
-    try {
-      plan = context.watch<TaskPlanRegistry>().of(widget.conversationId);
-    } on ProviderNotFoundException {
-      plan = null;
-    }
-    final visible = plan != null && !plan.isDone;
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      alignment: Alignment.bottomCenter,
-      child: visible
-          ? _buildBar(context, plan)
-          : const SizedBox(width: double.infinity),
-    );
-  }
-
-  Widget _buildBar(BuildContext context, TaskPlan plan) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final current = plan.current;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-      child: Material(
-        color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(16),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            InkWell(
-              key: TaskPlanBar.toggleKey,
-              onTap: () => setState(() => _expanded = !_expanded),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
-                child: Row(
-                  children: [
-                    Icon(Lucide.ListChecks, size: 18, color: cs.primary),
-                    const SizedBox(width: 10),
-                    Text(
-                      l10n.taskPlanProgress(plan.completed, plan.steps.length),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: AppFontWeights.semibold,
-                        color: cs.primary,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                    if (current != null && !_expanded) ...[
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          current.text,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 13, color: cs.onSurface),
-                        ),
-                      ),
-                    ] else
-                      const Spacer(),
-                    Icon(
-                      _expanded ? Lucide.ChevronDown : Lucide.ChevronUp,
-                      size: 16,
-                      color: cs.onSurface.withValues(alpha: 0.55),
-                    ),
-                  ],
+    return Material(
+      color: cs.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: toggleKey,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
+          child: Row(
+            children: [
+              Icon(Lucide.ListChecks, size: 16, color: cs.primary),
+              const SizedBox(width: 6),
+              Text(
+                l10n.taskPlanProgress(plan.completed, plan.steps.length),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: AppFontWeights.semibold,
+                  color: cs.primary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
-            ),
-            if (_expanded)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-                child: TaskPlanChecklist(plan: plan),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  current?.text ?? '',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.25,
+                    color: cs.onSurface,
+                  ),
+                ),
               ),
-          ],
+              Icon(
+                expanded ? Lucide.ChevronDown : Lucide.ChevronUp,
+                size: 14,
+                color: cs.onSurface.withValues(alpha: 0.55),
+              ),
+            ],
+          ),
         ),
       ),
     );

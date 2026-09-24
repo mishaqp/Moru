@@ -3,6 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:Kelivo/core/services/workspace/task_plan.dart';
+import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
+import 'package:Kelivo/features/home/widgets/composer_status_strip.dart';
+import 'package:Kelivo/features/home/widgets/running_tool_bar.dart';
 import 'package:Kelivo/features/home/widgets/task_plan_bar.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 
@@ -45,13 +48,13 @@ void main() {
           home: const Scaffold(
             body: Align(
               alignment: Alignment.bottomCenter,
-              child: TaskPlanBar(conversationId: 'c1'),
+              child: ComposerStatusStrip(conversationId: 'c1'),
             ),
           ),
         ),
       ),
     );
-    expect(find.byKey(TaskPlanBar.toggleKey), findsNothing);
+    expect(find.byKey(TaskPlanChip.toggleKey), findsNothing);
 
     plans.set(
       'c1',
@@ -68,7 +71,7 @@ void main() {
     expect(find.text('Test'), findsNothing);
     expect(find.text('Other chat'), findsNothing);
 
-    await tester.tap(find.byKey(TaskPlanBar.toggleKey));
+    await tester.tap(find.byKey(TaskPlanChip.toggleKey));
     await tester.pumpAndSettle();
     expect(find.text('Read code'), findsOneWidget);
     expect(find.text('Test'), findsOneWidget);
@@ -82,6 +85,54 @@ void main() {
       ]),
     );
     await tester.pumpAndSettle();
-    expect(find.byKey(TaskPlanBar.toggleKey), findsNothing);
+    expect(find.byKey(TaskPlanChip.toggleKey), findsNothing);
+  });
+
+  testWidgets('plan and running command share one row', (tester) async {
+    final plans = TaskPlanRegistry()
+      ..set('c1', _plan([('Serve', 'in_progress'), ('Check', 'pending')]));
+    final runs = ToolRunRegistry();
+    final run = runs.start(
+      'call-1',
+      'shell',
+      command: 'python3 -m http.server',
+      conversationId: 'c1',
+    );
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: plans),
+          ChangeNotifierProvider.value(value: runs),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(
+            body: Align(
+              alignment: Alignment.bottomCenter,
+              child: ComposerStatusStrip(conversationId: 'c1'),
+            ),
+          ),
+        ),
+      ),
+    );
+    // The live dot pulses forever, so frames are stepped explicitly.
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final planBox = tester.getRect(find.byType(TaskPlanChip));
+    final runBox = tester.getRect(find.byType(RunningToolChip));
+    expect(planBox.top, runBox.top);
+    expect(planBox.right, lessThan(runBox.left));
+    expect(planBox.width, closeTo(runBox.width, 1));
+
+    run.complete(status: ToolRunStatus.succeeded, exitCode: 0);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(RunningToolChip), findsNothing);
+    // Alone, the plan takes the whole row.
+    expect(
+      tester.getRect(find.byType(TaskPlanChip)).width,
+      runBox.right - planBox.left,
+    );
   });
 }

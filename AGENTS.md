@@ -59,13 +59,14 @@ package name does not require building other platforms.
   `BrowserMiniWindow` (in `AppOverlays`). `BrowserAgentSession.minimize`
   parks the live `WebViewController`, and the next agent `WebViewPage` adopts
   it without reloading; `openSharedBrowser` opens or expands it. The chat
-  header's `ChatHeaderSwitcher` and the composer's `RunningToolBar` are the
+  header's `ChatHeaderSwitcher` and the composer's `ComposerStatusStrip` are the
   entry points for files, terminal, browser and running commands.
 - **Background jobs and task plan**: workspace `shell` takes `background: true`
   and returns a `job_id`; `shell_output` reads, waits for or stops the job
   (its `ToolRun` stays in `ToolRunRegistry`, found by `byRuntimeRunId`). The
-  `update_plan` workspace tool stores the checklist in `TaskPlanRegistry`, and
-  `TaskPlanBar` shows it above the composer until every step is done.
+  `update_plan` workspace tool stores the checklist in `TaskPlanRegistry`.
+  `ComposerStatusStrip` shows the open plan (`TaskPlanChip`) and the running
+  command (`RunningToolChip`) side by side above the composer.
 
 ## Pre-commit checklist
 

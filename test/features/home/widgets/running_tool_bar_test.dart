@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
+import 'package:Kelivo/features/home/widgets/composer_status_strip.dart';
 import 'package:Kelivo/features/home/widgets/running_tool_bar.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 
@@ -38,7 +39,7 @@ Widget _host({
       home: Scaffold(
         body: Align(
           alignment: Alignment.bottomCenter,
-          child: RunningToolBar(conversationId: conversationId),
+          child: ComposerStatusStrip(conversationId: conversationId),
         ),
       ),
     ),
@@ -54,7 +55,7 @@ void main() {
     registry.start('other', 'shell', command: 'sleep 9', conversationId: 'c2');
 
     await tester.pumpWidget(_host(registry: registry, runtime: runtime));
-    expect(find.byKey(RunningToolBar.stopKey), findsNothing);
+    expect(find.byKey(RunningToolChip.stopKey), findsNothing);
 
     final run = registry.start(
       'call-1',
@@ -86,9 +87,9 @@ void main() {
     );
 
     await tester.pumpWidget(_host(registry: registry, runtime: runtime));
-    await tester.tap(find.byKey(RunningToolBar.stopKey));
+    await tester.tap(find.byKey(RunningToolChip.stopKey));
     await tester.pump();
-    await tester.tap(find.byKey(RunningToolBar.stopKey));
+    await tester.tap(find.byKey(RunningToolChip.stopKey));
     await tester.pump();
 
     expect(fake.cancelled, ['run-1']);
@@ -116,7 +117,7 @@ void main() {
     );
 
     await tester.pumpWidget(_host(registry: registry, runtime: runtime));
-    Text tail() => tester.widget<Text>(find.byKey(RunningToolBar.tailKey));
+    Text tail() => tester.widget<Text>(find.byKey(RunningToolChip.tailKey));
     expect(tail().data, '…');
 
     run.appendStdout(Uint8List.fromList(utf8.encode('step 16\nstep 17\n\n')));

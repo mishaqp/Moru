@@ -502,6 +502,32 @@ void main() {
     expect(find.text('outputs'), findsNothing);
   });
 
+  testWidgets('a background job read shows its command, exit and output', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        toolParts: [
+          _uiPart(
+            tool: 'shell_output',
+            meta: const WorkspaceToolMetadata(
+              tool: 'shell_output',
+              status: 'ok',
+              command: 'python3 -m http.server',
+              exitCode: 143,
+              stdoutPreview: 'Serving HTTP\nGET /index.html 200\n',
+            ),
+          ),
+        ],
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('python3 -m http.server'), findsOneWidget);
+    expect(find.textContaining('exit 143'), findsOneWidget);
+    expect(find.textContaining('GET /index.html 200'), findsOneWidget);
+  });
+
   testWidgets('the card leaves live output to the running strip', (
     tester,
   ) async {
