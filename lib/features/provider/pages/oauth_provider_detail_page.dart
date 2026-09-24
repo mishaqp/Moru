@@ -4,11 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/auth/provider_oauth_service.dart';
-import '../../../desktop/desktop_settings_page.dart'
-    show DesktopProviderDetailPane;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/responsive/screen_type_helper.dart';
 import '../../../shared/widgets/ios_form_text_field.dart';
 import '../../../shared/widgets/ios_settings_rows.dart';
 import '../../../shared/widgets/ios_switch.dart';
@@ -29,63 +26,35 @@ Future<void> showOAuthProviderDetails(
   String providerId, {
   bool startLogin = false,
 }) async {
-  if (ResponsiveHelper.isDesktop(context)) {
-    await showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'oauth-account',
-      barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: .25),
-      pageBuilder: (context, _, __) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 780, maxHeight: 850),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: OAuthProviderDetailPage(
-                providerId: providerId,
-                startLogin: startLogin,
-              ),
-            ),
-          ),
-        ),
+  await Navigator.of(context).push<void>(
+    PageRouteBuilder(
+      pageBuilder: (_, animation, __) => OAuthProviderDetailPage(
+        providerId: providerId,
+        startLogin: startLogin,
       ),
-    );
-  } else {
-    await Navigator.of(context).push<void>(
-      PageRouteBuilder(
-        pageBuilder: (_, animation, __) => OAuthProviderDetailPage(
-          providerId: providerId,
-          startLogin: startLogin,
+      transitionsBuilder: (_, animation, __, child) => SlideTransition(
+        position: animation.drive(
+          Tween(
+            begin: const Offset(1, 0),
+            end: Offset.zero,
+          ).chain(CurveTween(curve: Curves.easeOutCubic)),
         ),
-        transitionsBuilder: (_, animation, __, child) => SlideTransition(
-          position: animation.drive(
-            Tween(
-              begin: const Offset(1, 0),
-              end: Offset.zero,
-            ).chain(CurveTween(curve: Curves.easeOutCubic)),
-          ),
-          child: child,
-        ),
+        child: child,
       ),
-    );
-  }
+    ),
+  );
 }
 
 class OAuthProviderDetailPage extends StatefulWidget {
   const OAuthProviderDetailPage({
     super.key,
     required this.providerId,
-    this.embedded = false,
     this.startLogin = false,
     this.service,
-    this.desktopPaneKey,
   });
   final String providerId;
-  final bool embedded;
   final bool startLogin;
   final ProviderOAuthService? service;
-  final Key? desktopPaneKey;
 
   @override
   State<OAuthProviderDetailPage> createState() =>
@@ -256,63 +225,12 @@ class _OAuthProviderDetailPageState extends State<OAuthProviderDetailPage> {
     if (config == null || !config.isOAuth) return const SizedBox.shrink();
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final desktop = widget.embedded || ResponsiveHelper.isDesktop(context);
     final needsLogin =
         config.oauthCredentials == null ||
         config.oauthCredentials!.requiresLogin;
     return ListenableBuilder(
       listenable: _service,
       builder: (context, _) {
-        if (desktop) {
-          return Material(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: DesktopProviderDetailPane(
-              key: widget.desktopPaneKey ?? ValueKey(config.id),
-              providerKey: config.id,
-              displayName: config.name,
-              oauthAccount: Column(
-                children: [
-                  _account(config),
-                  if (config.oauthProvider == OAuthProvider.claude) ...[
-                    const SizedBox(height: 18),
-                    ProviderPromptCacheSettings(config: config, desktop: true),
-                  ],
-                ],
-              ),
-              syncingModels: _syncing,
-              onSyncModels: needsLogin ? null : _syncModels,
-              onClose: widget.embedded
-                  ? null
-                  : () => Navigator.of(context).maybePop(),
-              oauthFooter: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _modelStatus(config),
-                  if (config.oauthCredentials != null) ...[
-                    const SizedBox(height: 20),
-                    IosIconButton(
-                      semanticLabel: l.oauthLogout,
-                      color: cs.error,
-                      minSize: 32,
-                      builder: (color) => Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(LucideIcons.logOut, size: 16, color: color),
-                          const SizedBox(width: 8),
-                          Text(
-                            l.oauthLogout,
-                            style: TextStyle(fontSize: 13, color: color),
-                          ),
-                        ],
-                      ),
-                      onTap: () => _logout(config.id),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          );
-        }
         return Material(
           color: Theme.of(context).scaffoldBackgroundColor,
           child: SafeArea(

@@ -32,14 +32,8 @@ dependencies:
   flutter:
     sdk: flutter
   logging: ^1.2.0
-  # BitsDojo Window for Windows
-  bitsdojo_window: ^0.1.6
   window_manager: ^0.5.1
-  screen_retriever: ^0.2.0
-  tray_manager:
-    path: ./dependencies/tray_manager/packages/tray_manager
   desktop_drop: ^0.7.1
-  hotkey_manager: ^0.2.3
 
   # Localizations for Chinese/English UI strings
   flutter_localizations:
@@ -60,7 +54,6 @@ dependencies:
   dio: 5.9.2
   socks5_proxy: ^2.1.1
   jose: ^0.3.4
-  reorderable_grid_view: ^2.2.8
   flutter_slidable: ^3.0.1
   hive: ^2.2.3
   hive_flutter: ^1.1.0
@@ -106,7 +99,6 @@ dependencies:
   super_sliver_list: ^0.4.1
   image_gallery_saver_plus: ^4.0.1
   haptic_feedback: ^0.6.4+3
-  system_fonts: ^1.0.1
   super_clipboard: ^0.9.1
   permission_handler: ^12.0.3
   flutter_tts:

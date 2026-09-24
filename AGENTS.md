@@ -10,9 +10,10 @@ Ubuntu CI runners execute Android checks; they are not Linux application targets
 Preserve the embedded PRoot/Linux environment, workspace, terminal/PTY and STDIO
 MCP: these are Android features. The native `ios/`, `macos/`, `windows/`,
 `linux/` and `web/` projects are removed and must not return; when merging
-upstream Kelivo, resolve its changes to those folders by deleting them. Dart
-desktop/iOS code under `lib/` is still present and is removed in separate,
-reviewed steps. New UI work only needs Android/mobile layouts, not a parallel
+upstream Kelivo, resolve its changes to those folders by deleting them, and do
+the same for upstream changes to removed files under `lib/desktop/`. The
+remaining desktop/iOS Dart code under `lib/` is removed in separate, reviewed
+steps. New UI work only needs Android/mobile layouts, not a parallel
 desktop implementation.
 
 Preserve explicit user settings, existing chat data, application ID and signing
@@ -28,7 +29,7 @@ package name does not require building other platforms.
 ## Architecture
 
 - **Feature-based structure**: `lib/features/<feature>/` with `pages/`, `widgets/`, `models/`, `utils/` subdirectories.
-- **Upstream desktop/mobile split**: unused desktop layouts and `lib/desktop/` remain in source. Use the existing Android/mobile path for Moru tasks. Avoid unrelated edits to desktop layouts.
+- **Desktop code**: the desktop app shell (window, tray, hotkeys, desktop home and settings panes) is removed. `lib/desktop/` still holds desktop branches reached from mobile screens and a few shared menu widgets; those are removed or moved to `lib/shared/` in later steps. Use the Android/mobile path for Moru tasks and do not add new desktop code.
 - **State management**: Provider (`lib/core/providers/`).
 - **Database**: Drift (`lib/core/database/`). Schema versions tracked in `drift_schemas/`.
 - **Localization**: ARB-based (`lib/l10n/`), English template (`app_en.arb`). Edit source ARB, run `flutter gen-l10n`, and commit generated output. Preserve English and Chinese translations when adding Russian.

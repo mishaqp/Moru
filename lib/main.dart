@@ -4,20 +4,13 @@ import 'package:Kelivo/core/providers/external_mounts_provider.dart';
 import 'package:Kelivo/core/services/sandbox/environment_dependencies.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
-    show debugPrint, kIsWeb, defaultTargetPlatform, TargetPlatform;
+    show debugPrint, defaultTargetPlatform, TargetPlatform;
 import 'dart:async';
-import 'dart:ui' show AppExitResponse;
 import 'l10n/app_localizations.dart';
 import 'features/home/pages/home_page.dart';
 import 'features/migration/hive_to_sqlite_migration_page.dart';
 import 'features/migration/hive_to_sqlite_migration_service.dart';
-import 'desktop/desktop_home_page.dart';
 import 'package:flutter/services.dart';
-import 'package:window_manager/window_manager.dart';
-import 'desktop/desktop_window_controller.dart';
-import 'core/services/linux_window_service.dart';
-import 'desktop/desktop_tray_controller.dart';
-import 'desktop/windows_paste_fix.dart';
 // import 'package:logging/logging.dart' as logging;
 // Theme is now managed in SettingsProvider
 import 'theme/theme_factory.dart';
@@ -46,7 +39,6 @@ import 'core/services/memory/memory_pipeline.dart';
 import 'core/services/memory/memory_repository.dart';
 import 'core/providers/s3_backup_provider.dart';
 import 'core/providers/backup_reminder_provider.dart';
-import 'core/providers/hotkey_provider.dart';
 import 'core/providers/workspace_provider.dart';
 import 'core/services/workspace/workspace_binding_actions.dart';
 import 'core/providers/environment_provider.dart';
@@ -74,7 +66,6 @@ import 'core/database/startup_failure_report.dart';
 import 'core/services/backup/backup_activity.dart';
 import 'core/services/backup/local_snapshot_schedule.dart';
 import 'core/services/chat/chat_service.dart';
-import 'core/services/app_exit_flush.dart';
 import 'core/services/backup/restore_archive_pruner.dart';
 import 'core/services/backup/restore_business_lease.dart';
 import 'core/services/backup/restore_startup_gate.dart';
@@ -94,7 +85,6 @@ import 'shared/widgets/restore_failure_screen.dart';
 import 'shared/widgets/restore_progress_screen.dart';
 import 'shared/widgets/restore_outcome_notice.dart';
 import 'shared/widgets/update_required_screen.dart';
-import 'package:system_fonts/system_fonts.dart';
 import 'dart:io'
     show
         Directory,
@@ -152,7 +142,6 @@ Future<void> main() async {
   await runZoned(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
-      WindowsPasteFix.instance.install();
       // Register notification tap handling for every Android launch. This is
       // independent of the current background-chat mode: an older completion
       // notification can still launch the app after the mode has changed.
@@ -163,11 +152,6 @@ Future<void> main() async {
         } catch (_) {}
       }
       FlutterLogger.installGlobalHandlers();
-      // The Linux runner starts hidden so decorations can be restored first.
-      // Show before the restore gate so progress and failure screens stay visible.
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
-        await _initDesktopWindow();
-      }
       final appDataDirectory = await AppDirectories.getAppDataDirectory();
       final RestoreReceipt? restoreOutcome;
       RestoreBusinessLease? businessLease;
@@ -200,7 +184,6 @@ Future<void> main() async {
             );
       } catch (error, stackTrace) {
         stderr.writeln('[RestoreStartupGate] $error\n$stackTrace');
-        await _initRestoreFailureWindow();
         runApp(
           _RestoreFailureApp(
             report: StartupFailureReport.capture(
@@ -226,10 +209,6 @@ Future<void> main() async {
         PaintingBinding.instance.imageCache.maximumSizeBytes =
             48 << 20; // ~48MB
       } catch (_) {}
-      // Desktop (Windows) window setup: hide native title bar for custom Flutter bar
-      if (defaultTargetPlatform != TargetPlatform.linux) {
-        await _initDesktopWindow();
-      }
       // Avoid preloading all system fonts at launch (huge memory on desktop)
       // Debug logging and global error handlers were enabled previously for diagnosis.
       // They are commented out now per request to reduce log noise.
@@ -314,7 +293,6 @@ Future<void> main() async {
               continue;
             }
           }
-          await _initRestoreFailureWindow();
           runApp(
             _RestoreFailureApp(
               report: StartupFailureReport.capture(
@@ -330,8 +308,6 @@ Future<void> main() async {
           return;
         }
       }
-      // Desktop exit hook: drain queued preference writes before process exit.
-      _installExitFlush(businessPreferences);
       ScheduledTasksService.configureDevice(businessPreferences);
       // Best-effort trim of archived restore runs after a few cold starts.
       unawaited(_pruneRestoreArchive(appDataDirectory));
@@ -455,33 +431,6 @@ HiveToSqliteMigrationDecision _legacyMigrationDecision(
   );
 }
 
-Future<void> _initRestoreFailureWindow() async {
-  if (kIsWeb) return;
-  final isDesktop =
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.linux;
-  if (!isDesktop) return;
-  try {
-    await windowManager.ensureInitialized();
-    if (defaultTargetPlatform == TargetPlatform.windows) {
-      await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
-      await windowManager.show();
-      await windowManager.focus();
-      return;
-    }
-    await windowManager.waitUntilReadyToShow(
-      const WindowOptions(title: 'Kelivo'),
-      () async {
-        await windowManager.show();
-        await windowManager.focus();
-      },
-    );
-  } catch (error) {
-    stderr.writeln('[RestoreFailureWindow] $error');
-  }
-}
-
 /// Persistence-free shell for [RestoreProgressScreen].
 ///
 /// Deliberately built from defaults: the user's theme and locale live in the
@@ -537,67 +486,6 @@ class _RestoreFailureApp extends StatelessWidget {
             ),
     );
   }
-}
-
-Future<void> _initDesktopWindow() async {
-  if (kIsWeb) return;
-  try {
-    if (defaultTargetPlatform == TargetPlatform.windows) {
-      await windowManager.ensureInitialized();
-      await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
-    }
-    final linuxHideTitleBar =
-        LinuxWindowService.isSupported &&
-        ((await SharedPreferences.getInstance()).getBool(
-              LinuxWindowService.hideTitleBarKey,
-            ) ??
-            false);
-    // Initialize and show desktop window with persisted size/position
-    await DesktopWindowController.instance.initializeAndShow(
-      title: 'Kelivo',
-      linuxHideTitleBar: linuxHideTitleBar,
-    );
-  } catch (_) {
-    // A failed preference/geometry restore must not leave Linux invisible.
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
-      try {
-        await windowManager.show();
-        await windowManager.focus();
-      } catch (_) {}
-    }
-    // Ignore on unsupported platforms.
-  }
-}
-
-// Removed eager system font preloading to reduce memory footprint at launch.
-
-AppLifecycleListener? _exitFlushListener;
-
-/// Desktop-only: mobile process kills cannot be intercepted, and SQLite WAL
-/// already protects committed transactions, so only Dart-side write queues
-/// need draining before exit.
-void _installExitFlush(BusinessPreferences businessPreferences) {
-  if (kIsWeb) return;
-  final isDesktop =
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.linux;
-  if (!isDesktop || _exitFlushListener != null) return;
-  AppExitFlush.register(businessPreferences.flushPendingWrites);
-  AppExitFlush.register(ChatActions.flushActiveGenerationProgress);
-  _exitFlushListener = AppLifecycleListener(
-    onExitRequested: () async {
-      try {
-        // Bound the wait: a stuck write transaction must not leave the
-        // process unkillable after macOS answers NSTerminateLater.
-        await AppExitFlush.flushAll().timeout(
-          const Duration(seconds: 2),
-          onTimeout: () {},
-        );
-      } catch (_) {}
-      return AppExitResponse.exit;
-    },
-  );
 }
 
 Future<void> _pruneRestoreArchive(Directory appDataDirectory) async {
@@ -833,8 +721,6 @@ class MyApp extends StatelessWidget {
           create: (_) =>
               BackupReminderProvider(preferences: businessPreferences),
         ),
-        // Desktop hotkeys provider
-        ChangeNotifierProvider(create: (_) => HotkeyProvider()),
         ChangeNotifierProvider(
           create: (ctx) => BackupProvider(
             chatService: ctx.read<ChatService>(),
@@ -882,42 +768,6 @@ class MyApp extends StatelessWidget {
           final settings = context.watch<SettingsProvider>();
           // Apply global proxy overrides when settings change
           settings.applyGlobalProxyOverridesIfNeeded();
-          // Lazily ensure system fonts only if user selected a system family (desktop only)
-          // Load ONLY selected families to avoid huge memory from loading all system fonts.
-          WidgetsBinding.instance.addPostFrameCallback((_) async {
-            try {
-              final isDesktop =
-                  !kIsWeb &&
-                  (defaultTargetPlatform == TargetPlatform.windows ||
-                      defaultTargetPlatform == TargetPlatform.macOS ||
-                      defaultTargetPlatform == TargetPlatform.linux);
-              if (!isDesktop) return;
-              // Selected system app/code fonts (not local alias)
-              final wantsAppSystem =
-                  (settings.appFontFamily?.isNotEmpty == true) &&
-                  (settings.appFontLocalAlias == null ||
-                      settings.appFontLocalAlias!.isEmpty);
-              final wantsCodeSystem =
-                  (settings.codeFontFamily?.isNotEmpty == true) &&
-                  (settings.codeFontLocalAlias == null ||
-                      settings.codeFontLocalAlias!.isEmpty);
-              if (wantsAppSystem || wantsCodeSystem) {
-                final sf = SystemFonts();
-                if (wantsAppSystem) {
-                  final fam = settings.appFontFamily!;
-                  try {
-                    await sf.loadFont(fam);
-                  } catch (_) {}
-                }
-                if (wantsCodeSystem) {
-                  final fam = settings.codeFontFamily!;
-                  try {
-                    if (fam != settings.appFontFamily) await sf.loadFont(fam);
-                  } catch (_) {}
-                }
-              }
-            } catch (_) {}
-          });
           // One-time app update check after first build
           if (settings.showAppUpdates && !_didCheckUpdates) {
             _didCheckUpdates = true;
@@ -949,20 +799,6 @@ class MyApp extends StatelessWidget {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 try {
                   settings.setDynamicColorSupported(dynSupported);
-                } catch (_) {}
-              });
-
-              // Initialize desktop hotkeys on supported platforms
-              WidgetsBinding.instance.addPostFrameCallback((_) async {
-                try {
-                  final isDesktop =
-                      !kIsWeb &&
-                      (defaultTargetPlatform == TargetPlatform.windows ||
-                          defaultTargetPlatform == TargetPlatform.macOS ||
-                          defaultTargetPlatform == TargetPlatform.linux);
-                  if (isDesktop) {
-                    await context.read<HotkeyProvider>().initialize();
-                  }
                 } catch (_) {}
               });
 
@@ -1104,7 +940,7 @@ class MyApp extends StatelessWidget {
                     });
                   }
 
-                  // Desktop tray + close behaviour (minimize to tray) sync
+                  // Background-generation coordinator follows current settings.
                   final l10n = AppLocalizations.of(ctx);
                   if (l10n != null) {
                     final backgroundSettings = ctx.watch<SettingsProvider>();
@@ -1123,23 +959,6 @@ class MyApp extends StatelessWidget {
                           l10n,
                         ),
                       );
-                    });
-                    WidgetsBinding.instance.addPostFrameCallback((_) async {
-                      try {
-                        final isDesktop =
-                            !kIsWeb &&
-                            (defaultTargetPlatform == TargetPlatform.windows ||
-                                defaultTargetPlatform == TargetPlatform.macOS ||
-                                defaultTargetPlatform == TargetPlatform.linux);
-                        if (!isDesktop) return;
-                        final sp = ctx.read<SettingsProvider>();
-                        await DesktopTrayController.instance.syncFromSettings(
-                          l10n,
-                          showTray: sp.desktopShowTray,
-                          minimizeToTrayOnClose:
-                              sp.desktopMinimizeToTrayOnClose,
-                        );
-                      } catch (_) {}
                     });
                   }
 
@@ -1188,14 +1007,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-Widget _selectHome() {
-  // Mobile remains the default platform. Desktop is an added platform.
-  if (kIsWeb) return const HomePage();
-  final isDesktop =
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux;
-  return isDesktop ? const DesktopHomePage() : const HomePage();
-}
+Widget _selectHome() => const HomePage();
 
 // Overrides logic is implemented within SettingsProvider now.
