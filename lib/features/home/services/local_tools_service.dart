@@ -7,8 +7,10 @@ import 'package:math_expressions/math_expressions.dart';
 
 import '../../../core/models/assistant.dart';
 import '../../../core/models/health_data_type.dart';
+import '../../../core/services/scheduled_tasks_service.dart';
 import 'assistant_manager_tool.dart';
 import 'browser_agent_tool.dart';
+import 'scheduled_task_tool.dart';
 
 typedef TextToSpeechStarter = Future<void> Function(String text);
 
@@ -34,6 +36,7 @@ class LocalToolNames {
   static const String remindersCreate = 'reminders_create';
   static const String remindersComplete = 'reminders_complete';
   static const String assistantManager = AssistantManagerTool.toolName;
+  static const String scheduledTasks = ScheduledTaskTool.toolName;
 
   static const List<String> all = [
     timeInfo,
@@ -55,6 +58,7 @@ class LocalToolNames {
     remindersCreate,
     remindersComplete,
     assistantManager,
+    scheduledTasks,
   ];
 
   static const List<String> requiresUserApproval = [
@@ -69,6 +73,9 @@ class LocalToolNames {
     if (requiresUserApproval.contains(name)) return true;
     if (name == assistantManager) {
       return AssistantManagerTool.requiresApproval(arguments);
+    }
+    if (name == scheduledTasks) {
+      return ScheduledTaskTool.requiresApproval(arguments);
     }
     if (name != browserUse) return false;
     final action = (arguments['action'] ?? '').toString().trim().toLowerCase();
@@ -452,6 +459,8 @@ class LocalToolsService {
       case LocalToolNames.remindersCreate:
       case LocalToolNames.remindersComplete:
         return DeviceLocalTools.remindersSupported;
+      case LocalToolNames.scheduledTasks:
+        return ScheduledTasksService.supported;
       default:
         return true;
     }
@@ -514,6 +523,8 @@ class LocalToolsService {
         return _remindersCompleteDefinition;
       case LocalToolNames.assistantManager:
         return AssistantManagerTool.definition;
+      case LocalToolNames.scheduledTasks:
+        return ScheduledTaskTool.definition;
       default:
         throw ArgumentError.value(name, 'name', 'Unknown local tool');
     }

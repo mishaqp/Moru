@@ -48,6 +48,7 @@ import '../../../utils/platform_utils.dart';
 import '../../home/services/ask_user_interaction_service.dart';
 import '../utils/tool_timing.dart';
 import '../../home/services/assistant_manager_tool.dart';
+import '../../home/services/scheduled_task_tool.dart';
 import '../../home/services/local_tools_service.dart';
 import '../../home/services/tool_approval_service.dart';
 import '../utils/assistant_paragraph_splitter.dart';
@@ -492,6 +493,7 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
     LocalToolNames.remindersCreate => Lucide.ListPlus,
     LocalToolNames.remindersComplete => Lucide.CheckCircle,
     LocalToolNames.assistantManager => Lucide.Bot,
+    LocalToolNames.scheduledTasks => Lucide.CalendarClock,
     _ => null,
   };
 }
@@ -533,6 +535,13 @@ String? _localToolTitleFor(
     LocalToolNames.remindersComplete =>
       l10n.assistantEditLocalToolRemindersCompleteTitle,
     LocalToolNames.assistantManager => _assistantManagerTitleFor(l10n, args),
+    LocalToolNames.scheduledTasks => switch (ScheduledTaskTool.actionOf(args)) {
+      ScheduledTaskTool.actionList => l10n.scheduledTaskToolActionList,
+      ScheduledTaskTool.actionCreate => l10n.scheduledTaskToolActionCreate,
+      ScheduledTaskTool.actionUpdate => l10n.scheduledTaskToolActionUpdate,
+      ScheduledTaskTool.actionDelete => l10n.scheduledTaskToolActionDelete,
+      _ => l10n.scheduledTaskToolTitle,
+    },
     _ => null,
   };
 }

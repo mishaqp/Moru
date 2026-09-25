@@ -12618,6 +12618,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantManagerActionDelete => 'Delete assistant';
 
   @override
+  String get scheduledTaskToolTitle => 'Scheduled Tasks';
+
+  @override
+  String get scheduledTaskToolSubtitle =>
+      'List, create, change and delete scheduled tasks from the chat. Every change asks for your confirmation.';
+
+  @override
+  String get scheduledTaskToolActionList => 'List scheduled tasks';
+
+  @override
+  String get scheduledTaskToolActionCreate => 'Create scheduled task';
+
+  @override
+  String get scheduledTaskToolActionUpdate => 'Change scheduled task';
+
+  @override
+  String get scheduledTaskToolActionDelete => 'Delete scheduled task';
+
+  @override
   String get phoneControlTitle => 'Phone Control';
 
   @override

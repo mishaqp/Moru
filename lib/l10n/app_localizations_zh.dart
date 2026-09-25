@@ -12043,6 +12043,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantManagerActionDelete => '删除助手';
 
   @override
+  String get scheduledTaskToolTitle => '定时任务';
+
+  @override
+  String get scheduledTaskToolSubtitle => '在聊天中查看、创建、修改和删除定时任务。每次更改都需要你确认。';
+
+  @override
+  String get scheduledTaskToolActionList => '列出定时任务';
+
+  @override
+  String get scheduledTaskToolActionCreate => '创建定时任务';
+
+  @override
+  String get scheduledTaskToolActionUpdate => '修改定时任务';
+
+  @override
+  String get scheduledTaskToolActionDelete => '删除定时任务';
+
+  @override
   String get phoneControlTitle => '手机控制';
 
   @override
@@ -24079,6 +24097,24 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get assistantManagerActionDelete => '删除助手';
+
+  @override
+  String get scheduledTaskToolTitle => '定时任务';
+
+  @override
+  String get scheduledTaskToolSubtitle => '在聊天中查看、创建、修改和删除定时任务。每次更改都需要你确认。';
+
+  @override
+  String get scheduledTaskToolActionList => '列出定时任务';
+
+  @override
+  String get scheduledTaskToolActionCreate => '创建定时任务';
+
+  @override
+  String get scheduledTaskToolActionUpdate => '修改定时任务';
+
+  @override
+  String get scheduledTaskToolActionDelete => '删除定时任务';
 
   @override
   String get phoneControlTitle => '手机控制';
@@ -36196,6 +36232,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get assistantManagerActionDelete => '刪除助理';
+
+  @override
+  String get scheduledTaskToolTitle => '排程任務';
+
+  @override
+  String get scheduledTaskToolSubtitle => '在聊天中查看、建立、修改和刪除排程任務。每次變更都需要你確認。';
+
+  @override
+  String get scheduledTaskToolActionList => '列出排程任務';
+
+  @override
+  String get scheduledTaskToolActionCreate => '建立排程任務';
+
+  @override
+  String get scheduledTaskToolActionUpdate => '修改排程任務';
+
+  @override
+  String get scheduledTaskToolActionDelete => '刪除排程任務';
 
   @override
   String get phoneControlTitle => '手機控制';

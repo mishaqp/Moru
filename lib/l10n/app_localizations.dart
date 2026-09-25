@@ -22556,6 +22556,42 @@ abstract class AppLocalizations {
   /// **'Delete assistant'**
   String get assistantManagerActionDelete;
 
+  /// No description provided for @scheduledTaskToolTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled Tasks'**
+  String get scheduledTaskToolTitle;
+
+  /// No description provided for @scheduledTaskToolSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'List, create, change and delete scheduled tasks from the chat. Every change asks for your confirmation.'**
+  String get scheduledTaskToolSubtitle;
+
+  /// No description provided for @scheduledTaskToolActionList.
+  ///
+  /// In en, this message translates to:
+  /// **'List scheduled tasks'**
+  String get scheduledTaskToolActionList;
+
+  /// No description provided for @scheduledTaskToolActionCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create scheduled task'**
+  String get scheduledTaskToolActionCreate;
+
+  /// No description provided for @scheduledTaskToolActionUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Change scheduled task'**
+  String get scheduledTaskToolActionUpdate;
+
+  /// No description provided for @scheduledTaskToolActionDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete scheduled task'**
+  String get scheduledTaskToolActionDelete;
+
   /// No description provided for @phoneControlTitle.
   ///
   /// In en, this message translates to:

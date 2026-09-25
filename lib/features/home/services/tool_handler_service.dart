@@ -17,6 +17,7 @@ import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/mcp/mcp_tool_service.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
 import '../../../core/services/memory/memory_tools.dart';
+import '../../../core/services/scheduled_tasks_service.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import '../../../core/services/tools/tool_schema_overrides.dart';
 import '../../../core/services/skills/skills_service.dart';
@@ -30,6 +31,7 @@ import 'ask_user_interaction_service.dart';
 import 'assistant_manager_tool.dart';
 import 'built_in_tool_names.dart';
 import 'local_tools_service.dart';
+import 'scheduled_task_tool.dart';
 import 'tool_approval_service.dart';
 
 /// 工具调用处理服务
@@ -594,6 +596,37 @@ class ToolHandlerService {
             assistants: assistantProvider,
             catalog: _assistantManagerCatalog(settings, mcp),
             callerAssistantId: assistant.id,
+          ).execute(args);
+        }
+
+        if (name == LocalToolNames.scheduledTasks &&
+            assistant != null &&
+            LocalToolsService.isEnabledForAssistant(name, assistant)) {
+          // Changes are only made after the approval prompt above; a caller
+          // without one (e.g. a background run) may only read.
+          if (approvalService == null &&
+              ScheduledTaskTool.requiresApproval(args)) {
+            return _toolError(
+              error: 'approval_unavailable',
+              message:
+                  'Changing scheduled tasks needs the user\'s confirmation, '
+                  'which is not available here.',
+              tool: name,
+            );
+          }
+          final service = ScheduledTasksService.instance;
+          return ScheduledTaskTool(
+            tasks: () async {
+              if (!service.loaded) await service.refresh();
+              return service.tasks;
+            },
+            save: service.save,
+            delete: service.delete,
+            assistantNames: {
+              for (final a in assistantProvider.assistants) a.id: a.name,
+            },
+            callerAssistantId: assistant.id,
+            conversationId: conversationId,
           ).execute(args);
         }
 
