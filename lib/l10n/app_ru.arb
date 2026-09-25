@@ -3484,6 +3484,10 @@
     }
   },
   "tokenDetailDuration": "{value} с",
+  "contextUsageTooltip": "Контекст: {used} из {window} токенов ({percent}%)",
+  "contextUsageUnknownWindow": "Контекст: {used} токенов. Укажите контекстное окно в настройках модели, чтобы видеть заполнение.",
+  "modelDetailSheetContextWindowLabel": "Контекстное окно (токены)",
+  "modelDetailSheetContextWindowHint": "Неизвестно — введите лимит модели",
   "@tokenDetailDuration": {
     "placeholders": {
       "value": {

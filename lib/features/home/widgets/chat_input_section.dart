@@ -23,6 +23,8 @@ import '../../../theme/design_tokens.dart';
 import 'chat_input_bar.dart';
 import 'model_icon.dart';
 import 'composer_status_strip.dart';
+import 'context_usage_ring.dart';
+import '../../../core/models/model_context_window.dart';
 
 /// Callback for checking if a model supports tool calling.
 typedef IsToolModelCallback = bool Function(String providerKey, String modelId);
@@ -80,6 +82,7 @@ class ChatInputSection extends StatelessWidget {
     this.onClearContext,
     this.onCompressContext,
     this.conversationId,
+    this.contextTokensUsed,
     this.sendButtonTooltip,
     this.backgroundImageActive = false,
   });
@@ -141,6 +144,9 @@ class ChatInputSection extends StatelessWidget {
   final bool chatModelIsConversationOverride;
   final String? sendButtonTooltip;
   final bool backgroundImageActive;
+
+  /// Tokens the next request starts from; null hides the context ring.
+  final int? contextTokensUsed;
 
   @override
   Widget build(BuildContext context) {
@@ -252,6 +258,16 @@ class ChatInputSection extends StatelessWidget {
       onClearContext: isTablet ? onClearContext : null,
       onCompressContext: isTablet ? onCompressContext : null,
       backgroundImageActive: backgroundImageActive,
+      contextIndicator:
+          (contextTokensUsed != null &&
+              settings.showTokenStats &&
+              pk != null &&
+              mid != null)
+          ? ContextUsageRing(
+              usedTokens: contextTokensUsed!,
+              windowTokens: resolveContextWindowTokens(settings, pk, mid),
+            )
+          : null,
       inputBackgroundOpacityLight: settings.chatInputBackgroundOpacityLight,
       inputBackgroundOpacityDark: settings.chatInputBackgroundOpacityDark,
     );

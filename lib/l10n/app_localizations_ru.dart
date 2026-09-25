@@ -8089,6 +8089,23 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String contextUsageTooltip(String used, String window, int percent) {
+    return 'Контекст: $used из $window токенов ($percent%)';
+  }
+
+  @override
+  String contextUsageUnknownWindow(String used) {
+    return 'Контекст: $used токенов. Укажите контекстное окно в настройках модели, чтобы видеть заполнение.';
+  }
+
+  @override
+  String get modelDetailSheetContextWindowLabel => 'Контекстное окно (токены)';
+
+  @override
+  String get modelDetailSheetContextWindowHint =>
+      'Неизвестно — введите лимит модели';
+
+  @override
   String tokenDetailTotalTokens(int count) {
     return 'Токенов: $count';
   }

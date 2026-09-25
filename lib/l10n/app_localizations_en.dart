@@ -7981,6 +7981,23 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String contextUsageTooltip(String used, String window, int percent) {
+    return 'Context: $used of $window tokens ($percent%)';
+  }
+
+  @override
+  String contextUsageUnknownWindow(String used) {
+    return 'Context: $used tokens. Set the model\'s context window in its settings to see how full it is.';
+  }
+
+  @override
+  String get modelDetailSheetContextWindowLabel => 'Context window (tokens)';
+
+  @override
+  String get modelDetailSheetContextWindowHint =>
+      'Unknown — enter the model\'s limit';
+
+  @override
   String tokenDetailTotalTokens(int count) {
     return '$count tokens';
   }

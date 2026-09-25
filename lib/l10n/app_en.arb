@@ -3492,6 +3492,22 @@
     }
   },
   "tokenDetailDuration": "{value}s",
+  "contextUsageTooltip": "Context: {used} of {window} tokens ({percent}%)",
+  "@contextUsageTooltip": {
+    "placeholders": {
+      "used": {"type": "String"},
+      "window": {"type": "String"},
+      "percent": {"type": "int"}
+    }
+  },
+  "contextUsageUnknownWindow": "Context: {used} tokens. Set the model's context window in its settings to see how full it is.",
+  "@contextUsageUnknownWindow": {
+    "placeholders": {
+      "used": {"type": "String"}
+    }
+  },
+  "modelDetailSheetContextWindowLabel": "Context window (tokens)",
+  "modelDetailSheetContextWindowHint": "Unknown — enter the model's limit",
   "@tokenDetailDuration": {
     "placeholders": {
       "value": {

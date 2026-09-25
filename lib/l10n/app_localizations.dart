@@ -14487,6 +14487,30 @@ abstract class AppLocalizations {
   /// **'{value}s'**
   String tokenDetailDuration(String value);
 
+  /// No description provided for @contextUsageTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Context: {used} of {window} tokens ({percent}%)'**
+  String contextUsageTooltip(String used, String window, int percent);
+
+  /// No description provided for @contextUsageUnknownWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Context: {used} tokens. Set the model\'s context window in its settings to see how full it is.'**
+  String contextUsageUnknownWindow(String used);
+
+  /// No description provided for @modelDetailSheetContextWindowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Context window (tokens)'**
+  String get modelDetailSheetContextWindowLabel;
+
+  /// No description provided for @modelDetailSheetContextWindowHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown — enter the model\'s limit'**
+  String get modelDetailSheetContextWindowHint;
+
   /// No description provided for @tokenDetailTotalTokens.
   ///
   /// In en, this message translates to:

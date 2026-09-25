@@ -7652,6 +7652,22 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String contextUsageTooltip(String used, String window, int percent) {
+    return '上下文：$used / $window tokens（$percent%）';
+  }
+
+  @override
+  String contextUsageUnknownWindow(String used) {
+    return '上下文：$used tokens。在模型设置中填写上下文窗口即可查看占用比例。';
+  }
+
+  @override
+  String get modelDetailSheetContextWindowLabel => '上下文窗口（tokens）';
+
+  @override
+  String get modelDetailSheetContextWindowHint => '未知，请输入模型上限';
+
+  @override
   String tokenDetailTotalTokens(int count) {
     return '$count tokens';
   }
@@ -19706,6 +19722,22 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String tokenDetailDuration(String value) {
     return '${value}s';
   }
+
+  @override
+  String contextUsageTooltip(String used, String window, int percent) {
+    return '上下文：$used / $window tokens（$percent%）';
+  }
+
+  @override
+  String contextUsageUnknownWindow(String used) {
+    return '上下文：$used tokens。在模型设置中填写上下文窗口即可查看占用比例。';
+  }
+
+  @override
+  String get modelDetailSheetContextWindowLabel => '上下文窗口（tokens）';
+
+  @override
+  String get modelDetailSheetContextWindowHint => '未知，请输入模型上限';
 
   @override
   String tokenDetailTotalTokens(int count) {
@@ -31837,6 +31869,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String tokenDetailDuration(String value) {
     return '${value}s';
   }
+
+  @override
+  String contextUsageTooltip(String used, String window, int percent) {
+    return '上下文：$used / $window tokens（$percent%）';
+  }
+
+  @override
+  String contextUsageUnknownWindow(String used) {
+    return '上下文：$used tokens。在模型設定中填寫上下文視窗即可查看佔用比例。';
+  }
+
+  @override
+  String get modelDetailSheetContextWindowLabel => '上下文視窗（tokens）';
+
+  @override
+  String get modelDetailSheetContextWindowHint => '未知，請輸入模型上限';
 
   @override
   String tokenDetailTotalTokens(int count) {
