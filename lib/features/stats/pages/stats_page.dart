@@ -9,7 +9,9 @@ import '../../../core/database/chat_database_repository.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/services/api/chat_api_helpers.dart';
 import '../../../core/services/chat/chat_service.dart';
+import '../../../core/services/model_catalog/model_catalog.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
@@ -50,6 +52,18 @@ class _StatsPageState extends State<StatsPage> {
     _range =
         widget.snapshotOverride?.range ??
         StatsDateRange.allTime(DateTime.now());
+    ModelCatalog.instance.addListener(_catalogChanged);
+  }
+
+  @override
+  void dispose() {
+    ModelCatalog.instance.removeListener(_catalogChanged);
+    super.dispose();
+  }
+
+  /// New prices change the costs, which the signature picks up.
+  void _catalogChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -114,6 +128,21 @@ class _StatsPageState extends State<StatsPage> {
                   withBackground: false,
                 ),
               ),
+              if (snapshot.costRank.isNotEmpty)
+                StatsRankSection(
+                  title: l10n.statsPageModelCostTitle,
+                  leftHeader: l10n.statsPageModelColumn,
+                  rightHeader: l10n.statsPageCostColumn,
+                  items: snapshot.costRank,
+                  footer: l10n.statsPageCostNote,
+                  leadingBuilder: (context, item) => CurrentModelIcon(
+                    key: ValueKey('stats-cost-icon-${item.id}'),
+                    providerKey: item.providerId,
+                    modelId: item.id,
+                    size: 32,
+                    withBackground: false,
+                  ),
+                ),
               StatsRankSection(
                 title: l10n.statsPageAssistantUsageTitle,
                 leftHeader: l10n.statsPageAssistantColumn,
@@ -210,7 +239,8 @@ class _StatsPageState extends State<StatsPage> {
         '$conversationSignature|${_range.preset.name}:'
         '${_range.start}:${_range.end}:${settings.appLaunchCount}:'
         '${_mapSignature(providerNames)}:${_mapSignature(assistantNames)}:'
-        '${chatService.statisticsRevision}';
+        '${chatService.statisticsRevision}:'
+        '${ModelCatalog.instance.updatedAt?.millisecondsSinceEpoch}';
     if (_failedStatsSignature != null && _failedStatsSignature != signature) {
       _failedStatsSignature = null;
     }
@@ -265,6 +295,15 @@ class _StatsPageState extends State<StatsPage> {
                         providerNames: requestedProviderNames,
                         unknownProviderLabel: l10n.statsPageUnknownProvider,
                         unknownTopicLabel: l10n.statsPageUnknownTopic,
+                        priceFor: (providerId, modelId) =>
+                            ModelCatalog.instance.lookup(
+                              providerId == null
+                                  ? modelId
+                                  : apiModelId(
+                                      settings.getProviderConfig(providerId),
+                                      modelId,
+                                    ),
+                            ),
                       );
                   _statsSignature = signature;
                   _pendingStatsSignature = null;

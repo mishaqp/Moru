@@ -456,6 +456,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get statsPageCachedTokens => 'Кэшированные токены';
 
   @override
+  String get statsPageEstimatedCost => 'Примерная стоимость';
+
+  @override
+  String get statsPageModelCostTitle => 'Расходы по моделям';
+
+  @override
+  String get statsPageCostColumn => 'Сумма';
+
+  @override
+  String get statsPageCostNote =>
+      'Оценка по ценам models.dev, только для моделей с известной ценой. Реальный счёт может отличаться.';
+
+  @override
   String get statsPageLaunchCount => 'Запуски приложения';
 
   @override

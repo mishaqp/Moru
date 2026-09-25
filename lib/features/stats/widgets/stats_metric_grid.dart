@@ -44,6 +44,12 @@ class StatsMetricGrid extends StatelessWidget {
         label: l10n.statsPageLaunchCount,
         value: _formatCompact(summary.launchCount),
       ),
+      if (summary.costUsd case final cost?)
+        _MetricItem(
+          icon: Lucide.Coins,
+          label: l10n.statsPageEstimatedCost,
+          value: '≈ ${formatUsd(cost)}',
+        ),
     ];
 
     return LayoutBuilder(

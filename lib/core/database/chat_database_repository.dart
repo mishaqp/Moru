@@ -3522,7 +3522,10 @@ class ChatDatabaseRepository {
 
     final modelRows = await _db.customSelect('''
       SELECT m.model_id AS id, MIN(m.provider_id) AS provider_id,
-        COUNT(*) AS item_count
+        COUNT(*) AS item_count,
+        COALESCE(SUM(m.prompt_tokens), 0) AS input_tokens,
+        COALESCE(SUM(m.completion_tokens), 0) AS output_tokens,
+        COALESCE(SUM(m.cached_tokens), 0) AS cached_tokens
       FROM message_rows m
       WHERE NULLIF(TRIM(m.model_id), '') IS NOT NULL $rangeWhere
       GROUP BY m.model_id ORDER BY item_count DESC, id;
@@ -3580,6 +3583,9 @@ class ChatDatabaseRepository {
             label: row.read<String>('id'),
             count: row.read<int>('item_count'),
             providerId: row.readNullable<String>('provider_id'),
+            inputTokens: row.read<int>('input_tokens'),
+            outputTokens: row.read<int>('output_tokens'),
+            cachedTokens: row.read<int>('cached_tokens'),
           ),
       ],
       assistants: [
@@ -8023,11 +8029,19 @@ final class ChatStatsRank {
     required this.label,
     required this.count,
     this.providerId,
+    this.inputTokens = 0,
+    this.outputTokens = 0,
+    this.cachedTokens = 0,
   });
   final String id;
   final String label;
   final int count;
   final String? providerId;
+
+  /// Token sums, filled for the model rank only.
+  final int inputTokens;
+  final int outputTokens;
+  final int cachedTokens;
 }
 
 final class ChatStatsAggregate {

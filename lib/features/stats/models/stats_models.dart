@@ -110,6 +110,7 @@ class StatsSummary {
     required this.outputTokens,
     required this.cachedTokens,
     required this.launchCount,
+    this.costUsd,
   });
 
   final int totalConversations;
@@ -118,6 +119,9 @@ class StatsSummary {
   final int outputTokens;
   final int cachedTokens;
   final int launchCount;
+
+  /// Estimated spend of the models with a known price, or null when none has.
+  final double? costUsd;
 }
 
 class StatsRankItem {
@@ -126,12 +130,16 @@ class StatsRankItem {
     required this.label,
     required this.value,
     this.providerId,
+    this.valueLabel,
   });
 
   final String id;
   final String label;
   final int value;
   final String? providerId;
+
+  /// Shown instead of [value], e.g. a formatted price.
+  final String? valueLabel;
 }
 
 class StatsHeatmapDay {
@@ -192,6 +200,7 @@ class StatsSnapshot {
     required this.modelRank,
     required this.assistantRank,
     required this.topicRank,
+    this.costRank = const [],
   });
 
   final StatsDateRange range;
@@ -201,4 +210,21 @@ class StatsSnapshot {
   final List<StatsRankItem> modelRank;
   final List<StatsRankItem> assistantRank;
   final List<StatsRankItem> topicRank;
+
+  /// Models by estimated spend; empty when no model has a known price.
+  final List<StatsRankItem> costRank;
+}
+
+/// "$0.0042", "$0.37", "$12.40", "$1,204".
+String formatUsd(double value) {
+  if (value >= 1000) {
+    final whole = value.round().toString().replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+$)'),
+      (_) => ',',
+    );
+    return '\$$whole';
+  }
+  if (value >= 0.1 || value == 0) return '\$${value.toStringAsFixed(2)}';
+  if (value >= 0.001) return '\$${value.toStringAsFixed(4)}';
+  return '<\$0.001';
 }
