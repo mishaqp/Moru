@@ -12781,24 +12781,23 @@ class AppLocalizationsRu extends AppLocalizations {
   String get assistantManagerActionDelete => 'Удаление ассистента';
 
   @override
-  String get scheduledTaskToolTitle => 'Запланированные задачи';
+  String get scheduledTaskToolTitle => 'Задачи по расписанию';
 
   @override
   String get scheduledTaskToolSubtitle =>
-      'Просматривать, создавать, менять и удалять запланированные задачи прямо из чата. Каждое изменение требует вашего подтверждения.';
+      'Просматривать, создавать, менять и удалять задачи по расписанию прямо из чата. Каждое изменение требует вашего подтверждения.';
 
   @override
-  String get scheduledTaskToolActionList => 'Список запланированных задач';
+  String get scheduledTaskToolActionList => 'Список задач по расписанию';
 
   @override
-  String get scheduledTaskToolActionCreate => 'Создание запланированной задачи';
+  String get scheduledTaskToolActionCreate => 'Создание задачи по расписанию';
 
   @override
-  String get scheduledTaskToolActionUpdate =>
-      'Изменение запланированной задачи';
+  String get scheduledTaskToolActionUpdate => 'Изменение задачи по расписанию';
 
   @override
-  String get scheduledTaskToolActionDelete => 'Удаление запланированной задачи';
+  String get scheduledTaskToolActionDelete => 'Удаление задачи по расписанию';
 
   @override
   String get phoneControlTitle => 'Управление телефоном';

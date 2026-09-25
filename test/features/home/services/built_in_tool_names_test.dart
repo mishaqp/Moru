@@ -32,6 +32,8 @@ void main() {
       LocalToolNames.screenTime,
       LocalToolNames.calendarQuery,
       LocalToolNames.calendarCreate,
+      LocalToolNames.calendarUpdate,
+      LocalToolNames.calendarDelete,
       LocalToolNames.currentLocation,
       LocalToolNames.phoneControl,
       LocalToolNames.weather,
@@ -40,6 +42,7 @@ void main() {
       LocalToolNames.remindersCreate,
       LocalToolNames.remindersComplete,
       LocalToolNames.assistantManager,
+      LocalToolNames.scheduledTasks,
     ]);
   });
 }
