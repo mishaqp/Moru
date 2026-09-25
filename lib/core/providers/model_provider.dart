@@ -1,3 +1,4 @@
+import '../services/model_catalog/model_catalog.dart';
 import '../services/auth/provider_oauth_service.dart';
 export '../models/model_types.dart';
 
@@ -172,6 +173,17 @@ class ModelRegistry {
     if ((reasoning.hasMatch(id) || isKimiCode) &&
         !ab.contains(ModelAbility.reasoning)) {
       ab.add(ModelAbility.reasoning);
+    }
+    // models.dev fills in tools and image input for ids the patterns above
+    // miss. Reasoning stays pattern-only: it changes the request parameters.
+    final listed = ModelCatalog.instance.lookup(id);
+    if (listed != null) {
+      if (listed.imageInput && !inMods.contains(Modality.image)) {
+        inMods.add(Modality.image);
+      }
+      if (listed.toolCall && !ab.contains(ModelAbility.tool)) {
+        ab.add(ModelAbility.tool);
+      }
     }
     return base.copyWith(input: inMods, output: outMods, abilities: ab);
   }

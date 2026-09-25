@@ -25,6 +25,7 @@ import 'model_icon.dart';
 import 'composer_status_strip.dart';
 import 'context_usage_ring.dart';
 import '../../../core/models/model_context_window.dart';
+import '../../../core/services/model_catalog/model_catalog.dart';
 
 /// Callback for checking if a model supports tool calling.
 typedef IsToolModelCallback = bool Function(String providerKey, String modelId);
@@ -263,9 +264,13 @@ class ChatInputSection extends StatelessWidget {
               settings.showTokenStats &&
               pk != null &&
               mid != null)
-          ? ContextUsageRing(
-              usedTokens: contextTokensUsed!,
-              windowTokens: resolveContextWindowTokens(settings, pk, mid),
+          // The window can arrive later, when the model catalog loads.
+          ? ListenableBuilder(
+              listenable: ModelCatalog.instance,
+              builder: (context, _) => ContextUsageRing(
+                usedTokens: contextTokensUsed!,
+                windowTokens: resolveContextWindowTokens(settings, pk, mid),
+              ),
             )
           : null,
       inputBackgroundOpacityLight: settings.chatInputBackgroundOpacityLight,
