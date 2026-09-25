@@ -158,6 +158,7 @@ class ChatInputBar extends StatefulWidget {
     this.learningModeActive = false,
     this.worldBookActive = false,
     this.showMoreButton = true,
+    this.contextIndicator,
     this.showQuickPhraseButton = false,
     this.onQuickPhrase,
     this.onLongPressQuickPhrase,
@@ -219,6 +220,9 @@ class ChatInputBar extends StatefulWidget {
   final bool learningModeActive;
   final bool worldBookActive;
   final bool showMoreButton;
+
+  /// Shown left of the more button, e.g. the context fill ring.
+  final Widget? contextIndicator;
   final bool showQuickPhraseButton;
   final VoidCallback? onQuickPhrase;
   final VoidCallback? onLongPressQuickPhrase;
@@ -2971,6 +2975,11 @@ class _ChatInputBarState extends State<ChatInputBar>
                                         ),
                                         Row(
                                           children: [
+                                            if (widget.contextIndicator
+                                                case final indicator?) ...[
+                                              indicator,
+                                              const SizedBox(width: 4),
+                                            ],
                                             if (widget.showMoreButton) ...[
                                               _CompactIconButton(
                                                 tooltip: AppLocalizations.of(

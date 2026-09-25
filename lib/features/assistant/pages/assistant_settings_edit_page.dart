@@ -42,6 +42,7 @@ import '../../../core/services/memory/memory_pipeline.dart';
 import '../../settings/pages/memory_settings_page.dart';
 import '../../settings/widgets/memory_ui.dart';
 import '../../../core/services/haptics.dart';
+import '../../../core/services/scheduled_tasks_service.dart';
 import '../../../shared/widgets/context_menu.dart';
 import '../../../shared/widgets/select_dropdown.dart';
 import '../../home/services/local_tool_toggle.dart';

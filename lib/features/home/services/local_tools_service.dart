@@ -7,8 +7,10 @@ import 'package:math_expressions/math_expressions.dart';
 
 import '../../../core/models/assistant.dart';
 import '../../../core/models/health_data_type.dart';
+import '../../../core/services/scheduled_tasks_service.dart';
 import 'assistant_manager_tool.dart';
 import 'browser_agent_tool.dart';
+import 'scheduled_task_tool.dart';
 
 typedef TextToSpeechStarter = Future<void> Function(String text);
 
@@ -24,6 +26,8 @@ class LocalToolNames {
   static const String screenTime = 'get_screen_time';
   static const String calendarQuery = 'calendar_query';
   static const String calendarCreate = 'calendar_create';
+  static const String calendarUpdate = 'calendar_update';
+  static const String calendarDelete = 'calendar_delete';
   static const String currentLocation = 'get_current_location';
   static const String phoneControl = 'phone_control';
   static const String weather = 'get_weather';
@@ -32,6 +36,7 @@ class LocalToolNames {
   static const String remindersCreate = 'reminders_create';
   static const String remindersComplete = 'reminders_complete';
   static const String assistantManager = AssistantManagerTool.toolName;
+  static const String scheduledTasks = ScheduledTaskTool.toolName;
 
   static const List<String> all = [
     timeInfo,
@@ -43,6 +48,8 @@ class LocalToolNames {
     screenTime,
     calendarQuery,
     calendarCreate,
+    calendarUpdate,
+    calendarDelete,
     currentLocation,
     phoneControl,
     weather,
@@ -51,10 +58,13 @@ class LocalToolNames {
     remindersCreate,
     remindersComplete,
     assistantManager,
+    scheduledTasks,
   ];
 
   static const List<String> requiresUserApproval = [
     calendarCreate,
+    calendarUpdate,
+    calendarDelete,
     remindersCreate,
     remindersComplete,
   ];
@@ -63,6 +73,9 @@ class LocalToolNames {
     if (requiresUserApproval.contains(name)) return true;
     if (name == assistantManager) {
       return AssistantManagerTool.requiresApproval(arguments);
+    }
+    if (name == scheduledTasks) {
+      return ScheduledTaskTool.requiresApproval(arguments);
     }
     if (name != browserUse) return false;
     final action = (arguments['action'] ?? '').toString().trim().toLowerCase();
@@ -433,6 +446,8 @@ class LocalToolsService {
         return DeviceLocalTools.screenTimeSupported;
       case LocalToolNames.calendarQuery:
       case LocalToolNames.calendarCreate:
+      case LocalToolNames.calendarUpdate:
+      case LocalToolNames.calendarDelete:
         return DeviceLocalTools.calendarSupported;
       case LocalToolNames.currentLocation:
         return DeviceLocalTools.locationSupported;
@@ -444,6 +459,8 @@ class LocalToolsService {
       case LocalToolNames.remindersCreate:
       case LocalToolNames.remindersComplete:
         return DeviceLocalTools.remindersSupported;
+      case LocalToolNames.scheduledTasks:
+        return ScheduledTasksService.supported;
       default:
         return true;
     }
@@ -488,6 +505,10 @@ class LocalToolsService {
         return _calendarQueryDefinition();
       case LocalToolNames.calendarCreate:
         return _calendarCreateDefinition();
+      case LocalToolNames.calendarUpdate:
+        return _calendarUpdateDefinition();
+      case LocalToolNames.calendarDelete:
+        return _calendarDeleteDefinition;
       case LocalToolNames.currentLocation:
         return _currentLocationDefinition;
       case LocalToolNames.weather:
@@ -502,6 +523,8 @@ class LocalToolsService {
         return _remindersCompleteDefinition;
       case LocalToolNames.assistantManager:
         return AssistantManagerTool.definition;
+      case LocalToolNames.scheduledTasks:
+        return ScheduledTaskTool.definition;
       default:
         throw ArgumentError.value(name, 'name', 'Unknown local tool');
     }
@@ -585,6 +608,14 @@ class LocalToolsService {
     if (name == LocalToolNames.calendarCreate &&
         DeviceLocalTools.calendarSupported) {
       return _invokeDeviceTool('createCalendarEvent', args);
+    }
+    if (name == LocalToolNames.calendarUpdate &&
+        DeviceLocalTools.calendarSupported) {
+      return _invokeDeviceTool('updateCalendarEvent', args);
+    }
+    if (name == LocalToolNames.calendarDelete &&
+        DeviceLocalTools.calendarSupported) {
+      return _invokeDeviceTool('deleteCalendarEvent', args);
     }
     if (name == LocalToolNames.currentLocation &&
         DeviceLocalTools.locationSupported) {
@@ -1114,7 +1145,9 @@ class LocalToolsService {
       'description':
           "Query calendar events on the user's device within a time range. "
           "Specify a custom interval with 'begin'/'end', or use the 'range' preset (today/week/month). "
-          'Returns a list of events with title, description, location, start/end times, and calendar info. '
+          'Returns a list of events with id, title, description, location, start/end times, '
+          'calendar name and calendar_id. Pass an event id to calendar_update or calendar_delete. '
+          "Set 'include_calendars' to also get the device's calendars (id, name, account, writable). "
           '${_deviceTimezoneHint()} '
           "Requires the 'Calendar' permission; if it is not granted, an error is returned.",
       'parameters': {
@@ -1146,6 +1179,16 @@ class LocalToolsService {
             'type': 'integer',
             'description': 'Maximum number of events to return. Default 20.',
           },
+          'calendar_id': {
+            'type': 'integer',
+            'description': 'Optional: only return events of this calendar.',
+          },
+          'include_calendars': {
+            'type': 'boolean',
+            'description':
+                "Also return 'calendars': every calendar on the device with its "
+                'id, name, account, and whether events can be written to it. Default false.',
+          },
         },
       },
     },
@@ -1159,6 +1202,7 @@ class LocalToolsService {
           "Create a new calendar event on the user's device. "
           'Requires title and start time at minimum. End time defaults to 1 hour after start. '
           "Use 'reminders' to attach notification alerts ahead of the event. "
+          "The event goes to the primary calendar unless 'calendar_id' names another writable one. "
           'The user will be asked to confirm before the event is created. '
           '${_deviceTimezoneHint()} '
           "Requires the 'Calendar' permission; if it is not granted, an error is returned.",
@@ -1199,8 +1243,91 @@ class LocalToolsService {
                 '(4 weeks) and de-duplicated, and the result reports what was actually '
                 'saved.',
           },
+          'calendar_id': {
+            'type': 'integer',
+            'description':
+                'Optional writable calendar to add the event to. Get ids from '
+                'calendar_query with include_calendars=true.',
+          },
         },
         'required': ['title', 'start'],
+      },
+    },
+  };
+
+  static Map<String, dynamic> _calendarUpdateDefinition() => {
+    'type': 'function',
+    'function': {
+      'name': LocalToolNames.calendarUpdate,
+      'description':
+          "Change an existing event in the user's device calendar. Get 'event_id' "
+          'from calendar_query first. Pass only the fields to change. Moving the '
+          'start without an end keeps the event length. Repeating events accept '
+          'only title, description, location and reminders. '
+          'The user will be asked to confirm before the event is changed. '
+          '${_deviceTimezoneHint()} '
+          "Requires the 'Calendar' permission; if it is not granted, an error is returned.",
+      'parameters': {
+        'type': 'object',
+        'properties': {
+          'event_id': {
+            'type': 'integer',
+            'description': 'The event id returned by calendar_query.',
+          },
+          'title': {'type': 'string', 'description': 'New title.'},
+          'description': {
+            'type': 'string',
+            'description': 'New description; an empty string clears it.',
+          },
+          'location': {
+            'type': 'string',
+            'description': 'New location; an empty string clears it.',
+          },
+          'start': {
+            'type': 'string',
+            'description':
+                "New start time. Accepts an ISO-8601 date 'yyyy-MM-dd', a local "
+                "date-time 'yyyy-MM-ddTHH:mm:ss', an offset date-time, or epoch milliseconds.",
+          },
+          'end': {
+            'type': 'string',
+            'description': "New end time, same formats as 'start'.",
+          },
+          'all_day': {
+            'type': 'boolean',
+            'description': 'Make the event all-day (true) or timed (false).',
+          },
+          'reminders': {
+            'type': 'array',
+            'items': {'type': 'integer'},
+            'description':
+                'Replaces all reminders, as minutes before the start. [] removes '
+                'them. Omit to keep the current reminders.',
+          },
+        },
+        'required': ['event_id'],
+      },
+    },
+  };
+
+  static const Map<String, dynamic> _calendarDeleteDefinition = {
+    'type': 'function',
+    'function': {
+      'name': LocalToolNames.calendarDelete,
+      'description':
+          "Delete an event from the user's device calendar. Get 'event_id' from "
+          'calendar_query first. Deleting a repeating event removes the whole '
+          'series. The user will be asked to confirm before the event is deleted. '
+          "Requires the 'Calendar' permission; if it is not granted, an error is returned.",
+      'parameters': {
+        'type': 'object',
+        'properties': {
+          'event_id': {
+            'type': 'integer',
+            'description': 'The event id returned by calendar_query.',
+          },
+        },
+        'required': ['event_id'],
       },
     },
   };

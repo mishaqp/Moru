@@ -48,6 +48,7 @@ import '../../../utils/platform_utils.dart';
 import '../../home/services/ask_user_interaction_service.dart';
 import '../utils/tool_timing.dart';
 import '../../home/services/assistant_manager_tool.dart';
+import '../../home/services/scheduled_task_tool.dart';
 import '../../home/services/local_tools_service.dart';
 import '../../home/services/tool_approval_service.dart';
 import '../utils/assistant_paragraph_splitter.dart';
@@ -482,6 +483,8 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
     LocalToolNames.screenTime => Lucide.Smartphone,
     LocalToolNames.calendarQuery => Lucide.Calendar,
     LocalToolNames.calendarCreate => Lucide.CalendarPlus,
+    LocalToolNames.calendarUpdate => Lucide.CalendarCog,
+    LocalToolNames.calendarDelete => Lucide.CalendarX,
     LocalToolNames.currentLocation => Lucide.MapPin,
     LocalToolNames.phoneControl => Lucide.Smartphone,
     LocalToolNames.weather => Lucide.CloudSun,
@@ -490,6 +493,7 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
     LocalToolNames.remindersCreate => Lucide.ListPlus,
     LocalToolNames.remindersComplete => Lucide.CheckCircle,
     LocalToolNames.assistantManager => Lucide.Bot,
+    LocalToolNames.scheduledTasks => Lucide.CalendarClock,
     _ => null,
   };
 }
@@ -516,6 +520,10 @@ String? _localToolTitleFor(
       l10n.assistantEditLocalToolCalendarQueryTitle,
     LocalToolNames.calendarCreate =>
       l10n.assistantEditLocalToolCalendarCreateTitle,
+    LocalToolNames.calendarUpdate =>
+      l10n.assistantEditLocalToolCalendarUpdateTitle,
+    LocalToolNames.calendarDelete =>
+      l10n.assistantEditLocalToolCalendarDeleteTitle,
     LocalToolNames.currentLocation => l10n.assistantEditLocalToolLocationTitle,
     LocalToolNames.phoneControl => l10n.phoneControlTitle,
     LocalToolNames.weather => l10n.assistantEditLocalToolWeatherTitle,
@@ -527,6 +535,13 @@ String? _localToolTitleFor(
     LocalToolNames.remindersComplete =>
       l10n.assistantEditLocalToolRemindersCompleteTitle,
     LocalToolNames.assistantManager => _assistantManagerTitleFor(l10n, args),
+    LocalToolNames.scheduledTasks => switch (ScheduledTaskTool.actionOf(args)) {
+      ScheduledTaskTool.actionList => l10n.scheduledTaskToolActionList,
+      ScheduledTaskTool.actionCreate => l10n.scheduledTaskToolActionCreate,
+      ScheduledTaskTool.actionUpdate => l10n.scheduledTaskToolActionUpdate,
+      ScheduledTaskTool.actionDelete => l10n.scheduledTaskToolActionDelete,
+      _ => l10n.scheduledTaskToolTitle,
+    },
     _ => null,
   };
 }

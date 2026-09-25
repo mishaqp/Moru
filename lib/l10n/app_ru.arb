@@ -2582,6 +2582,10 @@
   "assistantEditLocalToolCalendarQuerySubtitle": "Читать события календаря на устройстве. Требуется разрешение на доступ к календарю.",
   "assistantEditLocalToolCalendarCreateTitle": "Создать событие",
   "assistantEditLocalToolCalendarCreateSubtitle": "Создавать события календаря с вашим подтверждением. Требуется разрешение на доступ к календарю.",
+  "assistantEditLocalToolCalendarUpdateTitle": "Изменить событие",
+  "assistantEditLocalToolCalendarUpdateSubtitle": "Менять время, название, место и напоминания событий календаря с вашим подтверждением. Требуется разрешение на доступ к календарю.",
+  "assistantEditLocalToolCalendarDeleteTitle": "Удалить событие",
+  "assistantEditLocalToolCalendarDeleteSubtitle": "Удалять события календаря с вашим подтверждением. Требуется разрешение на доступ к календарю.",
   "assistantEditLocalToolLocationTitle": "Текущее местоположение",
   "assistantEditLocalToolLocationSubtitle": "Однократно получать местоположение устройства. Требуется разрешение на доступ к геопозиции.",
   "assistantEditLocalToolWeatherTitle": "Погода",
@@ -3480,6 +3484,10 @@
     }
   },
   "tokenDetailDuration": "{value} с",
+  "contextUsageTooltip": "Контекст: {used} из {window} токенов ({percent}%)",
+  "contextUsageUnknownWindow": "Контекст: {used} токенов. Укажите контекстное окно в настройках модели, чтобы видеть заполнение.",
+  "modelDetailSheetContextWindowLabel": "Контекстное окно (токены)",
+  "modelDetailSheetContextWindowHint": "Неизвестно — введите лимит модели",
   "@tokenDetailDuration": {
     "placeholders": {
       "value": {
@@ -5595,6 +5603,12 @@
   "assistantManagerActionDuplicate": "Копирование ассистента",
   "assistantManagerActionSwitch": "Переключение ассистента",
   "assistantManagerActionDelete": "Удаление ассистента",
+  "scheduledTaskToolTitle": "Задачи по расписанию",
+  "scheduledTaskToolSubtitle": "Просматривать, создавать, менять и удалять задачи по расписанию прямо из чата. Каждое изменение требует вашего подтверждения.",
+  "scheduledTaskToolActionList": "Список задач по расписанию",
+  "scheduledTaskToolActionCreate": "Создание задачи по расписанию",
+  "scheduledTaskToolActionUpdate": "Изменение задачи по расписанию",
+  "scheduledTaskToolActionDelete": "Удаление задачи по расписанию",
   "phoneControlTitle": "Управление телефоном",
   "phoneControlSubtitle": "Чтение экрана и выполнение действий через Специальные возможности",
   "phoneControlAccessibilityService": "Служба специальных возможностей",

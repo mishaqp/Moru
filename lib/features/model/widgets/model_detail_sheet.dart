@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../../../core/models/compress_context_options.dart';
+import '../../../core/models/model_context_window.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/model_provider.dart';
 import '../../../core/services/api/builtin_tools.dart';
@@ -94,6 +96,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
 
   late TextEditingController _idCtrl;
   late TextEditingController _nameCtrl;
+  final TextEditingController _contextCtrl = TextEditingController();
   bool _nameEdited = false;
   ModelType _type = ModelType.chat;
   final Set<Modality> _input = {Modality.text};
@@ -188,6 +191,8 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
     }
 
     if (ov != null) {
+      final contextWindow = readModelContextWindowTokens(ov);
+      if (contextWindow != null) _contextCtrl.text = '$contextWindow';
       final rawHdrs = ov['headers'];
       final hdrs = (rawHdrs is List) ? rawHdrs : const <dynamic>[];
       for (final h in hdrs) {
@@ -250,6 +255,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
     _tabCtrl.dispose();
     _idCtrl.dispose();
     _nameCtrl.dispose();
+    _contextCtrl.dispose();
     for (final h in _headers) {
       h.name.dispose();
       h.value.dispose();
@@ -497,6 +503,42 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
                 () => _setType(i == 0 ? ModelType.chat : ModelType.embedding),
               ),
             ),
+            if (_type == ModelType.chat) ...[
+              const SizedBox(height: 12),
+              _label(context, l10n.modelDetailSheetContextWindowLabel),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _contextCtrl,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: context.appColors.surfaceCard,
+                  // The family default applies while the field is empty.
+                  hintText:
+                      inferContextWindowTokens(_idCtrl.text)?.toString() ??
+                      l10n.modelDetailSheetContextWindowHint,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: cs.outlineVariant.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: cs.outlineVariant.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: cs.primary.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -774,6 +816,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
         ? _nextModelKey(old, apiModelId)
         : prevKey;
     final bool isEmbedding = _type == ModelType.embedding;
+    final contextWindow = int.tryParse(_contextCtrl.text.trim()) ?? 0;
     ov[key] = {
       ...modelSyncMetadata(prev),
       'apiModelId': apiModelId,
@@ -793,6 +836,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
       'headers': headers,
       'body': bodies,
       if (!isEmbedding && builtInTools.isNotEmpty) 'builtInTools': builtInTools,
+      if (!isEmbedding && contextWindow > 0) 'contextWindow': contextWindow,
     };
 
     // Apply updates to provider config

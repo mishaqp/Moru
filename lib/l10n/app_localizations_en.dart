@@ -6056,6 +6056,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Create calendar events on this device with your confirmation, requires the calendar permission.';
 
   @override
+  String get assistantEditLocalToolCalendarUpdateTitle => 'Edit Event';
+
+  @override
+  String get assistantEditLocalToolCalendarUpdateSubtitle =>
+      'Change the time, title, place or reminders of calendar events with your confirmation, requires the calendar permission.';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteTitle => 'Delete Event';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteSubtitle =>
+      'Delete calendar events with your confirmation, requires the calendar permission.';
+
+  @override
   String get assistantEditLocalToolLocationTitle => 'Current Location';
 
   @override
@@ -7965,6 +7979,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String tokenDetailDuration(String value) {
     return '${value}s';
   }
+
+  @override
+  String contextUsageTooltip(String used, String window, int percent) {
+    return 'Context: $used of $window tokens ($percent%)';
+  }
+
+  @override
+  String contextUsageUnknownWindow(String used) {
+    return 'Context: $used tokens. Set the model\'s context window in its settings to see how full it is.';
+  }
+
+  @override
+  String get modelDetailSheetContextWindowLabel => 'Context window (tokens)';
+
+  @override
+  String get modelDetailSheetContextWindowHint =>
+      'Unknown — enter the model\'s limit';
 
   @override
   String tokenDetailTotalTokens(int count) {
@@ -12602,6 +12633,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assistantManagerActionDelete => 'Delete assistant';
+
+  @override
+  String get scheduledTaskToolTitle => 'Scheduled Tasks';
+
+  @override
+  String get scheduledTaskToolSubtitle =>
+      'List, create, change and delete scheduled tasks from the chat. Every change asks for your confirmation.';
+
+  @override
+  String get scheduledTaskToolActionList => 'List scheduled tasks';
+
+  @override
+  String get scheduledTaskToolActionCreate => 'Create scheduled task';
+
+  @override
+  String get scheduledTaskToolActionUpdate => 'Change scheduled task';
+
+  @override
+  String get scheduledTaskToolActionDelete => 'Delete scheduled task';
 
   @override
   String get phoneControlTitle => 'Phone Control';

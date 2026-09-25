@@ -167,6 +167,9 @@ class Lucide {
   static const IconData toggleRight = lucide.LucideIcons.toggleRight;
   static const IconData Calendar = lucide.LucideIcons.calendar;
   static const IconData CalendarPlus = lucide.LucideIcons.calendarPlus;
+  static const IconData CalendarCog = lucide.LucideIcons.calendarCog;
+  static const IconData CalendarX = lucide.LucideIcons.calendarX;
+  static const IconData CalendarClock = lucide.LucideIcons.calendarClock;
   static const IconData Hourglass = lucide.LucideIcons.hourglass;
   static const IconData Smartphone = lucide.LucideIcons.smartphone;
   static const IconData ImageOff = lucide.LucideIcons.imageOff;

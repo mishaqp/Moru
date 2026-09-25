@@ -2590,6 +2590,10 @@
   "assistantEditLocalToolCalendarQuerySubtitle": "Read calendar events on this device, requires the calendar permission.",
   "assistantEditLocalToolCalendarCreateTitle": "Create Event",
   "assistantEditLocalToolCalendarCreateSubtitle": "Create calendar events on this device with your confirmation, requires the calendar permission.",
+  "assistantEditLocalToolCalendarUpdateTitle": "Edit Event",
+  "assistantEditLocalToolCalendarUpdateSubtitle": "Change the time, title, place or reminders of calendar events with your confirmation, requires the calendar permission.",
+  "assistantEditLocalToolCalendarDeleteTitle": "Delete Event",
+  "assistantEditLocalToolCalendarDeleteSubtitle": "Delete calendar events with your confirmation, requires the calendar permission.",
   "assistantEditLocalToolLocationTitle": "Current Location",
   "assistantEditLocalToolLocationSubtitle": "Read a one-shot location from this device, requires the location permission.",
   "assistantEditLocalToolWeatherTitle": "Weather",
@@ -3488,6 +3492,22 @@
     }
   },
   "tokenDetailDuration": "{value}s",
+  "contextUsageTooltip": "Context: {used} of {window} tokens ({percent}%)",
+  "@contextUsageTooltip": {
+    "placeholders": {
+      "used": {"type": "String"},
+      "window": {"type": "String"},
+      "percent": {"type": "int"}
+    }
+  },
+  "contextUsageUnknownWindow": "Context: {used} tokens. Set the model's context window in its settings to see how full it is.",
+  "@contextUsageUnknownWindow": {
+    "placeholders": {
+      "used": {"type": "String"}
+    }
+  },
+  "modelDetailSheetContextWindowLabel": "Context window (tokens)",
+  "modelDetailSheetContextWindowHint": "Unknown — enter the model's limit",
   "@tokenDetailDuration": {
     "placeholders": {
       "value": {
@@ -5642,6 +5662,12 @@
   "assistantManagerActionDuplicate": "Copy assistant",
   "assistantManagerActionSwitch": "Switch assistant",
   "assistantManagerActionDelete": "Delete assistant",
+  "scheduledTaskToolTitle": "Scheduled Tasks",
+  "scheduledTaskToolSubtitle": "List, create, change and delete scheduled tasks from the chat. Every change asks for your confirmation.",
+  "scheduledTaskToolActionList": "List scheduled tasks",
+  "scheduledTaskToolActionCreate": "Create scheduled task",
+  "scheduledTaskToolActionUpdate": "Change scheduled task",
+  "scheduledTaskToolActionDelete": "Delete scheduled task",
   "phoneControlTitle": "Phone Control",
   "phoneControlSubtitle": "Read the screen and perform actions through Accessibility",
   "phoneControlAccessibilityService": "Accessibility service",

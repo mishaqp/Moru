@@ -6140,6 +6140,20 @@ class AppLocalizationsRu extends AppLocalizations {
       'Создавать события календаря с вашим подтверждением. Требуется разрешение на доступ к календарю.';
 
   @override
+  String get assistantEditLocalToolCalendarUpdateTitle => 'Изменить событие';
+
+  @override
+  String get assistantEditLocalToolCalendarUpdateSubtitle =>
+      'Менять время, название, место и напоминания событий календаря с вашим подтверждением. Требуется разрешение на доступ к календарю.';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteTitle => 'Удалить событие';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteSubtitle =>
+      'Удалять события календаря с вашим подтверждением. Требуется разрешение на доступ к календарю.';
+
+  @override
   String get assistantEditLocalToolLocationTitle => 'Текущее местоположение';
 
   @override
@@ -8073,6 +8087,23 @@ class AppLocalizationsRu extends AppLocalizations {
   String tokenDetailDuration(String value) {
     return '$value с';
   }
+
+  @override
+  String contextUsageTooltip(String used, String window, int percent) {
+    return 'Контекст: $used из $window токенов ($percent%)';
+  }
+
+  @override
+  String contextUsageUnknownWindow(String used) {
+    return 'Контекст: $used токенов. Укажите контекстное окно в настройках модели, чтобы видеть заполнение.';
+  }
+
+  @override
+  String get modelDetailSheetContextWindowLabel => 'Контекстное окно (токены)';
+
+  @override
+  String get modelDetailSheetContextWindowHint =>
+      'Неизвестно — введите лимит модели';
 
   @override
   String tokenDetailTotalTokens(int count) {
@@ -12748,6 +12779,25 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get assistantManagerActionDelete => 'Удаление ассистента';
+
+  @override
+  String get scheduledTaskToolTitle => 'Задачи по расписанию';
+
+  @override
+  String get scheduledTaskToolSubtitle =>
+      'Просматривать, создавать, менять и удалять задачи по расписанию прямо из чата. Каждое изменение требует вашего подтверждения.';
+
+  @override
+  String get scheduledTaskToolActionList => 'Список задач по расписанию';
+
+  @override
+  String get scheduledTaskToolActionCreate => 'Создание задачи по расписанию';
+
+  @override
+  String get scheduledTaskToolActionUpdate => 'Изменение задачи по расписанию';
+
+  @override
+  String get scheduledTaskToolActionDelete => 'Удаление задачи по расписанию';
 
   @override
   String get phoneControlTitle => 'Управление телефоном';

@@ -11085,6 +11085,30 @@ abstract class AppLocalizations {
   /// **'Create calendar events on this device with your confirmation, requires the calendar permission.'**
   String get assistantEditLocalToolCalendarCreateSubtitle;
 
+  /// No description provided for @assistantEditLocalToolCalendarUpdateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Event'**
+  String get assistantEditLocalToolCalendarUpdateTitle;
+
+  /// No description provided for @assistantEditLocalToolCalendarUpdateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change the time, title, place or reminders of calendar events with your confirmation, requires the calendar permission.'**
+  String get assistantEditLocalToolCalendarUpdateSubtitle;
+
+  /// No description provided for @assistantEditLocalToolCalendarDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Event'**
+  String get assistantEditLocalToolCalendarDeleteTitle;
+
+  /// No description provided for @assistantEditLocalToolCalendarDeleteSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete calendar events with your confirmation, requires the calendar permission.'**
+  String get assistantEditLocalToolCalendarDeleteSubtitle;
+
   /// No description provided for @assistantEditLocalToolLocationTitle.
   ///
   /// In en, this message translates to:
@@ -14462,6 +14486,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{value}s'**
   String tokenDetailDuration(String value);
+
+  /// No description provided for @contextUsageTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Context: {used} of {window} tokens ({percent}%)'**
+  String contextUsageTooltip(String used, String window, int percent);
+
+  /// No description provided for @contextUsageUnknownWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Context: {used} tokens. Set the model\'s context window in its settings to see how full it is.'**
+  String contextUsageUnknownWindow(String used);
+
+  /// No description provided for @modelDetailSheetContextWindowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Context window (tokens)'**
+  String get modelDetailSheetContextWindowLabel;
+
+  /// No description provided for @modelDetailSheetContextWindowHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown — enter the model\'s limit'**
+  String get modelDetailSheetContextWindowHint;
 
   /// No description provided for @tokenDetailTotalTokens.
   ///
@@ -22531,6 +22579,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete assistant'**
   String get assistantManagerActionDelete;
+
+  /// No description provided for @scheduledTaskToolTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled Tasks'**
+  String get scheduledTaskToolTitle;
+
+  /// No description provided for @scheduledTaskToolSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'List, create, change and delete scheduled tasks from the chat. Every change asks for your confirmation.'**
+  String get scheduledTaskToolSubtitle;
+
+  /// No description provided for @scheduledTaskToolActionList.
+  ///
+  /// In en, this message translates to:
+  /// **'List scheduled tasks'**
+  String get scheduledTaskToolActionList;
+
+  /// No description provided for @scheduledTaskToolActionCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create scheduled task'**
+  String get scheduledTaskToolActionCreate;
+
+  /// No description provided for @scheduledTaskToolActionUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Change scheduled task'**
+  String get scheduledTaskToolActionUpdate;
+
+  /// No description provided for @scheduledTaskToolActionDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete scheduled task'**
+  String get scheduledTaskToolActionDelete;
 
   /// No description provided for @phoneControlTitle.
   ///

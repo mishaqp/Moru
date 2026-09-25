@@ -30,6 +30,10 @@ IconData localToolIcon(String id) {
       return Lucide.Calendar;
     case LocalToolNames.calendarCreate:
       return Lucide.CalendarPlus;
+    case LocalToolNames.calendarUpdate:
+      return Lucide.CalendarCog;
+    case LocalToolNames.calendarDelete:
+      return Lucide.CalendarX;
     case LocalToolNames.currentLocation:
       return Lucide.MapPin;
     case LocalToolNames.phoneControl:
@@ -46,6 +50,8 @@ IconData localToolIcon(String id) {
       return Lucide.CheckCircle;
     case LocalToolNames.assistantManager:
       return Lucide.Bot;
+    case LocalToolNames.scheduledTasks:
+      return Lucide.CalendarClock;
     default:
       return Lucide.Wrench;
   }
@@ -69,6 +75,10 @@ String localToolTitle(AppLocalizations l10n, String id) {
       return l10n.assistantEditLocalToolCalendarQueryTitle;
     case LocalToolNames.calendarCreate:
       return l10n.assistantEditLocalToolCalendarCreateTitle;
+    case LocalToolNames.calendarUpdate:
+      return l10n.assistantEditLocalToolCalendarUpdateTitle;
+    case LocalToolNames.calendarDelete:
+      return l10n.assistantEditLocalToolCalendarDeleteTitle;
     case LocalToolNames.currentLocation:
       return l10n.assistantEditLocalToolLocationTitle;
     case LocalToolNames.phoneControl:
@@ -85,6 +95,8 @@ String localToolTitle(AppLocalizations l10n, String id) {
       return l10n.assistantEditLocalToolRemindersCompleteTitle;
     case LocalToolNames.assistantManager:
       return l10n.assistantManagerToolTitle;
+    case LocalToolNames.scheduledTasks:
+      return l10n.scheduledTaskToolTitle;
     default:
       return id;
   }

@@ -5821,6 +5821,20 @@ class AppLocalizationsZh extends AppLocalizations {
       '在你确认后于本设备创建日历日程，需要授予日历权限。';
 
   @override
+  String get assistantEditLocalToolCalendarUpdateTitle => '修改日程';
+
+  @override
+  String get assistantEditLocalToolCalendarUpdateSubtitle =>
+      '在你确认后修改日历日程的时间、标题、地点或提醒，需要授予日历权限。';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteTitle => '删除日程';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteSubtitle =>
+      '在你确认后删除日历日程，需要授予日历权限。';
+
+  @override
   String get assistantEditLocalToolLocationTitle => '当前位置';
 
   @override
@@ -7636,6 +7650,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String tokenDetailDuration(String value) {
     return '${value}s';
   }
+
+  @override
+  String contextUsageTooltip(String used, String window, int percent) {
+    return '上下文：$used / $window tokens（$percent%）';
+  }
+
+  @override
+  String contextUsageUnknownWindow(String used) {
+    return '上下文：$used tokens。在模型设置中填写上下文窗口即可查看占用比例。';
+  }
+
+  @override
+  String get modelDetailSheetContextWindowLabel => '上下文窗口（tokens）';
+
+  @override
+  String get modelDetailSheetContextWindowHint => '未知，请输入模型上限';
 
   @override
   String tokenDetailTotalTokens(int count) {
@@ -12027,6 +12057,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get assistantManagerActionDelete => '删除助手';
+
+  @override
+  String get scheduledTaskToolTitle => '定时任务';
+
+  @override
+  String get scheduledTaskToolSubtitle => '在聊天中查看、创建、修改和删除定时任务。每次更改都需要你确认。';
+
+  @override
+  String get scheduledTaskToolActionList => '列出定时任务';
+
+  @override
+  String get scheduledTaskToolActionCreate => '创建定时任务';
+
+  @override
+  String get scheduledTaskToolActionUpdate => '修改定时任务';
+
+  @override
+  String get scheduledTaskToolActionDelete => '删除定时任务';
 
   @override
   String get phoneControlTitle => '手机控制';
@@ -17845,6 +17893,20 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       '在你确认后于本设备创建日历日程，需要授予日历权限。';
 
   @override
+  String get assistantEditLocalToolCalendarUpdateTitle => '修改日程';
+
+  @override
+  String get assistantEditLocalToolCalendarUpdateSubtitle =>
+      '在你确认后修改日历日程的时间、标题、地点或提醒，需要授予日历权限。';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteTitle => '删除日程';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteSubtitle =>
+      '在你确认后删除日历日程，需要授予日历权限。';
+
+  @override
   String get assistantEditLocalToolLocationTitle => '当前位置';
 
   @override
@@ -19660,6 +19722,22 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String tokenDetailDuration(String value) {
     return '${value}s';
   }
+
+  @override
+  String contextUsageTooltip(String used, String window, int percent) {
+    return '上下文：$used / $window tokens（$percent%）';
+  }
+
+  @override
+  String contextUsageUnknownWindow(String used) {
+    return '上下文：$used tokens。在模型设置中填写上下文窗口即可查看占用比例。';
+  }
+
+  @override
+  String get modelDetailSheetContextWindowLabel => '上下文窗口（tokens）';
+
+  @override
+  String get modelDetailSheetContextWindowHint => '未知，请输入模型上限';
 
   @override
   String tokenDetailTotalTokens(int count) {
@@ -24051,6 +24129,24 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get assistantManagerActionDelete => '删除助手';
+
+  @override
+  String get scheduledTaskToolTitle => '定时任务';
+
+  @override
+  String get scheduledTaskToolSubtitle => '在聊天中查看、创建、修改和删除定时任务。每次更改都需要你确认。';
+
+  @override
+  String get scheduledTaskToolActionList => '列出定时任务';
+
+  @override
+  String get scheduledTaskToolActionCreate => '创建定时任务';
+
+  @override
+  String get scheduledTaskToolActionUpdate => '修改定时任务';
+
+  @override
+  String get scheduledTaskToolActionDelete => '删除定时任务';
 
   @override
   String get phoneControlTitle => '手机控制';
@@ -29944,6 +30040,20 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '在你確認後於本裝置建立日曆行程，需要授予日曆權限。';
 
   @override
+  String get assistantEditLocalToolCalendarUpdateTitle => '修改行程';
+
+  @override
+  String get assistantEditLocalToolCalendarUpdateSubtitle =>
+      '在你確認後修改日曆行程的時間、標題、地點或提醒，需要授予日曆權限。';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteTitle => '刪除行程';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteSubtitle =>
+      '在你確認後刪除日曆行程，需要授予日曆權限。';
+
+  @override
   String get assistantEditLocalToolLocationTitle => '目前位置';
 
   @override
@@ -31759,6 +31869,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String tokenDetailDuration(String value) {
     return '${value}s';
   }
+
+  @override
+  String contextUsageTooltip(String used, String window, int percent) {
+    return '上下文：$used / $window tokens（$percent%）';
+  }
+
+  @override
+  String contextUsageUnknownWindow(String used) {
+    return '上下文：$used tokens。在模型設定中填寫上下文視窗即可查看佔用比例。';
+  }
+
+  @override
+  String get modelDetailSheetContextWindowLabel => '上下文視窗（tokens）';
+
+  @override
+  String get modelDetailSheetContextWindowHint => '未知，請輸入模型上限';
 
   @override
   String tokenDetailTotalTokens(int count) {
@@ -36154,6 +36280,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get assistantManagerActionDelete => '刪除助理';
+
+  @override
+  String get scheduledTaskToolTitle => '排程任務';
+
+  @override
+  String get scheduledTaskToolSubtitle => '在聊天中查看、建立、修改和刪除排程任務。每次變更都需要你確認。';
+
+  @override
+  String get scheduledTaskToolActionList => '列出排程任務';
+
+  @override
+  String get scheduledTaskToolActionCreate => '建立排程任務';
+
+  @override
+  String get scheduledTaskToolActionUpdate => '修改排程任務';
+
+  @override
+  String get scheduledTaskToolActionDelete => '刪除排程任務';
 
   @override
   String get phoneControlTitle => '手機控制';

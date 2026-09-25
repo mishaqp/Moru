@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/database/chat_database_repository.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
+import '../../../core/models/model_context_window.dart';
 import '../../../core/models/message_part.dart';
 import '../../../core/models/conversation.dart';
 import '../../../core/models/workspace_binding.dart';
@@ -3025,6 +3026,14 @@ class HomePageController extends ChangeNotifier {
     return configured == null
         ? l10n.contextMessageCount(count.actual)
         : l10n.contextMessageCountLimited(count.actual, configured);
+  }
+
+  /// Tokens the next request starts from ([latestContextTokens]). 0 once the
+  /// context was cleared, null before the first reply with usage.
+  int? contextTokensUsed() {
+    if (currentConversation == null || messages.isEmpty) return null;
+    if (_viewModel.getContextMessageCount().actual == 0) return 0;
+    return latestContextTokens(collapseVersions(messages));
   }
 
   String? currentStreamingMessageId() {
