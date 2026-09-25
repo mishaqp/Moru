@@ -1,5 +1,6 @@
 import '../providers/settings_provider.dart';
 import '../services/api/chat_api_helpers.dart';
+import '../services/model_catalog/model_catalog.dart';
 import '../services/model_override_payload_parser.dart';
 import 'chat_message.dart';
 import 'compress_context_options.dart';
@@ -20,18 +21,25 @@ int? inferContextWindowTokens(String modelId) {
 }
 
 /// The context window for [modelId] of [providerKey]: the model settings
-/// value first, then [inferContextWindowTokens] on the upstream id.
+/// value first, then [defaultContextWindowTokens] for the upstream id.
 int? resolveContextWindowTokens(
   SettingsProvider settings,
   String providerKey,
-  String modelId,
-) {
+  String modelId, {
+  ModelCatalog? catalog,
+}) {
   final cfg = settings.getProviderConfig(providerKey);
   final configured = readModelContextWindowTokens(
     ModelOverridePayloadParser.modelOverride(cfg.modelOverrides, modelId),
   );
-  return configured ?? inferContextWindowTokens(apiModelId(cfg, modelId));
+  return configured ??
+      defaultContextWindowTokens(apiModelId(cfg, modelId), catalog: catalog);
 }
+
+/// The window models.dev lists for [upstreamId], else the family default.
+int? defaultContextWindowTokens(String upstreamId, {ModelCatalog? catalog}) =>
+    (catalog ?? ModelCatalog.instance).lookup(upstreamId)?.contextTokens ??
+    inferContextWindowTokens(upstreamId);
 
 /// Tokens the next request starts from: the latest reply's prompt plus its
 /// completion. Providers report the whole context each round, so the last

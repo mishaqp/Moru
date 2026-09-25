@@ -62,6 +62,9 @@ void main() {
     expect(aggregate.totals.inputTokens, 30);
     expect(aggregate.totals.outputTokens, 60);
     expect(aggregate.models.single.count, 2);
+    expect(aggregate.models.single.inputTokens, 30);
+    expect(aggregate.models.single.outputTokens, 60);
+    expect(aggregate.models.single.cachedTokens, 3);
     expect(aggregate.topics.single.count, 2);
     expect(aggregate.trend.single.activityCount, 2);
   });

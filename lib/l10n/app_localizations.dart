@@ -900,6 +900,30 @@ abstract class AppLocalizations {
   /// **'Cached Tokens'**
   String get statsPageCachedTokens;
 
+  /// No description provided for @statsPageEstimatedCost.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated Cost'**
+  String get statsPageEstimatedCost;
+
+  /// No description provided for @statsPageModelCostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spend by Model'**
+  String get statsPageModelCostTitle;
+
+  /// No description provided for @statsPageCostColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost'**
+  String get statsPageCostColumn;
+
+  /// No description provided for @statsPageCostNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated from models.dev list prices for models with a known price. Actual bills can differ.'**
+  String get statsPageCostNote;
+
   /// No description provided for @statsPageLaunchCount.
   ///
   /// In en, this message translates to:

@@ -516,7 +516,9 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
                   fillColor: context.appColors.surfaceCard,
                   // The family default applies while the field is empty.
                   hintText:
-                      inferContextWindowTokens(_idCtrl.text)?.toString() ??
+                      defaultContextWindowTokens(
+                        _idCtrl.text.trim(),
+                      )?.toString() ??
                       l10n.modelDetailSheetContextWindowHint,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),

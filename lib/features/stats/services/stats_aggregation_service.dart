@@ -1,6 +1,7 @@
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/conversation.dart';
 import '../../../core/database/chat_database_repository.dart';
+import '../../../core/services/model_catalog/model_catalog.dart';
 import '../models/stats_models.dart';
 
 class StatsAggregationService {
@@ -13,7 +14,19 @@ class StatsAggregationService {
     required String unknownTopicLabel,
     Map<String, String> assistantNames = const {},
     Map<String, String> providerNames = const {},
+    ModelCatalogEntry? Function(String? providerId, String modelId)? priceFor,
   }) {
+    final costs = <ChatStatsRank, double>{};
+    for (final row in aggregate.models) {
+      final cost = priceFor
+          ?.call(row.providerId, row.id)
+          ?.cost(
+            input: row.inputTokens,
+            output: row.outputTokens,
+            cached: row.cachedTokens,
+          );
+      if (cost != null && cost > 0) costs[row] = cost;
+    }
     final assistantCounts = <String, int>{};
     for (final row in aggregate.assistants) {
       assistantCounts[row.id] = (assistantCounts[row.id] ?? 0) + row.count;
@@ -51,6 +64,7 @@ class StatsAggregationService {
         outputTokens: aggregate.totals.outputTokens,
         cachedTokens: aggregate.totals.cachedTokens,
         launchCount: launchCount,
+        costUsd: costs.isEmpty ? null : costs.values.reduce((a, b) => a + b),
       ),
       heatmap: _buildHeatmap(now, heatmapCounts),
       trend: [
@@ -67,6 +81,19 @@ class StatsAggregationService {
             label: row.label,
             value: row.count,
             providerId: row.providerId,
+          ),
+      ],
+      costRank: [
+        for (final entry
+            in costs.entries.toList()
+              ..sort((a, b) => b.value.compareTo(a.value)))
+          StatsRankItem(
+            id: entry.key.id,
+            label: entry.key.label,
+            // Micro-dollars keep the bar proportions for small spends.
+            value: (entry.value * 1000000).round(),
+            valueLabel: formatUsd(entry.value),
+            providerId: entry.key.providerId,
           ),
       ],
       assistantRank: _assistantRank(

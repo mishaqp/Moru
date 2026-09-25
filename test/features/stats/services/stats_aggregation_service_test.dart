@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/conversation.dart';
+import 'package:Kelivo/core/services/model_catalog/model_catalog.dart';
 import 'package:Kelivo/features/stats/models/stats_models.dart';
 import 'package:Kelivo/features/stats/services/stats_aggregation_service.dart';
 
@@ -518,5 +519,108 @@ void main() {
       );
       expect(trendDay.providerTokens, isEmpty);
     });
+  });
+
+  test('database snapshot prices models with a known price', () {
+    final now = DateTime(2026, 5, 3, 12);
+    final lookups = <String>[];
+    final snapshot = StatsAggregationService.buildDatabaseSnapshot(
+      now: now,
+      range: StatsDateRange.allTime(now),
+      aggregate: const ChatStatsAggregate(
+        conversations: 1,
+        totals: ChatStatsTotals(
+          messages: 3,
+          inputTokens: 0,
+          outputTokens: 0,
+          cachedTokens: 0,
+        ),
+        heatmap: [],
+        trend: [],
+        models: [
+          ChatStatsRank(
+            id: 'cheap',
+            label: 'cheap',
+            count: 5,
+            providerId: 'p1',
+            inputTokens: 1000000,
+            outputTokens: 1000000,
+          ),
+          ChatStatsRank(
+            id: 'pricey',
+            label: 'pricey',
+            count: 1,
+            providerId: 'p1',
+            inputTokens: 1000000,
+            outputTokens: 100000,
+            cachedTokens: 500000,
+          ),
+          ChatStatsRank(id: 'unknown', label: 'unknown', count: 9),
+        ],
+        assistants: [],
+        topics: [],
+      ),
+      launchCount: 1,
+      unknownProviderLabel: 'Unknown provider',
+      unknownTopicLabel: 'Untitled topic',
+      priceFor: (providerId, modelId) {
+        lookups.add('$providerId/$modelId');
+        return switch (modelId) {
+          'cheap' => const ModelCatalogEntry(inputPrice: 0.1, outputPrice: 0.4),
+          'pricey' => const ModelCatalogEntry(
+            inputPrice: 3,
+            outputPrice: 15,
+            cacheReadPrice: 0.3,
+          ),
+          _ => null,
+        };
+      },
+    );
+
+    expect(lookups, ['p1/cheap', 'p1/pricey', 'null/unknown']);
+    // pricey: 0.5M * 3 + 0.5M * 0.3 + 0.1M * 15 = 1.5 + 0.15 + 1.5
+    expect(snapshot.summary.costUsd, closeTo(0.5 + 3.15, 1e-9));
+    expect(snapshot.costRank.map((item) => item.id), ['pricey', 'cheap']);
+    expect(snapshot.costRank.map((item) => item.valueLabel), [
+      r'$3.15',
+      r'$0.50',
+    ]);
+    // Message counts stay the model rank's measure.
+    expect(snapshot.modelRank.map((item) => item.value), [5, 1, 9]);
+  });
+
+  test('without prices there is no cost', () {
+    final now = DateTime(2026, 5, 3, 12);
+    final snapshot = StatsAggregationService.buildDatabaseSnapshot(
+      now: now,
+      range: StatsDateRange.allTime(now),
+      aggregate: const ChatStatsAggregate(
+        conversations: 0,
+        totals: ChatStatsTotals(
+          messages: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          cachedTokens: 0,
+        ),
+        heatmap: [],
+        trend: [],
+        models: [ChatStatsRank(id: 'm', label: 'm', count: 1)],
+        assistants: [],
+        topics: [],
+      ),
+      launchCount: 0,
+      unknownProviderLabel: 'Unknown provider',
+      unknownTopicLabel: 'Untitled topic',
+    );
+    expect(snapshot.summary.costUsd, isNull);
+    expect(snapshot.costRank, isEmpty);
+  });
+
+  test('prices are formatted for small and large spends', () {
+    expect(formatUsd(0), r'$0.00');
+    expect(formatUsd(0.0042), r'$0.0042');
+    expect(formatUsd(0.0004), r'<$0.001');
+    expect(formatUsd(12.4), r'$12.40');
+    expect(formatUsd(1204.4), r'$1,204');
   });
 }

@@ -1,4 +1,5 @@
 import 'core/services/scheduled_tasks_service.dart';
+import 'core/services/model_catalog/model_catalog.dart';
 import 'package:Kelivo/core/services/sandbox/workspace_channel.dart';
 import 'package:Kelivo/core/providers/external_mounts_provider.dart';
 import 'package:Kelivo/core/services/sandbox/environment_dependencies.dart';
@@ -323,6 +324,8 @@ Future<void> main() async {
           restoreOutcome: restoreOutcome?.state,
         ),
       );
+      // Context windows and prices from models.dev; refreshed once a day.
+      unawaited(ModelCatalog.instance.start());
     },
     zoneSpecification: ZoneSpecification(
       print: (self, parent, zone, line) {

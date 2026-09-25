@@ -399,6 +399,9 @@ class WorkspaceToolsService {
         [
           'Keep a short checklist for multi-step work; the user sees it live.',
           'Send the whole list each time; exactly one step in_progress.',
+          'Call it again as soon as each step is done: mark that step '
+              'completed and the next one in_progress. Do not save the '
+              'updates for the end.',
           'Before your final answer, send it again with finished steps completed.',
         ],
         {

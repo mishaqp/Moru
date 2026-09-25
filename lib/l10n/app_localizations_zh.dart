@@ -436,6 +436,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statsPageCachedTokens => '缓存 Tokens';
 
   @override
+  String get statsPageEstimatedCost => '预估费用';
+
+  @override
+  String get statsPageModelCostTitle => '各模型花费';
+
+  @override
+  String get statsPageCostColumn => '费用';
+
+  @override
+  String get statsPageCostNote => '按 models.dev 公布价格估算，仅包含已知价格的模型，实际账单可能不同。';
+
+  @override
   String get statsPageLaunchCount => '应用启动次数';
 
   @override
@@ -12582,6 +12594,18 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get statsPageCachedTokens => '缓存 Tokens';
 
   @override
+  String get statsPageEstimatedCost => '预估费用';
+
+  @override
+  String get statsPageModelCostTitle => '各模型花费';
+
+  @override
+  String get statsPageCostColumn => '费用';
+
+  @override
+  String get statsPageCostNote => '按 models.dev 公布价格估算，仅包含已知价格的模型，实际账单可能不同。';
+
+  @override
   String get statsPageLaunchCount => '应用启动次数';
 
   @override
@@ -24652,6 +24676,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get statsPageCachedTokens => '快取 Tokens';
+
+  @override
+  String get statsPageEstimatedCost => '預估費用';
+
+  @override
+  String get statsPageModelCostTitle => '各模型花費';
+
+  @override
+  String get statsPageCostColumn => '費用';
+
+  @override
+  String get statsPageCostNote => '依 models.dev 公布價格估算，僅包含已知價格的模型，實際帳單可能不同。';
 
   @override
   String get statsPageLaunchCount => '應用啟動次數';

@@ -452,6 +452,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statsPageCachedTokens => 'Cached Tokens';
 
   @override
+  String get statsPageEstimatedCost => 'Estimated Cost';
+
+  @override
+  String get statsPageModelCostTitle => 'Spend by Model';
+
+  @override
+  String get statsPageCostColumn => 'Cost';
+
+  @override
+  String get statsPageCostNote =>
+      'Estimated from models.dev list prices for models with a known price. Actual bills can differ.';
+
+  @override
   String get statsPageLaunchCount => 'App Launches';
 
   @override

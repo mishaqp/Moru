@@ -16,6 +16,7 @@ class StatsRankSection extends StatelessWidget {
     required this.items,
     this.icon,
     this.leadingBuilder,
+    this.footer,
   });
 
   final String title;
@@ -26,10 +27,20 @@ class StatsRankSection extends StatelessWidget {
   final Widget Function(BuildContext context, StatsRankItem item)?
   leadingBuilder;
 
+  /// A short note under the rows.
+  final String? footer;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final showExpand = items.length > 5;
+    final body = _RankBody(
+      leftHeader: leftHeader,
+      rightHeader: rightHeader,
+      items: items.take(5).toList(),
+      icon: icon,
+      leadingBuilder: leadingBuilder,
+    );
     return StatsSectionCard(
       title: title,
       trailing: showExpand
@@ -42,13 +53,23 @@ class StatsRankSection extends StatelessWidget {
               ),
             )
           : null,
-      child: _RankBody(
-        leftHeader: leftHeader,
-        rightHeader: rightHeader,
-        items: items.take(5).toList(),
-        icon: icon,
-        leadingBuilder: leadingBuilder,
-      ),
+      child: footer == null
+          ? body
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                body,
+                Text(
+                  footer!,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.52),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 
@@ -316,7 +337,7 @@ class _RankRow extends StatelessWidget {
         SizedBox(
           width: 52,
           child: Text(
-            item.value.toString(),
+            item.valueLabel ?? item.value.toString(),
             textAlign: TextAlign.right,
             style: TextStyle(
               color: cs.onSurface.withValues(alpha: 0.76),
