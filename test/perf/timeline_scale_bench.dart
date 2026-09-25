@@ -200,7 +200,6 @@ class _BenchHarnessState extends State<_BenchHarness> {
     super.initState();
     scrollCtrl = scroll_ctrl.ChatScrollController(
       scrollController: scrollController,
-      onStateChanged: () {},
       getAutoScrollEnabled: () => true,
       getAutoScrollIdleSeconds: () => 3,
       isGenerating: () => generating,

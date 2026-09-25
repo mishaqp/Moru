@@ -71,7 +71,7 @@ void main() {
     );
     await tester.pump();
 
-    final list = tester.widget<SuperListView>(find.byType(SuperListView));
+    final list = tester.widget<SuperSliverList>(find.byType(SuperSliverList));
     final empty = list.extentEstimation!(0, 400);
     expect(empty, 96);
 
@@ -122,7 +122,7 @@ void main() {
     await tester.pump();
 
     final empty = tester
-        .widget<SuperListView>(find.byType(SuperListView))
+        .widget<SuperSliverList>(find.byType(SuperSliverList))
         .extentEstimation!(0, 400);
     expect(empty, 96);
 
@@ -141,7 +141,7 @@ void main() {
     await tester.pump();
 
     final after = tester
-        .widget<SuperListView>(find.byType(SuperListView))
+        .widget<SuperSliverList>(find.byType(SuperSliverList))
         .extentEstimation!(0, 400);
     expect(after, closeTo(96 + 8 * _workspaceReadFileCard, 0.1));
   });
@@ -175,7 +175,7 @@ void main() {
     );
     await tester.pump();
 
-    final list = tester.widget<SuperListView>(find.byType(SuperListView));
+    final list = tester.widget<SuperSliverList>(find.byType(SuperSliverList));
     final loading = list.extentEstimation!(0, 400);
 
     key.currentState!.replaceTools({
@@ -200,7 +200,7 @@ void main() {
     await tester.pump();
 
     final answered = tester
-        .widget<SuperListView>(find.byType(SuperListView))
+        .widget<SuperSliverList>(find.byType(SuperSliverList))
         .extentEstimation!(0, 400);
     expect(answered, isNot(loading));
   });
@@ -282,7 +282,7 @@ void main() {
     await tester.pump();
 
     final empty = tester
-        .widget<SuperListView>(find.byType(SuperListView))
+        .widget<SuperSliverList>(find.byType(SuperSliverList))
         .extentEstimation!(0, 400);
 
     key.currentState!.replaceMessages([
@@ -300,7 +300,7 @@ void main() {
     await tester.pump();
 
     final withImage = tester
-        .widget<SuperListView>(find.byType(SuperListView))
+        .widget<SuperSliverList>(find.byType(SuperSliverList))
         .extentEstimation!(0, 400);
     expect(withImage, greaterThan(empty + 200));
   });

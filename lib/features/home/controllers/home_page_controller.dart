@@ -287,8 +287,15 @@ class HomePageController extends ChangeNotifier {
   String? _spotlightMessageId;
   int _spotlightToken = 0;
 
-  // Input bar measurement
-  double _inputBarHeight = 72;
+  // Composer measurements. Only the list padding, the floating buttons and
+  // the edit overlays listen: rebuilding the whole page on every frame of a
+  // composer size animation (a command chip, the plan, a growing draft) made
+  // the chat stutter while the agent worked.
+  final ValueNotifier<double> inputBarHeightListenable = ValueNotifier<double>(
+    72,
+  );
+  final ValueNotifier<double> composerAreaHeightListenable =
+      ValueNotifier<double>(72);
   double? _composerAreaHeight;
 
   UserMessageEditState? _userMessageEditState;
@@ -327,10 +334,10 @@ class HomePageController extends ChangeNotifier {
   bool get rightSidebarOpen => _rightSidebarOpen;
   double get embeddedSidebarWidth => _embeddedSidebarWidth;
   double get rightSidebarWidth => _rightSidebarWidth;
-  double get inputBarHeight => _inputBarHeight;
+  double get inputBarHeight => inputBarHeightListenable.value;
 
   /// Height the chat must keep clear at the bottom, strip included.
-  double get composerAreaHeight => _composerAreaHeight ?? _inputBarHeight;
+  double get composerAreaHeight => composerAreaHeightListenable.value;
   bool get desktopUiInited => _desktopUiInited;
   bool get isGlobalSearchMode => _isGlobalSearchMode;
   String get globalSearchQuery => _globalSearchQuery;
@@ -626,7 +633,6 @@ class HomePageController extends ChangeNotifier {
   void _initializeScrollController() {
     _scrollCtrl = scroll_ctrl.ChatScrollController(
       scrollController: _scrollController,
-      onStateChanged: () => notifyListeners(),
       getAutoScrollEnabled: () =>
           _context.read<SettingsProvider>().autoScrollEnabled,
       getAutoScrollIdleSeconds: () =>
@@ -2651,18 +2657,16 @@ class HomePageController extends ChangeNotifier {
 
   void measureInputBar() {
     try {
-      var changed = false;
       final bar = _heightOf(_inputBarKey);
-      if (bar != null && (_inputBarHeight - bar).abs() > 1.0) {
-        _inputBarHeight = bar;
-        changed = true;
+      if (bar != null && (inputBarHeightListenable.value - bar).abs() > 1.0) {
+        inputBarHeightListenable.value = bar;
       }
       final area = _heightOf(_composerAreaKey);
       if (area != null && ((_composerAreaHeight ?? -10) - area).abs() > 1.0) {
         _composerAreaHeight = area;
-        changed = true;
       }
-      if (changed) notifyListeners();
+      composerAreaHeightListenable.value =
+          _composerAreaHeight ?? inputBarHeightListenable.value;
     } catch (_) {}
   }
 
@@ -3031,14 +3035,6 @@ class HomePageController extends ChangeNotifier {
     return null;
   }
 
-  bool shouldPinStreamingIndicator(String? messageId) {
-    if (messageId == null) return false;
-    if (_scrollCtrl.isUserScrolling) return false;
-    if (!_scrollCtrl.hasEnoughContentToScroll(56.0)) return false;
-    if (!_scrollCtrl.isNearBottom(48)) return false;
-    return true;
-  }
-
   /// Transform raw content using assistant regexes.
   String transformAssistantContent(
     stream_ctrl.StreamingState state, [
@@ -3228,6 +3224,8 @@ class HomePageController extends ChangeNotifier {
     _messageJumpTransitionController.dispose();
     _mcpProvider?.removeListener(_onMcpChanged);
     _scrollCtrl.dispose();
+    inputBarHeightListenable.dispose();
+    composerAreaHeightListenable.dispose();
     try {
       _chatActionSub?.cancel();
     } catch (_) {}

@@ -126,7 +126,6 @@ class _ProbeHarnessState extends State<_ProbeHarness> {
     super.initState();
     scrollCtrl = scroll_ctrl.ChatScrollController(
       scrollController: scrollController,
-      onStateChanged: () {},
       getAutoScrollEnabled: () => true,
       getAutoScrollIdleSeconds: () => 3,
       isGenerating: () => generating,

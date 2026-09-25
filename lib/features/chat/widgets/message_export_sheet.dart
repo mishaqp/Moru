@@ -1281,14 +1281,6 @@ const double _maxExportCaptureSlicePhysicalHeight = 4096.0;
 const double _minExportFullCapturePixelRatio = 2.0;
 
 @visibleForTesting
-Future<Uint8List?> captureExportBoundaryPngBytesForTesting(
-  RenderRepaintBoundary boundary, {
-  required double pixelRatio,
-}) {
-  return _captureBoundaryPngBytes(boundary, pixelRatio: pixelRatio);
-}
-
-@visibleForTesting
 bool shouldUseFullExportCaptureForTesting({
   required Size logicalSize,
   required double pixelRatio,
@@ -1781,50 +1773,6 @@ bool _exportImageIsBlankPixel(
 
 bool _exportImageChannelNear(num a, num b) {
   return (a - b).abs() <= _exportImageBlankColorTolerance;
-}
-
-Future<void> showMessageExportSheet(
-  BuildContext context,
-  ChatMessage message,
-) async {
-  try {
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      // Desktop: show centered dialog
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: true,
-        builder: (ctx) => Dialog(
-          elevation: 12,
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 24,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: _ExportDialog(message: message, parentContext: context),
-        ),
-      );
-      return;
-    }
-  } catch (_) {
-    // Fallback to bottom sheet below
-  }
-  // Mobile: keep bottom sheet
-  await showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: context.overlaySurface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (ctx) {
-      return SafeArea(
-        top: false,
-        child: _ExportSheet(message: message, parentContext: context),
-      );
-    },
-  );
 }
 
 Future<void> showChatExportSheet(

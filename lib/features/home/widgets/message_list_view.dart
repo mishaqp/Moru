@@ -62,26 +62,6 @@ typedef OnRecoveredAskUserAnswer =
       AskUserResult result,
     );
 
-/// Data class for reasoning UI state
-class ReasoningUiState {
-  final String? text;
-  final bool expanded;
-  final bool loading;
-  final DateTime? startAt;
-  final DateTime? finishedAt;
-  final VoidCallback? onToggle;
-
-  const ReasoningUiState({
-    this.text,
-    this.expanded = false,
-    this.loading = false,
-    this.startAt,
-    this.finishedAt,
-    this.onToggle,
-  });
-}
-
-/// Data class for translation UI state
 class TranslationUiState {
   final bool expanded;
   final VoidCallback? onToggle;
@@ -115,6 +95,7 @@ class MessageListView extends StatefulWidget {
     required this.dividerPadding,
     this.topContentPadding = 8,
     this.bottomContentPadding = 16,
+    this.bottomInset,
     this.footer,
     this.pinnedStreamingMessageId,
     this.isPinnedIndicatorActive = false,
@@ -192,6 +173,10 @@ class MessageListView extends StatefulWidget {
   final EdgeInsetsGeometry dividerPadding;
   final double topContentPadding;
   final double bottomContentPadding;
+
+  /// Space the composer covers, added under [bottomContentPadding]. A change
+  /// only re-pads the list; the message rows are not rebuilt.
+  final ValueListenable<double>? bottomInset;
   final String? pinnedStreamingMessageId;
   final bool isPinnedIndicatorActive;
 
@@ -296,6 +281,9 @@ class MessageListView extends StatefulWidget {
 }
 
 class _MessageListViewState extends State<MessageListView> {
+  static const ValueListenable<double> _noBottomInset =
+      AlwaysStoppedAnimation<double>(0);
+
   static const _footerExtent = 48.0;
   static final _idleStreamingContent = AlwaysStoppedAnimation(
     StreamingContentData(content: '', totalTokens: 0),
@@ -1729,38 +1717,60 @@ class _MessageListViewState extends State<MessageListView> {
 
         return Builder(
           builder: (context) {
-            final list = SuperListView.builder(
-              controller: widget.scrollController,
+            final itemCount = _effectiveRenderModels.isEmpty && _hasFooter
+                ? 1
+                : _effectiveRenderModels.length;
+            final rows = SuperSliverList(
               listController: widget.listController,
-              cacheExtent: 600,
               delayPopulatingCacheArea: false,
-              addRepaintBoundaries: false,
-              findChildIndexCallback: _findMessageIndexByKey,
               extentEstimation: _estimateItemExtent,
-              padding: EdgeInsets.fromLTRB(
-                horizontalPad,
-                widget.topContentPadding,
-                horizontalPad,
-                widget.bottomContentPadding +
-                    (widget.isPinnedIndicatorActive ? 12 : 0),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  if (_effectiveRenderModels.isEmpty && _hasFooter) {
+                    return SizedBox(
+                      height: _footerExtent,
+                      child: widget.footer,
+                    );
+                  }
+                  if (index < 0 || index >= _effectiveRenderModels.length) {
+                    return const SizedBox.shrink();
+                  }
+                  return _buildMessageItem(
+                    context,
+                    index: index,
+                    presentation: presentation,
+                  );
+                },
+                findChildIndexCallback: _findMessageIndexByKey,
+                childCount: itemCount,
+                addRepaintBoundaries: false,
               ),
-              itemCount: _effectiveRenderModels.isEmpty && _hasFooter
-                  ? 1
-                  : _effectiveRenderModels.length,
+            );
+            final bottomPadding =
+                widget.bottomContentPadding +
+                (widget.isPinnedIndicatorActive ? 12 : 0);
+            final list = CustomScrollView(
+              controller: widget.scrollController,
+              scrollCacheExtent: const ScrollCacheExtent.pixels(600),
+              semanticChildCount: itemCount,
               keyboardDismissBehavior: _keyboardDismissBehavior,
-              itemBuilder: (context, index) {
-                if (_effectiveRenderModels.isEmpty && _hasFooter) {
-                  return SizedBox(height: _footerExtent, child: widget.footer);
-                }
-                if (index < 0 || index >= _effectiveRenderModels.length) {
-                  return const SizedBox.shrink();
-                }
-                return _buildMessageItem(
-                  context,
-                  index: index,
-                  presentation: presentation,
-                );
-              },
+              slivers: [
+                // The same rows widget is handed back on an inset change, so
+                // only the padding updates.
+                ValueListenableBuilder<double>(
+                  valueListenable: widget.bottomInset ?? _noBottomInset,
+                  child: rows,
+                  builder: (context, inset, rows) => SliverPadding(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPad,
+                      widget.topContentPadding,
+                      horizontalPad,
+                      inset + bottomPadding,
+                    ),
+                    sliver: rows,
+                  ),
+                ),
+              ],
             );
 
             final historyList = NotificationListener<ScrollNotification>(

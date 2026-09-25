@@ -55,7 +55,7 @@ void main() {
       );
 
       expect(find.byKey(MessageListView.windowSkeletonKey), findsOneWidget);
-      expect(find.byType(SuperListView), findsOneWidget);
+      expect(find.byType(SuperSliverList), findsOneWidget);
 
       // The skeleton pulses; it must survive further frames.
       await tester.pump(const Duration(milliseconds: 400));
@@ -99,7 +99,7 @@ void main() {
       );
 
       expect(find.byKey(MessageListView.windowSkeletonKey), findsNothing);
-      expect(find.byType(SuperListView), findsOneWidget);
+      expect(find.byType(SuperSliverList), findsOneWidget);
     } finally {
       scrollController.dispose();
       listController.dispose();

@@ -1066,7 +1066,7 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildMobileBody(BuildContext context, ColorScheme cs) {
-    final bottomContentPadding = _controller.composerAreaHeight + 16;
+    const bottomContentPadding = 16.0;
     final topContentPadding = _chatTopOverlayInset(context) + 8;
     final backgroundImageActive = _assistantBackgroundActive(context);
 
@@ -1245,7 +1245,7 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildTabletBody(BuildContext context, ColorScheme cs) {
-    final bottomContentPadding = _controller.composerAreaHeight + 16;
+    const bottomContentPadding = 16.0;
     final topContentPadding = _chatTopOverlayInset(context) + 8;
     final backgroundImageActive = _assistantBackgroundActive(context);
 
@@ -1351,10 +1351,13 @@ class _HomePageState extends State<HomePage>
         : null;
     if (_controller.isTemporaryConversation &&
         _controller.chatController.collapsedMessages.isEmpty) {
-      return _TemporaryConversationEmptyState(
-        topContentPadding: topContentPadding,
-        bottomContentPadding: bottomContentPadding,
-        footer: footer,
+      return ValueListenableBuilder<double>(
+        valueListenable: _controller.composerAreaHeightListenable,
+        builder: (context, inset, _) => _TemporaryConversationEmptyState(
+          topContentPadding: topContentPadding,
+          bottomContentPadding: inset + bottomContentPadding,
+          footer: footer,
+        ),
       );
     }
 
@@ -1382,6 +1385,7 @@ class _HomePageState extends State<HomePage>
           : const <String>[],
       topContentPadding: topContentPadding,
       bottomContentPadding: bottomContentPadding,
+      bottomInset: _controller.composerAreaHeightListenable,
       dividerPadding: dividerPadding,
       streamingContentNotifier: _controller.streamingContentNotifier,
       spotlightMessageId: _controller.spotlightMessageId,
@@ -1593,54 +1597,62 @@ class _HomePageState extends State<HomePage>
         if (_controller.messages.isEmpty) {
           return const SizedBox.shrink();
         }
-        var visible = _controller.scrollCtrl.showNavButtons;
-        var hoverEnabled = false;
-        if (_controller.isDesktopPlatform) {
-          switch (settings.desktopMessageNavButtonsMode) {
-            case DesktopMessageNavButtonsMode.always:
-              visible = true;
-              break;
-            case DesktopMessageNavButtonsMode.scroll:
-              visible = _controller.scrollCtrl.showNavButtons;
-              break;
-            case DesktopMessageNavButtonsMode.hover:
-              visible = _scrollNavHovering;
-              hoverEnabled = true;
-              break;
-            case DesktopMessageNavButtonsMode.scrollAndHover:
-              visible =
-                  _controller.scrollCtrl.showNavButtons || _scrollNavHovering;
-              hoverEnabled = true;
-              break;
-            case DesktopMessageNavButtonsMode.never:
-              return const SizedBox.shrink();
-          }
-        } else {
-          switch (settings.mobileMessageNavButtonsMode) {
-            case MobileMessageNavButtonsMode.always:
-              visible = true;
-              break;
-            case MobileMessageNavButtonsMode.scroll:
-              visible = _controller.scrollCtrl.showNavButtons;
-              break;
-            case MobileMessageNavButtonsMode.never:
-              return const SizedBox.shrink();
-          }
-        }
-        return ScrollNavButtonsPanel(
-          visible: visible,
-          hoverEnabled: hoverEnabled,
-          onHoverChanged: hoverEnabled
-              ? (hovering) {
-                  if (_scrollNavHovering == hovering) return;
-                  setState(() => _scrollNavHovering = hovering);
-                }
-              : null,
-          bottomOffset: _controller.composerAreaHeight + 12,
-          onScrollToTop: () => _controller.scrollToTop(animate: false),
-          onPreviousMessage: _controller.jumpToPreviousQuestion,
-          onNextMessage: _controller.jumpToNextQuestion,
-          onScrollToBottom: _controller.forceScrollToBottom,
+        // Scroll activity toggles only the buttons, never the whole page.
+        final scrollCtrl = _controller.scrollCtrl;
+        return ListenableBuilder(
+          listenable: Listenable.merge([
+            scrollCtrl.navButtonsVisible,
+            _controller.composerAreaHeightListenable,
+          ]),
+          builder: (context, _) {
+            final scrolling = scrollCtrl.showNavButtons;
+            var visible = scrolling;
+            var hoverEnabled = false;
+            if (_controller.isDesktopPlatform) {
+              switch (settings.desktopMessageNavButtonsMode) {
+                case DesktopMessageNavButtonsMode.always:
+                  visible = true;
+                  break;
+                case DesktopMessageNavButtonsMode.scroll:
+                  break;
+                case DesktopMessageNavButtonsMode.hover:
+                  visible = _scrollNavHovering;
+                  hoverEnabled = true;
+                  break;
+                case DesktopMessageNavButtonsMode.scrollAndHover:
+                  visible = scrolling || _scrollNavHovering;
+                  hoverEnabled = true;
+                  break;
+                case DesktopMessageNavButtonsMode.never:
+                  return const SizedBox.shrink();
+              }
+            } else {
+              switch (settings.mobileMessageNavButtonsMode) {
+                case MobileMessageNavButtonsMode.always:
+                  visible = true;
+                  break;
+                case MobileMessageNavButtonsMode.scroll:
+                  break;
+                case MobileMessageNavButtonsMode.never:
+                  return const SizedBox.shrink();
+              }
+            }
+            return ScrollNavButtonsPanel(
+              visible: visible,
+              hoverEnabled: hoverEnabled,
+              onHoverChanged: hoverEnabled
+                  ? (hovering) {
+                      if (_scrollNavHovering == hovering) return;
+                      setState(() => _scrollNavHovering = hovering);
+                    }
+                  : null,
+              bottomOffset: _controller.composerAreaHeight + 12,
+              onScrollToTop: () => _controller.scrollToTop(animate: false),
+              onPreviousMessage: _controller.jumpToPreviousQuestion,
+              onNextMessage: _controller.jumpToNextQuestion,
+              onScrollToBottom: _controller.forceScrollToBottom,
+            );
+          },
         );
       },
     );
@@ -1655,25 +1667,33 @@ class _HomePageState extends State<HomePage>
       fit: StackFit.expand,
       children: [
         _buildScrollButtons(),
-        UserMessageEditOverlay(
-          visible: editState != null && !_controller.selecting,
-          previewText: editState?.previewText ?? '',
-          topInset: _chatTopOverlayInset(context),
-          bottomInset: _controller.inputBarHeight,
-          onCancel: _controller.cancelUserMessageEdit,
-          onSaveOnly: () {
-            unawaited(_controller.saveUserMessageEditOnly());
-          },
-          onPreviewTap: _controller.focusUserMessageEditInput,
-        ),
-        UserMessageEditOverlay(
-          visible: queuedEdit != null && !_controller.selecting,
-          previewText: queuedEdit?.previewText ?? '',
-          topInset: _chatTopOverlayInset(context),
-          bottomInset: _controller.inputBarHeight,
-          onCancel: _controller.cancelQueuedMessageEdit,
-          onSaveOnly: _controller.saveQueuedMessageEditOnly,
-          onPreviewTap: _controller.focusUserMessageEditInput,
+        ValueListenableBuilder<double>(
+          valueListenable: _controller.inputBarHeightListenable,
+          builder: (context, inputBarHeight, _) => Stack(
+            fit: StackFit.expand,
+            children: [
+              UserMessageEditOverlay(
+                visible: editState != null && !_controller.selecting,
+                previewText: editState?.previewText ?? '',
+                topInset: _chatTopOverlayInset(context),
+                bottomInset: inputBarHeight,
+                onCancel: _controller.cancelUserMessageEdit,
+                onSaveOnly: () {
+                  unawaited(_controller.saveUserMessageEditOnly());
+                },
+                onPreviewTap: _controller.focusUserMessageEditInput,
+              ),
+              UserMessageEditOverlay(
+                visible: queuedEdit != null && !_controller.selecting,
+                previewText: queuedEdit?.previewText ?? '',
+                topInset: _chatTopOverlayInset(context),
+                bottomInset: inputBarHeight,
+                onCancel: _controller.cancelQueuedMessageEdit,
+                onSaveOnly: _controller.saveQueuedMessageEditOnly,
+                onPreviewTap: _controller.focusUserMessageEditInput,
+              ),
+            ],
+          ),
         ),
       ],
     );

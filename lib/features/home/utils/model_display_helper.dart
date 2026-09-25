@@ -134,18 +134,3 @@ ModelDisplayInfo getModelDisplayInfo(
   conversation: conversation,
   assistant: assistant,
 );
-
-/// Gets the ProviderConfig for the active model.
-ProviderConfig? getActiveProviderConfig(
-  SettingsProvider settings, {
-  Conversation? conversation,
-  Assistant? assistant,
-}) {
-  final providerKey = resolveChatModel(
-    settings,
-    conversation: conversation,
-    assistant: assistant,
-  ).providerKey;
-  if (providerKey == null) return null;
-  return settings.getProviderConfig(providerKey);
-}
