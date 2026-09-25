@@ -26,7 +26,6 @@ import 'package:Kelivo/shared/widgets/ios_tactile.dart';
 import 'package:Kelivo/shared/widgets/ios_tile_button.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
-import 'package:Kelivo/utils/mcp_structured_image.dart';
 
 import 'chat_surface.dart';
 
@@ -134,18 +133,6 @@ IconData workspaceFileTypeIcon(String path) {
   if (_kTextExtensions.contains(ext)) return Lucide.FileText;
   if (_kSpreadsheetExtensions.contains(ext)) return Lucide.FileSpreadsheet;
   return Lucide.File;
-}
-
-bool workspaceReadWasImage({
-  required WorkspaceToolPart part,
-  WorkspaceToolMetadata? meta,
-}) {
-  final raw = part.metadata;
-  if (raw != null && raw[kMcpResultMetadataKey] != null) return true;
-  final content = part.content ?? '';
-  if (content.contains('![](') || content.contains('![')) return true;
-  final path = meta?.path ?? (part.arguments['path'] ?? '').toString();
-  return isWorkspaceImagePath(path);
 }
 
 String workspaceToolTitle(AppLocalizations l10n, String toolName) {

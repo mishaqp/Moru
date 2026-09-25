@@ -200,7 +200,6 @@ class _IndexedScrollActivity extends ScrollActivity {
 class ChatScrollController {
   ChatScrollController({
     required this._scrollController,
-    required this._onStateChanged,
     required this._getAutoScrollEnabled,
     required this._getAutoScrollIdleSeconds,
     this._getTopRevealInset,
@@ -224,7 +223,6 @@ class ChatScrollController {
   }
 
   final ScrollController _scrollController;
-  final VoidCallback _onStateChanged;
   final bool Function() _getAutoScrollEnabled;
   final int Function() _getAutoScrollIdleSeconds;
   final double Function()? _getTopRevealInset;
@@ -237,13 +235,11 @@ class ChatScrollController {
   // State Fields
   // ============================================================================
 
-  /// Whether to show the jump-to-bottom button.
-  bool _showJumpToBottom = false;
-  bool get showJumpToBottom => _showJumpToBottom;
-
-  /// Whether the navigation buttons should be visible (based on scroll activity).
-  bool _showNavButtons = false;
-  bool get showNavButtons => _showNavButtons;
+  /// Whether the navigation buttons should be visible (based on scroll
+  /// activity). Only the buttons listen: a whole-page rebuild at the start of
+  /// every scroll gesture made the chat stutter.
+  final ValueNotifier<bool> navButtonsVisible = ValueNotifier<bool>(false);
+  bool get showNavButtons => navButtonsVisible.value;
 
   /// Timer for auto-hiding navigation buttons.
   Timer? _navButtonsHideTimer;
@@ -363,11 +359,6 @@ class ChatScrollController {
       } else if (autoScrollEnabled || _autoStickToBottom) {
         _autoStickToBottom = true;
       }
-      final shouldShow = !atBottom;
-      if (_showJumpToBottom != shouldShow) {
-        _showJumpToBottom = shouldShow;
-        _onStateChanged();
-      }
     } catch (_) {}
   }
 
@@ -378,17 +369,13 @@ class ChatScrollController {
     _isUserScrolling = true;
     _autoStickToBottom = false;
     _lastJumpUserMessageId = null;
-    if (!_showNavButtons) {
-      _showNavButtons = true;
-      _onStateChanged();
-    }
+    navButtonsVisible.value = true;
     _resetNavButtonsHideTimer();
     _userScrollTimer?.cancel();
     final secs = _getAutoScrollIdleSeconds();
     _userScrollTimer = Timer(Duration(seconds: secs), () {
       _isUserScrolling = false;
       refreshAutoStickToBottom();
-      _onStateChanged();
     });
   }
 
@@ -397,31 +384,14 @@ class ChatScrollController {
     _navButtonsHideTimer?.cancel();
     _navButtonsHideTimer = Timer(
       const Duration(milliseconds: _navButtonsHideDelayMs),
-      () {
-        if (_showNavButtons) {
-          _showNavButtons = false;
-          _onStateChanged();
-        }
-      },
+      () => navButtonsVisible.value = false,
     );
   }
 
   /// Show navigation buttons manually (e.g., when user taps a button).
   void revealNavButtons() {
-    if (!_showNavButtons) {
-      _showNavButtons = true;
-      _onStateChanged();
-    }
+    navButtonsVisible.value = true;
     _resetNavButtonsHideTimer();
-  }
-
-  /// Hide navigation buttons immediately.
-  void hideNavButtons() {
-    _navButtonsHideTimer?.cancel();
-    if (_showNavButtons) {
-      _showNavButtons = false;
-      _onStateChanged();
-    }
   }
 
   // ============================================================================
@@ -649,7 +619,6 @@ class ChatScrollController {
         final lastIndex = _messageListController.numberOfItems - 1;
         final target = pos.maxScrollExtent;
         if ((target - pos.pixels).abs() <= 0.5) {
-          _updateJumpToBottomVisibility(false);
           _autoStickToBottom = true;
           return;
         }
@@ -667,7 +636,6 @@ class ChatScrollController {
             }
           }
           if (request != _bottomScrollRequest) return;
-          _updateJumpToBottomVisibility(false);
           _autoStickToBottom = true;
           return;
         }
@@ -704,7 +672,6 @@ class ChatScrollController {
           await WidgetsBinding.instance.endOfFrame;
         }
         if (request != _bottomScrollRequest) return;
-        _updateJumpToBottomVisibility(false);
         _autoStickToBottom = true;
         return;
       }
@@ -738,16 +705,8 @@ class ChatScrollController {
       }
 
       if (request != _bottomScrollRequest) return;
-      _updateJumpToBottomVisibility(false);
       _autoStickToBottom = true;
     } catch (_) {}
-  }
-
-  void _updateJumpToBottomVisibility(bool show) {
-    if (_showJumpToBottom != show) {
-      _showJumpToBottom = show;
-      _onStateChanged();
-    }
   }
 
   // ============================================================================
@@ -1160,5 +1119,6 @@ class ChatScrollController {
     _bottomHoldTimer?.cancel();
     _cancelIndexedNavigation();
     _messageListController.dispose();
+    navButtonsVisible.dispose();
   }
 }

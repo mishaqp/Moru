@@ -51,7 +51,9 @@ void main() {
         ),
       );
 
-      final list = tester.widget<SuperListView>(find.byType(SuperListView));
+      final list = tester.widget<CustomScrollView>(
+        find.byType(CustomScrollView),
+      );
       final desktop =
           platform == TargetPlatform.macOS ||
           platform == TargetPlatform.windows ||
@@ -65,7 +67,7 @@ void main() {
       expect(find.byType(Scrollbar), desktop ? findsOneWidget : findsNothing);
 
       if (desktop) {
-        await tester.tap(find.byType(SuperListView));
+        await tester.tap(find.byType(CustomScrollView));
         await tester.sendKeyDownEvent(LogicalKeyboardKey.pageUp);
         await tester.sendKeyUpEvent(LogicalKeyboardKey.pageUp);
         await tester.pump();

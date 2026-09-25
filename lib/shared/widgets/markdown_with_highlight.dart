@@ -5423,30 +5423,6 @@ class LatexBlockScrollableMd extends BlockMd {
   }
 }
 
-/// Inline LaTeX `$...$` rendered in the text flow.
-class InlineLatexScrollableMd extends InlineMd {
-  @override
-  // Match single-dollar $...$ or \(...\) inline math (avoid $$ block)
-  RegExp get exp => RegExp(
-    r"(?:(?<!\$)\$([^\$\n]{1,"
-    "$_maxInlineMathBodyLength"
-    r"})\$(?!\$)|\\\(([^\n]{1,"
-    "$_maxInlineMathBodyLength"
-    r"}?)\\\))",
-  );
-
-  @override
-  InlineSpan span(BuildContext context, String text, GptMarkdownConfig config) {
-    final m = exp.firstMatch(text);
-    if (m == null) return TextSpan(text: text, style: config.style);
-    final body = ((m.group(1) ?? m.group(2) ?? '')).trim();
-    if (body.isEmpty) return TextSpan(text: text, style: config.style);
-    final math = _renderMath(body, style: _inlineMathTextStyle(config.style));
-    return _inlineMathSpan(math);
-  }
-}
-
-/// Inline LaTeX for dollar delimiters only: `$...$`
 class InlineLatexDollarScrollableMd extends InlineMd {
   @override
   RegExp get exp => RegExp(
@@ -5609,40 +5585,6 @@ class AtxHeadingMd extends BlockMd {
   }
 }
 
-// Setext-style headings (underlines with === or ---)
-class SetextHeadingMd extends BlockMd {
-  @override
-  String get expString => (r"^(.+?)\n(=+|-+)\s*$");
-
-  @override
-  Widget build(BuildContext context, String text, GptMarkdownConfig config) {
-    final m = exp.firstMatch(text.trimRight());
-    if (m == null) return const SizedBox.shrink();
-    final title = (m.group(1) ?? '').trim();
-    final underline = (m.group(2) ?? '').trim();
-    final level = underline.startsWith('=') ? 1 : 2;
-
-    final innerCfg = config.copyWith(style: TextStyle());
-    final inner = TextSpan(
-      children: MarkdownComponent.generate(context, title, innerCfg, true),
-    );
-    final style = AtxHeadingMd()._headingTextStyle(context, config, level);
-    // Match the tighter spacing used in ATX headings
-    final top = level == 1 ? 10.0 : 9.0;
-    final bottom = 6.0;
-
-    return Padding(
-      padding: EdgeInsets.only(top: top, bottom: bottom),
-      child: DefaultTextStyle.merge(
-        // Use selection-aware renderer from config so headings can be selected/copied
-        style: style,
-        child: config.getRich(inner),
-      ),
-    );
-  }
-}
-
-// Label-value strong lines like "**作者:** 张三" should not render as heading-sized text
 class LabelValueLineMd extends InlineMd {
   @override
   // Treat this as an inline transform so it only affects the matched

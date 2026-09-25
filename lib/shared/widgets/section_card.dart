@@ -13,14 +13,6 @@ Color sheetTileColor(BuildContext context) {
   return layered ? context.appColors.surfaceCardFill : Colors.transparent;
 }
 
-bool showSheetTileDividers(BuildContext context) {
-  try {
-    return context.watch<SettingsProvider>().useLayeredSheetTiles;
-  } catch (_) {
-    return false;
-  }
-}
-
 enum SectionCardVariant { standard, emphasized }
 
 /// Shared iOS-style section card: one step above the page surface.

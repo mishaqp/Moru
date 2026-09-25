@@ -12,7 +12,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
       );
@@ -61,7 +60,6 @@ void main() {
       final nextController = ChatAutoFollowScrollController();
       final nextChatController = ChatScrollController(
         scrollController: nextController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
       );
@@ -110,7 +108,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
       );
@@ -147,7 +144,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
       );
@@ -197,7 +193,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
       );
@@ -245,7 +240,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
       );
@@ -284,7 +278,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => true,
         getAutoScrollIdleSeconds: () => 8,
         isGenerating: () => true,
@@ -331,7 +324,6 @@ void main() {
         final scrollController = ChatAutoFollowScrollController();
         final chatScrollController = ChatScrollController(
           scrollController: scrollController,
-          onStateChanged: () {},
           getAutoScrollEnabled: () => true,
           getAutoScrollIdleSeconds: () => 8,
           isGenerating: () => generating,
@@ -378,7 +370,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => true,
         getAutoScrollIdleSeconds: () => 8,
         isGenerating: () => generating,
@@ -420,7 +411,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => true,
         getAutoScrollIdleSeconds: () => 8,
         isGenerating: () => true,
@@ -468,7 +458,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
       );
@@ -494,7 +483,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => autoScrollEnabled,
         getAutoScrollIdleSeconds: () => 8,
         isGenerating: () => true,
@@ -535,7 +523,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => autoScrollEnabled,
         getAutoScrollIdleSeconds: () => 8,
         isGenerating: () => true,
@@ -571,7 +558,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => true,
         getAutoScrollIdleSeconds: () => 8,
         isGenerating: () => false,
@@ -609,7 +595,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => true,
         getAutoScrollIdleSeconds: () => 8,
         isGenerating: () => true,
@@ -668,7 +653,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => true,
         getAutoScrollIdleSeconds: () => 8,
         isGenerating: () => true,
@@ -714,7 +698,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
       );
@@ -749,7 +732,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => true,
         getAutoScrollIdleSeconds: () => 8,
         isGenerating: () => true,
@@ -798,7 +780,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
         getTopRevealInset: () => 100,
@@ -893,7 +874,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
         getTopRevealInset: () => 100,
@@ -969,7 +949,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
       );
@@ -1011,7 +990,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
       );
@@ -1053,7 +1031,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
       );
@@ -1099,7 +1076,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
       );
@@ -1143,7 +1119,6 @@ void main() {
         final scrollController = ChatAutoFollowScrollController();
         final chatScrollController = ChatScrollController(
           scrollController: scrollController,
-          onStateChanged: () {},
           getAutoScrollEnabled: () => false,
           getAutoScrollIdleSeconds: () => 8,
           getTopRevealInset: () => 100,
@@ -1188,7 +1163,6 @@ void main() {
         final scrollController = ChatAutoFollowScrollController();
         final chatScrollController = ChatScrollController(
           scrollController: scrollController,
-          onStateChanged: () {},
           getAutoScrollEnabled: () => false,
           getAutoScrollIdleSeconds: () => 8,
         );
@@ -1237,7 +1211,6 @@ void main() {
       final scrollController = ChatAutoFollowScrollController();
       final chatScrollController = ChatScrollController(
         scrollController: scrollController,
-        onStateChanged: () {},
         getAutoScrollEnabled: () => false,
         getAutoScrollIdleSeconds: () => 8,
       );

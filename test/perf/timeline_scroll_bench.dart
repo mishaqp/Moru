@@ -157,7 +157,6 @@ class _HState extends State<_H> {
     super.initState();
     scrollCtrl = scroll_ctrl.ChatScrollController(
       scrollController: scrollController,
-      onStateChanged: () {},
       getAutoScrollEnabled: () => false,
       getAutoScrollIdleSeconds: () => 3,
       isGenerating: () => false,

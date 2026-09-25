@@ -18,10 +18,15 @@ import 'package:Kelivo/features/home/widgets/message_list_view.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+EdgeInsets _listPadding(WidgetTester tester) =>
+    tester.widget<SliverPadding>(find.byType(SliverPadding)).padding
+        as EdgeInsets;
 
 void main() {
   setUp(() {
@@ -137,17 +142,21 @@ void main() {
         ),
       );
 
-      final listView = tester.widget<SuperListView>(find.byType(SuperListView));
+      final listView = tester.widget<CustomScrollView>(
+        find.byType(CustomScrollView),
+      );
       expect(
         listView.keyboardDismissBehavior,
         ScrollViewKeyboardDismissBehavior.manual,
       );
-      expect(listView.delayPopulatingCacheArea, isFalse);
+      expect(
+        tester
+            .widget<SuperSliverList>(find.byType(SuperSliverList))
+            .delayPopulatingCacheArea,
+        isFalse,
+      );
       expect(listView.clipBehavior, Clip.hardEdge);
-      // SuperListView 0.4.1 still forwards this constructor value through the
-      // legacy ScrollView property on current Flutter.
-      // ignore: deprecated_member_use
-      expect(listView.cacheExtent, 600);
+      expect(listView.scrollCacheExtent, const ScrollCacheExtent.pixels(600));
     } finally {
       debugDefaultTargetPlatformOverride = null;
       scrollController.dispose();
@@ -186,7 +195,9 @@ void main() {
         ),
       );
 
-      final listView = tester.widget<SuperListView>(find.byType(SuperListView));
+      final listView = tester.widget<CustomScrollView>(
+        find.byType(CustomScrollView),
+      );
       expect(
         listView.keyboardDismissBehavior,
         ScrollViewKeyboardDismissBehavior.onDrag,
@@ -228,12 +239,94 @@ void main() {
       ),
     );
 
-    final listView = tester.widget<SuperListView>(find.byType(SuperListView));
-    expect((listView.padding as EdgeInsets).bottom, 144);
+    expect(_listPadding(tester).bottom, 144);
 
     scrollController.dispose();
     listController.dispose();
     processingFilesMessageId.dispose();
+  });
+
+  testWidgets('a composer height change re-pads without rebuilding rows', (
+    tester,
+  ) async {
+    final scrollController = ScrollController();
+    final listController = ListController();
+    final processingFilesMessageId = ValueNotifier<String?>(null);
+    final composerHeight = ValueNotifier<double>(100);
+    addTearDown(() {
+      scrollController.dispose();
+      listController.dispose();
+      processingFilesMessageId.dispose();
+      composerHeight.dispose();
+    });
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(
+            value: SettingsProvider(createBusinessTestPreferences()),
+          ),
+          ChangeNotifierProvider.value(
+            value: AssistantProvider(
+              preferences: createBusinessTestPreferences(),
+            ),
+          ),
+          ChangeNotifierProvider.value(
+            value: TtsProvider(preferences: createBusinessTestPreferences()),
+          ),
+          ChangeNotifierProvider.value(
+            value: UserProvider(preferences: createBusinessTestPreferences()),
+          ),
+          ChangeNotifierProvider.value(value: AskUserInteractionService()),
+          ChangeNotifierProvider.value(value: ToolApprovalService()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: MessageListView(
+              scrollController: scrollController,
+              listController: listController,
+              messages: [
+                for (var i = 0; i < 3; i++)
+                  ChatMessage(
+                    id: 'm$i',
+                    role: i.isEven ? 'user' : 'assistant',
+                    content: 'message $i',
+                    conversationId: 'conversation-1',
+                  ),
+              ],
+              byGroup: const {},
+              versionSelections: const {},
+              reasoning: const {},
+              reasoningSegments: const {},
+              contentSplits: const {},
+              toolParts: const {},
+              translations: const {},
+              selecting: false,
+              selectedItems: const {},
+              dividerPadding: EdgeInsets.zero,
+              processingFilesMessageId: processingFilesMessageId,
+              bottomContentPadding: 16,
+              bottomInset: composerHeight,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(_listPadding(tester).bottom, 116);
+    final rowBefore = tester.widget(find.byKey(const ValueKey('m1')));
+
+    composerHeight.value = 160;
+    await tester.pump();
+
+    expect(_listPadding(tester).bottom, 176);
+    // Same widget instance: the row subtree was not rebuilt.
+    expect(
+      identical(tester.widget(find.byKey(const ValueKey('m1'))), rowBefore),
+      isTrue,
+    );
   });
 
   testWidgets('消息列表顶部留白使用传入的导航栏覆盖高度', (tester) async {
@@ -266,9 +359,8 @@ void main() {
       ),
     );
 
-    final listView = tester.widget<SuperListView>(find.byType(SuperListView));
-    expect((listView.padding as EdgeInsets).top, 88);
-    expect((listView.padding as EdgeInsets).bottom, 144);
+    expect(_listPadding(tester).top, 88);
+    expect(_listPadding(tester).bottom, 144);
 
     scrollController.dispose();
     listController.dispose();
@@ -305,8 +397,7 @@ void main() {
       ),
     );
 
-    final listView = tester.widget<SuperListView>(find.byType(SuperListView));
-    expect((listView.padding as EdgeInsets).bottom, 156);
+    expect(_listPadding(tester).bottom, 156);
 
     scrollController.dispose();
     listController.dispose();
@@ -555,7 +646,7 @@ void main() {
     await tester.pump();
 
     final gesture = await tester.startGesture(
-      tester.getCenter(find.byType(SuperListView)),
+      tester.getCenter(find.byType(CustomScrollView)),
     );
     await gesture.moveBy(const Offset(0, 96));
     await tester.pump();
@@ -658,7 +749,7 @@ void main() {
     await tester.pump();
 
     final gesture = await tester.startGesture(
-      tester.getCenter(find.byType(SuperListView)),
+      tester.getCenter(find.byType(CustomScrollView)),
     );
     await gesture.moveBy(const Offset(0, 8));
     await tester.pump();
@@ -763,7 +854,7 @@ void main() {
 
     final pointer = TestPointer(1, PointerDeviceKind.mouse);
     await tester.sendEventToBinding(
-      pointer.hover(tester.getCenter(find.byType(SuperListView))),
+      pointer.hover(tester.getCenter(find.byType(CustomScrollView))),
     );
     await tester.sendEventToBinding(pointer.scroll(const Offset(0, -96)));
     await tester.pump();

@@ -535,7 +535,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    final list = tester.widget<SuperListView>(find.byType(SuperListView));
+    final list = tester.widget<SuperSliverList>(find.byType(SuperSliverList));
     final estimate = list.extentEstimation!(0, 400);
     final measured = tester.getSize(find.byType(ChatMessageWidget)).height;
     final error = (estimate - measured).abs() / measured;
@@ -605,7 +605,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      final list = tester.widget<SuperListView>(find.byType(SuperListView));
+      final list = tester.widget<SuperSliverList>(find.byType(SuperSliverList));
       final estimate = list.extentEstimation!(0, 400);
       final measured = tester.getSize(find.byType(ChatMessageWidget)).height;
       final error = (estimate - measured).abs() / measured;
@@ -679,7 +679,7 @@ void main() {
         reason: 'renderer and projector visible counts must match',
       );
 
-      final list = tester.widget<SuperListView>(find.byType(SuperListView));
+      final list = tester.widget<SuperSliverList>(find.byType(SuperSliverList));
       final estimate = list.extentEstimation!(0, 400);
       final measured = tester.getSize(find.byType(ChatMessageWidget)).height;
       final error = (estimate - measured).abs() / measured;
@@ -764,7 +764,7 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      final list = tester.widget<SuperListView>(find.byType(SuperListView));
+      final list = tester.widget<SuperSliverList>(find.byType(SuperSliverList));
       final estimate = list.extentEstimation!(0, 400);
       final measured = tester.getSize(find.byType(ChatMessageWidget)).height;
       return (estimate, measured);
@@ -836,7 +836,7 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      final list = tester.widget<SuperListView>(find.byType(SuperListView));
+      final list = tester.widget<SuperSliverList>(find.byType(SuperSliverList));
       final measuredSize = tester.getSize(find.byType(ChatMessageWidget));
       final estimate = list.extentEstimation!(0, measuredSize.width);
       return (estimate, measuredSize.height);
@@ -995,8 +995,8 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      final list = tester.widget<SuperListView>(find.byType(SuperListView));
-      final parkedWidth = tester.getSize(find.byType(SuperListView)).width;
+      final list = tester.widget<SuperSliverList>(find.byType(SuperSliverList));
+      final parkedWidth = tester.getSize(find.byType(CustomScrollView)).width;
       final estimate = list.extentEstimation!(history.length, parkedWidth);
       final oneCollapsed = 96 + 2 * 44.0 + 36;
       expect(
@@ -1030,10 +1030,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       final measured = tester.getSize(find.byType(ChatMessageWidget)).height;
-      final isolatedList = tester.widget<SuperListView>(
-        find.byType(SuperListView),
+      final isolatedList = tester.widget<SuperSliverList>(
+        find.byType(SuperSliverList),
       );
-      final isolatedWidth = tester.getSize(find.byType(SuperListView)).width;
+      final isolatedWidth = tester.getSize(find.byType(CustomScrollView)).width;
       final isolatedEstimate = isolatedList.extentEstimation!(0, isolatedWidth);
       final layoutError = (isolatedEstimate - measured).abs() / measured;
       final parkedError =
@@ -1196,7 +1196,7 @@ void main() {
 
     notifier.updateContent('stream-grow', 'Hi.', 1);
     await tester.pump();
-    final list = tester.widget<SuperListView>(find.byType(SuperListView));
+    final list = tester.widget<SuperSliverList>(find.byType(SuperSliverList));
     final short = list.extentEstimation!(0, 400);
 
     notifier.updateContent(
@@ -1429,7 +1429,7 @@ Future<double> _estimateExtent(
     ),
   );
   await tester.pump();
-  final list = tester.widget<SuperListView>(find.byType(SuperListView));
+  final list = tester.widget<SuperSliverList>(find.byType(SuperSliverList));
   return list.extentEstimation!(0, 400);
 }
 
