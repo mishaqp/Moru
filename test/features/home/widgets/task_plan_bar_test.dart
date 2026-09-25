@@ -48,7 +48,10 @@ void main() {
           home: const Scaffold(
             body: Align(
               alignment: Alignment.bottomCenter,
-              child: ComposerStatusStrip(conversationId: 'c1'),
+              child: ComposerStatusStrip(
+                conversationId: 'c1',
+                generating: true,
+              ),
             ),
           ),
         ),
@@ -88,6 +91,36 @@ void main() {
     expect(find.byKey(TaskPlanChip.toggleKey), findsNothing);
   });
 
+  testWidgets('a plan left open is hidden once the reply ends', (tester) async {
+    final plans = TaskPlanRegistry()
+      ..set('c1', _plan([('Build', 'completed'), ('Retest', 'in_progress')]));
+    Widget strip({required bool generating}) => ChangeNotifierProvider.value(
+      value: plans,
+      child: MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.bottomCenter,
+            child: ComposerStatusStrip(
+              conversationId: 'c1',
+              generating: generating,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(strip(generating: true));
+    await tester.pumpAndSettle();
+    expect(find.text('Plan · 1/2'), findsOneWidget);
+
+    await tester.pumpWidget(strip(generating: false));
+    await tester.pumpAndSettle();
+    expect(find.byKey(TaskPlanChip.toggleKey), findsNothing);
+  });
+
   testWidgets('plan and running command share one row', (tester) async {
     final plans = TaskPlanRegistry()
       ..set('c1', _plan([('Serve', 'in_progress'), ('Check', 'pending')]));
@@ -111,7 +144,10 @@ void main() {
           home: const Scaffold(
             body: Align(
               alignment: Alignment.bottomCenter,
-              child: ComposerStatusStrip(conversationId: 'c1'),
+              child: ComposerStatusStrip(
+                conversationId: 'c1',
+                generating: true,
+              ),
             ),
           ),
         ),

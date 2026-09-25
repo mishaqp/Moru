@@ -39,7 +39,10 @@ Widget _host({
       home: Scaffold(
         body: Align(
           alignment: Alignment.bottomCenter,
-          child: ComposerStatusStrip(conversationId: conversationId),
+          child: ComposerStatusStrip(
+            conversationId: conversationId,
+            generating: false,
+          ),
         ),
       ),
     ),
