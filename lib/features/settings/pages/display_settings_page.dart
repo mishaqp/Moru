@@ -1478,7 +1478,7 @@ class ChatItemDisplaySettingsPage extends StatelessWidget {
               _iosDivider(context),
               _iosSwitchRow(
                 context,
-                icon: Lucide.MessageCircle,
+                icon: Lucide.IdCard,
                 label: l10n.displaySettingsPageShowUserNameTitle,
                 value: sp.showUserName,
                 onChanged: (v) =>
@@ -1515,7 +1515,7 @@ class ChatItemDisplaySettingsPage extends StatelessWidget {
               _iosDivider(context),
               _iosSwitchRow(
                 context,
-                icon: Lucide.Bot,
+                icon: Lucide.PanelTop,
                 label: l10n.displaySettingsPageUseNewAssistantAvatarUxTitle,
                 value: sp.useNewAssistantAvatarUx,
                 onChanged: (v) => context
@@ -1525,7 +1525,7 @@ class ChatItemDisplaySettingsPage extends StatelessWidget {
               _iosDivider(context),
               _iosSwitchRow(
                 context,
-                icon: Lucide.MessageSquare,
+                icon: Lucide.Tag,
                 label: l10n.displaySettingsPageShowModelNameTitle,
                 value: sp.showModelName,
                 onChanged: (v) =>
@@ -1553,7 +1553,7 @@ class ChatItemDisplaySettingsPage extends StatelessWidget {
               _iosDivider(context),
               _iosSwitchRow(
                 context,
-                icon: Lucide.Type,
+                icon: Lucide.Gauge,
                 label: l10n.displaySettingsPageShowTokenStatsTitle,
                 value: sp.showTokenStats,
                 onChanged: (v) =>

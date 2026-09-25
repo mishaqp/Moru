@@ -210,6 +210,42 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  test('groups edits of one file into one diff without repeated headers', () {
+    const header = '--- a/a.dart\n+++ b/a.dart\n';
+    final files = groupReplyFileEdits(const [
+      ReplyFileEdit(
+        path: 'a.dart',
+        diff: '$header@@ -1 +1 @@\n-old\n+new\n',
+        added: 1,
+        removed: 1,
+        truncated: false,
+      ),
+      ReplyFileEdit(
+        path: 'b.dart',
+        diff: '--- a/b.dart\n+++ b/b.dart\n@@ -1 +1 @@\n+b\n',
+        added: 1,
+        removed: 0,
+        truncated: false,
+      ),
+      ReplyFileEdit(
+        path: 'a.dart',
+        diff: '$header@@ -9 +9 @@\n--- removed sql comment\n+tail\n',
+        added: 1,
+        removed: 1,
+        truncated: true,
+      ),
+    ]);
+
+    expect(files.map((f) => f.path), ['a.dart', 'b.dart']);
+    final a = files.first;
+    expect(
+      a.diff,
+      '$header@@ -1 +1 @@\n-old\n+new\n'
+      '@@ -9 +9 @@\n--- removed sql comment\n+tail',
+    );
+    expect((a.added, a.removed, a.truncated), (2, 2, true));
+  });
+
   testWidgets('sums the reply edits and opens every diff', (tester) async {
     WorkspaceToolPart edit(
       String id,
@@ -276,7 +312,8 @@ void main() {
 
     await tester.tap(summary);
     await tester.pumpAndSettle();
-    expect(find.byType(UnifiedDiffView), findsNWidgets(3));
+    // One block per file, not per edit.
+    expect(find.byType(UnifiedDiffView), findsNWidgets(2));
     expect(tester.takeException(), isNull);
   });
 }

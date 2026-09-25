@@ -7,8 +7,12 @@ import 'package:path/path.dart' as p;
 class FileSnapshot {
   static const int defaultMaxEntries = 20000;
 
-  /// Returns host path → mtime milliseconds. Skips dot-directories and
-  /// `.l2s.*` overlay files. Caps at [maxEntries].
+  /// Tool caches, not outputs: `python3 -m unittest` leaves `.pyc` files and
+  /// `npm install` tens of thousands of packages the reply never wrote.
+  static const Set<String> skippedDirectories = {'__pycache__', 'node_modules'};
+
+  /// Returns host path → mtime milliseconds. Skips dot-directories,
+  /// [skippedDirectories] and `.l2s.*` overlay files. Caps at [maxEntries].
   static Future<Map<String, int>> snapshot(
     List<Directory> roots, {
     int maxEntries = defaultMaxEntries,
@@ -48,7 +52,9 @@ class FileSnapshot {
       final name = p.basename(entity.path);
       if (name.startsWith('.l2s.')) continue;
       if (entity is Directory) {
-        if (name.startsWith('.')) continue;
+        if (name.startsWith('.') || skippedDirectories.contains(name)) {
+          continue;
+        }
         await _walk(entity, out, maxEntries);
         continue;
       }

@@ -38,7 +38,9 @@ class UnifiedDiff {
       if (op.tag == '-') removed++;
     }
 
-    final header = '--- a/$path\n+++ b/$path\n';
+    // `a/` + an absolute path would read `a//workspace/...`.
+    final shown = path.replaceFirst(RegExp(r'^/+'), '');
+    final header = '--- a/$shown\n+++ b/$shown\n';
     if (added == 0 && removed == 0) {
       return UnifiedDiff(text: header, added: 0, removed: 0, truncated: false);
     }

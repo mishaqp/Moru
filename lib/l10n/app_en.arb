@@ -4983,7 +4983,7 @@
   "workspaceToolRelatedFiles": "Related files",
   "workspaceToolFilesTruncated": "Only some files are listed.",
   "displaySettingsPageShowProducedFilesTitle": "Show Files Below Replies",
-  "displaySettingsPageShowProducedFilesSubtitle": "Show files created or modified by tools below replies.",
+  "displaySettingsPageShowProducedFilesSubtitle": "Show files created or modified by tools below replies, with a summary of the edits that opens every diff.",
   "reasoningBudgetSliderLow": "Low",
   "reasoningBudgetSliderMedium": "Medium",
   "reasoningBudgetSliderHigh": "High",

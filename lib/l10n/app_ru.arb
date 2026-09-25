@@ -4952,7 +4952,7 @@
   "workspaceToolRelatedFiles": "Связанные файлы",
   "workspaceToolFilesTruncated": "Показана только часть файлов.",
   "displaySettingsPageShowProducedFilesTitle": "Показывать файлы под ответами",
-  "displaySettingsPageShowProducedFilesSubtitle": "Показывать файлы, созданные или изменённые инструментами, под ответами.",
+  "displaySettingsPageShowProducedFilesSubtitle": "Показывать под ответами файлы, созданные или изменённые инструментами, и сводку правок, открывающую все изменения.",
   "reasoningBudgetSliderLow": "Низкий",
   "reasoningBudgetSliderMedium": "Средний",
   "reasoningBudgetSliderHigh": "Высокий",

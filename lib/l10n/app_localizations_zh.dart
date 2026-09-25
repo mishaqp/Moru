@@ -10476,7 +10476,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get displaySettingsPageShowProducedFilesSubtitle =>
-      '在回复底部显示工具创建或修改的文件。';
+      '在回复下方显示工具创建或修改的文件，以及可查看全部差异的修改摘要。';
 
   @override
   String get reasoningBudgetSliderLow => 'Low';
@@ -22500,7 +22500,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageShowProducedFilesSubtitle =>
-      '在回复底部显示工具创建或修改的文件。';
+      '在回复下方显示工具创建或修改的文件，以及可查看全部差异的修改摘要。';
 
   @override
   String get reasoningBudgetSliderLow => 'Low';
@@ -34601,7 +34601,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageShowProducedFilesSubtitle =>
-      '在回覆底部顯示工具建立或修改的檔案。';
+      '在回覆下方顯示工具建立或修改的檔案，以及可檢視全部差異的修改摘要。';
 
   @override
   String get reasoningBudgetSliderLow => 'Low';

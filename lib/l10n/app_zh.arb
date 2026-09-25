@@ -3994,7 +3994,7 @@
   "workspaceToolRelatedFiles": "相关文件",
   "workspaceToolFilesTruncated": "仅列出部分文件。",
   "displaySettingsPageShowProducedFilesTitle": "显示回复底部文件卡片",
-  "displaySettingsPageShowProducedFilesSubtitle": "在回复底部显示工具创建或修改的文件。",
+  "displaySettingsPageShowProducedFilesSubtitle": "在回复下方显示工具创建或修改的文件，以及可查看全部差异的修改摘要。",
   "reasoningBudgetSliderLow": "Low",
   "reasoningBudgetSliderMedium": "Medium",
   "reasoningBudgetSliderHigh": "High",
