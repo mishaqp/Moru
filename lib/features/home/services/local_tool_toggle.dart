@@ -83,7 +83,9 @@ Future<void> setLocalToolEnabled(
   }
 
   if ((toolId == LocalToolNames.calendarQuery ||
-          toolId == LocalToolNames.calendarCreate) &&
+          toolId == LocalToolNames.calendarCreate ||
+          toolId == LocalToolNames.calendarUpdate ||
+          toolId == LocalToolNames.calendarDelete) &&
       DeviceLocalTools.calendarSupported) {
     final granted = await DeviceLocalTools.hasCalendarPermission();
     if (!granted) {

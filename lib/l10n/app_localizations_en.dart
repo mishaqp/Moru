@@ -6056,6 +6056,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Create calendar events on this device with your confirmation, requires the calendar permission.';
 
   @override
+  String get assistantEditLocalToolCalendarUpdateTitle => 'Edit Event';
+
+  @override
+  String get assistantEditLocalToolCalendarUpdateSubtitle =>
+      'Change the time, title, place or reminders of calendar events with your confirmation, requires the calendar permission.';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteTitle => 'Delete Event';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteSubtitle =>
+      'Delete calendar events with your confirmation, requires the calendar permission.';
+
+  @override
   String get assistantEditLocalToolLocationTitle => 'Current Location';
 
   @override

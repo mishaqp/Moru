@@ -5821,6 +5821,20 @@ class AppLocalizationsZh extends AppLocalizations {
       '在你确认后于本设备创建日历日程，需要授予日历权限。';
 
   @override
+  String get assistantEditLocalToolCalendarUpdateTitle => '修改日程';
+
+  @override
+  String get assistantEditLocalToolCalendarUpdateSubtitle =>
+      '在你确认后修改日历日程的时间、标题、地点或提醒，需要授予日历权限。';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteTitle => '删除日程';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteSubtitle =>
+      '在你确认后删除日历日程，需要授予日历权限。';
+
+  @override
   String get assistantEditLocalToolLocationTitle => '当前位置';
 
   @override
@@ -17843,6 +17857,20 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get assistantEditLocalToolCalendarCreateSubtitle =>
       '在你确认后于本设备创建日历日程，需要授予日历权限。';
+
+  @override
+  String get assistantEditLocalToolCalendarUpdateTitle => '修改日程';
+
+  @override
+  String get assistantEditLocalToolCalendarUpdateSubtitle =>
+      '在你确认后修改日历日程的时间、标题、地点或提醒，需要授予日历权限。';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteTitle => '删除日程';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteSubtitle =>
+      '在你确认后删除日历日程，需要授予日历权限。';
 
   @override
   String get assistantEditLocalToolLocationTitle => '当前位置';
@@ -29942,6 +29970,20 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get assistantEditLocalToolCalendarCreateSubtitle =>
       '在你確認後於本裝置建立日曆行程，需要授予日曆權限。';
+
+  @override
+  String get assistantEditLocalToolCalendarUpdateTitle => '修改行程';
+
+  @override
+  String get assistantEditLocalToolCalendarUpdateSubtitle =>
+      '在你確認後修改日曆行程的時間、標題、地點或提醒，需要授予日曆權限。';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteTitle => '刪除行程';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteSubtitle =>
+      '在你確認後刪除日曆行程，需要授予日曆權限。';
 
   @override
   String get assistantEditLocalToolLocationTitle => '目前位置';

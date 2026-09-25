@@ -6140,6 +6140,20 @@ class AppLocalizationsRu extends AppLocalizations {
       'Создавать события календаря с вашим подтверждением. Требуется разрешение на доступ к календарю.';
 
   @override
+  String get assistantEditLocalToolCalendarUpdateTitle => 'Изменить событие';
+
+  @override
+  String get assistantEditLocalToolCalendarUpdateSubtitle =>
+      'Менять время, название, место и напоминания событий календаря с вашим подтверждением. Требуется разрешение на доступ к календарю.';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteTitle => 'Удалить событие';
+
+  @override
+  String get assistantEditLocalToolCalendarDeleteSubtitle =>
+      'Удалять события календаря с вашим подтверждением. Требуется разрешение на доступ к календарю.';
+
+  @override
   String get assistantEditLocalToolLocationTitle => 'Текущее местоположение';
 
   @override

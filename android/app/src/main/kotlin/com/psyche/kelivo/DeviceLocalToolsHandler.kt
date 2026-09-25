@@ -22,6 +22,7 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 import org.json.JSONArray
 import org.json.JSONObject
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -141,6 +142,14 @@ class DeviceLocalToolsHandler(private val context: Context) {
                     arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR),
                     result,
                 ) { runAsync(result) { createCalendarEvent(JSONObject(argsJson)) } }
+                "updateCalendarEvent" -> withCalendarPermission(
+                    arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR),
+                    result,
+                ) { runAsync(result) { updateCalendarEvent(JSONObject(argsJson)) } }
+                "deleteCalendarEvent" -> withCalendarPermission(
+                    arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR),
+                    result,
+                ) { runAsync(result) { deleteCalendarEvent(JSONObject(argsJson)) } }
                 else -> result.notImplemented()
             }
         }
@@ -500,6 +509,7 @@ class DeviceLocalToolsHandler(private val context: Context) {
         val limit = params.optString("limit").toIntOrNull()?.coerceIn(1, 100)
             ?: params.optInt("limit", 20).coerceIn(1, 100)
         val query = params.optString("query").takeIf { it.isNotBlank() }
+        val calendarFilter = optLong(params, "calendar_id")
 
         val now = ZonedDateTime.now()
         val zone = now.zone
@@ -547,17 +557,26 @@ class DeviceLocalToolsHandler(private val context: Context) {
             CalendarContract.Instances.END,
             CalendarContract.Instances.ALL_DAY,
             CalendarContract.Instances.CALENDAR_DISPLAY_NAME,
+            CalendarContract.Instances.CALENDAR_ID,
         )
-        // Escape LIKE wildcards so the keyword is matched literally as a
-        // substring (e.g. searching "100%" must not act as a wildcard).
-        val selection = if (query != null) "${CalendarContract.Instances.TITLE} LIKE ? ESCAPE '\\'" else null
-        val selectionArgs = if (query != null) {
+        val clauses = mutableListOf<String>()
+        val args = mutableListOf<String>()
+        if (query != null) {
+            // Escape LIKE wildcards so the keyword is matched literally as a
+            // substring (e.g. searching "100%" must not act as a wildcard).
+            clauses.add("${CalendarContract.Instances.TITLE} LIKE ? ESCAPE '\\'")
             val escaped = query
                 .replace("\\", "\\\\")
                 .replace("%", "\\%")
                 .replace("_", "\\_")
-            arrayOf("%$escaped%")
-        } else null
+            args.add("%$escaped%")
+        }
+        if (calendarFilter != null) {
+            clauses.add("${CalendarContract.Instances.CALENDAR_ID} = ?")
+            args.add(calendarFilter.toString())
+        }
+        val selection = clauses.takeIf { it.isNotEmpty() }?.joinToString(" AND ")
+        val selectionArgs = args.takeIf { it.isNotEmpty() }?.toTypedArray()
 
         val uri = CalendarContract.Instances.CONTENT_URI.buildUpon()
             .appendPath(startMs.toString())
@@ -597,17 +616,77 @@ class DeviceLocalToolsHandler(private val context: Context) {
                 }
                 obj.put("all_day", allDay)
                 obj.put("calendar", cursor.getString(7) ?: "")
+                obj.put("calendar_id", cursor.getLong(8))
                 events.put(obj)
                 count++
             }
         }
 
-        return JSONObject()
+        val payload = JSONObject()
             .put("range_start", startTime.withNano(0).toString())
             .put("range_end", endTime.withNano(0).toString())
             .put("count", events.length())
             .put("events", events)
-            .toString()
+        if (params.optBoolean("include_calendars", false)) {
+            payload.put("calendars", listCalendars())
+        }
+        return payload.toString()
+    }
+
+    private fun listCalendars(): JSONArray {
+        val calendars = JSONArray()
+        context.contentResolver.query(
+            CalendarContract.Calendars.CONTENT_URI,
+            arrayOf(
+                CalendarContract.Calendars._ID,
+                CalendarContract.Calendars.CALENDAR_DISPLAY_NAME,
+                CalendarContract.Calendars.ACCOUNT_NAME,
+                CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL,
+                CalendarContract.Calendars.IS_PRIMARY,
+                CalendarContract.Calendars.VISIBLE,
+            ),
+            null,
+            null,
+            "${CalendarContract.Calendars.IS_PRIMARY} DESC, ${CalendarContract.Calendars._ID} ASC",
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                calendars.put(
+                    JSONObject()
+                        .put("id", cursor.getLong(0))
+                        .put("name", cursor.getString(1) ?: "")
+                        .put("account", cursor.getString(2) ?: "")
+                        .put("writable", cursor.getInt(3) >= CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR)
+                        .put("primary", cursor.getInt(4) == 1)
+                        .put("visible", cursor.getInt(5) == 1),
+                )
+            }
+        }
+        return calendars
+    }
+
+    /** A writable calendar with this id, or null. */
+    private fun writableCalendarExists(calendarId: Long): Boolean {
+        context.contentResolver.query(
+            ContentUris.withAppendedId(CalendarContract.Calendars.CONTENT_URI, calendarId),
+            arrayOf(CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            return cursor.moveToFirst() &&
+                cursor.getInt(0) >= CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR
+        }
+        return false
+    }
+
+    /** Reads an integer id that the model may send as a number or a string. */
+    private fun optLong(params: JSONObject, key: String): Long? {
+        val raw = params.opt(key) ?: return null
+        return when (raw) {
+            is Number -> raw.toLong()
+            is String -> raw.trim().toLongOrNull()
+            else -> null
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -639,46 +718,40 @@ class DeviceLocalToolsHandler(private val context: Context) {
         } catch (e: Exception) {
             return errorPayload("INVALID_TIME", e.message ?: "Invalid time format.")
         }
-        if (!startTime.isBefore(endTime)) {
-            return errorPayload("INVALID_RANGE", "end must be later than start.")
-        }
+        val times = eventTimes(startTime, endTime, allDay, zone)
+        if (times is EventTimes.Invalid) return errorPayload("INVALID_RANGE", times.message)
+        times as EventTimes.Valid
 
         val description = params.optString("description")
         val location = params.optString("location")
         val reminderMinutes = parseReminderMinutes(params.opt("reminders"))
 
-        val eventStartMillis: Long
-        val eventEndMillis: Long
-        val eventTimeZone: String
-        if (allDay) {
-            val startDate = startTime.toLocalDate()
-            val endDate = endTime.toLocalDate()
-            if (!startDate.isBefore(endDate)) {
-                return errorPayload("INVALID_RANGE", "all-day event end date must be later than start date.")
+        val requestedCalendar = optLong(params, "calendar_id")
+        val calendarId = if (requestedCalendar != null) {
+            if (!writableCalendarExists(requestedCalendar)) {
+                return errorPayload(
+                    "INVALID_CALENDAR",
+                    "Calendar $requestedCalendar does not exist or is read-only. " +
+                        "Call calendar_query with include_calendars=true to see writable calendars.",
+                )
             }
-            eventStartMillis = startDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-            eventEndMillis = endDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-            eventTimeZone = "UTC"
+            requestedCalendar
         } else {
-            eventStartMillis = startTime.toInstant().toEpochMilli()
-            eventEndMillis = endTime.toInstant().toEpochMilli()
-            eventTimeZone = zone.id
+            getDefaultCalendarId()
+                ?: return errorPayload(
+                    "NO_CALENDAR",
+                    "No calendar account found on this device. Please add a calendar account first.",
+                )
         }
-
-        val calendarId = getDefaultCalendarId()
-            ?: return errorPayload(
-                "NO_CALENDAR",
-                "No calendar account found on this device. Please add a calendar account first.",
-            )
 
         val values = ContentValues().apply {
             put(CalendarContract.Events.CALENDAR_ID, calendarId)
             put(CalendarContract.Events.TITLE, title)
             put(CalendarContract.Events.DESCRIPTION, description)
             put(CalendarContract.Events.EVENT_LOCATION, location)
-            put(CalendarContract.Events.DTSTART, eventStartMillis)
-            put(CalendarContract.Events.DTEND, eventEndMillis)
-            put(CalendarContract.Events.EVENT_TIMEZONE, eventTimeZone)
+            put(CalendarContract.Events.DTSTART, times.startMillis)
+            put(CalendarContract.Events.DTEND, times.endMillis)
+            put(CalendarContract.Events.EVENT_TIMEZONE, times.timeZone)
             if (allDay) {
                 put(CalendarContract.Events.ALL_DAY, 1)
             }
@@ -691,37 +764,248 @@ class DeviceLocalToolsHandler(private val context: Context) {
         val savedReminders = insertReminders(eventId, reminderMinutes)
         if (savedReminders.isNotEmpty()) {
             // 只有提醒真的写进去了才置 HAS_ALARM, 否则事件行会谎称有闹钟.
-            runCatching {
-                context.contentResolver.update(
-                    ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId),
-                    ContentValues().apply { put(CalendarContract.Events.HAS_ALARM, 1) },
-                    null,
-                    null,
-                )
-            }
+            setHasAlarm(eventId, true)
         }
 
         val payload = JSONObject()
             .put("success", true)
             .put("event_id", eventId)
+            .put("calendar_id", calendarId)
             .put("title", title)
             .put("start", startTime.withNano(0).toString())
             .put("end", endTime.withNano(0).toString())
             .put("all_day", allDay)
             .put("location", location)
             .put("reminders", JSONArray(savedReminders))
-        if (savedReminders.size < reminderMinutes.size) {
-            // 事件已经建好了, 但部分/全部提醒被日历账户拒绝; 必须让模型看见,
-            // 否则它会告诉用户提醒已设置.
-            payload
-                .put("reminders_requested", JSONArray(reminderMinutes))
-                .put(
-                    "warning",
-                    "The event was created, but the calendar account rejected some reminders. " +
-                        "Tell the user which reminders were actually saved.",
-                )
+        putReminderWarning(payload, reminderMinutes, savedReminders)
+        return payload.toString()
+    }
+
+    // ---------------------------------------------------------------------
+    // Calendar update / delete
+    // ---------------------------------------------------------------------
+
+    private class StoredEvent(
+        val title: String,
+        val start: ZonedDateTime,
+        val end: ZonedDateTime,
+        val allDay: Boolean,
+        val recurring: Boolean,
+        val writable: Boolean,
+    )
+
+    private fun readEvent(eventId: Long, zone: ZoneId): StoredEvent? {
+        context.contentResolver.query(
+            ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId),
+            arrayOf(
+                CalendarContract.Events.TITLE,
+                CalendarContract.Events.DTSTART,
+                CalendarContract.Events.DTEND,
+                CalendarContract.Events.ALL_DAY,
+                CalendarContract.Events.RRULE,
+                CalendarContract.Events.CALENDAR_ACCESS_LEVEL,
+                CalendarContract.Events.DELETED,
+            ),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (!cursor.moveToFirst() || cursor.getInt(6) == 1) return null
+            val allDay = cursor.getInt(3) == 1
+            fun time(millis: Long): ZonedDateTime = if (allDay) {
+                // All-day rows are stored as UTC midnights.
+                Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().atStartOfDay(zone)
+            } else {
+                Instant.ofEpochMilli(millis).atZone(zone)
+            }
+            val start = time(cursor.getLong(1))
+            val end = if (cursor.isNull(2)) {
+                if (allDay) start.plusDays(1) else start.plusHours(1)
+            } else {
+                time(cursor.getLong(2))
+            }
+            return StoredEvent(
+                title = cursor.getString(0) ?: "",
+                start = start,
+                end = end,
+                allDay = allDay,
+                recurring = !cursor.getString(4).isNullOrBlank(),
+                writable = cursor.getInt(5) >= CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR,
+            )
+        }
+        return null
+    }
+
+    private fun updateCalendarEvent(params: JSONObject): String {
+        val eventId = optLong(params, "event_id")
+            ?: return errorPayload("MISSING_REQUIRED", "'event_id' is required.")
+        val zone = ZoneId.systemDefault()
+        val event = readEvent(eventId, zone)
+            ?: return errorPayload("NOT_FOUND", "Event $eventId was not found.")
+        if (!event.writable) {
+            return errorPayload("READ_ONLY", "Event $eventId is in a read-only calendar.")
+        }
+
+        val startRaw = params.optString("start").takeIf { it.isNotBlank() }
+        val endRaw = params.optString("end").takeIf { it.isNotBlank() }
+        val allDay = if (params.has("all_day")) params.optBoolean("all_day", event.allDay) else event.allDay
+        val timeChanged = startRaw != null || endRaw != null || allDay != event.allDay
+        if (timeChanged && event.recurring) {
+            return errorPayload(
+                "RECURRING_EVENT",
+                "Event $eventId repeats. Only its title, description, location and reminders " +
+                    "can be changed here; ask the user to move a repeating event in their calendar app.",
+            )
+        }
+
+        val values = ContentValues()
+        params.optString("title").takeIf { params.has("title") && it.isNotBlank() }?.let {
+            values.put(CalendarContract.Events.TITLE, it)
+        }
+        if (params.has("description")) {
+            values.put(CalendarContract.Events.DESCRIPTION, params.optString("description"))
+        }
+        if (params.has("location")) {
+            values.put(CalendarContract.Events.EVENT_LOCATION, params.optString("location"))
+        }
+
+        var startTime = event.start
+        var endTime = event.end
+        if (timeChanged) {
+            try {
+                startTime = startRaw?.let { parseTime(it, zone) } ?: event.start
+                endTime = when {
+                    endRaw != null -> parseTime(endRaw, zone)
+                    // Moving the start keeps the event's length.
+                    startRaw != null -> startTime.plus(Duration.between(event.start, event.end))
+                    else -> event.end
+                }
+                if (allDay && !event.allDay && endRaw == null) {
+                    endTime = startTime.toLocalDate().plusDays(1).atStartOfDay(zone)
+                }
+            } catch (e: Exception) {
+                return errorPayload("INVALID_TIME", e.message ?: "Invalid time format.")
+            }
+            val times = eventTimes(startTime, endTime, allDay, zone)
+            if (times is EventTimes.Invalid) return errorPayload("INVALID_RANGE", times.message)
+            times as EventTimes.Valid
+            values.put(CalendarContract.Events.DTSTART, times.startMillis)
+            values.put(CalendarContract.Events.DTEND, times.endMillis)
+            values.put(CalendarContract.Events.EVENT_TIMEZONE, times.timeZone)
+            values.put(CalendarContract.Events.ALL_DAY, if (allDay) 1 else 0)
+        }
+
+        val replaceReminders = params.has("reminders")
+        if (values.size() == 0 && !replaceReminders) {
+            return errorPayload("NOTHING_TO_UPDATE", "Pass at least one field to change.")
+        }
+        val eventUri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId)
+        if (values.size() > 0 && context.contentResolver.update(eventUri, values, null, null) == 0) {
+            return errorPayload("UPDATE_FAILED", "The calendar did not accept the change.")
+        }
+
+        val payload = JSONObject()
+            .put("success", true)
+            .put("event_id", eventId)
+            .put("title", values.getAsString(CalendarContract.Events.TITLE) ?: event.title)
+            .put("start", startTime.withNano(0).toString())
+            .put("end", endTime.withNano(0).toString())
+            .put("all_day", allDay)
+        if (replaceReminders) {
+            val requested = parseReminderMinutes(params.opt("reminders"))
+            context.contentResolver.delete(
+                CalendarContract.Reminders.CONTENT_URI,
+                "${CalendarContract.Reminders.EVENT_ID} = ?",
+                arrayOf(eventId.toString()),
+            )
+            val saved = insertReminders(eventId, requested)
+            setHasAlarm(eventId, saved.isNotEmpty())
+            payload.put("reminders", JSONArray(saved))
+            putReminderWarning(payload, requested, saved)
         }
         return payload.toString()
+    }
+
+    private fun deleteCalendarEvent(params: JSONObject): String {
+        val eventId = optLong(params, "event_id")
+            ?: return errorPayload("MISSING_REQUIRED", "'event_id' is required.")
+        val event = readEvent(eventId, ZoneId.systemDefault())
+            ?: return errorPayload("NOT_FOUND", "Event $eventId was not found.")
+        if (!event.writable) {
+            return errorPayload("READ_ONLY", "Event $eventId is in a read-only calendar.")
+        }
+        val deleted = context.contentResolver.delete(
+            ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId),
+            null,
+            null,
+        )
+        if (deleted == 0) {
+            return errorPayload("DELETE_FAILED", "The calendar did not delete event $eventId.")
+        }
+        return JSONObject()
+            .put("success", true)
+            .put("event_id", eventId)
+            .put("title", event.title)
+            .put("was_recurring", event.recurring)
+            .toString()
+    }
+
+    private sealed class EventTimes {
+        class Valid(val startMillis: Long, val endMillis: Long, val timeZone: String) : EventTimes()
+        class Invalid(val message: String) : EventTimes()
+    }
+
+    /** Timed events keep the device zone; all-day events are UTC midnights. */
+    private fun eventTimes(
+        startTime: ZonedDateTime,
+        endTime: ZonedDateTime,
+        allDay: Boolean,
+        zone: ZoneId,
+    ): EventTimes {
+        if (!startTime.isBefore(endTime)) {
+            return EventTimes.Invalid("end must be later than start.")
+        }
+        if (!allDay) {
+            return EventTimes.Valid(
+                startTime.toInstant().toEpochMilli(),
+                endTime.toInstant().toEpochMilli(),
+                zone.id,
+            )
+        }
+        val startDate = startTime.toLocalDate()
+        val endDate = endTime.toLocalDate()
+        if (!startDate.isBefore(endDate)) {
+            return EventTimes.Invalid("all-day event end date must be later than start date.")
+        }
+        return EventTimes.Valid(
+            startDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+            endDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+            "UTC",
+        )
+    }
+
+    private fun setHasAlarm(eventId: Long, hasAlarm: Boolean) {
+        runCatching {
+            context.contentResolver.update(
+                ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId),
+                ContentValues().apply { put(CalendarContract.Events.HAS_ALARM, if (hasAlarm) 1 else 0) },
+                null,
+                null,
+            )
+        }
+    }
+
+    private fun putReminderWarning(payload: JSONObject, requested: List<Int>, saved: List<Int>) {
+        if (saved.size >= requested.size) return
+        // 事件已经保存了, 但部分/全部提醒被日历账户拒绝; 必须让模型看见,
+        // 否则它会告诉用户提醒已设置.
+        payload
+            .put("reminders_requested", JSONArray(requested))
+            .put(
+                "warning",
+                "The event was saved, but the calendar account rejected some reminders. " +
+                    "Tell the user which reminders were actually saved.",
+            )
     }
 
     /**

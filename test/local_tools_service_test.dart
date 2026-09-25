@@ -824,6 +824,78 @@ void main() {
       ]);
     });
 
+    test(
+      'Android calendar edit and delete reach the native channel with approval',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        const channel = MethodChannel('app.device_tools');
+        final messenger =
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+        addTearDown(() {
+          debugDefaultTargetPlatformOverride = null;
+          messenger.setMockMethodCallHandler(channel, null);
+        });
+        final calls = <String, Object?>{};
+        messenger.setMockMethodCallHandler(channel, (call) async {
+          calls[call.method] = jsonDecode(call.arguments as String);
+          return '{"success":true}';
+        });
+        const assistant = Assistant(
+          id: 'a1',
+          name: 'Assistant',
+          localToolIds: [
+            LocalToolNames.calendarQuery,
+            LocalToolNames.calendarUpdate,
+            LocalToolNames.calendarDelete,
+          ],
+        );
+
+        expect(
+          LocalToolsService.buildToolDefinitions(
+            assistant: assistant,
+            supportsTools: true,
+          ).map((tool) => tool['function']['name']),
+          [
+            LocalToolNames.browserUse,
+            LocalToolNames.calendarQuery,
+            LocalToolNames.calendarUpdate,
+            LocalToolNames.calendarDelete,
+          ],
+        );
+        for (final name in [
+          LocalToolNames.calendarUpdate,
+          LocalToolNames.calendarDelete,
+        ]) {
+          expect(LocalToolNames.requiresApprovalFor(name, const {}), isTrue);
+        }
+        expect(
+          LocalToolNames.requiresApprovalFor(
+            LocalToolNames.calendarQuery,
+            const {},
+          ),
+          isFalse,
+        );
+
+        await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.calendarUpdate,
+          {'event_id': 7, 'start': '2026-10-01T10:00:00'},
+          assistant,
+        );
+        await LocalToolsService.tryHandleToolCall(
+          LocalToolNames.calendarDelete,
+          {'event_id': 7},
+          assistant,
+        );
+        expect(calls, {
+          'updateCalendarEvent': {
+            'event_id': 7,
+            'start': '2026-10-01T10:00:00',
+          },
+          'deleteCalendarEvent': {'event_id': 7},
+        });
+      },
+    );
+
     test('location is unavailable on desktop platforms', () {
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
       for (final platform in [

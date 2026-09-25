@@ -11085,6 +11085,30 @@ abstract class AppLocalizations {
   /// **'Create calendar events on this device with your confirmation, requires the calendar permission.'**
   String get assistantEditLocalToolCalendarCreateSubtitle;
 
+  /// No description provided for @assistantEditLocalToolCalendarUpdateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Event'**
+  String get assistantEditLocalToolCalendarUpdateTitle;
+
+  /// No description provided for @assistantEditLocalToolCalendarUpdateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change the time, title, place or reminders of calendar events with your confirmation, requires the calendar permission.'**
+  String get assistantEditLocalToolCalendarUpdateSubtitle;
+
+  /// No description provided for @assistantEditLocalToolCalendarDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Event'**
+  String get assistantEditLocalToolCalendarDeleteTitle;
+
+  /// No description provided for @assistantEditLocalToolCalendarDeleteSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete calendar events with your confirmation, requires the calendar permission.'**
+  String get assistantEditLocalToolCalendarDeleteSubtitle;
+
   /// No description provided for @assistantEditLocalToolLocationTitle.
   ///
   /// In en, this message translates to:

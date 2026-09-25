@@ -33,6 +33,12 @@ class _LocalToolsTab extends StatelessWidget {
     final calendarCreateEnabled = assistant.localToolIds.contains(
       LocalToolNames.calendarCreate,
     );
+    final calendarUpdateEnabled = assistant.localToolIds.contains(
+      LocalToolNames.calendarUpdate,
+    );
+    final calendarDeleteEnabled = assistant.localToolIds.contains(
+      LocalToolNames.calendarDelete,
+    );
     final locationEnabled = assistant.localToolIds.contains(
       LocalToolNames.currentLocation,
     );
@@ -135,6 +141,24 @@ class _LocalToolsTab extends StatelessWidget {
                 enabled: calendarCreateEnabled,
                 onChanged: (value) =>
                     toggleTool(LocalToolNames.calendarCreate, value),
+              ),
+              _iosDivider(context),
+              _LocalToolRow(
+                icon: Lucide.CalendarCog,
+                title: l10n.assistantEditLocalToolCalendarUpdateTitle,
+                subtitle: l10n.assistantEditLocalToolCalendarUpdateSubtitle,
+                enabled: calendarUpdateEnabled,
+                onChanged: (value) =>
+                    toggleTool(LocalToolNames.calendarUpdate, value),
+              ),
+              _iosDivider(context),
+              _LocalToolRow(
+                icon: Lucide.CalendarX,
+                title: l10n.assistantEditLocalToolCalendarDeleteTitle,
+                subtitle: l10n.assistantEditLocalToolCalendarDeleteSubtitle,
+                enabled: calendarDeleteEnabled,
+                onChanged: (value) =>
+                    toggleTool(LocalToolNames.calendarDelete, value),
               ),
             ],
             if (DeviceLocalTools.locationSupported) ...[
