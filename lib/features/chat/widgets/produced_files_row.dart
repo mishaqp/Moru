@@ -85,6 +85,39 @@ List<ReplyFileEdit> collectReplyFileEdits(Iterable<WorkspaceToolPart> parts) {
   return edits;
 }
 
+/// [edits] merged per file in order of first edit: one diff whose later
+/// hunks follow the first without repeating the `---`/`+++` file lines.
+List<ReplyFileEdit> groupReplyFileEdits(List<ReplyFileEdit> edits) {
+  final byPath = <String, List<ReplyFileEdit>>{};
+  for (final edit in edits) {
+    (byPath[edit.path] ??= []).add(edit);
+  }
+  return [
+    for (final entry in byPath.entries)
+      ReplyFileEdit(
+        path: entry.key,
+        diff: [
+          entry.value.first.diff.trimRight(),
+          for (final edit in entry.value.skip(1))
+            _withoutFileHeader(edit.diff).trimRight(),
+        ].join('\n'),
+        added: entry.value.fold(0, (sum, edit) => sum + edit.added),
+        removed: entry.value.fold(0, (sum, edit) => sum + edit.removed),
+        truncated: entry.value.any((edit) => edit.truncated),
+      ),
+  ];
+}
+
+String _withoutFileHeader(String diff) {
+  final lines = diff.split('\n');
+  if (lines.length >= 2 &&
+      lines[0].startsWith('--- ') &&
+      lines[1].startsWith('+++ ')) {
+    return lines.skip(2).join('\n');
+  }
+  return diff;
+}
+
 /// Deduped chips / image thumbs for files written or edited in a turn.
 class ProducedFilesRow extends StatelessWidget {
   const ProducedFilesRow({
@@ -237,28 +270,29 @@ class _ReplyEditsSummary extends StatelessWidget {
   Future<void> _open(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
+    final files = groupReplyFileEdits(edits);
     return showCustomBottomSheet<void>(
       context: context,
       title: l10n.workspaceToolChangedFiles,
-      count: {for (final edit in edits) edit.path}.length,
+      count: files.length,
       builder: (context, controller) => ListView.separated(
         controller: controller,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        itemCount: edits.length,
+        itemCount: files.length,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final edit = edits[index];
+          final file = files[index];
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               UnifiedDiffView(
-                diff: edit.diff,
+                diff: file.diff,
                 showHeader: true,
-                fileName: edit.path,
-                added: edit.added,
-                removed: edit.removed,
+                fileName: file.path,
+                added: file.added,
+                removed: file.removed,
               ),
-              if (edit.truncated)
+              if (file.truncated)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(

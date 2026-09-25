@@ -11085,7 +11085,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get displaySettingsPageShowProducedFilesSubtitle =>
-      'Показывать файлы, созданные или изменённые инструментами, под ответами.';
+      'Показывать под ответами файлы, созданные или изменённые инструментами, и сводку правок, открывающую все изменения.';
 
   @override
   String get reasoningBudgetSliderLow => 'Низкий';

@@ -10955,7 +10955,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get displaySettingsPageShowProducedFilesSubtitle =>
-      'Show files created or modified by tools below replies.';
+      'Show files created or modified by tools below replies, with a summary of the edits that opens every diff.';
 
   @override
   String get reasoningBudgetSliderLow => 'Low';

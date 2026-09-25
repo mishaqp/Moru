@@ -32,6 +32,17 @@ void main() {
     expect(snap.length, 2);
   });
 
+  test('snapshot skips tool cache directories', () async {
+    File(p.join(tmp.path, 'calc.py')).writeAsStringSync('a');
+    for (final dir in ['__pycache__', 'node_modules']) {
+      Directory(p.join(tmp.path, dir)).createSync();
+      File(p.join(tmp.path, dir, 'cached.bin')).writeAsStringSync('x');
+    }
+
+    final snap = await FileSnapshot.snapshot([tmp]);
+    expect(snap.keys.map(p.basename), ['calc.py']);
+  });
+
   test('changedSince reports new and modified paths', () async {
     final file = File(p.join(tmp.path, 'a.txt'))..writeAsStringSync('1');
     final before = await FileSnapshot.snapshot([tmp]);

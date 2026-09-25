@@ -19628,7 +19628,7 @@ abstract class AppLocalizations {
   /// No description provided for @displaySettingsPageShowProducedFilesSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Show files created or modified by tools below replies.'**
+  /// **'Show files created or modified by tools below replies, with a summary of the edits that opens every diff.'**
   String get displaySettingsPageShowProducedFilesSubtitle;
 
   /// No description provided for @reasoningBudgetSliderLow.

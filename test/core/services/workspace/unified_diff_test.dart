@@ -21,6 +21,21 @@ void main() {
 ''');
   });
 
+  test('an absolute path keeps one slash after a/ and b/', () {
+    final diff = UnifiedDiff.compute(
+      'a\n',
+      'b\n',
+      path: '/workspace/moru_check/calc.py',
+    );
+    expect(
+      diff.text,
+      startsWith(
+        '--- a/workspace/moru_check/calc.py\n'
+        '+++ b/workspace/moru_check/calc.py\n',
+      ),
+    );
+  });
+
   test('counts pure additions and deletions', () {
     final added = UnifiedDiff.compute('', 'a\nb\n', path: 'f');
     expect(added.added, 2);

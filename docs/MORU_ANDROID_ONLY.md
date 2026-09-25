@@ -27,8 +27,9 @@ in `AGENTS.md`.
 - Android `ndk.abiFilters`, CMake ABI and PRoot downloads all select arm64-v8a.
 - The four arm64 PRoot libraries are pinned by SHA-256 in `tool/proot_checksums.txt`.
   Termux keeps only one proot build in its pool, so the pinned version and the
-  `libproot_exec.so` checksum are bumped together when the old build disappears
-  (last bump: 5.1.107.94, v0.1.16).
+  proot checksums (`libproot_exec.so`, `libproot_loader.so`) are bumped together
+  when the old build disappears
+  (last bump: 5.1.107.95, v0.1.29).
 - Verify actual ZIP library paths **and ELF architecture**, not the APK filename.
 - Keep the existing full Dart analyzer/Flutter test PR gates and add Android JVM
   tests plus an actual arm64 build.
