@@ -11,9 +11,18 @@ import 'task_plan_bar.dart';
 /// when alone. The plan's checklist opens above the row. Hidden when there
 /// is neither.
 class ComposerStatusStrip extends StatefulWidget {
-  const ComposerStatusStrip({super.key, required this.conversationId});
+  const ComposerStatusStrip({
+    super.key,
+    required this.conversationId,
+    required this.generating,
+  });
 
   final String? conversationId;
+
+  /// The plan is live progress: once the reply ends it stays only in the
+  /// reply's own update_plan card, even if the model left a step open.
+  /// Background commands outlive the reply and keep their chip.
+  final bool generating;
 
   @override
   State<ComposerStatusStrip> createState() => _ComposerStatusStripState();
@@ -33,7 +42,9 @@ class _ComposerStatusStripState extends State<ComposerStatusStrip> {
   @override
   Widget build(BuildContext context) {
     final plan = _watch<TaskPlanRegistry>(context)?.of(widget.conversationId);
-    final openPlan = plan != null && !plan.isDone ? plan : null;
+    final openPlan = widget.generating && plan != null && !plan.isDone
+        ? plan
+        : null;
     final runs =
         _watch<ToolRunRegistry>(context)?.runningIn(widget.conversationId) ??
         const <ToolRun>[];

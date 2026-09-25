@@ -399,6 +399,7 @@ class WorkspaceToolsService {
         [
           'Keep a short checklist for multi-step work; the user sees it live.',
           'Send the whole list each time; exactly one step in_progress.',
+          'Before your final answer, send it again with finished steps completed.',
         ],
         {
           'plan': {

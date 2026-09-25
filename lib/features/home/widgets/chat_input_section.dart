@@ -261,7 +261,10 @@ class ChatInputSection extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ComposerStatusStrip(conversationId: conversationId),
+        ComposerStatusStrip(
+          conversationId: conversationId,
+          generating: isLoading,
+        ),
         if (showEnvChip)
           Padding(
             padding: const EdgeInsets.fromLTRB(
