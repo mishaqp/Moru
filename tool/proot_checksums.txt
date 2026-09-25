@@ -1,6 +1,6 @@
 # sha256  path-relative-to-repo-root
-# Moru Android arm64-v8a only. Original pins preserved (Termux proot 5.1.107.94).
-b1032b2bf455779a0cba67415baf59f6ef8e9140f67278671578b9e74137bca4  android/app/src/main/jniLibs/arm64-v8a/libproot_exec.so
-44ef39c1e1a18c09f6e4c4b5d6f8bba82d30596598bd155ec162d05c5122ff04  android/app/src/main/jniLibs/arm64-v8a/libproot_loader.so
+# Moru Android arm64-v8a only. Original pins preserved (Termux proot 5.1.107.95).
+98a5f86aad8d7f91e36ee039c64c8f5ac20738e545c883c559bf93e9b94e7bfa  android/app/src/main/jniLibs/arm64-v8a/libproot_exec.so
+cbdef0e652c2b78af25d867e1719fdebbb0915e25aae2dd35b3b5c1835f6b551  android/app/src/main/jniLibs/arm64-v8a/libproot_loader.so
 3c9b207c0a6ea2896b7523e03f55d9ab0d9e88baa115d4c32b84058ff4246fbb  android/app/src/main/jniLibs/arm64-v8a/libtalloc.so
 84475798e07c8174dbbfaec70a827fdb02f19ffa69a589380c13e7507fd0e731  android/app/src/main/jniLibs/arm64-v8a/libandroid-shmem.so
