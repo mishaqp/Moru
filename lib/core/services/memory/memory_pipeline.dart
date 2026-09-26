@@ -21,6 +21,7 @@ import 'memory_prompts.dart';
 import 'memory_repository.dart';
 import 'memory_smart_add.dart';
 import 'memory_trace.dart';
+import 'memory_usage_meter.dart';
 
 /// Result of a background organize run (§12 / §13.6).
 class MemoryOrganizeResult {
@@ -79,6 +80,7 @@ class MemoryPipelineService {
     required this._assistants,
     required this._memoryV2,
     MemoryTraceRecorder? traceRecorder,
+    this.usage,
     Future<String> Function({
       required ProviderConfig config,
       required String modelId,
@@ -122,6 +124,9 @@ class MemoryPipelineService {
 
   /// Collects step-by-step traces of every background run (§debug viewer).
   final MemoryTraceRecorder traceRecorder;
+
+  /// Counts today's background calls for the settings; null in tests.
+  final MemoryUsageMeter? usage;
 
   final SettingsProvider Function() _settings;
   final AssistantProvider Function() _assistants;
@@ -509,13 +514,17 @@ class MemoryPipelineService {
       watermark: watermark,
       window: window,
       trace: handle,
-      llmCall: (prompt) => _generateText(
-        conversationId: job.conversationId,
-        config: cfg,
-        modelId: mdlId,
-        prompt: prompt,
-        thinkingBudget: thinkingBudget,
-      ),
+      llmCall: (prompt) async {
+        final response = await _generateText(
+          conversationId: job.conversationId,
+          config: cfg,
+          modelId: mdlId,
+          prompt: prompt,
+          thinkingBudget: thinkingBudget,
+        );
+        usage?.record(prompt: prompt, response: response);
+        return response;
+      },
     );
   }
 

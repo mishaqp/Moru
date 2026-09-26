@@ -2969,6 +2969,12 @@
   "memorySettingsInjectionSection": "Добавление памяти в контекст",
   "memorySettingsInjectionMaxItemsTitle": "Записей каждого типа в контексте",
   "memorySettingsInjectionMaxItemsSubtitle": "При превышении лимита добавляются только новые записи. Остальные доступны через memory_search_profile. Больший лимит даёт более полный контекст, но расходует больше токенов. Если вы меняли промпт правил, обновите его или восстановите исходный.",
+  "memoryUsageSection": "Расход токенов",
+  "memoryUsagePerRequestTitle": "Добавляется к каждому запросу",
+  "memoryUsagePerRequestSubtitle": "Инструменты {tools}, правила {rules}, снимок памяти {snapshot}. У провайдеров с кэшем повторяющаяся часть стоит дешевле.",
+  "memoryUsageTodayTitle": "Фон сегодня",
+  "memoryUsageTodaySubtitle": "Вызовов: {calls}. Отправлено {input}, получено {output}. Автоматическое и ручное упорядочивание памяти.",
+  "memoryUsageTokens": "{count, plural, one{≈{count} токен} few{≈{count} токена} many{≈{count} токенов} other{≈{count} токена}}",
   "memorySettingsInjectionMaxItemsOption": "{n}",
   "@memorySettingsInjectionMaxItemsOption": {
     "placeholders": {

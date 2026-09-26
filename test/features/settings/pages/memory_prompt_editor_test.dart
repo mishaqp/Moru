@@ -3,7 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:Kelivo/core/database/chat_database_repository.dart';
+import 'package:Kelivo/core/providers/memory_provider_v2.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
+import 'package:Kelivo/core/services/memory/memory_repository.dart';
+import 'package:Kelivo/core/services/memory/memory_usage_meter.dart';
 import 'package:Kelivo/core/services/memory/memory_prompts.dart';
 import 'package:Kelivo/features/settings/pages/memory_settings_page.dart';
 import 'package:Kelivo/features/settings/widgets/memory_ui.dart';
@@ -11,17 +15,31 @@ import 'package:Kelivo/l10n/app_localizations.dart';
 
 import '../../../support/business_test_harness.dart';
 
+late MemoryProviderV2 _memory;
+late MemoryUsageMeter _usage;
+
 Future<SettingsProvider> _createSettings() async {
   SharedPreferences.setMockInitialValues({});
   final harness = await createBusinessTestHarness();
   final settings = SettingsProvider(harness.preferences);
   await settings.loaded;
+  final chat = ChatDatabaseRepository(harness.database);
+  await chat.ensureReady();
+  _memory = MemoryProviderV2(
+    repository: MemoryRepository(harness.preferences),
+    chatRepository: chat,
+  );
+  _usage = MemoryUsageMeter(preferences: harness.preferences);
   return settings;
 }
 
 Widget _wrap(SettingsProvider settings, {required Locale locale}) {
-  return ChangeNotifierProvider.value(
-    value: settings,
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider.value(value: settings),
+      ChangeNotifierProvider.value(value: _memory),
+      ChangeNotifierProvider.value(value: _usage),
+    ],
     child: MaterialApp(
       locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -182,5 +200,27 @@ void main() {
 
     expect(settings.legacyMemoryPromptEn, 'Custom legacy rules');
     expect(settings.legacyMemoryPromptZh, MemoryPrompts.legacyRulesZh);
+  });
+
+  testWidgets('token usage shows each request and today in background', (
+    tester,
+  ) async {
+    final settings = await _createSettings();
+    _usage.record(prompt: 'a' * 400, response: 'b' * 40);
+    _usage.record(prompt: 'c' * 400, response: 'd' * 40);
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(_wrap(settings, locale: const Locale('en')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Token usage'), findsOneWidget);
+    expect(find.text('Added to each request'), findsOneWidget);
+    expect(
+      find.textContaining('Calls: 2. Sent ≈200 tokens, received ≈20 tokens.'),
+      findsOneWidget,
+    );
+    expect(find.text('≈220 tokens'), findsOneWidget);
   });
 }

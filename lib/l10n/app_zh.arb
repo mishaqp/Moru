@@ -2461,6 +2461,12 @@
   "memorySettingsInjectionSection": "记忆注入",
   "memorySettingsInjectionMaxItemsTitle": "每类注入条数",
   "memorySettingsInjectionMaxItemsSubtitle": "某一类型的记忆超过该条数时，只注入最近的若干条，其余由模型用 memory_search_profile 按需查询。调大更全面但更费 token。若你改过规则提示词，请一并更新或恢复默认。",
+  "memoryUsageSection": "Token 用量",
+  "memoryUsagePerRequestTitle": "每次请求附加",
+  "memoryUsagePerRequestSubtitle": "工具 {tools}，规则 {rules}，记忆快照 {snapshot}。支持提示缓存的服务商对重复部分收费更低。",
+  "memoryUsageTodayTitle": "今日后台",
+  "memoryUsageTodaySubtitle": "调用：{calls}。发送 {input}，接收 {output}。自动和手动整理记忆。",
+  "memoryUsageTokens": "{count, plural, other{≈{count} tokens}}",
   "memorySettingsInjectionMaxItemsOption": "{n}",
   "@memorySettingsInjectionMaxItemsOption": {
     "placeholders": {

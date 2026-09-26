@@ -1,10 +1,19 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/models/assistant.dart';
+import '../../../core/models/memory_entry.dart';
+import '../../../core/providers/memory_provider_v2.dart';
+import '../../../core/services/memory/memory_block_builder.dart';
 import '../../../core/services/memory/memory_prompts.dart';
+import '../../../core/services/memory/memory_tools.dart';
+import '../../../core/services/memory/memory_usage_meter.dart';
+import '../../../core/utils/token_estimator.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
@@ -176,6 +185,8 @@ class MemorySettingsContent extends StatelessWidget {
           ),
         ],
       ),
+      const SizedBox(height: 18),
+      const _MemoryUsageSection(),
       const SizedBox(height: 18),
       langSection,
       const SizedBox(height: 18),
@@ -1066,6 +1077,121 @@ class _SettingsDivider extends StatelessWidget {
       indent: 14,
       endIndent: 12,
       color: cs.outlineVariant.withValues(alpha: 0.18),
+    );
+  }
+}
+
+/// What memory adds to each request and what its background calls used
+/// today. Estimates only; nothing here changes what memory sends.
+class _MemoryUsageSection extends StatefulWidget {
+  const _MemoryUsageSection();
+
+  @override
+  State<_MemoryUsageSection> createState() => _MemoryUsageSectionState();
+}
+
+class _MemoryUsageSectionState extends State<_MemoryUsageSection> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<MemoryProviderV2>().initialize(loadAll: true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = context.watch<SettingsProvider>();
+    final memory = context.watch<MemoryProviderV2>();
+    final today = context.watch<MemoryUsageMeter>().today;
+    final lang = settings.resolvedMemoryPromptLang;
+
+    final tools = estimateTokens(
+      jsonEncode(
+        MemoryTools.buildDefinitions(
+          lang: lang,
+          writeScope: MemoryWriteScope.alwaysGlobal,
+          enableMemory: true,
+          allowPastConversationRecall: false,
+        ),
+      ),
+    );
+    final rules = estimateTokens(
+      lang == MemoryPromptLang.zh
+          ? settings.memoryRulesPromptZh
+          : settings.memoryRulesPromptEn,
+    );
+    // Global memories reach every assistant; its own ones come on top.
+    final global = [
+      for (final e in memory.entries)
+        if (e.status == MemoryStatus.active && e.scope == MemoryScope.global) e,
+    ];
+    final snapshot = estimateTokens(
+      MemoryBlockBuilder.buildFullSnapshotPrefix(
+        MemoryBlockBuilder.buildProfileBlock(
+          fields: memory.profileFields,
+          lang: lang,
+        ),
+        MemoryBlockBuilder.buildMemoryBlock(
+          visible: global,
+          totalByType: {
+            for (final type in MemoryType.values)
+              type: global.where((e) => e.type == type).length,
+          },
+          lang: lang,
+          maxItems: settings.memoryInjectionMaxItems,
+        ),
+        lang,
+      ),
+    );
+
+    return _SettingsSection(
+      title: l10n.memoryUsageSection,
+      children: [
+        _SettingsRow(
+          title: l10n.memoryUsagePerRequestTitle,
+          subtitle: l10n.memoryUsagePerRequestSubtitle(
+            l10n.memoryUsageTokens(tools),
+            l10n.memoryUsageTokens(rules),
+            l10n.memoryUsageTokens(snapshot),
+          ),
+          trailing: _UsageValue(
+            l10n.memoryUsageTokens(tools + rules + snapshot),
+          ),
+        ),
+        _SettingsRow(
+          title: l10n.memoryUsageTodayTitle,
+          subtitle: l10n.memoryUsageTodaySubtitle(
+            '${today.calls}',
+            l10n.memoryUsageTokens(today.input),
+            l10n.memoryUsageTokens(today.output),
+          ),
+          trailing: _UsageValue(
+            l10n.memoryUsageTokens(today.input + today.output),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _UsageValue extends StatelessWidget {
+  const _UsageValue(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: AppFontWeights.medium,
+        color: cs.onSurface.withValues(alpha: 0.7),
+      ),
     );
   }
 }

@@ -18,6 +18,7 @@ import 'package:Kelivo/core/providers/tts_provider.dart';
 import 'package:Kelivo/core/providers/user_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/services/memory/memory_pipeline.dart';
+import 'package:Kelivo/core/services/memory/memory_usage_meter.dart';
 import 'package:Kelivo/core/services/memory/memory_repository.dart';
 import 'package:Kelivo/core/services/tts/tts_playback_models.dart';
 import 'package:Kelivo/features/assistant/pages/assistant_settings_edit_page.dart';
@@ -136,6 +137,10 @@ Widget _buildHarness({
             MemoryProvider(preferences: assistantProvider.preferences),
       ),
       ChangeNotifierProvider.value(value: memoryV2),
+      ChangeNotifierProvider(
+        create: (_) =>
+            MemoryUsageMeter(preferences: assistantProvider.preferences),
+      ),
       Provider.value(value: pipeline),
       ChangeNotifierProvider(
         create: (_) =>
