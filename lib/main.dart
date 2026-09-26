@@ -34,6 +34,7 @@ import 'core/providers/backup_provider.dart';
 import 'core/providers/local_snapshot_provider.dart';
 import 'features/backup/local_snapshot_scheduler.dart';
 import 'core/services/memory/memory_pipeline.dart';
+import 'core/services/memory/memory_usage_meter.dart';
 import 'core/services/memory/memory_repository.dart';
 import 'core/providers/s3_backup_provider.dart';
 import 'core/providers/backup_reminder_provider.dart';
@@ -711,10 +712,14 @@ class MyApp extends StatelessWidget {
             );
           },
         ),
+        ChangeNotifierProvider(
+          create: (_) => MemoryUsageMeter(preferences: businessPreferences),
+        ),
         Provider<MemoryPipelineService>(
           create: (ctx) {
             final memoryV2 = ctx.read<MemoryProviderV2>();
             return MemoryPipelineService(
+              usage: ctx.read<MemoryUsageMeter>(),
               chatService: ctx.read<ChatService>(),
               repository: memoryV2.repository,
               chatRepository: memoryV2.chatRepository,

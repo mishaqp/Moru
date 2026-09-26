@@ -1,17 +1,25 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/models/assistant.dart';
+import '../../../core/models/memory_entry.dart';
+import '../../../core/providers/memory_provider_v2.dart';
+import '../../../core/services/memory/memory_block_builder.dart';
 import '../../../core/services/memory/memory_prompts.dart';
+import '../../../core/services/memory/memory_tools.dart';
+import '../../../core/services/memory/memory_usage_meter.dart';
+import '../../../core/utils/token_estimator.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/section_card.dart';
 import '../../../shared/widgets/snackbar.dart';
-import '../../../utils/platform_utils.dart';
 import '../../model/widgets/model_select_sheet.dart';
 import '../widgets/memory_ui.dart';
 import 'legacy_memory_page.dart';
@@ -51,9 +59,7 @@ class MemorySettingsPage extends StatelessWidget {
 }
 
 class MemorySettingsContent extends StatelessWidget {
-  const MemorySettingsContent({super.key, this.padding});
-
-  final EdgeInsetsGeometry? padding;
+  const MemorySettingsContent({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -180,6 +186,8 @@ class MemorySettingsContent extends StatelessWidget {
         ],
       ),
       const SizedBox(height: 18),
+      const _MemoryUsageSection(),
+      const SizedBox(height: 18),
       langSection,
       const SizedBox(height: 18),
       _SettingsSection(
@@ -233,7 +241,7 @@ class MemorySettingsContent extends StatelessWidget {
     ];
 
     return ListView(
-      padding: padding ?? const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         modeSection,
         const SizedBox(height: 18),
@@ -444,35 +452,15 @@ List<_PromptEntry> _promptEntries(AppLocalizations l10n) => [
 ];
 
 Future<void> _openPromptEditor(BuildContext context, _PromptEntry entry) async {
-  if (PlatformUtils.isDesktopTarget) {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => Dialog(
-        backgroundColor: context.overlaySurface,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 860, maxHeight: 660),
-          child: _MemoryPromptEditPage(entry: entry, desktopDialog: true),
-        ),
-      ),
-    );
-    return;
-  }
   await Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => _MemoryPromptEditPage(entry: entry)),
   );
 }
 
 class _MemoryPromptEditPage extends StatefulWidget {
-  const _MemoryPromptEditPage({
-    required this.entry,
-    this.desktopDialog = false,
-  });
+  const _MemoryPromptEditPage({required this.entry});
 
   final _PromptEntry entry;
-  final bool desktopDialog;
 
   @override
   State<_MemoryPromptEditPage> createState() => _MemoryPromptEditPageState();
@@ -657,12 +645,7 @@ class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage> {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     return ListView(
-      padding: EdgeInsets.fromLTRB(
-        widget.desktopDialog ? 20 : 16,
-        12,
-        widget.desktopDialog ? 20 : 16,
-        widget.desktopDialog ? 24 : 32,
-      ),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 32),
       children: [
         Text(
           widget.entry.subtitle,
@@ -700,71 +683,6 @@ class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-
-    if (widget.desktopDialog) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            height: 44,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.entry.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: AppFontWeights.emphasis,
-                      ),
-                    ),
-                  ),
-                  Tooltip(
-                    message: l10n.memoryPromptEditReset,
-                    child: IosIconButton(
-                      icon: Lucide.RotateCcw,
-                      color: cs.onSurface,
-                      size: 18,
-                      minSize: 36,
-                      semanticLabel: l10n.memoryPromptEditReset,
-                      onTap: _reset,
-                    ),
-                  ),
-                  Tooltip(
-                    message: l10n.memoryPromptEditSave,
-                    child: IosIconButton(
-                      icon: Lucide.Check,
-                      color: cs.primary,
-                      size: 18,
-                      minSize: 36,
-                      semanticLabel: l10n.memoryPromptEditSave,
-                      onTap: _save,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: MaterialLocalizations.of(
-                      context,
-                    ).closeButtonTooltip,
-                    icon: const Icon(Lucide.X, size: 18),
-                    color: cs.onSurface,
-                    onPressed: () => Navigator.of(context).maybePop(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Divider(
-            height: 1,
-            thickness: 0.5,
-            color: cs.outlineVariant.withValues(alpha: 0.12),
-          ),
-          Expanded(child: _buildEditorBody(context)),
-        ],
-      );
-    }
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -1159,6 +1077,121 @@ class _SettingsDivider extends StatelessWidget {
       indent: 14,
       endIndent: 12,
       color: cs.outlineVariant.withValues(alpha: 0.18),
+    );
+  }
+}
+
+/// What memory adds to each request and what its background calls used
+/// today. Estimates only; nothing here changes what memory sends.
+class _MemoryUsageSection extends StatefulWidget {
+  const _MemoryUsageSection();
+
+  @override
+  State<_MemoryUsageSection> createState() => _MemoryUsageSectionState();
+}
+
+class _MemoryUsageSectionState extends State<_MemoryUsageSection> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<MemoryProviderV2>().initialize(loadAll: true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = context.watch<SettingsProvider>();
+    final memory = context.watch<MemoryProviderV2>();
+    final today = context.watch<MemoryUsageMeter>().today;
+    final lang = settings.resolvedMemoryPromptLang;
+
+    final tools = estimateTokens(
+      jsonEncode(
+        MemoryTools.buildDefinitions(
+          lang: lang,
+          writeScope: MemoryWriteScope.alwaysGlobal,
+          enableMemory: true,
+          allowPastConversationRecall: false,
+        ),
+      ),
+    );
+    final rules = estimateTokens(
+      lang == MemoryPromptLang.zh
+          ? settings.memoryRulesPromptZh
+          : settings.memoryRulesPromptEn,
+    );
+    // Global memories reach every assistant; its own ones come on top.
+    final global = [
+      for (final e in memory.entries)
+        if (e.status == MemoryStatus.active && e.scope == MemoryScope.global) e,
+    ];
+    final snapshot = estimateTokens(
+      MemoryBlockBuilder.buildFullSnapshotPrefix(
+        MemoryBlockBuilder.buildProfileBlock(
+          fields: memory.profileFields,
+          lang: lang,
+        ),
+        MemoryBlockBuilder.buildMemoryBlock(
+          visible: global,
+          totalByType: {
+            for (final type in MemoryType.values)
+              type: global.where((e) => e.type == type).length,
+          },
+          lang: lang,
+          maxItems: settings.memoryInjectionMaxItems,
+        ),
+        lang,
+      ),
+    );
+
+    return _SettingsSection(
+      title: l10n.memoryUsageSection,
+      children: [
+        _SettingsRow(
+          title: l10n.memoryUsagePerRequestTitle,
+          subtitle: l10n.memoryUsagePerRequestSubtitle(
+            l10n.memoryUsageTokens(tools),
+            l10n.memoryUsageTokens(rules),
+            l10n.memoryUsageTokens(snapshot),
+          ),
+          trailing: _UsageValue(
+            l10n.memoryUsageTokens(tools + rules + snapshot),
+          ),
+        ),
+        _SettingsRow(
+          title: l10n.memoryUsageTodayTitle,
+          subtitle: l10n.memoryUsageTodaySubtitle(
+            '${today.calls}',
+            l10n.memoryUsageTokens(today.input),
+            l10n.memoryUsageTokens(today.output),
+          ),
+          trailing: _UsageValue(
+            l10n.memoryUsageTokens(today.input + today.output),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _UsageValue extends StatelessWidget {
+  const _UsageValue(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: AppFontWeights.medium,
+        color: cs.onSurface.withValues(alpha: 0.7),
+      ),
     );
   }
 }

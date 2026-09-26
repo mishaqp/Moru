@@ -6953,6 +6953,40 @@ class AppLocalizationsEn extends AppLocalizations {
       'When a type exceeds this limit, only the newest items are injected. The rest can be fetched with memory_search_profile. A larger number is more complete but uses more tokens. If you customized the rules prompt, update it or restore the default.';
 
   @override
+  String get memoryUsageSection => 'Token usage';
+
+  @override
+  String get memoryUsagePerRequestTitle => 'Added to each request';
+
+  @override
+  String memoryUsagePerRequestSubtitle(
+    String tools,
+    String rules,
+    String snapshot,
+  ) {
+    return 'Tools $tools, rules $rules, memory snapshot $snapshot. Providers with prompt caching bill the repeated part at a lower price.';
+  }
+
+  @override
+  String get memoryUsageTodayTitle => 'Background today';
+
+  @override
+  String memoryUsageTodaySubtitle(String calls, String input, String output) {
+    return 'Calls: $calls. Sent $input, received $output. Automatic and manual memory organizing.';
+  }
+
+  @override
+  String memoryUsageTokens(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '≈$count tokens',
+      one: '≈$count token',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String memorySettingsInjectionMaxItemsOption(int n) {
     return '$n';
   }

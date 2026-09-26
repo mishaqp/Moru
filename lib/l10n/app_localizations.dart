@@ -12705,6 +12705,46 @@ abstract class AppLocalizations {
   /// **'When a type exceeds this limit, only the newest items are injected. The rest can be fetched with memory_search_profile. A larger number is more complete but uses more tokens. If you customized the rules prompt, update it or restore the default.'**
   String get memorySettingsInjectionMaxItemsSubtitle;
 
+  /// No description provided for @memoryUsageSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Token usage'**
+  String get memoryUsageSection;
+
+  /// No description provided for @memoryUsagePerRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to each request'**
+  String get memoryUsagePerRequestTitle;
+
+  /// No description provided for @memoryUsagePerRequestSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tools {tools}, rules {rules}, memory snapshot {snapshot}. Providers with prompt caching bill the repeated part at a lower price.'**
+  String memoryUsagePerRequestSubtitle(
+    String tools,
+    String rules,
+    String snapshot,
+  );
+
+  /// No description provided for @memoryUsageTodayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Background today'**
+  String get memoryUsageTodayTitle;
+
+  /// No description provided for @memoryUsageTodaySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Calls: {calls}. Sent {input}, received {output}. Automatic and manual memory organizing.'**
+  String memoryUsageTodaySubtitle(String calls, String input, String output);
+
+  /// No description provided for @memoryUsageTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{≈{count} token} other{≈{count} tokens}}'**
+  String memoryUsageTokens(int count);
+
   /// No description provided for @memorySettingsInjectionMaxItemsOption.
   ///
   /// In en, this message translates to:

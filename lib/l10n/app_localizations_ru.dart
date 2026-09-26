@@ -7048,6 +7048,42 @@ class AppLocalizationsRu extends AppLocalizations {
       'При превышении лимита добавляются только новые записи. Остальные доступны через memory_search_profile. Больший лимит даёт более полный контекст, но расходует больше токенов. Если вы меняли промпт правил, обновите его или восстановите исходный.';
 
   @override
+  String get memoryUsageSection => 'Расход токенов';
+
+  @override
+  String get memoryUsagePerRequestTitle => 'Добавляется к каждому запросу';
+
+  @override
+  String memoryUsagePerRequestSubtitle(
+    String tools,
+    String rules,
+    String snapshot,
+  ) {
+    return 'Инструменты $tools, правила $rules, снимок памяти $snapshot. У провайдеров с кэшем повторяющаяся часть стоит дешевле.';
+  }
+
+  @override
+  String get memoryUsageTodayTitle => 'Фон сегодня';
+
+  @override
+  String memoryUsageTodaySubtitle(String calls, String input, String output) {
+    return 'Вызовов: $calls. Отправлено $input, получено $output. Автоматическое и ручное упорядочивание памяти.';
+  }
+
+  @override
+  String memoryUsageTokens(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '≈$count токена',
+      many: '≈$count токенов',
+      few: '≈$count токена',
+      one: '≈$count токен',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String memorySettingsInjectionMaxItemsOption(int n) {
     return '$n';
   }

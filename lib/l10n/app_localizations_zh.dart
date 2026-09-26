@@ -6684,6 +6684,39 @@ class AppLocalizationsZh extends AppLocalizations {
       '某一类型的记忆超过该条数时，只注入最近的若干条，其余由模型用 memory_search_profile 按需查询。调大更全面但更费 token。若你改过规则提示词，请一并更新或恢复默认。';
 
   @override
+  String get memoryUsageSection => 'Token 用量';
+
+  @override
+  String get memoryUsagePerRequestTitle => '每次请求附加';
+
+  @override
+  String memoryUsagePerRequestSubtitle(
+    String tools,
+    String rules,
+    String snapshot,
+  ) {
+    return '工具 $tools，规则 $rules，记忆快照 $snapshot。支持提示缓存的服务商对重复部分收费更低。';
+  }
+
+  @override
+  String get memoryUsageTodayTitle => '今日后台';
+
+  @override
+  String memoryUsageTodaySubtitle(String calls, String input, String output) {
+    return '调用：$calls。发送 $input，接收 $output。自动和手动整理记忆。';
+  }
+
+  @override
+  String memoryUsageTokens(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '≈$count tokens',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String memorySettingsInjectionMaxItemsOption(int n) {
     return '$n';
   }
@@ -18875,6 +18908,39 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get memorySettingsInjectionMaxItemsSubtitle =>
       '某一类型的记忆超过该条数时，只注入最近的若干条，其余由模型用 memory_search_profile 按需查询。调大更全面但更费 token。若你改过规则提示词，请一并更新或恢复默认。';
+
+  @override
+  String get memoryUsageSection => 'Token 用量';
+
+  @override
+  String get memoryUsagePerRequestTitle => '每次请求附加';
+
+  @override
+  String memoryUsagePerRequestSubtitle(
+    String tools,
+    String rules,
+    String snapshot,
+  ) {
+    return '工具 $tools，规则 $rules，记忆快照 $snapshot。支持提示缓存的服务商对重复部分收费更低。';
+  }
+
+  @override
+  String get memoryUsageTodayTitle => '今日后台';
+
+  @override
+  String memoryUsageTodaySubtitle(String calls, String input, String output) {
+    return '调用：$calls。发送 $input，接收 $output。自动和手动整理记忆。';
+  }
+
+  @override
+  String memoryUsageTokens(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '≈$count tokens',
+    );
+    return '$_temp0';
+  }
 
   @override
   String memorySettingsInjectionMaxItemsOption(int n) {
@@ -31143,6 +31209,39 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get memorySettingsInjectionMaxItemsSubtitle =>
       '某一類型的記憶超過該條數時，只注入最近的若干條，其餘由模型用 memory_search_profile 按需查詢。調大更全面但更費 token。若你改過規則提示詞，請一併更新或恢復預設。';
+
+  @override
+  String get memoryUsageSection => 'Token 用量';
+
+  @override
+  String get memoryUsagePerRequestTitle => '每次請求附加';
+
+  @override
+  String memoryUsagePerRequestSubtitle(
+    String tools,
+    String rules,
+    String snapshot,
+  ) {
+    return '工具 $tools，規則 $rules，記憶快照 $snapshot。支援提示快取的服務商對重複部分收費更低。';
+  }
+
+  @override
+  String get memoryUsageTodayTitle => '今日背景';
+
+  @override
+  String memoryUsageTodaySubtitle(String calls, String input, String output) {
+    return '呼叫：$calls。傳送 $input，接收 $output。自動和手動整理記憶。';
+  }
+
+  @override
+  String memoryUsageTokens(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '≈$count tokens',
+    );
+    return '$_temp0';
+  }
 
   @override
   String memorySettingsInjectionMaxItemsOption(int n) {

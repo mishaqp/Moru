@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -337,95 +336,6 @@ void main() {
       ),
       isTrue,
     );
-  });
-
-  testWidgets('desktop memory editor uses centered Dialog not bottom sheet', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1200, 900);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-    try {
-      final h = await _createHarness();
-      await h.memoryV2.refreshAll();
-
-      await tester.pumpWidget(_wrap(h, const MemoryEntriesContent()));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Add memory'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(Dialog), findsWidgets);
-      expect(find.byType(BottomSheet), findsNothing);
-      expect(find.byType(MemoryEntryEditForm), findsOneWidget);
-
-      await tester.enterText(
-        find.descendant(
-          of: find.byType(MemoryEntryEditForm),
-          matching: find.byType(TextField),
-        ),
-        'Desktop fact',
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
-
-      expect(
-        h.memoryV2.entries.any((e) => e.content == 'Desktop fact'),
-        isTrue,
-      );
-      expect(tester.takeException(), isNull);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
-
-  testWidgets('desktop profile field editor uses Dialog not bottom sheet', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1200, 900);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-    try {
-      final h = await _createHarness();
-      await h.memoryV2.refreshAll();
-
-      await tester.pumpWidget(_wrap(h, const UserProfileContent()));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Preferred name'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(Dialog), findsWidgets);
-      expect(find.byType(BottomSheet), findsNothing);
-
-      await tester.enterText(
-        find.descendant(
-          of: find.byType(Dialog),
-          matching: find.byType(TextField),
-        ),
-        'Casey',
-      );
-      await tester.tap(
-        find.descendant(of: find.byType(Dialog), matching: find.text('Save')),
-      );
-      await tester.pumpAndSettle();
-
-      expect(
-        h.memoryV2.profileFields.any(
-          (f) => f.key == 'preferred_name' && f.value == 'Casey',
-        ),
-        isTrue,
-      );
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
   });
 
   testWidgets('legacy content can be scoped to a single assistant', (

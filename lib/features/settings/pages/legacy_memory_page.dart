@@ -22,7 +22,6 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../shared/widgets/snackbar.dart';
-import '../../../utils/platform_utils.dart';
 import '../../model/widgets/model_select_sheet.dart';
 import '../widgets/memory_ui.dart';
 
@@ -88,9 +87,7 @@ class LegacyMemoryPage extends StatelessWidget {
 }
 
 class LegacyMemoryContent extends StatefulWidget {
-  const LegacyMemoryContent({super.key, this.padding, this.assistantId});
-
-  final EdgeInsetsGeometry? padding;
+  const LegacyMemoryContent({super.key, this.assistantId});
 
   /// When set, only legacy memories of that assistant are listed.
   final String? assistantId;
@@ -219,7 +216,7 @@ class _LegacyMemoryContentState extends State<LegacyMemoryContent> {
     }
 
     return ListView(
-      padding: widget.padding ?? const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         Container(
           decoration: BoxDecoration(
@@ -341,21 +338,6 @@ Future<void> _showLegacyMemoryMigration(
     memories: memories,
     assistantId: assistantId,
   );
-  if (PlatformUtils.isDesktopTarget) {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => Dialog(
-        backgroundColor: dialogContext.overlaySurface,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480, maxHeight: 680),
-          child: panel,
-        ),
-      ),
-    );
-  }
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,

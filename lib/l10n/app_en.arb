@@ -2977,6 +2977,31 @@
   "memorySettingsInjectionSection": "Memory injection",
   "memorySettingsInjectionMaxItemsTitle": "Items injected per type",
   "memorySettingsInjectionMaxItemsSubtitle": "When a type exceeds this limit, only the newest items are injected. The rest can be fetched with memory_search_profile. A larger number is more complete but uses more tokens. If you customized the rules prompt, update it or restore the default.",
+  "memoryUsageSection": "Token usage",
+  "memoryUsagePerRequestTitle": "Added to each request",
+  "@memoryUsagePerRequestSubtitle": {
+    "placeholders": {
+      "tools": {"type": "String"},
+      "rules": {"type": "String"},
+      "snapshot": {"type": "String"}
+    }
+  },
+  "memoryUsagePerRequestSubtitle": "Tools {tools}, rules {rules}, memory snapshot {snapshot}. Providers with prompt caching bill the repeated part at a lower price.",
+  "memoryUsageTodayTitle": "Background today",
+  "@memoryUsageTodaySubtitle": {
+    "placeholders": {
+      "calls": {"type": "String"},
+      "input": {"type": "String"},
+      "output": {"type": "String"}
+    }
+  },
+  "memoryUsageTodaySubtitle": "Calls: {calls}. Sent {input}, received {output}. Automatic and manual memory organizing.",
+  "@memoryUsageTokens": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "memoryUsageTokens": "{count, plural, one{≈{count} token} other{≈{count} tokens}}",
   "memorySettingsInjectionMaxItemsOption": "{n}",
   "@memorySettingsInjectionMaxItemsOption": {
     "placeholders": {
