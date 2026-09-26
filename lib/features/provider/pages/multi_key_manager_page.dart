@@ -13,6 +13,7 @@ import '../../../core/services/haptics.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 import 'package:Kelivo/shared/widgets/section_card.dart';
+import '../../../core/providers/provider_config_watch.dart';
 
 class MultiKeyManagerPage extends StatefulWidget {
   const MultiKeyManagerPage({
@@ -36,8 +37,7 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final settings = context.watch<SettingsProvider>();
-    final cfg = settings.getProviderConfig(
+    final cfg = context.watchProviderConfig(
       widget.providerKey,
       defaultName: widget.providerDisplayName,
     );

@@ -21,10 +21,12 @@ import 'dart:ui' as ui show ImageFilter;
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../shared/widgets/ios_checkbox.dart';
 import '../widgets/provider_avatar.dart';
+import '../widgets/provider_search_field.dart';
 import '../widgets/provider_group_select_sheet.dart';
 import '../../../utils/provider_grouping_logic.dart';
 import '../../../theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
+import '../../../core/providers/provider_config_watch.dart';
 
 class ProvidersPage extends StatefulWidget {
   const ProvidersPage({super.key});
@@ -213,7 +215,7 @@ class _ProvidersPageState extends State<ProvidersPage> {
         children: [
           Column(
             children: [
-              _ProvidersSearchField(
+              ProviderSearchField(
                 controller: _searchController,
                 hintText: l10n.providersPageSearchHint,
                 onChanged: (value) {
@@ -1047,90 +1049,6 @@ class _GroupedProvidersList extends StatelessWidget {
   }
 }
 
-class _ProvidersSearchField extends StatelessWidget {
-  const _ProvidersSearchField({
-    required this.controller,
-    required this.hintText,
-    required this.onChanged,
-    required this.onClear,
-  });
-
-  final TextEditingController controller;
-  final String hintText;
-  final ValueChanged<String> onChanged;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final hasText = controller.text.trim().isNotEmpty;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: TextField(
-        controller: controller,
-        onChanged: onChanged,
-        style: TextStyle(color: cs.onSurface, fontSize: 14),
-        cursorColor: cs.primary,
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: TextStyle(
-            color: cs.onSurface.withValues(alpha: 0.5),
-            fontSize: 13.5,
-          ),
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
-          ),
-          prefixIcon: Icon(
-            Lucide.Search,
-            size: 16,
-            color: cs.onSurface.withValues(alpha: 0.5),
-          ),
-          prefixIconConstraints: const BoxConstraints(
-            minWidth: 34,
-            minHeight: 34,
-          ),
-          suffixIcon: hasText
-              ? IconButton(
-                  onPressed: onClear,
-                  icon: Icon(
-                    Lucide.X,
-                    size: 14,
-                    color: cs.onSurface.withValues(alpha: 0.48),
-                  ),
-                  tooltip: hintText,
-                  splashColor: Colors.transparent,
-                  highlightColor: Colors.transparent,
-                  hoverColor: Colors.transparent,
-                )
-              : null,
-          suffixIconConstraints: const BoxConstraints(
-            minWidth: 34,
-            minHeight: 34,
-          ),
-          filled: true,
-          fillColor: context.appColors.surfaceFill,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ProviderGroupHeaderRow extends StatelessWidget {
   const _ProviderGroupHeaderRow({
     required this.groupKey,
@@ -1220,8 +1138,7 @@ class _ProviderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final settings = context.watch<SettingsProvider>();
-    final cfg = settings.getProviderConfig(
+    final cfg = context.watchProviderConfig(
       provider.keyName,
       defaultName: provider.name,
     );

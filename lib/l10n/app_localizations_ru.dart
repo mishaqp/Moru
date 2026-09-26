@@ -3882,6 +3882,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get providerDetailPageNoModelsTitle => 'Нет моделей';
 
   @override
+  String get providerDetailPageModelSearchHint => 'Поиск моделей';
+
+  @override
   String get providerDetailPageNoModelsSubtitle =>
       'Нажмите кнопки ниже, чтобы добавить модели';
 

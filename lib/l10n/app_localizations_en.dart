@@ -3838,6 +3838,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerDetailPageNoModelsTitle => 'No Models';
 
   @override
+  String get providerDetailPageModelSearchHint => 'Search models';
+
+  @override
   String get providerDetailPageNoModelsSubtitle =>
       'Tap the buttons below to add models';
 

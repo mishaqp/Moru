@@ -6,6 +6,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../widgets/provider_custom_request_editor.dart';
+import '../../../core/providers/provider_config_watch.dart';
 
 class ProviderCustomRequestPage extends StatelessWidget {
   const ProviderCustomRequestPage({
@@ -21,8 +22,7 @@ class ProviderCustomRequestPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final settings = context.watch<SettingsProvider>();
-    final config = settings.getProviderConfig(
+    final config = context.watchProviderConfig(
       providerKey,
       defaultName: providerDisplayName,
     );
@@ -63,6 +63,7 @@ class ProviderCustomRequestPage extends StatelessWidget {
             headers: config.customHeaders,
             body: config.customBody,
             onHeadersChanged: (rows) async {
+              final settings = context.read<SettingsProvider>();
               final old = settings.getProviderConfig(
                 providerKey,
                 defaultName: providerDisplayName,
@@ -73,6 +74,7 @@ class ProviderCustomRequestPage extends StatelessWidget {
               );
             },
             onBodyChanged: (rows) async {
+              final settings = context.read<SettingsProvider>();
               final old = settings.getProviderConfig(
                 providerKey,
                 defaultName: providerDisplayName,

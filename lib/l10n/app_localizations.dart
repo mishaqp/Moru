@@ -7071,6 +7071,12 @@ abstract class AppLocalizations {
   /// **'No Models'**
   String get providerDetailPageNoModelsTitle;
 
+  /// No description provided for @providerDetailPageModelSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search models'**
+  String get providerDetailPageModelSearchHint;
+
   /// No description provided for @providerDetailPageNoModelsSubtitle.
   ///
   /// In en, this message translates to:

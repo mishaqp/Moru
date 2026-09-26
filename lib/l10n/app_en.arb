@@ -1728,6 +1728,7 @@
   "providerDetailPageSaveButton": "Save",
   "providerDetailPageProviderRemovedMessage": "Provider removed",
   "providerDetailPageNoModelsTitle": "No Models",
+  "providerDetailPageModelSearchHint": "Search models",
   "providerDetailPageNoModelsSubtitle": "Tap the buttons below to add models",
   "providerDetailPageDeleteModelButton": "Delete",
   "providerDetailPageConfirmDeleteTitle": "Confirm Delete",

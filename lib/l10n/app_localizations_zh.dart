@@ -3705,6 +3705,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get providerDetailPageNoModelsTitle => '暂无模型';
 
   @override
+  String get providerDetailPageModelSearchHint => '搜索模型';
+
+  @override
   String get providerDetailPageNoModelsSubtitle => '点击下方按钮添加模型';
 
   @override
@@ -15934,6 +15937,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get providerDetailPageNoModelsTitle => '暂无模型';
 
   @override
+  String get providerDetailPageModelSearchHint => '搜索模型';
+
+  @override
   String get providerDetailPageNoModelsSubtitle => '点击下方按钮添加模型';
 
   @override
@@ -28087,6 +28093,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get providerDetailPageNoModelsTitle => '暫無模型';
+
+  @override
+  String get providerDetailPageModelSearchHint => '搜尋模型';
 
   @override
   String get providerDetailPageNoModelsSubtitle => '點擊下方按鈕新增模型';

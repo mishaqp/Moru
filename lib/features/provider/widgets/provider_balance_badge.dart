@@ -5,6 +5,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/provider_balance_service.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../core/providers/provider_config_watch.dart';
 
 class ProviderBalanceBadge extends StatefulWidget {
   const ProviderBalanceBadge({
@@ -121,8 +122,7 @@ class _ProviderBalanceBadgeState extends State<ProviderBalanceBadge> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsProvider>();
-    final config = settings.getProviderConfig(
+    final config = context.watchProviderConfig(
       widget.providerKey,
       defaultName: widget.displayName,
     );

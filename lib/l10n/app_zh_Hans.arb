@@ -1360,6 +1360,7 @@
   "providerDetailPageSaveButton": "保存",
   "providerDetailPageProviderRemovedMessage": "供应商已删除",
   "providerDetailPageNoModelsTitle": "暂无模型",
+  "providerDetailPageModelSearchHint": "搜索模型",
   "providerDetailPageNoModelsSubtitle": "点击下方按钮添加模型",
   "providerDetailPageDeleteModelButton": "删除",
   "providerDetailPageConfirmDeleteTitle": "确认删除",

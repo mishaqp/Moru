@@ -2,14 +2,13 @@ import '../../../theme/app_semantic_colors.dart';
 import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:provider/provider.dart';
 
-import '../../../core/providers/settings_provider.dart';
 import '../../../utils/avatar_cache.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/brand_assets.dart';
 import '../../../shared/widgets/emoji_text.dart';
 import '../../../theme/app_font_weights.dart';
+import '../../../core/providers/provider_config_watch.dart';
 
 class ProviderAvatar extends StatelessWidget {
   const ProviderAvatar({
@@ -29,7 +28,7 @@ class ProviderAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cfg = context.watch<SettingsProvider>().getProviderConfig(
+    final cfg = context.watchProviderConfig(
       providerKey,
       defaultName: displayName,
     );

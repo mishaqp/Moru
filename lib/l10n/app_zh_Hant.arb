@@ -1322,6 +1322,7 @@
   "providerDetailPageSaveButton": "儲存",
   "providerDetailPageProviderRemovedMessage": "供應商已刪除",
   "providerDetailPageNoModelsTitle": "暫無模型",
+  "providerDetailPageModelSearchHint": "搜尋模型",
   "providerDetailPageNoModelsSubtitle": "點擊下方按鈕新增模型",
   "providerDetailPageDeleteModelButton": "刪除",
   "providerDetailPageConfirmDeleteTitle": "確認刪除",

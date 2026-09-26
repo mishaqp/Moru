@@ -1729,6 +1729,7 @@
   "providerDetailPageSaveButton": "Сохранить",
   "providerDetailPageProviderRemovedMessage": "Провайдер удалён",
   "providerDetailPageNoModelsTitle": "Нет моделей",
+  "providerDetailPageModelSearchHint": "Поиск моделей",
   "providerDetailPageNoModelsSubtitle": "Нажмите кнопки ниже, чтобы добавить модели",
   "providerDetailPageDeleteModelButton": "Удалить",
   "providerDetailPageConfirmDeleteTitle": "Подтвердите удаление",
