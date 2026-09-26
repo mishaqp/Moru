@@ -139,6 +139,7 @@ class MainActivity : FlutterActivity() {
                     pendingMiniApp = null
                     result.success(id)
                 }
+                "localTimeZone" -> result.success(java.util.TimeZone.getDefault().id)
                 "pinShortcut" -> {
                     val id = call.argument<String>("id")
                     val icon = call.argument<ByteArray>("icon")

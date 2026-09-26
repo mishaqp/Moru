@@ -7071,6 +7071,12 @@ abstract class AppLocalizations {
   /// **'No Models'**
   String get providerDetailPageNoModelsTitle;
 
+  /// No description provided for @providerDetailPageModelSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search models'**
+  String get providerDetailPageModelSearchHint;
+
   /// No description provided for @providerDetailPageNoModelsSubtitle.
   ///
   /// In en, this message translates to:
@@ -22652,6 +22658,42 @@ abstract class AppLocalizations {
   /// **'Delete scheduled task'**
   String get scheduledTaskToolActionDelete;
 
+  /// No description provided for @miniAppsToolTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mini Apps'**
+  String get miniAppsToolTitle;
+
+  /// No description provided for @miniAppsToolSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Read and change the data of your mini apps from the chat, e.g. “I drank a glass of water”.'**
+  String get miniAppsToolSubtitle;
+
+  /// No description provided for @miniAppsToolActionList.
+  ///
+  /// In en, this message translates to:
+  /// **'List mini apps'**
+  String get miniAppsToolActionList;
+
+  /// No description provided for @miniAppsToolActionRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Read app data'**
+  String get miniAppsToolActionRead;
+
+  /// No description provided for @miniAppsToolActionWrite.
+  ///
+  /// In en, this message translates to:
+  /// **'Update app data'**
+  String get miniAppsToolActionWrite;
+
+  /// No description provided for @miniAppsToolActionRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove app data'**
+  String get miniAppsToolActionRemove;
+
   /// No description provided for @miniAppsTitle.
   ///
   /// In en, this message translates to:
@@ -22723,6 +22765,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete “{name}”?'**
   String miniAppsDeleteTitle(String name);
+
+  /// No description provided for @miniAppsNotificationChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mini apps'**
+  String get miniAppsNotificationChannel;
+
+  /// No description provided for @miniAppsNotificationChannelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications and reminders from your mini apps.'**
+  String get miniAppsNotificationChannelDescription;
 
   /// No description provided for @phoneControlTitle.
   ///

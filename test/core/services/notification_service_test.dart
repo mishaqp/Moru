@@ -52,4 +52,18 @@ void main() {
       await sub.cancel();
     },
   );
+
+  test('mini app notifications carry the app id', () {
+    expect(NotificationService.miniAppIdFromPayload('mini-app:water'), 'water');
+    expect(NotificationService.miniAppIdFromPayload('mini-app: '), isNull);
+    expect(
+      NotificationService.miniAppIdFromPayload('chat-complete:c1'),
+      isNull,
+    );
+    expect(
+      NotificationService.conversationIdFromPayload('mini-app:water'),
+      isNull,
+    );
+    expect(NotificationService.miniAppIdFromPayload(null), isNull);
+  });
 }

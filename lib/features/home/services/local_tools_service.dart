@@ -10,6 +10,7 @@ import '../../../core/models/health_data_type.dart';
 import '../../../core/services/scheduled_tasks_service.dart';
 import 'assistant_manager_tool.dart';
 import 'browser_agent_tool.dart';
+import 'mini_app_data_tool.dart';
 import 'scheduled_task_tool.dart';
 
 typedef TextToSpeechStarter = Future<void> Function(String text);
@@ -37,6 +38,7 @@ class LocalToolNames {
   static const String remindersComplete = 'reminders_complete';
   static const String assistantManager = AssistantManagerTool.toolName;
   static const String scheduledTasks = ScheduledTaskTool.toolName;
+  static const String miniApps = MiniAppDataTool.toolName;
 
   static const List<String> all = [
     timeInfo,
@@ -59,6 +61,7 @@ class LocalToolNames {
     remindersComplete,
     assistantManager,
     scheduledTasks,
+    miniApps,
   ];
 
   static const List<String> requiresUserApproval = [
@@ -461,6 +464,8 @@ class LocalToolsService {
         return DeviceLocalTools.remindersSupported;
       case LocalToolNames.scheduledTasks:
         return ScheduledTasksService.supported;
+      case LocalToolNames.miniApps:
+        return !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
       default:
         return true;
     }
@@ -525,6 +530,8 @@ class LocalToolsService {
         return AssistantManagerTool.definition;
       case LocalToolNames.scheduledTasks:
         return ScheduledTaskTool.definition;
+      case LocalToolNames.miniApps:
+        return MiniAppDataTool.definition;
       default:
         throw ArgumentError.value(name, 'name', 'Unknown local tool');
     }

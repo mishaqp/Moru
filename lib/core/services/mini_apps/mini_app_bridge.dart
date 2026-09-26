@@ -1,15 +1,38 @@
 import 'dart:convert';
 
+import 'mini_app_reminders.dart';
 import 'mini_app_store.dart';
+
+/// What a mini app may ask of Moru beyond its own storage.
+class MiniAppHost {
+  const MiniAppHost({this.ask, this.notify, this.reminders});
+
+  /// Asks the default model; returns its text.
+  final Future<String> Function(String prompt, String? system)? ask;
+
+  /// Shows a notification that opens the app.
+  final Future<void> Function(String title, String body)? notify;
+  final MiniAppReminders? reminders;
+}
 
 /// Answers `window.moru` calls from one mini app page. Each message is
 /// `{id, method, args}`; [handle] returns the JavaScript that settles the
 /// page's promise.
 class MiniAppBridge {
-  const MiniAppBridge({required this.store, required this.appId});
+  MiniAppBridge({
+    required this.store,
+    required this.appId,
+    this.host = const MiniAppHost(),
+  });
+
+  static const int maxPromptChars = 32000;
 
   final MiniAppStore store;
   final String appId;
+  final MiniAppHost host;
+
+  /// One model request at a time, so a looping page cannot flood the model.
+  bool _asking = false;
 
   Future<String> handle(String message) async {
     Object? id;
@@ -28,7 +51,21 @@ class MiniAppBridge {
     }
   }
 
+  /// Tells the page that [key] changed outside it.
+  static String changedScript(String key) =>
+      'window.__moruChanged && window.__moruChanged(${jsonEncode(key)});';
+
   Future<Object?> _dispatch(String method, Map<String, dynamic> args) async {
+    String text(String name, {int max = 1000, bool required = true}) {
+      final value = args[name];
+      if (value is! String || (required && value.trim().isEmpty)) {
+        if (!required && value == null) return '';
+        throw MiniAppException('invalid_argument', '$name must be a string.');
+      }
+      return value.length <= max ? value : value.substring(0, max);
+    }
+
+    // The store checks key length.
     String key() {
       final value = args['key'];
       if (value is! String) {
@@ -41,19 +78,61 @@ class MiniAppBridge {
       case 'storage.get':
         return store.storageGet(appId, key());
       case 'storage.set':
-        await store.storageSet(appId, key(), args['value']);
+        await store.storageSet(appId, key(), args['value'], fromApp: true);
         return null;
       case 'storage.remove':
-        await store.storageRemove(appId, key());
+        await store.storageRemove(appId, key(), fromApp: true);
         return null;
       case 'storage.keys':
         return store.storageKeys(appId);
       case 'app.info':
         final app = store.byId(appId);
         return {'id': appId, 'name': app?.name, 'platform': 'android'};
+      case 'ai.ask':
+        final ask = _need(host.ask);
+        final prompt = text('prompt', max: maxPromptChars);
+        final system = text('system', max: maxPromptChars, required: false);
+        if (_asking) {
+          throw const MiniAppException(
+            'busy',
+            'Wait for the previous moru.ai.ask to finish.',
+          );
+        }
+        _asking = true;
+        try {
+          return await ask(prompt, system.isEmpty ? null : system);
+        } finally {
+          _asking = false;
+        }
+      case 'notify':
+        await _need(host.notify)(
+          text('title', max: 80),
+          text('body', max: 300, required: false),
+        );
+        return null;
+      case 'reminders.set':
+        await _need(
+          host.reminders,
+        ).set(appId, text('id', max: 40), args['reminder']);
+        return null;
+      case 'reminders.remove':
+        await _need(host.reminders).remove(appId, text('id', max: 40));
+        return null;
+      case 'reminders.list':
+        return _need(host.reminders).list(appId);
       default:
         throw MiniAppException('unknown_method', 'Unknown method "$method".');
     }
+  }
+
+  static T _need<T>(T? value) {
+    if (value == null) {
+      throw const MiniAppException(
+        'unavailable',
+        'This is not available here.',
+      );
+    }
+    return value;
   }
 
   /// `id` is a number the page chose; anything else is dropped by the page.

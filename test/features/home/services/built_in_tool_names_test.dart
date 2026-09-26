@@ -43,6 +43,7 @@ void main() {
       LocalToolNames.remindersComplete,
       LocalToolNames.assistantManager,
       LocalToolNames.scheduledTasks,
+      LocalToolNames.miniApps,
     ]);
   });
 }

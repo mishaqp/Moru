@@ -3705,6 +3705,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get providerDetailPageNoModelsTitle => '暂无模型';
 
   @override
+  String get providerDetailPageModelSearchHint => '搜索模型';
+
+  @override
   String get providerDetailPageNoModelsSubtitle => '点击下方按钮添加模型';
 
   @override
@@ -12096,6 +12099,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get scheduledTaskToolActionDelete => '删除定时任务';
 
   @override
+  String get miniAppsToolTitle => '小应用';
+
+  @override
+  String get miniAppsToolSubtitle => '在聊天中读取和修改小应用的数据，例如“我喝了一杯水”。';
+
+  @override
+  String get miniAppsToolActionList => '列出小应用';
+
+  @override
+  String get miniAppsToolActionRead => '读取应用数据';
+
+  @override
+  String get miniAppsToolActionWrite => '更新应用数据';
+
+  @override
+  String get miniAppsToolActionRemove => '删除应用数据';
+
+  @override
   String get miniAppsTitle => '我的小应用';
 
   @override
@@ -12134,6 +12155,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String miniAppsDeleteTitle(String name) {
     return '删除“$name”？';
   }
+
+  @override
+  String get miniAppsNotificationChannel => '小应用';
+
+  @override
+  String get miniAppsNotificationChannelDescription => '来自小应用的通知和提醒。';
 
   @override
   String get phoneControlTitle => '手机控制';
@@ -15908,6 +15935,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get providerDetailPageNoModelsTitle => '暂无模型';
+
+  @override
+  String get providerDetailPageModelSearchHint => '搜索模型';
 
   @override
   String get providerDetailPageNoModelsSubtitle => '点击下方按钮添加模型';
@@ -24227,6 +24257,24 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get scheduledTaskToolActionDelete => '删除定时任务';
 
   @override
+  String get miniAppsToolTitle => '小应用';
+
+  @override
+  String get miniAppsToolSubtitle => '在聊天中读取和修改小应用的数据，例如“我喝了一杯水”。';
+
+  @override
+  String get miniAppsToolActionList => '列出小应用';
+
+  @override
+  String get miniAppsToolActionRead => '读取应用数据';
+
+  @override
+  String get miniAppsToolActionWrite => '更新应用数据';
+
+  @override
+  String get miniAppsToolActionRemove => '删除应用数据';
+
+  @override
   String get miniAppsTitle => '我的小应用';
 
   @override
@@ -24265,6 +24313,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String miniAppsDeleteTitle(String name) {
     return '删除“$name”？';
   }
+
+  @override
+  String get miniAppsNotificationChannel => '小应用';
+
+  @override
+  String get miniAppsNotificationChannelDescription => '来自小应用的通知和提醒。';
 
   @override
   String get phoneControlTitle => '手机控制';
@@ -28039,6 +28093,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get providerDetailPageNoModelsTitle => '暫無模型';
+
+  @override
+  String get providerDetailPageModelSearchHint => '搜尋模型';
 
   @override
   String get providerDetailPageNoModelsSubtitle => '點擊下方按鈕新增模型';
@@ -36437,6 +36494,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get scheduledTaskToolActionDelete => '刪除排程任務';
 
   @override
+  String get miniAppsToolTitle => '小應用';
+
+  @override
+  String get miniAppsToolSubtitle => '在聊天中讀取和修改小應用的資料，例如「我喝了一杯水」。';
+
+  @override
+  String get miniAppsToolActionList => '列出小應用';
+
+  @override
+  String get miniAppsToolActionRead => '讀取應用資料';
+
+  @override
+  String get miniAppsToolActionWrite => '更新應用資料';
+
+  @override
+  String get miniAppsToolActionRemove => '刪除應用資料';
+
+  @override
   String get miniAppsTitle => '我的小應用';
 
   @override
@@ -36475,6 +36550,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String miniAppsDeleteTitle(String name) {
     return '刪除「$name」？';
   }
+
+  @override
+  String get miniAppsNotificationChannel => '小應用';
+
+  @override
+  String get miniAppsNotificationChannelDescription => '來自小應用的通知和提醒。';
 
   @override
   String get phoneControlTitle => '手機控制';

@@ -1,3 +1,4 @@
+import 'dart:async';
 import '../widgets/prompt_cache_ttl_control.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -35,10 +36,15 @@ import 'provider_network_page.dart';
 import '../../../core/services/haptics.dart';
 import '../widgets/provider_balance_badge.dart';
 import '../widgets/provider_avatar.dart';
+import '../widgets/provider_search_field.dart';
 import '../../../utils/model_grouping.dart';
 import '../../../theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 import 'package:Kelivo/shared/widgets/section_card.dart';
+
+part 'provider_detail_model_card.dart';
+part 'provider_detail_test_dialog.dart';
+part 'provider_detail_widgets.dart';
 
 class ProviderDetailPage extends StatefulWidget {
   const ProviderDetailPage({
@@ -75,6 +81,11 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
   // 模型选择模式相关
   bool _isSelectionMode = false;
   final Set<String> _selectedModels = {};
+  final TextEditingController _modelSearch = TextEditingController();
+  String _modelQuery = '';
+
+  /// Long model lists get a search field above them.
+  static const int _modelSearchThreshold = 10;
   bool _isDetecting = false;
   bool _detectUseStream = false;
   final Map<String, bool> _detectionResults = {};
@@ -125,6 +136,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     _locationCtrl.dispose();
     _projectCtrl.dispose();
     _saJsonCtrl.dispose();
+    _modelSearch.dispose();
     super.dispose();
   }
 
@@ -809,16 +821,35 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
   }
 
+  /// This provider's config, or null once it is removed. Only changes to it
+  /// rebuild the caller; other providers and settings do not.
+  ProviderConfig? _watchConfig(BuildContext context) =>
+      context.select<SettingsProvider, ProviderConfig?>((s) {
+        final saved = s.providerConfigs[widget.keyName];
+        if (saved != null) return saved;
+        return s.providersOrder.contains(widget.keyName)
+            ? _defaultConfig
+            : null;
+      });
+
+  /// Stable stand-in for a listed provider without a saved config, so
+  /// [_watchConfig] does not see a new object on every notification.
+  late final ProviderConfig _defaultConfig = ProviderConfig.defaultsFor(
+    widget.keyName,
+    displayName: widget.displayName,
+  );
+
   Widget _buildConfigTab(
     BuildContext context,
     ColorScheme cs,
     AppLocalizations l10n,
   ) {
-    final sp = context.watch<SettingsProvider>();
-    final gid = sp.groupIdForProvider(widget.keyName);
-    final groupName = gid == null
-        ? l10n.providerGroupsOther
-        : (sp.groupById(gid)?.name ?? l10n.providerGroupsOther);
+    final groupName =
+        context.select<SettingsProvider, String?>((s) {
+          final gid = s.groupIdForProvider(widget.keyName);
+          return gid == null ? null : s.groupById(gid)?.name;
+        }) ??
+        l10n.providerGroupsOther;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -1450,11 +1481,8 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     ColorScheme cs,
     AppLocalizations l10n,
   ) {
-    final settings = context.watch<SettingsProvider>();
-    final bool providerKnown =
-        settings.providersOrder.contains(widget.keyName) ||
-        settings.providerConfigs.containsKey(widget.keyName);
-    if (!providerKnown) {
+    final watched = _watchConfig(context);
+    if (watched == null) {
       return Center(
         child: Text(
           l10n.providerDetailPageProviderRemovedMessage,
@@ -1462,13 +1490,14 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
         ),
       );
     }
-    final cfg = settings.getProviderConfig(
-      widget.keyName,
-      defaultName: widget.displayName,
-    );
+    final cfg = watched;
     final models = cfg.models;
+    final showSearch =
+        models.length >= _modelSearchThreshold || _modelQuery.isNotEmpty;
+    final visibleModels = _filterModels(cfg);
     final allSelected =
-        _selectedModels.length == models.length && models.isNotEmpty;
+        visibleModels.isNotEmpty &&
+        visibleModels.every(_selectedModels.contains);
     final hasFailedDetectedModels = _failedDetectedModels(models).isNotEmpty;
     return Stack(
       children: [
@@ -1498,25 +1527,45 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               16,
               _isSelectionMode ? 160 : 100,
             ),
-            itemCount: models.length,
+            header: showSearch
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: ProviderSearchField(
+                      controller: _modelSearch,
+                      hintText: l10n.providerDetailPageModelSearchHint,
+                      onChanged: (value) =>
+                          setState(() => _modelQuery = value.trim()),
+                      onClear: () => setState(() {
+                        _modelSearch.clear();
+                        _modelQuery = '';
+                      }),
+                    ),
+                  )
+                : null,
+            // Each row has its own long-press listener that selection mode
+            // and search switch off; the default one would ignore that.
+            buildDefaultDragHandles: false,
+            itemCount: visibleModels.length,
             onReorderItem: (oldIndex, newIndex) {
-              if (_isSelectionMode) return;
+              // Filtered positions are not positions in the saved order.
+              if (_isSelectionMode || _modelQuery.isNotEmpty) return;
               final list = List<String>.from(models);
               final item = list.removeAt(oldIndex);
               list.insert(newIndex, item);
-              setState(() {});
+              // The new order is published before the save is awaited, so
+              // the list never shows the old order after the drop.
               final settings = context.read<SettingsProvider>();
-              // 使用 Future.microtask 来异步执行，避免阻塞回调
-              Future.microtask(() async {
-                final latest = settings.getProviderConfig(
+              unawaited(
+                settings.setProviderConfig(
                   widget.keyName,
-                  defaultName: widget.displayName,
-                );
-                await settings.setProviderConfig(
-                  widget.keyName,
-                  latest.copyWith(models: list),
-                );
-              });
+                  settings
+                      .getProviderConfig(
+                        widget.keyName,
+                        defaultName: widget.displayName,
+                      )
+                      .copyWith(models: list),
+                ),
+              );
             },
             proxyDecorator: (child, index, animation) {
               return AnimatedBuilder(
@@ -1529,13 +1578,13 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               );
             },
             itemBuilder: (c, i) {
-              final id = models[i];
+              final id = visibleModels[i];
               final cs = Theme.of(context).colorScheme;
               return KeyedSubtree(
                 key: ValueKey('reorder-model-$id'),
                 child: ReorderableDelayedDragStartListener(
                   index: i,
-                  enabled: !_isSelectionMode,
+                  enabled: !_isSelectionMode && _modelQuery.isEmpty,
                   child: Slidable(
                     key: ValueKey('model-$id'),
                     enabled: !_isSelectionMode,
@@ -1828,11 +1877,12 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
   Widget _buildBalanceEntry(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final settings = context.watch<SettingsProvider>();
-    final cfg = settings.getProviderConfig(
-      widget.keyName,
-      defaultName: widget.displayName,
-    );
+    final cfg =
+        _watchConfig(context) ??
+        context.read<SettingsProvider>().getProviderConfig(
+          widget.keyName,
+          defaultName: widget.displayName,
+        );
     final enabled = cfg.balanceEnabled == true;
     return _TactileRow(
       onTap: () async {
@@ -3072,8 +3122,22 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
     setState(() {
       _selectedModels.clear();
-      _selectedModels.addAll(cfg.models);
+      _selectedModels.addAll(_filterModels(cfg));
     });
+  }
+
+  /// Models whose id or custom name contains the search text.
+  List<String> _filterModels(ProviderConfig cfg) {
+    final query = _modelQuery.toLowerCase();
+    if (query.isEmpty) return cfg.models;
+    return [
+      for (final id in cfg.models)
+        if (id.toLowerCase().contains(query) ||
+            '${cfg.modelOverrides[id]?['name'] ?? ''}'.toLowerCase().contains(
+              query,
+            ))
+          id,
+    ];
   }
 
   Set<String> _failedDetectedModels(Iterable<String> models) {
@@ -4019,816 +4083,6 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           },
         );
       },
-    );
-  }
-}
-
-class _ModelCard extends StatelessWidget {
-  const _ModelCard({
-    required this.providerKey,
-    required this.modelId,
-    this.isSelectionMode = false,
-    this.isSelected = false,
-    this.onSelectionChanged,
-    this.detectionResult,
-    this.detectionErrorMessage,
-    this.isDetecting = false,
-    this.isPending = false,
-  });
-  final String providerKey;
-  final String modelId;
-  final bool isSelectionMode;
-  final bool isSelected;
-  final ValueChanged<bool>? onSelectionChanged;
-  final bool? detectionResult;
-  final String? detectionErrorMessage;
-  final bool isDetecting;
-  final bool isPending;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final resolved = _resolveBaseAndOverride(context);
-    final effective = resolved.ov == null
-        ? resolved.base
-        : _applyModelOverride(
-            resolved.base,
-            resolved.ov!,
-            applyDisplayName: true,
-          );
-    String displayName = effective.displayName.trim();
-    if (displayName.isEmpty) displayName = modelId;
-    final Widget? detectionIndicator = isDetecting
-        ? SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary),
-          )
-        : isPending
-        ? Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: cs.onSurface.withValues(alpha: 0.3),
-                width: 2,
-              ),
-            ),
-          )
-        : detectionResult != null
-        ? MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: Tooltip(
-              message: detectionResult!
-                  ? l10n.providerDetailPageDetectSuccess
-                  : (detectionErrorMessage ??
-                        l10n.providerDetailPageDetectFailed),
-              child: Icon(
-                detectionResult! ? Lucide.CheckCircle : Lucide.XCircle,
-                size: 16,
-                color: detectionResult! ? context.appColors.success : cs.error,
-              ),
-            ),
-          )
-        : null;
-    return _TactileRow(
-      pressedScale: 0.98,
-      haptics: false,
-      onTap: isSelectionMode
-          ? () => onSelectionChanged?.call(!isSelected)
-          : () {},
-      builder: (pressed) {
-        return Container(
-          decoration: BoxDecoration(
-            color: cs.surface,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                if (isSelectionMode) ...[
-                  IosCheckbox(
-                    value: isSelected,
-                    onChanged: (value) => onSelectionChanged?.call(value),
-                  ),
-                  const SizedBox(width: 12),
-                ],
-                _BrandAvatar(name: resolved.baseId, size: 28),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        displayName,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: AppFontWeights.semibold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      ModelTagWrap(model: effective),
-                    ],
-                  ),
-                ),
-                if (detectionIndicator != null) ...[
-                  const SizedBox(width: 8),
-                  detectionIndicator,
-                ],
-                if (!isSelectionMode) ...[
-                  const SizedBox(width: 8),
-                  _TactileIconButton(
-                    icon: Lucide.Settings2,
-                    color: cs.onSurface.withValues(alpha: 0.7),
-                    size: 18,
-                    semanticLabel: l10n.providerDetailPageEditTooltip,
-                    haptics: false,
-                    onTap: () async {
-                      await showModelDetailSheet(
-                        context,
-                        providerKey: providerKey,
-                        modelId: modelId,
-                      );
-                    },
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  ModelInfo _infer(String id) {
-    // build a minimal ModelInfo and let registry infer
-    return ModelRegistry.infer(ModelInfo(id: id, displayName: id));
-  }
-
-  _ResolvedModelOverride _resolveBaseAndOverride(BuildContext context) {
-    final configs = context.watch<SettingsProvider>().providerConfigs;
-    final cfg = configs[providerKey];
-    if (cfg == null) {
-      final base = _infer(modelId);
-      return _ResolvedModelOverride(base: base, ov: null, baseId: modelId);
-    }
-    final rawOv = cfg.modelOverrides[modelId];
-    final Map<String, dynamic>? ov = rawOv is Map
-        ? {for (final e in rawOv.entries) e.key.toString(): e.value}
-        : null;
-    String baseId = modelId;
-    if (ov != null) {
-      final raw = (ov['apiModelId'] ?? ov['api_model_id'])?.toString().trim();
-      if (raw != null && raw.isNotEmpty) baseId = raw;
-    }
-    final base = _infer(baseId);
-    return _ResolvedModelOverride(base: base, ov: ov, baseId: baseId);
-  }
-}
-
-class _ResolvedModelOverride {
-  const _ResolvedModelOverride({
-    required this.base,
-    required this.ov,
-    required this.baseId,
-  });
-
-  final ModelInfo base;
-  final Map<String, dynamic>? ov;
-  final String baseId;
-}
-
-class _ConnectionTestDialog extends StatefulWidget {
-  const _ConnectionTestDialog({
-    required this.providerKey,
-    required this.providerDisplayName,
-  });
-  final String providerKey;
-  final String providerDisplayName;
-
-  @override
-  State<_ConnectionTestDialog> createState() => _ConnectionTestDialogState();
-}
-
-enum _TestState { idle, loading, success, error }
-
-class _ConnectionTestDialogState extends State<_ConnectionTestDialog> {
-  String? _selectedModelId;
-  _TestState _state = _TestState.idle;
-  String _errorMessage = '';
-  bool _useStream = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final title = l10n.providerDetailPageTestConnectionTitle;
-    final canTest = _selectedModelId != null && _state != _TestState.loading;
-    return Dialog(
-      backgroundColor: context.overlaySurface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Center(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: AppFontWeights.emphasis,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildBody(context, cs, l10n),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text(l10n.providerDetailPageCancelButton),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: canTest ? _doTest : null,
-                    style: TextButton.styleFrom(
-                      foregroundColor: canTest
-                          ? cs.primary
-                          : cs.onSurface.withValues(alpha: 0.4),
-                    ),
-                    child: Text(l10n.providerDetailPageTestButton),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBody(
-    BuildContext context,
-    ColorScheme cs,
-    AppLocalizations l10n,
-  ) {
-    switch (_state) {
-      case _TestState.idle:
-        return _buildIdle(context, cs, l10n);
-      case _TestState.loading:
-        return _buildLoading(context, cs, l10n);
-      case _TestState.success:
-        return _buildResult(
-          context,
-          cs,
-          l10n,
-          success: true,
-          message: l10n.providerDetailPageTestSuccessMessage,
-        );
-      case _TestState.error:
-        return _buildResult(
-          context,
-          cs,
-          l10n,
-          success: false,
-          message: _errorMessage,
-        );
-    }
-  }
-
-  Widget _buildIdle(
-    BuildContext context,
-    ColorScheme cs,
-    AppLocalizations l10n,
-  ) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        if (_selectedModelId == null)
-          TextButton(
-            onPressed: _pickModel,
-            child: Text(l10n.providerDetailPageSelectModelButton),
-          )
-        else
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _BrandAvatar(name: _selectedModelId!, size: 24),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  _selectedModelId!,
-                  style: TextStyle(fontWeight: AppFontWeights.semibold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 10),
-              TextButton(
-                onPressed: _pickModel,
-                child: Text(l10n.providerDetailPageChangeButton),
-              ),
-            ],
-          ),
-        if (_selectedModelId != null) ...[
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                l10n.providerDetailPageUseStreamingLabel,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: cs.onSurface.withValues(alpha: 0.9),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IosSwitch(
-                value: _useStream,
-                onChanged: (v) => setState(() => _useStream = v),
-              ),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildLoading(
-    BuildContext context,
-    ColorScheme cs,
-    AppLocalizations l10n,
-  ) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        if (_selectedModelId != null)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _BrandAvatar(name: _selectedModelId!, size: 24),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  _selectedModelId!,
-                  style: TextStyle(fontWeight: AppFontWeights.semibold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        const SizedBox(height: 16),
-        const LinearProgressIndicator(minHeight: 4),
-        const SizedBox(height: 12),
-        Text(
-          l10n.providerDetailPageTestingMessage,
-          style: TextStyle(color: cs.onSurface.withValues(alpha: 0.7)),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildResult(
-    BuildContext context,
-    ColorScheme cs,
-    AppLocalizations l10n, {
-    required bool success,
-    required String message,
-  }) {
-    final color = success ? context.appColors.success : cs.error;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        if (_selectedModelId != null)
-          _TactileRow(
-            pressedScale: 0.98,
-            haptics: false,
-            onTap: _pickModel,
-            builder: (_) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    _BrandAvatar(name: _selectedModelId!, size: 24),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _selectedModelId!,
-                        style: TextStyle(fontWeight: AppFontWeights.semibold),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      Lucide.ChevronDown,
-                      size: 16,
-                      color: cs.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        const SizedBox(height: 14),
-        Text(
-          message,
-          style: TextStyle(
-            color: color,
-            fontSize: 14,
-            fontWeight: AppFontWeights.semibold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _pickModel() async {
-    final selected = await showModelPickerForTest(
-      context,
-      widget.providerKey,
-      widget.providerDisplayName,
-      initialModelId: _selectedModelId,
-    );
-    if (selected != null) {
-      setState(() {
-        _selectedModelId = selected;
-        _state = _TestState.idle;
-        _errorMessage = '';
-      });
-    }
-  }
-
-  Future<void> _doTest() async {
-    if (_selectedModelId == null) return;
-    setState(() {
-      _state = _TestState.loading;
-      _errorMessage = '';
-    });
-    try {
-      final cfg = context.read<SettingsProvider>().getProviderConfig(
-        widget.providerKey,
-        defaultName: widget.providerDisplayName,
-      );
-      await ProviderManager.testConnection(
-        cfg,
-        _selectedModelId!,
-        useStream: _useStream,
-      );
-      if (!mounted) return;
-      setState(() => _state = _TestState.success);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _state = _TestState.error;
-        _errorMessage = e.toString();
-      });
-    }
-  }
-}
-
-Future<String?> showModelPickerForTest(
-  BuildContext context,
-  String providerKey,
-  String providerDisplayName, {
-  String? initialModelId,
-}) async {
-  final sel = await showModelSelector(
-    context,
-    limitProviderKey: providerKey,
-    initialProviderKey: initialModelId == null ? null : providerKey,
-    initialModelId: initialModelId,
-  );
-  return sel?.modelId;
-}
-
-ModelInfo _applyModelOverride(
-  ModelInfo base,
-  Map<String, dynamic> ov, {
-  bool applyDisplayName = false,
-}) {
-  try {
-    return ModelOverrideResolver.applyModelOverride(
-      base,
-      ov,
-      applyDisplayName: applyDisplayName,
-    );
-  } catch (e, st) {
-    FlutterLogger.log(
-      '[ModelOverride] applyModelOverride failed: $e\n$st',
-      tag: 'ModelOverride',
-    );
-    assert(() {
-      debugPrint('[ModelOverride] applyModelOverride failed: $e');
-      return true;
-    }());
-    return base;
-  }
-}
-
-// Using flutter_slidable for reliable swipe actions with confirm + undo.
-
-// Legacy page-based implementations removed in favor of swipeable PageView tabs.
-
-class _BrandAvatar extends StatelessWidget {
-  const _BrandAvatar({required this.name, this.size = 20});
-  final String name;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final asset = BrandAssets.assetForName(name);
-    final mono =
-        asset != null && isDark && BrandAssets.assetNeedsDarkInvert(asset);
-    return CircleAvatar(
-      radius: size / 2,
-      backgroundColor: cs.primary.withValues(alpha: isDark ? 0.18 : 0.1),
-      child: asset == null
-          ? Text(
-              name.isNotEmpty ? name.characters.first.toUpperCase() : '?',
-              style: TextStyle(
-                color: cs.primary,
-                fontSize: size * 0.5,
-                fontWeight: AppFontWeights.emphasis,
-              ),
-            )
-          : (asset.endsWith('.svg')
-                ? SvgPicture.asset(
-                    asset,
-                    width: size * 0.7,
-                    height: size * 0.7,
-                    colorFilter: mono
-                        ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
-                        : null,
-                  )
-                : Image.asset(
-                    asset,
-                    width: size * 0.7,
-                    height: size * 0.7,
-                    fit: BoxFit.contain,
-                    color: mono ? cs.onSurface : null,
-                    colorBlendMode: mono ? BlendMode.srcIn : null,
-                  )),
-    );
-  }
-}
-
-// Top-level tactile row used by iOS-style lists here
-class _TactileRow extends StatefulWidget {
-  const _TactileRow({
-    required this.builder,
-    this.onTap,
-    this.pressedScale = 1.00,
-    this.haptics = true,
-  });
-  final Widget Function(bool pressed) builder;
-  final VoidCallback? onTap;
-  final double pressedScale;
-  final bool haptics;
-  @override
-  State<_TactileRow> createState() => _TactileRowState();
-}
-
-// Icon-only tactile button for AppBar (no ripple, slight press scale)
-class _TactileIconButton extends StatefulWidget {
-  const _TactileIconButton({
-    required this.icon,
-    required this.color,
-    required this.onTap,
-    this.semanticLabel,
-    this.size = 22,
-    this.haptics = true,
-  });
-
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-  final String? semanticLabel;
-  final double size;
-  final bool haptics;
-
-  @override
-  State<_TactileIconButton> createState() => _TactileIconButtonState();
-}
-
-class _TactileIconButtonState extends State<_TactileIconButton> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final base = widget.color;
-    final pressColor = base.withValues(alpha: 0.7);
-    final icon = Icon(
-      widget.icon,
-      size: widget.size,
-      color: _pressed ? pressColor : base,
-      semanticLabel: widget.semanticLabel,
-    );
-
-    return Semantics(
-      button: true,
-      label: widget.semanticLabel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapUp: (_) => setState(() => _pressed = false),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTap: () {
-          // if (widget.haptics) Haptics.light();
-          widget.onTap();
-        },
-        child: AnimatedScale(
-          scale: _pressed ? 0.95 : 1.0,
-          duration: const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-            child: icon,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TactileRowState extends State<_TactileRow> {
-  bool _pressed = false;
-  void _setPressed(bool v) {
-    if (_pressed != v) setState(() => _pressed = v);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: widget.onTap == null ? null : (_) => _setPressed(true),
-      onTapUp: widget.onTap == null ? null : (_) => _setPressed(false),
-      onTapCancel: widget.onTap == null ? null : () => _setPressed(false),
-      onTap: widget.onTap == null
-          ? null
-          : () {
-              if (widget.haptics &&
-                  context.read<SettingsProvider>().hapticsOnListItemTap) {
-                Haptics.soft();
-              }
-              widget.onTap!.call();
-            },
-      child: AnimatedScale(
-        scale: _pressed ? widget.pressedScale : 1.0,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOutCubic,
-        child: widget.builder(_pressed),
-      ),
-    );
-  }
-}
-
-// Bottom tactile tabs (two items) without ripple
-class _BottomTabs extends StatelessWidget {
-  const _BottomTabs({
-    required this.index,
-    required this.leftIcon,
-    required this.leftLabel,
-    required this.rightIcon,
-    required this.rightLabel,
-    required this.onSelect,
-  });
-  final int index;
-  final IconData leftIcon;
-  final String leftLabel;
-  final IconData rightIcon;
-  final String rightLabel;
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Colors.transparent : cs.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: cs.outlineVariant.withValues(alpha: isDark ? 0.18 : 0.12),
-          width: 0.8,
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: _BottomTabItem(
-              icon: leftIcon,
-              label: leftLabel,
-              selected: index == 0,
-              onTap: () => onSelect(0),
-            ),
-          ),
-          Expanded(
-            child: _BottomTabItem(
-              icon: rightIcon,
-              label: rightLabel,
-              selected: index == 1,
-              onTap: () => onSelect(1),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BottomTabItem extends StatefulWidget {
-  const _BottomTabItem({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  State<_BottomTabItem> createState() => _BottomTabItemState();
-}
-
-class _BottomTabItemState extends State<_BottomTabItem> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final baseColor = cs.onSurface.withValues(alpha: 0.7);
-    final selColor = cs.primary;
-    final target = widget.selected ? selColor : baseColor;
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: () {
-        Haptics.soft();
-        widget.onTap();
-      },
-      child: TweenAnimationBuilder<Color?>(
-        tween: ColorTween(end: target),
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        builder: (context, color, _) {
-          final c = color ?? baseColor;
-          return AnimatedScale(
-            scale: _pressed ? 0.95 : 1.0,
-            duration: const Duration(milliseconds: 110),
-            curve: Curves.easeOutCubic,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(widget.icon, size: 20, color: c),
-                  const SizedBox(height: 4),
-                  AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOutCubic,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: AppFontWeights.semibold,
-                      color: c,
-                    ),
-                    child: Text(
-                      widget.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 }

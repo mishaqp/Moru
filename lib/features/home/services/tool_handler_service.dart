@@ -17,6 +17,7 @@ import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/mcp/mcp_tool_service.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
 import '../../../core/services/memory/memory_tools.dart';
+import '../../../core/services/mini_apps/mini_app_store.dart';
 import '../../../core/services/scheduled_tasks_service.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import '../../../core/services/tools/tool_schema_overrides.dart';
@@ -31,6 +32,7 @@ import 'ask_user_interaction_service.dart';
 import 'assistant_manager_tool.dart';
 import 'built_in_tool_names.dart';
 import 'local_tools_service.dart';
+import 'mini_app_data_tool.dart';
 import 'scheduled_task_tool.dart';
 import 'tool_approval_service.dart';
 
@@ -628,6 +630,12 @@ class ToolHandlerService {
             callerAssistantId: assistant.id,
             conversationId: conversationId,
           ).execute(args);
+        }
+
+        if (name == LocalToolNames.miniApps &&
+            assistant != null &&
+            LocalToolsService.isEnabledForAssistant(name, assistant)) {
+          return MiniAppDataTool(store: MiniAppStore.instance).execute(args);
         }
 
         // Local tools
