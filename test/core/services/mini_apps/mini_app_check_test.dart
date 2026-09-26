@@ -114,6 +114,39 @@ void main() {
     });
   });
 
+  test('an opaque script error shows the console text instead', () {
+    expect(
+      const MiniAppCheckReport(
+        loaded: true,
+        pageErrors: ['error: Script error.', 'resource: Failed to load a.js'],
+        console: [
+          'warning: slow',
+          'error: Uncaught ReferenceError: initWidgets is not defined',
+        ],
+      ).toJson(),
+      {
+        'ok': false,
+        'loaded': true,
+        'page_errors': [
+          'error: Uncaught ReferenceError: initWidgets is not defined',
+          'resource: Failed to load a.js',
+        ],
+        'console': [
+          'warning: slow',
+          'error: Uncaught ReferenceError: initWidgets is not defined',
+        ],
+      },
+    );
+    // Without console details the page error stays as it came.
+    expect(
+      const MiniAppCheckReport(
+        loaded: true,
+        pageErrors: ['error: Script error.'],
+      ).toJson()['page_errors'],
+      ['error: Script error.'],
+    );
+  });
+
   test('a clean run is ok', () {
     expect(const MiniAppCheckReport(loaded: true, visibleContent: 3).toJson(), {
       'ok': true,

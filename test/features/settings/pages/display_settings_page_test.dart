@@ -3,6 +3,7 @@ import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/features/settings/pages/display_settings_page.dart';
 import 'package:Kelivo/features/settings/widgets/memory_ui.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
+import 'package:Kelivo/shared/widgets/ios_switch.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -160,6 +161,48 @@ void main() {
       expect(settings.showProducedFiles, isFalse);
     },
   );
+
+  // Pages watch only the settings they show; every switch must still follow
+  // its own setting.
+  for (final page in <String, Widget>{
+    'chat items': const ChatItemDisplaySettingsPage(),
+    'rendering': const RenderingSettingsPage(),
+    'haptics': const HapticsSettingsPage(),
+  }.entries) {
+    testWidgets('every switch on ${page.key} follows its setting', (
+      tester,
+    ) async {
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      addTearDown(settings.dispose);
+      await settings.loaded;
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsProvider>.value(
+          value: settings,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: page.value,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final count = find.byType(IosSwitch).evaluate().length;
+      expect(count, greaterThan(3));
+      for (var i = 0; i < count; i++) {
+        final finder = find.byType(IosSwitch).at(i);
+        await tester.ensureVisible(finder);
+        await tester.pumpAndSettle();
+        final before = tester.widget<IosSwitch>(finder).value;
+        await tester.tap(finder);
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<IosSwitch>(find.byType(IosSwitch).at(i)).value,
+          !before,
+          reason: 'switch $i on ${page.key}',
+        );
+      }
+    });
+  }
 
   testWidgets('behavior page shows long-paste threshold only when enabled', (
     tester,

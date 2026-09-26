@@ -4,8 +4,6 @@ import 'package:Kelivo/core/services/sandbox/workspace_channel.dart';
 import 'package:Kelivo/core/providers/external_mounts_provider.dart';
 import 'package:Kelivo/core/services/sandbox/environment_dependencies.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'
-    show debugPrint, defaultTargetPlatform, TargetPlatform;
 import 'dart:async';
 import 'l10n/app_localizations.dart';
 import 'features/home/pages/home_page.dart';
@@ -14,11 +12,10 @@ import 'features/migration/hive_to_sqlite_migration_service.dart';
 import 'package:flutter/services.dart';
 // import 'package:logging/logging.dart' as logging;
 // Theme is now managed in SettingsProvider
+import 'theme/app_theme_builder.dart';
 import 'theme/theme_factory.dart';
 import 'theme/palettes.dart';
-import 'theme/custom_theme.dart';
 import 'package:provider/provider.dart';
-import 'package:dynamic_color/dynamic_color.dart';
 import 'core/providers/user_provider.dart';
 import 'core/providers/settings_provider.dart';
 import 'core/providers/mcp_provider.dart';
@@ -94,6 +91,7 @@ import 'dart:io'
         FileMode,
         Platform,
         stderr; // kept for global override usage inside provider
+import 'core/models/mobile_background_settings.dart';
 import 'core/services/mobile_background.dart';
 import 'core/services/notification_service.dart';
 import 'features/home/controllers/chat_actions.dart';
@@ -148,7 +146,7 @@ Future<void> main() async {
       // independent of the current background-chat mode: an older completion
       // notification can still launch the app after the mode has changed.
       // Initialization does not request notification permission.
-      if (Platform.isAndroid || Platform.isIOS) {
+      if (Platform.isAndroid) {
         try {
           await NotificationService.ensureInitialized();
         } catch (_) {}
@@ -573,6 +571,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) {
             final settings = SettingsProvider(businessPreferences);
+            // The global proxy follows the settings without rebuilding the
+            // app root; it only changes HttpOverrides when its values do.
+            settings.addListener(settings.applyGlobalProxyOverridesIfNeeded);
+            settings.applyGlobalProxyOverridesIfNeeded();
             unawaited(
               settings.loaded.then((_) => settings.incrementAppLaunchCount()),
             );
@@ -770,12 +772,10 @@ class MyApp extends StatelessWidget {
       ],
       child: Builder(
         builder: (context) {
-          final settings = context.watch<SettingsProvider>();
-          // Apply global proxy overrides when settings change
-          settings.applyGlobalProxyOverridesIfNeeded();
-          // One-time app update check after first build
-          if (settings.showAppUpdates && !_didCheckUpdates) {
+          // One-time app update check once the settings are loaded.
+          if (!_didCheckUpdates) {
             _didCheckUpdates = true;
+            final settings = context.read<SettingsProvider>();
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               try {
                 await settings.loaded;
@@ -784,113 +784,20 @@ class MyApp extends StatelessWidget {
               } catch (_) {}
             });
           }
-          return DynamicColorBuilder(
-            builder: (lightDynamic, darkDynamic) {
-              // if (lightDynamic != null) {
-              //   debugPrint('[DynamicColor] Light dynamic detected. primary=${lightDynamic.primary.value.toRadixString(16)} surface=${lightDynamic.surface.value.toRadixString(16)}');
-              // } else {
-              //   debugPrint('[DynamicColor] Light dynamic not available');
-              // }
-              // if (darkDynamic != null) {
-              //   debugPrint('[DynamicColor] Dark dynamic detected. primary=${darkDynamic.primary.value.toRadixString(16)} surface=${darkDynamic.surface.value.toRadixString(16)}');
-              // } else {
-              //   debugPrint('[DynamicColor] Dark dynamic not available');
-              // }
-              final isAndroid =
-                  Theme.of(context).platform == TargetPlatform.android;
-              // Update dynamic color capability for settings UI (avoid notify during build)
-              final dynSupported =
-                  isAndroid && (lightDynamic != null || darkDynamic != null);
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                try {
-                  settings.setDynamicColorSupported(dynSupported);
-                } catch (_) {}
-              });
-
-              final useDyn = isAndroid && settings.useDynamicColor;
-              final custom = settings.selectedCustomTheme;
-              final palette =
-                  settings.themePaletteId == ThemePalettes.customPaletteId &&
-                      custom != null
-                  ? buildCustomThemePalette(custom)
-                  : ThemePalettes.byId(settings.themePaletteId);
-
-              final light = buildLightThemeForScheme(
-                palette.light,
-                dynamicScheme: useDyn ? lightDynamic : null,
-                pureBackground: settings.usePureBackground,
-                layeredSurfaces: settings.useLayeredSurfaces,
-              );
-              final dark = buildDarkThemeForScheme(
-                palette.dark,
-                dynamicScheme: useDyn ? darkDynamic : null,
-                pureBackground: settings.usePureBackground,
-                layeredSurfaces: settings.useLayeredSurfaces,
-              );
-              // Resolve effective app font family (system/local alias)
-              String? effectiveAppFontFamily() {
-                final fam = settings.appFontFamily;
-                if (fam == null || fam.isEmpty) return null;
-                return fam;
-              }
-
-              final effectiveAppFont = effectiveAppFontFamily();
-
-              // Apply user-selected app font to theme text styles and app bar
-              ThemeData applyAppFont(ThemeData base) {
-                if (effectiveAppFont == null || effectiveAppFont.isEmpty) {
-                  return base;
-                }
-                TextStyle? withFamily(TextStyle? s) =>
-                    s?.copyWith(fontFamily: effectiveAppFont);
-                TextTheme apply(TextTheme t) => t.copyWith(
-                  displayLarge: withFamily(t.displayLarge),
-                  displayMedium: withFamily(t.displayMedium),
-                  displaySmall: withFamily(t.displaySmall),
-                  headlineLarge: withFamily(t.headlineLarge),
-                  headlineMedium: withFamily(t.headlineMedium),
-                  headlineSmall: withFamily(t.headlineSmall),
-                  titleLarge: withFamily(t.titleLarge),
-                  titleMedium: withFamily(t.titleMedium),
-                  titleSmall: withFamily(t.titleSmall),
-                  bodyLarge: withFamily(t.bodyLarge),
-                  bodyMedium: withFamily(t.bodyMedium),
-                  bodySmall: withFamily(t.bodySmall),
-                  labelLarge: withFamily(t.labelLarge),
-                  labelMedium: withFamily(t.labelMedium),
-                  labelSmall: withFamily(t.labelSmall),
-                );
-                final bar = base.appBarTheme;
-                final appBar = bar.copyWith(
-                  titleTextStyle: (bar.titleTextStyle ?? const TextStyle())
-                      .copyWith(fontFamily: effectiveAppFont),
-                  toolbarTextStyle: (bar.toolbarTextStyle ?? const TextStyle())
-                      .copyWith(fontFamily: effectiveAppFont),
-                );
-                // Apply as default family to all text in ThemeData
-                return base.copyWith(
-                  textTheme: apply(base.textTheme),
-                  primaryTextTheme: apply(base.primaryTextTheme),
-                  appBarTheme: appBar,
-                );
-              }
-
-              final themedLight = applyAppFont(light);
-              final themedDark = applyAppFont(dark);
-              // Log top-level colors likely used by widgets (card/bg/shadow approximations)
-              // debugPrint('[Theme/App] Light scaffoldBg=${light.colorScheme.surface.value.toRadixString(16)} card≈${light.colorScheme.surface.value.toRadixString(16)} shadow=${light.colorScheme.shadow.value.toRadixString(16)}');
-              // debugPrint('[Theme/App] Dark scaffoldBg=${dark.colorScheme.surface.value.toRadixString(16)} card≈${dark.colorScheme.surface.value.toRadixString(16)} shadow=${dark.colorScheme.shadow.value.toRadixString(16)}');
+          return AppThemeBuilder(
+            builder: (context, themes) {
+              final effectiveAppFont = themes.fontFamily;
               return MaterialApp(
                 debugShowCheckedModeBanner: false,
                 title: 'Kelivo',
                 navigatorKey: rootNavigatorKey,
                 // App UI language; null = follow system (respects iOS per-app language)
-                locale: settings.appLocaleForMaterialApp,
+                locale: themes.locale,
                 supportedLocales: AppLocalizations.supportedLocales,
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
-                theme: themedLight,
-                darkTheme: themedDark,
-                themeMode: settings.themeMode,
+                theme: themes.light,
+                darkTheme: themes.dark,
+                themeMode: themes.mode,
                 navigatorObservers: <NavigatorObserver>[routeObserver],
                 home: RestoreOutcomeNotice(
                   outcome: restoreOutcome,
@@ -948,7 +855,11 @@ class MyApp extends StatelessWidget {
                   // Background-generation coordinator follows current settings.
                   final l10n = AppLocalizations.of(ctx);
                   if (l10n != null) {
-                    final backgroundSettings = ctx.watch<SettingsProvider>();
+                    // Reconfigure only when the background settings change.
+                    ctx.select<SettingsProvider, MobileBackgroundSettings>(
+                      (s) => s.mobileBackground,
+                    );
+                    final backgroundSettings = ctx.read<SettingsProvider>();
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (!ctx.mounted) return;
                       final coordinator = MobileBackgroundCoordinator.instance;
@@ -967,30 +878,8 @@ class MyApp extends StatelessWidget {
                     });
                   }
 
-                  final mq = MediaQuery.of(ctx);
-                  final display = View.of(ctx).display;
-                  final displaySize = display.size / display.devicePixelRatio;
-                  final isFloatingIpad =
-                      defaultTargetPlatform == TargetPlatform.iOS &&
-                      displaySize.shortestSide >= 600 &&
-                      (mq.size.shortestSide < displaySize.shortestSide - 1 ||
-                          mq.size.longestSide < displaySize.longestSide - 1);
-                  final systemTop = mq.viewPadding.top;
-                  final controlsTop = systemTop < 56 ? 56.0 : systemTop;
-                  final appWithOverlays = MediaQuery(
-                    data: isFloatingIpad
-                        ? mq.copyWith(
-                            padding: mq.padding.copyWith(top: controlsTop),
-                            viewPadding: mq.viewPadding.copyWith(
-                              top: controlsTop,
-                            ),
-                          )
-                        : mq,
-                    child: LocalSnapshotScheduler(
-                      child: AppOverlays(
-                        child: child ?? const SizedBox.shrink(),
-                      ),
-                    ),
+                  final appWithOverlays = LocalSnapshotScheduler(
+                    child: AppOverlays(child: child ?? const SizedBox.shrink()),
                   );
                   // Enforce app font as a default across the tree for Texts without explicit family
                   return AnnotatedRegion<SystemUiOverlayStyle>(
