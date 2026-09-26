@@ -16929,6 +16929,12 @@ abstract class AppLocalizations {
   /// **'Grep'**
   String get workspaceToolTitleGrep;
 
+  /// No description provided for @workspaceToolTitlePublishMiniApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish app'**
+  String get workspaceToolTitlePublishMiniApp;
+
   /// No description provided for @workspaceToolTitleUpdatePlan.
   ///
   /// In en, this message translates to:
@@ -19246,6 +19252,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Let the model keep a step checklist shown above the input.'**
   String get workspaceToolHelpUpdatePlan;
+
+  /// No description provided for @workspaceToolHelpPublishMiniApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Let the model turn a web app it built in the workspace into a mini app you can open in Moru.'**
+  String get workspaceToolHelpPublishMiniApp;
 
   /// No description provided for @workspaceToolHelpShellOutput.
   ///
@@ -22639,6 +22651,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete scheduled task'**
   String get scheduledTaskToolActionDelete;
+
+  /// No description provided for @miniAppsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Apps'**
+  String get miniAppsTitle;
+
+  /// No description provided for @miniAppsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No apps yet. Open a chat with a workspace and ask, for example: “Make me a water tracker app”. The agent builds it and publishes it here.'**
+  String get miniAppsEmpty;
+
+  /// No description provided for @miniAppsFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Each app keeps its own data, which survives updates. Ask the agent in the same chat to change an app; it republishes it.'**
+  String get miniAppsFooter;
+
+  /// No description provided for @miniAppsOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get miniAppsOpen;
+
+  /// No description provided for @miniAppsReload.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload'**
+  String get miniAppsReload;
+
+  /// No description provided for @miniAppsAddToHomeScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to home screen'**
+  String get miniAppsAddToHomeScreen;
+
+  /// No description provided for @miniAppsPinRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm adding the shortcut in the launcher.'**
+  String get miniAppsPinRequested;
+
+  /// No description provided for @miniAppsPinUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This launcher cannot pin shortcuts.'**
+  String get miniAppsPinUnsupported;
+
+  /// No description provided for @miniAppsDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get miniAppsDelete;
+
+  /// No description provided for @miniAppsDeleteDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The app and all its data are removed. A home screen shortcut stops working.'**
+  String get miniAppsDeleteDetail;
+
+  /// No description provided for @miniAppsNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This app is not installed anymore.'**
+  String get miniAppsNotFound;
+
+  /// No description provided for @miniAppsDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}”?'**
+  String miniAppsDeleteTitle(String name);
 
   /// No description provided for @phoneControlTitle.
   ///

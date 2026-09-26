@@ -9004,6 +9004,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get workspaceToolTitleGrep => 'Grep';
 
   @override
+  String get workspaceToolTitlePublishMiniApp => '发布应用';
+
+  @override
   String get workspaceToolTitleUpdatePlan => '计划';
 
   @override
@@ -10272,6 +10275,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get workspaceToolHelpUpdatePlan => '让模型维护步骤清单，显示在输入框上方。';
+
+  @override
+  String get workspaceToolHelpPublishMiniApp =>
+      '让模型把在工作区构建的网页应用发布为可在 Moru 中打开的小应用。';
 
   @override
   String get workspaceToolHelpShellOutput => '读取、等待或停止在后台启动的命令。';
@@ -12087,6 +12094,46 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get scheduledTaskToolActionDelete => '删除定时任务';
+
+  @override
+  String get miniAppsTitle => '我的小应用';
+
+  @override
+  String get miniAppsEmpty =>
+      '还没有小应用。打开绑定工作区的对话，例如说：“帮我做一个喝水记录应用”。智能体会构建并发布到这里。';
+
+  @override
+  String get miniAppsFooter =>
+      '每个小应用都有自己的数据，更新后仍会保留。想修改应用时，在同一对话中告诉智能体，它会重新发布。';
+
+  @override
+  String get miniAppsOpen => '打开';
+
+  @override
+  String get miniAppsReload => '重新加载';
+
+  @override
+  String get miniAppsAddToHomeScreen => '添加到主屏幕';
+
+  @override
+  String get miniAppsPinRequested => '请在启动器中确认添加快捷方式。';
+
+  @override
+  String get miniAppsPinUnsupported => '当前启动器不支持固定快捷方式。';
+
+  @override
+  String get miniAppsDelete => '删除';
+
+  @override
+  String get miniAppsDeleteDetail => '将删除该应用及其全部数据，主屏幕快捷方式将失效。';
+
+  @override
+  String get miniAppsNotFound => '该小应用已不存在。';
+
+  @override
+  String miniAppsDeleteTitle(String name) {
+    return '删除“$name”？';
+  }
 
   @override
   String get phoneControlTitle => '手机控制';
@@ -21088,6 +21135,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get workspaceToolTitleGrep => 'Grep';
 
   @override
+  String get workspaceToolTitlePublishMiniApp => '发布应用';
+
+  @override
   String get workspaceToolTitleUpdatePlan => '计划';
 
   @override
@@ -22356,6 +22406,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get workspaceToolHelpUpdatePlan => '让模型维护步骤清单，显示在输入框上方。';
+
+  @override
+  String get workspaceToolHelpPublishMiniApp =>
+      '让模型把在工作区构建的网页应用发布为可在 Moru 中打开的小应用。';
 
   @override
   String get workspaceToolHelpShellOutput => '读取、等待或停止在后台启动的命令。';
@@ -24171,6 +24225,46 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get scheduledTaskToolActionDelete => '删除定时任务';
+
+  @override
+  String get miniAppsTitle => '我的小应用';
+
+  @override
+  String get miniAppsEmpty =>
+      '还没有小应用。打开绑定工作区的对话，例如说：“帮我做一个喝水记录应用”。智能体会构建并发布到这里。';
+
+  @override
+  String get miniAppsFooter =>
+      '每个小应用都有自己的数据，更新后仍会保留。想修改应用时，在同一对话中告诉智能体，它会重新发布。';
+
+  @override
+  String get miniAppsOpen => '打开';
+
+  @override
+  String get miniAppsReload => '重新加载';
+
+  @override
+  String get miniAppsAddToHomeScreen => '添加到主屏幕';
+
+  @override
+  String get miniAppsPinRequested => '请在启动器中确认添加快捷方式。';
+
+  @override
+  String get miniAppsPinUnsupported => '当前启动器不支持固定快捷方式。';
+
+  @override
+  String get miniAppsDelete => '删除';
+
+  @override
+  String get miniAppsDeleteDetail => '将删除该应用及其全部数据，主屏幕快捷方式将失效。';
+
+  @override
+  String get miniAppsNotFound => '该小应用已不存在。';
+
+  @override
+  String miniAppsDeleteTitle(String name) {
+    return '删除“$name”？';
+  }
 
   @override
   String get phoneControlTitle => '手机控制';
@@ -33247,6 +33341,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get workspaceToolTitleGrep => 'Grep';
 
   @override
+  String get workspaceToolTitlePublishMiniApp => '發布應用';
+
+  @override
   String get workspaceToolTitleUpdatePlan => '計畫';
 
   @override
@@ -34517,6 +34614,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get workspaceToolHelpUpdatePlan => '讓模型維護步驟清單，顯示在輸入框上方。';
+
+  @override
+  String get workspaceToolHelpPublishMiniApp =>
+      '讓模型把在工作區建構的網頁應用發布為可在 Moru 中開啟的小應用。';
 
   @override
   String get workspaceToolHelpShellOutput => '讀取、等待或停止在背景啟動的命令。';
@@ -36334,6 +36435,46 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get scheduledTaskToolActionDelete => '刪除排程任務';
+
+  @override
+  String get miniAppsTitle => '我的小應用';
+
+  @override
+  String get miniAppsEmpty =>
+      '還沒有小應用。開啟綁定工作區的對話，例如說：「幫我做一個喝水紀錄應用」。智慧體會建構並發布到這裡。';
+
+  @override
+  String get miniAppsFooter =>
+      '每個小應用都有自己的資料，更新後仍會保留。想修改應用時，在同一對話中告訴智慧體，它會重新發布。';
+
+  @override
+  String get miniAppsOpen => '開啟';
+
+  @override
+  String get miniAppsReload => '重新載入';
+
+  @override
+  String get miniAppsAddToHomeScreen => '加入主畫面';
+
+  @override
+  String get miniAppsPinRequested => '請在啟動器中確認加入捷徑。';
+
+  @override
+  String get miniAppsPinUnsupported => '目前的啟動器不支援釘選捷徑。';
+
+  @override
+  String get miniAppsDelete => '刪除';
+
+  @override
+  String get miniAppsDeleteDetail => '將刪除此應用及其全部資料，主畫面捷徑將失效。';
+
+  @override
+  String get miniAppsNotFound => '此小應用已不存在。';
+
+  @override
+  String miniAppsDeleteTitle(String name) {
+    return '刪除「$name」？';
+  }
 
   @override
   String get phoneControlTitle => '手機控制';

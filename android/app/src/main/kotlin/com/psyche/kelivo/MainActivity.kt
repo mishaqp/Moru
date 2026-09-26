@@ -68,6 +68,9 @@ class MainActivity : FlutterActivity() {
     private val processTextChannelName = "app.process_text"
     private val fileSaveChannelName = "app.file_save"
     private val deviceStorageChannelName = "app.device_storage"
+    private val miniAppsChannelName = "app.mini_apps"
+    private var miniAppsChannel: MethodChannel? = null
+    private var pendingMiniApp: String? = null
     private var processTextChannel: MethodChannel? = null
     private var fileSaveChannel: MethodChannel? = null
     private var deviceStorageChannel: MethodChannel? = null
@@ -87,6 +90,11 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         forwardCachedProcessTextLaunch(reusedEngine, savedInstanceState, intent, processTextChannel)
+        // A retained HomePage already asked for its first app; send new ones.
+        if (reusedEngine && savedInstanceState == null &&
+            intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) {
+            takeMiniAppId(intent)?.let { miniAppsChannel?.invokeMethod("onOpenApp", it) }
+        }
         (kelivo.engine.plugins.get(FlutterLocalNotificationsPlugin::class.java) as? FlutterLocalNotificationsPlugin)?.let {
             forwardCachedNotificationLaunch(reusedEngine, savedInstanceState, intent, it)
         }
@@ -119,6 +127,27 @@ class MainActivity : FlutterActivity() {
                     val text = pendingProcessText ?: takeProcessText(intent)
                     pendingProcessText = null
                     result.success(text)
+                }
+                else -> result.notImplemented()
+            }
+        }
+        miniAppsChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, miniAppsChannelName)
+        miniAppsChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "takeInitialApp" -> {
+                    val id = pendingMiniApp ?: takeMiniAppId(intent)
+                    pendingMiniApp = null
+                    result.success(id)
+                }
+                "pinShortcut" -> {
+                    val id = call.argument<String>("id")
+                    val icon = call.argument<ByteArray>("icon")
+                    if (id == null || icon == null) {
+                        result.error("invalid_args", "id and icon are required", null)
+                    } else {
+                        val name = call.argument<String>("name") ?: id
+                        result.success(MiniAppShortcuts.requestPin(this, id, name, icon))
+                    }
                 }
                 else -> result.notImplemented()
             }
@@ -159,6 +188,14 @@ class MainActivity : FlutterActivity() {
         kelivo.backgroundRuntime.receiveConversation(intent)
         setIntent(intent)
         receivedShare = incomingShareHandler?.receive(intent) == true
+        takeMiniAppId(intent)?.let { id ->
+            val channel = miniAppsChannel
+            if (channel != null) {
+                channel.invokeMethod("onOpenApp", id)
+            } else {
+                pendingMiniApp = id
+            }
+        }
         val text = takeProcessText(intent) ?: return
         val ch = processTextChannel
         if (ch != null) {
@@ -173,6 +210,7 @@ class MainActivity : FlutterActivity() {
         kelivo.backgroundRuntime.detachActivity(this)
         OAuthHandler.detachActivity(this)
         processTextChannel?.setMethodCallHandler(null)
+        miniAppsChannel?.setMethodCallHandler(null)
         fileSaveChannel?.setMethodCallHandler(null)
         deviceStorageChannel?.setMethodCallHandler(null)
         highRefreshRate.dispose()

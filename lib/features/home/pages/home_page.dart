@@ -24,6 +24,7 @@ import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/compress_context_options.dart';
 import '../../../core/services/android_process_text.dart';
+import '../../mini_apps/mini_app_launcher.dart';
 import '../../../core/services/incoming_share_service.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../utils/platform_utils.dart';
@@ -706,6 +707,7 @@ class _HomePageState extends State<HomePage>
   bool _scrollNavHovering = false;
   double _lastViewInsetBottom = 0;
   StreamSubscription<String>? _processTextSub;
+  StreamSubscription<String>? _miniAppLaunchSub;
   IncomingShareService? _incomingShares;
   late final Future<void> _chatReady;
   bool _readingIncomingShares = false;
@@ -746,6 +748,7 @@ class _HomePageState extends State<HomePage>
 
     _chatReady = _controller.initChat();
     _initProcessText();
+    _initMiniAppLaunches();
     _initIncomingShares();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -802,6 +805,7 @@ class _HomePageState extends State<HomePage>
       WidgetsBinding.instance.removeObserver(this);
     } catch (_) {}
     _processTextSub?.cancel();
+    _miniAppLaunchSub?.cancel();
     _incomingShares?.dispose();
     _controller.removeListener(_onControllerChanged);
     _drawerController.removeListener(_onDrawerValueChanged);
@@ -846,6 +850,21 @@ class _HomePageState extends State<HomePage>
         _handleProcessText(text);
       }
     });
+  }
+
+  /// Home screen shortcuts of mini apps, on a cold start and afterwards.
+  void _initMiniAppLaunches() {
+    if (!PlatformUtils.isAndroid) return;
+    MiniAppLauncher.ensureInitialized();
+    _miniAppLaunchSub = MiniAppLauncher.launches.listen(_openMiniApp);
+    MiniAppLauncher.takeInitialApp().then((id) {
+      if (id != null) _openMiniApp(id);
+    });
+  }
+
+  void _openMiniApp(String id) {
+    if (!mounted) return;
+    unawaited(MiniAppLauncher.open(context, id));
   }
 
   void _initIncomingShares() {
