@@ -14,6 +14,7 @@ import 'package:Kelivo/core/services/workspace/task_plan.dart';
 import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
 import 'package:Kelivo/core/services/workspace/workspace_paths.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
+import 'package:Kelivo/core/services/mini_apps/mini_app_check.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tools_service.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
@@ -502,6 +503,56 @@ void main() {
         toolCallId: 'no-manifest',
       );
       expect(jsonOf(noManifest)['error'], 'missing_manifest');
+    });
+
+    test('reports what the check found, or why it could not run', () async {
+      final app = Directory(p.join(workspaceDir.path, 'apps', 'water'))
+        ..createSync(recursive: true);
+      File(
+        p.join(app.path, 'moru-app.json'),
+      ).writeAsStringSync(jsonEncode({'id': 'water', 'name': 'Water'}));
+      File(p.join(app.path, 'index.html')).writeAsStringSync('<p>hi</p>');
+      final store = MiniAppStore(
+        root: () async => Directory(p.join(tmp.path, 'installed')),
+      );
+      final checked = <String>[];
+      var tools = WorkspaceToolsService(
+        registry: registry,
+        miniApps: store,
+        checkMiniApp: (app) async {
+          checked.add(app.id);
+          return const MiniAppCheckReport(
+            loaded: true,
+            pageErrors: ['error: x is not defined (app.js:3)'],
+            visibleContent: 0,
+          );
+        },
+      );
+      var raw = await tools.handle(ctx(), WorkspaceToolsService.miniAppTool, {
+        'path': 'apps/water',
+      }, toolCallId: 'checked');
+      expect(checked, ['water']);
+      expect(jsonOf(raw)['check'], {
+        'ok': false,
+        'loaded': true,
+        'page_errors': ['error: x is not defined (app.js:3)'],
+        'blank_page': true,
+      });
+
+      tools = WorkspaceToolsService(
+        registry: registry,
+        miniApps: store,
+        checkMiniApp: (app) async => throw StateError('no webview'),
+      );
+      raw = await tools.handle(ctx(), WorkspaceToolsService.miniAppTool, {
+        'path': 'apps/water',
+      }, toolCallId: 'broken-check');
+      // The app is published even when the check cannot run.
+      expect(jsonOf(raw)['ok'], isTrue);
+      expect(jsonOf(raw)['check'], {
+        'ok': false,
+        'skipped': 'The check could not run: Bad state: no webview',
+      });
     });
   });
 

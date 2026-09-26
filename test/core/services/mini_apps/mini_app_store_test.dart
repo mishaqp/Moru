@@ -183,8 +183,8 @@ void main() {
   test('the bridge answers storage calls and reports errors', () async {
     await store.install(await source({'id': 'water', 'name': 'Water'}));
     final bridge = MiniAppBridge(store: store, appId: 'water');
-    Future<String> call(Map<String, Object?> message) =>
-        bridge.handle(jsonEncode(message));
+    Future<String> call(Map<String, Object?> message) async =>
+        (await bridge.handle(jsonEncode(message)))!;
 
     expect(
       await call({

@@ -43,7 +43,7 @@ void main() {
     );
     final match = RegExp(
       r'^window\.__moruReply\(1, (true|false), (.*)\);$',
-    ).firstMatch(script)!;
+    ).firstMatch(script!)!;
     return {'ok': match[1] == 'true', 'value': jsonDecode(match[2]!)};
   }
 

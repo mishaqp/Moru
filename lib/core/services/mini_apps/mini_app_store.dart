@@ -711,6 +711,27 @@ class MiniAppStore extends ChangeNotifier {
   if (window.moru) return;
   var pending = {};
   var next = 0;
+  // Problems go to Moru, which shows them to the agent after publishing.
+  function report(kind, message) {
+    try {
+      MoruBridge.postMessage(JSON.stringify({
+        method: '__report', args: { kind: kind, message: String(message).slice(0, 500) }
+      }));
+    } catch (e) {}
+  }
+  window.addEventListener('error', function (e) {
+    var target = e.target;
+    if (target && target !== window && (target.src || target.href)) {
+      report('resource', 'Failed to load ' + (target.src || target.href).split('/app/').pop());
+    } else {
+      var where = e.filename ? ' (' + e.filename.split('/app/').pop() + ':' + e.lineno + ')' : '';
+      report('error', (e.message || 'Script error') + where);
+    }
+  }, true);
+  window.addEventListener('unhandledrejection', function (e) {
+    var reason = e.reason;
+    report('promise', reason && reason.message ? reason.message : String(reason));
+  });
   function call(method, args) {
     return new Promise(function (resolve, reject) {
       var id = ++next;

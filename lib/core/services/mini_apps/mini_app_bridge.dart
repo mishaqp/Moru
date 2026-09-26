@@ -47,24 +47,47 @@ class MiniAppBridge {
   final String appId;
   final MiniAppHost host;
 
+  static const int maxProblems = 50;
+
   /// One model request at a time, so a looping page cannot flood the model.
   bool _asking = false;
 
-  Future<String> handle(String message) async {
+  /// Script errors, rejected promises and files that failed to load, as
+  /// `moru.js` reported them.
+  final List<String> pageErrors = [];
+
+  /// `moru.*` calls that failed, as "method: message".
+  final List<String> failedCalls = [];
+
+  /// The script that settles the page's promise, or null for a message
+  /// that needs no answer.
+  Future<String?> handle(String message) async {
     Object? id;
+    var method = '';
     try {
       final call = Map<String, dynamic>.from(jsonDecode(message) as Map);
       id = call['id'];
+      method = '${call['method']}';
       final args = call['args'] is Map
           ? Map<String, dynamic>.from(call['args'] as Map)
           : const <String, dynamic>{};
-      final value = await _dispatch('${call['method']}', args);
+      if (method == '__report') {
+        _note(pageErrors, '${args['kind']}: ${args['message']}');
+        return null;
+      }
+      final value = await _dispatch(method, args);
       return _reply(id, true, value);
     } on MiniAppException catch (e) {
+      _note(failedCalls, '$method: ${e.message}');
       return _reply(id, false, e.message);
     } catch (e) {
+      _note(failedCalls, '$method: $e');
       return _reply(id, false, '$e');
     }
+  }
+
+  static void _note(List<String> list, String problem) {
+    if (list.length < maxProblems) list.add(problem);
   }
 
   /// Tells the page that [key] changed outside it.
