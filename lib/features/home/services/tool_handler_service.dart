@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/assistant.dart';
@@ -28,6 +29,7 @@ import '../../../core/services/workspace/workspace_runtime.dart';
 import '../../../core/services/workspace/workspace_tools_service.dart';
 import '../../../core/providers/workspace_provider.dart';
 import '../../../core/services/browser/browser_agent_session.dart';
+import '../../mini_apps/mini_app_checker.dart';
 import 'ask_user_interaction_service.dart';
 import 'assistant_manager_tool.dart';
 import 'built_in_tool_names.dart';
@@ -80,6 +82,9 @@ class ToolHandlerService {
         isToolEnabled: (id, name) =>
             workspaces.byId(id)?.isToolEnabled(name) ?? false,
         plans: _optional<TaskPlanRegistry>(),
+        checkMiniApp: defaultTargetPlatform == TargetPlatform.android
+            ? MiniAppChecker.run
+            : null,
       );
     } catch (_) {
       return WorkspaceToolsService();

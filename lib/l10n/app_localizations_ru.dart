@@ -12885,6 +12885,42 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get miniAppsShare => 'Поделиться';
+
+  @override
+  String miniAppsShareTitle(String name) {
+    return 'Поделиться «$name»';
+  }
+
+  @override
+  String get miniAppsShareWithData => 'Приложение и данные';
+
+  @override
+  String get miniAppsShareWithoutData => 'Только приложение';
+
+  @override
+  String get miniAppsShareDataDetail =>
+      'Данные — всё, что приложение сохранило, например ваши записи. Напоминания не передаются.';
+
+  @override
+  String get miniAppsImport => 'Импорт';
+
+  @override
+  String miniAppsImported(String name) {
+    return '«$name» установлено';
+  }
+
+  @override
+  String miniAppsImportedWithData(String name) {
+    return '«$name» установлено вместе с данными';
+  }
+
+  @override
+  String miniAppsImportFailed(String message) {
+    return 'Не удалось установить приложение: $message';
+  }
+
+  @override
   String get miniAppsNotificationChannel => 'Мини-приложения';
 
   @override

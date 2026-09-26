@@ -22766,6 +22766,60 @@ abstract class AppLocalizations {
   /// **'Delete “{name}”?'**
   String miniAppsDeleteTitle(String name);
 
+  /// No description provided for @miniAppsShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get miniAppsShare;
+
+  /// No description provided for @miniAppsShareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share “{name}”'**
+  String miniAppsShareTitle(String name);
+
+  /// No description provided for @miniAppsShareWithData.
+  ///
+  /// In en, this message translates to:
+  /// **'App and its data'**
+  String get miniAppsShareWithData;
+
+  /// No description provided for @miniAppsShareWithoutData.
+  ///
+  /// In en, this message translates to:
+  /// **'App only'**
+  String get miniAppsShareWithoutData;
+
+  /// No description provided for @miniAppsShareDataDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Data is everything the app saved, such as your records. Reminders are not shared.'**
+  String get miniAppsShareDataDetail;
+
+  /// No description provided for @miniAppsImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get miniAppsImport;
+
+  /// No description provided for @miniAppsImported.
+  ///
+  /// In en, this message translates to:
+  /// **'“{name}” installed'**
+  String miniAppsImported(String name);
+
+  /// No description provided for @miniAppsImportedWithData.
+  ///
+  /// In en, this message translates to:
+  /// **'“{name}” installed with its data'**
+  String miniAppsImportedWithData(String name);
+
+  /// No description provided for @miniAppsImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not install the app: {message}'**
+  String miniAppsImportFailed(String message);
+
   /// No description provided for @miniAppsNotificationChannel.
   ///
   /// In en, this message translates to:

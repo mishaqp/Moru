@@ -1,21 +1,31 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/models/assistant.dart';
 import '../../core/providers/assistant_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/api/chat_api_service.dart';
 import '../../core/services/mini_apps/mini_app_bridge.dart';
+import '../../core/services/mini_apps/mini_app_fetch.dart';
 import '../../core/services/mini_apps/mini_app_reminders.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
 import '../../core/services/notification_service.dart';
+import '../home/services/local_tools_service.dart';
+import '../../icons/lucide_adapter.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/ios_settings_rows.dart';
+import '../../shared/widgets/option_sheet.dart';
 import '../../shared/widgets/snackbar.dart';
 import 'pages/mini_app_page.dart';
 
@@ -95,7 +105,31 @@ class MiniAppLauncher {
       );
     },
     reminders: reminders,
+    fetch: fetcher,
+    calendar: _calendar,
   );
+
+  /// Shared by every open app, so connections are reused.
+  static final MiniAppFetch fetcher = MiniAppFetch();
+
+  static Future<Map<String, dynamic>> _calendar(
+    String method,
+    Map<String, dynamic> args,
+  ) async {
+    if (!await DeviceLocalTools.hasCalendarPermission() &&
+        !await DeviceLocalTools.requestCalendarPermission()) {
+      throw const MiniAppException(
+        'permission_denied',
+        'Calendar access was not granted.',
+      );
+    }
+    final result = jsonDecode(
+      await LocalToolsService.invokeDeviceTool(method, args),
+    );
+    return result is Map
+        ? Map<String, dynamic>.from(result)
+        : {'events': result};
+  }
 
   static void ensureInitialized() {
     if (_initialized) return;
@@ -143,6 +177,100 @@ class MiniAppLauncher {
       ),
     );
   }
+
+  /// Shares [app] as a `.moruapp` file, asking first whether its data goes
+  /// along when it has any.
+  static Future<void> share(
+    BuildContext context,
+    MiniApp app, {
+    MiniAppStore? store,
+  }) async {
+    final apps = store ?? MiniAppStore.instance;
+    final l10n = AppLocalizations.of(context)!;
+    var withData = false;
+    if ((await apps.storageKeys(app.id)).isNotEmpty) {
+      if (!context.mounted) return;
+      final choice = await showOptionSheet<bool>(
+        context,
+        title: l10n.miniAppsShareTitle(app.name),
+        items: [
+          OptionSheetItem(
+            value: false,
+            icon: Lucide.Package,
+            label: l10n.miniAppsShareWithoutData,
+          ),
+          OptionSheetItem(
+            value: true,
+            icon: Lucide.Database,
+            label: l10n.miniAppsShareWithData,
+          ),
+        ],
+        footer: IosSectionFooter(text: l10n.miniAppsShareDataDetail),
+      );
+      if (choice == null) return;
+      withData = choice;
+    }
+    final temp = await getTemporaryDirectory();
+    final file = await apps.exportArchive(
+      app.id,
+      withData: withData,
+      into: Directory(p.join(temp.path, 'mini_app_share')),
+    );
+    if (!context.mounted) return;
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path, mimeType: 'application/zip')],
+        subject: app.name,
+      ),
+    );
+  }
+
+  /// Lets the user pick a `.moruapp` file and installs it.
+  static Future<void> pickAndImport(
+    BuildContext context, {
+    MiniAppStore? store,
+  }) async {
+    final result = await FilePicker.platform.pickFiles(allowMultiple: false);
+    final path = result?.files.singleOrNull?.path;
+    if (path == null || !context.mounted) return;
+    await importFile(context, File(path), store: store);
+  }
+
+  /// Installs the app in the `.moruapp` [file] and opens it.
+  static Future<void> importFile(
+    BuildContext context,
+    File file, {
+    MiniAppStore? store,
+  }) async {
+    final apps = store ?? MiniAppStore.instance;
+    final l10n = AppLocalizations.of(context)!;
+    final ({MiniApp app, bool updated, bool dataRestored}) result;
+    try {
+      result = await apps.importArchive(file);
+    } on MiniAppException catch (e) {
+      if (context.mounted) {
+        showAppSnackBar(
+          context,
+          message: l10n.miniAppsImportFailed(e.message),
+          type: NotificationType.error,
+        );
+      }
+      return;
+    }
+    if (!context.mounted) return;
+    showAppSnackBar(
+      context,
+      message: result.dataRestored
+          ? l10n.miniAppsImportedWithData(result.app.name)
+          : l10n.miniAppsImported(result.app.name),
+      type: NotificationType.success,
+    );
+    await open(context, result.app.id, store: store);
+  }
+
+  /// Whether a shared or opened file is a mini app.
+  static bool isArchiveName(String name) =>
+      name.toLowerCase().endsWith(MiniAppStore.archiveExtension);
 
   /// Asks the launcher to pin [app]. False when it cannot pin shortcuts.
   static Future<bool> pinShortcut(MiniApp app) async {

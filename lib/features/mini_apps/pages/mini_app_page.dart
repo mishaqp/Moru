@@ -96,7 +96,7 @@ class _MiniAppPageState extends State<MiniAppPage> {
 
   Future<void> _answer(String message) async {
     final script = await _bridge.handle(message);
-    if (!mounted) return;
+    if (script == null || !mounted) return;
     await _controller.runJavaScript(script);
   }
 

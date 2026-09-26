@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../utils/app_directories.dart';
+import '../skills/skill_archive.dart' show safeZipEntryName;
 
 /// A mini app the agent built and published: a small web app with its own
 /// data, opened inside Moru or from a home screen shortcut.
@@ -19,6 +21,8 @@ class MiniApp {
     this.entry = 'index.html',
     this.icon,
     this.dataHelp = '',
+    this.network = const [],
+    this.permissions = const {},
     required this.updatedAt,
   });
 
@@ -29,6 +33,13 @@ class MiniApp {
   /// What the app keeps in `moru.storage`, from `data` in the manifest, so the
   /// chat can read and change it.
   final String dataHelp;
+
+  /// Hosts `moru.fetch` may reach, from `network` in the manifest. An entry
+  /// `*.example.com` also allows every subdomain.
+  final List<String> network;
+
+  /// Device features the app asked for in `permissions`, e.g. `calendar`.
+  final Set<String> permissions;
 
   /// Folder of the installed copy (manifest, app/ and data).
   final String directory;
@@ -55,6 +66,12 @@ class MiniApp {
         entry: json['entry'] as String? ?? 'index.html',
         icon: json['icon'] as String?,
         dataHelp: json['data'] as String? ?? '',
+        network: [
+          for (final host in json['network'] as List? ?? const []) '$host',
+        ],
+        permissions: {
+          for (final name in json['permissions'] as List? ?? const []) '$name',
+        },
         directory: directory,
         updatedAt: DateTime.fromMillisecondsSinceEpoch(
           json['updatedAt'] as int? ?? 0,
@@ -68,6 +85,8 @@ class MiniApp {
     'entry': entry,
     'icon': ?icon,
     if (dataHelp.isNotEmpty) 'data': dataHelp,
+    if (network.isNotEmpty) 'network': network,
+    if (permissions.isNotEmpty) 'permissions': permissions.toList()..sort(),
     'updatedAt': updatedAt.millisecondsSinceEpoch,
   };
 }
@@ -222,6 +241,8 @@ class MiniAppStore extends ChangeNotifier {
       );
     }
     final entry = _relative(manifest['entry'], fallback: 'index.html')!;
+    final network = _hosts(manifest['network']);
+    final permissions = _permissions(manifest['permissions']);
     final icon = _relative(manifest['icon'], fallback: null);
 
     final files = await _collect(sourceDir);
@@ -265,6 +286,8 @@ class MiniAppStore extends ChangeNotifier {
       entry: entry,
       icon: icon,
       dataHelp: _limited('${manifest['data'] ?? ''}'.trim(), 2000),
+      network: network,
+      permissions: permissions,
       directory: directory.path,
       updatedAt: _now(),
     );
@@ -311,6 +334,139 @@ class MiniAppStore extends ChangeNotifier {
         if (other.id != id) other,
     ];
     notifyListeners();
+  }
+
+  // ---------------------------------------------------------------------------
+  // .moruapp files
+  // ---------------------------------------------------------------------------
+
+  static const String archiveExtension = '.moruapp';
+
+  /// Stored data inside a `.moruapp`, beside the app's own files.
+  static const String archiveDataFile = '.moru-data.json';
+
+  /// Packs [id] into `<into>/<id>.moruapp`: its files and moru-app.json, and
+  /// its data when [withData]. Reminders stay on this device.
+  Future<File> exportArchive(
+    String id, {
+    required bool withData,
+    required Directory into,
+  }) async {
+    await load();
+    final app = _require(id);
+    await _writes[id];
+    final archive = Archive();
+    final manifest = app.toJson()..remove('updatedAt');
+    archive.addFile(
+      ArchiveFile.bytes(manifestFile, utf8.encode(jsonEncode(manifest))),
+    );
+    final code = Directory(app.codeDirectory);
+    await for (final entity in code.list(recursive: true)) {
+      if (entity is! File) continue;
+      final relative = p.posix.joinAll(
+        p.split(p.relative(entity.path, from: code.path)),
+      );
+      if (relative == bridgeFile) continue;
+      archive.addFile(ArchiveFile.bytes(relative, await entity.readAsBytes()));
+    }
+    if (withData) {
+      final data = await _readData(app);
+      if (data.isNotEmpty) {
+        archive.addFile(
+          ArchiveFile.bytes(archiveDataFile, utf8.encode(jsonEncode(data))),
+        );
+      }
+    }
+    await into.create(recursive: true);
+    final file = File(p.join(into.path, '$id$archiveExtension'));
+    await file.writeAsBytes(ZipEncoder().encodeBytes(archive), flush: true);
+    return file;
+  }
+
+  /// Installs the app packed in [file]. Its data is used only when the app
+  /// has no data here yet, so importing never overwrites what is stored.
+  Future<({MiniApp app, bool updated, bool dataRestored})> importArchive(
+    File file,
+  ) async {
+    await load();
+    if (await file.length() > maxBytes + maxDataBytes) {
+      throw const MiniAppException('too_large', 'The file is too large.');
+    }
+    final Archive archive;
+    try {
+      archive = ZipDecoder().decodeBytes(await file.readAsBytes());
+    } catch (_) {
+      throw const MiniAppException(
+        'invalid_archive',
+        'This is not a Moru app file.',
+      );
+    }
+    final root = await _root();
+    await root.create(recursive: true);
+    final staging = await root.createTemp('.import-');
+    try {
+      var files = 0;
+      var bytes = 0;
+      for (final entry in archive) {
+        if (!entry.isFile || entry.isSymbolicLink) continue;
+        final String? name;
+        try {
+          name = safeZipEntryName(entry.name);
+        } on FormatException {
+          throw const MiniAppException(
+            'invalid_archive',
+            'The file has unsafe paths.',
+          );
+        }
+        if (name == null) continue;
+        files++;
+        bytes += entry.size;
+        if (files > maxFiles + 2 || bytes > maxBytes + maxDataBytes) {
+          throw const MiniAppException('too_large', 'The app is too large.');
+        }
+        final target = File(p.join(staging.path, name));
+        await target.parent.create(recursive: true);
+        await target.writeAsBytes(entry.readBytes() ?? const []);
+      }
+      if (!await File(p.join(staging.path, manifestFile)).exists()) {
+        throw const MiniAppException(
+          'invalid_archive',
+          'This is not a Moru app file.',
+        );
+      }
+      Map<String, dynamic>? data;
+      final dataFile = File(p.join(staging.path, archiveDataFile));
+      if (await dataFile.exists()) {
+        try {
+          data = Map<String, dynamic>.from(
+            jsonDecode(await dataFile.readAsString()) as Map,
+          );
+        } catch (_) {
+          throw const MiniAppException(
+            'invalid_archive',
+            'The app data in the file is damaged.',
+          );
+        }
+        await dataFile.delete();
+      }
+      final installed = await install(staging);
+      final id = installed.app.id;
+      var restored = false;
+      if (data != null && data.isNotEmpty) {
+        await _update(id, (current) {
+          if (current.isNotEmpty) return;
+          current.addAll(data!);
+          restored = true;
+        });
+      }
+      return (
+        app: installed.app,
+        updated: installed.updated,
+        dataRestored: restored,
+      );
+    } finally {
+      await staging.delete(recursive: true);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -423,6 +579,57 @@ class MiniAppStore extends ChangeNotifier {
   static List<MiniApp> _sorted(List<MiniApp> apps) =>
       apps..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
+  static const int maxHosts = 20;
+  static const Set<String> knownPermissions = {'calendar'};
+  static final RegExp _hostPattern = RegExp(
+    r'^(\*\.)?([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$',
+  );
+
+  static List<String> _hosts(Object? raw) {
+    if (raw == null) return const [];
+    if (raw is! List || raw.length > maxHosts) {
+      throw const MiniAppException(
+        'invalid_network',
+        '"network" must be a list of at most $maxHosts host names.',
+      );
+    }
+    final hosts = <String>{};
+    for (final item in raw) {
+      final host = '$item'.trim().toLowerCase();
+      if (!_hostPattern.hasMatch(host)) {
+        throw MiniAppException(
+          'invalid_network',
+          '"$item" is not a host name. Use e.g. "api.example.com" or '
+              '"*.example.com", without scheme, port or path.',
+        );
+      }
+      hosts.add(host);
+    }
+    return hosts.toList();
+  }
+
+  static Set<String> _permissions(Object? raw) {
+    if (raw == null) return const {};
+    final names = raw is List ? raw.map((e) => '$e'.trim()).toSet() : null;
+    if (names == null || !names.every(knownPermissions.contains)) {
+      throw MiniAppException(
+        'invalid_permissions',
+        '"permissions" must be a list of: ${knownPermissions.join(', ')}.',
+      );
+    }
+    return names;
+  }
+
+  /// Whether `moru.fetch` from [app] may reach [host].
+  static bool allowsHost(MiniApp app, String host) {
+    final name = host.toLowerCase();
+    return app.network.any(
+      (allowed) => allowed.startsWith('*.')
+          ? name.endsWith(allowed.substring(1)) || name == allowed.substring(2)
+          : name == allowed,
+    );
+  }
+
   static String _limited(String text, int max) =>
       text.length <= max ? text : text.substring(0, max);
 
@@ -504,6 +711,27 @@ class MiniAppStore extends ChangeNotifier {
   if (window.moru) return;
   var pending = {};
   var next = 0;
+  // Problems go to Moru, which shows them to the agent after publishing.
+  function report(kind, message) {
+    try {
+      MoruBridge.postMessage(JSON.stringify({
+        method: '__report', args: { kind: kind, message: String(message).slice(0, 500) }
+      }));
+    } catch (e) {}
+  }
+  window.addEventListener('error', function (e) {
+    var target = e.target;
+    if (target && target !== window && (target.src || target.href)) {
+      report('resource', 'Failed to load ' + (target.src || target.href).split('/app/').pop());
+    } else {
+      var where = e.filename ? ' (' + e.filename.split('/app/').pop() + ':' + e.lineno + ')' : '';
+      report('error', (e.message || 'Script error') + where);
+    }
+  }, true);
+  window.addEventListener('unhandledrejection', function (e) {
+    var reason = e.reason;
+    report('promise', reason && reason.message ? reason.message : String(reason));
+  });
   function call(method, args) {
     return new Promise(function (resolve, reject) {
       var id = ++next;
@@ -540,6 +768,20 @@ class MiniAppStore extends ChangeNotifier {
       set: function (id, reminder) { return call('reminders.set', { id: id, reminder: reminder }); },
       remove: function (id) { return call('reminders.remove', { id: id }); },
       list: function () { return call('reminders.list'); }
+    },
+    fetch: function (url, options) {
+      options = options || {};
+      return call('fetch', {
+        url: url, method: options.method, headers: options.headers, body: options.body
+      }).then(function (response) {
+        response.json = function () { return JSON.parse(response.body); };
+        response.text = function () { return response.body; };
+        return response;
+      });
+    },
+    calendar: {
+      list: function (query) { return call('calendar.list', query); },
+      add: function (event) { return call('calendar.add', event); }
     },
     app: {
       info: function () { return call('app.info'); }

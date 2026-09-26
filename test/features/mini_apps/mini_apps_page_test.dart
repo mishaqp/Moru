@@ -56,6 +56,15 @@ void main() {
   testWidgets('without apps the page explains how to make one', (tester) async {
     await pump(tester);
     expect(find.textContaining('No apps yet'), findsOneWidget);
+    expect(find.byTooltip('Import'), findsOneWidget);
+  });
+
+  testWidgets('the app menu offers sharing', (tester) async {
+    await tester.runAsync(() => install('water', 'Water', ''));
+    await pump(tester);
+    await tester.longPress(find.byKey(const ValueKey('mini-app-water')));
+    await tester.pumpAndSettle();
+    expect(find.text('Share'), findsOneWidget);
   });
 
   testWidgets('apps are listed and can be deleted from their menu', (

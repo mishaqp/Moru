@@ -17,6 +17,7 @@ import '../../providers/external_mounts_provider.dart';
 import '../../providers/workspace_provider.dart';
 import '../chat/chat_service.dart';
 import '../mini_apps/mini_app_store.dart';
+import '../mini_apps/mini_app_check.dart';
 import 'conversation_files.dart';
 import 'environment_output_redactor.dart';
 import 'file_link_resolver.dart';
@@ -53,6 +54,7 @@ class WorkspaceToolsService {
     this.loadEnvironment,
     this.plans,
     this.miniApps,
+    this.checkMiniApp,
   }) : registry = registry ?? ToolRunRegistry(),
        runtimeProvider = runtimeProvider ?? WorkspaceRuntimeProvider();
 
@@ -108,6 +110,12 @@ class WorkspaceToolsService {
 
   /// Where published mini apps go; [MiniAppStore.instance] when null.
   final MiniAppStore? miniApps;
+
+  /// Opens a just-published app out of sight and reports what went wrong;
+  /// null where no WebView is available.
+  final Future<MiniAppCheckReport> Function(MiniApp app)? checkMiniApp;
+
+  static const Duration _miniAppCheckTimeout = Duration(seconds: 30);
 
   bool _enabled(WorkspaceToolContext ctx, String name) {
     // Background jobs only exist where shell does.
@@ -449,9 +457,20 @@ class WorkspaceToolsService {
           'when the chat changes data. Also: await moru.ai.ask(prompt,',
           '{system}) for text from the default model, moru.notify(title, body),',
           'moru.reminders.set(id, {time: "HH:mm", days?: [1-7], title, body}),',
-          'remove(id), list(). Moru adds moru.js automatically. Publishing the',
+          'remove(id), list(). Internet: list hosts in moru-app.json "network":',
+          '["api.example.com", "*.example.org"] and call await moru.fetch(url,',
+          '{method, headers, body: string}) -> {status, ok, headers, body,',
+          'json()}, which is not limited by CORS like fetch() in the page.',
+          'Calendar: "permissions": ["calendar"], then moru.calendar.list({range:',
+          '"today"|"week"|"month", begin, end, query}) and moru.calendar.add(',
+          '{title, start, end, description, location, all_day, reminders}).',
+          'Moru adds moru.js automatically. Publishing the',
           'same id again updates the app and keeps its data. Afterwards give',
           'the user the link from the result as [Open <name>](kelivo://app/<id>).',
+          'The result has "check": Moru opened the app out of sight with a copy',
+          'of its data. Fix page_errors, failed_moru_calls, console errors or',
+          'blank_page and publish again before sharing the link. If loaded is',
+          'false or the check was skipped, ask the user to open the app instead.',
         ],
         {
           'path': {
@@ -1483,6 +1502,7 @@ class WorkspaceToolsService {
         Directory(resolved.hostPath),
       );
       final app = result.app;
+      final check = await _checkMiniApp(app);
       final meta = WorkspaceToolMetadata(
         tool: tool,
         status: 'ok',
@@ -1498,6 +1518,7 @@ class WorkspaceToolsService {
           'updated': result.updated,
           'files': result.files,
           'bytes': result.bytes,
+          'check': ?check,
         }),
         metadata: meta.toJson(),
       );
@@ -1505,6 +1526,16 @@ class WorkspaceToolsService {
       return _errorResult(tool: tool, error: e.code, message: e.message);
     } on PathResolutionException catch (e) {
       return _errorResult(tool: tool, error: 'path_error', message: e.message);
+    }
+  }
+
+  Future<Map<String, Object?>?> _checkMiniApp(MiniApp app) async {
+    final check = checkMiniApp;
+    if (check == null) return null;
+    try {
+      return (await check(app).timeout(_miniAppCheckTimeout)).toJson();
+    } catch (e) {
+      return {'ok': false, 'skipped': 'The check could not run: $e'};
     }
   }
 
