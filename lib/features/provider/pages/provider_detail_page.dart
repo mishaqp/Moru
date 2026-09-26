@@ -1811,8 +1811,6 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
   }
 
-  // Legacy network tab removed (replaced by ProviderNetworkPage)
-
   Widget _inputRow(
     BuildContext context, {
     required String label,
@@ -1917,8 +1915,6 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               child: Row(
                 children: [
-                  // Icon(Lucide.Coins, size: 18, color: c),
-                  // const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       l10n.providerDetailPageBalanceInfo,

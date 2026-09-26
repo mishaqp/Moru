@@ -122,7 +122,6 @@ class _ModelCard extends StatelessWidget {
                     color: cs.onSurface.withValues(alpha: 0.7),
                     size: 18,
                     semanticLabel: l10n.providerDetailPageEditTooltip,
-                    haptics: false,
                     onTap: () async {
                       await showModelDetailSheet(
                         context,

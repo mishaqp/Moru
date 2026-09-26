@@ -34,16 +34,11 @@ Future<OAuthCallback> openOAuthCallback(
               authorizationServer,
               scheme: 'com.mishaqp.moru',
             )
-          : Platform.isIOS
-          ? _IosOAuthCallback(authorizationServer)
           : null,
     );
   }
   if (Platform.isAndroid) {
     return _AndroidOAuthCallback(authorizationServer);
-  }
-  if (Platform.isIOS) {
-    return _IosOAuthCallback(authorizationServer);
   }
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   return _IoOAuthCallback(server, expectedState: expectedState);
@@ -115,60 +110,6 @@ final class _AndroidOAuthCallback implements OAuthCallback {
   @override
   Future<Uri> waitForCallback(Duration timeout) {
     throw UnsupportedError('Android OAuth callbacks are handled by the app');
-  }
-
-  @override
-  Future<void> close() => _mobileOAuthChannel.invokeMethod<void>('cancel', {
-    'sessionId': _sessionId,
-  });
-}
-
-final class _IosOAuthCallback implements OAuthCallback {
-  _IosOAuthCallback(Uri authorizationServer)
-    : redirectUri = Uri(
-        scheme: 'psyche.kelivo',
-        path:
-            '/oauth/callback/${_authorizationServerHash(authorizationServer)}',
-      );
-
-  @override
-  final Uri redirectUri;
-  final String _sessionId = oauthRandomString(24);
-
-  @override
-  Future<Uri> authorize(
-    Uri authorizationUrl,
-    Duration timeout,
-    OAuthUrlLauncher launchAuthorizationUrl,
-  ) async {
-    try {
-      final value = await _mobileOAuthChannel
-          .invokeMethod<String>('authenticate', {
-            'url': authorizationUrl.toString(),
-            'callbackScheme': redirectUri.scheme,
-            'sessionId': _sessionId,
-          })
-          .timeout(timeout);
-      if (value == null) {
-        throw const OAuthCallbackException(
-          'authorization session returned no callback URL',
-        );
-      }
-      return Uri.parse(value);
-    } on TimeoutException {
-      await close();
-      rethrow;
-    } on PlatformException catch (error) {
-      throw OAuthCallbackException(
-        error.message ?? 'authorization session failed',
-        cancelled: error.code == 'authorization_cancelled',
-      );
-    }
-  }
-
-  @override
-  Future<Uri> waitForCallback(Duration timeout) {
-    throw UnsupportedError('iOS OAuth callbacks are handled by the system');
   }
 
   @override

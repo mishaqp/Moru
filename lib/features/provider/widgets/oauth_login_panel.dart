@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -241,8 +240,7 @@ class _OAuthLoginPanelState extends State<OAuthLoginPanel> {
             ],
             if (_prompt != null &&
                 (_prompt!.submitAuthorizationCode != null ||
-                    !_prompt!.browserAuthorization ||
-                    !(Platform.isAndroid || Platform.isIOS)))
+                    !_prompt!.browserAuthorization))
               IosTileButton(
                 label: l.oauthOpenBrowser,
                 icon: LucideIcons.externalLink,
