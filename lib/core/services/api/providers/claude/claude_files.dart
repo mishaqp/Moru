@@ -11,12 +11,9 @@ import '../../../../../utils/sandbox_path_resolver.dart';
 import '../../../../../utils/upload_dedupe.dart';
 import '../../stream/stream_chunk.dart';
 
-/// The download streams to disk, so memory is not the constraint: on desktop
-/// this is the API's own per-file limit, and on a phone it is what a chat is
-/// willing to spend of the device's storage on one file.
-final claudeFileSizeLimit = (Platform.isIOS || Platform.isAndroid)
-    ? 200 * 1024 * 1024
-    : 500 * 1024 * 1024;
+/// The download streams to disk, so memory is not the constraint: this is
+/// what a chat is willing to spend of the phone's storage on one file.
+const claudeFileSizeLimit = 200 * 1024 * 1024;
 
 /// An upload is buffered whole by the HTTP client on its way out, so this is
 /// what a phone can hold in memory for one request — well under the API's own

@@ -15,6 +15,9 @@ import 'package:Kelivo/theme/app_semantic_colors.dart';
 import 'package:Kelivo/shared/widgets/section_card.dart';
 import '../../../core/providers/provider_config_watch.dart';
 
+part 'multi_key_manager_sheets.dart';
+part 'multi_key_manager_widgets.dart';
+
 class MultiKeyManagerPage extends StatefulWidget {
   const MultiKeyManagerPage({
     super.key,
@@ -183,7 +186,11 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
         cfg.keyManagement?.strategy ?? LoadBalanceStrategy.roundRobin;
     return _TactileRow(
       pressedScale: 1.00,
-      onTap: _showStrategySheet,
+      onTap: () => _showKeyStrategySheet(
+        context,
+        providerKey: widget.providerKey,
+        providerDisplayName: widget.providerDisplayName,
+      ),
       builder: (pressed) {
         final base = cs.onSurface;
         final target = pressed
@@ -336,7 +343,6 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
           IosSwitch(
             value: k.isEnabled,
             onChanged: (v) async {
-              // Haptics.soft();
               await _updateKey(k.copyWith(isEnabled: v));
             },
             width: 46,
@@ -479,7 +485,7 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
   Future<void> _editKey(ApiKeyConfig k) async {
     final settings = context.read<SettingsProvider>();
     final l10n = AppLocalizations.of(context)!;
-    final updated = await _showEditKeySheet(k);
+    final updated = await _showEditKeySheet(context, k);
     if (updated == null) {
       return;
     }
@@ -509,7 +515,7 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
   Future<void> _onAddKeys() async {
     final l10n = AppLocalizations.of(context)!;
     final settings = context.read<SettingsProvider>();
-    final added = await _showAddKeysSheet();
+    final added = await _showAddKeysSheet(context);
     if (added == null) {
       return;
     }
@@ -522,7 +528,7 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
     final unique = <String>[];
     for (final k in added) {
       if (k.isEmpty) continue;
-      if (!existingSet.contains(k)) unique.add(k);
+      if (existingSet.add(k)) unique.add(k);
     }
     if (unique.isEmpty) {
       if (!mounted) {
@@ -580,15 +586,6 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
     } finally {
       if (mounted) setState(() => _testingKeyId = null);
     }
-  }
-
-  List<String> _splitKeys(String raw) {
-    final s = raw.replaceAll(',', ' ').trim();
-    return s
-        .split(RegExp(r'\s+'))
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
   }
 
   Future<void> _onDetect() async {
@@ -682,412 +679,6 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
     );
   }
 
-  Future<void> _showStrategySheet() async {
-    final cs = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final settings = context.read<SettingsProvider>();
-    final old = settings.getProviderConfig(
-      widget.providerKey,
-      defaultName: widget.providerDisplayName,
-    );
-    final current =
-        old.keyManagement?.strategy ?? LoadBalanceStrategy.roundRobin;
-    String labelFor(LoadBalanceStrategy s) {
-      switch (s) {
-        case LoadBalanceStrategy.priority:
-          return l10n.multiKeyPageStrategyPriority;
-        case LoadBalanceStrategy.leastUsed:
-          return l10n.multiKeyPageStrategyLeastUsed;
-        case LoadBalanceStrategy.random:
-          return l10n.multiKeyPageStrategyRandom;
-        case LoadBalanceStrategy.roundRobin:
-          return l10n.multiKeyPageStrategyRoundRobin;
-      }
-    }
-
-    final selected = await showModalBottomSheet<LoadBalanceStrategy>(
-      context: context,
-      backgroundColor: context.overlaySurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: cs.onSurface.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Only show Round Robin and Random for now
-                for (final s in <LoadBalanceStrategy>[
-                  LoadBalanceStrategy.roundRobin,
-                  LoadBalanceStrategy.random,
-                ])
-                  _TactileRow(
-                    pressedScale: 1.00,
-                    onTap: () => Navigator.of(ctx).pop(s),
-                    builder: (pressed) {
-                      final base = cs.onSurface;
-                      final target = pressed
-                          ? (Color.lerp(base, cs.surface, 0.55) ?? base)
-                          : base;
-                      return TweenAnimationBuilder<Color?>(
-                        tween: ColorTween(end: target),
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeOutCubic,
-                        builder: (context, color, _) {
-                          final c = color ?? base;
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    labelFor(s),
-                                    style: TextStyle(fontSize: 15, color: c),
-                                  ),
-                                ),
-                                if (s == current)
-                                  Icon(Icons.check, color: cs.primary),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    if (selected != null && selected != current) {
-      final km = (old.keyManagement ?? const KeyManagementConfig()).copyWith(
-        strategy: selected,
-      );
-      await settings.setProviderConfig(
-        widget.providerKey,
-        old.copyWith(keyManagement: km),
-      );
-    }
-  }
-
-  Future<List<String>?> _showAddKeysSheet() async {
-    final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final inputCtrl = TextEditingController();
-    final result = await showModalBottomSheet<List<String>?>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: context.overlaySurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 12,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: cs.onSurface.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 36,
-                  child: Stack(
-                    children: [
-                      Align(
-                        alignment: Alignment.center,
-                        child: Text(
-                          l10n.multiKeyPageAdd,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: AppFontWeights.semibold,
-                          ),
-                        ),
-                      ),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: _TactileIconButton(
-                          icon: Lucide.X,
-                          color: cs.onSurface,
-                          onTap: () => Navigator.of(ctx).maybePop(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: inputCtrl,
-                  minLines: 3,
-                  maxLines: 6,
-                  decoration: InputDecoration(
-                    hintText: l10n.multiKeyPageAddHint,
-                    filled: true,
-                    fillColor: context.appColors.surfaceCard,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: cs.outlineVariant.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: cs.outlineVariant.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: cs.primary.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: IosTileButton(
-                    label: l10n.multiKeyPageAdd,
-                    icon: Lucide.Plus,
-                    backgroundColor: cs.primary,
-                    onTap: () =>
-                        Navigator.of(ctx).pop(_splitKeys(inputCtrl.text)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    return result;
-  }
-
-  Future<ApiKeyConfig?> _showEditKeySheet(ApiKeyConfig k) async {
-    final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final aliasCtrl = TextEditingController(text: k.name ?? '');
-    final keyCtrl = TextEditingController(text: k.key);
-    final priCtrl = TextEditingController(text: k.priority.toString());
-    final updated = await showModalBottomSheet<ApiKeyConfig?>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: context.overlaySurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 12,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: cs.onSurface.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 36,
-                  child: Stack(
-                    children: [
-                      Align(
-                        alignment: Alignment.center,
-                        child: Text(
-                          l10n.multiKeyPageEdit,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: AppFontWeights.semibold,
-                          ),
-                        ),
-                      ),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: _TactileIconButton(
-                          icon: Lucide.X,
-                          color: cs.onSurface,
-                          onTap: () => Navigator.of(ctx).maybePop(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: aliasCtrl,
-                  decoration: InputDecoration(
-                    hintText: l10n.multiKeyPageAlias,
-                    filled: true,
-                    fillColor: context.appColors.surfaceCard,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: cs.outlineVariant.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: cs.outlineVariant.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: cs.primary.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: keyCtrl,
-                  decoration: InputDecoration(
-                    hintText: l10n.multiKeyPageKey,
-                    filled: true,
-                    fillColor: context.appColors.surfaceCard,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: cs.outlineVariant.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: cs.outlineVariant.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: cs.primary.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: priCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: l10n.multiKeyPagePriority,
-                    filled: true,
-                    fillColor: context.appColors.surfaceCard,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: cs.outlineVariant.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: cs.outlineVariant.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: cs.primary.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: IosTileButton(
-                    label: l10n.multiKeyPageSave,
-                    icon: Lucide.Check,
-                    backgroundColor: cs.primary,
-                    onTap: () {
-                      final p = int.tryParse(priCtrl.text.trim()) ?? k.priority;
-                      final clamped = p.clamp(1, 10);
-                      Navigator.of(ctx).pop(
-                        k.copyWith(
-                          name: aliasCtrl.text.trim().isEmpty
-                              ? null
-                              : aliasCtrl.text.trim(),
-                          key: keyCtrl.text.trim(),
-                          priority: clamped,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    return updated;
-  }
-
   Future<void> _detectOnly({required List<String> keys}) async {
     final cfg = context.read<SettingsProvider>().getProviderConfig(
       widget.providerKey,
@@ -1174,158 +765,5 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
     } catch (_) {
       return false;
     }
-  }
-}
-
-// A scale-on-tap wrapper for iOS-like lightweight feedback (no ripple)
-class _TactileScale extends StatefulWidget {
-  const _TactileScale({required this.child, this.onTap});
-  final Widget child;
-  final VoidCallback? onTap;
-
-  @override
-  State<_TactileScale> createState() => _TactileScaleState();
-}
-
-class _TactileScaleState extends State<_TactileScale> {
-  bool _pressed = false;
-
-  void _setPressed(bool v) {
-    if (_pressed != v) setState(() => _pressed = v);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: widget.onTap == null ? null : (_) => _setPressed(true),
-      onTapUp: widget.onTap == null ? null : (_) => _setPressed(false),
-      onTapCancel: widget.onTap == null ? null : () => _setPressed(false),
-      onTap: widget.onTap == null
-          ? null
-          : () {
-              if (context.read<SettingsProvider>().hapticsOnListItemTap) {
-                Haptics.soft();
-              }
-              widget.onTap!.call();
-            },
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOutCubic,
-        child: widget.child,
-      ),
-    );
-  }
-}
-
-// Icon-only, no-border, iOS-like tactile icon button
-class _TactileIconButton extends StatefulWidget {
-  const _TactileIconButton({
-    required this.icon,
-    required this.color,
-    required this.onTap,
-    this.onLongPress,
-    this.semanticLabel,
-  });
-
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-  final VoidCallback? onLongPress;
-  final String? semanticLabel;
-
-  @override
-  State<_TactileIconButton> createState() => _TactileIconButtonState();
-}
-
-class _TactileIconButtonState extends State<_TactileIconButton> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final base = widget.color;
-    final pressColor = base.withValues(alpha: 0.7);
-    final icon = Icon(
-      widget.icon,
-      size: 22,
-      color: _pressed ? pressColor : base,
-      semanticLabel: widget.semanticLabel,
-    );
-
-    return Semantics(
-      button: true,
-      label: widget.semanticLabel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapUp: (_) => setState(() => _pressed = false),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTap: () {
-          // Haptics.light();
-          widget.onTap();
-        },
-        onLongPress: widget.onLongPress == null
-            ? null
-            : () {
-                Haptics.light();
-                widget.onLongPress!.call();
-              },
-        child: AnimatedScale(
-          scale: _pressed ? 0.95 : 1.0,
-          duration: const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-            child: icon,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Builder-based tactile wrapper to expose pressed state and optional scale
-class _TactileRow extends StatefulWidget {
-  const _TactileRow({
-    required this.builder,
-    this.onTap,
-    this.pressedScale = 0.97,
-  });
-  final Widget Function(bool pressed) builder;
-  final VoidCallback? onTap;
-  final double pressedScale;
-
-  @override
-  State<_TactileRow> createState() => _TactileRowState();
-}
-
-class _TactileRowState extends State<_TactileRow> {
-  bool _pressed = false;
-
-  void _setPressed(bool v) {
-    if (_pressed != v) setState(() => _pressed = v);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: widget.onTap == null ? null : (_) => _setPressed(true),
-      onTapUp: widget.onTap == null ? null : (_) => _setPressed(false),
-      onTapCancel: widget.onTap == null ? null : () => _setPressed(false),
-      onTap: widget.onTap == null
-          ? null
-          : () {
-              Haptics.soft();
-              widget.onTap!.call();
-            },
-      child: AnimatedScale(
-        scale: _pressed ? widget.pressedScale : 1.0,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOutCubic,
-        child: widget.builder(_pressed),
-      ),
-    );
   }
 }

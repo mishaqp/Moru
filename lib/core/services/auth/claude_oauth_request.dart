@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:ffi';
-import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:hashlib/hashlib.dart' show XXHash64;
@@ -39,11 +38,7 @@ Map<String, String> claudeOAuthHeaders(ProviderOAuthCredentials credentials) =>
           ? 'arm64'
           : 'x64',
       'X-Stainless-Lang': 'js',
-      'X-Stainless-OS': Platform.isMacOS || Platform.isIOS
-          ? 'MacOS'
-          : Platform.isWindows
-          ? 'Windows'
-          : 'Linux',
+      'X-Stainless-OS': 'Linux',
       'X-Stainless-Package-Version': claudeCodeSdkVersion,
       'X-Stainless-Retry-Count': '0',
       'X-Stainless-Runtime': 'node',

@@ -23,7 +23,6 @@ class _TactileIconButton extends StatefulWidget {
     required this.onTap,
     this.semanticLabel,
     this.size = 22,
-    this.haptics = true,
   });
 
   final IconData icon;
@@ -31,7 +30,6 @@ class _TactileIconButton extends StatefulWidget {
   final VoidCallback onTap;
   final String? semanticLabel;
   final double size;
-  final bool haptics;
 
   @override
   State<_TactileIconButton> createState() => _TactileIconButtonState();
@@ -60,7 +58,6 @@ class _TactileIconButtonState extends State<_TactileIconButton> {
         onTapUp: (_) => setState(() => _pressed = false),
         onTapCancel: () => setState(() => _pressed = false),
         onTap: () {
-          // if (widget.haptics) Haptics.light();
           widget.onTap();
         },
         child: AnimatedScale(
