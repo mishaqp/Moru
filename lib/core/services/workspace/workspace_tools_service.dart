@@ -511,7 +511,7 @@ class WorkspaceToolsService {
       ..writeln('- $tmp — scratch (writable, ephemeral)')
       ..writeln('cwd: ${ctx.cwd}')
       ..writeln(
-        'Enabled tools: ${toolNames.where((name) => name != shellOutputTool && name != planTool && ctx.workspace.isToolEnabled(name)).join(', ')}',
+        'Enabled tools: ${toolNames.where((name) => name != shellOutputTool && name != planTool && name != miniAppTool && ctx.workspace.isToolEnabled(name)).join(', ')}',
       )
       ..writeln();
     if (ctx.workspace.isToolEnabled('shell')) {
