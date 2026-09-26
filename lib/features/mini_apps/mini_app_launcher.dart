@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../core/models/assistant.dart';
+import '../../core/providers/assistant_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/api/chat_api_service.dart';
 import '../../core/services/mini_apps/mini_app_bridge.dart';
@@ -42,42 +44,58 @@ class MiniAppLauncher {
     return reminders;
   }();
 
-  /// What [app] may use besides its storage: the default model,
-  /// notifications and reminders.
-  static MiniAppHost hostFor(MiniApp app, SettingsProvider settings) =>
-      MiniAppHost(
-        ask: (prompt, system) async {
-          final provider = settings.currentModelProvider;
-          final model = settings.currentModelId;
-          if (provider == null || model == null) {
-            throw const MiniAppException(
-              'no_model',
-              'Choose a default model in Moru settings first.',
-            );
-          }
-          final result = await ChatApiService.generateMessage(
-            config: settings.getProviderConfig(provider),
-            modelId: model,
-            messages: [
-              if (system != null) {'role': 'system', 'content': system},
-              {'role': 'user', 'content': prompt},
-            ],
-            textOnly: true,
-            skipImageParsing: true,
-          );
-          return result.text;
-        },
-        notify: (title, body) async {
-          await NotificationService.ensureAndroidNotificationsPermission();
-          await NotificationService.showMiniApp(
-            id: MiniAppReminders.notificationIds(app.id, '_notify', null).first,
-            appId: app.id,
-            title: title,
-            body: body,
-          );
-        },
-        reminders: reminders,
+  /// The model `moru.ai.ask` uses: the current assistant's chat model, else
+  /// the default model, the same order the chat uses.
+  static ({String provider, String model})? askModelFor(
+    SettingsProvider settings,
+    Assistant? assistant,
+  ) {
+    final provider =
+        assistant?.chatModelProvider ?? settings.currentModelProvider;
+    final model = assistant?.chatModelId ?? settings.currentModelId;
+    if (provider == null || model == null) return null;
+    return (provider: provider, model: model);
+  }
+
+  /// What [app] may use besides its storage: the chat model, notifications
+  /// and reminders.
+  static MiniAppHost hostFor(
+    MiniApp app,
+    SettingsProvider settings,
+    AssistantProvider assistants,
+  ) => MiniAppHost(
+    ask: (prompt, system) async {
+      final target = askModelFor(settings, assistants.currentAssistant);
+      if (target == null) {
+        throw const MiniAppException(
+          'no_model',
+          'Choose a chat model for the assistant or a default model in '
+              'Moru settings first.',
+        );
+      }
+      final result = await ChatApiService.generateMessage(
+        config: settings.getProviderConfig(target.provider),
+        modelId: target.model,
+        messages: [
+          if (system != null) {'role': 'system', 'content': system},
+          {'role': 'user', 'content': prompt},
+        ],
+        textOnly: true,
+        skipImageParsing: true,
       );
+      return result.text;
+    },
+    notify: (title, body) async {
+      await NotificationService.ensureAndroidNotificationsPermission();
+      await NotificationService.showMiniApp(
+        id: MiniAppReminders.notificationIds(app.id, '_notify', null).first,
+        appId: app.id,
+        title: title,
+        body: body,
+      );
+    },
+    reminders: reminders,
+  );
 
   static void ensureInitialized() {
     if (_initialized) return;

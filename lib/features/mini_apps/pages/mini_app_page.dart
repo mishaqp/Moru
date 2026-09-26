@@ -6,6 +6,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import 'package:provider/provider.dart';
 
+import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/mini_apps/mini_app_bridge.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
@@ -44,6 +45,7 @@ class _MiniAppPageState extends State<MiniAppPage> {
       host: MiniAppLauncher.hostFor(
         widget.app,
         context.read<SettingsProvider>(),
+        context.read<AssistantProvider>(),
       ),
     );
     // Data the chat changed while the app is open.
