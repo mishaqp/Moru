@@ -146,6 +146,7 @@ String workspaceToolTitle(AppLocalizations l10n, String toolName) {
     'list_dir' => l10n.workspaceToolTitleListDir,
     'glob' => l10n.workspaceToolTitleGlob,
     'grep' => l10n.workspaceToolTitleGrep,
+    WorkspaceToolsService.miniAppTool => l10n.workspaceToolTitlePublishMiniApp,
     _ => toolName,
   };
 }
@@ -161,6 +162,7 @@ IconData workspaceToolIcon(String toolName) {
     'list_dir' => Lucide.FolderOpen,
     'glob' => Lucide.FileSearch,
     'grep' => Lucide.TextSearch,
+    WorkspaceToolsService.miniAppTool => Lucide.LayoutGrid,
     _ => Lucide.Wrench,
   };
 }

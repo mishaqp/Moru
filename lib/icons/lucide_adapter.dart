@@ -170,6 +170,7 @@ class Lucide {
   static const IconData CalendarCog = lucide.LucideIcons.calendarCog;
   static const IconData CalendarX = lucide.LucideIcons.calendarX;
   static const IconData CalendarClock = lucide.LucideIcons.calendarClock;
+  static const IconData LayoutGrid = lucide.LucideIcons.layoutGrid;
   static const IconData Hourglass = lucide.LucideIcons.hourglass;
   static const IconData Smartphone = lucide.LucideIcons.smartphone;
   static const IconData ImageOff = lucide.LucideIcons.imageOff;

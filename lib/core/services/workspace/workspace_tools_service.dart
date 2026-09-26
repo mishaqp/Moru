@@ -16,6 +16,7 @@ import '../../models/environment_variable.dart';
 import '../../providers/external_mounts_provider.dart';
 import '../../providers/workspace_provider.dart';
 import '../chat/chat_service.dart';
+import '../mini_apps/mini_app_store.dart';
 import 'conversation_files.dart';
 import 'environment_output_redactor.dart';
 import 'file_link_resolver.dart';
@@ -51,6 +52,7 @@ class WorkspaceToolsService {
     this.isToolEnabled,
     this.loadEnvironment,
     this.plans,
+    this.miniApps,
   }) : registry = registry ?? ToolRunRegistry(),
        runtimeProvider = runtimeProvider ?? WorkspaceRuntimeProvider();
 
@@ -64,6 +66,7 @@ class WorkspaceToolsService {
     'glob',
     'grep',
     planTool,
+    miniAppTool,
   };
 
   /// Reads, waits for or stops a command started with `background: true`.
@@ -71,6 +74,9 @@ class WorkspaceToolsService {
 
   /// Keeps the task checklist shown above the composer.
   static const String planTool = 'update_plan';
+
+  /// Installs a web app from a workspace folder as a Moru mini app.
+  static const String miniAppTool = 'publish_mini_app';
 
   static const int _backgroundTimeoutDefault = 3600;
   static const int _backgroundTimeoutMax = 86400;
@@ -99,6 +105,9 @@ class WorkspaceToolsService {
   final bool Function(String workspaceId, String tool)? isToolEnabled;
   final Future<EnvironmentExecutionConfig> Function()? loadEnvironment;
   final TaskPlanRegistry? plans;
+
+  /// Where published mini apps go; [MiniAppStore.instance] when null.
+  final MiniAppStore? miniApps;
 
   bool _enabled(WorkspaceToolContext ctx, String name) {
     // Background jobs only exist where shell does.
@@ -422,6 +431,33 @@ class WorkspaceToolsService {
         },
         ['plan'],
       ),
+      _fn(
+        miniAppTool,
+        [
+          'Publish a web app you built in the workspace as a Moru mini app:',
+          'the user opens it inside Moru and can pin it to the home screen.',
+          'The folder needs moru-app.json: {"id": "water-tracker" (lowercase,',
+          'digits, dashes), "name": "Вода", "description": "...",',
+          '"entry": "index.html" (default), "icon": "icon.svg" (optional, SVG)}.',
+          'Build a static, phone-first page (HTML/CSS/JS, no server, dark and',
+          'light friendly). Use classic relative <script src> and <link> tags;',
+          'type="module" scripts and fetch() of local files are blocked, so',
+          'bundle modules first. Save data only with window.moru.storage',
+          '(async get(key), set(key, jsonValue), remove(key), keys()); Moru adds',
+          'moru.js automatically. Publishing the same id again updates the app',
+          'and keeps its data. Afterwards give the user the link from the result',
+          'as [Open <name>](kelivo://app/<id>).',
+        ],
+        {
+          'path': {
+            'type': 'string',
+            'description':
+                'Folder with moru-app.json, in model path vocabulary '
+                '(${vocab.join(', ')}).',
+          },
+        },
+        ['path'],
+      ),
     ];
   }
 
@@ -475,7 +511,7 @@ class WorkspaceToolsService {
       ..writeln('- $tmp — scratch (writable, ephemeral)')
       ..writeln('cwd: ${ctx.cwd}')
       ..writeln(
-        'Enabled tools: ${toolNames.where((name) => name != shellOutputTool && name != planTool && ctx.workspace.isToolEnabled(name)).join(', ')}',
+        'Enabled tools: ${toolNames.where((name) => name != shellOutputTool && name != planTool && name != miniAppTool && ctx.workspace.isToolEnabled(name)).join(', ')}',
       )
       ..writeln();
     if (ctx.workspace.isToolEnabled('shell')) {
@@ -585,6 +621,8 @@ class WorkspaceToolsService {
           return await _handleShellOutput(ctx, args, conversationId);
         case planTool:
           return _handlePlan(ctx, args, conversationId);
+        case miniAppTool:
+          return await _handlePublishMiniApp(ctx, args);
         case 'read_file':
           return await _handleReadFile(ctx, args);
         case 'write_file':
@@ -1417,6 +1455,51 @@ class WorkspaceToolsService {
         error: 'edit_failed',
         message: e.message,
       );
+    }
+  }
+
+  Future<Object?> _handlePublishMiniApp(
+    WorkspaceToolContext ctx,
+    Map<String, dynamic> args,
+  ) async {
+    const tool = miniAppTool;
+    final path = _stringArg(args, 'path', fallback: ctx.cwd);
+    try {
+      final resolved = await ctx.paths.resolveReal(path, cwd: ctx.cwd);
+      if (resolved.zone == WorkspaceZone.outside ||
+          !await Directory(resolved.hostPath).exists()) {
+        return _errorResult(
+          tool: tool,
+          error: 'not_a_folder',
+          message: '$path is not a folder in the workspace.',
+        );
+      }
+      final result = await (miniApps ?? MiniAppStore.instance).install(
+        Directory(resolved.hostPath),
+      );
+      final app = result.app;
+      final meta = WorkspaceToolMetadata(
+        tool: tool,
+        status: 'ok',
+        path: resolved.modelPath,
+        count: result.files,
+      );
+      return ClientToolResult(
+        jsonEncode({
+          'ok': true,
+          'id': app.id,
+          'name': app.name,
+          'link': app.link,
+          'updated': result.updated,
+          'files': result.files,
+          'bytes': result.bytes,
+        }),
+        metadata: meta.toJson(),
+      );
+    } on MiniAppException catch (e) {
+      return _errorResult(tool: tool, error: e.code, message: e.message);
+    } on PathResolutionException catch (e) {
+      return _errorResult(tool: tool, error: 'path_error', message: e.message);
     }
   }
 

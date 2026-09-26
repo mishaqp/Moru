@@ -39,6 +39,8 @@ import 'package:provider/provider.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/workspace/file_link_resolver.dart';
+import '../../core/services/mini_apps/mini_app_store.dart';
+import '../../features/mini_apps/mini_app_launcher.dart';
 import '../../features/workspace/workspace_file_navigation.dart';
 import '../cache/byte_lru_cache.dart';
 import 'incremental_markdown_document.dart';
@@ -823,6 +825,11 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
   }
 
   Future<void> _handleLinkTap(BuildContext context, String url) async {
+    final miniApp = MiniAppStore.idFromLink(_stripFormatChars(url));
+    if (miniApp != null) {
+      await MiniAppLauncher.open(context, miniApp);
+      return;
+    }
     final kelivo = KelivoLink.tryParse(_stripFormatChars(url));
     if (kelivo != null) {
       await openWorkspaceLinkedFile(

@@ -9530,6 +9530,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceToolTitleGrep => 'Поиск по содержимому';
 
   @override
+  String get workspaceToolTitlePublishMiniApp => 'Публикация приложения';
+
+  @override
   String get workspaceToolTitleUpdatePlan => 'План';
 
   @override
@@ -10867,6 +10870,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get workspaceToolHelpUpdatePlan =>
       'Модель ведёт чек-лист шагов, он виден над полем ввода.';
+
+  @override
+  String get workspaceToolHelpPublishMiniApp =>
+      'Модель превращает собранное в рабочей папке веб-приложение в мини-приложение, которое открывается в Moru.';
 
   @override
   String get workspaceToolHelpShellOutput =>
@@ -12811,6 +12818,49 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get scheduledTaskToolActionDelete => 'Удаление задачи по расписанию';
+
+  @override
+  String get miniAppsTitle => 'Мои приложения';
+
+  @override
+  String get miniAppsEmpty =>
+      'Приложений пока нет. Откройте чат с рабочей папкой и попросите, например: «Сделай приложение — трекер воды». Агент соберёт его и опубликует здесь.';
+
+  @override
+  String get miniAppsFooter =>
+      'У каждого приложения свои данные, они сохраняются при обновлениях. Чтобы изменить приложение, попросите агента в том же чате — он опубликует новую версию.';
+
+  @override
+  String get miniAppsOpen => 'Открыть';
+
+  @override
+  String get miniAppsReload => 'Перезагрузить';
+
+  @override
+  String get miniAppsAddToHomeScreen => 'На рабочий стол';
+
+  @override
+  String get miniAppsPinRequested =>
+      'Подтвердите добавление ярлыка на рабочий стол.';
+
+  @override
+  String get miniAppsPinUnsupported =>
+      'Этот рабочий стол не поддерживает ярлыки.';
+
+  @override
+  String get miniAppsDelete => 'Удалить';
+
+  @override
+  String get miniAppsDeleteDetail =>
+      'Приложение и все его данные будут удалены. Ярлык на рабочем столе перестанет работать.';
+
+  @override
+  String get miniAppsNotFound => 'Это приложение больше не установлено.';
+
+  @override
+  String miniAppsDeleteTitle(String name) {
+    return 'Удалить «$name»?';
+  }
 
   @override
   String get phoneControlTitle => 'Управление телефоном';

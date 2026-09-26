@@ -9412,6 +9412,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceToolTitleGrep => 'Grep';
 
   @override
+  String get workspaceToolTitlePublishMiniApp => 'Publish app';
+
+  @override
   String get workspaceToolTitleUpdatePlan => 'Plan';
 
   @override
@@ -10738,6 +10741,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get workspaceToolHelpUpdatePlan =>
       'Let the model keep a step checklist shown above the input.';
+
+  @override
+  String get workspaceToolHelpPublishMiniApp =>
+      'Let the model turn a web app it built in the workspace into a mini app you can open in Moru.';
 
   @override
   String get workspaceToolHelpShellOutput =>
@@ -12665,6 +12672,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get scheduledTaskToolActionDelete => 'Delete scheduled task';
+
+  @override
+  String get miniAppsTitle => 'My Apps';
+
+  @override
+  String get miniAppsEmpty =>
+      'No apps yet. Open a chat with a workspace and ask, for example: “Make me a water tracker app”. The agent builds it and publishes it here.';
+
+  @override
+  String get miniAppsFooter =>
+      'Each app keeps its own data, which survives updates. Ask the agent in the same chat to change an app; it republishes it.';
+
+  @override
+  String get miniAppsOpen => 'Open';
+
+  @override
+  String get miniAppsReload => 'Reload';
+
+  @override
+  String get miniAppsAddToHomeScreen => 'Add to home screen';
+
+  @override
+  String get miniAppsPinRequested =>
+      'Confirm adding the shortcut in the launcher.';
+
+  @override
+  String get miniAppsPinUnsupported => 'This launcher cannot pin shortcuts.';
+
+  @override
+  String get miniAppsDelete => 'Delete';
+
+  @override
+  String get miniAppsDeleteDetail =>
+      'The app and all its data are removed. A home screen shortcut stops working.';
+
+  @override
+  String get miniAppsNotFound => 'This app is not installed anymore.';
+
+  @override
+  String miniAppsDeleteTitle(String name) {
+    return 'Delete “$name”?';
+  }
 
   @override
   String get phoneControlTitle => 'Phone Control';

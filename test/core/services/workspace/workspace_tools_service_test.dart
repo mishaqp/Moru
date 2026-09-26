@@ -14,6 +14,7 @@ import 'package:Kelivo/core/services/workspace/task_plan.dart';
 import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
 import 'package:Kelivo/core/services/workspace/workspace_paths.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
+import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tools_service.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
 import 'package:Kelivo/utils/mcp_structured_image.dart';
@@ -456,6 +457,53 @@ void main() {
       );
     },
   );
+
+  group('publish_mini_app', () {
+    test('installs a workspace folder and returns its link', () async {
+      final app = Directory(p.join(workspaceDir.path, 'apps', 'water'))
+        ..createSync(recursive: true);
+      File(
+        p.join(app.path, 'moru-app.json'),
+      ).writeAsStringSync(jsonEncode({'id': 'water', 'name': 'Water'}));
+      File(p.join(app.path, 'index.html')).writeAsStringSync('<p>hi</p>');
+      final store = MiniAppStore(
+        root: () async => Directory(p.join(tmp.path, 'installed')),
+      );
+      final tools = WorkspaceToolsService(registry: registry, miniApps: store);
+
+      final raw = await tools.handle(ctx(), WorkspaceToolsService.miniAppTool, {
+        'path': 'apps/water',
+      }, toolCallId: 'publish');
+
+      expect(jsonOf(raw), {
+        'ok': true,
+        'id': 'water',
+        'name': 'Water',
+        'link': 'kelivo://app/water',
+        'updated': false,
+        'files': 1,
+        'bytes': 9,
+      });
+      expect(metaOf(raw).status, 'ok');
+      expect(store.byId('water'), isNotNull);
+
+      final missing = await tools.handle(
+        ctx(),
+        WorkspaceToolsService.miniAppTool,
+        {'path': 'apps/nothing'},
+        toolCallId: 'missing',
+      );
+      expect(jsonOf(missing)['error'], 'not_a_folder');
+
+      final noManifest = await tools.handle(
+        ctx(),
+        WorkspaceToolsService.miniAppTool,
+        {'path': 'apps'},
+        toolCallId: 'no-manifest',
+      );
+      expect(jsonOf(noManifest)['error'], 'missing_manifest');
+    });
+  });
 
   group('shell', () {
     test(

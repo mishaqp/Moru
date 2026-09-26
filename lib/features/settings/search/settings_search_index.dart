@@ -36,6 +36,7 @@ enum SettingsSearchDestination {
   backup,
   storage,
   scheduledTasks,
+  miniApps,
   hotkeys,
   stats,
   toolSchemas,
@@ -80,6 +81,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.backup => l.settingsPageBackup,
     SettingsSearchDestination.storage => l.settingsPageChatStorage,
     SettingsSearchDestination.scheduledTasks => l.scheduledTasksTitle,
+    SettingsSearchDestination.miniApps => l.miniAppsTitle,
     SettingsSearchDestination.hotkeys => l.settingsPageHotkeys,
     SettingsSearchDestination.stats => l.settingsPageStatistics,
     SettingsSearchDestination.toolSchemas => l.toolSchemaSettingsPageTitle,
@@ -118,6 +120,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.backup => LucideIcons.database,
     SettingsSearchDestination.storage => LucideIcons.hardDrive,
     SettingsSearchDestination.scheduledTasks => LucideIcons.clock,
+    SettingsSearchDestination.miniApps => LucideIcons.layoutGrid,
     SettingsSearchDestination.hotkeys => LucideIcons.keyboard,
     SettingsSearchDestination.stats => LucideIcons.chartColumnBig,
     SettingsSearchDestination.toolSchemas => LucideIcons.wrench,
@@ -469,6 +472,15 @@ class SettingsSearchIndex {
         (l) => l.scheduledTasksTitle,
         page: true,
         keywords: 'scheduled timer alarm cron 定时 定時 计划 排程 任务 任務',
+      );
+    }
+    if (platform == TargetPlatform.android) {
+      add(
+        'miniApps',
+        SettingsSearchDestination.miniApps,
+        (l) => l.miniAppsTitle,
+        page: true,
+        keywords: 'mini apps applets widgets приложения мини 小应用 小應用 应用',
       );
     }
     if (desktop) {

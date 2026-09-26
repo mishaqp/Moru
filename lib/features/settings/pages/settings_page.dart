@@ -34,6 +34,7 @@ import 'storage_space_page.dart';
 import '../../stats/pages/stats_page.dart';
 import '../../../core/services/storage/storage_usage_service.dart';
 import '../../../core/services/haptics.dart';
+import '../../mini_apps/pages/mini_apps_page.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
@@ -313,6 +314,17 @@ class SettingsPage extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (_) => const ScheduledTasksPage(),
                     ),
+                  ),
+                ),
+                _iosDivider(context),
+              ],
+              if (defaultTargetPlatform == TargetPlatform.android) ...[
+                _iosNavRow(
+                  context,
+                  icon: Lucide.LayoutGrid,
+                  label: l10n.miniAppsTitle,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const MiniAppsPage()),
                   ),
                 ),
                 _iosDivider(context),

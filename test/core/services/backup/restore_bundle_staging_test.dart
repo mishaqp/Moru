@@ -1262,6 +1262,21 @@ void main() {
               .toList(),
           isEmpty,
         );
+        // The deferred discard still clears its marker and syncs the
+        // workspace after the run folder is gone, all under the workspace
+        // lock. Queue behind it so tearDown cannot delete the folder under it.
+        await RestoreWorkspaceLock(
+          appDataDirectory: root,
+        ).synchronized(() async {});
+        expect(
+          File(
+            p.join(
+              workspaceRoot.path,
+              RestoreWorkspaceLock.discardingRunFileName,
+            ),
+          ).existsSync(),
+          isFalse,
+        );
       },
     );
 
