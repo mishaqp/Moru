@@ -5698,6 +5698,35 @@
     }
   },
   "miniAppsDeleteTitle": "Delete “{name}”?",
+  "miniAppsShare": "Share",
+  "@miniAppsShareTitle": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "miniAppsShareTitle": "Share “{name}”",
+  "miniAppsShareWithData": "App and its data",
+  "miniAppsShareWithoutData": "App only",
+  "miniAppsShareDataDetail": "Data is everything the app saved, such as your records. Reminders are not shared.",
+  "miniAppsImport": "Import",
+  "@miniAppsImported": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "miniAppsImported": "“{name}” installed",
+  "@miniAppsImportedWithData": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "miniAppsImportedWithData": "“{name}” installed with its data",
+  "@miniAppsImportFailed": {
+    "placeholders": {
+      "message": {"type": "String"}
+    }
+  },
+  "miniAppsImportFailed": "Could not install the app: {message}",
   "miniAppsNotificationChannel": "Mini apps",
   "miniAppsNotificationChannelDescription": "Notifications and reminders from your mini apps.",
   "phoneControlTitle": "Phone Control",

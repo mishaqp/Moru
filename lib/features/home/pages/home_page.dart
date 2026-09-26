@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show MissingPluginException;
 import 'package:desktop_drop/desktop_drop.dart';
@@ -910,8 +910,34 @@ class _HomePageState extends State<HomePage>
       await _chatReady;
       while (mounted && _incomingShareChanged) {
         _incomingShareChanged = false;
-        final shares = await service.pending();
+        var shares = await service.pending();
         if (!mounted || shares.isEmpty) continue;
+        // A shared or opened .moruapp installs the mini app instead of
+        // becoming a chat attachment.
+        final miniApps = [
+          for (final share in shares)
+            if (share.text.trim().isEmpty &&
+                share.files.isNotEmpty &&
+                share.files.every(
+                  (file) => MiniAppLauncher.isArchiveName(file.fileName),
+                ))
+              share,
+        ];
+        if (miniApps.isNotEmpty) {
+          for (final share in miniApps) {
+            for (final file in share.files) {
+              if (!mounted) return;
+              await MiniAppLauncher.importFile(context, File(file.path));
+            }
+          }
+          await service.acknowledge(miniApps);
+          if (!mounted) return;
+          shares = [
+            for (final share in shares)
+              if (!miniApps.contains(share)) share,
+          ];
+          if (shares.isEmpty) continue;
+        }
         final hasContent = shares.any(
           (share) => share.text.trim().isNotEmpty || share.files.isNotEmpty,
         );

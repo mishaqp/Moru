@@ -12738,6 +12738,42 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get miniAppsShare => 'Share';
+
+  @override
+  String miniAppsShareTitle(String name) {
+    return 'Share “$name”';
+  }
+
+  @override
+  String get miniAppsShareWithData => 'App and its data';
+
+  @override
+  String get miniAppsShareWithoutData => 'App only';
+
+  @override
+  String get miniAppsShareDataDetail =>
+      'Data is everything the app saved, such as your records. Reminders are not shared.';
+
+  @override
+  String get miniAppsImport => 'Import';
+
+  @override
+  String miniAppsImported(String name) {
+    return '“$name” installed';
+  }
+
+  @override
+  String miniAppsImportedWithData(String name) {
+    return '“$name” installed with its data';
+  }
+
+  @override
+  String miniAppsImportFailed(String message) {
+    return 'Could not install the app: $message';
+  }
+
+  @override
   String get miniAppsNotificationChannel => 'Mini apps';
 
   @override

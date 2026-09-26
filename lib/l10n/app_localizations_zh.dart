@@ -12157,6 +12157,41 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get miniAppsShare => '分享';
+
+  @override
+  String miniAppsShareTitle(String name) {
+    return '分享「$name」';
+  }
+
+  @override
+  String get miniAppsShareWithData => '应用和数据';
+
+  @override
+  String get miniAppsShareWithoutData => '仅应用';
+
+  @override
+  String get miniAppsShareDataDetail => '数据是应用保存的全部内容，例如你的记录。提醒不会被分享。';
+
+  @override
+  String get miniAppsImport => '导入';
+
+  @override
+  String miniAppsImported(String name) {
+    return '已安装「$name」';
+  }
+
+  @override
+  String miniAppsImportedWithData(String name) {
+    return '已安装「$name」及其数据';
+  }
+
+  @override
+  String miniAppsImportFailed(String message) {
+    return '无法安装应用：$message';
+  }
+
+  @override
   String get miniAppsNotificationChannel => '小应用';
 
   @override
@@ -24312,6 +24347,41 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String miniAppsDeleteTitle(String name) {
     return '删除“$name”？';
+  }
+
+  @override
+  String get miniAppsShare => '分享';
+
+  @override
+  String miniAppsShareTitle(String name) {
+    return '分享「$name」';
+  }
+
+  @override
+  String get miniAppsShareWithData => '应用和数据';
+
+  @override
+  String get miniAppsShareWithoutData => '仅应用';
+
+  @override
+  String get miniAppsShareDataDetail => '数据是应用保存的全部内容，例如你的记录。提醒不会被分享。';
+
+  @override
+  String get miniAppsImport => '导入';
+
+  @override
+  String miniAppsImported(String name) {
+    return '已安装「$name」';
+  }
+
+  @override
+  String miniAppsImportedWithData(String name) {
+    return '已安装「$name」及其数据';
+  }
+
+  @override
+  String miniAppsImportFailed(String message) {
+    return '无法安装应用：$message';
   }
 
   @override
@@ -36549,6 +36619,41 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String miniAppsDeleteTitle(String name) {
     return '刪除「$name」？';
+  }
+
+  @override
+  String get miniAppsShare => '分享';
+
+  @override
+  String miniAppsShareTitle(String name) {
+    return '分享「$name」';
+  }
+
+  @override
+  String get miniAppsShareWithData => '應用和資料';
+
+  @override
+  String get miniAppsShareWithoutData => '僅應用';
+
+  @override
+  String get miniAppsShareDataDetail => '資料是應用儲存的全部內容，例如你的記錄。提醒不會被分享。';
+
+  @override
+  String get miniAppsImport => '匯入';
+
+  @override
+  String miniAppsImported(String name) {
+    return '已安裝「$name」';
+  }
+
+  @override
+  String miniAppsImportedWithData(String name) {
+    return '已安裝「$name」及其資料';
+  }
+
+  @override
+  String miniAppsImportFailed(String message) {
+    return '無法安裝應用：$message';
   }
 
   @override

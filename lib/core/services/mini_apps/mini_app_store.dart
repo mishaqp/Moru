@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../utils/app_directories.dart';
+import '../skills/skill_archive.dart' show safeZipEntryName;
 
 /// A mini app the agent built and published: a small web app with its own
 /// data, opened inside Moru or from a home screen shortcut.
@@ -332,6 +334,139 @@ class MiniAppStore extends ChangeNotifier {
         if (other.id != id) other,
     ];
     notifyListeners();
+  }
+
+  // ---------------------------------------------------------------------------
+  // .moruapp files
+  // ---------------------------------------------------------------------------
+
+  static const String archiveExtension = '.moruapp';
+
+  /// Stored data inside a `.moruapp`, beside the app's own files.
+  static const String archiveDataFile = '.moru-data.json';
+
+  /// Packs [id] into `<into>/<id>.moruapp`: its files and moru-app.json, and
+  /// its data when [withData]. Reminders stay on this device.
+  Future<File> exportArchive(
+    String id, {
+    required bool withData,
+    required Directory into,
+  }) async {
+    await load();
+    final app = _require(id);
+    await _writes[id];
+    final archive = Archive();
+    final manifest = app.toJson()..remove('updatedAt');
+    archive.addFile(
+      ArchiveFile.bytes(manifestFile, utf8.encode(jsonEncode(manifest))),
+    );
+    final code = Directory(app.codeDirectory);
+    await for (final entity in code.list(recursive: true)) {
+      if (entity is! File) continue;
+      final relative = p.posix.joinAll(
+        p.split(p.relative(entity.path, from: code.path)),
+      );
+      if (relative == bridgeFile) continue;
+      archive.addFile(ArchiveFile.bytes(relative, await entity.readAsBytes()));
+    }
+    if (withData) {
+      final data = await _readData(app);
+      if (data.isNotEmpty) {
+        archive.addFile(
+          ArchiveFile.bytes(archiveDataFile, utf8.encode(jsonEncode(data))),
+        );
+      }
+    }
+    await into.create(recursive: true);
+    final file = File(p.join(into.path, '$id$archiveExtension'));
+    await file.writeAsBytes(ZipEncoder().encodeBytes(archive), flush: true);
+    return file;
+  }
+
+  /// Installs the app packed in [file]. Its data is used only when the app
+  /// has no data here yet, so importing never overwrites what is stored.
+  Future<({MiniApp app, bool updated, bool dataRestored})> importArchive(
+    File file,
+  ) async {
+    await load();
+    if (await file.length() > maxBytes + maxDataBytes) {
+      throw const MiniAppException('too_large', 'The file is too large.');
+    }
+    final Archive archive;
+    try {
+      archive = ZipDecoder().decodeBytes(await file.readAsBytes());
+    } catch (_) {
+      throw const MiniAppException(
+        'invalid_archive',
+        'This is not a Moru app file.',
+      );
+    }
+    final root = await _root();
+    await root.create(recursive: true);
+    final staging = await root.createTemp('.import-');
+    try {
+      var files = 0;
+      var bytes = 0;
+      for (final entry in archive) {
+        if (!entry.isFile || entry.isSymbolicLink) continue;
+        final String? name;
+        try {
+          name = safeZipEntryName(entry.name);
+        } on FormatException {
+          throw const MiniAppException(
+            'invalid_archive',
+            'The file has unsafe paths.',
+          );
+        }
+        if (name == null) continue;
+        files++;
+        bytes += entry.size;
+        if (files > maxFiles + 2 || bytes > maxBytes + maxDataBytes) {
+          throw const MiniAppException('too_large', 'The app is too large.');
+        }
+        final target = File(p.join(staging.path, name));
+        await target.parent.create(recursive: true);
+        await target.writeAsBytes(entry.readBytes() ?? const []);
+      }
+      if (!await File(p.join(staging.path, manifestFile)).exists()) {
+        throw const MiniAppException(
+          'invalid_archive',
+          'This is not a Moru app file.',
+        );
+      }
+      Map<String, dynamic>? data;
+      final dataFile = File(p.join(staging.path, archiveDataFile));
+      if (await dataFile.exists()) {
+        try {
+          data = Map<String, dynamic>.from(
+            jsonDecode(await dataFile.readAsString()) as Map,
+          );
+        } catch (_) {
+          throw const MiniAppException(
+            'invalid_archive',
+            'The app data in the file is damaged.',
+          );
+        }
+        await dataFile.delete();
+      }
+      final installed = await install(staging);
+      final id = installed.app.id;
+      var restored = false;
+      if (data != null && data.isNotEmpty) {
+        await _update(id, (current) {
+          if (current.isNotEmpty) return;
+          current.addAll(data!);
+          restored = true;
+        });
+      }
+      return (
+        app: installed.app,
+        updated: installed.updated,
+        dataRestored: restored,
+      );
+    } finally {
+      await staging.delete(recursive: true);
+    }
   }
 
   // ---------------------------------------------------------------------------

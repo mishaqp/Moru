@@ -50,6 +50,11 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
           label: l10n.miniAppsAddToHomeScreen,
         ),
         OptionSheetItem(
+          value: 'share',
+          icon: Lucide.Share2,
+          label: l10n.miniAppsShare,
+        ),
+        OptionSheetItem(
           value: 'delete',
           icon: Lucide.Trash2,
           label: l10n.miniAppsDelete,
@@ -68,6 +73,8 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
           message: ok ? l10n.miniAppsPinRequested : l10n.miniAppsPinUnsupported,
           type: ok ? NotificationType.success : NotificationType.warning,
         );
+      case 'share':
+        await MiniAppLauncher.share(context, app, store: widget._store);
       case 'delete':
         final confirmed = await showOptionSheet<bool>(
           context,
@@ -100,6 +107,20 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
           ),
         ),
         title: Text(l10n.miniAppsTitle),
+        actions: [
+          Tooltip(
+            message: l10n.miniAppsImport,
+            child: IosIconButton(
+              icon: Lucide.Import,
+              minSize: 44,
+              size: 20,
+              onTap: () => unawaited(
+                MiniAppLauncher.pickAndImport(context, store: widget._store),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: ListenableBuilder(
         listenable: _store,
