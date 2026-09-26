@@ -12,7 +12,6 @@ import '../../../shared/widgets/section_card.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../shared/widgets/snackbar.dart';
-import '../../../utils/platform_utils.dart';
 import '../widgets/memory_ui.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
@@ -46,9 +45,7 @@ class UserProfilePage extends StatelessWidget {
 }
 
 class UserProfileContent extends StatefulWidget {
-  const UserProfileContent({super.key, this.padding});
-
-  final EdgeInsetsGeometry? padding;
+  const UserProfileContent({super.key});
 
   @override
   State<UserProfileContent> createState() => _UserProfileContentState();
@@ -95,49 +92,25 @@ class _UserProfileContentState extends State<UserProfileContent> {
     final title = isNewCustom
         ? l10n.userProfileAddCustom
         : (isCustom ? key : _knownLabel(l10n, key));
-    _ProfileFieldForm buildForm({required bool desktop}) => _ProfileFieldForm(
+    _ProfileFieldForm buildForm() => _ProfileFieldForm(
       title: title,
       fieldKey: key,
       initialValue: current ?? '',
       isNewCustom: isNewCustom,
       canClear: current != null && current.isNotEmpty,
-      desktop: desktop,
     );
 
     final Future<_ProfileFieldResult?> resultFuture;
-    if (PlatformUtils.isDesktopTarget) {
-      resultFuture = showDialog<_ProfileFieldResult>(
-        context: context,
-        barrierDismissible: true,
-        builder: (ctx) {
-          final maxHeight = MediaQuery.sizeOf(ctx).height * 0.85;
-          return Dialog(
-            backgroundColor: context.overlaySurface,
-            insetPadding: const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 24,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 480, maxHeight: maxHeight),
-              child: buildForm(desktop: true),
-            ),
-          );
-        },
-      );
-    } else {
-      resultFuture = showModalBottomSheet<_ProfileFieldResult>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: context.overlaySurface,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        builder: (ctx) => buildForm(desktop: false),
-      );
-    }
+    resultFuture = showModalBottomSheet<_ProfileFieldResult>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.overlaySurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => buildForm(),
+    );
+
     final result = await resultFuture;
 
     if (result == null || !mounted) return;
@@ -193,7 +166,7 @@ class _UserProfileContentState extends State<UserProfileContent> {
     );
 
     return ListView(
-      padding: widget.padding ?? const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         sectionCard([
           for (final key in UserProfileField.knownKeys)
@@ -276,7 +249,6 @@ class _ProfileFieldForm extends StatefulWidget {
     required this.initialValue,
     required this.isNewCustom,
     required this.canClear,
-    this.desktop = false,
   });
 
   final String title;
@@ -284,7 +256,6 @@ class _ProfileFieldForm extends StatefulWidget {
   final String initialValue;
   final bool isNewCustom;
   final bool canClear;
-  final bool desktop;
 
   @override
   State<_ProfileFieldForm> createState() => _ProfileFieldFormState();
@@ -366,61 +337,6 @@ class _ProfileFieldFormState extends State<_ProfileFieldForm> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-
-    if (widget.desktop) {
-      final maxBodyHeight = MediaQuery.sizeOf(context).height * 0.5;
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            height: 44,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: AppFontWeights.emphasis,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: MaterialLocalizations.of(
-                      context,
-                    ).closeButtonTooltip,
-                    icon: const Icon(Lucide.X, size: 18),
-                    color: cs.onSurface,
-                    onPressed: () => Navigator.of(context).maybePop(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Divider(
-            height: 1,
-            thickness: 0.5,
-            color: cs.outlineVariant.withValues(alpha: 0.12),
-          ),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxBodyHeight),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: _fields(l10n),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-            child: _actions(l10n, cs),
-          ),
-        ],
-      );
-    }
 
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final maxHeight = MediaQuery.sizeOf(context).height * 0.9;

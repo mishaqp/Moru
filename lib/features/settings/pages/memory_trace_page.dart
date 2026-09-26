@@ -48,11 +48,9 @@ class MemoryTracePage extends StatelessWidget {
   }
 }
 
-/// Body of [MemoryTracePage], reused by the desktop pane.
+/// Body of [MemoryTracePage].
 class MemoryTraceContent extends StatelessWidget {
-  const MemoryTraceContent({super.key, this.padding});
-
-  final EdgeInsetsGeometry? padding;
+  const MemoryTraceContent({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +63,7 @@ class MemoryTraceContent extends StatelessWidget {
       builder: (context, _) {
         final traces = recorder.traces;
         return ListView(
-          padding: padding ?? const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
             _SectionHeader(title: l10n.memoryTraceRecordingSection),
             _GroupedCard(
@@ -222,21 +220,15 @@ class MemoryTraceDetailPage extends StatelessWidget {
   }
 }
 
-/// Body of [MemoryTraceDetailPage], reused by the desktop dialog.
+/// Body of [MemoryTraceDetailPage].
 class MemoryTraceDetailContent extends StatelessWidget {
-  const MemoryTraceDetailContent({
-    super.key,
-    required this.trace,
-    this.padding,
-  });
+  const MemoryTraceDetailContent({super.key, required this.trace});
 
   final MemoryTrace trace;
-  final EdgeInsetsGeometry? padding;
-
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: padding ?? const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         _OverviewCard(trace: trace),
         for (final step in trace.steps) ...[

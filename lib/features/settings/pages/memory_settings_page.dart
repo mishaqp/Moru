@@ -11,7 +11,6 @@ import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/section_card.dart';
 import '../../../shared/widgets/snackbar.dart';
-import '../../../utils/platform_utils.dart';
 import '../../model/widgets/model_select_sheet.dart';
 import '../widgets/memory_ui.dart';
 import 'legacy_memory_page.dart';
@@ -51,9 +50,7 @@ class MemorySettingsPage extends StatelessWidget {
 }
 
 class MemorySettingsContent extends StatelessWidget {
-  const MemorySettingsContent({super.key, this.padding});
-
-  final EdgeInsetsGeometry? padding;
+  const MemorySettingsContent({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -233,7 +230,7 @@ class MemorySettingsContent extends StatelessWidget {
     ];
 
     return ListView(
-      padding: padding ?? const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         modeSection,
         const SizedBox(height: 18),
@@ -444,35 +441,15 @@ List<_PromptEntry> _promptEntries(AppLocalizations l10n) => [
 ];
 
 Future<void> _openPromptEditor(BuildContext context, _PromptEntry entry) async {
-  if (PlatformUtils.isDesktopTarget) {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => Dialog(
-        backgroundColor: context.overlaySurface,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 860, maxHeight: 660),
-          child: _MemoryPromptEditPage(entry: entry, desktopDialog: true),
-        ),
-      ),
-    );
-    return;
-  }
   await Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => _MemoryPromptEditPage(entry: entry)),
   );
 }
 
 class _MemoryPromptEditPage extends StatefulWidget {
-  const _MemoryPromptEditPage({
-    required this.entry,
-    this.desktopDialog = false,
-  });
+  const _MemoryPromptEditPage({required this.entry});
 
   final _PromptEntry entry;
-  final bool desktopDialog;
 
   @override
   State<_MemoryPromptEditPage> createState() => _MemoryPromptEditPageState();
@@ -657,12 +634,7 @@ class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage> {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     return ListView(
-      padding: EdgeInsets.fromLTRB(
-        widget.desktopDialog ? 20 : 16,
-        12,
-        widget.desktopDialog ? 20 : 16,
-        widget.desktopDialog ? 24 : 32,
-      ),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 32),
       children: [
         Text(
           widget.entry.subtitle,
@@ -700,71 +672,6 @@ class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-
-    if (widget.desktopDialog) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            height: 44,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.entry.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: AppFontWeights.emphasis,
-                      ),
-                    ),
-                  ),
-                  Tooltip(
-                    message: l10n.memoryPromptEditReset,
-                    child: IosIconButton(
-                      icon: Lucide.RotateCcw,
-                      color: cs.onSurface,
-                      size: 18,
-                      minSize: 36,
-                      semanticLabel: l10n.memoryPromptEditReset,
-                      onTap: _reset,
-                    ),
-                  ),
-                  Tooltip(
-                    message: l10n.memoryPromptEditSave,
-                    child: IosIconButton(
-                      icon: Lucide.Check,
-                      color: cs.primary,
-                      size: 18,
-                      minSize: 36,
-                      semanticLabel: l10n.memoryPromptEditSave,
-                      onTap: _save,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: MaterialLocalizations.of(
-                      context,
-                    ).closeButtonTooltip,
-                    icon: const Icon(Lucide.X, size: 18),
-                    color: cs.onSurface,
-                    onPressed: () => Navigator.of(context).maybePop(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Divider(
-            height: 1,
-            thickness: 0.5,
-            color: cs.outlineVariant.withValues(alpha: 0.12),
-          ),
-          Expanded(child: _buildEditorBody(context)),
-        ],
-      );
-    }
 
     return Scaffold(
       backgroundColor: cs.surface,

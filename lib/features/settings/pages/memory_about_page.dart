@@ -5,7 +5,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 
-/// Full-screen "about memory" page (mobile). Desktop uses a dialog instead.
+/// Full-screen "about memory" page.
 class MemoryAboutPage extends StatelessWidget {
   const MemoryAboutPage({super.key});
 
@@ -35,18 +35,16 @@ class MemoryAboutPage extends StatelessWidget {
   }
 }
 
-/// Shared body for the about page (mobile) and desktop dialog.
+/// Body of the about page.
 class MemoryAboutContent extends StatelessWidget {
-  const MemoryAboutContent({super.key, this.padding});
-
-  final EdgeInsetsGeometry? padding;
+  const MemoryAboutContent({super.key});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
     return ListView(
-      padding: padding ?? const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         _AboutSection(
           title: l10n.memoryAboutQuickstartTitle,

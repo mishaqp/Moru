@@ -19,7 +19,6 @@ import '../../../shared/widgets/ios_form_text_field.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/section_card.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
-import '../../../utils/platform_utils.dart';
 
 final DateFormat memoryEntryDateFormat = DateFormat('yyyy-MM-dd');
 
@@ -630,83 +629,6 @@ class MemorySearchField extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Desktop: prefixIcon + symmetric contentPadding (providers search pattern).
-    if (PlatformUtils.isDesktopTarget) {
-      return ValueListenableBuilder<TextEditingValue>(
-        valueListenable: controller,
-        builder: (context, value, _) {
-          final hasText = value.text.isNotEmpty;
-          return TextField(
-            controller: controller,
-            onChanged: onChanged,
-            textAlignVertical: TextAlignVertical.center,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: AppFontWeights.medium,
-              color: cs.onSurface.withValues(alpha: 0.92),
-            ),
-            cursorColor: cs.primary,
-            decoration: InputDecoration(
-              hintText: hintText,
-              hintStyle: TextStyle(
-                fontSize: 15,
-                fontWeight: AppFontWeights.medium,
-                color: cs.onSurface.withValues(alpha: isDark ? 0.42 : 0.46),
-              ),
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 10,
-              ),
-              prefixIcon: Icon(
-                Lucide.Search,
-                size: 18,
-                color: cs.onSurface.withValues(alpha: 0.55),
-              ),
-              prefixIconConstraints: const BoxConstraints(
-                minWidth: 36,
-                minHeight: 36,
-              ),
-              suffixIcon: hasText
-                  ? IconButton(
-                      onPressed: () {
-                        controller.clear();
-                        onChanged?.call('');
-                      },
-                      icon: Icon(
-                        Lucide.X,
-                        size: 16,
-                        color: cs.onSurface.withValues(alpha: 0.55),
-                      ),
-                      tooltip: l10n.memoryUiSearchClear,
-                      splashColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                    )
-                  : null,
-              suffixIconConstraints: const BoxConstraints(
-                minWidth: 36,
-                minHeight: 36,
-              ),
-              filled: true,
-              fillColor: context.appColors.surfaceFill,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          );
-        },
-      );
-    }
 
     return Container(
       constraints: const BoxConstraints(minHeight: 42),
@@ -783,7 +705,7 @@ class MemoryPickerOption<T> {
   final String? subtitle;
 }
 
-/// Option picker: centered Dialog on desktop, bottom sheet on mobile.
+/// Option picker in a bottom sheet.
 Future<T?> showMemoryOptionPicker<T>(
   BuildContext context, {
   required String title,
@@ -811,77 +733,6 @@ Future<T?> showMemoryOptionPicker<T>(
             ),
         ],
       ],
-    );
-  }
-
-  if (PlatformUtils.isDesktopTarget) {
-    return showDialog<T>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) {
-        final localCs = Theme.of(ctx).colorScheme;
-        final maxHeight = MediaQuery.sizeOf(ctx).height * 0.7;
-        return Dialog(
-          backgroundColor: context.overlaySurface,
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 24,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 420, maxHeight: maxHeight),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(
-                  height: 44,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: AppFontWeights.emphasis,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: MaterialLocalizations.of(
-                            ctx,
-                          ).closeButtonTooltip,
-                          icon: const Icon(Lucide.X, size: 18),
-                          color: localCs.onSurface,
-                          onPressed: () => Navigator.of(ctx).maybePop(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Divider(
-                  height: 1,
-                  thickness: 0.5,
-                  color: localCs.outlineVariant.withValues(alpha: 0.12),
-                ),
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: maxHeight - 56),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                    child: optionsCard(ctx),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -1055,7 +906,7 @@ class MemorySheetActions extends StatelessWidget {
 
 /// Opens the add/edit memory editor.
 ///
-/// Desktop: centered [Dialog]. Mobile: modal bottom sheet.
+/// Opens the entry editor in a modal bottom sheet.
 /// The form owns its [TextEditingController] inside a [State], so the
 /// controller stays alive for the whole exit transition.
 Future<void> showMemoryEntryEditor(
@@ -1070,38 +921,13 @@ Future<void> showMemoryEntryEditor(
       ? l10n.memoryEntryCreateTitle
       : l10n.memoryEntryEditTitle;
 
-  MemoryEntryEditForm buildForm({required bool desktop}) => MemoryEntryEditForm(
+  MemoryEntryEditForm buildForm() => MemoryEntryEditForm(
     title: title,
     existing: existing,
     defaultAssistantId: defaultAssistantId,
     defaultScope: defaultScope,
     allowAssistantPicker: allowAssistantPicker,
-    desktop: desktop,
   );
-
-  if (PlatformUtils.isDesktopTarget) {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) {
-        final maxHeight = MediaQuery.sizeOf(ctx).height * 0.85;
-        return Dialog(
-          backgroundColor: context.overlaySurface,
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 24,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 520, maxHeight: maxHeight),
-            child: buildForm(desktop: true),
-          ),
-        );
-      },
-    );
-  }
 
   return showModalBottomSheet<void>(
     context: context,
@@ -1110,7 +936,7 @@ Future<void> showMemoryEntryEditor(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
-    builder: (ctx) => buildForm(desktop: false),
+    builder: (ctx) => buildForm(),
   );
 }
 
@@ -1122,7 +948,6 @@ class MemoryEntryEditForm extends StatefulWidget {
     this.defaultAssistantId,
     this.defaultScope = MemoryScope.global,
     this.allowAssistantPicker = false,
-    this.desktop = false,
   });
 
   final String title;
@@ -1132,7 +957,6 @@ class MemoryEntryEditForm extends StatefulWidget {
   final bool allowAssistantPicker;
 
   /// When true, render a compact dialog body (no sheet drag handle / inset).
-  final bool desktop;
 
   @override
   State<MemoryEntryEditForm> createState() => _MemoryEntryEditFormState();
@@ -1316,67 +1140,6 @@ class _MemoryEntryEditFormState extends State<MemoryEntryEditForm> {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final assistants = context.watch<AssistantProvider>().assistants;
-
-    if (widget.desktop) {
-      // Compact, height-hugging dialog body — stays visually centered.
-      // Cap the scroll area explicitly (avoid Flexible + mainAxisSize.min
-      // collapsing to zero height).
-      final maxBodyHeight = MediaQuery.sizeOf(context).height * 0.55;
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            height: 44,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: AppFontWeights.emphasis,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: MaterialLocalizations.of(
-                      context,
-                    ).closeButtonTooltip,
-                    icon: const Icon(Lucide.X, size: 18),
-                    color: cs.onSurface,
-                    onPressed: () => Navigator.of(context).maybePop(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Divider(
-            height: 1,
-            thickness: 0.5,
-            color: cs.outlineVariant.withValues(alpha: 0.12),
-          ),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxBodyHeight),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: _formFields(l10n, assistants),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-            child: _actions(l10n),
-          ),
-        ],
-      );
-    }
 
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final maxHeight = MediaQuery.sizeOf(context).height * 0.9;

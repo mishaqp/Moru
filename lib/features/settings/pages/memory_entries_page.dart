@@ -6,11 +6,9 @@ import '../../../core/models/memory_entry.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/memory_provider_v2.dart';
 import '../../../core/services/memory/memory_tools.dart';
-import '../../../shared/widgets/select_dropdown.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
-import '../../../utils/platform_utils.dart';
 import '../widgets/memory_ui.dart';
 
 /// Global memory list with search, filters, batch delete, orphan cleanup (§14.4).
@@ -43,9 +41,7 @@ class MemoryEntriesPage extends StatelessWidget {
 }
 
 class MemoryEntriesContent extends StatefulWidget {
-  const MemoryEntriesContent({super.key, this.padding});
-
-  final EdgeInsetsGeometry? padding;
+  const MemoryEntriesContent({super.key});
 
   @override
   State<MemoryEntriesContent> createState() => _MemoryEntriesContentState();
@@ -161,97 +157,6 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
       _selected.clear();
       _selecting = false;
     });
-  }
-
-  Widget _desktopToolbar(AppLocalizations l10n, AssistantProvider ap) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 4, 0, 6),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          DesktopSelectDropdown<_ScopeFilter>(
-            value: _scope,
-            minWidth: 120,
-            maxLabelWidth: 160,
-            options: [
-              for (final v in _ScopeFilter.values)
-                DesktopSelectOption(
-                  value: v,
-                  label: switch (v) {
-                    _ScopeFilter.all => l10n.memoryFilterScopeAll,
-                    _ScopeFilter.global => l10n.memoryFilterScopeGlobal,
-                    _ScopeFilter.assistant => l10n.memoryFilterScopeAssistant,
-                  },
-                ),
-            ],
-            onSelected: (v) => setState(() => _scope = v),
-          ),
-          DesktopSelectDropdown<MemoryType?>(
-            value: _type,
-            minWidth: 120,
-            maxLabelWidth: 160,
-            options: [
-              DesktopSelectOption(value: null, label: l10n.memoryFilterTypeAll),
-              for (final t in MemoryType.values)
-                DesktopSelectOption(value: t, label: memoryTypeLabel(l10n, t)),
-            ],
-            onSelected: (v) async {
-              setState(() => _type = v);
-              if (_search.text.trim().isNotEmpty) {
-                await _runSearch(_search.text);
-              }
-            },
-          ),
-          DesktopSelectDropdown<_StatusFilter>(
-            value: _status,
-            minWidth: 120,
-            maxLabelWidth: 160,
-            options: [
-              for (final v in _StatusFilter.values)
-                DesktopSelectOption(
-                  value: v,
-                  label: switch (v) {
-                    _StatusFilter.all => l10n.memoryFilterStatusAll,
-                    _StatusFilter.active => l10n.memoryFilterStatusActive,
-                    _StatusFilter.archived => l10n.memoryFilterStatusArchived,
-                  },
-                ),
-            ],
-            onSelected: (v) => setState(() => _status = v),
-          ),
-          if (_scope == _ScopeFilter.assistant)
-            DesktopSelectDropdown<String?>(
-              value: _assistantFilterId,
-              minWidth: 140,
-              maxLabelWidth: 200,
-              options: [
-                DesktopSelectOption(
-                  value: null,
-                  label: l10n.memoryUiAssistantAll,
-                ),
-                for (final a in ap.assistants)
-                  DesktopSelectOption(value: a.id, label: a.name),
-              ],
-              onSelected: (v) => setState(() => _assistantFilterId = v),
-            ),
-          MemorySelectChip(
-            label: _selecting
-                ? l10n.memoryEntryActionBatchDelete
-                : l10n.providersPageMultiSelectTooltip,
-            emphasized: _selecting,
-            onTap: _toggleBatchDelete,
-          ),
-          MemorySelectChip(
-            label: l10n.memoryEntryActionAdd,
-            emphasized: true,
-            icon: Lucide.Plus,
-            onTap: () => _showEditSheet(),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _mobileToolbar(AppLocalizations l10n, AssistantProvider ap) {
@@ -396,38 +301,52 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
     final ap = context.watch<AssistantProvider>();
     final source = _searchResults ?? mp.entries;
     final filtered = _filtered(source);
-    final active = filtered
-        .where((e) => e.status == MemoryStatus.active)
-        .toList();
-    final archived = filtered
-        .where((e) => e.status == MemoryStatus.archived)
-        .toList();
-    final desktop = PlatformUtils.isDesktopTarget;
-    final listPadding = desktop
-        ? (widget.padding ?? const EdgeInsets.fromLTRB(4, 0, 4, 20))
-        : (widget.padding ?? const EdgeInsets.only(bottom: 24));
+    final active = [
+      for (final e in filtered)
+        if (e.status == MemoryStatus.active) e,
+    ];
+    final archived =
+        _status == _StatusFilter.all || _status == _StatusFilter.archived
+        ? [
+            for (final e in filtered)
+              if (e.status == MemoryStatus.archived) e,
+          ]
+        : const <MemoryEntry>[];
+    // Active entries, then the archived heading, then archived entries. Only
+    // the rows on screen are built; long memories used to build every card
+    // on each change.
+    final hasArchived = archived.isNotEmpty;
+    final count = active.length + (hasArchived ? 1 + archived.length : 0);
+
+    Widget card(MemoryEntry e) => MemoryEntryCard(
+      key: ValueKey(e.id),
+      entry: e,
+      assistantName: resolveAssistantName(context, e.assistantId),
+      selectable: _selecting,
+      selected: _selected.contains(e.id),
+      onSelectedChanged: (v) {
+        setState(() {
+          if (v) {
+            _selected.add(e.id);
+          } else {
+            _selected.remove(e.id);
+          }
+        });
+      },
+      onEdit: () => _showEditSheet(existing: e),
+    );
 
     return Column(
       children: [
         Padding(
-          padding: widget.padding == null
-              ? EdgeInsets.fromLTRB(desktop ? 12 : 16, 8, desktop ? 12 : 16, 4)
-              : const EdgeInsets.fromLTRB(0, 0, 0, 4),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
           child: MemorySearchField(
             controller: _search,
             hintText: l10n.memorySearchHint,
             onChanged: _runSearch,
           ),
         ),
-        if (desktop)
-          Padding(
-            padding: widget.padding == null
-                ? const EdgeInsets.symmetric(horizontal: 12)
-                : EdgeInsets.zero,
-            child: _desktopToolbar(l10n, ap),
-          )
-        else
-          _mobileToolbar(l10n, ap),
+        _mobileToolbar(l10n, ap),
         const MemoryOrphanBanner(),
         Expanded(
           child: filtered.isEmpty
@@ -441,71 +360,25 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
                     ),
                   ),
                 )
-              : ListView(
-                  padding: listPadding,
-                  children: [
-                    ...active.map(
-                      (e) => MemoryEntryCard(
-                        entry: e,
-                        assistantName: resolveAssistantName(
-                          context,
-                          e.assistantId,
-                        ),
-                        selectable: _selecting,
-                        selected: _selected.contains(e.id),
-                        onSelectedChanged: (v) {
-                          setState(() {
-                            if (v) {
-                              _selected.add(e.id);
-                            } else {
-                              _selected.remove(e.id);
-                            }
-                          });
-                        },
-                        onEdit: () => _showEditSheet(existing: e),
-                      ),
-                    ),
-                    if (archived.isNotEmpty &&
-                        (_status == _StatusFilter.all ||
-                            _status == _StatusFilter.archived)) ...[
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          desktop ? 8 : 16,
-                          16,
-                          desktop ? 8 : 16,
-                          4,
-                        ),
+              : ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  itemCount: count,
+                  itemBuilder: (context, i) {
+                    if (i < active.length) return card(active[i]);
+                    if (i == active.length) {
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                         child: Text(
                           l10n.memoryEntryArchivedSection,
                           style: TextStyle(
-                            fontSize: desktop ? 13.5 : 15,
+                            fontSize: 15,
                             fontWeight: AppFontWeights.emphasis,
                           ),
                         ),
-                      ),
-                      ...archived.map(
-                        (e) => MemoryEntryCard(
-                          entry: e,
-                          assistantName: resolveAssistantName(
-                            context,
-                            e.assistantId,
-                          ),
-                          selectable: _selecting,
-                          selected: _selected.contains(e.id),
-                          onSelectedChanged: (v) {
-                            setState(() {
-                              if (v) {
-                                _selected.add(e.id);
-                              } else {
-                                _selected.remove(e.id);
-                              }
-                            });
-                          },
-                          onEdit: () => _showEditSheet(existing: e),
-                        ),
-                      ),
-                    ],
-                  ],
+                      );
+                    }
+                    return card(archived[i - active.length - 1]);
+                  },
                 ),
         ),
       ],
