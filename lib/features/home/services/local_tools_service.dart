@@ -606,31 +606,31 @@ class LocalToolsService {
     }
     if (name == LocalToolNames.screenTime &&
         DeviceLocalTools.screenTimeSupported) {
-      return _invokeDeviceTool('getScreenTime', args);
+      return invokeDeviceTool('getScreenTime', args);
     }
     if (name == LocalToolNames.calendarQuery &&
         DeviceLocalTools.calendarSupported) {
-      return _invokeDeviceTool('queryCalendar', args);
+      return invokeDeviceTool('queryCalendar', args);
     }
     if (name == LocalToolNames.calendarCreate &&
         DeviceLocalTools.calendarSupported) {
-      return _invokeDeviceTool('createCalendarEvent', args);
+      return invokeDeviceTool('createCalendarEvent', args);
     }
     if (name == LocalToolNames.calendarUpdate &&
         DeviceLocalTools.calendarSupported) {
-      return _invokeDeviceTool('updateCalendarEvent', args);
+      return invokeDeviceTool('updateCalendarEvent', args);
     }
     if (name == LocalToolNames.calendarDelete &&
         DeviceLocalTools.calendarSupported) {
-      return _invokeDeviceTool('deleteCalendarEvent', args);
+      return invokeDeviceTool('deleteCalendarEvent', args);
     }
     if (name == LocalToolNames.currentLocation &&
         DeviceLocalTools.locationSupported) {
-      return _invokeDeviceTool('getCurrentLocation', args);
+      return invokeDeviceTool('getCurrentLocation', args);
     }
     if (name == LocalToolNames.phoneControl &&
         DeviceLocalTools.phoneControlSupported) {
-      return _invokeDeviceTool('phoneControl', args);
+      return invokeDeviceTool('phoneControl', args);
     }
     if (name == LocalToolNames.weather &&
         DeviceLocalTools.iosDeviceToolsSupported) {
@@ -641,7 +641,7 @@ class LocalToolsService {
           'message': 'Weather requires iOS 16 or later.',
         });
       }
-      return _invokeDeviceTool('getWeather', args);
+      return invokeDeviceTool('getWeather', args);
     }
     if (name == LocalToolNames.healthSummary &&
         DeviceLocalTools.iosDeviceToolsSupported) {
@@ -658,19 +658,19 @@ class LocalToolsService {
         assistant.healthDataTypeIds,
         DeviceLocalTools.availableHealthTypeIds,
       );
-      return _invokeDeviceTool('getHealthSummary', {'types': types});
+      return invokeDeviceTool('getHealthSummary', {'types': types});
     }
     if (name == LocalToolNames.remindersQuery &&
         DeviceLocalTools.remindersSupported) {
-      return _invokeDeviceTool('queryReminders', args);
+      return invokeDeviceTool('queryReminders', args);
     }
     if (name == LocalToolNames.remindersCreate &&
         DeviceLocalTools.remindersSupported) {
-      return _invokeDeviceTool('createReminder', args);
+      return invokeDeviceTool('createReminder', args);
     }
     if (name == LocalToolNames.remindersComplete &&
         DeviceLocalTools.remindersSupported) {
-      return _invokeDeviceTool('completeReminder', args);
+      return invokeDeviceTool('completeReminder', args);
     }
     return null;
   }
@@ -1470,7 +1470,7 @@ class LocalToolsService {
   /// Invokes a native device tool over the MethodChannel. The native side
   /// returns a JSON string payload (including structured error payloads that
   /// the model can act on, e.g. missing permissions).
-  static Future<String> _invokeDeviceTool(
+  static Future<String> invokeDeviceTool(
     String method,
     Map<String, dynamic> args,
   ) async {

@@ -19,6 +19,8 @@ class MiniApp {
     this.entry = 'index.html',
     this.icon,
     this.dataHelp = '',
+    this.network = const [],
+    this.permissions = const {},
     required this.updatedAt,
   });
 
@@ -29,6 +31,13 @@ class MiniApp {
   /// What the app keeps in `moru.storage`, from `data` in the manifest, so the
   /// chat can read and change it.
   final String dataHelp;
+
+  /// Hosts `moru.fetch` may reach, from `network` in the manifest. An entry
+  /// `*.example.com` also allows every subdomain.
+  final List<String> network;
+
+  /// Device features the app asked for in `permissions`, e.g. `calendar`.
+  final Set<String> permissions;
 
   /// Folder of the installed copy (manifest, app/ and data).
   final String directory;
@@ -55,6 +64,12 @@ class MiniApp {
         entry: json['entry'] as String? ?? 'index.html',
         icon: json['icon'] as String?,
         dataHelp: json['data'] as String? ?? '',
+        network: [
+          for (final host in json['network'] as List? ?? const []) '$host',
+        ],
+        permissions: {
+          for (final name in json['permissions'] as List? ?? const []) '$name',
+        },
         directory: directory,
         updatedAt: DateTime.fromMillisecondsSinceEpoch(
           json['updatedAt'] as int? ?? 0,
@@ -68,6 +83,8 @@ class MiniApp {
     'entry': entry,
     'icon': ?icon,
     if (dataHelp.isNotEmpty) 'data': dataHelp,
+    if (network.isNotEmpty) 'network': network,
+    if (permissions.isNotEmpty) 'permissions': permissions.toList()..sort(),
     'updatedAt': updatedAt.millisecondsSinceEpoch,
   };
 }
@@ -222,6 +239,8 @@ class MiniAppStore extends ChangeNotifier {
       );
     }
     final entry = _relative(manifest['entry'], fallback: 'index.html')!;
+    final network = _hosts(manifest['network']);
+    final permissions = _permissions(manifest['permissions']);
     final icon = _relative(manifest['icon'], fallback: null);
 
     final files = await _collect(sourceDir);
@@ -265,6 +284,8 @@ class MiniAppStore extends ChangeNotifier {
       entry: entry,
       icon: icon,
       dataHelp: _limited('${manifest['data'] ?? ''}'.trim(), 2000),
+      network: network,
+      permissions: permissions,
       directory: directory.path,
       updatedAt: _now(),
     );
@@ -423,6 +444,57 @@ class MiniAppStore extends ChangeNotifier {
   static List<MiniApp> _sorted(List<MiniApp> apps) =>
       apps..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
+  static const int maxHosts = 20;
+  static const Set<String> knownPermissions = {'calendar'};
+  static final RegExp _hostPattern = RegExp(
+    r'^(\*\.)?([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$',
+  );
+
+  static List<String> _hosts(Object? raw) {
+    if (raw == null) return const [];
+    if (raw is! List || raw.length > maxHosts) {
+      throw const MiniAppException(
+        'invalid_network',
+        '"network" must be a list of at most $maxHosts host names.',
+      );
+    }
+    final hosts = <String>{};
+    for (final item in raw) {
+      final host = '$item'.trim().toLowerCase();
+      if (!_hostPattern.hasMatch(host)) {
+        throw MiniAppException(
+          'invalid_network',
+          '"$item" is not a host name. Use e.g. "api.example.com" or '
+              '"*.example.com", without scheme, port or path.',
+        );
+      }
+      hosts.add(host);
+    }
+    return hosts.toList();
+  }
+
+  static Set<String> _permissions(Object? raw) {
+    if (raw == null) return const {};
+    final names = raw is List ? raw.map((e) => '$e'.trim()).toSet() : null;
+    if (names == null || !names.every(knownPermissions.contains)) {
+      throw MiniAppException(
+        'invalid_permissions',
+        '"permissions" must be a list of: ${knownPermissions.join(', ')}.',
+      );
+    }
+    return names;
+  }
+
+  /// Whether `moru.fetch` from [app] may reach [host].
+  static bool allowsHost(MiniApp app, String host) {
+    final name = host.toLowerCase();
+    return app.network.any(
+      (allowed) => allowed.startsWith('*.')
+          ? name.endsWith(allowed.substring(1)) || name == allowed.substring(2)
+          : name == allowed,
+    );
+  }
+
   static String _limited(String text, int max) =>
       text.length <= max ? text : text.substring(0, max);
 
@@ -540,6 +612,20 @@ class MiniAppStore extends ChangeNotifier {
       set: function (id, reminder) { return call('reminders.set', { id: id, reminder: reminder }); },
       remove: function (id) { return call('reminders.remove', { id: id }); },
       list: function () { return call('reminders.list'); }
+    },
+    fetch: function (url, options) {
+      options = options || {};
+      return call('fetch', {
+        url: url, method: options.method, headers: options.headers, body: options.body
+      }).then(function (response) {
+        response.json = function () { return JSON.parse(response.body); };
+        response.text = function () { return response.body; };
+        return response;
+      });
+    },
+    calendar: {
+      list: function (query) { return call('calendar.list', query); },
+      add: function (event) { return call('calendar.add', event); }
     },
     app: {
       info: function () { return call('app.info'); }

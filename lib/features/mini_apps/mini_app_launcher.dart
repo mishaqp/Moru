@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -12,9 +13,11 @@ import '../../core/providers/assistant_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/api/chat_api_service.dart';
 import '../../core/services/mini_apps/mini_app_bridge.dart';
+import '../../core/services/mini_apps/mini_app_fetch.dart';
 import '../../core/services/mini_apps/mini_app_reminders.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
 import '../../core/services/notification_service.dart';
+import '../home/services/local_tools_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/snackbar.dart';
 import 'pages/mini_app_page.dart';
@@ -95,7 +98,31 @@ class MiniAppLauncher {
       );
     },
     reminders: reminders,
+    fetch: fetcher,
+    calendar: _calendar,
   );
+
+  /// Shared by every open app, so connections are reused.
+  static final MiniAppFetch fetcher = MiniAppFetch();
+
+  static Future<Map<String, dynamic>> _calendar(
+    String method,
+    Map<String, dynamic> args,
+  ) async {
+    if (!await DeviceLocalTools.hasCalendarPermission() &&
+        !await DeviceLocalTools.requestCalendarPermission()) {
+      throw const MiniAppException(
+        'permission_denied',
+        'Calendar access was not granted.',
+      );
+    }
+    final result = jsonDecode(
+      await LocalToolsService.invokeDeviceTool(method, args),
+    );
+    return result is Map
+        ? Map<String, dynamic>.from(result)
+        : {'events': result};
+  }
 
   static void ensureInitialized() {
     if (_initialized) return;
