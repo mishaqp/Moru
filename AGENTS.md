@@ -76,11 +76,16 @@ dart analyze --fatal-infos lib test integration_test
 flutter test
 python3 -m unittest discover -s tool -p 'test_android_only_policy.py' -v
 python3 -m unittest discover -s tool -p 'test_verify_apk_arm64.py' -v
+python3 -m unittest discover -s tool -p 'test_verify_release_keep_rules.py' -v
 ```
 
 Format only changed Dart files. `pr-check.yml` enforces the existing analyzer,
 tests and localization gates. `moru-android.yml` additionally builds one arm64
-APK, runs Android JVM tests and inspects actual APK libraries/signature.
+APK, runs Android JVM tests and inspects actual APK libraries/signature. PRs
+build a debug APK, which R8 does not shrink; `tool/verify_release_keep_rules.py`
+checks the release APK built on `master` before it can be published. Code that
+reads generic types by reflection (Gson `TypeToken`) needs keep rules in
+`android/app/proguard-rules.pro`.
 
 ## Updating Moru (upstream Kelivo merges, any AI tool)
 
