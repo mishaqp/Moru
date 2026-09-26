@@ -8,7 +8,6 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/fonts/google_fonts_service.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/responsive/screen_type_helper.dart';
 import '../../../shared/widgets/ios_form_text_field.dart';
 
 Future<void> showGoogleFontsPicker(
@@ -27,20 +26,9 @@ Future<void> showGoogleFontsPicker(
             licenseText: font.license,
           ),
   );
-  if (ResponsiveHelper.isDesktop(context)) {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Dialog(
-        clipBehavior: Clip.antiAlias,
-        child: SizedBox(width: 640, height: 720, child: picker),
-      ),
-    );
-  } else {
-    await Navigator.of(
-      context,
-    ).push<void>(MaterialPageRoute(builder: (_) => picker));
-  }
+  await Navigator.of(
+    context,
+  ).push<void>(MaterialPageRoute(builder: (_) => picker));
 }
 
 class GoogleFontsPickerPage extends StatefulWidget {

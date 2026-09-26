@@ -1,5 +1,4 @@
 import '../widgets/settings_search_target.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'mobile_background_settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -180,20 +179,17 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                 ),
               ),
               _iosDivider(context),
-              if (defaultTargetPlatform == TargetPlatform.android ||
-                  defaultTargetPlatform == TargetPlatform.iOS) ...[
-                _iosNavRow(
-                  context,
-                  icon: Lucide.Activity,
-                  label: l10n.backgroundSettingsTitle,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const MobileBackgroundSettingsPage(),
-                    ),
+              _iosNavRow(
+                context,
+                icon: Lucide.Activity,
+                label: l10n.backgroundSettingsTitle,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const MobileBackgroundSettingsPage(),
                   ),
                 ),
-                _iosDivider(context),
-              ],
+              ),
+              _iosDivider(context),
               _iosNavRow(
                 context,
                 icon: Lucide.Type,
@@ -1693,19 +1689,15 @@ class RenderingSettingsPage extends StatelessWidget {
                       .setAutoCollapseCodeBlockLines(v),
                 ),
               ],
-              if (defaultTargetPlatform == TargetPlatform.android ||
-                  defaultTargetPlatform == TargetPlatform.iOS) ...[
-                _iosDivider(context),
-                _iosSwitchRow(
-                  context,
-                  icon: Lucide.WrapText,
-                  label: l10n.displaySettingsPageMobileCodeBlockWrapTitle,
-                  value: sp.mobileCodeBlockWrap,
-                  onChanged: (v) => context
-                      .read<SettingsProvider>()
-                      .setMobileCodeBlockWrap(v),
-                ),
-              ],
+              _iosDivider(context),
+              _iosSwitchRow(
+                context,
+                icon: Lucide.WrapText,
+                label: l10n.displaySettingsPageMobileCodeBlockWrapTitle,
+                value: sp.mobileCodeBlockWrap,
+                onChanged: (v) =>
+                    context.read<SettingsProvider>().setMobileCodeBlockWrap(v),
+              ),
             ],
           ),
         ],
@@ -2002,22 +1994,19 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
                 onChanged: (v) =>
                     context.read<SettingsProvider>().setShowAppUpdates(v),
               ),
-              if (defaultTargetPlatform == TargetPlatform.android ||
-                  defaultTargetPlatform == TargetPlatform.iOS) ...[
-                _iosDivider(context),
-                _iosSwitchRow(
-                  context,
-                  icon: Lucide.Sun,
-                  label:
-                      l10n.displaySettingsPageKeepScreenOnDuringGenerationTitle,
-                  tip: l10n
-                      .displaySettingsPageKeepScreenOnDuringGenerationSubtitle,
-                  value: sp.keepScreenOnDuringGeneration,
-                  onChanged: (v) => context
-                      .read<SettingsProvider>()
-                      .setKeepScreenOnDuringGeneration(v),
-                ),
-              ],
+              _iosDivider(context),
+              _iosSwitchRow(
+                context,
+                icon: Lucide.Sun,
+                label:
+                    l10n.displaySettingsPageKeepScreenOnDuringGenerationTitle,
+                tip: l10n
+                    .displaySettingsPageKeepScreenOnDuringGenerationSubtitle,
+                value: sp.keepScreenOnDuringGeneration,
+                onChanged: (v) => context
+                    .read<SettingsProvider>()
+                    .setKeepScreenOnDuringGeneration(v),
+              ),
               _iosDivider(context),
               _iosNavRow(
                 context,

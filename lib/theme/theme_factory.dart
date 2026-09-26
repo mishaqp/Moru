@@ -17,27 +17,13 @@ const List<String> kDefaultFontFamilyFallback = <String>[
 
 const List<String> kAndroidFontFamilyFallback = <String>['sans-serif'];
 
-// Windows-specific font fallback to fix Chinese font rendering issues
-const List<String> kWindowsFontFamilyFallback = <String>[
-  'Twemoji Country Flags',
-  'Segoe UI',
-  'Microsoft YaHei',
-  'SimHei',
-];
-
 // Get platform-appropriate font fallback list
 List<String> getPlatformFontFallback() {
   if (defaultTargetPlatform == TargetPlatform.android) {
     return kAndroidFontFamilyFallback;
   }
-  if (defaultTargetPlatform == TargetPlatform.windows) {
-    return kWindowsFontFamilyFallback;
-  }
   return kDefaultFontFamilyFallback;
 }
-
-// Internal helper for theme building
-List<String> _getPlatformFontFallback() => getPlatformFontFallback();
 
 /// Derive page `surface` and `surfaceContainer*` from the palette.
 ///
@@ -113,72 +99,8 @@ TextTheme _withFontFallback(TextTheme base, List<String> fallback) {
   );
 }
 
-// String _hex(Color c) => '#${c.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
-// String _rgb(Color c) => 'r=${c.red}, g=${c.green}, b=${c.blue}, a=${(c.alpha / 255).toStringAsFixed(3)}';
-// String _hsl(Color c) {
-//   final hsl = HSLColor.fromColor(c);
-//   return 'h=${hsl.hue.toStringAsFixed(1)} s=${(hsl.saturation * 100).toStringAsFixed(1)}% l=${(hsl.lightness * 100).toStringAsFixed(1)}%';
-// }
-// String _hsv(Color c) {
-//   final hsv = HSVColor.fromColor(c);
-//   return 'h=${hsv.hue.toStringAsFixed(1)} s=${(hsv.saturation * 100).toStringAsFixed(1)}% v=${(hsv.value * 100).toStringAsFixed(1)}%';
-// }
-// String _lum(Color c) => 'lum=${c.computeLuminance().toStringAsFixed(4)}';
-//
-// void _logOne(String tag, String name, Color c) {
-//   debugPrint('[Theme/$tag][$name] ${_hex(c)} | ${_rgb(c)} | ${_hsl(c)} | ${_hsv(c)} | ${_lum(c)}');
-// }
-//
-// void _logColorScheme(String tag, ColorScheme s) {
-//   // Log a comprehensive dump of the scheme with HEX/RGB/HSL/HSV/Luminance.
-//   debugPrint('[Theme/$tag] ================= ColorScheme Dump =================');
-//   debugPrint('[Theme/$tag] brightness=${s.brightness}');
-//   _logOne(tag, 'primary', s.primary);
-//   _logOne(tag, 'onPrimary', s.onPrimary);
-//   _logOne(tag, 'primaryContainer', s.primaryContainer);
-//   _logOne(tag, 'onPrimaryContainer', s.onPrimaryContainer);
-//   _logOne(tag, 'secondary', s.secondary);
-//   _logOne(tag, 'onSecondary', s.onSecondary);
-//   _logOne(tag, 'secondaryContainer', s.secondaryContainer);
-//   _logOne(tag, 'onSecondaryContainer', s.onSecondaryContainer);
-//   _logOne(tag, 'tertiary', s.tertiary);
-//   _logOne(tag, 'onTertiary', s.onTertiary);
-//   _logOne(tag, 'tertiaryContainer', s.tertiaryContainer);
-//   _logOne(tag, 'onTertiaryContainer', s.onTertiaryContainer);
-//   _logOne(tag, 'surface', s.surface);
-//   _logOne(tag, 'onSurface', s.onSurface);
-//   _logOne(tag, 'surfaceVariant', s.surfaceVariant);
-//   _logOne(tag, 'onSurfaceVariant', s.onSurfaceVariant);
-//   _logOne(tag, 'background', s.background);
-//   _logOne(tag, 'onBackground', s.onBackground);
-//   _logOne(tag, 'error', s.error);
-//   _logOne(tag, 'onError', s.onError);
-//   _logOne(tag, 'errorContainer', s.errorContainer);
-//   _logOne(tag, 'onErrorContainer', s.onErrorContainer);
-//   _logOne(tag, 'outline', s.outline);
-//   _logOne(tag, 'outlineVariant', s.outlineVariant);
-//   _logOne(tag, 'shadow', s.shadow);
-//   _logOne(tag, 'scrim', s.scrim);
-//   _logOne(tag, 'inverseSurface', s.inverseSurface);
-//   _logOne(tag, 'onInverseSurface', s.onInverseSurface);
-//   _logOne(tag, 'inversePrimary', s.inversePrimary);
-//   _logOne(tag, 'surfaceTint', s.surfaceTint);
-//   // Derived/common surfaces used in this app
-//   _logOne(tag, 'cardBackground≈surface', s.surface);
-//   _logOne(tag, 'scaffoldBackground', s.surface);
-//   _logOne(tag, 'appBarBackground', s.surface);
-//   // M3 tinted surfaces approximation at common elevations
-//   final e1 = ElevationOverlay.applySurfaceTint(s.surface, s.surfaceTint, 1);
-//   final e3 = ElevationOverlay.applySurfaceTint(s.surface, s.surfaceTint, 3);
-//   final e6 = ElevationOverlay.applySurfaceTint(s.surface, s.surfaceTint, 6);
-//   _logOne(tag, 'surface@1dp', e1);
-//   _logOne(tag, 'surface@3dp', e3);
-//   _logOne(tag, 'surface@6dp', e6);
-//   debugPrint('[Theme/$tag] ======================================================');
-// }
-
 ThemeData buildLightTheme(ColorScheme? dynamicScheme) {
-  final fontFallback = _getPlatformFontFallback();
+  final fontFallback = getPlatformFontFallback();
   final scheme = _withDerivedSurfaceContainers(
     _applyPageSurface(
       (dynamicScheme?.harmonized()) ??
@@ -279,7 +201,7 @@ ThemeData buildLightThemeForScheme(
   bool pureBackground = false,
   bool layeredSurfaces = false,
 }) {
-  final fontFallback = _getPlatformFontFallback();
+  final fontFallback = getPlatformFontFallback();
   var scheme = (dynamicScheme?.harmonized()) ?? staticScheme;
   if (pureBackground) {
     scheme = scheme.copyWith(
@@ -349,7 +271,7 @@ ThemeData buildLightThemeForScheme(
 }
 
 ThemeData buildDarkTheme(ColorScheme? dynamicScheme) {
-  final fontFallback = _getPlatformFontFallback();
+  final fontFallback = getPlatformFontFallback();
   final scheme = _withDerivedSurfaceContainers(
     (dynamicScheme?.harmonized()) ??
         const ColorScheme(
@@ -446,7 +368,7 @@ ThemeData buildDarkThemeForScheme(
   bool pureBackground = false,
   bool layeredSurfaces = false,
 }) {
-  final fontFallback = _getPlatformFontFallback();
+  final fontFallback = getPlatformFontFallback();
   var scheme = (dynamicScheme?.harmonized()) ?? staticScheme;
   if (pureBackground) {
     scheme = scheme.copyWith(

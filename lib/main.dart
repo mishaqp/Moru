@@ -4,8 +4,6 @@ import 'package:Kelivo/core/services/sandbox/workspace_channel.dart';
 import 'package:Kelivo/core/providers/external_mounts_provider.dart';
 import 'package:Kelivo/core/services/sandbox/environment_dependencies.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'
-    show debugPrint, defaultTargetPlatform, TargetPlatform;
 import 'dart:async';
 import 'l10n/app_localizations.dart';
 import 'features/home/pages/home_page.dart';
@@ -148,7 +146,7 @@ Future<void> main() async {
       // independent of the current background-chat mode: an older completion
       // notification can still launch the app after the mode has changed.
       // Initialization does not request notification permission.
-      if (Platform.isAndroid || Platform.isIOS) {
+      if (Platform.isAndroid) {
         try {
           await NotificationService.ensureInitialized();
         } catch (_) {}
@@ -880,30 +878,8 @@ class MyApp extends StatelessWidget {
                     });
                   }
 
-                  final mq = MediaQuery.of(ctx);
-                  final display = View.of(ctx).display;
-                  final displaySize = display.size / display.devicePixelRatio;
-                  final isFloatingIpad =
-                      defaultTargetPlatform == TargetPlatform.iOS &&
-                      displaySize.shortestSide >= 600 &&
-                      (mq.size.shortestSide < displaySize.shortestSide - 1 ||
-                          mq.size.longestSide < displaySize.longestSide - 1);
-                  final systemTop = mq.viewPadding.top;
-                  final controlsTop = systemTop < 56 ? 56.0 : systemTop;
-                  final appWithOverlays = MediaQuery(
-                    data: isFloatingIpad
-                        ? mq.copyWith(
-                            padding: mq.padding.copyWith(top: controlsTop),
-                            viewPadding: mq.viewPadding.copyWith(
-                              top: controlsTop,
-                            ),
-                          )
-                        : mq,
-                    child: LocalSnapshotScheduler(
-                      child: AppOverlays(
-                        child: child ?? const SizedBox.shrink(),
-                      ),
-                    ),
+                  final appWithOverlays = LocalSnapshotScheduler(
+                    child: AppOverlays(child: child ?? const SizedBox.shrink()),
                   );
                   // Enforce app font as a default across the tree for Texts without explicit family
                   return AnnotatedRegion<SystemUiOverlayStyle>(

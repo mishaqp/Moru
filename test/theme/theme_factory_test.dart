@@ -21,12 +21,6 @@ void main() {
 
       expect(getPlatformFontFallback(), kDefaultFontFamilyFallback);
     });
-
-    test('keeps Windows fallback on Windows', () {
-      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-
-      expect(getPlatformFontFallback(), kWindowsFontFamilyFallback);
-    });
   });
 
   group('overlay surface themes', () {

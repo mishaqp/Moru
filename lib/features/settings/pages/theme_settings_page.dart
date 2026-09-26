@@ -1,5 +1,4 @@
 import '../widgets/settings_search_target.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
@@ -88,9 +87,7 @@ class ThemeSettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         children: [
-          if (!kIsWeb &&
-              defaultTargetPlatform == TargetPlatform.android &&
-              settings.dynamicColorSupported) ...[
+          if (settings.dynamicColorSupported) ...[
             header(l10n.themeSettingsPageDynamicColorSection),
             SectionCard(
               children: [
