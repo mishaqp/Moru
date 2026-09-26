@@ -1,4 +1,5 @@
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:Kelivo/theme/surface_ladder.dart';
 
@@ -107,6 +108,44 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       ],
     );
   }
+
+  // Themes are rebuilt from settings; equal colors keep ThemeData equal, so
+  // widgets that read the theme are not rebuilt for nothing.
+  @override
+  bool operator ==(Object other) =>
+      other is AppSemanticColors &&
+      other.surfaceFill == surfaceFill &&
+      other.surfaceCard == surfaceCard &&
+      other.surfaceCardFill == surfaceCardFill &&
+      other.hairline == hairline &&
+      other.hairlineStrong == hairlineStrong &&
+      other.success == success &&
+      other.successContainer == successContainer &&
+      other.onSuccessContainer == onSuccessContainer &&
+      other.warning == warning &&
+      other.warningContainer == warningContainer &&
+      other.onWarningContainer == onWarningContainer &&
+      other.searchHighlight == searchHighlight &&
+      listEquals(other.chartSeries, chartSeries) &&
+      other.layered == layered;
+
+  @override
+  int get hashCode => Object.hash(
+    surfaceFill,
+    surfaceCard,
+    surfaceCardFill,
+    hairline,
+    hairlineStrong,
+    success,
+    successContainer,
+    onSuccessContainer,
+    warning,
+    warningContainer,
+    onWarningContainer,
+    searchHighlight,
+    Object.hashAll(chartSeries),
+    layered,
+  );
 
   @override
   AppSemanticColors copyWith({
