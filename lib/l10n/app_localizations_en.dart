@@ -12674,6 +12674,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scheduledTaskToolActionDelete => 'Delete scheduled task';
 
   @override
+  String get miniAppsToolTitle => 'Mini Apps';
+
+  @override
+  String get miniAppsToolSubtitle =>
+      'Read and change the data of your mini apps from the chat, e.g. “I drank a glass of water”.';
+
+  @override
+  String get miniAppsToolActionList => 'List mini apps';
+
+  @override
+  String get miniAppsToolActionRead => 'Read app data';
+
+  @override
+  String get miniAppsToolActionWrite => 'Update app data';
+
+  @override
+  String get miniAppsToolActionRemove => 'Remove app data';
+
+  @override
   String get miniAppsTitle => 'My Apps';
 
   @override
@@ -12714,6 +12733,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String miniAppsDeleteTitle(String name) {
     return 'Delete “$name”?';
   }
+
+  @override
+  String get miniAppsNotificationChannel => 'Mini apps';
+
+  @override
+  String get miniAppsNotificationChannelDescription =>
+      'Notifications and reminders from your mini apps.';
 
   @override
   String get phoneControlTitle => 'Phone Control';

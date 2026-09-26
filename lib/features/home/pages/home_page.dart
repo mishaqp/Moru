@@ -24,6 +24,7 @@ import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/compress_context_options.dart';
 import '../../../core/services/android_process_text.dart';
+import '../../../core/services/notification_service.dart';
 import '../../mini_apps/mini_app_launcher.dart';
 import '../../../core/services/incoming_share_service.dart';
 import '../../../core/services/logging/flutter_logger.dart';
@@ -708,6 +709,7 @@ class _HomePageState extends State<HomePage>
   double _lastViewInsetBottom = 0;
   StreamSubscription<String>? _processTextSub;
   StreamSubscription<String>? _miniAppLaunchSub;
+  StreamSubscription<String>? _miniAppNotificationSub;
   IncomingShareService? _incomingShares;
   late final Future<void> _chatReady;
   bool _readingIncomingShares = false;
@@ -806,6 +808,7 @@ class _HomePageState extends State<HomePage>
     } catch (_) {}
     _processTextSub?.cancel();
     _miniAppLaunchSub?.cancel();
+    _miniAppNotificationSub?.cancel();
     _incomingShares?.dispose();
     _controller.removeListener(_onControllerChanged);
     _drawerController.removeListener(_onDrawerValueChanged);
@@ -860,6 +863,12 @@ class _HomePageState extends State<HomePage>
     MiniAppLauncher.takeInitialApp().then((id) {
       if (id != null) _openMiniApp(id);
     });
+    // Notifications and reminders of mini apps open their app.
+    _miniAppNotificationSub = NotificationService.miniAppTaps.listen(
+      _openMiniApp,
+    );
+    final pending = NotificationService.takePendingMiniAppId();
+    if (pending != null) _openMiniApp(pending);
   }
 
   void _openMiniApp(String id) {

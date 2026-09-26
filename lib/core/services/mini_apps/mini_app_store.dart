@@ -18,12 +18,17 @@ class MiniApp {
     this.description = '',
     this.entry = 'index.html',
     this.icon,
+    this.dataHelp = '',
     required this.updatedAt,
   });
 
   final String id;
   final String name;
   final String description;
+
+  /// What the app keeps in `moru.storage`, from `data` in the manifest, so the
+  /// chat can read and change it.
+  final String dataHelp;
 
   /// Folder of the installed copy (manifest, app/ and data).
   final String directory;
@@ -49,6 +54,7 @@ class MiniApp {
         description: json['description'] as String? ?? '',
         entry: json['entry'] as String? ?? 'index.html',
         icon: json['icon'] as String?,
+        dataHelp: json['data'] as String? ?? '',
         directory: directory,
         updatedAt: DateTime.fromMillisecondsSinceEpoch(
           json['updatedAt'] as int? ?? 0,
@@ -61,6 +67,7 @@ class MiniApp {
     if (description.isNotEmpty) 'description': description,
     'entry': entry,
     'icon': ?icon,
+    if (dataHelp.isNotEmpty) 'data': dataHelp,
     'updatedAt': updatedAt.millisecondsSinceEpoch,
   };
 }
@@ -111,6 +118,17 @@ class MiniAppStore extends ChangeNotifier {
   bool _loaded = false;
   Future<void>? _loading;
   final Map<String, Future<void>> _writes = {};
+  final StreamController<({String appId, String key})> _changes =
+      StreamController.broadcast();
+  final List<Future<void> Function(String id)> _deleteHooks = [];
+
+  /// Data written from outside the app itself, e.g. by the chat, so an open
+  /// app can redraw.
+  Stream<({String appId, String key})> get changes => _changes.stream;
+
+  /// Runs before an app is deleted, e.g. to cancel its reminders.
+  void addDeleteHook(Future<void> Function(String id) hook) =>
+      _deleteHooks.add(hook);
 
   static Future<Directory> _defaultRoot() async {
     final base = await AppDirectories.getAppDataDirectory();
@@ -246,6 +264,7 @@ class MiniAppStore extends ChangeNotifier {
       description: '${manifest['description'] ?? ''}'.trim(),
       entry: entry,
       icon: icon,
+      dataHelp: _limited('${manifest['data'] ?? ''}'.trim(), 2000),
       directory: directory.path,
       updatedAt: _now(),
     );
@@ -281,6 +300,9 @@ class MiniAppStore extends ChangeNotifier {
     await load();
     final app = byId(id);
     if (app == null) return;
+    for (final hook in _deleteHooks) {
+      await hook(id);
+    }
     await _writes[id];
     final directory = Directory(app.directory);
     if (await directory.exists()) await directory.delete(recursive: true);
@@ -309,18 +331,63 @@ class MiniAppStore extends ChangeNotifier {
   Future<List<String>> storageKeys(String id) async =>
       (await _readData(_require(id))).keys.toList();
 
-  Future<void> storageSet(String id, String key, Object? value) {
+  /// All stored values of the app.
+  Future<Map<String, dynamic>> storageAll(String id) => _readData(_require(id));
+
+  /// [fromApp] marks the app's own writes; other writes reach [changes].
+  Future<void> storageSet(
+    String id,
+    String key,
+    Object? value, {
+    bool fromApp = false,
+  }) async {
     if (key.isEmpty || key.length > maxKeyLength) {
       throw const MiniAppException(
         'invalid_key',
         'Keys must be 1-$maxKeyLength characters.',
       );
     }
-    return _update(id, (data) => data[key] = value);
+    await _update(id, (data) => data[key] = value);
+    if (!fromApp) _changes.add((appId: id, key: key));
   }
 
-  Future<void> storageRemove(String id, String key) =>
-      _update(id, (data) => data.remove(key));
+  Future<void> storageRemove(
+    String id,
+    String key, {
+    bool fromApp = false,
+  }) async {
+    await _update(id, (data) => data.remove(key));
+    if (!fromApp) _changes.add((appId: id, key: key));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Reminders (scheduled by MiniAppNotifications)
+  // ---------------------------------------------------------------------------
+
+  Future<Map<String, dynamic>> readReminders(String id) async {
+    final file = File(p.join(_require(id).directory, 'reminders.json'));
+    if (!await file.exists()) return <String, dynamic>{};
+    return Map<String, dynamic>.from(
+      jsonDecode(await file.readAsString()) as Map,
+    );
+  }
+
+  Future<void> writeReminders(String id, Map<String, dynamic> reminders) async {
+    final file = File(p.join(_require(id).directory, 'reminders.json'));
+    final temp = File('${file.path}.tmp');
+    await temp.writeAsString(jsonEncode(reminders), flush: true);
+    await temp.rename(file.path);
+  }
+
+  /// Rewrites `moru.js` of an app installed by an older Moru, so it gets the
+  /// current bridge without being republished.
+  Future<void> refreshBridge(MiniApp app) async {
+    final file = File(p.join(app.codeDirectory, bridgeFile));
+    if (await file.exists() && await file.readAsString() == moruBridgeScript) {
+      return;
+    }
+    await file.writeAsString(moruBridgeScript);
+  }
 
   /// Writes are queued per app so two quick saves cannot overwrite each other.
   Future<void> _update(String id, void Function(Map<String, dynamic>) change) {
@@ -355,6 +422,9 @@ class MiniAppStore extends ChangeNotifier {
 
   static List<MiniApp> _sorted(List<MiniApp> apps) =>
       apps..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+  static String _limited(String text, int max) =>
+      text.length <= max ? text : text.substring(0, max);
 
   static bool _isHtml(String path) =>
       const {'.html', '.htm'}.contains(p.extension(path).toLowerCase());
@@ -448,12 +518,28 @@ class MiniAppStore extends ChangeNotifier {
     if (ok) request.resolve(value);
     else request.reject(new Error(value));
   };
+  window.__moruChanged = function (key) {
+    window.dispatchEvent(new CustomEvent('moru:storage', { detail: { key: key } }));
+  };
   window.moru = {
     storage: {
       get: function (key) { return call('storage.get', { key: key }); },
       set: function (key, value) { return call('storage.set', { key: key, value: value }); },
       remove: function (key) { return call('storage.remove', { key: key }); },
       keys: function () { return call('storage.keys'); }
+    },
+    ai: {
+      ask: function (prompt, options) {
+        return call('ai.ask', { prompt: prompt, system: (options || {}).system });
+      }
+    },
+    notify: function (title, body) {
+      return call('notify', { title: title, body: body });
+    },
+    reminders: {
+      set: function (id, reminder) { return call('reminders.set', { id: id, reminder: reminder }); },
+      remove: function (id) { return call('reminders.remove', { id: id }); },
+      list: function () { return call('reminders.list'); }
     },
     app: {
       info: function () { return call('app.info'); }

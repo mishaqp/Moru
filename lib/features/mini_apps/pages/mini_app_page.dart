@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import 'package:provider/provider.dart';
+
+import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/mini_apps/mini_app_bridge.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
 import '../../../icons/lucide_adapter.dart';
@@ -27,6 +30,7 @@ class MiniAppPage extends StatefulWidget {
 class _MiniAppPageState extends State<MiniAppPage> {
   late final WebViewController _controller;
   late final MiniAppBridge _bridge;
+  StreamSubscription<({String appId, String key})>? _changes;
   bool _loading = true;
 
   MiniAppStore get _store => widget._store ?? MiniAppStore.instance;
@@ -34,7 +38,22 @@ class _MiniAppPageState extends State<MiniAppPage> {
   @override
   void initState() {
     super.initState();
-    _bridge = MiniAppBridge(store: _store, appId: widget.app.id);
+    _bridge = MiniAppBridge(
+      store: _store,
+      appId: widget.app.id,
+      host: MiniAppLauncher.hostFor(
+        widget.app,
+        context.read<SettingsProvider>(),
+      ),
+    );
+    // Data the chat changed while the app is open.
+    _changes = _store.changes
+        .where((change) => change.appId == widget.app.id)
+        .listen(
+          (change) => unawaited(
+            _controller.runJavaScript(MiniAppBridge.changedScript(change.key)),
+          ),
+        );
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..addJavaScriptChannel(
@@ -59,7 +78,18 @@ class _MiniAppPageState extends State<MiniAppPage> {
           },
         ),
       );
-    unawaited(_controller.loadFile(widget.app.entryPath));
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    await _store.refreshBridge(widget.app);
+    await _controller.loadFile(widget.app.entryPath);
+  }
+
+  @override
+  void dispose() {
+    unawaited(_changes?.cancel());
+    super.dispose();
   }
 
   Future<void> _answer(String message) async {

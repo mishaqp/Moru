@@ -48,6 +48,7 @@ import '../../../utils/platform_utils.dart';
 import '../../home/services/ask_user_interaction_service.dart';
 import '../utils/tool_timing.dart';
 import '../../home/services/assistant_manager_tool.dart';
+import '../../home/services/mini_app_data_tool.dart';
 import '../../home/services/scheduled_task_tool.dart';
 import '../../home/services/local_tools_service.dart';
 import '../../home/services/tool_approval_service.dart';
@@ -494,6 +495,7 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
     LocalToolNames.remindersComplete => Lucide.CheckCircle,
     LocalToolNames.assistantManager => Lucide.Bot,
     LocalToolNames.scheduledTasks => Lucide.CalendarClock,
+    LocalToolNames.miniApps => Lucide.LayoutGrid,
     _ => null,
   };
 }
@@ -541,6 +543,13 @@ String? _localToolTitleFor(
       ScheduledTaskTool.actionUpdate => l10n.scheduledTaskToolActionUpdate,
       ScheduledTaskTool.actionDelete => l10n.scheduledTaskToolActionDelete,
       _ => l10n.scheduledTaskToolTitle,
+    },
+    LocalToolNames.miniApps => switch (MiniAppDataTool.actionOf(args)) {
+      MiniAppDataTool.actionList => l10n.miniAppsToolActionList,
+      MiniAppDataTool.actionRead => l10n.miniAppsToolActionRead,
+      MiniAppDataTool.actionWrite => l10n.miniAppsToolActionWrite,
+      MiniAppDataTool.actionRemove => l10n.miniAppsToolActionRemove,
+      _ => l10n.miniAppsToolTitle,
     },
     _ => null,
   };

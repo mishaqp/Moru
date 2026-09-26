@@ -99,6 +99,7 @@ dependencies:
   flutter_tts:
     path: ./dependencies/flutter_tts
   flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
   image: ^4.8.0
   downsize:
     path: ./dependencies/downsize

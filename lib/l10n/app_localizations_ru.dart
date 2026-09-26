@@ -12820,6 +12820,25 @@ class AppLocalizationsRu extends AppLocalizations {
   String get scheduledTaskToolActionDelete => 'Удаление задачи по расписанию';
 
   @override
+  String get miniAppsToolTitle => 'Мини-приложения';
+
+  @override
+  String get miniAppsToolSubtitle =>
+      'Читать и менять данные ваших мини-приложений прямо из чата, например «выпил стакан воды».';
+
+  @override
+  String get miniAppsToolActionList => 'Список мини-приложений';
+
+  @override
+  String get miniAppsToolActionRead => 'Чтение данных приложения';
+
+  @override
+  String get miniAppsToolActionWrite => 'Изменение данных приложения';
+
+  @override
+  String get miniAppsToolActionRemove => 'Удаление данных приложения';
+
+  @override
   String get miniAppsTitle => 'Мои приложения';
 
   @override
@@ -12861,6 +12880,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String miniAppsDeleteTitle(String name) {
     return 'Удалить «$name»?';
   }
+
+  @override
+  String get miniAppsNotificationChannel => 'Мини-приложения';
+
+  @override
+  String get miniAppsNotificationChannelDescription =>
+      'Уведомления и напоминания ваших мини-приложений.';
 
   @override
   String get phoneControlTitle => 'Управление телефоном';

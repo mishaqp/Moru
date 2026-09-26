@@ -210,6 +210,21 @@ class _LocalToolsTab extends StatelessWidget {
                     toggleTool(LocalToolNames.scheduledTasks, value),
               ),
             ],
+            if (LocalToolsService.isAvailableOnThisPlatform(
+              LocalToolNames.miniApps,
+            )) ...[
+              _iosDivider(context),
+              _LocalToolRow(
+                icon: Lucide.LayoutGrid,
+                title: l10n.miniAppsToolTitle,
+                subtitle: l10n.miniAppsToolSubtitle,
+                enabled: assistant.localToolIds.contains(
+                  LocalToolNames.miniApps,
+                ),
+                onChanged: (value) =>
+                    toggleTool(LocalToolNames.miniApps, value),
+              ),
+            ],
             if (DeviceLocalTools.iosDeviceToolsSupported)
               FutureBuilder<bool>(
                 future: DeviceLocalTools.prefetchIosCapabilities(),

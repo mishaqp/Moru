@@ -7,7 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../core/providers/settings_provider.dart';
+import '../../core/services/api/chat_api_service.dart';
+import '../../core/services/mini_apps/mini_app_bridge.dart';
+import '../../core/services/mini_apps/mini_app_reminders.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
+import '../../core/services/notification_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/snackbar.dart';
 import 'pages/mini_app_page.dart';
@@ -23,6 +28,56 @@ class MiniAppLauncher {
 
   /// Shortcut taps while Moru is already running.
   static Stream<String> get launches => _launches.stream;
+
+  static MiniAppReminders? _reminders;
+
+  /// Reminders of the installed apps; deleting an app cancels its own.
+  static MiniAppReminders get reminders => _reminders ??= () {
+    final reminders = MiniAppReminders(
+      store: MiniAppStore.instance,
+      schedule: NotificationService.scheduleMiniAppReminder,
+      cancel: NotificationService.cancel,
+    );
+    MiniAppStore.instance.addDeleteHook(reminders.cancelAll);
+    return reminders;
+  }();
+
+  /// What [app] may use besides its storage: the default model,
+  /// notifications and reminders.
+  static MiniAppHost hostFor(MiniApp app, SettingsProvider settings) =>
+      MiniAppHost(
+        ask: (prompt, system) async {
+          final provider = settings.currentModelProvider;
+          final model = settings.currentModelId;
+          if (provider == null || model == null) {
+            throw const MiniAppException(
+              'no_model',
+              'Choose a default model in Moru settings first.',
+            );
+          }
+          final result = await ChatApiService.generateMessage(
+            config: settings.getProviderConfig(provider),
+            modelId: model,
+            messages: [
+              if (system != null) {'role': 'system', 'content': system},
+              {'role': 'user', 'content': prompt},
+            ],
+            textOnly: true,
+            skipImageParsing: true,
+          );
+          return result.text;
+        },
+        notify: (title, body) async {
+          await NotificationService.ensureAndroidNotificationsPermission();
+          await NotificationService.showMiniApp(
+            id: MiniAppReminders.notificationIds(app.id, '_notify', null).first,
+            appId: app.id,
+            title: title,
+            body: body,
+          );
+        },
+        reminders: reminders,
+      );
 
   static void ensureInitialized() {
     if (_initialized) return;

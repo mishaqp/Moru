@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
 import '../../l10n/app_localizations.dart';
 import '../../l10n/app_localizations_ru.dart';
 
@@ -22,6 +25,19 @@ class NotificationService {
   static final StreamController<String> _scheduledRunTapController =
       StreamController<String>.broadcast();
   static String? _pendingScheduledRunId;
+  static final StreamController<String> _miniAppTapController =
+      StreamController<String>.broadcast();
+  static String? _pendingMiniAppId;
+  static const String _miniAppPayloadPrefix = 'mini-app:';
+
+  /// Taps on mini app notifications, as app ids.
+  static Stream<String> get miniAppTaps => _miniAppTapController.stream;
+  static String? takePendingMiniAppId() {
+    final id = _pendingMiniAppId;
+    _pendingMiniAppId = null;
+    return id;
+  }
+
   static Stream<String> get scheduledRunTaps =>
       _scheduledRunTapController.stream;
   static String? takePendingScheduledRunId() {
@@ -201,6 +217,15 @@ class NotificationService {
   }
 
   static void _handleNotificationResponse(NotificationResponse response) {
+    final miniApp = miniAppIdFromPayload(response.payload);
+    if (miniApp != null) {
+      if (_miniAppTapController.hasListener) {
+        _miniAppTapController.add(miniApp);
+      } else {
+        _pendingMiniAppId = miniApp;
+      }
+      return;
+    }
     final runId = scheduledRunIdFromPayload(response.payload);
     if (runId != null) {
       if (_scheduledRunTapController.hasListener) {
@@ -236,6 +261,116 @@ class NotificationService {
         .substring(_chatCompletionPayloadPrefix.length)
         .trim();
     return conversationId.isEmpty ? null : conversationId;
+  }
+
+  @visibleForTesting
+  static String? miniAppIdFromPayload(String? payload) {
+    if (payload == null || !payload.startsWith(_miniAppPayloadPrefix)) {
+      return null;
+    }
+    final id = payload.substring(_miniAppPayloadPrefix.length).trim();
+    return id.isEmpty ? null : id;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mini apps
+  // ---------------------------------------------------------------------------
+
+  static AndroidNotificationDetails get _miniAppDetails =>
+      AndroidNotificationDetails(
+        'moru_mini_apps',
+        _l10n.miniAppsNotificationChannel,
+        channelDescription: _l10n.miniAppsNotificationChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        category: AndroidNotificationCategory.reminder,
+      );
+
+  static Future<void> showMiniApp({
+    required int id,
+    required String appId,
+    required String title,
+    required String body,
+  }) async {
+    await ensureInitialized();
+    await _plugin.show(
+      id,
+      title,
+      body,
+      NotificationDetails(android: _miniAppDetails),
+      payload: '$_miniAppPayloadPrefix$appId',
+    );
+  }
+
+  static bool _timeZoneReady = false;
+
+  static Future<void> _ensureTimeZone() async {
+    if (_timeZoneReady) return;
+    tz_data.initializeTimeZones();
+    String? name;
+    try {
+      name = await const MethodChannel(
+        'app.mini_apps',
+      ).invokeMethod<String>('localTimeZone');
+    } catch (_) {}
+    try {
+      tz.setLocalLocation(tz.getLocation(name ?? 'UTC'));
+    } catch (_) {
+      tz.setLocalLocation(tz.UTC);
+    }
+    _timeZoneReady = true;
+  }
+
+  /// Repeats at [hour]:[minute] every day, or every [weekday] (1 = Monday).
+  static Future<void> scheduleMiniAppReminder({
+    required int id,
+    required String appId,
+    required String title,
+    required String body,
+    required int hour,
+    required int minute,
+    int? weekday,
+  }) async {
+    await ensureInitialized();
+    await _ensureTimeZone();
+    final now = tz.TZDateTime.now(tz.local);
+    var next = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
+    while (!next.isAfter(now) || (weekday != null && next.weekday != weekday)) {
+      next = next.add(const Duration(days: 1));
+    }
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    final exact = await android?.canScheduleExactNotifications() ?? false;
+    await _plugin.zonedSchedule(
+      id,
+      title,
+      body,
+      next,
+      NotificationDetails(android: _miniAppDetails),
+      androidScheduleMode: exact
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: weekday == null
+          ? DateTimeComponents.time
+          : DateTimeComponents.dayOfWeekAndTime,
+      payload: '$_miniAppPayloadPrefix$appId',
+    );
+  }
+
+  static Future<void> cancel(int id) async {
+    await ensureInitialized();
+    await _plugin.cancel(id);
   }
 
   @visibleForTesting
