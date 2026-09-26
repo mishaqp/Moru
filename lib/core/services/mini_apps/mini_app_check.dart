@@ -36,10 +36,28 @@ class MiniAppCheckReport {
 
   bool get ok => loaded && pageErrors.isEmpty && failedCalls.isEmpty;
 
+  /// The WebView hides the details of script errors on file pages ("Script
+  /// error."); the console has them, so they take its place.
+  List<String> get _pageErrors {
+    final details = [
+      for (final line in console)
+        if (line.startsWith('error: ')) line,
+    ];
+    var next = 0;
+    return [
+      for (final error in pageErrors)
+        error == _opaqueError && next < details.length
+            ? details[next++]
+            : error,
+    ];
+  }
+
+  static const String _opaqueError = 'error: Script error.';
+
   Map<String, Object?> toJson() => {
     'ok': ok,
     'loaded': loaded,
-    if (pageErrors.isNotEmpty) 'page_errors': pageErrors,
+    if (pageErrors.isNotEmpty) 'page_errors': _pageErrors,
     if (failedCalls.isNotEmpty) 'failed_moru_calls': failedCalls,
     if (console.isNotEmpty) 'console': console,
     if (visibleContent == 0) 'blank_page': true,
