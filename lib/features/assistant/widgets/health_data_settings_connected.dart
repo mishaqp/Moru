@@ -49,13 +49,7 @@ class _HealthDataSettingsConnectedState
     if (assistant == null) {
       return const SizedBox.shrink();
     }
-    if (!DeviceLocalTools.iosDeviceToolsSupported) {
-      return _view(assistant);
-    }
-    return FutureBuilder<bool>(
-      future: DeviceLocalTools.prefetchIosCapabilities(),
-      builder: (context, _) => _view(assistant),
-    );
+    return _view(assistant);
   }
 
   Widget _view(Assistant assistant) {
@@ -80,30 +74,12 @@ class _HealthDataSettingsConnectedState
         enabled: enabled,
         availableIds: available,
       );
-      if (enabled && DeviceLocalTools.healthSupported) {
-        final types = HealthDataSelection.queryTypes(
-          next,
-          availableIds: available,
-        );
-        final requested = await DeviceLocalTools.requestHealthPermission(
-          types: types,
-        );
-        if (!requested) return null;
-      }
       return next;
     });
   }
 
   Future<void> _setType(String typeId, bool enabled) {
     return _writer.apply((current) async {
-      if (enabled &&
-          HealthDataSelection.isMasterEnabled(current) &&
-          DeviceLocalTools.healthSupported) {
-        final requested = await DeviceLocalTools.requestHealthPermission(
-          types: [typeId],
-        );
-        if (!requested) return null;
-      }
       return HealthDataSelection.toggleType(current, typeId, enabled: enabled);
     });
   }
@@ -121,16 +97,6 @@ class _HealthDataSettingsConnectedState
         current,
         availableIds: available,
       );
-      if (DeviceLocalTools.healthSupported) {
-        final types = HealthDataSelection.queryTypes(
-          next,
-          availableIds: available,
-        );
-        final requested = await DeviceLocalTools.requestHealthPermission(
-          types: types,
-        );
-        if (!requested) return null;
-      }
       return next;
     });
   }

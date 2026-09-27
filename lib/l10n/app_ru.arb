@@ -14,7 +14,6 @@
       }
     }
   },
-  "helloWorld": "Привет, мир!",
   "settingsPageBackButton": "Назад",
   "settingsPageTitle": "Настройки",
   "settingsPageDarkMode": "Тёмная",
@@ -24,9 +23,7 @@
   "settingsPageGeneralSection": "Основные",
   "settingsPageColorMode": "Цветовой режим",
   "settingsPageDisplay": "Внешний вид и поведение",
-  "settingsPageDisplaySubtitle": "Настройки оформления, поведения и взаимодействия",
   "settingsPageAssistant": "Ассистент",
-  "settingsPageAssistantSubtitle": "Ассистент и стиль по умолчанию",
   "settingsPageModelsServicesSection": "Модели и сервисы",
   "settingsPageDefaultModel": "Модель по умолчанию",
   "settingsPageProviders": "Провайдеры",
@@ -45,14 +42,6 @@
   "storageSpaceRefreshTooltip": "Обновить",
   "storageSpaceLoadFailed": "Не удалось узнать объём занятого места",
   "storageSpaceTotalLabel": "Занято",
-  "storageSpaceClearableLabel": "Можно очистить: {size}",
-  "@storageSpaceClearableLabel": {
-    "placeholders": {
-      "size": {
-        "type": "String"
-      }
-    }
-  },
   "storageSpaceClearableHint": "Можно безопасно очистить: {size}",
   "@storageSpaceClearableHint": {
     "placeholders": {
@@ -181,13 +170,10 @@
   "storageSpaceSortOldest": "Сначала старые",
   "storageSpaceSortLargest": "Сначала большие",
   "storageSpaceSortSmallest": "Сначала маленькие",
-  "settingsPageAboutSection": "О приложении",
   "settingsPageAbout": "О приложении",
   "settingsPageStatistics": "Статистика",
-  "settingsPageDocs": "Документация",
   "settingsPageLogs": "Журналы",
   "settingsPageSponsor": "Поддержать",
-  "settingsPageShare": "Поделиться",
   "statsPageTitle": "Статистика",
   "statsPageRangeAllTime": "За всё время",
   "statsPageRangeLast30Days": "За последние 30 дней",
@@ -222,7 +208,6 @@
   "statsPageClose": "Закрыть",
   "statsPageUnknownProvider": "Неизвестный провайдер",
   "statsPageUnknownAssistant": "Ассистент по умолчанию",
-  "statsPageUnknownModel": "Неизвестная модель",
   "statsPageUnknownTopic": "Тема без названия",
   "statsPageCustomRangeTitle": "Свой период",
   "statsPageCustomRangeStart": "Начало",
@@ -233,10 +218,7 @@
   "sponsorPageSponsorsSectionTitle": "Спонсоры",
   "sponsorPageEmpty": "Спонсоров пока нет",
   "sponsorPageAfdianTitle": "Afdian",
-  "sponsorPageAfdianSubtitle": "afdian.com/a/kelivo",
   "sponsorPageWeChatTitle": "Поддержать через WeChat",
-  "sponsorPageWeChatSubtitle": "Код поддержки WeChat",
-  "sponsorPageScanQrHint": "Отсканируйте QR-код для поддержки",
   "languageDisplaySimplifiedChinese": "Китайский (упрощённый)",
   "languageDisplayEnglish": "Английский",
   "languageDisplayTraditionalChinese": "Китайский (традиционный)",
@@ -246,7 +228,6 @@
   "languageDisplayGerman": "Немецкий",
   "languageDisplayItalian": "Итальянский",
   "languageDisplaySpanish": "Испанский",
-  "languageSelectSheetTitle": "Язык перевода",
   "languageSelectSheetClearButton": "Убрать перевод",
   "homePageClearContext": "Очистить контекст",
   "contextMessageCount": "Сообщений: {count}",
@@ -290,17 +271,13 @@
     }
   },
   "displaySettingsPageLanguageTitle": "Язык приложения",
-  "displaySettingsPageLanguageSubtitle": "Выберите язык интерфейса",
   "assistantTagsManageTitle": "Управление тегами",
-  "assistantTagsCreateButton": "Создать",
   "assistantTagsCreateDialogTitle": "Создать тег",
   "assistantTagsCreateDialogOk": "Создать",
   "assistantTagsCreateDialogCancel": "Отмена",
   "assistantTagsNameHint": "Название тега",
-  "assistantTagsRenameButton": "Переименовать",
   "assistantTagsRenameDialogTitle": "Переименовать тег",
   "assistantTagsRenameDialogOk": "Переименовать",
-  "assistantTagsDeleteButton": "Удалить",
   "assistantTagsDeleteConfirmTitle": "Удалить тег",
   "assistantTagsDeleteConfirmContent": "Удалить этот тег?",
   "assistantTagsDeleteConfirmOk": "Удалить",
@@ -348,8 +325,6 @@
   "homePageCancel": "Отмена",
   "homePageDelete": "Удалить",
   "homePageSelectMessagesToShare": "Выберите сообщения, которыми хотите поделиться",
-  "homePageDone": "Готово",
-  "homePageDropToUpload": "Перетащите файлы для загрузки",
   "assistantEditPageTitle": "Ассистент",
   "assistantEditPageNotFound": "Ассистент не найден",
   "assistantEditPageBasicTab": "Основное",
@@ -391,7 +366,6 @@
   "assistantRegexDeleteButton": "Удалить",
   "assistantRegexValidationError": "Введите название и регулярное выражение, затем выберите хотя бы одну область действия.",
   "assistantRegexInvalidPattern": "Некорректное регулярное выражение",
-  "assistantRegexCancelButton": "Отмена",
   "assistantRegexUntitled": "Правило без названия",
   "assistantEditCustomHeadersTitle": "Свои заголовки",
   "assistantEditCustomHeadersAdd": "Добавить заголовок",
@@ -403,10 +377,8 @@
   "assistantEditHeaderValueLabel": "Значение заголовка",
   "assistantEditBodyKeyLabel": "Ключ поля",
   "assistantEditBodyValueLabel": "Значение поля (JSON)",
-  "assistantEditDeleteTooltip": "Удалить",
   "assistantEditAssistantNameLabel": "Имя ассистента",
   "assistantEditUseAssistantAvatarTitle": "Использовать аватар ассистента",
-  "assistantEditUseAssistantAvatarSubtitle": "Показывать аватар ассистента вместо аватара модели",
   "assistantEditUseAssistantNameTitle": "Использовать имя ассистента",
   "assistantEditChatModelTitle": "Модель для чата",
   "assistantEditChatModelSubtitle": "Модель по умолчанию для этого ассистента; иначе используется общая настройка",
@@ -417,9 +389,7 @@
   "assistantEditContextMessagesTitle": "Сообщения в контексте",
   "assistantEditContextMessagesDescription": "Сколько последних сообщений сохранять в контексте",
   "assistantEditStreamOutputTitle": "Потоковый вывод",
-  "assistantEditStreamOutputDescription": "Показывать ответ по мере генерации",
   "assistantEditThinkingBudgetTitle": "Бюджет рассуждений",
-  "assistantEditConfigureButton": "Настроить",
   "assistantEditMaxTokensTitle": "Максимум токенов",
   "assistantEditMaxTokensDescription": "Оставьте пустым, чтобы не ограничивать",
   "assistantEditMaxTokensHint": "Без ограничений",
@@ -427,12 +397,7 @@
   "assistantEditChatBackgroundDescription": "Задайте фоновое изображение для этого ассистента",
   "assistantEditChooseImageButton": "Выбрать изображение",
   "assistantEditClearButton": "Очистить",
-  "desktopNavChatTooltip": "Чат",
   "desktopNavTranslateTooltip": "Перевести",
-  "desktopNavStorageTooltip": "Хранилище",
-  "desktopNavGlobalSearchTooltip": "Глобальный поиск",
-  "desktopNavThemeToggleTooltip": "Тема оформления",
-  "desktopNavSettingsTooltip": "Настройки",
   "desktopAvatarMenuUseEmoji": "Использовать эмодзи",
   "cameraPermissionDeniedMessage": "Камера недоступна: разрешение не предоставлено.",
   "openSystemSettings": "Открыть настройки",
@@ -443,16 +408,9 @@
   "assistantEditAvatarEnterLink": "Ввести ссылку",
   "assistantEditAvatarImportQQ": "Импортировать из QQ",
   "assistantEditAvatarReset": "Сбросить",
-  "displaySettingsPageChatMessageBackgroundTitle": "Фон сообщений чата",
   "displaySettingsPageChatMessageBackgroundDefault": "По умолчанию",
   "displaySettingsPageChatMessageBackgroundFrosted": "Матовое стекло",
   "displaySettingsPageChatMessageBackgroundSolid": "Сплошной цвет",
-  "displaySettingsPageAndroidBackgroundChatTitle": "Фоновая генерация (Android)",
-  "displaySettingsPageIosBackgroundChatTitle": "Фоновая генерация (iOS)",
-  "iosBackgroundStatusOn": "Вкл.",
-  "iosBackgroundStatusOff": "Выкл.",
-  "iosLiveActivityTitle": "Текущая активность",
-  "iosLiveActivitySubtitle": "Показывать фоновые ответы на экране блокировки и в Dynamic Island, если устройство это поддерживает.",
   "notificationChatCompletedTitle": "Генерация завершена",
   "notificationChatCompletedBody": "Ответ ассистента готов",
   "assistantEditEmojiDialogTitle": "Выбрать эмодзи",
@@ -489,7 +447,6 @@
   "multiKeyPageTotal": "Всего",
   "multiKeyPageNormal": "Исправны",
   "multiKeyPageError": "Ошибка",
-  "multiKeyPageAccuracy": "Успешность",
   "multiKeyPageStrategyTitle": "Стратегия распределения нагрузки",
   "multiKeyPageStrategyRoundRobin": "По очереди",
   "multiKeyPageStrategyPriority": "По приоритету",
@@ -500,7 +457,6 @@
   "multiKeyPageStatusDisabled": "Отключено",
   "multiKeyPageStatusError": "Ошибка",
   "multiKeyPageStatusRateLimited": "Лимит запросов",
-  "multiKeyPageEditAlias": "Изменить псевдоним",
   "multiKeyPageEdit": "Изменить",
   "multiKeyPageKey": "API-ключ",
   "multiKeyPagePriority": "Приоритет (1–10)",
@@ -567,22 +523,10 @@
   "markdownTableExportCsvTooltip": "Экспорт в CSV",
   "markdownTableSaveImageTooltip": "Сохранить в галерею",
   "markdownTableDefaultFileNameStem": "table",
-  "markdownTableCopiedCsvSnackbar": "CSV скопирован. Удерживайте кнопку копирования, чтобы скопировать как изображение.",
   "markdownTableCopiedMarkdownSnackbar": "Таблица скопирована.",
-  "codeBlockCollapsedLines": "… Свёрнуто строк: {n}",
-  "@codeBlockCollapsedLines": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
-  "htmlPreviewNotSupportedOnLinux": "Предпросмотр HTML не поддерживается в Linux",
-  "assistantEditSampleUser": "Пользователь",
   "assistantEditSampleMessage": "Привет",
   "assistantEditSampleReply": "Здравствуйте! Чем могу помочь?",
   "assistantEditMcpNoServersMessage": "Нет работающих MCP-серверов",
-  "assistantEditMcpConnectedTag": "Подключено",
   "assistantEditMcpToolsCountTag": "Инструменты: {enabled}/{total}",
   "@assistantEditMcpToolsCountTag": {
     "placeholders": {
@@ -600,27 +544,11 @@
   "assistantSettingsCopySuccess": "Ассистент скопирован",
   "assistantSettingsCopySuffix": "Копия",
   "assistantSettingsDeleteButton": "Удалить",
-  "assistantSettingsEditButton": "Изменить",
   "assistantSettingsAddSheetTitle": "Имя ассистента",
   "assistantSettingsAddSheetHint": "Введите имя",
   "assistantSettingsAddSheetCancel": "Отмена",
   "assistantSettingsAddSheetSave": "Сохранить",
-  "desktopAssistantsListTitle": "Ассистенты",
-  "desktopSidebarTabAssistants": "Ассистенты",
-  "desktopSidebarTabTopics": "Темы",
-  "desktopTrayMenuShowWindow": "Показать окно",
-  "desktopTrayMenuExit": "Выход",
-  "hotkeyToggleAppVisibility": "Показать/скрыть приложение",
-  "hotkeyCloseWindow": "Закрыть окно",
   "hotkeyOpenSettings": "Открыть настройки",
-  "hotkeyNewTopic": "Новая тема",
-  "hotkeySwitchModel": "Сменить модель",
-  "hotkeyToggleAssistantPanel": "Показать/скрыть ассистентов",
-  "hotkeyToggleTopicPanel": "Показать/скрыть темы",
-  "hotkeysPressShortcut": "Нажмите сочетание клавиш",
-  "hotkeysResetDefault": "Сбросить по умолчанию",
-  "hotkeysClearShortcut": "Убрать сочетание",
-  "hotkeysResetAll": "Сбросить все сочетания",
   "assistantEditTemperatureTitle": "Температура",
   "assistantEditTopPTitle": "Top-p",
   "assistantSettingsDeleteDialogTitle": "Удалить ассистента",
@@ -633,8 +561,6 @@
   "mcpAssistantSheetSelectAll": "Выбрать всё",
   "mcpAssistantSheetClearAll": "Очистить",
   "backupPageTitle": "Резервное копирование и восстановление",
-  "backupPageWebDavTab": "WebDAV",
-  "backupPageImportExportTab": "Импорт и экспорт",
   "backupPageWebDavServerUrl": "URL сервера WebDAV",
   "backupPageUsername": "Имя пользователя",
   "backupPagePassword": "Пароль",
@@ -669,8 +595,6 @@
   "restoreProgressStageRollingBack": "Восстановление предыдущих данных",
   "restoreProgressStageFinishing": "Завершение",
   "backupRestoreFailureRestartButton": "Перезапустить Moru",
-  "backupRestoreFailureCopyButton": "Скопировать диагностический код",
-  "backupRestoreFailureCopied": "Диагностический код скопирован",
   "backupRestoreFailureDiagnostic": "Диагностический код: {code}",
   "@backupRestoreFailureDiagnostic": {
     "placeholders": {
@@ -679,7 +603,6 @@
       }
     }
   },
-  "startupRecoveryMoreOptions": "Другие способы восстановления",
   "startupRecoveryRepairButton": "Исправить и перезапустить",
   "startupRecoveryExportButton": "Экспортировать копию моих данных",
   "startupRecoveryResetButton": "Сбросить данные",
@@ -725,26 +648,10 @@
       }
     }
   },
-  "startupRecoveryReportSaved": "Отчёт сохранён в {path}",
-  "@startupRecoveryReportSaved": {
-    "placeholders": {
-      "path": {
-        "type": "String"
-      }
-    }
-  },
   "startupRecoveryReportShared": "Отчёт экспортирован.",
   "startupRecoveryReportSaveFailed": "Не удалось экспортировать отчёт.",
   "startupRecoverySectionDataTitle": "Ваши данные",
   "startupRecoverySectionDataBody": "Ничего не удалено. Прежде чем выполнять действия ниже, сохраните копию данных в надёжном месте.",
-  "startupRecoveryExportSavedTo": "Копия ваших данных сохранена в {path}",
-  "@startupRecoveryExportSavedTo": {
-    "placeholders": {
-      "path": {
-        "type": "String"
-      }
-    }
-  },
   "startupRecoverySectionRepairTitle": "Диагностика и исправление",
   "startupRecoverySectionRepairBody": "Проверка целостности только читает базу данных. Исправление удаляет остаточные метаданные прерванного обновления и повторяет запуск, но никогда не удаляет чаты.",
   "startupRecoveryIntegrityButton": "Проверить целостность базы",
@@ -796,7 +703,6 @@
   "backupPageOK": "ОК",
   "backupPageCancel": "Отмена",
   "backupPageSelectImportMode": "Режим импорта",
-  "backupPageSelectImportModeDescription": "Выберите режим восстановления. Переключатели чатов и файлов определяют, какие компоненты будут включены.",
   "backupPageOverwriteMode": "Полная замена",
   "backupPageOverwriteModeDescription": "Заменить выбранные компоненты; сохранить невыбранные компоненты и остальные локальные настройки",
   "backupPageMergeMode": "Объединить",
@@ -818,8 +724,6 @@
   "backupPageForwardCompatCancel": "Отмена",
   "backupPageSchemaTooNewMessage": "Эта копия создана более новой версией Moru и не поддерживается текущей. Обновите Moru и повторите попытку.",
   "backupPageBackupUploaded": "Резервная копия загружена",
-  "backupPageBackup": "Резервное копирование",
-  "backupPageExporting": "Экспорт…",
   "backupProgressCancel": "Отмена",
   "backupProgressCancelled": "Отменено",
   "backupProgressPreparing": "Подготовка",
@@ -861,14 +765,9 @@
     }
   },
   "backupPageExportToFile": "Экспортировать в файл",
-  "backupPageExportToFileSubtitle": "Сохранить данные приложения в файл",
   "backupPageImportBackupFile": "Импортировать резервную копию",
-  "backupPageImportBackupFileSubtitle": "Импортировать локальный файл резервной копии",
-  "backupPageImportFromOtherApps": "Импорт из других приложений",
-  "backupPageNotSupportedYet": "Пока не поддерживается",
   "backupPageRemoteBackups": "Удалённые резервные копии",
   "backupPageNoBackups": "Нет резервных копий",
-  "backupPageRestoreTooltip": "Восстановить",
   "backupPageDeleteTooltip": "Удалить",
   "backupPageDeleteConfirmTitle": "Подтверждение удаления",
   "backupPageDeleteConfirmContent": "Удалить удалённую резервную копию «{name}»? Отменить удаление нельзя.",
@@ -904,8 +803,6 @@
   "backupReminderEnableTitle": "Напоминать о создании копии",
   "backupReminderFrequencyTitle": "Периодичность",
   "backupReminderTimeTitle": "Время напоминания",
-  "backupReminderTimeInputHint": "ЧЧ:мм",
-  "backupReminderTimeInvalid": "Введите время от 00:00 до 23:59.",
   "backupReminderLastBackupTitle": "Последняя копия",
   "backupReminderNextReminderTitle": "Следующее напоминание",
   "backupReminderNever": "Никогда",
@@ -1005,18 +902,12 @@
       }
     }
   },
-  "bottomToolsSheetLearningMode": "Режим обучения",
-  "bottomToolsSheetLearningModeDescription": "Помощь в пошаговом обучении",
-  "bottomToolsSheetConfigurePrompt": "Настроить промпт",
   "bottomToolsSheetPrompt": "Промпт",
   "bottomToolsSheetPromptHint": "Введите текст добавляемого промпта",
-  "bottomToolsSheetResetDefault": "Сбросить по умолчанию",
   "bottomToolsSheetSave": "Сохранить",
   "bottomToolsSheetOcr": "Распознать текст на изображении",
-  "messageMoreSheetTitle": "Другие действия",
   "messageMoreSheetSelectCopy": "Выделить и скопировать",
   "messageMoreSheetRenderWebView": "Открыть в веб-представлении",
-  "messageMoreSheetNotImplemented": "Пока не реализовано",
   "messageMoreSheetEdit": "Изменить",
   "messageMoreSheetShare": "Поделиться",
   "messageMoreSheetSelectMessages": "Выбрать сообщения",
@@ -1025,20 +916,7 @@
   "messageMoreSheetDeleteAllVersions": "Удалить все версии",
   "reasoningBudgetSheetOff": "Выкл.",
   "reasoningBudgetSheetAuto": "Авто",
-  "reasoningBudgetSheetLight": "Лёгкие рассуждения",
-  "reasoningBudgetSheetMedium": "Средние рассуждения",
-  "reasoningBudgetSheetHeavy": "Глубокие рассуждения",
-  "reasoningBudgetSheetXhigh": "Очень глубокие рассуждения",
-  "reasoningBudgetSheetMax": "Максимальные рассуждения",
   "reasoningBudgetSheetTitle": "Глубина рассуждений",
-  "reasoningBudgetSheetCurrentLevel": "Текущий уровень: {level}",
-  "@reasoningBudgetSheetCurrentLevel": {
-    "placeholders": {
-      "level": {
-        "type": "String"
-      }
-    }
-  },
   "reasoningBudgetSheetOffSubtitle": "Отвечать сразу, без рассуждений",
   "reasoningBudgetSheetAutoSubtitle": "Модель сама выберет глубину рассуждений",
   "reasoningBudgetSheetLightSubtitle": "Использовать лёгкие рассуждения для ответа",
@@ -1072,8 +950,6 @@
     }
   },
   "chatMessageWidgetCopiedToClipboard": "Скопировано в буфер обмена",
-  "chatMessageWidgetResendTooltip": "Отправить повторно",
-  "chatMessageWidgetMoreTooltip": "Больше",
   "chatMessageWidgetThinking": "Думает…",
   "chatMessageWidgetTranslation": "Перевод",
   "chatMessageWidgetTranslating": "Перевод…",
@@ -1088,26 +964,14 @@
   },
   "chatMessageWidgetOpenLinkError": "Не удалось открыть ссылку",
   "chatMessageWidgetAttachmentUnavailable": "Вложение недоступно",
-  "chatMessageWidgetCitationsTitle": "Источники ({count})",
-  "@chatMessageWidgetCitationsTitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "chatMessageWidgetSearchResultsTitle": "Результаты поиска",
-  "chatMessageWidgetCitationSourcesTitle": "Источники цитат",
-  "chatMessageWidgetRegenerateTooltip": "Сгенерировать заново",
   "chatMessageWidgetRegenerateConfirmTitle": "Подтвердите повторную генерацию",
   "chatMessageWidgetRegenerateConfirmContent": "Повторная генерация обновит только это сообщение и сохранит сообщения ниже. Продолжить?",
   "chatMessageWidgetRegenerateConfirmDeleteTrailingContent": "Повторная генерация удалит все сообщения ниже этого. Отменить удаление нельзя. Продолжить?",
   "chatMessageWidgetRegenerateConfirmCancel": "Отмена",
   "chatMessageWidgetRegenerateConfirmOk": "Сгенерировать заново",
   "chatMessageWidgetStopTooltip": "Остановить",
-  "chatMessageWidgetSpeakTooltip": "Озвучить",
   "chatMessageWidgetTranslateTooltip": "Перевести",
-  "chatMessageWidgetBuiltinSearchHideNote": "Скрыть карточки встроенного поиска",
   "chatMessageWidgetDeepThinking": "Глубокое размышление",
   "chatMessageWidgetWebSearch": "Веб-поиск: {query}",
   "@chatMessageWidgetWebSearch": {
@@ -1121,14 +985,6 @@
   "chatMessageWidgetReadClipboard": "Чтение буфера обмена",
   "chatMessageWidgetWriteClipboard": "Запись в буфер обмена",
   "chatMessageWidgetSpeakingTitle": "Озвучивание:",
-  "chatMessageWidgetSpeakText": "Озвучивание: {text}",
-  "@chatMessageWidgetSpeakText": {
-    "placeholders": {
-      "text": {
-        "type": "String"
-      }
-    }
-  },
   "chatMessageWidgetMemoryRead": "Чтение памяти",
   "chatMessageWidgetMemoryUpdate": "Обновление памяти",
   "chatMessageWidgetMemorySearchProfile": "Поиск в памяти",
@@ -1216,9 +1072,7 @@
     }
   },
   "displaySettingsPageEnableDollarLatexTitle": "Формулы внутри $...$",
-  "displaySettingsPageEnableDollarLatexSubtitle": "Отображать строчные формулы внутри $...$",
   "displaySettingsPageEnableMathTitle": "Отображение формул",
-  "displaySettingsPageEnableMathSubtitle": "Отображать формулы LaTeX в строках и блоках",
   "displaySettingsPageEnableUserMarkdownTitle": "Markdown в сообщениях пользователя",
   "displaySettingsPageEnableReasoningMarkdownTitle": "Markdown в рассуждениях",
   "displaySettingsPageEnableAssistantMarkdownTitle": "Markdown в сообщениях ассистента",
@@ -1316,22 +1170,14 @@
   "sideDrawerCancel": "Отмена",
   "sideDrawerOK": "ОК",
   "sideDrawerSave": "Сохранить",
-  "sideDrawerGreetingMorning": "Доброе утро 👋",
-  "sideDrawerGreetingNoon": "Добрый день 👋",
-  "sideDrawerGreetingAfternoon": "Добрый день 👋",
-  "sideDrawerGreetingEvening": "Добрый вечер 👋",
   "sideDrawerDateToday": "Сегодня",
   "sideDrawerDateYesterday": "Вчера",
   "sideDrawerDateShortPattern": "d MMM",
   "sideDrawerDateFullPattern": "d MMM yyyy",
   "sideDrawerSearchHint": "Поиск у текущего ассистента",
-  "sideDrawerSearchAssistantsHint": "Поиск ассистентов",
-  "sideDrawerTopicSearchModeLabel": "Поиск по темам",
-  "sideDrawerGlobalSearchModeLabel": "Глобальный поиск",
   "sideDrawerSearchModeSwipeToTopicHint": "Смахните строку поиска для поиска по темам",
   "sideDrawerSearchModeSwipeToGlobalHint": "Смахните строку поиска для глобального поиска",
   "sideDrawerGlobalSearchHint": "Поиск во всех диалогах",
-  "sideDrawerGlobalSearchEmptyHint": "Поиск по заголовкам и сообщениям",
   "sideDrawerGlobalSearchNoResults": "Подходящие диалоги не найдены",
   "sideDrawerGlobalSearchResultCount": "Результатов: {count}",
   "@sideDrawerGlobalSearchResultCount": {
@@ -1362,8 +1208,6 @@
   },
   "sideDrawerLinkCopied": "Ссылка скопирована",
   "sideDrawerPinnedLabel": "Закреплённые",
-  "sideDrawerHistory": "История",
-  "sideDrawerSettings": "Настройки",
   "sideDrawerChooseAssistantTitle": "Выберите ассистента",
   "sideDrawerChooseImage": "Выбрать изображение",
   "sideDrawerChooseEmoji": "Выбрать эмодзи",
@@ -1375,7 +1219,6 @@
   "providerAvatarIconSearchHint": "Поиск значков",
   "providerAvatarIconNoResults": "Значки не найдены",
   "providerAvatarInputLobehubIcon": "Указать значок LobeHub",
-  "providerAvatarChooseLobehubIcon": "Указать значок LobeHub",
   "providerAvatarLobehubDialogTitle": "Указать значок LobeHub",
   "providerAvatarLobehubDialogHint": "Введите название значка LobeHub, например openai",
   "sideDrawerEmojiDialogTitle": "Выбрать эмодзи",
@@ -1391,12 +1234,10 @@
   "sideDrawerSetNicknameTitle": "Задать никнейм",
   "sideDrawerNicknameLabel": "Никнейм",
   "sideDrawerNicknameHint": "Введите новый никнейм",
-  "sideDrawerRename": "Переименовать",
   "chatInputBarHint": "Напишите сообщение ИИ",
   "chatInputBarSelectModelTooltip": "Выбрать модель",
   "chatInputBarOnlineSearchTooltip": "Поиск в интернете",
   "chatInputBarReasoningStrengthTooltip": "Глубина рассуждений",
-  "chatInputBarMcpServersTooltip": "MCP-серверы",
   "chatInputBarToolsTooltip": "Инструменты",
   "chatInputBarMoreTooltip": "Добавить",
   "chatInputBarVoiceInputTooltip": "Голосовой ввод",
@@ -1408,10 +1249,6 @@
   "chatInputBarImageMode": "Режим изображений",
   "chatInputBarDisableImageModeTooltip": "Выключить режим изображений",
   "chatInputBarQueuedPending": "В очереди на отправку",
-  "chatInputBarQueuedCancel": "Отменить отправку из очереди",
-  "chatInputBarInsertNewline": "Новая строка",
-  "chatInputBarExpand": "Развернуть",
-  "chatInputBarCollapse": "Свернуть",
   "mcpPageBackTooltip": "Назад",
   "mcpPageAddMcpTooltip": "Добавить MCP",
   "mcpPageNoServers": "Нет MCP-серверов",
@@ -1480,7 +1317,6 @@
   "mcpServerEditSheetTabBasic": "Основное",
   "mcpServerEditSheetTabTools": "Инструменты",
   "mcpServerEditSheetNoToolsHint": "Нет инструментов. Нажмите обновление для синхронизации",
-  "mcpServerEditSheetCancel": "Отмена",
   "mcpServerEditSheetSave": "Сохранить",
   "mcpServerEditSheetUrlRequired": "Введите URL сервера",
   "defaultModelPageBackTooltip": "Назад",
@@ -1607,14 +1443,6 @@
   "modelDetailSheetBuiltinToolsTab": "Встроенные инструменты",
   "modelDetailSheetModelIdLabel": "ID модели",
   "modelDetailSheetModelIdHint": "Обязательно; рекомендуются строчные буквы, цифры и дефисы",
-  "modelDetailSheetModelIdDisabledHint": "{modelId}",
-  "@modelDetailSheetModelIdDisabledHint": {
-    "placeholders": {
-      "modelId": {
-        "type": "String"
-      }
-    }
-  },
   "modelDetailSheetModelNameLabel": "Название модели",
   "modelDetailSheetModelTypeLabel": "Тип модели",
   "modelDetailSheetChatType": "Чат",
@@ -1633,15 +1461,12 @@
   "modelDetailSheetSaveFailedMessage": "Не удалось сохранить. Повторите попытку.",
   "modelDetailSheetAddBody": "Добавить поле",
   "modelDetailSheetBuiltinToolsDescription": "Встроенные инструменты зависят от провайдера и режима API.",
-  "modelDetailSheetSearchTool": "Поиск",
-  "modelDetailSheetSearchToolDescription": "Включить интеграцию с Google Search",
   "modelDetailSheetUrlContextTool": "Контекст по URL",
   "modelDetailSheetUrlContextToolDescription": "Включить чтение содержимого по URL",
   "modelDetailSheetCodeExecutionTool": "Выполнение кода",
   "modelDetailSheetCodeExecutionToolDescription": "Включить инструмент выполнения кода",
   "modelDetailSheetYoutubeTool": "YouTube",
   "modelDetailSheetYoutubeToolDescription": "Включить чтение YouTube по URL (ссылки в промптах распознаются автоматически)",
-  "modelDetailSheetOpenaiBuiltinToolsResponsesOnlyHint": "Требуется OpenAI Responses API.",
   "modelDetailSheetWebFetchTool": "Чтение веб-страниц",
   "modelDetailSheetOpenrouterWebFetchToolDescription": "Включить серверный инструмент чтения веб-страниц OpenRouter",
   "modelDetailSheetClaudeWebFetchToolDescription": "Разрешить Claude читать страницы и PDF по ссылкам из диалога",
@@ -1656,7 +1481,6 @@
   "modelDetailSheetAddButton": "Добавить",
   "modelDetailSheetConfirmButton": "Подтвердить",
   "modelDetailSheetInvalidIdError": "Введите корректный ID модели (не менее 2 символов)",
-  "modelDetailSheetModelIdExistsError": "Такой ID модели уже существует",
   "modelDetailSheetHeaderKeyHint": "Ключ заголовка",
   "modelDetailSheetHeaderValueHint": "Значение заголовка",
   "modelDetailSheetBodyKeyHint": "Ключ поля",
@@ -1701,7 +1525,6 @@
   "providerDetailPageBalanceResultPathLabel": "Путь к результату в JSON",
   "providerDetailPageBalanceQueryButton": "Проверить баланс",
   "providerDetailPageBalanceQuerying": "Проверка…",
-  "providerDetailPageBalanceResetDefaultsButton": "Сбросить",
   "providerDetailPageBalanceResetDefaultsTooltip": "Сбросить настройки баланса",
   "providerDetailPageBalanceResult": "Баланс: {value}",
   "@providerDetailPageBalanceResult": {
@@ -1724,9 +1547,7 @@
   "providerDetailPageProjectIdLabel": "ID проекта",
   "providerDetailPageServiceAccountJsonLabel": "JSON сервисного аккаунта (вставьте или импортируйте)",
   "providerDetailPageImportJsonButton": "Импортировать JSON",
-  "providerDetailPageImportJsonReadFailedMessage": "Не удалось прочитать файл",
   "providerDetailPageTestButton": "Проверить",
-  "providerDetailPageSaveButton": "Сохранить",
   "providerDetailPageProviderRemovedMessage": "Провайдер удалён",
   "providerDetailPageNoModelsTitle": "Нет моделей",
   "providerDetailPageModelSearchHint": "Поиск моделей",
@@ -1743,13 +1564,11 @@
   "providerDetailPagePortLabel": "Порт",
   "providerDetailPageUsernameOptionalLabel": "Имя пользователя (необязательно)",
   "providerDetailPagePasswordOptionalLabel": "Пароль (необязательно)",
-  "providerDetailPageSavedSnackbar": "Сохранено",
   "providerDetailPageEmbeddingsGroupTitle": "Эмбеддинги",
   "providerDetailPageOtherModelsGroupTitle": "Другое",
   "providerDetailPageRemoveGroupTooltip": "Убрать группу",
   "providerDetailPageAddGroupTooltip": "Добавить группу",
   "providerDetailPageFilterHint": "Введите название модели для фильтрации",
-  "providerDetailPageDeleteText": "Удалить",
   "providerDetailPageEditTooltip": "Изменить",
   "providerDetailPageTestConnectionTitle": "Проверить подключение",
   "providerDetailPageSelectModelButton": "Выбрать модель",
@@ -1787,8 +1606,6 @@
   "providersPageByteDanceName": "ByteDance",
   "providersPageEnabledStatus": "ВКЛ.",
   "providersPageDisabledStatus": "ВЫКЛ.",
-  "providersPageModelsCountSuffix": " моделей",
-  "providersPageModelsCountSingleSuffix": " моделей",
   "addProviderSheetTitle": "Добавить провайдера",
   "addProviderSheetEnabledLabel": "Включено",
   "addProviderSheetNameLabel": "Имя",
@@ -1797,7 +1614,6 @@
   "addProviderSheetVertexAiProjectIdLabel": "ID проекта",
   "addProviderSheetVertexAiServiceAccountJsonLabel": "JSON сервисного аккаунта (вставьте или импортируйте)",
   "addProviderSheetImportJsonButton": "Импортировать JSON",
-  "addProviderSheetCancelButton": "Отмена",
   "addProviderSheetAddButton": "Добавить",
   "importProviderSheetTitle": "Импортировать провайдера",
   "importProviderSheetScanQrTooltip": "Сканировать QR",
@@ -1819,7 +1635,6 @@
     }
   },
   "importProviderSheetDescription": "Вставьте строки конфигурации (можно несколько строк) или JSON ChatBox",
-  "importProviderSheetInputHint": "ai-provider:v1:... или JSON",
   "importProviderSheetCancelButton": "Отмена",
   "importProviderSheetImportButton": "Импорт",
   "shareProviderSheetTitle": "Поделиться провайдером",
@@ -1827,22 +1642,13 @@
   "shareProviderSheetCopiedMessage": "Скопировано",
   "shareProviderSheetCopyButton": "Копировать",
   "shareProviderSheetShareButton": "Поделиться",
-  "desktopProviderContextMenuShare": "Поделиться",
-  "desktopProviderShareCopyText": "Скопировать код",
-  "desktopProviderShareCopyQr": "Скопировать QR",
   "providerDetailPageApiBaseUrlLabel": "Базовый URL API",
   "providerDetailPageModelsTitle": "Модели",
-  "providerModelsGetButton": "Получить",
-  "providerDetailPageCapsVision": "Зрение",
-  "providerDetailPageCapsImage": "Изображение",
-  "providerDetailPageCapsTool": "Инструмент",
-  "providerDetailPageCapsReasoning": "Рассуждения",
   "qrScanPageTitle": "Сканировать QR",
   "qrScanPageInstruction": "Поместите QR-код в рамку",
   "searchServicesPageBackTooltip": "Назад",
   "searchServicesPageTitle": "Сервисы поиска",
   "searchServicesPageDone": "Готово",
-  "searchServicesPageEdit": "Изменить",
   "searchServicesPageAddProvider": "Добавить провайдера",
   "searchServicesPageSearchProviders": "Поисковые провайдеры",
   "searchServicesPageGeneralOptions": "Общие параметры",
@@ -1854,10 +1660,7 @@
   "searchServicesPageConnectedStatus": "Подключено",
   "searchServicesPageFailedStatus": "Ошибка",
   "searchServicesPageNotTestedStatus": "Не проверено",
-  "searchServicesPageEditServiceTooltip": "Изменить сервис",
   "searchServicesPageTestConnectionTooltip": "Проверить подключение",
-  "searchServicesPageDeleteServiceTooltip": "Удалить сервис",
-  "searchServicesPageConfiguredStatus": "Настроено",
   "miniMapTitle": "Мини-карта",
   "miniMapTooltip": "Мини-карта",
   "miniMapScrollToBottomTooltip": "Прокрутить вниз",
@@ -1870,29 +1673,15 @@
     }
   },
   "miniMapSearchNoResults": "Подходящие сообщения не найдены",
-  "searchServicesPageApiKeyRequiredStatus": "Нужен API-ключ",
-  "searchServicesPageUrlRequiredStatus": "Нужен URL",
   "searchServicesAddDialogTitle": "Добавить сервис поиска",
-  "searchServicesAddDialogServiceType": "Тип сервиса",
-  "searchServicesAddDialogBingLocal": "Локальный",
   "searchServicesAddDialogCancel": "Отмена",
   "searchServicesAddDialogAdd": "Добавить",
-  "searchServicesAddDialogApiKeyRequired": "Необходимо указать API-ключ",
   "searchServicesFieldCustomUrlOptional": "Свой URL (необязательно)",
   "searchServicesDialogApiKey": "API-ключ",
   "searchServicesDialogModel": "Модель",
   "searchServicesDialogSystemPrompt": "Системный промпт",
-  "searchServicesAddDialogInstanceUrl": "URL экземпляра",
   "searchServicesAddDialogUrlRequired": "Необходимо указать URL",
-  "searchServicesAddDialogEnginesOptional": "Поисковые движки (необязательно)",
-  "searchServicesAddDialogLanguageOptional": "Язык (необязательно)",
-  "searchServicesAddDialogUsernameOptional": "Имя пользователя (необязательно)",
-  "searchServicesAddDialogPasswordOptional": "Пароль (необязательно)",
-  "searchServicesAddDialogRegionOptional": "Регион (необязательно, по умолчанию us-en)",
-  "searchServicesEditDialogEdit": "Изменить",
-  "searchServicesEditDialogCancel": "Отмена",
   "searchServicesEditDialogSave": "Сохранить",
-  "searchServicesEditDialogBingLocalNoConfig": "Локальный поиск Bing не требует настройки.",
   "searchServicesEditDialogApiKeyRequired": "Необходимо указать API-ключ",
   "searchServicesEditDialogInstanceUrl": "URL экземпляра",
   "searchServicesEditDialogUrlRequired": "Необходимо указать URL",
@@ -1994,54 +1783,19 @@
     }
   },
   "searchServiceEditorDeleteConfirm": "Удалить",
-  "searchServiceEditorDiscardTitle": "Отменить изменения?",
-  "searchServiceEditorDiscardMessage": "Несохранённые настройки сервиса поиска будут потеряны.",
-  "searchServiceEditorKeepEditing": "Продолжить редактирование",
-  "searchServiceEditorDiscard": "Не сохранять",
   "searchSettingsSheetTitle": "Настройки поиска",
   "searchSettingsSheetBuiltinSearchTitle": "Встроенный поиск",
-  "searchSettingsSheetBuiltinSearchDescription": "Включить встроенный поиск модели",
   "searchSettingsSheetClaudeDynamicSearchTitle": "Динамическая фильтрация",
   "searchSettingsSheetClaudeDynamicSearchDescription": "Фильтровать результаты для экономии токенов",
   "searchSettingsSheetWebSearchTitle": "Веб-поиск",
-  "searchSettingsSheetWebSearchDescription": "Включить поиск в интернете в чате",
   "searchSettingsSheetOpenSearchServicesTooltip": "Открыть сервисы поиска",
   "searchSettingsSheetNoServicesMessage": "Нет сервисов. Добавьте их в разделе «Сервисы поиска».",
-  "aboutPageEasterEggMessage": "Спасибо за любопытство!\n(Пасхалки пока нет)",
   "aboutPageEasterEggButton": "Отлично!",
   "aboutPageKelivoSearchUnlocked": "Неизвестная дверь приоткрылась. Возможно, вы найдёте её в настройках.",
   "aboutPageKelivoSearchAlreadyUnlocked": "Вы уже проходили через эту дверь.",
-  "aboutPageAppName": "Moru",
   "aboutPageAppDescription": "ИИ-ассистент с открытым исходным кодом",
-  "aboutPageNoQQGroup": "Группы QQ пока нет",
   "aboutPageVersion": "Версия",
-  "aboutPageVersionDetail": "{version} / {buildNumber}",
-  "@aboutPageVersionDetail": {
-    "placeholders": {
-      "version": {
-        "type": "String"
-      },
-      "buildNumber": {
-        "type": "String"
-      }
-    }
-  },
   "aboutPageSystem": "Системная",
-  "aboutPageLoadingPlaceholder": "...",
-  "aboutPageUnknownPlaceholder": "-",
-  "aboutPagePlatformMacos": "macOS",
-  "aboutPagePlatformWindows": "Windows",
-  "aboutPagePlatformLinux": "Linux",
-  "aboutPagePlatformAndroid": "Android",
-  "aboutPagePlatformIos": "iOS",
-  "aboutPagePlatformOther": "Другая ({os})",
-  "@aboutPagePlatformOther": {
-    "placeholders": {
-      "os": {
-        "type": "String"
-      }
-    }
-  },
   "aboutPageWebsite": "Сайт",
   "aboutPageGithub": "GitHub",
   "aboutPageLicense": "Лицензия",
@@ -2051,34 +1805,22 @@
   "aboutPageQQGroupThree": "Группа Kelivo 3",
   "aboutPageJoinDiscord": "Присоединиться к Discord",
   "displaySettingsPageShowUserAvatarTitle": "Показывать аватар пользователя",
-  "displaySettingsPageShowUserAvatarSubtitle": "Отображать аватар пользователя в сообщениях чата",
-  "displaySettingsPageShowUserNameTimestampTitle": "Имя пользователя и время",
-  "displaySettingsPageShowUserNameTimestampSubtitle": "Показывать имя пользователя и время под ним в сообщениях чата",
   "displaySettingsPageShowUserNameTitle": "Показывать имя пользователя",
   "displaySettingsPageShowUserTimestampTitle": "Показывать время сообщений пользователя",
   "displaySettingsPageShowUserMessageActionsTitle": "Действия под сообщениями пользователя",
-  "displaySettingsPageShowUserMessageActionsSubtitle": "Показывать кнопки копирования, повторной отправки и других действий под вашими сообщениями",
-  "displaySettingsPageShowModelNameTimestampTitle": "Название модели и время",
-  "displaySettingsPageShowModelNameTimestampSubtitle": "Показывать название модели и время под ним в сообщениях чата",
   "displaySettingsPageShowModelNameTitle": "Показывать название модели",
   "displaySettingsPageShowModelTimestampTitle": "Показывать время ответов модели",
   "displaySettingsPageShowProviderInChatMessageTitle": "Провайдер после названия модели",
-  "displaySettingsPageShowProviderInChatMessageSubtitle": "Показывать провайдера после ID модели в чате (например: модель | провайдер)",
   "displaySettingsPageChatModelIconTitle": "Значок модели в чате",
-  "displaySettingsPageChatModelIconSubtitle": "Показывать значок модели в сообщениях чата",
   "displaySettingsPageShowTokenStatsTitle": "Статистика токенов и контекста",
-  "displaySettingsPageShowTokenStatsSubtitle": "Показывать расход токенов и количество сообщений",
   "displaySettingsPageShowThinkingCardsTitle": "Показывать карточки рассуждений",
   "displaySettingsPageShowThinkingCardsSubtitle": "Если отключено, карточки рассуждений скрыты в чате.",
   "displaySettingsPageShowToolCardsTitle": "Показывать карточки инструментов",
   "displaySettingsPageShowToolCardsSubtitle": "Если отключено, карточки вызовов инструментов скрыты в чате.",
   "displaySettingsPageAutoCollapseThinkingTitle": "Автоматически сворачивать рассуждения",
-  "displaySettingsPageAutoCollapseThinkingSubtitle": "Сворачивать рассуждения после завершения",
   "displaySettingsPageCollapseThinkingStepsTitle": "Сворачивать этапы рассуждений",
-  "displaySettingsPageCollapseThinkingStepsSubtitle": "Во время ответа показывать последние этапы, после — сворачивать в одну строку",
   "displaySettingsPageShowToolResultSummaryTitle": "Показывать сводку результатов инструментов",
   "displaySettingsPageInsertSuggestionOnlyTitle": "Вставлять подсказки без отправки",
-  "displaySettingsPageShowToolResultSummarySubtitle": "Показывать краткий результат под этапами работы инструментов",
   "displaySettingsPageHideToolResultImagesTitle": "Скрывать изображения в результатах инструментов",
   "displaySettingsPageRegenerateDeleteTrailingMessagesTitle": "Удалять сообщения ниже при повторной генерации",
   "displaySettingsPageShowRegenerateConfirmDialogTitle": "Подтверждать повторную генерацию",
@@ -2095,32 +1837,25 @@
   "chainOfThoughtProcessedIn": "Обработано · {seconds} с",
   "chainOfThoughtProcessedSteps": "Обработано · шагов: {count}",
   "displaySettingsPageShowChatListDateTitle": "Показывать даты в списке чатов",
-  "displaySettingsPageShowChatListDateSubtitle": "Группировать диалоги по датам и показывать подписи групп",
   "displaySettingsPageEnableImageCropperTitle": "Обрезка изображений",
   "displaySettingsPageEnableImageCropperSubtitle": "Обрезать изображения после выбора из галереи или съёмки",
   "displaySettingsPageKeepSidebarOpenOnAssistantTapTitle": "Не закрывать боковую панель при выборе ассистента",
   "displaySettingsPageKeepSidebarOpenOnTopicTapTitle": "Не закрывать боковую панель при выборе темы",
   "displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle": "Не сворачивать список ассистентов при закрытии панели",
   "displaySettingsPageShowUpdatesTitle": "Показывать обновления",
-  "displaySettingsPageShowUpdatesSubtitle": "Показывать уведомления об обновлениях приложения",
   "displaySettingsPageKeepScreenOnDuringGenerationTitle": "Не выключать экран во время генерации",
   "displaySettingsPageKeepScreenOnDuringGenerationSubtitle": "Предотвращает прерывание генерации блокировкой экрана. Увеличивает расход батареи.",
   "displaySettingsPageMessageNavButtonsTitle": "Кнопки навигации по сообщениям",
-  "displaySettingsPageMessageNavButtonsSubtitle": "Когда показывать кнопки быстрого перехода",
   "displaySettingsPageMessageNavButtonsModeAlways": "Всегда",
   "displaySettingsPageMessageNavButtonsModeScroll": "При прокрутке",
-  "displaySettingsPageMessageNavButtonsModeHover": "При наведении мыши",
-  "displaySettingsPageMessageNavButtonsModeScrollAndHover": "При прокрутке или наведении",
   "displaySettingsPageMessageNavButtonsModeNever": "Никогда не показывать",
   "displaySettingsPageUseNewAssistantAvatarUxTitle": "Аватар ассистента в заголовке чата",
   "displaySettingsPageHapticsOnSidebarTitle": "Виброотклик боковой панели",
-  "displaySettingsPageHapticsOnSidebarSubtitle": "Виброотклик при открытии и закрытии боковой панели",
   "displaySettingsPageHapticsGlobalTitle": "Общий виброотклик",
   "displaySettingsPageHapticsIosSwitchTitle": "Виброотклик переключателей",
   "displaySettingsPageHapticsOnListItemTapTitle": "Виброотклик элементов списка",
   "displaySettingsPageHapticsOnCardTapTitle": "Виброотклик карточек",
   "displaySettingsPageHapticsOnGenerateTitle": "Виброотклик при генерации",
-  "displaySettingsPageHapticsOnGenerateSubtitle": "Включить виброотклик во время генерации",
   "displaySettingsPageNewChatAfterDeleteTitle": "Новый чат после удаления темы",
   "displaySettingsPageNewChatOnAssistantSwitchTitle": "Новый чат при смене ассистента",
   "displaySettingsPageNewChatOnLaunchTitle": "Новый чат при запуске",
@@ -2128,14 +1863,6 @@
   "displaySettingsPageLongPasteAsFileTitle": "Вставлять длинный текст как файл",
   "displaySettingsPageLongPasteAsFileThresholdTitle": "Порог преобразования",
   "displaySettingsPageLongPasteAsFileThresholdUnit": "символов",
-  "displaySettingsPageSendShortcutTitle": "Клавиши отправки",
-  "displaySettingsPageSendShortcutEnter": "Enter",
-  "displaySettingsPageSendShortcutCtrlEnter": "Ctrl/Cmd + Enter",
-  "displaySettingsPageAutoSwitchTopicsTitle": "Автоматически переходить к темам",
-  "desktopDisplaySettingsTopicPositionTitle": "Расположение тем",
-  "desktopDisplaySettingsTopicPositionLeft": "Слева",
-  "desktopDisplaySettingsTopicPositionRight": "Справа",
-  "displaySettingsPageNewChatOnLaunchSubtitle": "Автоматически создавать новый чат при запуске",
   "displaySettingsPageChatFontSizeTitle": "Размер шрифта чата",
   "displaySettingsPageAutoScrollEnableTitle": "Автопрокрутка вниз",
   "displaySettingsPageAutoScrollIdleTitle": "Задержка возврата автопрокрутки",
@@ -2145,23 +1872,13 @@
   "displaySettingsPageChatBackgroundMaskTitle": "Непрозрачность затемнения фона чата",
   "displaySettingsPageChatInputBackgroundOpacityTitle": "Непрозрачность фона поля ввода",
   "displaySettingsPageThemeSettingsTitle": "Настройки темы",
-  "displaySettingsPageThemeColorTitle": "Цвет темы",
-  "desktopSettingsFontsTitle": "Шрифты",
-  "displaySettingsPageTrayTitle": "Системный трей",
-  "displaySettingsPageTrayShowTrayTitle": "Показывать значок в трее",
-  "displaySettingsPageTrayMinimizeOnCloseTitle": "Сворачивать в трей при закрытии",
-  "desktopFontAppLabel": "Шрифт приложения",
-  "desktopFontCodeLabel": "Шрифт кода",
   "desktopFontFamilySystemDefault": "Системный по умолчанию",
   "desktopFontFamilyMonospaceDefault": "Моноширинный",
-  "desktopFontFilterHint": "Поиск шрифтов…",
   "displaySettingsPageAppFontTitle": "Шрифт приложения",
   "displaySettingsPageCodeFontTitle": "Шрифт кода",
   "fontPickerChooseLocalFile": "Выбрать локальный файл",
-  "desktopFontLoading": "Загрузка шрифтов…",
   "displaySettingsPageFontLocalFileLabel": "Локальный файл",
   "displaySettingsPageFontResetLabel": "Сбросить настройки шрифтов",
-  "displaySettingsPageOtherSettingsTitle": "Другие настройки",
   "themeSettingsPageDynamicColorSection": "Динамические цвета",
   "themeSettingsPageUseDynamicColorTitle": "Системные динамические цвета",
   "themeSettingsPageUseDynamicColorSubtitle": "Использовать системную палитру (Android 12+)",
@@ -2189,17 +1906,14 @@
   "customThemeDelete": "Удалить",
   "customThemeDeleteConfirm": "Удалить эту тему?",
   "customThemeCopied": "JSON темы скопирован в буфер обмена",
-  "customThemeCopyAction": "Копировать",
   "customThemeImportHint": "Вставьте сюда JSON темы",
   "customThemeImportInvalid": "Некорректный JSON темы",
-  "customThemeHexLabel": "HEX",
   "ttsServicesPageBackButton": "Назад",
   "ttsServicesPageTitle": "Голосовые сервисы",
   "ttsServicesSectionTitle": "Синтез речи",
   "ttsServicesPageSettingsTooltip": "Настройки синтеза речи",
   "ttsServicesPageAddTooltip": "Добавить",
   "asrServicesSectionTitle": "Распознавание речи",
-  "asrServicesSectionDescription": "Преобразование речи в текст на устройстве, системным или облачным сервисом.",
   "asrServicesAddTooltip": "Добавить сервис распознавания речи",
   "asrServicesEmptyTitle": "Нет сервиса распознавания речи",
   "asrServicesEmptySubtitle": "Добавьте сервис, чтобы в поле ввода чата появился микрофон.",
@@ -2221,8 +1935,6 @@
   "asrServicesStepSubtitle": "Поэтапное распознавание Step Audio",
   "asrServicesAddTitle": "Добавить распознавание речи",
   "asrServicesEditTitle": "Изменить распознавание речи",
-  "asrServicesSelectedLabel": "Выбрано",
-  "asrServicesUnavailableLabel": "Недоступно",
   "asrServicesEditAction": "Изменить",
   "asrServicesDeleteAction": "Удалить",
   "asrServicesCancelAction": "Отмена",
@@ -2264,7 +1976,6 @@
       }
     }
   },
-  "ttsServicesPageAddNotImplemented": "Добавление сервиса синтеза речи пока не реализовано",
   "ttsServicesPageSystemTtsTitle": "Системный синтез речи",
   "ttsServicesPageSystemTtsAvailableSubtitle": "Использовать встроенный системный синтез речи",
   "ttsServicesPageSystemTtsUnavailableSubtitle": "Недоступно: {error}",
@@ -2277,10 +1988,6 @@
   },
   "ttsServicesPageSystemTtsUnavailableNotInitialized": "не инициализировано",
   "ttsServicesPageTestSpeechText": "Здравствуйте! Это проверка синтеза речи.",
-  "ttsServicesPageConfigureTooltip": "Настроить",
-  "ttsServicesPageTestVoiceTooltip": "Проверить голос",
-  "ttsServicesPageStopTooltip": "Остановить",
-  "ttsServicesPageDeleteTooltip": "Удалить",
   "ttsServicesPageSystemTtsSettingsTitle": "Настройки системного синтеза речи",
   "ttsServicesPageEngineLabel": "Движок",
   "ttsServicesPageAutoLabel": "Авто",
@@ -2289,12 +1996,9 @@
   "ttsServicesPagePitchLabel": "Высота голоса",
   "ttsServicesPageSettingsSavedMessage": "Настройки сохранены.",
   "ttsServicesPageDoneButton": "Готово",
-  "ttsServicesPageNetworkSectionTitle": "Облачный синтез речи",
-  "ttsServicesPageNoNetworkServices": "Нет сервисов синтеза речи.",
   "ttsServicesDialogAddTitle": "Добавить сервис синтеза речи",
   "ttsServicesDialogEditTitle": "Изменить сервис синтеза речи",
   "ttsServicesDialogProviderType": "Провайдер",
-  "ttsServicesDialogCancelButton": "Отмена",
   "ttsServicesDialogAddButton": "Добавить",
   "ttsServicesDialogSaveButton": "Сохранить",
   "ttsServicesFieldNameLabel": "Имя",
@@ -2317,7 +2021,6 @@
   "ttsServicesFieldLanguageBoostLabel": "Приоритетный язык",
   "ttsServicesFieldBitrateLabel": "Битрейт",
   "ttsServicesFieldChannelLabel": "Каналы",
-  "ttsServicesFieldSubtitlesLabel": "Создавать субтитры",
   "ttsServicesFieldPronunciationDictionaryLabel": "Словарь произношения (по одной записи в строке)",
   "ttsServicesFieldInstructionLabel": "Описание стиля и голоса",
   "ttsServicesFieldStreamingLabel": "Потоковый режим",
@@ -2404,7 +2107,6 @@
   "imageViewerPageShareButton": "Поделиться изображением",
   "imageViewerPageCloseButton": "Закрыть предпросмотр",
   "imageViewerPageSaveButton": "Сохранить изображение",
-  "imageViewerPageCopyButton": "Скопировать изображение",
   "imageViewerPagePreviousButton": "Предыдущее изображение",
   "imageViewerPageNextButton": "Следующее изображение",
   "imageViewerPageZoomInButton": "Увеличить",
@@ -2446,7 +2148,6 @@
       }
     }
   },
-  "settingsShare": "Moru — ИИ-ассистент с открытым исходным кодом",
   "searchProviderBingLocalDescription": "Получает результаты со страниц Bing. API-ключ не нужен; работа может быть нестабильной.",
   "searchProviderDuckDuckGoDescription": "Поиск DuckDuckGo через DDGS с упором на конфиденциальность. API-ключ не нужен; доступен выбор региона.",
   "searchProviderBraveDescription": "Независимый поисковик Brave с упором на конфиденциальность, без отслеживания и профилирования.",
@@ -2553,7 +2254,6 @@
       }
     }
   },
-  "instructionInjectionSheetSubtitle": "Выберите промпт, который будет применён перед общением",
   "mcpJsonEditButtonTooltip": "Изменить JSON",
   "mcpJsonEditTitle": "Изменить JSON",
   "mcpJsonEditParseFailed": "Не удалось разобрать JSON",
@@ -2562,12 +2262,10 @@
   "mcpTimeoutDialogTitle": "Тайм-аут вызова инструмента",
   "mcpTimeoutSecondsLabel": "Тайм-аут вызова инструмента (секунды)",
   "mcpTimeoutInvalid": "Введите положительное число секунд",
-  "quickPhraseEditButton": "Изменить",
   "quickPhraseDeleteButton": "Удалить",
   "quickPhraseMenuTitle": "Быстрая фраза",
   "chatInputBarQuickPhraseTooltip": "Быстрая фраза",
   "assistantEditQuickPhraseDescription": "Управляйте быстрыми фразами этого ассистента. Нажмите кнопку ниже, чтобы добавить фразы.",
-  "assistantEditManageQuickPhraseButton": "Управление быстрыми фразами",
   "assistantEditPageMemoryTab": "Память",
   "assistantEditLocalToolTimeInfoTitle": "Дата и время",
   "assistantEditLocalToolTimeInfoSubtitle": "Читать дату, день недели, время, часовой пояс, смещение UTC и метку времени устройства.",
@@ -2594,20 +2292,7 @@
   "assistantEditLocalToolLocationTitle": "Текущее местоположение",
   "assistantEditLocalToolLocationSubtitle": "Однократно получать местоположение устройства. Требуется разрешение на доступ к геопозиции.",
   "assistantEditLocalToolWeatherTitle": "Погода",
-  "assistantEditLocalToolWeatherSubtitle": "Получать Apple Weather для текущего или указанного места. В результате отображается указание источника WeatherKit.",
   "assistantEditLocalToolHealthTitle": "Сводка здоровья",
-  "assistantEditLocalToolHealthSubtitle": "Читать сводку активности из Apple Health с сохранением конфиденциальности. Требуется доступ к данным здоровья.",
-  "assistantEditLocalToolHealthSelectedCount": "Выбрано: {selected}/{total}",
-  "@assistantEditLocalToolHealthSelectedCount": {
-    "placeholders": {
-      "selected": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "healthDataSettingsTitle": "Данные здоровья",
   "healthDataSettingsDescription": "Данные HealthKit, доступные текущему ассистенту в обычных диалогах. Переключатели задают, что Moru может запрашивать; фактическим доступом к данным управляет iOS.",
   "healthDataSettingsBadge": "Включено: {selected}/{total}",
@@ -2665,14 +2350,9 @@
   "healthDataSettingsTypeBloodGlucoseTitle": "Глюкоза в крови",
   "healthDataSettingsTypeBloodGlucoseSubtitle": "Измерение глюкозы в крови",
   "assistantEditLocalToolRemindersQueryTitle": "Чтение напоминаний",
-  "assistantEditLocalToolRemindersQuerySubtitle": "Читать напоминания на устройстве. Требуется полный доступ к напоминаниям.",
   "assistantEditLocalToolRemindersCreateTitle": "Создать напоминание",
-  "assistantEditLocalToolRemindersCreateSubtitle": "Создавать напоминания с вашим подтверждением. Требуется полный доступ к напоминаниям.",
   "assistantEditLocalToolRemindersCompleteTitle": "Завершить напоминание",
-  "assistantEditLocalToolRemindersCompleteSubtitle": "Отмечать напоминания выполненными с вашим подтверждением. Требуется полный доступ к напоминаниям.",
-  "assistantEditMemorySwitchDescription": "Позволить ассистенту создавать и использовать записи памяти между чатами.",
   "assistantEditRecentChatsSwitchTitle": "Сведения о последних чатах",
-  "assistantEditRecentChatsSwitchDescription": "Добавлять заголовки последних диалогов для улучшения контекста.",
   "assistantEditAddMemoryButton": "Добавить запись в память",
   "assistantEditMemoryEmpty": "Записей в памяти пока нет",
   "assistantEditMemoryDialogTitle": "Память",
@@ -2721,12 +2401,8 @@
   "assistantEditPresetInputHintAssistant": "Введите сообщение ассистента…",
   "assistantEditPresetEmpty": "Заготовленных сообщений пока нет",
   "assistantEditPresetEditDialogTitle": "Изменить заготовленное сообщение",
-  "assistantEditPresetRoleUser": "Пользователь",
-  "assistantEditPresetRoleAssistant": "Ассистент",
-  "desktopTtsPleaseAddProvider": "Сначала добавьте провайдера синтеза речи",
   "settingsPageNetworkProxy": "Сетевой прокси",
   "networkProxyEnableLabel": "Включить прокси",
-  "networkProxySettingsHeader": "Настройки прокси",
   "networkProxyType": "Тип прокси",
   "networkProxyTypeHttp": "HTTP",
   "networkProxyTypeHttps": "HTTPS",
@@ -2782,7 +2458,6 @@
       }
     }
   },
-  "desktopShowProviderInModelCapsule": "Показывать провайдера в плашке модели",
   "messageWebViewOpenInBrowser": "Открыть в браузере",
   "messageWebViewConsoleLogs": "Журнал консоли",
   "messageWebViewNoConsoleMessages": "В консоли нет сообщений",
@@ -2792,11 +2467,9 @@
   "providerDetailPageMultiSelectButton": "Множественный выбор",
   "providerDetailPageBatchDetectButton": "Проверить",
   "providerDetailPageBatchDetecting": "Проверка…",
-  "providerDetailPageBatchDetectStart": "Начать проверку",
   "providerDetailPageDetectSuccess": "Проверка успешна",
   "providerDetailPageDetectFailed": "Проверка не удалась",
   "providerDetailPageDeleteSelectedModelsButton": "Удалить",
-  "providerDetailPageDeleteSelectedModelsTooltip": "Удалить выбранные модели",
   "providerDetailPageDeleteSelectedModelsConfirm": "Удалить выбранные модели ({count})? Отменить удаление нельзя.",
   "@providerDetailPageDeleteSelectedModelsConfirm": {
     "placeholders": {
@@ -2806,7 +2479,6 @@
     }
   },
   "providerDetailPageDeleteFailedDetectedModelsButton": "Удалить недоступные",
-  "providerDetailPageDeleteFailedDetectedModelsTooltip": "Удалить модели, не прошедшие проверку",
   "providerDetailPageDeleteFailedDetectedModelsConfirm": "Удалить модели, не прошедшие проверку ({count})? Отменить удаление нельзя.",
   "@providerDetailPageDeleteFailedDetectedModelsConfirm": {
     "placeholders": {
@@ -2870,7 +2542,6 @@
   "contextLogSnapshotFallbackTitle": "Снимок",
   "contextLogKindFull": "Полный снимок",
   "contextLogKindUpdate": "Добавочные изменения",
-  "contextLogSectionComposition": "Состав",
   "contextLogLoadOlder": "Загрузить более ранние записи",
   "contextLogLoading": "Загрузка…",
   "contextLogAllLoaded": "Все записи загружены",
@@ -2878,7 +2549,6 @@
   "logViewerEmpty": "Записей пока нет",
   "logViewerCurrentLog": "Текущий журнал",
   "logViewerExport": "Экспорт",
-  "logViewerOpenFolder": "Открыть папку журналов",
   "logViewerRequestsCount": "Запросов: {count}",
   "@logViewerRequestsCount": {
     "placeholders": {
@@ -3040,8 +2710,6 @@
   "memoryEntrySourceTool": "Инструмент",
   "memoryEntrySourceExtracted": "Извлечено",
   "memoryEntrySourceDistilled": "Сформировано",
-  "memoryEntryStatusActive": "Активен",
-  "memoryEntryStatusArchived": "В архиве",
   "memoryEntryUpdatedAt": "Обновлено: {date}",
   "@memoryEntryUpdatedAt": {
     "placeholders": {
@@ -3198,7 +2866,6 @@
   "memoryEntriesPageTitle": "Все записи памяти",
   "userProfilePageTitle": "Профиль пользователя",
   "userProfilePreferredName": "Предпочитаемое имя",
-  "userProfilePreferredNameHint": "Как модель должна к вам обращаться; не связано с именем в боковой панели",
   "userProfileGender": "Пол",
   "userProfilePronouns": "Местоимения",
   "userProfilePreferredLanguage": "Предпочитаемый язык",
@@ -3319,15 +2986,12 @@
       }
     }
   },
-  "memoryUiContentLabel": "Содержимое",
   "memoryUiValueLabel": "Значение",
   "memoryUiCustomKeyLabel": "Ключ",
   "memoryUiStatusLabel": "Статус",
   "memoryUiAssistantLabel": "Ассистент",
   "memoryUiAssistantAll": "Все ассистенты",
   "memoryUiSearchClear": "Очистить поиск",
-  "memoryUiAssistantLegacyTitle": "Старые записи (только чтение)",
-  "memoryUiAssistantLegacySubtitle": "Записи памяти этого ассистента из предыдущих версий",
   "assistantEditMemorySwitchTitle": "Использовать долговременную память",
   "assistantEditMemorySwitchSubtitle": "Добавлять сохранённые записи в контекст чатов и разрешить ассистенту создавать новые",
   "assistantEditAutoOrganizeTitle": "Автоупорядочивание памяти",
@@ -3399,14 +3063,6 @@
   },
   "worldBookNoEntriesHint": "Нет записей",
   "worldBookUnnamedEntry": "Запись без названия",
-  "worldBookKeywordsLine": "Ключевые слова: {keywords}",
-  "@worldBookKeywordsLine": {
-    "placeholders": {
-      "keywords": {
-        "type": "String"
-      }
-    }
-  },
   "worldBookEditEntry": "Изменить запись",
   "worldBookDeleteEntry": "Удалить запись",
   "worldBookNameLabel": "Имя",
@@ -3442,7 +3098,6 @@
   "toolApprovalDeny": "Отклонить",
   "toolApprovalDenyTitle": "Отклонить вызов инструмента",
   "toolApprovalDenyHint": "Причина (необязательно)",
-  "toolApprovalDeniedMessage": "Пользователь отклонил вызов инструмента «{toolName}». Причина: {reason}",
   "askUserCardSubmit": "Отправить ответ",
   "askUserCardCustomHint": "Введите ответ",
   "askUserCardSomethingElse": "Другой вариант",
@@ -3450,7 +3105,6 @@
   "askUserCardSkipped": "Пропущено",
   "askUserCardAnswered": "Ответ получен",
   "askUserCardInactive": "Этот вопрос больше не активен. Сгенерируйте ответ заново или продолжите диалог.",
-  "askUserCardCancelled": "Вопрос отменён",
   "askUserCardQuestionCount": "{count, plural, one{Задать {count} вопрос} few{Задать {count} вопроса} many{Задать {count} вопросов} other{Задать {count} вопроса}}",
   "@askUserCardQuestionCount": {
     "placeholders": {
@@ -3625,7 +3279,6 @@
   "migrationBackupReadyDetail": "ZIP-копия готова",
   "migrationSavingBackupZipDetail": "Сохранение ZIP-копии",
   "migrationBackupFileSavedTitle": "ZIP-копия сохранена",
-  "migrationChecklistBackupFiles": "Экспортировать ZIP-копию Hive",
   "migrationChecklistPrepareSqlite": "Подготовить базу SQLite",
   "migrationChecklistMigrateMessages": "Перенести диалоги и сообщения",
   "migrationChecklistMigrateToolEvents": "Перенести записи инструментов",
@@ -3639,7 +3292,6 @@
   "migrationMessageCount": "Сообщения",
   "migrationConvertedCount": "Преобразовано",
   "migrationMalformedCount": "Некорректных записей",
-  "migrationMissingFilesCount": "Отсутствующих файлов",
   "migrationRestartButton": "Перезапустить Moru",
   "migrationFailedTitle": "Не удалось перенести данные",
   "migrationFailedSubtitle": "Исходные данные Hive не повреждены. Ранее созданные резервные копии не изменены. Изучите причину ниже и повторите попытку.",
@@ -3652,7 +3304,6 @@
   "migrationSkipDialogCancel": "Отмена",
   "migrationSkipDialogConfirm": "Пропустить и начать заново",
   "migrationChatsExportDegradedNote": "Экспорт chats.json пропущен из-за ошибки. В ZIP-копии всё равно сохранены исходные файлы Hive с полной историей чатов.",
-  "timelineJumpToLatest": "К последним сообщениям",
   "largeContentShowMore": "Показать ещё: {count}",
   "@largeContentShowMore": {
     "placeholders": {
@@ -3747,7 +3398,6 @@
   "memoryTraceMutationSummary": "Сводка чата записана",
   "memoryTraceBefore": "До",
   "memoryTraceAfter": "После",
-  "memoryTraceEmptyValue": "(пусто)",
   "memoryTraceStepsCount": "Шагов: {count}",
   "@memoryTraceStepsCount": {
     "placeholders": {
@@ -3848,14 +3498,12 @@
       }
     }
   },
-  "localSnapshotKeepSubtitle": "Также по одной копии за прошлую неделю и прошлый месяц, чтобы можно было восстановить данные при поздно обнаруженной проблеме.",
   "localSnapshotKeepWeekly": "Хранить копию за прошлую неделю",
   "localSnapshotKeepMonthly": "Хранить копию за прошлый месяц",
   "localSnapshotKeepProtectedNote": "Последняя копия, содержащая данные, никогда не удаляется автоматически независимо от этой настройки.",
   "localSnapshotMaximumTitle": "Лимит места",
   "localSnapshotMaximumUnlimited": "Без лимита",
   "localSnapshotAnnounceTitle": "Уведомлять о сохранении копии",
-  "localSnapshotAnnounceSubtitle": "Об ошибках сообщается всегда. Эта настройка добавляет короткое уведомление об успешном сохранении.",
   "localSnapshotTakeNow": "Сохранить копию сейчас",
   "localSnapshotManageCopies": "Управление копиями",
   "localSnapshotUsage": "{count, plural, =0{Нет копий} one{{count} копия} few{{count} копии} many{{count} копий} other{{count} копии}} · {size}",
@@ -3890,7 +3538,6 @@
     }
   },
   "localSnapshotStatusSkippedSpace": "Пропущено: недостаточно свободного места на устройстве",
-  "localSnapshotStatusUnchanged": "С момента последней копии ничего не изменилось",
   "localSnapshotCopiesTitle": "Локальные копии",
   "localSnapshotCopiesEmpty": "Локальных копий пока нет",
   "localSnapshotCopiesEmptyHint": "Копия сохраняется автоматически при изменении данных и всегда создаётся перед восстановлением.",
@@ -3911,7 +3558,6 @@
     }
   },
   "localSnapshotCopyContentsUnknown": "Содержимое станет известно после восстановления",
-  "localSnapshotCopyPinned": "Сохраняется",
   "localSnapshotActionRestore": "Восстановить",
   "localSnapshotActionExport": "Экспорт",
   "localSnapshotActionDelete": "Удалить",
@@ -3950,7 +3596,6 @@
     }
   },
   "localSnapshotDeleteDone": "Копия удалена",
-  "localSnapshotBusyMessage": "Другая задача резервного копирования уже выполняется",
   "localSnapshotRunInBackground": "Продолжить в фоне",
   "localSnapshotRunningInBackground": "Сохранение копии в фоне",
   "startupRecoveryLocalCopiesAvailable": "На устройстве остаются локальные копии: {count, plural, one{{count} копия} few{{count} копии} many{{count} копий} other{{count} копии}}. Последняя — от {when}. Сброс не удаляет их. После перезапуска можно восстановить копию: Настройки › Резервное копирование › Локальные копии.",
@@ -3996,17 +3641,10 @@
   "toolSchemaEditorPageTitle": "Изменить описание",
   "toolSchemaSettingsCancel": "Отмена",
   "workspaceFileNotAvailable": "Файл недоступен",
-  "workspaceTerminalNotAvailable": "Терминал недоступен",
-  "workspacePreviewCopyPath": "Скопировать путь",
   "workspacePreviewShare": "Поделиться",
-  "workspacePreviewOpenExternally": "Открыть во внешнем приложении",
   "workspacePreviewOpenWith": "Открыть с помощью…",
-  "workspacePreviewFileTooLarge": "Файл слишком большой для предпросмотра. Откройте его во внешнем приложении.",
   "workspacePreviewSource": "Источник",
   "workspacePreviewRendered": "Представление",
-  "workspacePreviewFileName": "Имя",
-  "workspacePreviewFileSize": "Размер",
-  "workspacePreviewFileModified": "Изменено",
   "workspacePreviewPathCopied": "Путь скопирован",
   "workspacePreviewLineCount": "Строк: {count}",
   "@workspacePreviewLineCount": {
@@ -4035,7 +3673,6 @@
   "workspaceFilesRetry": "Повторить",
   "workspaceFilesPreview": "Предпросмотр",
   "workspaceFilesRename": "Переименовать",
-  "workspaceFilesMove": "Переместить",
   "workspaceFilesDelete": "Удалить",
   "workspaceFilesShare": "Поделиться",
   "workspaceFilesCopyPath": "Скопировать путь",
@@ -4044,7 +3681,6 @@
   "workspaceFilesNameHint": "Введите имя",
   "workspaceFilesCreate": "Создать",
   "workspaceFilesCancel": "Отмена",
-  "workspaceFilesConfirm": "Подтвердить",
   "workspaceFilesSave": "Сохранить",
   "workspaceFilesDeleteTitle": "Удалить этот объект?",
   "workspaceFilesDeleteMessage": "Удалить {name}?",
@@ -4064,7 +3700,6 @@
     }
   },
   "workspaceFilesMoveTitle": "Переместить в папку",
-  "workspaceFilesMoveHere": "Переместить сюда",
   "workspaceFilesPathCopied": "Путь скопирован",
   "workspaceFilesInvalidName": "Недопустимое название",
   "workspaceFilesInvalidPath": "Этот путь находится за пределами папки",
@@ -4111,9 +3746,7 @@
   "workspaceFilesKindManaged": "Управляемое",
   "workspaceFilesKindLinked": "Связано",
   "workspaceFilesMissingWorkspace": "Рабочее пространство не найдено",
-  "workspaceFilesClose": "Закрыть",
   "workspacesTitle": "Рабочие пространства",
-  "workspacesCreate": "Создать",
   "workspacesCreateTitle": "Новое рабочее пространство",
   "workspacesNameLabel": "Имя",
   "workspacesNameHint": "Название рабочего пространства",
@@ -4121,16 +3754,6 @@
   "workspacesEmpty": "Рабочих пространств пока нет",
   "workspacesEmptyCta": "Создать рабочее пространство",
   "workspacesSettings": "Настройки",
-  "workspacesOpenFiles": "Открыть файлы",
-  "workspacesLastUsedNever": "Ещё не использовалось",
-  "workspacesLastUsed": "Последнее использование: {when}",
-  "@workspacesLastUsed": {
-    "placeholders": {
-      "when": {
-        "type": "String"
-      }
-    }
-  },
   "workspacesDeleteTitle": "Удалить это рабочее пространство?",
   "workspacesDeleteMessage": "Удалить рабочее пространство {name}?",
   "@workspacesDeleteMessage": {
@@ -4153,10 +3776,6 @@
   "workspacesSettingsTitle": "Настройки рабочего пространства",
   "workspacesShellNeedsApproval": "Спрашивать перед выполнением команд Shell",
   "workspacesDefaultCwd": "Рабочий каталог по умолчанию",
-  "workspacesDefaultCwdHint": "Относительный путь, например src",
-  "workspacesDefaultCwdInvalid": "Укажите относительный путь без ..",
-  "workspacesCreateManaged": "Создать рабочее пространство",
-  "workspacesLinkExisting": "Привязать существующую папку",
   "workspacesUnlink": "Отвязать",
   "workspacesItemMore": "Действия с рабочим пространством",
   "workspaceToolDenied": "Отклонено",
@@ -4165,15 +3784,9 @@
   "workspaceToolInterrupted": "прервано",
   "workspaceToolEnvironmentNotReady": "Изолированная среда не установлена",
   "workspaceToolInstall": "Установить",
-  "workspaceToolFuzzy": "неточное совпадение",
-  "workspaceToolCreated": "создано",
-  "workspaceToolUpdated": "обновлено",
-  "workspaceToolTruncated": "обрезано",
-  "workspaceToolImageTag": "изображение",
   "workspaceToolAllowAll": "Разрешить всё в этой сессии",
   "workspaceToolStdout": "stdout",
   "workspaceToolStderr": "stderr",
-  "workspaceToolOpenFullOutput": "Открыть полный вывод",
   "workspaceToolChangedFiles": "Изменённые файлы",
   "replyChangedFilesSummary": "{count, plural, one{Изменён {count} файл} few{Изменено {count} файла} other{Изменено {count} файлов}}",
   "workspaceToolCancel": "Отмена",
@@ -4182,7 +3795,6 @@
   "workspaceToolCopyDiff": "Скопировать изменения",
   "workspaceToolCopied": "Скопировано",
   "workspaceToolDiffTruncated": "Список изменений обрезан",
-  "workspaceToolOpenPreview": "Открыть предпросмотр",
   "workspaceToolNoOutput": "Нет вывода",
   "workspaceToolNotAvailable": "Недоступно",
   "workspaceToolClose": "Закрыть",
@@ -4197,14 +3809,6 @@
   "workspaceToolTitleUpdatePlan": "План",
   "taskPlanProgress": "План · {done}/{total}",
   "workspaceToolTitleShellOutput": "Фоновая задача",
-  "workspaceToolCount": "{count}",
-  "@workspaceToolCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "workspaceToolMoreFiles": "+{count}",
   "@workspaceToolMoreFiles": {
     "placeholders": {
@@ -4246,7 +3850,6 @@
       }
     }
   },
-  "workspaceEnvEngineNative": "Системная оболочка",
   "workspaceEnvPhaseNotInstalled": "Не установлено",
   "workspaceEnvPhaseDownloading": "Загрузка",
   "workspaceEnvPhaseVerifying": "Проверка",
@@ -4255,62 +3858,15 @@
   "workspaceEnvPhaseReady": "Готово",
   "workspaceEnvPhaseError": "Ошибка",
   "workspaceEnvPhaseNeedsRestart": "Требуется перезапуск",
-  "workspaceEnvMetaLine": "{version} · {arch}",
-  "@workspaceEnvMetaLine": {
-    "placeholders": {
-      "version": {
-        "type": "String"
-      },
-      "arch": {
-        "type": "String"
-      }
-    }
-  },
-  "workspaceEnvInstalledAt": "Установлено: {date}",
-  "@workspaceEnvInstalledAt": {
-    "placeholders": {
-      "date": {
-        "type": "String"
-      }
-    }
-  },
-  "workspaceEnvDiskUsage": "Занято на диске: {size}",
-  "@workspaceEnvDiskUsage": {
-    "placeholders": {
-      "size": {
-        "type": "String"
-      }
-    }
-  },
-  "workspaceEnvRuntimeReason": "{reason}",
-  "@workspaceEnvRuntimeReason": {
-    "placeholders": {
-      "reason": {
-        "type": "String"
-      }
-    }
-  },
   "workspaceEnvInstall": "Установить",
   "workspaceEnvInstallSubtitleAndroid": "Выберите Ubuntu, Alpine, Debian или импортируйте локальный образ rootfs.",
-  "workspaceEnvInstallSubtitleIos": "Встроено, загрузка не требуется",
   "workspaceEnvCancel": "Отмена",
   "workspaceEnvRetry": "Повторить",
   "workspaceEnvRepair": "Исправить",
   "workspaceEnvReset": "Сбросить",
   "workspaceEnvResetConfirmTitle": "Сбросить среду?",
-  "workspaceEnvResetConfirmBody": "Будут удалены установленные пакеты и файловая система изолированной среды.",
   "workspaceEnvCheckForUpdate": "Проверить обновления",
-  "workspaceEnvUpdate": "Обновить",
-  "workspaceEnvAvailableVersion": "Доступна версия {version}",
-  "@workspaceEnvAvailableVersion": {
-    "placeholders": {
-      "version": {
-        "type": "String"
-      }
-    }
-  },
   "workspaceEnvUpToDate": "Установлена последняя версия",
-  "workspaceEnvRestartBanner": "Перезапустите Moru для завершения",
   "workspaceEnvDetectingMirrors": "Поиск самых быстрых зеркал…",
   "workspaceEnvApplyingMirror": "Применение зеркала {category}…",
   "@workspaceEnvApplyingMirror": {
@@ -4322,31 +3878,12 @@
   },
   "workspaceEnvMirrorsSection": "Зеркала",
   "workspaceEnvUseMirror": "Использовать зеркало",
-  "workspaceEnvDetect": "Проверить",
   "workspaceEnvOfficial": "Официальное",
-  "workspaceEnvMirrorsDisabled": "Зеркала меняются внутри изолированной среды. Дождитесь её готовности.",
-  "workspaceEnvMirrorsDisabledReason": "Изменение зеркал в изолированной среде недоступно: {reason}",
-  "@workspaceEnvMirrorsDisabledReason": {
-    "placeholders": {
-      "reason": {
-        "type": "String"
-      }
-    }
-  },
-  "workspaceEnvMirrorDetectTitle": "Скорость зеркал",
   "workspaceEnvMirrorLatency": "{ms} мс",
   "@workspaceEnvMirrorLatency": {
     "placeholders": {
       "ms": {
         "type": "int"
-      }
-    }
-  },
-  "workspaceEnvMirrorFailed": "{reason}",
-  "@workspaceEnvMirrorFailed": {
-    "placeholders": {
-      "reason": {
-        "type": "String"
       }
     }
   },
@@ -4373,27 +3910,11 @@
   "workspaceEnvChipInstallingIndeterminate": "Установка…",
   "workspaceEnvChipError": "Ошибка среды",
   "workspaceEnvChipRestart": "Требуется перезапуск",
-  "workspaceEnvNativeExplanation": "На компьютере Moru использует системную оболочку вместо изолированной Linux-среды.",
   "workspaceEnvNativeShellPath": "Оболочка: {path}",
   "@workspaceEnvNativeShellPath": {
     "placeholders": {
       "path": {
         "type": "String"
-      }
-    }
-  },
-  "workspaceEnvNativeShellApproval": "Для инструмента Shell требуется подтверждение, если в этой сессии не разрешены все инструменты.",
-  "workspaceEnvDownloadProgress": "{downloaded} / {total} МБ ({percent}%)",
-  "@workspaceEnvDownloadProgress": {
-    "placeholders": {
-      "downloaded": {
-        "type": "String"
-      },
-      "total": {
-        "type": "String"
-      },
-      "percent": {
-        "type": "int"
       }
     }
   },
@@ -4406,16 +3927,12 @@
   "skillsTab": "Навыки",
   "skillsSearchHint": "Поиск навыков",
   "skillsEmptyTitle": "Навыков пока нет",
-  "skillsEmptyBody": "Навык — папка с файлом SKILL.md. Импортируйте Markdown, файл .md или .zip либо укажите ссылку GitHub.",
   "skillsEmptyFormat": "---\nname: my-skill\ndescription: Что делает этот навык\n---\n\n# Инструкции",
-  "skillsImport": "Импорт",
   "skillsImportPaste": "Вставить Markdown",
   "skillsImportFile": "Из файла",
   "skillsImportGitHub": "Из GitHub",
   "skillsImportPasteLabel": "SKILL.md",
   "skillsImportPasteHint": "Вставьте SKILL.md с заголовком YAML",
-  "skillsImportGitHubLabel": "URL GitHub",
-  "skillsImportGitHubHint": "github.com/owner/repo или github.com/owner/repo/tree/ref/path",
   "skillsImportConfirm": "Импорт",
   "skillsCancel": "Отмена",
   "skillsSave": "Сохранить",
@@ -4446,12 +3963,9 @@
   "skillsDisabledHint": "Чтобы использовать навык здесь, включите его в разделе «Навыки».",
   "skillsOpenPage": "Управление навыками",
   "skillsInheritAssistant": "Наследовать от ассистента",
-  "skillsInheritAssistantSubtitle": "Использовать те же навыки, что и у ассистента этого диалога.",
-  "skillsActiveLabel": "Активен",
   "skillsSessionTitle": "Навыки для этого чата",
   "skillsEditTitle": "Изменить навык",
   "skillsDetailKindLabel": "Навык",
-  "skillsNoEnabled": "Нет включённых навыков",
   "terminalTitle": "Терминал",
   "terminalOpenInSystem": "Открыть в системном терминале",
   "terminalHostDirectory": "Каталог основной системы",
@@ -4468,29 +3982,18 @@
   "terminalMore": "Больше",
   "terminalNameLabel": "Имя",
   "terminalCancel": "Отмена",
-  "terminalSave": "Сохранить",
-  "workspaceDeskMenuWorkspace": "Рабочее пространство",
-  "workspaceDeskMenuSkills": "Навыки",
-  "workspaceDeskBarTitle": "Рабочее пространство",
-  "workspaceDeskBarNoWorkspace": "Нет рабочего пространства",
   "workspaceDeskBarEmptyHint": "Привяжите рабочее пространство на панели инструментов для просмотра файлов",
-  "workspaceDeskBarToggle": "Файлы рабочего пространства",
   "workspaceDeskOpenSystemTerminal": "Открыть в системном терминале",
   "workspaceDeskReveal": "Показать в файловом менеджере",
-  "workspaceDeskBarClose": "Закрыть панель рабочего пространства",
   "workspaceEntryBind": "Привязать рабочее пространство",
   "workspaceEntryUnbind": "Отвязать",
   "workspaceEntryChange": "Изменить",
   "workspaceEntrySetAssistantDefault": "По умолчанию для ассистента",
-  "workspaceEntryLocked": "Заблокировано",
   "workspaceEntryChangeConfirmTitle": "Сменить рабочее пространство?",
   "workspaceEntryUnbindConfirmTitle": "Отвязать?",
   "workspaceEntryChangeConfirmBody": "В этом диалоге уже использовались инструменты рабочего пространства. Ссылки на файлы в предыдущих сообщениях могут перестать работать.",
   "workspaceEntryCwd": "Рабочий каталог",
-  "workspaceEntryCwdHint": "Относительно корня рабочего пространства",
   "workspaceEntryCwdInvalid": "Путь некорректен или выходит за пределы рабочего пространства",
-  "workspaceEntryCwdMissing": "Такой каталог не существует",
-  "workspaceEntryCwdCreate": "Создать",
   "workspaceEntryFiles": "Файлы",
   "workspaceEntryTerminal": "Терминал",
   "workspaceEntryOpenSystemTerminal": "Открыть в системном терминале",
@@ -4504,9 +4007,7 @@
   "workspaceEntryDefaultWorkspace": "Рабочее пространство по умолчанию",
   "workspaceEntryDefaultWorkspaceSubtitle": "Новые диалоги с этим ассистентом будут привязаны к этому рабочему пространству.",
   "workspaceEntryNone": "Нет",
-  "workspaceEntryStartConversationFirst": "Сначала начните диалог",
   "workspaceEntryTooltip": "Рабочее пространство",
-  "workspaceEntryPickerTitle": "Выберите рабочее пространство",
   "settingsPageWorkspace": "Рабочее пространство и среда",
   "settingsPageSkills": "Навыки",
   "commonClose": "Закрыть",
@@ -4534,7 +4035,6 @@
   "workspaceMgmtImportFromFolderSubtitle": "Скопировать папку в новое управляемое рабочее пространство",
   "workspaceMgmtKindSection": "Тип",
   "workspaceMgmtCreate": "Создать",
-  "workspaceMgmtShellApprovalSubtitle": "Спрашивать перед каждой командой",
   "workspaceMgmtDefaultCwdRoot": "/",
   "workspaceMgmtPickCwdTitle": "Рабочий каталог по умолчанию",
   "workspaceMgmtFolderPickerUnavailable": "Выбор папки недоступен.",
@@ -4600,12 +4100,8 @@
   "workspacePreviewCopy": "Копировать",
   "workspacePreviewRetry": "Повторить",
   "workspacePreviewLoadError": "Не удалось загрузить файл.",
-  "workspacePreviewRevealInFinder": "Показать в Finder",
-  "workspacePreviewOpenInSystemApp": "Открыть системным приложением",
   "workspacePreviewOpenInBrowser": "Открыть в браузере",
   "workspacePreviewTable": "Таблица",
-  "workspacePreviewPlainLanguage": "Код",
-  "workspacePreviewOpen": "Открыть",
   "workspacePreviewRevealFailed": "Не удалось показать файл в файловом менеджере.",
   "workspacePreviewEmptyTable": "Эта таблица пуста.",
   "workspaceFilesNew": "Создать",
@@ -4624,16 +4120,12 @@
     }
   },
   "skillsImportTooltip": "Импортировать навык",
-  "skillsImportPasteSubtitle": "Вставьте SKILL.md с заголовком YAML",
-  "skillsImportFileSubtitle": "Выберите файл .md или .zip",
-  "skillsImportGitHubSubtitle": "Импортировать SKILL.md из репозитория",
   "skillsImportResolving": "Поиск репозитория…",
   "skillsImportDownloading": "Загрузка…",
   "skillsImportExtracting": "Распаковка…",
   "skillsImportInstalling": "Установка…",
   "skillsImportGitHubRepoLabel": "URL репозитория",
   "skillsImportGitHubUrlHint": "https://github.com/owner/repo или owner/repo[/path]",
-  "skillsImportGitHubHelp": "Поддерживается SKILL.md в корне репозитория или в подпапке.",
   "skillsEmptyHint": "Навык — файл SKILL.md с заголовком параметров. После импорта ассистент сможет использовать его по необходимости.",
   "skillsMoreActions": "Больше",
   "skillsSearchClear": "Очистить",
@@ -4647,8 +4139,6 @@
       }
     }
   },
-  "workspaceToolAwaitingApproval": "Ожидание разрешения",
-  "workspaceToolCompleted": "Готово",
   "workspaceToolLines": "Строк: {count}",
   "@workspaceToolLines": {
     "placeholders": {
@@ -4681,7 +4171,6 @@
       }
     }
   },
-  "workspaceToolExpand": "Развернуть",
   "workspaceToolSectionCommand": "Команда",
   "workspaceToolSectionPath": "Путь",
   "workspaceToolSectionPattern": "Шаблон",
@@ -4689,7 +4178,6 @@
   "workspaceToolSectionDiff": "Изменения",
   "workspaceToolSectionError": "Ошибка",
   "workspaceToolSavedOutput": "Полный вывод сохранён",
-  "workspaceToolApprove": "Разрешить",
   "workspaceToolDeny": "Отклонить",
   "workspaceToolCopy": "Копировать",
   "workspaceEnvEngineLocalShell": "Локальная оболочка",
@@ -4717,7 +4205,6 @@
   "workspaceEnvBrowseFilesDetail": "Полное дерево каталогов внутри изолированной среды",
   "workspaceEnvDetectFastMirrors": "Найти быстрые зеркала",
   "workspaceEnvActionsSection": "Действия",
-  "workspaceEnvInfoSection": "Информация",
   "workspaceEnvInfoBody": "Среда — корневая файловая система Linux для изолированного выполнения. Рабочие пространства хранятся отдельно и не удаляются при сбросе среды. Файлы находятся в распакованном rootfs на этом устройстве.",
   "workspaceEnvRepairDetail": "Повторно проверить и исправить файлы",
   "workspaceEnvUpdateCurrent": "Установлена последняя версия",
@@ -4782,7 +4269,6 @@
       }
     }
   },
-  "workspaceEnvNativeUnsandboxed": "Команды выполняются на этом компьютере, а не в изолированной среде. Для них требуется подтверждение, если в сессии не разрешены все инструменты.",
   "workspaceEnvRootfsTitle": "/",
   "workspaceEnvBrowserUnavailable": "Файловая система среды недоступна.",
   "workspaceEnvMirrorNameOfficial": "Официальное",
@@ -4822,10 +4308,8 @@
     }
   },
   "workspaceEnvSizeTimeout": "Время ожидания истекло",
-  "workspaceEnvInfoCopied": "Информация о среде скопирована",
   "workspacePreviewEmptyFile": "Этот файл пуст",
   "workspacePreviewEmptyHint": "Нет содержимого для предпросмотра.",
-  "workspacePreviewRevealInExplorer": "Показать в Проводнике",
   "workspacePreviewRevealInFileManager": "Показать в файловом менеджере",
   "workspaceBindingSetAssistantDefault": "Рабочее пространство по умолчанию для «{assistant}»",
   "@workspaceBindingSetAssistantDefault": {
@@ -4878,7 +4362,6 @@
   "workspaceEnvDependencyReadyFirst": "Сначала установите среду, чтобы добавить эти инструменты.",
   "workspaceEnvDependencySources": "Источники пакетов",
   "workspaceEnvDependencySourcesDetail": "Для установки используется выбранный источник apt/apk. Источники pip и npm применяются к пакетам, устанавливаемым позднее.",
-  "workspaceEnvDownloadSource": "Источник загрузки среды",
   "workspaceEnvDownloadAutomatic": "Автовыбор самого быстрого",
   "workspaceEnvDownloadAutomaticDetail": "Проверить официальный источник и встроенные зеркала перед загрузкой.",
   "workspaceEnvDownloadCustom": "Свой URL",
@@ -5133,7 +4616,6 @@
   "scheduledTasksChooseAssistant": "Выберите ассистента",
   "scheduledTasksAssistantMissing": "Ассистент недоступен",
   "scheduledTasksTime": "Время",
-  "scheduledTasksTimeHint": "24-часовой формат, например 08:00",
   "scheduledTasksRepeat": "Повтор",
   "scheduledTasksEveryDay": "Ежедневно",
   "scheduledTasksWeekdays": "Будни",
@@ -5204,9 +4686,6 @@
   "scheduledTasksChatMissing": "Диалог недоступен или принадлежит другому ассистенту.",
   "scheduledTasksMessageMissing": "Выбранный вопрос больше недоступен.",
   "scheduledTasksChatBusy": "В этом диалоге уже генерируется ответ. Запуск по расписанию пропущен.",
-  "scheduledTasksDesktopEmpty": "Нет задач по расписанию",
-  "scheduledTasksDesktopReliability": "Задачи выполняются, только пока Moru запущено, в том числе в свёрнутом виде или системном трее. Пропущенные после выхода или сна компьютера запуски не выполняются. Moru не запускается автоматически.",
-  "scheduledTasksDesktopExecutionDetail": "Результаты сохраняются в чатах. Откройте их из истории запусков задачи. Выполнение останавливается через 10 минут либо при необходимости ввода пользователя или подтверждения инструмента.",
   "worldBookStickyLabel": "Удержание (сообщений)",
   "worldBookStickyHint": "Сохранять запись активной в течение N сообщений после срабатывания. Повторные совпадения не продлевают период. 0 отключает этот эффект.",
   "worldBookCooldownLabel": "Пауза (сообщений)",
@@ -5236,16 +4715,7 @@
   "conversationPromptScope": "Этот диалог",
   "oauthAccountsTab": "Аккаунты",
   "oauthLogin": "Войти",
-  "oauthLoginTo": "Войти в {provider}",
-  "@oauthLoginTo": {
-    "placeholders": {
-      "provider": {
-        "type": "String"
-      }
-    }
-  },
   "oauthConnected": "Подключено",
-  "oauthNotConnected": "Не подключено",
   "oauthWaiting": "Ожидание авторизации {provider}",
   "@oauthWaiting": {
     "placeholders": {
@@ -5291,7 +4761,6 @@
   "oauthSyncing": "Синхронизация моделей…",
   "oauthModelsHint": "Доступные модели синхронизируются с вашим аккаунтом.",
   "oauthNoModels": "Синхронизируйте модели, чтобы начать общение",
-  "oauthConnection": "Подключение",
   "oauthConnectionInfo": "Сведения о подключении",
   "oauthEndpoint": "Адрес сервера",
   "oauthScope": "Область авторизации",
@@ -5299,9 +4768,6 @@
   "oauthTokenExpiry": "Срок действия токена",
   "oauthName": "Название провайдера",
   "oauthEnabledHint": "Показывать эти модели в списке выбора",
-  "oauthNetwork": "Сетевой прокси",
-  "oauthFollowGlobal": "Использовать общие настройки",
-  "oauthCustomRequest": "Свой запрос",
   "oauthWeekly": "Недельный период",
   "oauthMonthly": "Месячный период",
   "oauthTotal": "Общая квота",
@@ -5342,7 +4808,6 @@
   "oauthInvalidResponse": "Авторизация не завершена. Повторите попытку.",
   "oauthTimeout": "Время авторизации истекло. Повторите попытку.",
   "oauthDenied": "Авторизация не разрешена. Повторите попытку.",
-  "oauthSaving": "Подключение аккаунта…",
   "oauthQuotaExceeded": "У этого аккаунта нет доступной квоты.",
   "oauthRateLimited": "Слишком много запросов. Повторите попытку позже.",
   "oauthPermissionDenied": "У аккаунта нет доступа к этому ресурсу.",
@@ -5435,15 +4900,12 @@
   "browserMenuCopyLink": "Скопировать ссылку",
   "browserMenuActivityLog": "Журнал действий",
   "browserMenuSettings": "Настройки браузера",
-  "browserSchemeSecure": "Защищённое соединение (https)",
-  "browserSchemeInsecure": "Без шифрования (http)",
   "browserComposerHint": "Скажите ИИ, что делать…",
   "browserComposerSendTooltip": "Отправить",
   "browserComposerStopTooltip": "Стоп",
   "browserComposerActivityLogTooltip": "Журнал действий",
   "browserStateStarting": "Запуск…",
   "browserStateRunning": "Выполняется…",
-  "browserStateAwaitingApproval": "Ожидание вашего подтверждения…",
   "browserStateStopping": "Остановка…",
   "browserStateStopped": "Остановлено",
   "browserStateError": "Что-то пошло не так",
@@ -5481,119 +4943,12 @@
   "browserErrorReasonSsl": "Не удалось установить защищённое соединение.",
   "browserStateCompleted": "Готово",
   "browserApprovalHeadingUnknownSite": "Moru хочет выполнить действие в браузере",
-  "linuxHideTitleBarTitle": "Скрыть системную панель заголовка",
-  "linuxHideTitleBarDescription": "Также скрывает кнопки окна. Перемещайте, изменяйте размер и закрывайте окно средствами вашего оконного менеджера.",
-  "linuxHideTitleBarError": "Не удалось изменить панель заголовка. Попробуйте ещё раз.",
   "scheduledTasksPreparation": "Выполнение и уведомления",
-  "scheduledTasksAllowPreparation": "Разрешить заблаговременную подготовку",
-  "scheduledTasksAllowPreparationTip": "Готовить следующий результат заранее, пока Moru может работать в фоне. Результат не появится в чате до наступления срока. Подготовка использует только текст, без инструментов, вложений и собственного тела запроса. Может расходовать лимиты модели.",
   "scheduledTasksCancelled": "Отменено",
-  "scheduledTasksContextLatest": "Следовать за последним диалогом",
-  "scheduledTasksContextPolicy": "Контекст диалога",
-  "scheduledTasksContextPolicyTip": "Следовать за последним диалогом: до наступления срока новые сообщения, правки или переключение версии сообщения делают подготовленный результат недействительным; повторная подготовка расходует ещё одну попытку и может стоить дополнительно. По наступлении срока сохранённый результат добавляется в чат без изменений.\n\nИспользовать снимок на момент подготовки: подготовленный результат сохраняется даже при изменении диалога. Он не будет учитывать более поздние сообщения.",
-  "scheduledTasksContextSnapshot": "Использовать снимок на момент подготовки",
-  "scheduledTasksHours": "{count, plural, one{{count} час} few{{count} часа} many{{count} часов} other{{count} часа}}",
-  "@scheduledTasksHours": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "scheduledTasksIOSDetail": "Ограничения фонового режима iOS не позволяют Moru просыпаться в заданное время для запуска модели. Вместо этого содержимое готовится, пока приложение может работать, а система показывает уведомление в назначенное время. Готовится только следующее срабатывание. Подготовка может не завершиться после выхода из приложения — откройте Moru снова, чтобы подготовить последующие срабатывания.",
-  "scheduledTasksMinutes": "{count, plural, one{{count} минута} few{{count} минуты} many{{count} минут} other{{count} минуты}}",
-  "@scheduledTasksMinutes": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "scheduledTasksNotificationPermission": "Разрешить уведомления о задачах",
-  "scheduledTasksNotificationRegistered": "Уведомление запланировано",
-  "scheduledTasksNotificationUnavailable": "Уведомление не запланировано",
   "scheduledTasksNotify": "Уведомления о результате",
   "scheduledTasksNotifyTip": "Разрешить уведомления о результате и запасные напоминания. Отключение не останавливает задачу и вызовы модели и не отменяет расходы на подготовку. Также требуется системное разрешение на уведомления.",
-  "scheduledTasksPendingPreparation": "Ещё не подготовлено",
-  "scheduledTasksPreparationAttempts": "Лимит автоматических попыток",
-  "scheduledTasksPreparationAttemptsTip": "Автоматическая подготовка приостанавливается, когда это срабатывание достигает общего лимита попыток. Первые попытки, ошибки, отмены и ручная подготовка учитываются в этом счётчике. «Подготовить сейчас» может выполниться и после достижения лимита. Больше попыток — больше возможных расходов на модель; это не лимит трат.",
-  "scheduledTasksPreparationAttemptsUsed": "Для этого срабатывания использовано попыток: {count}, автоматический лимит — {limit}. Используйте «Подготовить сейчас», чтобы продолжить вручную.",
-  "@scheduledTasksPreparationAttemptsUsed": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
-  "scheduledTasksPreparationBudget": "Одновременно готовится не более одной задачи из всех. Автоматическая подготовка приостанавливается после шести попыток в час суммарно, включая отменённые запросы. «Подготовить сейчас» не ограничено числом попыток.",
-  "scheduledTasksPreparationContextChanged": "Диалог или контекст задачи изменились, поэтому прежний результат отброшен.",
-  "scheduledTasksPreparationCooldown": "Минимальный интервал (минуты)",
-  "scheduledTasksPreparationCooldownTip": "Минимальное время между началом попыток подготовки для одного и того же срабатывания. Больший интервал снижает число повторных запросов. Повтор всё равно требует, чтобы приложение могло выполниться — это не фоновый таймер. «Подготовить сейчас» обходит это автоматическое ожидание и все лимиты попыток.",
-  "scheduledTasksPreparationCooldownWaiting": "Ожидание повтора",
-  "scheduledTasksPreparationCost": "Подготовка вызывает модель и может стоить дополнительно. При выборе «Следовать за последним диалогом» новые сообщения до наступления срока могут сделать подготовленный результат недействительным. Неиспользованный или отменённый результат всё равно может быть оплачен, а повторная подготовка — это ещё один запрос к модели.",
-  "scheduledTasksPreparationDetail": "Заблаговременная подготовка подходит для текстовых задач, не требующих актуальной информации. Она не может использовать инструменты, вложения или выполнять внешние действия.",
-  "scheduledTasksPreparationHourlyLimit": "Достигнут часовой лимит",
-  "scheduledTasksPreparationHourlyLimitDetail": "Автоматическая подготовка приостановлена до восстановления часовой квоты. «Подготовить сейчас» по-прежнему доступно.",
-  "scheduledTasksPreparationIdle": "Ожидание чата",
-  "scheduledTasksPreparationIdleDetail": "Подготовка возобновится после завершения текущих ответов и стабилизации контекста этой задачи.",
-  "scheduledTasksPreparationLimitReached": "Достигнут лимит автоматических попыток",
-  "scheduledTasksPreparationOff": "Подготовка выключена",
-  "scheduledTasksPreparationPrompt": "Промпт подготовки",
-  "scheduledTasksPreparationPromptEmpty": "Оставьте пустым, чтобы не добавлять инструкций для подготовки",
-  "scheduledTasksPreparationPromptTip": "Дополнительные системные инструкции, используемые только при заблаговременной подготовке этой задачи, отдельно от текста самой задачи. Можно изменить тон или убрать эти инструкции полностью. Инструменты и актуальная информация всё равно недоступны. Изменение этого промпта делает недействительным любой результат, подготовленный до наступления срока — повторная подготовка может стоить ещё один запрос к модели.",
-  "scheduledTasksPreparationPromptVariables": "Доступные подстановки: {timeVariable} — запланированное локальное время доставки, {offsetVariable} — его смещение UTC. Они подставляются при подготовке результата.",
-  "@scheduledTasksPreparationPromptVariables": {
-    "placeholders": {
-      "timeVariable": {
-        "type": "String"
-      },
-      "offsetVariable": {
-        "type": "String"
-      }
-    }
-  },
-  "scheduledTasksPreparationPublishing": "Ожидает добавления в чат",
-  "scheduledTasksPreparationPublishingDetail": "Сохранённый результат будет добавлен в диалог после завершения текущего ответа.",
-  "scheduledTasksPreparationQueued": "В очереди",
-  "scheduledTasksPreparationQueuedDetail": "Готовится другая задача. Подходящие задачи готовятся по очереди в порядке наступления срока.",
-  "scheduledTasksPreparationReadFailed": "Не удалось прочитать контекст задачи. Проверка будет повторена в ближайшее время; подробности — в истории выполнения.",
-  "scheduledTasksPreparationResultRetained": "Не удалось проверить контекст. Подготовленный результат сохранён и будет проверен ещё раз.",
-  "scheduledTasksPreparationRetryAt": "Повторить можно после {time}",
-  "@scheduledTasksPreparationRetryAt": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "scheduledTasksPreparationUnavailable": "Подготовка недоступна",
-  "scheduledTasksPreparationWindow": "Готовить заранее не более чем за",
-  "scheduledTasksPreparationWindowTip": "Насколько заранее до назначенного времени может начаться подготовка — до 24 часов. Например, открытие Moru в полдень может подготовить напоминание на следующее утро. Больший интервал даёт больше шансов подготовить результат, но он может быть менее актуальным. Это не меняет само время задачи и не гарантирует фонового выполнения. «Подготовить сейчас» обходит это автоматическое ожидание и все лимиты попыток.",
-  "scheduledTasksPreparationWindowWaiting": "Вне окна подготовки",
-  "scheduledTasksPrepareNow": "Подготовить сейчас",
-  "scheduledTasksPrepareNowBusy": "Готовится другая задача. Повторите попытку после её завершения.",
-  "scheduledTasksPrepareNowChatBusy": "Дождитесь завершения текущего ответа и повторите попытку.",
-  "scheduledTasksPrepareNowDetail": "Подготовить следующий результат прямо сейчас и доставить его в назначенное время. Автоматические ожидания и лимиты попыток не применяются. Может расходовать лимиты модели. Уже подготовленный результат используется повторно.",
-  "scheduledTasksPrepareNowDisabled": "Сначала включите задачу и заблаговременную подготовку. Задачи с режимом «пересоздавать» нельзя подготовить заранее.",
-  "scheduledTasksPrepareNowNoUpcoming": "Нет предстоящего срабатывания для подготовки. Проверьте время задачи и её включённость.",
-  "scheduledTasksPrepareNowReady": "Следующий результат уже подготовлен. Дополнительный запрос к модели не выполнялся.",
-  "scheduledTasksPrepareNowStarted": "Готовим следующий результат к назначенному времени.",
-  "scheduledTasksPrepareNowUnavailable": "Подготовка пока недоступна. Повторите попытку немного позже.",
-  "scheduledTasksPrepared": "Результат подготовлен",
-  "scheduledTasksPreparing": "Подготовка результата",
-  "scheduledTasksRemind": "Только отправить напоминание",
-  "scheduledTasksReminded": "Наступил срок · только напоминание",
-  "scheduledTasksReminderBody": "Наступил срок запланированной задачи. Откройте Moru, чтобы продолжить.",
-  "scheduledTasksResultBody": "Результат запланированной задачи готов.",
   "scheduledTasksShowPreview": "Показывать текст результата в уведомлении",
   "scheduledTasksShowPreviewTip": "Показывать текст подготовленного результата в уведомлении, включая экран блокировки, если это разрешено системными настройками. Отключите, чтобы показывать общее уведомление — полный результат останется доступен в чате. Также действуют глобальные настройки приватности уведомлений.",
-  "scheduledTasksSkip": "Пропустить это срабатывание",
-  "scheduledTasksSkipped": "Пропущено",
-  "scheduledTasksUnavailable": "Если выполнение недоступно",
-  "scheduledTasksUnavailableTip": "Если подготовленный результат недоступен и задачу нельзя выполнить в срок — отправить напоминание или пропустить срабатывание. Напоминание не содержит сгенерированного ответа и требует включённых уведомлений. Если Moru открыто в момент наступления срока, задача может выполниться сразу.",
   "assistantManagerToolTitle": "Управление ассистентами",
   "assistantManagerToolSubtitle": "Создавать, настраивать, копировать, переключать и удалять ассистентов прямо из чата. Каждое изменение требует вашего подтверждения.",
   "assistantManagerActionList": "Список ассистентов",

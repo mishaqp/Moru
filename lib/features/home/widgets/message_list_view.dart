@@ -1602,15 +1602,7 @@ class _MessageListViewState extends State<MessageListView> {
     return shift;
   }
 
-  bool get _isDesktopPlatform =>
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux;
-
   ScrollViewKeyboardDismissBehavior get _keyboardDismissBehavior {
-    if (_isDesktopPlatform) {
-      return ScrollViewKeyboardDismissBehavior.manual;
-    }
     return ScrollViewKeyboardDismissBehavior.onDrag;
   }
 
@@ -1780,7 +1772,6 @@ class _MessageListViewState extends State<MessageListView> {
 
             final userScrollAwareList = Listener(
               onPointerDown: (event) {
-                if (_isDesktopPlatform) _keyboardFocusNode.requestFocus();
                 if (event.buttons != 0 &&
                     event.buttons != kSecondaryMouseButton) {
                   _pointerDragInProgress = true;

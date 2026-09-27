@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -39,40 +38,8 @@ void main() {
     expect(measureDirectorySizeSync(root.path), 32);
   });
 
-  test(
-    'resolveRootfsUsageDir prefers an explicit rootfsDir on Android',
-    () async {
-      final dir = await resolveRootfsUsageDir(
-        rootfsDir: '/tmp/explicit-rootfs',
-        platform: TargetPlatform.android,
-      );
-      expect(dir.path, '/tmp/explicit-rootfs');
-    },
-  );
-
-  test('resolveRootfsUsageDir ignores state rootfsDir on iOS', () async {
-    final alpine = Directory(
-      '/tmp/application-support/environment/alpine-rootfs',
-    );
-    final dir = await resolveRootfsUsageDir(
-      rootfsDir: '/tmp/Documents/environment/rootfs',
-      platform: TargetPlatform.iOS,
-      iosAlpineRootfsDirOverride: () async => alpine,
-    );
-    expect(dir.path, alpine.path);
+  test('resolveRootfsUsageDir prefers an explicit rootfsDir', () async {
+    final dir = await resolveRootfsUsageDir(rootfsDir: '/tmp/explicit-rootfs');
+    expect(dir.path, '/tmp/explicit-rootfs');
   });
-
-  test(
-    'resolveRootfsUsageDir uses alpine fakefs when iOS rootfsDir is empty',
-    () async {
-      final alpine = Directory(
-        '/tmp/application-support/environment/alpine-rootfs',
-      );
-      final dir = await resolveRootfsUsageDir(
-        platform: TargetPlatform.iOS,
-        iosAlpineRootfsDirOverride: () async => alpine,
-      );
-      expect(dir.path, alpine.path);
-    },
-  );
 }

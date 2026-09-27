@@ -1,8 +1,7 @@
 import 'dart:async';
-import 'dart:io' show File, Platform;
+import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show MissingPluginException;
-import 'package:desktop_drop/desktop_drop.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../main.dart';
@@ -705,7 +704,6 @@ class _HomePageState extends State<HomePage>
   final GlobalKey _composerAreaKey = GlobalKey();
   final GlobalKey _selectionMiniMapKey = GlobalKey();
   final GlobalKey _selectionActionBarKey = GlobalKey();
-  bool _scrollNavHovering = false;
   double _lastViewInsetBottom = 0;
   StreamSubscription<String>? _processTextSub;
   StreamSubscription<String>? _miniAppLaunchSub;
@@ -877,7 +875,7 @@ class _HomePageState extends State<HomePage>
   }
 
   void _initIncomingShares() {
-    if (!PlatformUtils.isMobile) return;
+    if (!PlatformUtils.isAndroid) return;
     _incomingShares = IncomingShareService()
       ..listen(
         onChanged: _readIncomingShares,
@@ -1184,8 +1182,6 @@ class _HomePageState extends State<HomePage>
     required String? modelDisplay,
     required ColorScheme cs,
   }) {
-    _controller.initDesktopUi();
-
     final allSelected = _controller.allSelectableMessagesSelected;
 
     return HomeDesktopScaffold(
@@ -1196,13 +1192,8 @@ class _HomePageState extends State<HomePage>
       providerName: providerName,
       modelDisplay: modelDisplay,
       tabletSidebarOpen: _controller.tabletSidebarOpen,
-      rightSidebarOpen: _controller.rightSidebarOpen,
       embeddedSidebarWidth: _controller.embeddedSidebarWidth,
-      rightSidebarWidth: _controller.rightSidebarWidth,
-      sidebarMinWidth: HomePageController.sidebarMinWidth,
-      sidebarMaxWidth: HomePageController.sidebarMaxWidth,
       onToggleSidebar: _controller.toggleTabletSidebar,
-      onToggleRightSidebar: _controller.toggleRightSidebar,
       onSelectConversation: (id) {
         _controller.switchConversationAnimated(id);
       },
@@ -1227,10 +1218,6 @@ class _HomePageState extends State<HomePage>
           .openGlobalSearchResult(conversationId: convId, messageId: msgId),
       onSelectModel: () =>
           showModelSelectSheet(context, controller: _controller),
-      onSidebarWidthChanged: _controller.updateSidebarWidth,
-      onSidebarWidthChangeEnd: _controller.saveSidebarWidth,
-      onRightSidebarWidthChanged: _controller.updateRightSidebarWidth,
-      onRightSidebarWidthChangeEnd: _controller.saveRightSidebarWidth,
       buildAssistantBackground: _buildAssistantBackground,
       appBarOverride: _controller.selecting
           ? ChatSelectionAppBar(
@@ -1475,11 +1462,7 @@ class _HomePageState extends State<HomePage>
           ? settings.autoCollapseCodeBlockLines
           : null,
       // Mirrors the wrap decision in the code block renderer.
-      wrapCodeBlocks:
-          Platform.isMacOS ||
-          Platform.isWindows ||
-          Platform.isLinux ||
-          settings.mobileCodeBlockWrap,
+      wrapCodeBlocks: settings.mobileCodeBlockWrap,
       showModelIcon: settings.showModelIcon,
       showUserAvatar: settings.showUserAvatar,
       showTokenStats: settings.showTokenStats,
@@ -1623,7 +1606,7 @@ class _HomePageState extends State<HomePage>
       onSend: (text) async {
         final result = await _controller.sendMessage(text);
         if (!mounted) return result;
-        if (PlatformUtils.isMobile &&
+        if (PlatformUtils.isAndroid &&
             result == ChatInputSubmissionResult.sent) {
           _controller.dismissKeyboard();
         }
@@ -1674,45 +1657,18 @@ class _HomePageState extends State<HomePage>
           builder: (context, _) {
             final scrolling = scrollCtrl.showNavButtons;
             var visible = scrolling;
-            var hoverEnabled = false;
-            if (_controller.isDesktopPlatform) {
-              switch (settings.desktopMessageNavButtonsMode) {
-                case DesktopMessageNavButtonsMode.always:
-                  visible = true;
-                  break;
-                case DesktopMessageNavButtonsMode.scroll:
-                  break;
-                case DesktopMessageNavButtonsMode.hover:
-                  visible = _scrollNavHovering;
-                  hoverEnabled = true;
-                  break;
-                case DesktopMessageNavButtonsMode.scrollAndHover:
-                  visible = scrolling || _scrollNavHovering;
-                  hoverEnabled = true;
-                  break;
-                case DesktopMessageNavButtonsMode.never:
-                  return const SizedBox.shrink();
-              }
-            } else {
-              switch (settings.mobileMessageNavButtonsMode) {
-                case MobileMessageNavButtonsMode.always:
-                  visible = true;
-                  break;
-                case MobileMessageNavButtonsMode.scroll:
-                  break;
-                case MobileMessageNavButtonsMode.never:
-                  return const SizedBox.shrink();
-              }
+            switch (settings.mobileMessageNavButtonsMode) {
+              case MobileMessageNavButtonsMode.always:
+                visible = true;
+                break;
+              case MobileMessageNavButtonsMode.scroll:
+                break;
+              case MobileMessageNavButtonsMode.never:
+                return const SizedBox.shrink();
             }
+
             return ScrollNavButtonsPanel(
               visible: visible,
-              hoverEnabled: hoverEnabled,
-              onHoverChanged: hoverEnabled
-                  ? (hovering) {
-                      if (_scrollNavHovering == hovering) return;
-                      setState(() => _scrollNavHovering = hovering);
-                    }
-                  : null,
               bottomOffset: _controller.composerAreaHeight + 12,
               onScrollToTop: () => _controller.scrollToTop(animate: false),
               onPreviousMessage: _controller.jumpToPreviousQuestion,
@@ -1791,63 +1747,7 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _wrapWithDropTarget(Widget child) {
-    if (!_controller.isDesktopPlatform) return child;
-    return DropTarget(
-      onDragEntered: (_) {
-        _controller.setDragHovering(true);
-      },
-      onDragExited: (_) {
-        _controller.setDragHovering(false);
-      },
-      onDragDone: (details) async {
-        _controller.setDragHovering(false);
-        try {
-          final files = details.files;
-          await _controller.onFilesDroppedDesktop(files);
-        } catch (_) {}
-      },
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          child,
-          if (_controller.isDragHovering)
-            IgnorePointer(
-              child: Container(
-                color: Theme.of(
-                  context,
-                ).colorScheme.scrim.withValues(alpha: 0.12),
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surface.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.4),
-                        width: 2,
-                      ),
-                    ),
-                    child: Text(
-                      AppLocalizations.of(context)!.homePageDropToUpload,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: AppFontWeights.semibold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
+    return child;
   }
 
   // ============================================================================

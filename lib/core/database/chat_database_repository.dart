@@ -1929,44 +1929,6 @@ class ChatDatabaseRepository {
         .toString();
   }
 
-  Future<Conversation> publishScheduledMessages({
-    required Conversation conversation,
-    required ChatMessage instruction,
-    required ChatMessage response,
-    required bool createConversation,
-    String? expectedContextRevision,
-  }) => _db.transaction(() async {
-    final existing = await getMessage(response.id);
-    if (existing != null) {
-      return (await getConversation(existing.conversationId))!;
-    }
-    var current = await getConversation(conversation.id);
-    if (current == null) {
-      if (!createConversation) throw StateError('conversation_missing');
-      await putConversation(conversation);
-      current = conversation;
-    }
-    if (current.assistantId != conversation.assistantId) {
-      throw StateError('conversation_missing');
-    }
-    if (expectedContextRevision != null &&
-        await scheduledContextRevision(current.id) != expectedContextRevision) {
-      throw StateError('scheduled_context_changed');
-    }
-    final afterInstruction = await _appendLinearMessageToConversation(
-      conversation: current,
-      message: instruction,
-      touchUpdatedAt: true,
-      selectVersion: false,
-    );
-    return _appendLinearMessageToConversation(
-      conversation: afterInstruction,
-      message: response,
-      touchUpdatedAt: true,
-      selectVersion: false,
-    );
-  });
-
   Future<Conversation?> getConversation(String id) async {
     return _observer.measure(
       ChatDatabaseOperation.queryConversation,

@@ -1,12 +1,11 @@
 import 'package:Kelivo/features/settings/search/settings_search_index.dart';
 import 'package:Kelivo/l10n/app_localizations_en.dart';
 import 'package:Kelivo/l10n/app_localizations_zh.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final en = AppLocalizationsEn();
-  final index = SettingsSearchIndex(en, platform: TargetPlatform.iOS);
+  final index = SettingsSearchIndex(en);
 
   test('exact setting names rank first; all query words must match', () {
     expect(
@@ -23,14 +22,8 @@ void main() {
   });
 
   test('indexes English, simplified and traditional titles in any locale', () {
-    final chinese = SettingsSearchIndex(
-      AppLocalizationsZh(),
-      platform: TargetPlatform.iOS,
-    );
-    final traditional = SettingsSearchIndex(
-      AppLocalizationsZhHant(),
-      platform: TargetPlatform.iOS,
-    );
+    final chinese = SettingsSearchIndex(AppLocalizationsZh());
+    final traditional = SettingsSearchIndex(AppLocalizationsZhHant());
     for (final candidate in [index, chinese, traditional]) {
       expect(
         candidate.search('language').map((e) => e.id),
@@ -52,64 +45,31 @@ void main() {
     }
   });
 
-  test('platform and runtime availability match the settings surfaces', () {
-    Set<String> ids(
-      TargetPlatform platform, {
-      bool logs = false,
-      bool dynamicColor = false,
-    }) => SettingsSearchIndex(
-      en,
-      platform: platform,
-      logsEnabled: logs,
-      dynamicColorSupported: dynamicColor,
-    ).entries.map((entry) => entry.id).toSet();
-    final ios = ids(TargetPlatform.iOS);
-    final android = ids(TargetPlatform.android, logs: true, dynamicColor: true);
-    final desktop = ids(TargetPlatform.macOS);
-    for (final platform in TargetPlatform.values) {
-      expect(
-        ids(platform).contains('linuxHideTitleBarTitle'),
-        platform == TargetPlatform.linux,
-        reason: 'The title bar setting is Linux-only.',
-      );
-    }
-    expect(ios, contains('scheduledTasks'));
-    expect(ios, isNot(contains('hotkeys')));
-    expect(ios, isNot(contains('logs')));
+  test('runtime availability matches the settings surfaces', () {
+    Set<String> ids({bool logs = false, bool dynamicColor = false}) =>
+        SettingsSearchIndex(
+          en,
+          logsEnabled: logs,
+          dynamicColorSupported: dynamicColor,
+        ).entries.map((entry) => entry.id).toSet();
+    expect(ids(), contains('scheduledTasks'));
+    expect(ids(), isNot(contains('logs')));
+    expect(ids(), isNot(contains('hotkeys')));
     expect(
-      android,
+      ids(logs: true, dynamicColor: true),
       containsAll([
         'scheduledTasks',
         'logs',
         'themeSettingsPageUseDynamicColorTitle',
       ]),
     );
-    expect(
-      desktop,
-      containsAll([
-        'scheduledTasks',
-        'hotkeys',
-        'displaySettingsPageTrayShowTrayTitle',
-      ]),
-    );
-    for (final id in [
-      'background',
-      'haptics',
-      'storage',
-      'sponsor',
-      'displaySettingsPageKeepSidebarOpenOnAssistantTapTitle',
-      'displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle',
-      'displaySettingsPageMobileCodeBlockWrapTitle',
-    ]) {
-      expect(desktop, isNot(contains(id)), reason: id);
-    }
   });
 
   test(
     'entries have stable unique ids, paths and localized destination labels',
     () {
-      for (final platform in TargetPlatform.values) {
-        final candidate = SettingsSearchIndex(en, platform: platform);
+      {
+        final candidate = SettingsSearchIndex(en);
         expect(
           candidate.entries.map((e) => e.id).toSet().length,
           candidate.entries.length,

@@ -6,7 +6,6 @@ import 'package:Kelivo/core/services/sandbox/android_proot_runtime.dart';
 import 'package:Kelivo/core/services/sandbox/environment_installer.dart';
 import 'package:Kelivo/core/services/sandbox/environment_manager.dart';
 import 'package:Kelivo/core/services/sandbox/guest_script_runner.dart';
-import 'package:Kelivo/core/services/sandbox/ios_ish_runtime.dart';
 import 'package:Kelivo/core/services/sandbox/mirror_service.dart';
 import 'package:Kelivo/core/services/sandbox/mirror_speed_test.dart';
 import 'package:Kelivo/core/services/sandbox/rootfs_source.dart';
@@ -30,19 +29,12 @@ class MobileWorkspaceStack {
   final WorkspaceChannel channel;
 }
 
-/// Builds the Android / iOS workspace stack. Returns null on other platforms.
+/// Builds the Android workspace stack. Returns null on other hosts (tests).
 Future<MobileWorkspaceStack?> createMobileWorkspaceStack({
   required EnvironmentProvider env,
 }) async {
-  if (kIsWeb) return null;
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.android:
-      return _android(env);
-    case TargetPlatform.iOS:
-      return _ios(env);
-    default:
-      return null;
-  }
+  if (defaultTargetPlatform != TargetPlatform.android) return null;
+  return _android(env);
 }
 
 Future<MobileWorkspaceStack> _android(EnvironmentProvider env) async {
@@ -78,30 +70,6 @@ Future<MobileWorkspaceStack> _android(EnvironmentProvider env) async {
       mirrors: mirrors,
     ),
     manager: installer,
-    mirrors: mirrors,
-    channel: channel,
-  );
-}
-
-Future<MobileWorkspaceStack> _ios(EnvironmentProvider env) async {
-  final channel = WorkspaceChannel();
-  final runtime = IosIshRuntime(channel: channel);
-  final guest = _MirrorGuestRunner(runtime);
-  final mirrors = MirrorService(
-    env: env,
-    speedTest: MirrorSpeedTest(),
-    runInGuest: guest.run,
-    cancelGuest: guest.cancel,
-  );
-  return MobileWorkspaceStack(
-    runtime: runtime,
-    dependencies: EnvironmentDependencies(
-      runtime: runtime,
-      env: env,
-      alpine: true,
-      mirrors: mirrors,
-    ),
-    manager: IosRootfsManager(channel: channel, env: env),
     mirrors: mirrors,
     channel: channel,
   );

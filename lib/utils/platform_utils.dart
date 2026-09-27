@@ -7,32 +7,13 @@ import 'package:restart_app/restart_app.dart';
 abstract final class PlatformUtils {
   PlatformUtils._();
 
-  static bool get isDesktop =>
-      Platform.isMacOS || Platform.isWindows || Platform.isLinux;
-
-  static bool get isMobile => Platform.isAndroid || Platform.isIOS;
-
-  static bool get isDesktopTarget =>
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux;
-
   static bool get isMobileTarget =>
-      defaultTargetPlatform == TargetPlatform.android ||
-      defaultTargetPlatform == TargetPlatform.iOS;
-
-  static bool get isMacOS => Platform.isMacOS;
-
-  static bool get isWindows => Platform.isWindows;
-
-  static bool get isLinux => Platform.isLinux;
+      defaultTargetPlatform == TargetPlatform.android;
 
   static bool get isAndroid => Platform.isAndroid;
 
-  static bool get isIOS => Platform.isIOS;
-
   static Future<void> restartApp() async {
-    if (defaultTargetPlatform == TargetPlatform.android || isDesktopTarget) {
+    if (defaultTargetPlatform == TargetPlatform.android) {
       final result = await Restart.restartApp(mode: RestartMode.process);
       if (!result.success) {
         throw StateError('restart_app:${result.code ?? 'unknown'}');

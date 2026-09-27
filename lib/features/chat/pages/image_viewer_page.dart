@@ -6,18 +6,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
-import 'package:super_clipboard/super_clipboard.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/safe_resize_image.dart';
-import '../../../utils/clipboard_images.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
@@ -315,10 +312,9 @@ class _ImageViewerPageState extends State<ImageViewerPage>
   bool _dragActive = false; // only when zoom ~ 1.0
   double _animFrom = 0.0; // for restore animation
   Offset? _lastDoubleTapPos; // focal point for double-tap zoom
-  Offset? _lastTapPos; // local tap point for desktop image/background split
   bool _saving = false; // saving to gallery state
   bool _sharing = false; // sharing state
-  bool _copying = false; // copying to clipboard state
+  // copying to clipboard state
   bool _chromeVisible = true;
   bool _currentImageZoomed = false;
   late final FocusNode _focusNode;
@@ -331,11 +327,6 @@ class _ImageViewerPageState extends State<ImageViewerPage>
 
   @visibleForTesting
   int get debugLiveImageSizeListenerCount => _imageSizeListeners.length;
-
-  bool get _isDesktop =>
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux ||
-      defaultTargetPlatform == TargetPlatform.macOS;
 
   bool get _hasImages => widget.images.isNotEmpty;
   bool get _hasMultipleImages => widget.images.length > 1;
@@ -460,10 +451,6 @@ class _ImageViewerPageState extends State<ImageViewerPage>
     final tx = focal.dx - targetScale * focalPoint.dx;
     final ty = focal.dy - targetScale * focalPoint.dy;
     _animateZoomTo(ctrl, toScale: targetScale, toTx: tx, toTy: ty);
-  }
-
-  void _toggleChrome() {
-    setState(() => _chromeVisible = !_chromeVisible);
   }
 
   void _updateCurrentDisplayTransform(
@@ -612,71 +599,6 @@ class _ImageViewerPageState extends State<ImageViewerPage>
     }
   }
 
-  Rect _imageTapRect({
-    required int index,
-    required String src,
-    required Size pageSize,
-    required EdgeInsets padding,
-  }) {
-    Rect fitInto({
-      required Size outerSize,
-      required Offset outerTopLeft,
-      required Size sourceSize,
-    }) {
-      final transform = _displayTransforms[index];
-      final fittedSource = transform.quarterTurns.isOdd
-          ? Size(sourceSize.height, sourceSize.width)
-          : sourceSize;
-      final fitted = applyBoxFit(BoxFit.contain, fittedSource, outerSize);
-      final outputSize = fitted.destination;
-      return Rect.fromLTWH(
-        outerTopLeft.dx + (outerSize.width - outputSize.width) / 2,
-        outerTopLeft.dy + (outerSize.height - outputSize.height) / 2,
-        outputSize.width,
-        outputSize.height,
-      );
-    }
-
-    Rect centeredSquare(Size outerSize, Offset outerTopLeft) {
-      final side = math.min(outerSize.width, outerSize.height);
-      return Rect.fromLTWH(
-        outerTopLeft.dx + (outerSize.width - side) / 2,
-        outerTopLeft.dy + (outerSize.height - side) / 2,
-        side,
-        side,
-      );
-    }
-
-    final naturalSize = _imageNaturalSizes[src];
-    final imageContext = _imageFrameKeys[index].currentContext;
-    final viewerContext = _viewerKey.currentContext;
-    final imageBox = imageContext?.findRenderObject();
-    final viewerBox = viewerContext?.findRenderObject();
-    if (imageBox is RenderBox &&
-        imageBox.hasSize &&
-        viewerBox is RenderBox &&
-        viewerBox.hasSize) {
-      final globalTopLeft = imageBox.localToGlobal(Offset.zero);
-      final localTopLeft = viewerBox.globalToLocal(globalTopLeft);
-      return localTopLeft & imageBox.size;
-    }
-
-    final contentSize = Size(
-      math.max(0.0, pageSize.width - padding.horizontal),
-      math.max(0.0, pageSize.height - padding.vertical),
-    );
-    final contentRect = padding.topLeft & contentSize;
-    if (naturalSize == null) {
-      return centeredSquare(contentSize, contentRect.topLeft);
-    }
-
-    return fitInto(
-      outerSize: contentSize,
-      outerTopLeft: contentRect.topLeft,
-      sourceSize: naturalSize,
-    );
-  }
-
   Size _displaySizeFor({
     required int index,
     required String src,
@@ -712,25 +634,8 @@ class _ImageViewerPageState extends State<ImageViewerPage>
     required Size pageSize,
     required EdgeInsets padding,
   }) {
-    if (!_isDesktop) {
-      Navigator.of(context).maybePop();
-      return;
-    }
-
-    final tapPos = _lastTapPos;
-    _lastTapPos = null;
-    if (tapPos != null &&
-        !_imageTapRect(
-          index: index,
-          src: src,
-          pageSize: pageSize,
-          padding: padding,
-        ).contains(tapPos)) {
-      Navigator.of(context).maybePop();
-      return;
-    }
-
-    _toggleChrome();
+    Navigator.of(context).maybePop();
+    return;
   }
 
   void _resetDragState() {
@@ -928,10 +833,6 @@ class _ImageViewerPageState extends State<ImageViewerPage>
   }
 
   Future<void> _saveCurrent() async {
-    if (_isDesktop) {
-      await _saveCurrentDesktop();
-      return;
-    }
     if (_saving) return;
     setState(() => _saving = true);
     final l10n = AppLocalizations.of(context)!;
@@ -1147,196 +1048,13 @@ class _ImageViewerPageState extends State<ImageViewerPage>
     }
   }
 
-  String _normalizeSuggestedName(String? name, String format) {
-    final ext = format == 'jpeg' ? '.jpg' : '.$format';
-    final fallback = 'image$ext';
-    if (name == null || name.trim().isEmpty) return fallback;
-    final trimmed = name.trim();
-    if (p.extension(trimmed).toLowerCase() != ext) {
-      return p.setExtension(trimmed, ext);
-    }
-    return trimmed;
-  }
-
-  Future<_CopyPayload?> _loadCopyPayload(
-    void Function(String reason) setError,
-  ) async {
-    final src = widget.images[_index];
-    Uint8List? bytes;
-    String suggestedName = '';
-    String? sourcePath;
-
-    try {
-      if (src.startsWith('data:')) {
-        final marker = 'base64,';
-        final idx = src.indexOf(marker);
-        if (idx != -1) {
-          bytes = base64Decode(src.substring(idx + marker.length));
-        }
-        final format = detectClipboardImageFormat(
-          bytes: bytes ?? const <int>[],
-        );
-        if (format.isNotEmpty) {
-          suggestedName = 'image.${format == 'jpeg' ? 'jpg' : format}';
-        }
-      } else if (src.startsWith('http://') || src.startsWith('https://')) {
-        final uri = Uri.parse(src);
-        final resp = await http.get(uri);
-        if (resp.statusCode >= 200 && resp.statusCode < 300) {
-          bytes = resp.bodyBytes;
-          suggestedName = uri.pathSegments.isNotEmpty
-              ? uri.pathSegments.last
-              : '';
-        } else {
-          setError('http-${resp.statusCode}');
-          return null;
-        }
-      } else {
-        final local = SandboxPathResolver.fix(src);
-        final file = File(local);
-        if (await file.exists()) {
-          sourcePath = file.path;
-          bytes = await file.readAsBytes();
-          suggestedName = p.basename(file.path);
-        } else {
-          setError('file-missing');
-          return null;
-        }
-      }
-    } catch (_) {
-      setError('read-error');
-      return null;
-    }
-
-    if (bytes == null || bytes.isEmpty) {
-      setError('empty-bytes');
-      return null;
-    }
-
-    final prepared = await prepareClipboardImageBytes(bytes: bytes);
-    if (prepared == null || !_isSupportedClipboardFormat(prepared.format)) {
-      setError('unsupported-format');
-      return null;
-    }
-
-    suggestedName = _normalizeSuggestedName(suggestedName, prepared.format);
-
-    return _CopyPayload(
-      bytes: prepared.bytes,
-      format: prepared.format,
-      suggestedName: suggestedName,
-      sourcePath: resolveClipboardFallbackSourcePath(
-        sourcePath: sourcePath,
-        converted: prepared.converted,
-      ),
-    );
-  }
-
-  Future<bool> _writeClipboardPayload(_CopyPayload payload) async {
-    bool ok = false;
-    try {
-      final clipboard = SystemClipboard.instance;
-      if (clipboard != null) {
-        final item = DataWriterItem(suggestedName: payload.suggestedName);
-        switch (payload.format) {
-          case 'png':
-            item.add(Formats.png(payload.bytes));
-            break;
-          case 'jpeg':
-            item.add(Formats.jpeg(payload.bytes));
-            break;
-          case 'gif':
-            item.add(Formats.gif(payload.bytes));
-            break;
-          case 'webp':
-            item.add(Formats.webp(payload.bytes));
-            break;
-        }
-        await clipboard.write([item]);
-        ok = true;
-      }
-    } catch (_) {
-      ok = false;
-    }
-
-    if (!ok) {
-      try {
-        String? path = payload.sourcePath;
-        if (path == null) {
-          final dir = await getTemporaryDirectory();
-          final ext = payload.format == 'jpeg' ? '.jpg' : '.${payload.format}';
-          path = p.join(
-            dir.path,
-            'kelivo_clip_${DateTime.now().millisecondsSinceEpoch}$ext',
-          );
-          await File(path).writeAsBytes(payload.bytes);
-        }
-        ok = await ClipboardImages.setImagePath(path);
-      } catch (_) {
-        ok = false;
-      }
-    }
-    return ok;
-  }
-
-  Future<void> _copyCurrent() async {
-    if (_copying) return;
-    setState(() => _copying = true);
-    final l10n = AppLocalizations.of(context)!;
-    String failureReason = 'copy-failed';
-    bool ok = false;
-
-    try {
-      final payload = await _loadCopyPayload(
-        (reason) => failureReason = reason,
-      );
-      if (payload == null) {
-        if (mounted) {
-          showAppSnackBar(
-            context,
-            message: l10n.messageExportSheetExportFailed(failureReason),
-            type: NotificationType.error,
-          );
-        }
-        return;
-      }
-
-      if (_isDesktop) {
-        ok = await _writeClipboardPayload(payload);
-        if (!ok) {
-          failureReason = 'clipboard-unavailable';
-        }
-      } else {
-        failureReason = 'unsupported-platform';
-      }
-    } finally {
-      if (mounted) setState(() => _copying = false);
-    }
-
-    if (!mounted) return;
-    if (ok) {
-      showAppSnackBar(
-        context,
-        message: l10n.chatMessageWidgetCopiedToClipboard,
-        type: NotificationType.success,
-      );
-    } else {
-      showAppSnackBar(
-        context,
-        message: l10n.messageExportSheetExportFailed(failureReason),
-        type: NotificationType.error,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final media = MediaQuery.of(context);
     final size = media.size;
     final compact = size.width < 700;
-    final topInset =
-        media.padding.top + (_isDesktop && Platform.isMacOS ? 22 : 0);
+    final topInset = media.padding.top + 0;
     final chromeOpacity = _chromeVisible ? _bgOpacity.clamp(0.0, 1.0) : 0.0;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -1527,9 +1245,6 @@ class _ImageViewerPageState extends State<ImageViewerPage>
                   child: SizedBox.expand(
                     child: GestureDetector(
                       behavior: HitTestBehavior.translucent,
-                      onTapDown: (details) =>
-                          _lastTapPos = details.localPosition,
-                      onTapCancel: () => _lastTapPos = null,
                       onDoubleTapDown: (details) =>
                           _lastDoubleTapPos = details.localPosition,
                       onTap: () => _handleImageTap(
@@ -1690,13 +1405,6 @@ class _ImageViewerPageState extends State<ImageViewerPage>
         loading: _saving,
         onTap: _saving ? null : _saveCurrent,
       ),
-      if (_isDesktop)
-        _GlassCircleButton(
-          label: l10n.imageViewerPageCopyButton,
-          icon: Lucide.Copy,
-          loading: _copying,
-          onTap: _copying ? null : _copyCurrent,
-        ),
       _GlassCircleButton(
         label: l10n.imageViewerPageShareButton,
         icon: Lucide.Share2,
@@ -1780,135 +1488,6 @@ class _ImageViewerPageState extends State<ImageViewerPage>
       ),
     );
   }
-
-  // Desktop save: choose a location via file picker
-  Future<void> _saveCurrentDesktop() async {
-    if (_saving) return;
-    setState(() => _saving = true);
-    final l10n = AppLocalizations.of(context)!;
-    try {
-      final src = widget.images[_index];
-      Uint8List? bytes;
-      String ext = '.jpg';
-
-      if (src.startsWith('data:')) {
-        final marker = 'base64,';
-        final idx = src.indexOf(marker);
-        if (idx != -1) {
-          bytes = base64Decode(src.substring(idx + marker.length));
-        }
-        final mimeEnd = src.indexOf(';');
-        if (mimeEnd != -1) {
-          final mime = src.substring(5, mimeEnd);
-          if (mime.contains('png')) {
-            ext = '.png';
-          } else if (mime.contains('jpeg') || mime.contains('jpg')) {
-            ext = '.jpg';
-          } else if (mime.contains('gif')) {
-            ext = '.gif';
-          } else if (mime.contains('webp')) {
-            ext = '.webp';
-          }
-        }
-      } else if (src.startsWith('http://') || src.startsWith('https://')) {
-        final resp = await http.get(Uri.parse(src));
-        if (resp.statusCode >= 200 && resp.statusCode < 300) {
-          bytes = resp.bodyBytes;
-          final urlExt = p.extension(Uri.parse(src).path);
-          if (urlExt.isNotEmpty) ext = urlExt;
-        } else {
-          if (!mounted) return;
-          showAppSnackBar(
-            context,
-            message: l10n.imageViewerPageSaveFailed('HTTP ${resp.statusCode}'),
-            type: NotificationType.error,
-          );
-          return;
-        }
-      } else {
-        final local = SandboxPathResolver.fix(src);
-        final file = File(local);
-        if (await file.exists()) {
-          bytes = await file.readAsBytes();
-          final pathExt = p.extension(local);
-          if (pathExt.isNotEmpty) ext = pathExt;
-        } else {
-          if (!mounted) return;
-          showAppSnackBar(
-            context,
-            message: l10n.imageViewerPageSaveFailed('file-missing'),
-            type: NotificationType.error,
-          );
-          return;
-        }
-      }
-
-      if (bytes == null || bytes.isEmpty) {
-        if (!mounted) return;
-        showAppSnackBar(
-          context,
-          message: l10n.imageViewerPageSaveFailed('empty-bytes'),
-          type: NotificationType.error,
-        );
-        return;
-      }
-
-      final defaultName = 'kelivo-${DateTime.now().millisecondsSinceEpoch}$ext';
-      final allowed = [ext.replaceFirst('.', '').toLowerCase()];
-      String? savePath = await FilePicker.platform.saveFile(
-        dialogTitle: l10n.imageViewerPageSaveButton,
-        fileName: defaultName,
-        type: FileType.custom,
-        allowedExtensions: allowed,
-      );
-      if (savePath == null) {
-        // user cancelled
-        return;
-      }
-      try {
-        await File(savePath).parent.create(recursive: true);
-        await File(savePath).writeAsBytes(bytes);
-      } catch (e) {
-        if (!mounted) return;
-        showAppSnackBar(
-          context,
-          message: l10n.imageViewerPageSaveFailed(e.toString()),
-          type: NotificationType.error,
-        );
-        return;
-      }
-
-      if (!mounted) return;
-      showAppSnackBar(
-        context,
-        message: l10n.imageViewerPageSaveSuccess,
-        type: NotificationType.success,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      showAppSnackBar(
-        context,
-        message: l10n.imageViewerPageSaveFailed(e.toString()),
-        type: NotificationType.error,
-      );
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-}
-
-class _CopyPayload {
-  _CopyPayload({
-    required this.bytes,
-    required this.format,
-    required this.suggestedName,
-    this.sourcePath,
-  });
-
-  final Uint8List bytes;
-  final String format; // png/jpeg/gif/webp
-  final String suggestedName;
-  final String? sourcePath;
 }
 
 class _ImageDisplayTransform {

@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/gestures.dart' show EagerGestureRecognizer;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,11 +14,6 @@ import '../../../theme/app_font_weights.dart';
 import '../../../theme/app_semantic_colors.dart';
 import '../../../theme/custom_theme.dart';
 import '../../../theme/palettes.dart';
-
-bool get _isDesktop =>
-    defaultTargetPlatform == TargetPlatform.macOS ||
-    defaultTargetPlatform == TargetPlatform.windows ||
-    defaultTargetPlatform == TargetPlatform.linux;
 
 // ---------------------------------------------------------------------------
 // Presentation shells (match the app's custom sheet/dialog idioms — no
@@ -687,22 +680,6 @@ Future<Color?> showAppColorPicker(
     ],
   );
 
-  if (_isDesktop) {
-    return showAppDialog<Color>(
-      context,
-      maxWidth: 380,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppDialogHeader(title: title),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-            child: Builder(builder: content),
-          ),
-        ],
-      ),
-    );
-  }
   return _showAppSheet<Color>(
     context,
     title: title,
@@ -1047,25 +1024,6 @@ Future<void> showCustomThemeEditor(
     await sp.selectCustomTheme(saved.id);
   }
 
-  if (_isDesktop) {
-    await showAppDialog<void>(
-      context,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppDialogHeader(title: title),
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-              child: CustomThemeEditor(initial: initial, onSave: save),
-            ),
-          ),
-        ],
-      ),
-    );
-    return;
-  }
-
   await _showAppSheet<void>(
     context,
     title: title,
@@ -1082,25 +1040,11 @@ Future<void> showImportCustomThemeDialog(BuildContext context) async {
   final l10n = AppLocalizations.of(context)!;
   final controller = TextEditingController();
 
-  final imported = await (_isDesktop
-      ? showAppDialog<CustomTheme>(
-          context,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppDialogHeader(title: l10n.customThemeImportTheme),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                child: _ImportThemeForm(controller: controller),
-              ),
-            ],
-          ),
-        )
-      : _showAppSheet<CustomTheme>(
-          context,
-          title: l10n.customThemeImportTheme,
-          child: _ImportThemeForm(controller: controller),
-        ));
+  final imported = await ((_showAppSheet<CustomTheme>(
+    context,
+    title: l10n.customThemeImportTheme,
+    child: _ImportThemeForm(controller: controller),
+  )));
 
   if (imported != null && context.mounted) {
     await context.read<SettingsProvider>().importCustomTheme(imported.export());

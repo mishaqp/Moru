@@ -41,9 +41,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get helloWorld => 'Привет, мир!';
-
-  @override
   String get settingsPageBackButton => 'Назад';
 
   @override
@@ -72,14 +69,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsPageDisplay => 'Внешний вид и поведение';
 
   @override
-  String get settingsPageDisplaySubtitle =>
-      'Настройки оформления, поведения и взаимодействия';
-
-  @override
   String get settingsPageAssistant => 'Ассистент';
-
-  @override
-  String get settingsPageAssistantSubtitle => 'Ассистент и стиль по умолчанию';
 
   @override
   String get settingsPageModelsServicesSection => 'Модели и сервисы';
@@ -134,11 +124,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get storageSpaceTotalLabel => 'Занято';
-
-  @override
-  String storageSpaceClearableLabel(String size) {
-    return 'Можно очистить: $size';
-  }
 
   @override
   String storageSpaceClearableHint(String size) {
@@ -390,25 +375,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get storageSpaceSortSmallest => 'Сначала маленькие';
 
   @override
-  String get settingsPageAboutSection => 'О приложении';
-
-  @override
   String get settingsPageAbout => 'О приложении';
 
   @override
   String get settingsPageStatistics => 'Статистика';
 
   @override
-  String get settingsPageDocs => 'Документация';
-
-  @override
   String get settingsPageLogs => 'Журналы';
 
   @override
   String get settingsPageSponsor => 'Поддержать';
-
-  @override
-  String get settingsPageShare => 'Поделиться';
 
   @override
   String get statsPageTitle => 'Статистика';
@@ -514,9 +490,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get statsPageUnknownAssistant => 'Ассистент по умолчанию';
 
   @override
-  String get statsPageUnknownModel => 'Неизвестная модель';
-
-  @override
   String get statsPageUnknownTopic => 'Тема без названия';
 
   @override
@@ -547,16 +520,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sponsorPageAfdianTitle => 'Afdian';
 
   @override
-  String get sponsorPageAfdianSubtitle => 'afdian.com/a/kelivo';
-
-  @override
   String get sponsorPageWeChatTitle => 'Поддержать через WeChat';
-
-  @override
-  String get sponsorPageWeChatSubtitle => 'Код поддержки WeChat';
-
-  @override
-  String get sponsorPageScanQrHint => 'Отсканируйте QR-код для поддержки';
 
   @override
   String get languageDisplaySimplifiedChinese => 'Китайский (упрощённый)';
@@ -584,9 +548,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get languageDisplaySpanish => 'Испанский';
-
-  @override
-  String get languageSelectSheetTitle => 'Язык перевода';
 
   @override
   String get languageSelectSheetClearButton => 'Убрать перевод';
@@ -653,13 +614,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get displaySettingsPageLanguageTitle => 'Язык приложения';
 
   @override
-  String get displaySettingsPageLanguageSubtitle => 'Выберите язык интерфейса';
-
-  @override
   String get assistantTagsManageTitle => 'Управление тегами';
-
-  @override
-  String get assistantTagsCreateButton => 'Создать';
 
   @override
   String get assistantTagsCreateDialogTitle => 'Создать тег';
@@ -674,16 +629,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get assistantTagsNameHint => 'Название тега';
 
   @override
-  String get assistantTagsRenameButton => 'Переименовать';
-
-  @override
   String get assistantTagsRenameDialogTitle => 'Переименовать тег';
 
   @override
   String get assistantTagsRenameDialogOk => 'Переименовать';
-
-  @override
-  String get assistantTagsDeleteButton => 'Удалить';
 
   @override
   String get assistantTagsDeleteConfirmTitle => 'Удалить тег';
@@ -819,12 +768,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Выберите сообщения, которыми хотите поделиться';
 
   @override
-  String get homePageDone => 'Готово';
-
-  @override
-  String get homePageDropToUpload => 'Перетащите файлы для загрузки';
-
-  @override
   String get assistantEditPageTitle => 'Ассистент';
 
   @override
@@ -936,9 +879,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Некорректное регулярное выражение';
 
   @override
-  String get assistantRegexCancelButton => 'Отмена';
-
-  @override
   String get assistantRegexUntitled => 'Правило без названия';
 
   @override
@@ -972,18 +912,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get assistantEditBodyValueLabel => 'Значение поля (JSON)';
 
   @override
-  String get assistantEditDeleteTooltip => 'Удалить';
-
-  @override
   String get assistantEditAssistantNameLabel => 'Имя ассистента';
 
   @override
   String get assistantEditUseAssistantAvatarTitle =>
       'Использовать аватар ассистента';
-
-  @override
-  String get assistantEditUseAssistantAvatarSubtitle =>
-      'Показывать аватар ассистента вместо аватара модели';
 
   @override
   String get assistantEditUseAssistantNameTitle =>
@@ -1022,14 +955,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get assistantEditStreamOutputTitle => 'Потоковый вывод';
 
   @override
-  String get assistantEditStreamOutputDescription =>
-      'Показывать ответ по мере генерации';
-
-  @override
   String get assistantEditThinkingBudgetTitle => 'Бюджет рассуждений';
-
-  @override
-  String get assistantEditConfigureButton => 'Настроить';
 
   @override
   String get assistantEditMaxTokensTitle => 'Максимум токенов';
@@ -1055,22 +981,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get assistantEditClearButton => 'Очистить';
 
   @override
-  String get desktopNavChatTooltip => 'Чат';
-
-  @override
   String get desktopNavTranslateTooltip => 'Перевести';
-
-  @override
-  String get desktopNavStorageTooltip => 'Хранилище';
-
-  @override
-  String get desktopNavGlobalSearchTooltip => 'Глобальный поиск';
-
-  @override
-  String get desktopNavThemeToggleTooltip => 'Тема оформления';
-
-  @override
-  String get desktopNavSettingsTooltip => 'Настройки';
 
   @override
   String get desktopAvatarMenuUseEmoji => 'Использовать эмодзи';
@@ -1104,10 +1015,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get assistantEditAvatarReset => 'Сбросить';
 
   @override
-  String get displaySettingsPageChatMessageBackgroundTitle =>
-      'Фон сообщений чата';
-
-  @override
   String get displaySettingsPageChatMessageBackgroundDefault => 'По умолчанию';
 
   @override
@@ -1116,27 +1023,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get displaySettingsPageChatMessageBackgroundSolid => 'Сплошной цвет';
-
-  @override
-  String get displaySettingsPageAndroidBackgroundChatTitle =>
-      'Фоновая генерация (Android)';
-
-  @override
-  String get displaySettingsPageIosBackgroundChatTitle =>
-      'Фоновая генерация (iOS)';
-
-  @override
-  String get iosBackgroundStatusOn => 'Вкл.';
-
-  @override
-  String get iosBackgroundStatusOff => 'Выкл.';
-
-  @override
-  String get iosLiveActivityTitle => 'Текущая активность';
-
-  @override
-  String get iosLiveActivitySubtitle =>
-      'Показывать фоновые ответы на экране блокировки и в Dynamic Island, если устройство это поддерживает.';
 
   @override
   String get notificationChatCompletedTitle => 'Генерация завершена';
@@ -1234,9 +1120,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get multiKeyPageError => 'Ошибка';
 
   @override
-  String get multiKeyPageAccuracy => 'Успешность';
-
-  @override
   String get multiKeyPageStrategyTitle => 'Стратегия распределения нагрузки';
 
   @override
@@ -1265,9 +1148,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get multiKeyPageStatusRateLimited => 'Лимит запросов';
-
-  @override
-  String get multiKeyPageEditAlias => 'Изменить псевдоним';
 
   @override
   String get multiKeyPageEdit => 'Изменить';
@@ -1437,23 +1317,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get markdownTableDefaultFileNameStem => 'table';
 
   @override
-  String get markdownTableCopiedCsvSnackbar =>
-      'CSV скопирован. Удерживайте кнопку копирования, чтобы скопировать как изображение.';
-
-  @override
   String get markdownTableCopiedMarkdownSnackbar => 'Таблица скопирована.';
-
-  @override
-  String codeBlockCollapsedLines(int n) {
-    return '… Свёрнуто строк: $n';
-  }
-
-  @override
-  String get htmlPreviewNotSupportedOnLinux =>
-      'Предпросмотр HTML не поддерживается в Linux';
-
-  @override
-  String get assistantEditSampleUser => 'Пользователь';
 
   @override
   String get assistantEditSampleMessage => 'Привет';
@@ -1463,9 +1327,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get assistantEditMcpNoServersMessage => 'Нет работающих MCP-серверов';
-
-  @override
-  String get assistantEditMcpConnectedTag => 'Подключено';
 
   @override
   String assistantEditMcpToolsCountTag(String enabled, String total) {
@@ -1492,9 +1353,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get assistantSettingsDeleteButton => 'Удалить';
 
   @override
-  String get assistantSettingsEditButton => 'Изменить';
-
-  @override
   String get assistantSettingsAddSheetTitle => 'Имя ассистента';
 
   @override
@@ -1507,52 +1365,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get assistantSettingsAddSheetSave => 'Сохранить';
 
   @override
-  String get desktopAssistantsListTitle => 'Ассистенты';
-
-  @override
-  String get desktopSidebarTabAssistants => 'Ассистенты';
-
-  @override
-  String get desktopSidebarTabTopics => 'Темы';
-
-  @override
-  String get desktopTrayMenuShowWindow => 'Показать окно';
-
-  @override
-  String get desktopTrayMenuExit => 'Выход';
-
-  @override
-  String get hotkeyToggleAppVisibility => 'Показать/скрыть приложение';
-
-  @override
-  String get hotkeyCloseWindow => 'Закрыть окно';
-
-  @override
   String get hotkeyOpenSettings => 'Открыть настройки';
-
-  @override
-  String get hotkeyNewTopic => 'Новая тема';
-
-  @override
-  String get hotkeySwitchModel => 'Сменить модель';
-
-  @override
-  String get hotkeyToggleAssistantPanel => 'Показать/скрыть ассистентов';
-
-  @override
-  String get hotkeyToggleTopicPanel => 'Показать/скрыть темы';
-
-  @override
-  String get hotkeysPressShortcut => 'Нажмите сочетание клавиш';
-
-  @override
-  String get hotkeysResetDefault => 'Сбросить по умолчанию';
-
-  @override
-  String get hotkeysClearShortcut => 'Убрать сочетание';
-
-  @override
-  String get hotkeysResetAll => 'Сбросить все сочетания';
 
   @override
   String get assistantEditTemperatureTitle => 'Температура';
@@ -1592,12 +1405,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get backupPageTitle => 'Резервное копирование и восстановление';
-
-  @override
-  String get backupPageWebDavTab => 'WebDAV';
-
-  @override
-  String get backupPageImportExportTab => 'Импорт и экспорт';
 
   @override
   String get backupPageWebDavServerUrl => 'URL сервера WebDAV';
@@ -1693,19 +1500,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get backupRestoreFailureRestartButton => 'Перезапустить Moru';
 
   @override
-  String get backupRestoreFailureCopyButton =>
-      'Скопировать диагностический код';
-
-  @override
-  String get backupRestoreFailureCopied => 'Диагностический код скопирован';
-
-  @override
   String backupRestoreFailureDiagnostic(String code) {
     return 'Диагностический код: $code';
   }
-
-  @override
-  String get startupRecoveryMoreOptions => 'Другие способы восстановления';
 
   @override
   String get startupRecoveryRepairButton => 'Исправить и перезапустить';
@@ -1800,11 +1597,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String startupRecoveryReportSaved(String path) {
-    return 'Отчёт сохранён в $path';
-  }
-
-  @override
   String get startupRecoveryReportShared => 'Отчёт экспортирован.';
 
   @override
@@ -1817,11 +1609,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get startupRecoverySectionDataBody =>
       'Ничего не удалено. Прежде чем выполнять действия ниже, сохраните копию данных в надёжном месте.';
-
-  @override
-  String startupRecoveryExportSavedTo(String path) {
-    return 'Копия ваших данных сохранена в $path';
-  }
 
   @override
   String get startupRecoverySectionRepairTitle => 'Диагностика и исправление';
@@ -1913,10 +1700,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get backupPageSelectImportMode => 'Режим импорта';
 
   @override
-  String get backupPageSelectImportModeDescription =>
-      'Выберите режим восстановления. Переключатели чатов и файлов определяют, какие компоненты будут включены.';
-
-  @override
   String get backupPageOverwriteMode => 'Полная замена';
 
   @override
@@ -1954,12 +1737,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get backupPageBackupUploaded => 'Резервная копия загружена';
-
-  @override
-  String get backupPageBackup => 'Резервное копирование';
-
-  @override
-  String get backupPageExporting => 'Экспорт…';
 
   @override
   String get backupProgressCancel => 'Отмена';
@@ -2029,30 +1806,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get backupPageExportToFile => 'Экспортировать в файл';
 
   @override
-  String get backupPageExportToFileSubtitle =>
-      'Сохранить данные приложения в файл';
-
-  @override
   String get backupPageImportBackupFile => 'Импортировать резервную копию';
-
-  @override
-  String get backupPageImportBackupFileSubtitle =>
-      'Импортировать локальный файл резервной копии';
-
-  @override
-  String get backupPageImportFromOtherApps => 'Импорт из других приложений';
-
-  @override
-  String get backupPageNotSupportedYet => 'Пока не поддерживается';
 
   @override
   String get backupPageRemoteBackups => 'Удалённые резервные копии';
 
   @override
   String get backupPageNoBackups => 'Нет резервных копий';
-
-  @override
-  String get backupPageRestoreTooltip => 'Восстановить';
 
   @override
   String get backupPageDeleteTooltip => 'Удалить';
@@ -2142,12 +1902,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get backupReminderTimeTitle => 'Время напоминания';
-
-  @override
-  String get backupReminderTimeInputHint => 'ЧЧ:мм';
-
-  @override
-  String get backupReminderTimeInvalid => 'Введите время от 00:00 до 23:59.';
 
   @override
   String get backupReminderLastBackupTitle => 'Последняя копия';
@@ -2387,23 +2141,10 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get bottomToolsSheetLearningMode => 'Режим обучения';
-
-  @override
-  String get bottomToolsSheetLearningModeDescription =>
-      'Помощь в пошаговом обучении';
-
-  @override
-  String get bottomToolsSheetConfigurePrompt => 'Настроить промпт';
-
-  @override
   String get bottomToolsSheetPrompt => 'Промпт';
 
   @override
   String get bottomToolsSheetPromptHint => 'Введите текст добавляемого промпта';
-
-  @override
-  String get bottomToolsSheetResetDefault => 'Сбросить по умолчанию';
 
   @override
   String get bottomToolsSheetSave => 'Сохранить';
@@ -2412,16 +2153,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get bottomToolsSheetOcr => 'Распознать текст на изображении';
 
   @override
-  String get messageMoreSheetTitle => 'Другие действия';
-
-  @override
   String get messageMoreSheetSelectCopy => 'Выделить и скопировать';
 
   @override
   String get messageMoreSheetRenderWebView => 'Открыть в веб-представлении';
-
-  @override
-  String get messageMoreSheetNotImplemented => 'Пока не реализовано';
 
   @override
   String get messageMoreSheetEdit => 'Изменить';
@@ -2448,27 +2183,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reasoningBudgetSheetAuto => 'Авто';
 
   @override
-  String get reasoningBudgetSheetLight => 'Лёгкие рассуждения';
-
-  @override
-  String get reasoningBudgetSheetMedium => 'Средние рассуждения';
-
-  @override
-  String get reasoningBudgetSheetHeavy => 'Глубокие рассуждения';
-
-  @override
-  String get reasoningBudgetSheetXhigh => 'Очень глубокие рассуждения';
-
-  @override
-  String get reasoningBudgetSheetMax => 'Максимальные рассуждения';
-
-  @override
   String get reasoningBudgetSheetTitle => 'Глубина рассуждений';
-
-  @override
-  String reasoningBudgetSheetCurrentLevel(String level) {
-    return 'Текущий уровень: $level';
-  }
 
   @override
   String get reasoningBudgetSheetOffSubtitle =>
@@ -2520,12 +2235,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get chatMessageWidgetCopiedToClipboard => 'Скопировано в буфер обмена';
 
   @override
-  String get chatMessageWidgetResendTooltip => 'Отправить повторно';
-
-  @override
-  String get chatMessageWidgetMoreTooltip => 'Больше';
-
-  @override
   String get chatMessageWidgetThinking => 'Думает…';
 
   @override
@@ -2549,18 +2258,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get chatMessageWidgetAttachmentUnavailable => 'Вложение недоступно';
 
   @override
-  String chatMessageWidgetCitationsTitle(int count) {
-    return 'Источники ($count)';
-  }
-
-  @override
   String get chatMessageWidgetSearchResultsTitle => 'Результаты поиска';
-
-  @override
-  String get chatMessageWidgetCitationSourcesTitle => 'Источники цитат';
-
-  @override
-  String get chatMessageWidgetRegenerateTooltip => 'Сгенерировать заново';
 
   @override
   String get chatMessageWidgetRegenerateConfirmTitle =>
@@ -2584,14 +2282,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get chatMessageWidgetStopTooltip => 'Остановить';
 
   @override
-  String get chatMessageWidgetSpeakTooltip => 'Озвучить';
-
-  @override
   String get chatMessageWidgetTranslateTooltip => 'Перевести';
-
-  @override
-  String get chatMessageWidgetBuiltinSearchHideNote =>
-      'Скрыть карточки встроенного поиска';
 
   @override
   String get chatMessageWidgetDeepThinking => 'Глубокое размышление';
@@ -2612,11 +2303,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get chatMessageWidgetSpeakingTitle => 'Озвучивание:';
-
-  @override
-  String chatMessageWidgetSpeakText(String text) {
-    return 'Озвучивание: $text';
-  }
 
   @override
   String get chatMessageWidgetMemoryRead => 'Чтение памяти';
@@ -2731,15 +2417,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Формулы внутри \$...\$';
 
   @override
-  String get displaySettingsPageEnableDollarLatexSubtitle =>
-      'Отображать строчные формулы внутри \$...\$';
-
-  @override
   String get displaySettingsPageEnableMathTitle => 'Отображение формул';
-
-  @override
-  String get displaySettingsPageEnableMathSubtitle =>
-      'Отображать формулы LaTeX в строках и блоках';
 
   @override
   String get displaySettingsPageEnableUserMarkdownTitle =>
@@ -2938,18 +2616,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sideDrawerSave => 'Сохранить';
 
   @override
-  String get sideDrawerGreetingMorning => 'Доброе утро 👋';
-
-  @override
-  String get sideDrawerGreetingNoon => 'Добрый день 👋';
-
-  @override
-  String get sideDrawerGreetingAfternoon => 'Добрый день 👋';
-
-  @override
-  String get sideDrawerGreetingEvening => 'Добрый вечер 👋';
-
-  @override
   String get sideDrawerDateToday => 'Сегодня';
 
   @override
@@ -2965,15 +2631,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sideDrawerSearchHint => 'Поиск у текущего ассистента';
 
   @override
-  String get sideDrawerSearchAssistantsHint => 'Поиск ассистентов';
-
-  @override
-  String get sideDrawerTopicSearchModeLabel => 'Поиск по темам';
-
-  @override
-  String get sideDrawerGlobalSearchModeLabel => 'Глобальный поиск';
-
-  @override
   String get sideDrawerSearchModeSwipeToTopicHint =>
       'Смахните строку поиска для поиска по темам';
 
@@ -2983,10 +2640,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get sideDrawerGlobalSearchHint => 'Поиск во всех диалогах';
-
-  @override
-  String get sideDrawerGlobalSearchEmptyHint =>
-      'Поиск по заголовкам и сообщениям';
 
   @override
   String get sideDrawerGlobalSearchNoResults => 'Подходящие диалоги не найдены';
@@ -3011,12 +2664,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get sideDrawerPinnedLabel => 'Закреплённые';
-
-  @override
-  String get sideDrawerHistory => 'История';
-
-  @override
-  String get sideDrawerSettings => 'Настройки';
 
   @override
   String get sideDrawerChooseAssistantTitle => 'Выберите ассистента';
@@ -3050,9 +2697,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get providerAvatarInputLobehubIcon => 'Указать значок LobeHub';
-
-  @override
-  String get providerAvatarChooseLobehubIcon => 'Указать значок LobeHub';
 
   @override
   String get providerAvatarLobehubDialogTitle => 'Указать значок LobeHub';
@@ -3105,9 +2749,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sideDrawerNicknameHint => 'Введите новый никнейм';
 
   @override
-  String get sideDrawerRename => 'Переименовать';
-
-  @override
   String get chatInputBarHint => 'Напишите сообщение ИИ';
 
   @override
@@ -3118,9 +2759,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get chatInputBarReasoningStrengthTooltip => 'Глубина рассуждений';
-
-  @override
-  String get chatInputBarMcpServersTooltip => 'MCP-серверы';
 
   @override
   String get chatInputBarToolsTooltip => 'Инструменты';
@@ -3156,18 +2794,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get chatInputBarQueuedPending => 'В очереди на отправку';
-
-  @override
-  String get chatInputBarQueuedCancel => 'Отменить отправку из очереди';
-
-  @override
-  String get chatInputBarInsertNewline => 'Новая строка';
-
-  @override
-  String get chatInputBarExpand => 'Развернуть';
-
-  @override
-  String get chatInputBarCollapse => 'Свернуть';
 
   @override
   String get mcpPageBackTooltip => 'Назад';
@@ -3320,9 +2946,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get mcpServerEditSheetNoToolsHint =>
       'Нет инструментов. Нажмите обновление для синхронизации';
-
-  @override
-  String get mcpServerEditSheetCancel => 'Отмена';
 
   @override
   String get mcpServerEditSheetSave => 'Сохранить';
@@ -3545,11 +3168,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Обязательно; рекомендуются строчные буквы, цифры и дефисы';
 
   @override
-  String modelDetailSheetModelIdDisabledHint(String modelId) {
-    return '$modelId';
-  }
-
-  @override
   String get modelDetailSheetModelNameLabel => 'Название модели';
 
   @override
@@ -3606,13 +3224,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Встроенные инструменты зависят от провайдера и режима API.';
 
   @override
-  String get modelDetailSheetSearchTool => 'Поиск';
-
-  @override
-  String get modelDetailSheetSearchToolDescription =>
-      'Включить интеграцию с Google Search';
-
-  @override
   String get modelDetailSheetUrlContextTool => 'Контекст по URL';
 
   @override
@@ -3632,10 +3243,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get modelDetailSheetYoutubeToolDescription =>
       'Включить чтение YouTube по URL (ссылки в промптах распознаются автоматически)';
-
-  @override
-  String get modelDetailSheetOpenaiBuiltinToolsResponsesOnlyHint =>
-      'Требуется OpenAI Responses API.';
 
   @override
   String get modelDetailSheetWebFetchTool => 'Чтение веб-страниц';
@@ -3686,10 +3293,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get modelDetailSheetInvalidIdError =>
       'Введите корректный ID модели (не менее 2 символов)';
-
-  @override
-  String get modelDetailSheetModelIdExistsError =>
-      'Такой ID модели уже существует';
 
   @override
   String get modelDetailSheetHeaderKeyHint => 'Ключ заголовка';
@@ -3833,9 +3436,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get providerDetailPageBalanceQuerying => 'Проверка…';
 
   @override
-  String get providerDetailPageBalanceResetDefaultsButton => 'Сбросить';
-
-  @override
   String get providerDetailPageBalanceResetDefaultsTooltip =>
       'Сбросить настройки баланса';
 
@@ -3866,14 +3466,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get providerDetailPageImportJsonButton => 'Импортировать JSON';
 
   @override
-  String get providerDetailPageImportJsonReadFailedMessage =>
-      'Не удалось прочитать файл';
-
-  @override
   String get providerDetailPageTestButton => 'Проверить';
-
-  @override
-  String get providerDetailPageSaveButton => 'Сохранить';
 
   @override
   String get providerDetailPageProviderRemovedMessage => 'Провайдер удалён';
@@ -3928,9 +3521,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Пароль (необязательно)';
 
   @override
-  String get providerDetailPageSavedSnackbar => 'Сохранено';
-
-  @override
   String get providerDetailPageEmbeddingsGroupTitle => 'Эмбеддинги';
 
   @override
@@ -3945,9 +3535,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get providerDetailPageFilterHint =>
       'Введите название модели для фильтрации';
-
-  @override
-  String get providerDetailPageDeleteText => 'Удалить';
 
   @override
   String get providerDetailPageEditTooltip => 'Изменить';
@@ -4063,12 +3650,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get providersPageDisabledStatus => 'ВЫКЛ.';
 
   @override
-  String get providersPageModelsCountSuffix => ' моделей';
-
-  @override
-  String get providersPageModelsCountSingleSuffix => ' моделей';
-
-  @override
   String get addProviderSheetTitle => 'Добавить провайдера';
 
   @override
@@ -4092,9 +3673,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get addProviderSheetImportJsonButton => 'Импортировать JSON';
-
-  @override
-  String get addProviderSheetCancelButton => 'Отмена';
 
   @override
   String get addProviderSheetAddButton => 'Добавить';
@@ -4123,9 +3701,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Вставьте строки конфигурации (можно несколько строк) или JSON ChatBox';
 
   @override
-  String get importProviderSheetInputHint => 'ai-provider:v1:... или JSON';
-
-  @override
   String get importProviderSheetCancelButton => 'Отмена';
 
   @override
@@ -4148,34 +3723,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get shareProviderSheetShareButton => 'Поделиться';
 
   @override
-  String get desktopProviderContextMenuShare => 'Поделиться';
-
-  @override
-  String get desktopProviderShareCopyText => 'Скопировать код';
-
-  @override
-  String get desktopProviderShareCopyQr => 'Скопировать QR';
-
-  @override
   String get providerDetailPageApiBaseUrlLabel => 'Базовый URL API';
 
   @override
   String get providerDetailPageModelsTitle => 'Модели';
-
-  @override
-  String get providerModelsGetButton => 'Получить';
-
-  @override
-  String get providerDetailPageCapsVision => 'Зрение';
-
-  @override
-  String get providerDetailPageCapsImage => 'Изображение';
-
-  @override
-  String get providerDetailPageCapsTool => 'Инструмент';
-
-  @override
-  String get providerDetailPageCapsReasoning => 'Рассуждения';
 
   @override
   String get qrScanPageTitle => 'Сканировать QR';
@@ -4191,9 +3742,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get searchServicesPageDone => 'Готово';
-
-  @override
-  String get searchServicesPageEdit => 'Изменить';
 
   @override
   String get searchServicesPageAddProvider => 'Добавить провайдера';
@@ -4231,16 +3779,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get searchServicesPageNotTestedStatus => 'Не проверено';
 
   @override
-  String get searchServicesPageEditServiceTooltip => 'Изменить сервис';
-
-  @override
   String get searchServicesPageTestConnectionTooltip => 'Проверить подключение';
-
-  @override
-  String get searchServicesPageDeleteServiceTooltip => 'Удалить сервис';
-
-  @override
-  String get searchServicesPageConfiguredStatus => 'Настроено';
 
   @override
   String get miniMapTitle => 'Мини-карта';
@@ -4260,29 +3799,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get miniMapSearchNoResults => 'Подходящие сообщения не найдены';
 
   @override
-  String get searchServicesPageApiKeyRequiredStatus => 'Нужен API-ключ';
-
-  @override
-  String get searchServicesPageUrlRequiredStatus => 'Нужен URL';
-
-  @override
   String get searchServicesAddDialogTitle => 'Добавить сервис поиска';
-
-  @override
-  String get searchServicesAddDialogServiceType => 'Тип сервиса';
-
-  @override
-  String get searchServicesAddDialogBingLocal => 'Локальный';
 
   @override
   String get searchServicesAddDialogCancel => 'Отмена';
 
   @override
   String get searchServicesAddDialogAdd => 'Добавить';
-
-  @override
-  String get searchServicesAddDialogApiKeyRequired =>
-      'Необходимо указать API-ключ';
 
   @override
   String get searchServicesFieldCustomUrlOptional => 'Свой URL (необязательно)';
@@ -4297,42 +3820,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get searchServicesDialogSystemPrompt => 'Системный промпт';
 
   @override
-  String get searchServicesAddDialogInstanceUrl => 'URL экземпляра';
-
-  @override
   String get searchServicesAddDialogUrlRequired => 'Необходимо указать URL';
 
   @override
-  String get searchServicesAddDialogEnginesOptional =>
-      'Поисковые движки (необязательно)';
-
-  @override
-  String get searchServicesAddDialogLanguageOptional => 'Язык (необязательно)';
-
-  @override
-  String get searchServicesAddDialogUsernameOptional =>
-      'Имя пользователя (необязательно)';
-
-  @override
-  String get searchServicesAddDialogPasswordOptional =>
-      'Пароль (необязательно)';
-
-  @override
-  String get searchServicesAddDialogRegionOptional =>
-      'Регион (необязательно, по умолчанию us-en)';
-
-  @override
-  String get searchServicesEditDialogEdit => 'Изменить';
-
-  @override
-  String get searchServicesEditDialogCancel => 'Отмена';
-
-  @override
   String get searchServicesEditDialogSave => 'Сохранить';
-
-  @override
-  String get searchServicesEditDialogBingLocalNoConfig =>
-      'Локальный поиск Bing не требует настройки.';
 
   @override
   String get searchServicesEditDialogApiKeyRequired =>
@@ -4478,27 +3969,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get searchServiceEditorDeleteConfirm => 'Удалить';
 
   @override
-  String get searchServiceEditorDiscardTitle => 'Отменить изменения?';
-
-  @override
-  String get searchServiceEditorDiscardMessage =>
-      'Несохранённые настройки сервиса поиска будут потеряны.';
-
-  @override
-  String get searchServiceEditorKeepEditing => 'Продолжить редактирование';
-
-  @override
-  String get searchServiceEditorDiscard => 'Не сохранять';
-
-  @override
   String get searchSettingsSheetTitle => 'Настройки поиска';
 
   @override
   String get searchSettingsSheetBuiltinSearchTitle => 'Встроенный поиск';
-
-  @override
-  String get searchSettingsSheetBuiltinSearchDescription =>
-      'Включить встроенный поиск модели';
 
   @override
   String get searchSettingsSheetClaudeDynamicSearchTitle =>
@@ -4512,20 +3986,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get searchSettingsSheetWebSearchTitle => 'Веб-поиск';
 
   @override
-  String get searchSettingsSheetWebSearchDescription =>
-      'Включить поиск в интернете в чате';
-
-  @override
   String get searchSettingsSheetOpenSearchServicesTooltip =>
       'Открыть сервисы поиска';
 
   @override
   String get searchSettingsSheetNoServicesMessage =>
       'Нет сервисов. Добавьте их в разделе «Сервисы поиска».';
-
-  @override
-  String get aboutPageEasterEggMessage =>
-      'Спасибо за любопытство!\n(Пасхалки пока нет)';
 
   @override
   String get aboutPageEasterEggButton => 'Отлично!';
@@ -4539,51 +4005,14 @@ class AppLocalizationsRu extends AppLocalizations {
       'Вы уже проходили через эту дверь.';
 
   @override
-  String get aboutPageAppName => 'Moru';
-
-  @override
   String get aboutPageAppDescription =>
       'ИИ-ассистент с открытым исходным кодом';
-
-  @override
-  String get aboutPageNoQQGroup => 'Группы QQ пока нет';
 
   @override
   String get aboutPageVersion => 'Версия';
 
   @override
-  String aboutPageVersionDetail(String version, String buildNumber) {
-    return '$version / $buildNumber';
-  }
-
-  @override
   String get aboutPageSystem => 'Системная';
-
-  @override
-  String get aboutPageLoadingPlaceholder => '...';
-
-  @override
-  String get aboutPageUnknownPlaceholder => '-';
-
-  @override
-  String get aboutPagePlatformMacos => 'macOS';
-
-  @override
-  String get aboutPagePlatformWindows => 'Windows';
-
-  @override
-  String get aboutPagePlatformLinux => 'Linux';
-
-  @override
-  String get aboutPagePlatformAndroid => 'Android';
-
-  @override
-  String get aboutPagePlatformIos => 'iOS';
-
-  @override
-  String aboutPagePlatformOther(String os) {
-    return 'Другая ($os)';
-  }
 
   @override
   String get aboutPageWebsite => 'Сайт';
@@ -4614,18 +4043,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Показывать аватар пользователя';
 
   @override
-  String get displaySettingsPageShowUserAvatarSubtitle =>
-      'Отображать аватар пользователя в сообщениях чата';
-
-  @override
-  String get displaySettingsPageShowUserNameTimestampTitle =>
-      'Имя пользователя и время';
-
-  @override
-  String get displaySettingsPageShowUserNameTimestampSubtitle =>
-      'Показывать имя пользователя и время под ним в сообщениях чата';
-
-  @override
   String get displaySettingsPageShowUserNameTitle =>
       'Показывать имя пользователя';
 
@@ -4636,18 +4053,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get displaySettingsPageShowUserMessageActionsTitle =>
       'Действия под сообщениями пользователя';
-
-  @override
-  String get displaySettingsPageShowUserMessageActionsSubtitle =>
-      'Показывать кнопки копирования, повторной отправки и других действий под вашими сообщениями';
-
-  @override
-  String get displaySettingsPageShowModelNameTimestampTitle =>
-      'Название модели и время';
-
-  @override
-  String get displaySettingsPageShowModelNameTimestampSubtitle =>
-      'Показывать название модели и время под ним в сообщениях чата';
 
   @override
   String get displaySettingsPageShowModelNameTitle =>
@@ -4662,23 +4067,11 @@ class AppLocalizationsRu extends AppLocalizations {
       'Провайдер после названия модели';
 
   @override
-  String get displaySettingsPageShowProviderInChatMessageSubtitle =>
-      'Показывать провайдера после ID модели в чате (например: модель | провайдер)';
-
-  @override
   String get displaySettingsPageChatModelIconTitle => 'Значок модели в чате';
-
-  @override
-  String get displaySettingsPageChatModelIconSubtitle =>
-      'Показывать значок модели в сообщениях чата';
 
   @override
   String get displaySettingsPageShowTokenStatsTitle =>
       'Статистика токенов и контекста';
-
-  @override
-  String get displaySettingsPageShowTokenStatsSubtitle =>
-      'Показывать расход токенов и количество сообщений';
 
   @override
   String get displaySettingsPageShowThinkingCardsTitle =>
@@ -4701,16 +4094,8 @@ class AppLocalizationsRu extends AppLocalizations {
       'Автоматически сворачивать рассуждения';
 
   @override
-  String get displaySettingsPageAutoCollapseThinkingSubtitle =>
-      'Сворачивать рассуждения после завершения';
-
-  @override
   String get displaySettingsPageCollapseThinkingStepsTitle =>
       'Сворачивать этапы рассуждений';
-
-  @override
-  String get displaySettingsPageCollapseThinkingStepsSubtitle =>
-      'Во время ответа показывать последние этапы, после — сворачивать в одну строку';
 
   @override
   String get displaySettingsPageShowToolResultSummaryTitle =>
@@ -4719,10 +4104,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get displaySettingsPageInsertSuggestionOnlyTitle =>
       'Вставлять подсказки без отправки';
-
-  @override
-  String get displaySettingsPageShowToolResultSummarySubtitle =>
-      'Показывать краткий результат под этапами работы инструментов';
 
   @override
   String get displaySettingsPageHideToolResultImagesTitle =>
@@ -4771,10 +4152,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Показывать даты в списке чатов';
 
   @override
-  String get displaySettingsPageShowChatListDateSubtitle =>
-      'Группировать диалоги по датам и показывать подписи групп';
-
-  @override
   String get displaySettingsPageEnableImageCropperTitle =>
       'Обрезка изображений';
 
@@ -4798,10 +4175,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get displaySettingsPageShowUpdatesTitle => 'Показывать обновления';
 
   @override
-  String get displaySettingsPageShowUpdatesSubtitle =>
-      'Показывать уведомления об обновлениях приложения';
-
-  @override
   String get displaySettingsPageKeepScreenOnDuringGenerationTitle =>
       'Не выключать экран во время генерации';
 
@@ -4814,22 +4187,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Кнопки навигации по сообщениям';
 
   @override
-  String get displaySettingsPageMessageNavButtonsSubtitle =>
-      'Когда показывать кнопки быстрого перехода';
-
-  @override
   String get displaySettingsPageMessageNavButtonsModeAlways => 'Всегда';
 
   @override
   String get displaySettingsPageMessageNavButtonsModeScroll => 'При прокрутке';
-
-  @override
-  String get displaySettingsPageMessageNavButtonsModeHover =>
-      'При наведении мыши';
-
-  @override
-  String get displaySettingsPageMessageNavButtonsModeScrollAndHover =>
-      'При прокрутке или наведении';
 
   @override
   String get displaySettingsPageMessageNavButtonsModeNever =>
@@ -4842,10 +4203,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get displaySettingsPageHapticsOnSidebarTitle =>
       'Виброотклик боковой панели';
-
-  @override
-  String get displaySettingsPageHapticsOnSidebarSubtitle =>
-      'Виброотклик при открытии и закрытии боковой панели';
 
   @override
   String get displaySettingsPageHapticsGlobalTitle => 'Общий виброотклик';
@@ -4864,10 +4221,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get displaySettingsPageHapticsOnGenerateTitle =>
       'Виброотклик при генерации';
-
-  @override
-  String get displaySettingsPageHapticsOnGenerateSubtitle =>
-      'Включить виброотклик во время генерации';
 
   @override
   String get displaySettingsPageNewChatAfterDeleteTitle =>
@@ -4893,32 +4246,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get displaySettingsPageLongPasteAsFileThresholdUnit => 'символов';
-
-  @override
-  String get displaySettingsPageSendShortcutTitle => 'Клавиши отправки';
-
-  @override
-  String get displaySettingsPageSendShortcutEnter => 'Enter';
-
-  @override
-  String get displaySettingsPageSendShortcutCtrlEnter => 'Ctrl/Cmd + Enter';
-
-  @override
-  String get displaySettingsPageAutoSwitchTopicsTitle =>
-      'Автоматически переходить к темам';
-
-  @override
-  String get desktopDisplaySettingsTopicPositionTitle => 'Расположение тем';
-
-  @override
-  String get desktopDisplaySettingsTopicPositionLeft => 'Слева';
-
-  @override
-  String get desktopDisplaySettingsTopicPositionRight => 'Справа';
-
-  @override
-  String get displaySettingsPageNewChatOnLaunchSubtitle =>
-      'Автоматически создавать новый чат при запуске';
 
   @override
   String get displaySettingsPageChatFontSizeTitle => 'Размер шрифта чата';
@@ -4953,46 +4280,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get displaySettingsPageThemeSettingsTitle => 'Настройки темы';
 
   @override
-  String get displaySettingsPageThemeColorTitle => 'Цвет темы';
-
-  @override
-  String get desktopSettingsFontsTitle => 'Шрифты';
-
-  @override
-  String get linuxHideTitleBarTitle => 'Скрыть системную панель заголовка';
-
-  @override
-  String get linuxHideTitleBarDescription =>
-      'Также скрывает кнопки окна. Перемещайте, изменяйте размер и закрывайте окно средствами вашего оконного менеджера.';
-
-  @override
-  String get linuxHideTitleBarError =>
-      'Не удалось изменить панель заголовка. Попробуйте ещё раз.';
-
-  @override
-  String get displaySettingsPageTrayTitle => 'Системный трей';
-
-  @override
-  String get displaySettingsPageTrayShowTrayTitle => 'Показывать значок в трее';
-
-  @override
-  String get displaySettingsPageTrayMinimizeOnCloseTitle =>
-      'Сворачивать в трей при закрытии';
-
-  @override
-  String get desktopFontAppLabel => 'Шрифт приложения';
-
-  @override
-  String get desktopFontCodeLabel => 'Шрифт кода';
-
-  @override
   String get desktopFontFamilySystemDefault => 'Системный по умолчанию';
 
   @override
   String get desktopFontFamilyMonospaceDefault => 'Моноширинный';
-
-  @override
-  String get desktopFontFilterHint => 'Поиск шрифтов…';
 
   @override
   String get displaySettingsPageAppFontTitle => 'Шрифт приложения';
@@ -5004,16 +4295,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get fontPickerChooseLocalFile => 'Выбрать локальный файл';
 
   @override
-  String get desktopFontLoading => 'Загрузка шрифтов…';
-
-  @override
   String get displaySettingsPageFontLocalFileLabel => 'Локальный файл';
 
   @override
   String get displaySettingsPageFontResetLabel => 'Сбросить настройки шрифтов';
-
-  @override
-  String get displaySettingsPageOtherSettingsTitle => 'Другие настройки';
 
   @override
   String get themeSettingsPageDynamicColorSection => 'Динамические цвета';
@@ -5104,16 +4389,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get customThemeCopied => 'JSON темы скопирован в буфер обмена';
 
   @override
-  String get customThemeCopyAction => 'Копировать';
-
-  @override
   String get customThemeImportHint => 'Вставьте сюда JSON темы';
 
   @override
   String get customThemeImportInvalid => 'Некорректный JSON темы';
-
-  @override
-  String get customThemeHexLabel => 'HEX';
 
   @override
   String get ttsServicesPageBackButton => 'Назад';
@@ -5132,10 +4411,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get asrServicesSectionTitle => 'Распознавание речи';
-
-  @override
-  String get asrServicesSectionDescription =>
-      'Преобразование речи в текст на устройстве, системным или облачным сервисом.';
 
   @override
   String get asrServicesAddTooltip => 'Добавить сервис распознавания речи';
@@ -5204,12 +4479,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get asrServicesEditTitle => 'Изменить распознавание речи';
-
-  @override
-  String get asrServicesSelectedLabel => 'Выбрано';
-
-  @override
-  String get asrServicesUnavailableLabel => 'Недоступно';
 
   @override
   String get asrServicesEditAction => 'Изменить';
@@ -5300,10 +4569,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get ttsServicesPageAddNotImplemented =>
-      'Добавление сервиса синтеза речи пока не реализовано';
-
-  @override
   String get ttsServicesPageSystemTtsTitle => 'Системный синтез речи';
 
   @override
@@ -5322,18 +4587,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get ttsServicesPageTestSpeechText =>
       'Здравствуйте! Это проверка синтеза речи.';
-
-  @override
-  String get ttsServicesPageConfigureTooltip => 'Настроить';
-
-  @override
-  String get ttsServicesPageTestVoiceTooltip => 'Проверить голос';
-
-  @override
-  String get ttsServicesPageStopTooltip => 'Остановить';
-
-  @override
-  String get ttsServicesPageDeleteTooltip => 'Удалить';
 
   @override
   String get ttsServicesPageSystemTtsSettingsTitle =>
@@ -5361,12 +4614,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ttsServicesPageDoneButton => 'Готово';
 
   @override
-  String get ttsServicesPageNetworkSectionTitle => 'Облачный синтез речи';
-
-  @override
-  String get ttsServicesPageNoNetworkServices => 'Нет сервисов синтеза речи.';
-
-  @override
   String get ttsServicesDialogAddTitle => 'Добавить сервис синтеза речи';
 
   @override
@@ -5374,9 +4621,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get ttsServicesDialogProviderType => 'Провайдер';
-
-  @override
-  String get ttsServicesDialogCancelButton => 'Отмена';
 
   @override
   String get ttsServicesDialogAddButton => 'Добавить';
@@ -5443,9 +4687,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get ttsServicesFieldChannelLabel => 'Каналы';
-
-  @override
-  String get ttsServicesFieldSubtitlesLabel => 'Создавать субтитры';
 
   @override
   String get ttsServicesFieldPronunciationDictionaryLabel =>
@@ -5643,9 +4884,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get imageViewerPageSaveButton => 'Сохранить изображение';
 
   @override
-  String get imageViewerPageCopyButton => 'Скопировать изображение';
-
-  @override
   String get imageViewerPagePreviousButton => 'Предыдущее изображение';
 
   @override
@@ -5693,9 +4931,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String imageViewerPageSaveFailed(String error) {
     return 'Не удалось сохранить: $error';
   }
-
-  @override
-  String get settingsShare => 'Moru — ИИ-ассистент с открытым исходным кодом';
 
   @override
   String get searchProviderBingLocalDescription =>
@@ -6041,10 +5276,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get instructionInjectionSheetSubtitle =>
-      'Выберите промпт, который будет применён перед общением';
-
-  @override
   String get mcpJsonEditButtonTooltip => 'Изменить JSON';
 
   @override
@@ -6070,9 +5301,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mcpTimeoutInvalid => 'Введите положительное число секунд';
 
   @override
-  String get quickPhraseEditButton => 'Изменить';
-
-  @override
   String get quickPhraseDeleteButton => 'Удалить';
 
   @override
@@ -6084,10 +5312,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get assistantEditQuickPhraseDescription =>
       'Управляйте быстрыми фразами этого ассистента. Нажмите кнопку ниже, чтобы добавить фразы.';
-
-  @override
-  String get assistantEditManageQuickPhraseButton =>
-      'Управление быстрыми фразами';
 
   @override
   String get assistantEditPageMemoryTab => 'Память';
@@ -6180,20 +5404,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get assistantEditLocalToolWeatherTitle => 'Погода';
 
   @override
-  String get assistantEditLocalToolWeatherSubtitle =>
-      'Получать Apple Weather для текущего или указанного места. В результате отображается указание источника WeatherKit.';
-
-  @override
   String get assistantEditLocalToolHealthTitle => 'Сводка здоровья';
-
-  @override
-  String get assistantEditLocalToolHealthSubtitle =>
-      'Читать сводку активности из Apple Health с сохранением конфиденциальности. Требуется доступ к данным здоровья.';
-
-  @override
-  String assistantEditLocalToolHealthSelectedCount(int selected, int total) {
-    return 'Выбрано: $selected/$total';
-  }
 
   @override
   String get healthDataSettingsTitle => 'Данные здоровья';
@@ -6354,36 +5565,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get assistantEditLocalToolRemindersQueryTitle => 'Чтение напоминаний';
 
   @override
-  String get assistantEditLocalToolRemindersQuerySubtitle =>
-      'Читать напоминания на устройстве. Требуется полный доступ к напоминаниям.';
-
-  @override
   String get assistantEditLocalToolRemindersCreateTitle =>
       'Создать напоминание';
-
-  @override
-  String get assistantEditLocalToolRemindersCreateSubtitle =>
-      'Создавать напоминания с вашим подтверждением. Требуется полный доступ к напоминаниям.';
 
   @override
   String get assistantEditLocalToolRemindersCompleteTitle =>
       'Завершить напоминание';
 
   @override
-  String get assistantEditLocalToolRemindersCompleteSubtitle =>
-      'Отмечать напоминания выполненными с вашим подтверждением. Требуется полный доступ к напоминаниям.';
-
-  @override
-  String get assistantEditMemorySwitchDescription =>
-      'Позволить ассистенту создавать и использовать записи памяти между чатами.';
-
-  @override
   String get assistantEditRecentChatsSwitchTitle =>
       'Сведения о последних чатах';
-
-  @override
-  String get assistantEditRecentChatsSwitchDescription =>
-      'Добавлять заголовки последних диалогов для улучшения контекста.';
 
   @override
   String get assistantEditAddMemoryButton => 'Добавить запись в память';
@@ -6500,23 +5691,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Изменить заготовленное сообщение';
 
   @override
-  String get assistantEditPresetRoleUser => 'Пользователь';
-
-  @override
-  String get assistantEditPresetRoleAssistant => 'Ассистент';
-
-  @override
-  String get desktopTtsPleaseAddProvider =>
-      'Сначала добавьте провайдера синтеза речи';
-
-  @override
   String get settingsPageNetworkProxy => 'Сетевой прокси';
 
   @override
   String get networkProxyEnableLabel => 'Включить прокси';
-
-  @override
-  String get networkProxySettingsHeader => 'Настройки прокси';
 
   @override
   String get networkProxyType => 'Тип прокси';
@@ -6632,10 +5810,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get desktopShowProviderInModelCapsule =>
-      'Показывать провайдера в плашке модели';
-
-  @override
   String get messageWebViewOpenInBrowser => 'Открыть в браузере';
 
   @override
@@ -6663,9 +5837,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get providerDetailPageBatchDetecting => 'Проверка…';
 
   @override
-  String get providerDetailPageBatchDetectStart => 'Начать проверку';
-
-  @override
   String get providerDetailPageDetectSuccess => 'Проверка успешна';
 
   @override
@@ -6675,10 +5846,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get providerDetailPageDeleteSelectedModelsButton => 'Удалить';
 
   @override
-  String get providerDetailPageDeleteSelectedModelsTooltip =>
-      'Удалить выбранные модели';
-
-  @override
   String providerDetailPageDeleteSelectedModelsConfirm(int count) {
     return 'Удалить выбранные модели ($count)? Отменить удаление нельзя.';
   }
@@ -6686,10 +5853,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get providerDetailPageDeleteFailedDetectedModelsButton =>
       'Удалить недоступные';
-
-  @override
-  String get providerDetailPageDeleteFailedDetectedModelsTooltip =>
-      'Удалить модели, не прошедшие проверку';
 
   @override
   String providerDetailPageDeleteFailedDetectedModelsConfirm(int count) {
@@ -6791,9 +5954,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get contextLogKindUpdate => 'Добавочные изменения';
 
   @override
-  String get contextLogSectionComposition => 'Состав';
-
-  @override
   String get contextLogLoadOlder => 'Загрузить более ранние записи';
 
   @override
@@ -6813,9 +5973,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get logViewerExport => 'Экспорт';
-
-  @override
-  String get logViewerOpenFolder => 'Открыть папку журналов';
 
   @override
   String logViewerRequestsCount(int count) {
@@ -7256,12 +6413,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get memoryEntrySourceDistilled => 'Сформировано';
 
   @override
-  String get memoryEntryStatusActive => 'Активен';
-
-  @override
-  String get memoryEntryStatusArchived => 'В архиве';
-
-  @override
   String memoryEntryUpdatedAt(String date) {
     return 'Обновлено: $date';
   }
@@ -7546,10 +6697,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get userProfilePreferredName => 'Предпочитаемое имя';
 
   @override
-  String get userProfilePreferredNameHint =>
-      'Как модель должна к вам обращаться; не связано с именем в боковой панели';
-
-  @override
   String get userProfileGender => 'Пол';
 
   @override
@@ -7754,9 +6901,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get memoryUiContentLabel => 'Содержимое';
-
-  @override
   String get memoryUiValueLabel => 'Значение';
 
   @override
@@ -7773,13 +6917,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get memoryUiSearchClear => 'Очистить поиск';
-
-  @override
-  String get memoryUiAssistantLegacyTitle => 'Старые записи (только чтение)';
-
-  @override
-  String get memoryUiAssistantLegacySubtitle =>
-      'Записи памяти этого ассистента из предыдущих версий';
 
   @override
   String get assistantEditMemorySwitchTitle =>
@@ -7959,11 +7096,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get worldBookUnnamedEntry => 'Запись без названия';
 
   @override
-  String worldBookKeywordsLine(String keywords) {
-    return 'Ключевые слова: $keywords';
-  }
-
-  @override
   String get worldBookEditEntry => 'Изменить запись';
 
   @override
@@ -8073,11 +7205,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get toolApprovalDenyHint => 'Причина (необязательно)';
 
   @override
-  String toolApprovalDeniedMessage(Object reason, Object toolName) {
-    return 'Пользователь отклонил вызов инструмента «$toolName». Причина: $reason';
-  }
-
-  @override
   String get askUserCardSubmit => 'Отправить ответ';
 
   @override
@@ -8098,9 +7225,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get askUserCardInactive =>
       'Этот вопрос больше не активен. Сгенерируйте ответ заново или продолжите диалог.';
-
-  @override
-  String get askUserCardCancelled => 'Вопрос отменён';
 
   @override
   String askUserCardQuestionCount(int count) {
@@ -8335,9 +7459,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get migrationBackupFileSavedTitle => 'ZIP-копия сохранена';
 
   @override
-  String get migrationChecklistBackupFiles => 'Экспортировать ZIP-копию Hive';
-
-  @override
   String get migrationChecklistPrepareSqlite => 'Подготовить базу SQLite';
 
   @override
@@ -8380,9 +7501,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get migrationMalformedCount => 'Некорректных записей';
 
   @override
-  String get migrationMissingFilesCount => 'Отсутствующих файлов';
-
-  @override
   String get migrationRestartButton => 'Перезапустить Moru';
 
   @override
@@ -8420,9 +7538,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get migrationChatsExportDegradedNote =>
       'Экспорт chats.json пропущен из-за ошибки. В ZIP-копии всё равно сохранены исходные файлы Hive с полной историей чатов.';
-
-  @override
-  String get timelineJumpToLatest => 'К последним сообщениям';
 
   @override
   String largeContentShowMore(int count) {
@@ -8704,9 +7819,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get memoryTraceAfter => 'После';
 
   @override
-  String get memoryTraceEmptyValue => '(пусто)';
-
-  @override
   String memoryTraceStepsCount(int count) {
     return 'Шагов: $count';
   }
@@ -8907,10 +8019,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get localSnapshotKeepSubtitle =>
-      'Также по одной копии за прошлую неделю и прошлый месяц, чтобы можно было восстановить данные при поздно обнаруженной проблеме.';
-
-  @override
   String get localSnapshotKeepWeekly => 'Хранить копию за прошлую неделю';
 
   @override
@@ -8928,10 +8036,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get localSnapshotAnnounceTitle => 'Уведомлять о сохранении копии';
-
-  @override
-  String get localSnapshotAnnounceSubtitle =>
-      'Об ошибках сообщается всегда. Эта настройка добавляет короткое уведомление об успешном сохранении.';
 
   @override
   String get localSnapshotTakeNow => 'Сохранить копию сейчас';
@@ -8969,10 +8073,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get localSnapshotStatusSkippedSpace =>
       'Пропущено: недостаточно свободного места на устройстве';
-
-  @override
-  String get localSnapshotStatusUnchanged =>
-      'С момента последней копии ничего не изменилось';
 
   @override
   String get localSnapshotCopiesTitle => 'Локальные копии';
@@ -9024,9 +8124,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get localSnapshotCopyContentsUnknown =>
       'Содержимое станет известно после восстановления';
-
-  @override
-  String get localSnapshotCopyPinned => 'Сохраняется';
 
   @override
   String get localSnapshotActionRestore => 'Восстановить';
@@ -9086,10 +8183,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get localSnapshotDeleteDone => 'Копия удалена';
-
-  @override
-  String get localSnapshotBusyMessage =>
-      'Другая задача резервного копирования уже выполняется';
 
   @override
   String get localSnapshotRunInBackground => 'Продолжить в фоне';
@@ -9180,38 +8273,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceFileNotAvailable => 'Файл недоступен';
 
   @override
-  String get workspaceTerminalNotAvailable => 'Терминал недоступен';
-
-  @override
-  String get workspacePreviewCopyPath => 'Скопировать путь';
-
-  @override
   String get workspacePreviewShare => 'Поделиться';
 
   @override
-  String get workspacePreviewOpenExternally => 'Открыть во внешнем приложении';
-
-  @override
   String get workspacePreviewOpenWith => 'Открыть с помощью…';
-
-  @override
-  String get workspacePreviewFileTooLarge =>
-      'Файл слишком большой для предпросмотра. Откройте его во внешнем приложении.';
 
   @override
   String get workspacePreviewSource => 'Источник';
 
   @override
   String get workspacePreviewRendered => 'Представление';
-
-  @override
-  String get workspacePreviewFileName => 'Имя';
-
-  @override
-  String get workspacePreviewFileSize => 'Размер';
-
-  @override
-  String get workspacePreviewFileModified => 'Изменено';
 
   @override
   String get workspacePreviewPathCopied => 'Путь скопирован';
@@ -9279,9 +8350,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceFilesRename => 'Переименовать';
 
   @override
-  String get workspaceFilesMove => 'Переместить';
-
-  @override
   String get workspaceFilesDelete => 'Удалить';
 
   @override
@@ -9306,9 +8374,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceFilesCancel => 'Отмена';
 
   @override
-  String get workspaceFilesConfirm => 'Подтвердить';
-
-  @override
   String get workspaceFilesSave => 'Сохранить';
 
   @override
@@ -9326,9 +8391,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspaceFilesMoveTitle => 'Переместить в папку';
-
-  @override
-  String get workspaceFilesMoveHere => 'Переместить сюда';
 
   @override
   String get workspaceFilesPathCopied => 'Путь скопирован';
@@ -9396,13 +8458,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Рабочее пространство не найдено';
 
   @override
-  String get workspaceFilesClose => 'Закрыть';
-
-  @override
   String get workspacesTitle => 'Рабочие пространства';
-
-  @override
-  String get workspacesCreate => 'Создать';
 
   @override
   String get workspacesCreateTitle => 'Новое рабочее пространство';
@@ -9424,17 +8480,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspacesSettings => 'Настройки';
-
-  @override
-  String get workspacesOpenFiles => 'Открыть файлы';
-
-  @override
-  String get workspacesLastUsedNever => 'Ещё не использовалось';
-
-  @override
-  String workspacesLastUsed(String when) {
-    return 'Последнее использование: $when';
-  }
 
   @override
   String get workspacesDeleteTitle => 'Удалить это рабочее пространство?';
@@ -9466,18 +8511,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspacesDefaultCwd => 'Рабочий каталог по умолчанию';
 
   @override
-  String get workspacesDefaultCwdHint => 'Относительный путь, например src';
-
-  @override
-  String get workspacesDefaultCwdInvalid => 'Укажите относительный путь без ..';
-
-  @override
-  String get workspacesCreateManaged => 'Создать рабочее пространство';
-
-  @override
-  String get workspacesLinkExisting => 'Привязать существующую папку';
-
-  @override
   String get workspacesUnlink => 'Отвязать';
 
   @override
@@ -9503,21 +8536,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceToolInstall => 'Установить';
 
   @override
-  String get workspaceToolFuzzy => 'неточное совпадение';
-
-  @override
-  String get workspaceToolCreated => 'создано';
-
-  @override
-  String get workspaceToolUpdated => 'обновлено';
-
-  @override
-  String get workspaceToolTruncated => 'обрезано';
-
-  @override
-  String get workspaceToolImageTag => 'изображение';
-
-  @override
   String get workspaceToolAllowAll => 'Разрешить всё в этой сессии';
 
   @override
@@ -9525,9 +8543,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspaceToolStderr => 'stderr';
-
-  @override
-  String get workspaceToolOpenFullOutput => 'Открыть полный вывод';
 
   @override
   String get workspaceToolChangedFiles => 'Изменённые файлы';
@@ -9561,9 +8576,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspaceToolDiffTruncated => 'Список изменений обрезан';
-
-  @override
-  String get workspaceToolOpenPreview => 'Открыть предпросмотр';
 
   @override
   String get workspaceToolNoOutput => 'Нет вывода';
@@ -9610,11 +8622,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceToolTitleShellOutput => 'Фоновая задача';
 
   @override
-  String workspaceToolCount(int count) {
-    return '$count';
-  }
-
-  @override
   String workspaceToolMoreFiles(int count) {
     return '+$count';
   }
@@ -9643,9 +8650,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get workspaceEnvEngineNative => 'Системная оболочка';
-
-  @override
   String get workspaceEnvPhaseNotInstalled => 'Не установлено';
 
   @override
@@ -9670,35 +8674,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceEnvPhaseNeedsRestart => 'Требуется перезапуск';
 
   @override
-  String workspaceEnvMetaLine(String version, String arch) {
-    return '$version · $arch';
-  }
-
-  @override
-  String workspaceEnvInstalledAt(String date) {
-    return 'Установлено: $date';
-  }
-
-  @override
-  String workspaceEnvDiskUsage(String size) {
-    return 'Занято на диске: $size';
-  }
-
-  @override
-  String workspaceEnvRuntimeReason(String reason) {
-    return '$reason';
-  }
-
-  @override
   String get workspaceEnvInstall => 'Установить';
 
   @override
   String get workspaceEnvInstallSubtitleAndroid =>
       'Выберите Ubuntu, Alpine, Debian или импортируйте локальный образ rootfs.';
-
-  @override
-  String get workspaceEnvInstallSubtitleIos =>
-      'Встроено, загрузка не требуется';
 
   @override
   String get workspaceEnvCancel => 'Отмена';
@@ -9716,25 +8696,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceEnvResetConfirmTitle => 'Сбросить среду?';
 
   @override
-  String get workspaceEnvResetConfirmBody =>
-      'Будут удалены установленные пакеты и файловая система изолированной среды.';
-
-  @override
   String get workspaceEnvCheckForUpdate => 'Проверить обновления';
 
   @override
-  String get workspaceEnvUpdate => 'Обновить';
-
-  @override
-  String workspaceEnvAvailableVersion(String version) {
-    return 'Доступна версия $version';
-  }
-
-  @override
   String get workspaceEnvUpToDate => 'Установлена последняя версия';
-
-  @override
-  String get workspaceEnvRestartBanner => 'Перезапустите Moru для завершения';
 
   @override
   String get workspaceEnvDetectingMirrors => 'Поиск самых быстрых зеркал…';
@@ -9751,31 +8716,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceEnvUseMirror => 'Использовать зеркало';
 
   @override
-  String get workspaceEnvDetect => 'Проверить';
-
-  @override
   String get workspaceEnvOfficial => 'Официальное';
-
-  @override
-  String get workspaceEnvMirrorsDisabled =>
-      'Зеркала меняются внутри изолированной среды. Дождитесь её готовности.';
-
-  @override
-  String workspaceEnvMirrorsDisabledReason(String reason) {
-    return 'Изменение зеркал в изолированной среде недоступно: $reason';
-  }
-
-  @override
-  String get workspaceEnvMirrorDetectTitle => 'Скорость зеркал';
 
   @override
   String workspaceEnvMirrorLatency(int ms) {
     return '$ms мс';
-  }
-
-  @override
-  String workspaceEnvMirrorFailed(String reason) {
-    return '$reason';
   }
 
   @override
@@ -9839,25 +8784,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceEnvChipRestart => 'Требуется перезапуск';
 
   @override
-  String get workspaceEnvNativeExplanation =>
-      'На компьютере Moru использует системную оболочку вместо изолированной Linux-среды.';
-
-  @override
   String workspaceEnvNativeShellPath(String path) {
     return 'Оболочка: $path';
-  }
-
-  @override
-  String get workspaceEnvNativeShellApproval =>
-      'Для инструмента Shell требуется подтверждение, если в этой сессии не разрешены все инструменты.';
-
-  @override
-  String workspaceEnvDownloadProgress(
-    String downloaded,
-    String total,
-    int percent,
-  ) {
-    return '$downloaded / $total МБ ($percent%)';
   }
 
   @override
@@ -9888,15 +8816,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get skillsEmptyTitle => 'Навыков пока нет';
 
   @override
-  String get skillsEmptyBody =>
-      'Навык — папка с файлом SKILL.md. Импортируйте Markdown, файл .md или .zip либо укажите ссылку GitHub.';
-
-  @override
   String get skillsEmptyFormat =>
       '---\nname: my-skill\ndescription: Что делает этот навык\n---\n\n# Инструкции';
-
-  @override
-  String get skillsImport => 'Импорт';
 
   @override
   String get skillsImportPaste => 'Вставить Markdown';
@@ -9912,13 +8833,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get skillsImportPasteHint => 'Вставьте SKILL.md с заголовком YAML';
-
-  @override
-  String get skillsImportGitHubLabel => 'URL GitHub';
-
-  @override
-  String get skillsImportGitHubHint =>
-      'github.com/owner/repo или github.com/owner/repo/tree/ref/path';
 
   @override
   String get skillsImportConfirm => 'Импорт';
@@ -9975,13 +8889,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get skillsInheritAssistant => 'Наследовать от ассистента';
 
   @override
-  String get skillsInheritAssistantSubtitle =>
-      'Использовать те же навыки, что и у ассистента этого диалога.';
-
-  @override
-  String get skillsActiveLabel => 'Активен';
-
-  @override
   String get skillsSessionTitle => 'Навыки для этого чата';
 
   @override
@@ -9989,9 +8896,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get skillsDetailKindLabel => 'Навык';
-
-  @override
-  String get skillsNoEnabled => 'Нет включённых навыков';
 
   @override
   String get terminalTitle => 'Терминал';
@@ -10043,35 +8947,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get terminalCancel => 'Отмена';
 
   @override
-  String get terminalSave => 'Сохранить';
-
-  @override
-  String get workspaceDeskMenuWorkspace => 'Рабочее пространство';
-
-  @override
-  String get workspaceDeskMenuSkills => 'Навыки';
-
-  @override
-  String get workspaceDeskBarTitle => 'Рабочее пространство';
-
-  @override
-  String get workspaceDeskBarNoWorkspace => 'Нет рабочего пространства';
-
-  @override
   String get workspaceDeskBarEmptyHint =>
       'Привяжите рабочее пространство на панели инструментов для просмотра файлов';
-
-  @override
-  String get workspaceDeskBarToggle => 'Файлы рабочего пространства';
 
   @override
   String get workspaceDeskOpenSystemTerminal => 'Открыть в системном терминале';
 
   @override
   String get workspaceDeskReveal => 'Показать в файловом менеджере';
-
-  @override
-  String get workspaceDeskBarClose => 'Закрыть панель рабочего пространства';
 
   @override
   String get workspaceEntryBind => 'Привязать рабочее пространство';
@@ -10084,9 +8967,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspaceEntrySetAssistantDefault => 'По умолчанию для ассистента';
-
-  @override
-  String get workspaceEntryLocked => 'Заблокировано';
 
   @override
   String get workspaceEntryChangeConfirmTitle =>
@@ -10103,18 +8983,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceEntryCwd => 'Рабочий каталог';
 
   @override
-  String get workspaceEntryCwdHint =>
-      'Относительно корня рабочего пространства';
-
-  @override
   String get workspaceEntryCwdInvalid =>
       'Путь некорректен или выходит за пределы рабочего пространства';
-
-  @override
-  String get workspaceEntryCwdMissing => 'Такой каталог не существует';
-
-  @override
-  String get workspaceEntryCwdCreate => 'Создать';
 
   @override
   String get workspaceEntryFiles => 'Файлы';
@@ -10184,13 +9054,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceEntryNone => 'Нет';
 
   @override
-  String get workspaceEntryStartConversationFirst => 'Сначала начните диалог';
-
-  @override
   String get workspaceEntryTooltip => 'Рабочее пространство';
-
-  @override
-  String get workspaceEntryPickerTitle => 'Выберите рабочее пространство';
 
   @override
   String get settingsPageWorkspace => 'Рабочее пространство и среда';
@@ -10259,10 +9123,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspaceMgmtCreate => 'Создать';
-
-  @override
-  String get workspaceMgmtShellApprovalSubtitle =>
-      'Спрашивать перед каждой командой';
 
   @override
   String get workspaceMgmtDefaultCwdRoot => '/';
@@ -10337,22 +9197,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspacePreviewLoadError => 'Не удалось загрузить файл.';
 
   @override
-  String get workspacePreviewRevealInFinder => 'Показать в Finder';
-
-  @override
-  String get workspacePreviewOpenInSystemApp => 'Открыть системным приложением';
-
-  @override
   String get workspacePreviewOpenInBrowser => 'Открыть в браузере';
 
   @override
   String get workspacePreviewTable => 'Таблица';
-
-  @override
-  String get workspacePreviewPlainLanguage => 'Код';
-
-  @override
-  String get workspacePreviewOpen => 'Открыть';
 
   @override
   String get workspacePreviewRevealFailed =>
@@ -10392,16 +9240,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get skillsImportTooltip => 'Импортировать навык';
 
   @override
-  String get skillsImportPasteSubtitle => 'Вставьте SKILL.md с заголовком YAML';
-
-  @override
-  String get skillsImportFileSubtitle => 'Выберите файл .md или .zip';
-
-  @override
-  String get skillsImportGitHubSubtitle =>
-      'Импортировать SKILL.md из репозитория';
-
-  @override
   String get skillsImportResolving => 'Поиск репозитория…';
 
   @override
@@ -10419,10 +9257,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get skillsImportGitHubUrlHint =>
       'https://github.com/owner/repo или owner/repo[/path]';
-
-  @override
-  String get skillsImportGitHubHelp =>
-      'Поддерживается SKILL.md в корне репозитория или в подпапке.';
 
   @override
   String get skillsEmptyHint =>
@@ -10447,12 +9281,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get workspaceToolAwaitingApproval => 'Ожидание разрешения';
-
-  @override
-  String get workspaceToolCompleted => 'Готово';
-
-  @override
   String workspaceToolLines(int count) {
     return 'Строк: $count';
   }
@@ -10471,9 +9299,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String workspaceToolContentMatches(int count) {
     return 'Совпадений: $count';
   }
-
-  @override
-  String get workspaceToolExpand => 'Развернуть';
 
   @override
   String get workspaceToolSectionCommand => 'Команда';
@@ -10495,9 +9320,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspaceToolSavedOutput => 'Полный вывод сохранён';
-
-  @override
-  String get workspaceToolApprove => 'Разрешить';
 
   @override
   String get workspaceToolDeny => 'Отклонить';
@@ -10553,9 +9375,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspaceEnvActionsSection => 'Действия';
-
-  @override
-  String get workspaceEnvInfoSection => 'Информация';
 
   @override
   String get workspaceEnvInfoBody =>
@@ -10645,10 +9464,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get workspaceEnvNativeUnsandboxed =>
-      'Команды выполняются на этом компьютере, а не в изолированной среде. Для них требуется подтверждение, если в сессии не разрешены все инструменты.';
-
-  @override
   String get workspaceEnvRootfsTitle => '/';
 
   @override
@@ -10721,16 +9536,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceEnvSizeTimeout => 'Время ожидания истекло';
 
   @override
-  String get workspaceEnvInfoCopied => 'Информация о среде скопирована';
-
-  @override
   String get workspacePreviewEmptyFile => 'Этот файл пуст';
 
   @override
   String get workspacePreviewEmptyHint => 'Нет содержимого для предпросмотра.';
-
-  @override
-  String get workspacePreviewRevealInExplorer => 'Показать в Проводнике';
 
   @override
   String get workspacePreviewRevealInFileManager =>
@@ -10865,9 +9674,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get workspaceEnvDependencySourcesDetail =>
       'Для установки используется выбранный источник apt/apk. Источники pip и npm применяются к пакетам, устанавливаемым позднее.';
-
-  @override
-  String get workspaceEnvDownloadSource => 'Источник загрузки среды';
 
   @override
   String get workspaceEnvDownloadAutomatic => 'Автовыбор самого быстрого';
@@ -11656,9 +10462,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get scheduledTasksTime => 'Время';
 
   @override
-  String get scheduledTasksTimeHint => '24-часовой формат, например 08:00';
-
-  @override
   String get scheduledTasksRepeat => 'Повтор';
 
   @override
@@ -11867,17 +10670,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'В этом диалоге уже генерируется ответ. Запуск по расписанию пропущен.';
 
   @override
-  String get scheduledTasksDesktopEmpty => 'Нет задач по расписанию';
-
-  @override
-  String get scheduledTasksDesktopReliability =>
-      'Задачи выполняются, только пока Moru запущено, в том числе в свёрнутом виде или системном трее. Пропущенные после выхода или сна компьютера запуски не выполняются. Moru не запускается автоматически.';
-
-  @override
-  String get scheduledTasksDesktopExecutionDetail =>
-      'Результаты сохраняются в чатах. Откройте их из истории запусков задачи. Выполнение останавливается через 10 минут либо при необходимости ввода пользователя или подтверждения инструмента.';
-
-  @override
   String get worldBookStickyLabel => 'Удержание (сообщений)';
 
   @override
@@ -11946,15 +10738,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get oauthLogin => 'Войти';
 
   @override
-  String oauthLoginTo(String provider) {
-    return 'Войти в $provider';
-  }
-
-  @override
   String get oauthConnected => 'Подключено';
-
-  @override
-  String get oauthNotConnected => 'Не подключено';
 
   @override
   String oauthWaiting(String provider) {
@@ -12039,9 +10823,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get oauthNoModels => 'Синхронизируйте модели, чтобы начать общение';
 
   @override
-  String get oauthConnection => 'Подключение';
-
-  @override
   String get oauthConnectionInfo => 'Сведения о подключении';
 
   @override
@@ -12061,15 +10842,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get oauthEnabledHint => 'Показывать эти модели в списке выбора';
-
-  @override
-  String get oauthNetwork => 'Сетевой прокси';
-
-  @override
-  String get oauthFollowGlobal => 'Использовать общие настройки';
-
-  @override
-  String get oauthCustomRequest => 'Свой запрос';
 
   @override
   String get oauthWeekly => 'Недельный период';
@@ -12116,9 +10888,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get oauthDenied => 'Авторизация не разрешена. Повторите попытку.';
-
-  @override
-  String get oauthSaving => 'Подключение аккаунта…';
 
   @override
   String get oauthQuotaExceeded => 'У этого аккаунта нет доступной квоты.';
@@ -12199,37 +10968,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get scheduledTasksPreparation => 'Выполнение и уведомления';
 
   @override
-  String get scheduledTasksAllowPreparation =>
-      'Разрешить заблаговременную подготовку';
-
-  @override
-  String get scheduledTasksPreparationDetail =>
-      'Заблаговременная подготовка подходит для текстовых задач, не требующих актуальной информации. Она не может использовать инструменты, вложения или выполнять внешние действия.';
-
-  @override
-  String get scheduledTasksIOSDetail =>
-      'Ограничения фонового режима iOS не позволяют Moru просыпаться в заданное время для запуска модели. Вместо этого содержимое готовится, пока приложение может работать, а система показывает уведомление в назначенное время. Готовится только следующее срабатывание. Подготовка может не завершиться после выхода из приложения — откройте Moru снова, чтобы подготовить последующие срабатывания.';
-
-  @override
-  String get scheduledTasksContextPolicy => 'Контекст диалога';
-
-  @override
-  String get scheduledTasksContextLatest => 'Следовать за последним диалогом';
-
-  @override
-  String get scheduledTasksContextSnapshot =>
-      'Использовать снимок на момент подготовки';
-
-  @override
-  String get scheduledTasksUnavailable => 'Если выполнение недоступно';
-
-  @override
-  String get scheduledTasksRemind => 'Только отправить напоминание';
-
-  @override
-  String get scheduledTasksSkip => 'Пропустить это срабатывание';
-
-  @override
   String get scheduledTasksNotify => 'Уведомления о результате';
 
   @override
@@ -12237,86 +10975,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Показывать текст результата в уведомлении';
 
   @override
-  String get scheduledTasksPreparationWindow =>
-      'Готовить заранее не более чем за';
-
-  @override
-  String get scheduledTasksPreparationAttempts =>
-      'Лимит автоматических попыток';
-
-  @override
-  String get scheduledTasksPreparationCooldown =>
-      'Минимальный интервал (минуты)';
-
-  @override
-  String get scheduledTasksPreparationBudget =>
-      'Одновременно готовится не более одной задачи из всех. Автоматическая подготовка приостанавливается после шести попыток в час суммарно, включая отменённые запросы. «Подготовить сейчас» не ограничено числом попыток.';
-
-  @override
-  String get scheduledTasksPreparing => 'Подготовка результата';
-
-  @override
-  String get scheduledTasksPrepared => 'Результат подготовлен';
-
-  @override
-  String get scheduledTasksPendingPreparation => 'Ещё не подготовлено';
-
-  @override
-  String get scheduledTasksNotificationRegistered =>
-      'Уведомление запланировано';
-
-  @override
-  String get scheduledTasksNotificationUnavailable =>
-      'Уведомление не запланировано';
-
-  @override
-  String get scheduledTasksReminded => 'Наступил срок · только напоминание';
-
-  @override
-  String get scheduledTasksSkipped => 'Пропущено';
-
-  @override
   String get scheduledTasksCancelled => 'Отменено';
-
-  @override
-  String get scheduledTasksReminderBody =>
-      'Наступил срок запланированной задачи. Откройте Moru, чтобы продолжить.';
-
-  @override
-  String get scheduledTasksResultBody =>
-      'Результат запланированной задачи готов.';
-
-  @override
-  String get scheduledTasksNotificationPermission =>
-      'Разрешить уведомления о задачах';
-
-  @override
-  String get scheduledTasksPreparationCost =>
-      'Подготовка вызывает модель и может стоить дополнительно. При выборе «Следовать за последним диалогом» новые сообщения до наступления срока могут сделать подготовленный результат недействительным. Неиспользованный или отменённый результат всё равно может быть оплачен, а повторная подготовка — это ещё один запрос к модели.';
-
-  @override
-  String get scheduledTasksAllowPreparationTip =>
-      'Готовить следующий результат заранее, пока Moru может работать в фоне. Результат не появится в чате до наступления срока. Подготовка использует только текст, без инструментов, вложений и собственного тела запроса. Может расходовать лимиты модели.';
-
-  @override
-  String get scheduledTasksContextPolicyTip =>
-      'Следовать за последним диалогом: до наступления срока новые сообщения, правки или переключение версии сообщения делают подготовленный результат недействительным; повторная подготовка расходует ещё одну попытку и может стоить дополнительно. По наступлении срока сохранённый результат добавляется в чат без изменений.\n\nИспользовать снимок на момент подготовки: подготовленный результат сохраняется даже при изменении диалога. Он не будет учитывать более поздние сообщения.';
-
-  @override
-  String get scheduledTasksPreparationWindowTip =>
-      'Насколько заранее до назначенного времени может начаться подготовка — до 24 часов. Например, открытие Moru в полдень может подготовить напоминание на следующее утро. Больший интервал даёт больше шансов подготовить результат, но он может быть менее актуальным. Это не меняет само время задачи и не гарантирует фонового выполнения. «Подготовить сейчас» обходит это автоматическое ожидание и все лимиты попыток.';
-
-  @override
-  String get scheduledTasksPreparationAttemptsTip =>
-      'Автоматическая подготовка приостанавливается, когда это срабатывание достигает общего лимита попыток. Первые попытки, ошибки, отмены и ручная подготовка учитываются в этом счётчике. «Подготовить сейчас» может выполниться и после достижения лимита. Больше попыток — больше возможных расходов на модель; это не лимит трат.';
-
-  @override
-  String get scheduledTasksPreparationCooldownTip =>
-      'Минимальное время между началом попыток подготовки для одного и того же срабатывания. Больший интервал снижает число повторных запросов. Повтор всё равно требует, чтобы приложение могло выполниться — это не фоновый таймер. «Подготовить сейчас» обходит это автоматическое ожидание и все лимиты попыток.';
-
-  @override
-  String get scheduledTasksUnavailableTip =>
-      'Если подготовленный результат недоступен и задачу нельзя выполнить в срок — отправить напоминание или пропустить срабатывание. Напоминание не содержит сгенерированного ответа и требует включённых уведомлений. Если Moru открыто в момент наступления срока, задача может выполниться сразу.';
 
   @override
   String get scheduledTasksNotifyTip =>
@@ -12325,98 +10984,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get scheduledTasksShowPreviewTip =>
       'Показывать текст подготовленного результата в уведомлении, включая экран блокировки, если это разрешено системными настройками. Отключите, чтобы показывать общее уведомление — полный результат останется доступен в чате. Также действуют глобальные настройки приватности уведомлений.';
-
-  @override
-  String scheduledTasksHours(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count часа',
-      many: '$count часов',
-      few: '$count часа',
-      one: '$count час',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String scheduledTasksMinutes(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count минуты',
-      many: '$count минут',
-      few: '$count минуты',
-      one: '$count минута',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get scheduledTasksPreparationOff => 'Подготовка выключена';
-
-  @override
-  String get scheduledTasksPreparationQueued => 'В очереди';
-
-  @override
-  String get scheduledTasksPreparationQueuedDetail =>
-      'Готовится другая задача. Подходящие задачи готовятся по очереди в порядке наступления срока.';
-
-  @override
-  String get scheduledTasksPreparationIdle => 'Ожидание чата';
-
-  @override
-  String get scheduledTasksPreparationIdleDetail =>
-      'Подготовка возобновится после завершения текущих ответов и стабилизации контекста этой задачи.';
-
-  @override
-  String get scheduledTasksPreparationWindowWaiting => 'Вне окна подготовки';
-
-  @override
-  String get scheduledTasksPreparationCooldownWaiting => 'Ожидание повтора';
-
-  @override
-  String scheduledTasksPreparationRetryAt(String time) {
-    return 'Повторить можно после $time';
-  }
-
-  @override
-  String get scheduledTasksPreparationLimitReached =>
-      'Достигнут лимит автоматических попыток';
-
-  @override
-  String scheduledTasksPreparationAttemptsUsed(int count, int limit) {
-    return 'Для этого срабатывания использовано попыток: $count, автоматический лимит — $limit. Используйте «Подготовить сейчас», чтобы продолжить вручную.';
-  }
-
-  @override
-  String get scheduledTasksPreparationHourlyLimit => 'Достигнут часовой лимит';
-
-  @override
-  String get scheduledTasksPreparationHourlyLimitDetail =>
-      'Автоматическая подготовка приостановлена до восстановления часовой квоты. «Подготовить сейчас» по-прежнему доступно.';
-
-  @override
-  String get scheduledTasksPreparationUnavailable => 'Подготовка недоступна';
-
-  @override
-  String get scheduledTasksPreparationReadFailed =>
-      'Не удалось прочитать контекст задачи. Проверка будет повторена в ближайшее время; подробности — в истории выполнения.';
-
-  @override
-  String get scheduledTasksPreparationResultRetained =>
-      'Не удалось проверить контекст. Подготовленный результат сохранён и будет проверен ещё раз.';
-
-  @override
-  String get scheduledTasksPreparationContextChanged =>
-      'Диалог или контекст задачи изменились, поэтому прежний результат отброшен.';
-
-  @override
-  String get scheduledTasksPreparationPublishing => 'Ожидает добавления в чат';
-
-  @override
-  String get scheduledTasksPreparationPublishingDetail =>
-      'Сохранённый результат будет добавлен в диалог после завершения текущего ответа.';
 
   @override
   String get moruChatNotificationChannel => 'Фоновая работа чата';
@@ -12560,12 +11127,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserMenuSettings => 'Настройки браузера';
 
   @override
-  String get browserSchemeSecure => 'Защищённое соединение (https)';
-
-  @override
-  String get browserSchemeInsecure => 'Без шифрования (http)';
-
-  @override
   String get browserComposerHint => 'Скажите ИИ, что делать…';
 
   @override
@@ -12582,9 +11143,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get browserStateRunning => 'Выполняется…';
-
-  @override
-  String get browserStateAwaitingApproval => 'Ожидание вашего подтверждения…';
 
   @override
   String get browserStateStopping => 'Остановка…';
@@ -12713,60 +11271,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get browserApprovalHeadingUnknownSite =>
       'Moru хочет выполнить действие в браузере';
-
-  @override
-  String get scheduledTasksPreparationPrompt => 'Промпт подготовки';
-
-  @override
-  String get scheduledTasksPreparationPromptTip =>
-      'Дополнительные системные инструкции, используемые только при заблаговременной подготовке этой задачи, отдельно от текста самой задачи. Можно изменить тон или убрать эти инструкции полностью. Инструменты и актуальная информация всё равно недоступны. Изменение этого промпта делает недействительным любой результат, подготовленный до наступления срока — повторная подготовка может стоить ещё один запрос к модели.';
-
-  @override
-  String get scheduledTasksPreparationPromptEmpty =>
-      'Оставьте пустым, чтобы не добавлять инструкций для подготовки';
-
-  @override
-  String scheduledTasksPreparationPromptVariables(
-    String timeVariable,
-    String offsetVariable,
-  ) {
-    return 'Доступные подстановки: $timeVariable — запланированное локальное время доставки, $offsetVariable — его смещение UTC. Они подставляются при подготовке результата.';
-  }
-
-  @override
-  String get scheduledTasksPrepareNow => 'Подготовить сейчас';
-
-  @override
-  String get scheduledTasksPrepareNowDetail =>
-      'Подготовить следующий результат прямо сейчас и доставить его в назначенное время. Автоматические ожидания и лимиты попыток не применяются. Может расходовать лимиты модели. Уже подготовленный результат используется повторно.';
-
-  @override
-  String get scheduledTasksPrepareNowReady =>
-      'Следующий результат уже подготовлен. Дополнительный запрос к модели не выполнялся.';
-
-  @override
-  String get scheduledTasksPrepareNowStarted =>
-      'Готовим следующий результат к назначенному времени.';
-
-  @override
-  String get scheduledTasksPrepareNowBusy =>
-      'Готовится другая задача. Повторите попытку после её завершения.';
-
-  @override
-  String get scheduledTasksPrepareNowChatBusy =>
-      'Дождитесь завершения текущего ответа и повторите попытку.';
-
-  @override
-  String get scheduledTasksPrepareNowDisabled =>
-      'Сначала включите задачу и заблаговременную подготовку. Задачи с режимом «пересоздавать» нельзя подготовить заранее.';
-
-  @override
-  String get scheduledTasksPrepareNowUnavailable =>
-      'Подготовка пока недоступна. Повторите попытку немного позже.';
-
-  @override
-  String get scheduledTasksPrepareNowNoUpcoming =>
-      'Нет предстоящего срабатывания для подготовки. Проверьте время задачи и её включённость.';
 
   @override
   String get assistantManagerToolTitle => 'Управление ассистентами';

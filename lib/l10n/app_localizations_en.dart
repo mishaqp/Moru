@@ -39,9 +39,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get helloWorld => 'Hello World!';
-
-  @override
   String get settingsPageBackButton => 'Back';
 
   @override
@@ -70,14 +67,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPageDisplay => 'Preferences';
 
   @override
-  String get settingsPageDisplaySubtitle =>
-      'Appearance, behavior, and interaction preferences';
-
-  @override
   String get settingsPageAssistant => 'Assistant';
-
-  @override
-  String get settingsPageAssistantSubtitle => 'Default assistant and style';
 
   @override
   String get settingsPageModelsServicesSection => 'Models & Services';
@@ -132,11 +122,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storageSpaceTotalLabel => 'Used';
-
-  @override
-  String storageSpaceClearableLabel(String size) {
-    return 'Clearable: $size';
-  }
 
   @override
   String storageSpaceClearableHint(String size) {
@@ -386,25 +371,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storageSpaceSortSmallest => 'Smallest';
 
   @override
-  String get settingsPageAboutSection => 'About';
-
-  @override
   String get settingsPageAbout => 'About';
 
   @override
   String get settingsPageStatistics => 'Statistics';
 
   @override
-  String get settingsPageDocs => 'Docs';
-
-  @override
   String get settingsPageLogs => 'Logs';
 
   @override
   String get settingsPageSponsor => 'Sponsor';
-
-  @override
-  String get settingsPageShare => 'Share';
 
   @override
   String get statsPageTitle => 'Statistics';
@@ -510,9 +486,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statsPageUnknownAssistant => 'Default Assistant';
 
   @override
-  String get statsPageUnknownModel => 'Unknown Model';
-
-  @override
   String get statsPageUnknownTopic => 'Untitled Topic';
 
   @override
@@ -543,16 +516,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sponsorPageAfdianTitle => 'Afdian';
 
   @override
-  String get sponsorPageAfdianSubtitle => 'afdian.com/a/kelivo';
-
-  @override
   String get sponsorPageWeChatTitle => 'WeChat Sponsor';
-
-  @override
-  String get sponsorPageWeChatSubtitle => 'WeChat sponsor code';
-
-  @override
-  String get sponsorPageScanQrHint => 'Scan the QR code to sponsor';
 
   @override
   String get languageDisplaySimplifiedChinese => 'Simplified Chinese';
@@ -580,9 +544,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get languageDisplaySpanish => 'Spanish';
-
-  @override
-  String get languageSelectSheetTitle => 'Select Translation Language';
 
   @override
   String get languageSelectSheetClearButton => 'Clear Translation';
@@ -649,13 +610,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get displaySettingsPageLanguageTitle => 'App Language';
 
   @override
-  String get displaySettingsPageLanguageSubtitle => 'Choose interface language';
-
-  @override
   String get assistantTagsManageTitle => 'Manage Tags';
-
-  @override
-  String get assistantTagsCreateButton => 'Create';
 
   @override
   String get assistantTagsCreateDialogTitle => 'Create Tag';
@@ -670,16 +625,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantTagsNameHint => 'Tag name';
 
   @override
-  String get assistantTagsRenameButton => 'Rename';
-
-  @override
   String get assistantTagsRenameDialogTitle => 'Rename Tag';
 
   @override
   String get assistantTagsRenameDialogOk => 'Rename';
-
-  @override
-  String get assistantTagsDeleteButton => 'Delete';
 
   @override
   String get assistantTagsDeleteConfirmTitle => 'Delete Tag';
@@ -813,12 +762,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homePageSelectMessagesToShare => 'Please select messages to share';
 
   @override
-  String get homePageDone => 'Done';
-
-  @override
-  String get homePageDropToUpload => 'Drop files to upload';
-
-  @override
   String get assistantEditPageTitle => 'Assistant';
 
   @override
@@ -928,9 +871,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantRegexInvalidPattern => 'Invalid regular expression';
 
   @override
-  String get assistantRegexCancelButton => 'Cancel';
-
-  @override
   String get assistantRegexUntitled => 'Untitled Rule';
 
   @override
@@ -964,17 +904,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantEditBodyValueLabel => 'Body Value (JSON)';
 
   @override
-  String get assistantEditDeleteTooltip => 'Delete';
-
-  @override
   String get assistantEditAssistantNameLabel => 'Assistant Name';
 
   @override
   String get assistantEditUseAssistantAvatarTitle => 'Use Assistant Avatar';
-
-  @override
-  String get assistantEditUseAssistantAvatarSubtitle =>
-      'Use assistant avatar instead of model avatar';
 
   @override
   String get assistantEditUseAssistantNameTitle => 'Use Assistant Name';
@@ -1012,14 +945,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantEditStreamOutputTitle => 'Stream Output';
 
   @override
-  String get assistantEditStreamOutputDescription =>
-      'Enable streaming responses';
-
-  @override
   String get assistantEditThinkingBudgetTitle => 'Thinking Budget';
-
-  @override
-  String get assistantEditConfigureButton => 'Configure';
 
   @override
   String get assistantEditMaxTokensTitle => 'Max Tokens';
@@ -1044,22 +970,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantEditClearButton => 'Clear';
 
   @override
-  String get desktopNavChatTooltip => 'Chat';
-
-  @override
   String get desktopNavTranslateTooltip => 'Translate';
-
-  @override
-  String get desktopNavStorageTooltip => 'Storage';
-
-  @override
-  String get desktopNavGlobalSearchTooltip => 'Global Search';
-
-  @override
-  String get desktopNavThemeToggleTooltip => 'Theme';
-
-  @override
-  String get desktopNavSettingsTooltip => 'Settings';
 
   @override
   String get desktopAvatarMenuUseEmoji => 'Use emoji';
@@ -1093,10 +1004,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantEditAvatarReset => 'Reset';
 
   @override
-  String get displaySettingsPageChatMessageBackgroundTitle =>
-      'Chat Message Background';
-
-  @override
   String get displaySettingsPageChatMessageBackgroundDefault => 'Default';
 
   @override
@@ -1104,27 +1011,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get displaySettingsPageChatMessageBackgroundSolid => 'Solid Color';
-
-  @override
-  String get displaySettingsPageAndroidBackgroundChatTitle =>
-      'Background Generation (Android)';
-
-  @override
-  String get displaySettingsPageIosBackgroundChatTitle =>
-      'Background Generation (iOS)';
-
-  @override
-  String get iosBackgroundStatusOn => 'On';
-
-  @override
-  String get iosBackgroundStatusOff => 'Off';
-
-  @override
-  String get iosLiveActivityTitle => 'Live Activity';
-
-  @override
-  String get iosLiveActivitySubtitle =>
-      'Show background replies on the Lock Screen and Dynamic Island when supported.';
 
   @override
   String get notificationChatCompletedTitle => 'Generation complete';
@@ -1222,9 +1108,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get multiKeyPageError => 'Error';
 
   @override
-  String get multiKeyPageAccuracy => 'Accuracy';
-
-  @override
   String get multiKeyPageStrategyTitle => 'Load Balancing Strategy';
 
   @override
@@ -1253,9 +1136,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get multiKeyPageStatusRateLimited => 'Rate Limited';
-
-  @override
-  String get multiKeyPageEditAlias => 'Edit Alias';
 
   @override
   String get multiKeyPageEdit => 'Edit';
@@ -1423,23 +1303,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get markdownTableDefaultFileNameStem => 'table';
 
   @override
-  String get markdownTableCopiedCsvSnackbar =>
-      'CSV copied. Long press Copy to copy as image.';
-
-  @override
   String get markdownTableCopiedMarkdownSnackbar => 'Table copied.';
-
-  @override
-  String codeBlockCollapsedLines(int n) {
-    return '… $n lines folded';
-  }
-
-  @override
-  String get htmlPreviewNotSupportedOnLinux =>
-      'HTML preview is not supported on Linux';
-
-  @override
-  String get assistantEditSampleUser => 'User';
 
   @override
   String get assistantEditSampleMessage => 'Hello there';
@@ -1449,9 +1313,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assistantEditMcpNoServersMessage => 'No running MCP servers';
-
-  @override
-  String get assistantEditMcpConnectedTag => 'Connected';
 
   @override
   String assistantEditMcpToolsCountTag(String enabled, String total) {
@@ -1477,9 +1338,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantSettingsDeleteButton => 'Delete';
 
   @override
-  String get assistantSettingsEditButton => 'Edit';
-
-  @override
   String get assistantSettingsAddSheetTitle => 'Assistant Name';
 
   @override
@@ -1492,52 +1350,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantSettingsAddSheetSave => 'Save';
 
   @override
-  String get desktopAssistantsListTitle => 'Assistants';
-
-  @override
-  String get desktopSidebarTabAssistants => 'Assistants';
-
-  @override
-  String get desktopSidebarTabTopics => 'Topics';
-
-  @override
-  String get desktopTrayMenuShowWindow => 'Show Window';
-
-  @override
-  String get desktopTrayMenuExit => 'Exit';
-
-  @override
-  String get hotkeyToggleAppVisibility => 'Show/Hide App';
-
-  @override
-  String get hotkeyCloseWindow => 'Close Window';
-
-  @override
   String get hotkeyOpenSettings => 'Open Settings';
-
-  @override
-  String get hotkeyNewTopic => 'New Topic';
-
-  @override
-  String get hotkeySwitchModel => 'Switch Model';
-
-  @override
-  String get hotkeyToggleAssistantPanel => 'Toggle Assistants';
-
-  @override
-  String get hotkeyToggleTopicPanel => 'Toggle Topics';
-
-  @override
-  String get hotkeysPressShortcut => 'Press a shortcut';
-
-  @override
-  String get hotkeysResetDefault => 'Reset to default';
-
-  @override
-  String get hotkeysClearShortcut => 'Clear shortcut';
-
-  @override
-  String get hotkeysResetAll => 'Reset all to defaults';
 
   @override
   String get assistantEditTemperatureTitle => 'Temperature';
@@ -1576,12 +1389,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupPageTitle => 'Backup & Restore';
-
-  @override
-  String get backupPageWebDavTab => 'WebDAV';
-
-  @override
-  String get backupPageImportExportTab => 'Import/Export';
 
   @override
   String get backupPageWebDavServerUrl => 'WebDAV Server URL';
@@ -1675,18 +1482,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupRestoreFailureRestartButton => 'Restart Kelivo';
 
   @override
-  String get backupRestoreFailureCopyButton => 'Copy diagnostic code';
-
-  @override
-  String get backupRestoreFailureCopied => 'Diagnostic code copied';
-
-  @override
   String backupRestoreFailureDiagnostic(String code) {
     return 'Diagnostic code: $code';
   }
-
-  @override
-  String get startupRecoveryMoreOptions => 'More recovery options';
 
   @override
   String get startupRecoveryRepairButton => 'Repair and restart';
@@ -1781,11 +1579,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String startupRecoveryReportSaved(String path) {
-    return 'Report saved to $path';
-  }
-
-  @override
   String get startupRecoveryReportShared => 'Report exported.';
 
   @override
@@ -1797,11 +1590,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get startupRecoverySectionDataBody =>
       'Nothing has been deleted. Save a copy somewhere safe before trying anything below.';
-
-  @override
-  String startupRecoveryExportSavedTo(String path) {
-    return 'A copy of your data was saved to $path';
-  }
 
   @override
   String get startupRecoverySectionRepairTitle => 'Diagnose and repair';
@@ -1892,10 +1680,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupPageSelectImportMode => 'Select Import Mode';
 
   @override
-  String get backupPageSelectImportModeDescription =>
-      'Choose a restore mode. The chat and file switches determine which components are included.';
-
-  @override
   String get backupPageOverwriteMode => 'Complete Overwrite';
 
   @override
@@ -1932,12 +1716,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupPageBackupUploaded => 'Backup uploaded';
-
-  @override
-  String get backupPageBackup => 'Backup';
-
-  @override
-  String get backupPageExporting => 'Exporting...';
 
   @override
   String get backupProgressCancel => 'Cancel';
@@ -2007,28 +1785,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupPageExportToFile => 'Export to File';
 
   @override
-  String get backupPageExportToFileSubtitle => 'Export app data to a file';
-
-  @override
   String get backupPageImportBackupFile => 'Import Backup File';
-
-  @override
-  String get backupPageImportBackupFileSubtitle => 'Import a local backup file';
-
-  @override
-  String get backupPageImportFromOtherApps => 'Import from Other Apps';
-
-  @override
-  String get backupPageNotSupportedYet => 'Not supported yet';
 
   @override
   String get backupPageRemoteBackups => 'Remote Backups';
 
   @override
   String get backupPageNoBackups => 'No backups';
-
-  @override
-  String get backupPageRestoreTooltip => 'Restore';
 
   @override
   String get backupPageDeleteTooltip => 'Delete';
@@ -2117,12 +1880,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupReminderTimeTitle => 'Reminder Time';
-
-  @override
-  String get backupReminderTimeInputHint => 'HH:mm';
-
-  @override
-  String get backupReminderTimeInvalid => 'Enter a time from 00:00 to 23:59.';
 
   @override
   String get backupReminderLastBackupTitle => 'Last Backup';
@@ -2361,23 +2118,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get bottomToolsSheetLearningMode => 'Learning Mode';
-
-  @override
-  String get bottomToolsSheetLearningModeDescription =>
-      'Help you learn step by step';
-
-  @override
-  String get bottomToolsSheetConfigurePrompt => 'Configure prompt';
-
-  @override
   String get bottomToolsSheetPrompt => 'Prompt';
 
   @override
   String get bottomToolsSheetPromptHint => 'Enter prompt text to inject';
-
-  @override
-  String get bottomToolsSheetResetDefault => 'Reset to default';
 
   @override
   String get bottomToolsSheetSave => 'Save';
@@ -2386,16 +2130,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bottomToolsSheetOcr => 'Image OCR';
 
   @override
-  String get messageMoreSheetTitle => 'More Actions';
-
-  @override
   String get messageMoreSheetSelectCopy => 'Select & Copy';
 
   @override
   String get messageMoreSheetRenderWebView => 'Render Web View';
-
-  @override
-  String get messageMoreSheetNotImplemented => 'Not yet implemented';
 
   @override
   String get messageMoreSheetEdit => 'Edit';
@@ -2422,27 +2160,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reasoningBudgetSheetAuto => 'Auto';
 
   @override
-  String get reasoningBudgetSheetLight => 'Light Reasoning';
-
-  @override
-  String get reasoningBudgetSheetMedium => 'Medium Reasoning';
-
-  @override
-  String get reasoningBudgetSheetHeavy => 'Heavy Reasoning';
-
-  @override
-  String get reasoningBudgetSheetXhigh => 'Extreme Reasoning';
-
-  @override
-  String get reasoningBudgetSheetMax => 'Maximum Reasoning';
-
-  @override
   String get reasoningBudgetSheetTitle => 'Reasoning Chain Strength';
-
-  @override
-  String reasoningBudgetSheetCurrentLevel(String level) {
-    return 'Current Level: $level';
-  }
 
   @override
   String get reasoningBudgetSheetOffSubtitle =>
@@ -2493,12 +2211,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMessageWidgetCopiedToClipboard => 'Copied to clipboard';
 
   @override
-  String get chatMessageWidgetResendTooltip => 'Resend';
-
-  @override
-  String get chatMessageWidgetMoreTooltip => 'More';
-
-  @override
   String get chatMessageWidgetThinking => 'Thinking...';
 
   @override
@@ -2522,18 +2234,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMessageWidgetAttachmentUnavailable => 'Attachment unavailable';
 
   @override
-  String chatMessageWidgetCitationsTitle(int count) {
-    return 'Citations ($count)';
-  }
-
-  @override
   String get chatMessageWidgetSearchResultsTitle => 'Search results';
-
-  @override
-  String get chatMessageWidgetCitationSourcesTitle => 'Citation sources';
-
-  @override
-  String get chatMessageWidgetRegenerateTooltip => 'Regenerate';
 
   @override
   String get chatMessageWidgetRegenerateConfirmTitle => 'Confirm Regenerate';
@@ -2556,14 +2257,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMessageWidgetStopTooltip => 'Stop';
 
   @override
-  String get chatMessageWidgetSpeakTooltip => 'Speak';
-
-  @override
   String get chatMessageWidgetTranslateTooltip => 'Translate';
-
-  @override
-  String get chatMessageWidgetBuiltinSearchHideNote =>
-      'Hide builtin search tool cards';
 
   @override
   String get chatMessageWidgetDeepThinking => 'Deep Thinking';
@@ -2584,11 +2278,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatMessageWidgetSpeakingTitle => 'Speaking:';
-
-  @override
-  String chatMessageWidgetSpeakText(String text) {
-    return 'Speaking: $text';
-  }
 
   @override
   String get chatMessageWidgetMemoryRead => 'Read Memory';
@@ -2702,15 +2391,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Inline \$...\$ Rendering';
 
   @override
-  String get displaySettingsPageEnableDollarLatexSubtitle =>
-      'Render inline math inside \$...\$';
-
-  @override
   String get displaySettingsPageEnableMathTitle => 'Math Formula Rendering';
-
-  @override
-  String get displaySettingsPageEnableMathSubtitle =>
-      'Render LaTeX math (inline and block)';
 
   @override
   String get displaySettingsPageEnableUserMarkdownTitle =>
@@ -2908,18 +2589,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sideDrawerSave => 'Save';
 
   @override
-  String get sideDrawerGreetingMorning => 'Good morning 👋';
-
-  @override
-  String get sideDrawerGreetingNoon => 'Good afternoon 👋';
-
-  @override
-  String get sideDrawerGreetingAfternoon => 'Good afternoon 👋';
-
-  @override
-  String get sideDrawerGreetingEvening => 'Good evening 👋';
-
-  @override
   String get sideDrawerDateToday => 'Today';
 
   @override
@@ -2935,15 +2604,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sideDrawerSearchHint => 'Search current assistant';
 
   @override
-  String get sideDrawerSearchAssistantsHint => 'Search assistants';
-
-  @override
-  String get sideDrawerTopicSearchModeLabel => 'Topic mode';
-
-  @override
-  String get sideDrawerGlobalSearchModeLabel => 'Global mode';
-
-  @override
   String get sideDrawerSearchModeSwipeToTopicHint =>
       'Swipe the search bar for topic search';
 
@@ -2953,10 +2613,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sideDrawerGlobalSearchHint => 'Search all sessions';
-
-  @override
-  String get sideDrawerGlobalSearchEmptyHint =>
-      'Search across titles and messages';
 
   @override
   String get sideDrawerGlobalSearchNoResults => 'No matching sessions';
@@ -2981,12 +2637,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sideDrawerPinnedLabel => 'Pinned';
-
-  @override
-  String get sideDrawerHistory => 'History';
-
-  @override
-  String get sideDrawerSettings => 'Settings';
 
   @override
   String get sideDrawerChooseAssistantTitle => 'Choose Assistant';
@@ -3020,9 +2670,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get providerAvatarInputLobehubIcon => 'Enter LobeHub Icon';
-
-  @override
-  String get providerAvatarChooseLobehubIcon => 'Enter LobeHub Icon';
 
   @override
   String get providerAvatarLobehubDialogTitle => 'Enter LobeHub Icon';
@@ -3075,9 +2722,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sideDrawerNicknameHint => 'Enter new nickname';
 
   @override
-  String get sideDrawerRename => 'Rename';
-
-  @override
   String get chatInputBarHint => 'Type a message for AI';
 
   @override
@@ -3088,9 +2732,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatInputBarReasoningStrengthTooltip => 'Reasoning Strength';
-
-  @override
-  String get chatInputBarMcpServersTooltip => 'MCP Servers';
 
   @override
   String get chatInputBarToolsTooltip => 'Tools';
@@ -3124,18 +2765,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatInputBarQueuedPending => 'Queued to send';
-
-  @override
-  String get chatInputBarQueuedCancel => 'Cancel Queue';
-
-  @override
-  String get chatInputBarInsertNewline => 'Newline';
-
-  @override
-  String get chatInputBarExpand => 'Expand';
-
-  @override
-  String get chatInputBarCollapse => 'Collapse';
 
   @override
   String get mcpPageBackTooltip => 'Back';
@@ -3286,9 +2915,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mcpServerEditSheetNoToolsHint => 'No tools, tap refresh to sync';
-
-  @override
-  String get mcpServerEditSheetCancel => 'Cancel';
 
   @override
   String get mcpServerEditSheetSave => 'Save';
@@ -3506,11 +3132,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Required, suggest lowercase/digits/hyphens';
 
   @override
-  String modelDetailSheetModelIdDisabledHint(String modelId) {
-    return '$modelId';
-  }
-
-  @override
   String get modelDetailSheetModelNameLabel => 'Model Name';
 
   @override
@@ -3567,13 +3188,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Built-in tools depend on the provider and API mode.';
 
   @override
-  String get modelDetailSheetSearchTool => 'Search';
-
-  @override
-  String get modelDetailSheetSearchToolDescription =>
-      'Enable Google Search integration';
-
-  @override
   String get modelDetailSheetUrlContextTool => 'URL Context';
 
   @override
@@ -3593,10 +3207,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get modelDetailSheetYoutubeToolDescription =>
       'Enable YouTube URL ingestion (auto-detect links in prompts)';
-
-  @override
-  String get modelDetailSheetOpenaiBuiltinToolsResponsesOnlyHint =>
-      'Requires OpenAI Responses API.';
 
   @override
   String get modelDetailSheetWebFetchTool => 'Web Fetch';
@@ -3646,9 +3256,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get modelDetailSheetInvalidIdError =>
       'Please enter a valid model ID (>=2 chars)';
-
-  @override
-  String get modelDetailSheetModelIdExistsError => 'Model ID already exists';
 
   @override
   String get modelDetailSheetHeaderKeyHint => 'Header Key';
@@ -3789,9 +3396,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerDetailPageBalanceQuerying => 'Checking...';
 
   @override
-  String get providerDetailPageBalanceResetDefaultsButton => 'Reset';
-
-  @override
   String get providerDetailPageBalanceResetDefaultsTooltip =>
       'Reset balance settings';
 
@@ -3822,14 +3426,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerDetailPageImportJsonButton => 'Import JSON';
 
   @override
-  String get providerDetailPageImportJsonReadFailedMessage =>
-      'Failed to read file';
-
-  @override
   String get providerDetailPageTestButton => 'Test';
-
-  @override
-  String get providerDetailPageSaveButton => 'Save';
 
   @override
   String get providerDetailPageProviderRemovedMessage => 'Provider removed';
@@ -3882,9 +3479,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerDetailPagePasswordOptionalLabel => 'Password (optional)';
 
   @override
-  String get providerDetailPageSavedSnackbar => 'Saved';
-
-  @override
   String get providerDetailPageEmbeddingsGroupTitle => 'Embeddings';
 
   @override
@@ -3898,9 +3492,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get providerDetailPageFilterHint => 'Type model name to filter';
-
-  @override
-  String get providerDetailPageDeleteText => 'Delete';
 
   @override
   String get providerDetailPageEditTooltip => 'Edit';
@@ -4016,12 +3607,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providersPageDisabledStatus => 'OFF';
 
   @override
-  String get providersPageModelsCountSuffix => ' models';
-
-  @override
-  String get providersPageModelsCountSingleSuffix => ' models';
-
-  @override
   String get addProviderSheetTitle => 'Add Provider';
 
   @override
@@ -4045,9 +3630,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addProviderSheetImportJsonButton => 'Import JSON';
-
-  @override
-  String get addProviderSheetCancelButton => 'Cancel';
 
   @override
   String get addProviderSheetAddButton => 'Add';
@@ -4076,9 +3658,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Paste share strings (multi-line supported) or ChatBox JSON';
 
   @override
-  String get importProviderSheetInputHint => 'ai-provider:v1:... or JSON';
-
-  @override
   String get importProviderSheetCancelButton => 'Cancel';
 
   @override
@@ -4100,34 +3679,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareProviderSheetShareButton => 'Share';
 
   @override
-  String get desktopProviderContextMenuShare => 'Share';
-
-  @override
-  String get desktopProviderShareCopyText => 'Copy code';
-
-  @override
-  String get desktopProviderShareCopyQr => 'Copy QR';
-
-  @override
   String get providerDetailPageApiBaseUrlLabel => 'API Base URL';
 
   @override
   String get providerDetailPageModelsTitle => 'Models';
-
-  @override
-  String get providerModelsGetButton => 'Get';
-
-  @override
-  String get providerDetailPageCapsVision => 'Vision';
-
-  @override
-  String get providerDetailPageCapsImage => 'Image';
-
-  @override
-  String get providerDetailPageCapsTool => 'Tool';
-
-  @override
-  String get providerDetailPageCapsReasoning => 'Reasoning';
 
   @override
   String get qrScanPageTitle => 'Scan QR';
@@ -4143,9 +3698,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchServicesPageDone => 'Done';
-
-  @override
-  String get searchServicesPageEdit => 'Edit';
 
   @override
   String get searchServicesPageAddProvider => 'Add Provider';
@@ -4183,16 +3735,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchServicesPageNotTestedStatus => 'Not tested';
 
   @override
-  String get searchServicesPageEditServiceTooltip => 'Edit Service';
-
-  @override
   String get searchServicesPageTestConnectionTooltip => 'Test Connection';
-
-  @override
-  String get searchServicesPageDeleteServiceTooltip => 'Delete Service';
-
-  @override
-  String get searchServicesPageConfiguredStatus => 'Configured';
 
   @override
   String get miniMapTitle => 'Minimap';
@@ -4212,28 +3755,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get miniMapSearchNoResults => 'No matching messages';
 
   @override
-  String get searchServicesPageApiKeyRequiredStatus => 'API Key Required';
-
-  @override
-  String get searchServicesPageUrlRequiredStatus => 'URL Required';
-
-  @override
   String get searchServicesAddDialogTitle => 'Add Search Service';
-
-  @override
-  String get searchServicesAddDialogServiceType => 'Service Type';
-
-  @override
-  String get searchServicesAddDialogBingLocal => 'Local';
 
   @override
   String get searchServicesAddDialogCancel => 'Cancel';
 
   @override
   String get searchServicesAddDialogAdd => 'Add';
-
-  @override
-  String get searchServicesAddDialogApiKeyRequired => 'API Key is required';
 
   @override
   String get searchServicesFieldCustomUrlOptional => 'Custom URL (optional)';
@@ -4248,39 +3776,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchServicesDialogSystemPrompt => 'System Prompt';
 
   @override
-  String get searchServicesAddDialogInstanceUrl => 'Instance URL';
-
-  @override
   String get searchServicesAddDialogUrlRequired => 'URL is required';
 
   @override
-  String get searchServicesAddDialogEnginesOptional => 'Engines (optional)';
-
-  @override
-  String get searchServicesAddDialogLanguageOptional => 'Language (optional)';
-
-  @override
-  String get searchServicesAddDialogUsernameOptional => 'Username (optional)';
-
-  @override
-  String get searchServicesAddDialogPasswordOptional => 'Password (optional)';
-
-  @override
-  String get searchServicesAddDialogRegionOptional =>
-      'Region (optional, default: us-en)';
-
-  @override
-  String get searchServicesEditDialogEdit => 'Edit';
-
-  @override
-  String get searchServicesEditDialogCancel => 'Cancel';
-
-  @override
   String get searchServicesEditDialogSave => 'Save';
-
-  @override
-  String get searchServicesEditDialogBingLocalNoConfig =>
-      'No configuration required for Bing Local search.';
 
   @override
   String get searchServicesEditDialogApiKeyRequired => 'API Key is required';
@@ -4422,27 +3921,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchServiceEditorDeleteConfirm => 'Delete';
 
   @override
-  String get searchServiceEditorDiscardTitle => 'Discard changes?';
-
-  @override
-  String get searchServiceEditorDiscardMessage =>
-      'Your unsaved search service settings will be lost.';
-
-  @override
-  String get searchServiceEditorKeepEditing => 'Keep editing';
-
-  @override
-  String get searchServiceEditorDiscard => 'Discard';
-
-  @override
   String get searchSettingsSheetTitle => 'Search Settings';
 
   @override
   String get searchSettingsSheetBuiltinSearchTitle => 'Built-in Search';
-
-  @override
-  String get searchSettingsSheetBuiltinSearchDescription =>
-      'Enable model\'s built-in search';
 
   @override
   String get searchSettingsSheetClaudeDynamicSearchTitle => 'Dynamic filtering';
@@ -4455,20 +3937,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchSettingsSheetWebSearchTitle => 'Web Search';
 
   @override
-  String get searchSettingsSheetWebSearchDescription =>
-      'Enable web search in chat';
-
-  @override
   String get searchSettingsSheetOpenSearchServicesTooltip =>
       'Open search services';
 
   @override
   String get searchSettingsSheetNoServicesMessage =>
       'No services. Add from Search Services.';
-
-  @override
-  String get aboutPageEasterEggMessage =>
-      'Thanks for exploring! \n (No egg yet)';
 
   @override
   String get aboutPageEasterEggButton => 'Nice!';
@@ -4482,50 +3956,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'You\'ve already been through this door.';
 
   @override
-  String get aboutPageAppName => 'Kelivo';
-
-  @override
   String get aboutPageAppDescription => 'Open-source AI Assistant';
-
-  @override
-  String get aboutPageNoQQGroup => 'No QQ group yet';
 
   @override
   String get aboutPageVersion => 'Version';
 
   @override
-  String aboutPageVersionDetail(String version, String buildNumber) {
-    return '$version / $buildNumber';
-  }
-
-  @override
   String get aboutPageSystem => 'System';
-
-  @override
-  String get aboutPageLoadingPlaceholder => '...';
-
-  @override
-  String get aboutPageUnknownPlaceholder => '-';
-
-  @override
-  String get aboutPagePlatformMacos => 'macOS';
-
-  @override
-  String get aboutPagePlatformWindows => 'Windows';
-
-  @override
-  String get aboutPagePlatformLinux => 'Linux';
-
-  @override
-  String get aboutPagePlatformAndroid => 'Android';
-
-  @override
-  String get aboutPagePlatformIos => 'iOS';
-
-  @override
-  String aboutPagePlatformOther(String os) {
-    return 'Other ($os)';
-  }
 
   @override
   String get aboutPageWebsite => 'Website';
@@ -4555,18 +3992,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get displaySettingsPageShowUserAvatarTitle => 'Show User Avatar';
 
   @override
-  String get displaySettingsPageShowUserAvatarSubtitle =>
-      'Display user avatar in chat messages';
-
-  @override
-  String get displaySettingsPageShowUserNameTimestampTitle =>
-      'Show User Name & Timestamp';
-
-  @override
-  String get displaySettingsPageShowUserNameTimestampSubtitle =>
-      'Show user name and the timestamp below it in chat messages';
-
-  @override
   String get displaySettingsPageShowUserNameTitle => 'Show User Name';
 
   @override
@@ -4575,18 +4000,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get displaySettingsPageShowUserMessageActionsTitle =>
       'Show User Message Actions';
-
-  @override
-  String get displaySettingsPageShowUserMessageActionsSubtitle =>
-      'Display copy, resend, and more buttons below your messages';
-
-  @override
-  String get displaySettingsPageShowModelNameTimestampTitle =>
-      'Show Model Name & Timestamp';
-
-  @override
-  String get displaySettingsPageShowModelNameTimestampSubtitle =>
-      'Show model name and the timestamp below it in chat messages';
 
   @override
   String get displaySettingsPageShowModelNameTitle => 'Show Model Name';
@@ -4600,23 +4013,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Show Provider After Model Name';
 
   @override
-  String get displaySettingsPageShowProviderInChatMessageSubtitle =>
-      'Display provider name after the model ID in chat messages (e.g. model | provider)';
-
-  @override
   String get displaySettingsPageChatModelIconTitle => 'Chat Model Icon';
-
-  @override
-  String get displaySettingsPageChatModelIconSubtitle =>
-      'Show model icon in chat messages';
 
   @override
   String get displaySettingsPageShowTokenStatsTitle =>
       'Show Token & Context Stats';
-
-  @override
-  String get displaySettingsPageShowTokenStatsSubtitle =>
-      'Show token usage and message count';
 
   @override
   String get displaySettingsPageShowThinkingCardsTitle => 'Show Thinking Cards';
@@ -4637,16 +4038,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Auto-collapse Thinking';
 
   @override
-  String get displaySettingsPageAutoCollapseThinkingSubtitle =>
-      'Collapse reasoning after finish';
-
-  @override
   String get displaySettingsPageCollapseThinkingStepsTitle =>
       'Collapse Thinking Steps';
-
-  @override
-  String get displaySettingsPageCollapseThinkingStepsSubtitle =>
-      'Show only the latest steps while replying; fold finished ones into one line';
 
   @override
   String get displaySettingsPageShowToolResultSummaryTitle =>
@@ -4655,10 +4048,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get displaySettingsPageInsertSuggestionOnlyTitle =>
       'Insert suggestions without sending';
-
-  @override
-  String get displaySettingsPageShowToolResultSummarySubtitle =>
-      'Display the summary text below tool steps';
 
   @override
   String get displaySettingsPageHideToolResultImagesTitle =>
@@ -4706,10 +4095,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get displaySettingsPageShowChatListDateTitle => 'Show Chat List Dates';
 
   @override
-  String get displaySettingsPageShowChatListDateSubtitle =>
-      'Display date group labels in the conversation list';
-
-  @override
   String get displaySettingsPageEnableImageCropperTitle =>
       'Enable Image Cropping';
 
@@ -4733,10 +4118,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get displaySettingsPageShowUpdatesTitle => 'Show Updates';
 
   @override
-  String get displaySettingsPageShowUpdatesSubtitle =>
-      'Show app update notifications';
-
-  @override
   String get displaySettingsPageKeepScreenOnDuringGenerationTitle =>
       'Keep Screen On While Generating';
 
@@ -4749,23 +4130,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Message Navigation Buttons';
 
   @override
-  String get displaySettingsPageMessageNavButtonsSubtitle =>
-      'Choose when quick jump buttons appear';
-
-  @override
   String get displaySettingsPageMessageNavButtonsModeAlways => 'Always show';
 
   @override
   String get displaySettingsPageMessageNavButtonsModeScroll =>
       'Show while scrolling';
-
-  @override
-  String get displaySettingsPageMessageNavButtonsModeHover =>
-      'Show on mouse hover';
-
-  @override
-  String get displaySettingsPageMessageNavButtonsModeScrollAndHover =>
-      'Show while scrolling or hovering';
 
   @override
   String get displaySettingsPageMessageNavButtonsModeNever => 'Never show';
@@ -4776,10 +4145,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get displaySettingsPageHapticsOnSidebarTitle => 'Haptics on Sidebar';
-
-  @override
-  String get displaySettingsPageHapticsOnSidebarSubtitle =>
-      'Enable haptic feedback when opening/closing sidebar';
 
   @override
   String get displaySettingsPageHapticsGlobalTitle => 'Global Haptics';
@@ -4796,10 +4161,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get displaySettingsPageHapticsOnGenerateTitle => 'Haptics on Generate';
-
-  @override
-  String get displaySettingsPageHapticsOnGenerateSubtitle =>
-      'Enable haptic feedback during generation';
 
   @override
   String get displaySettingsPageNewChatAfterDeleteTitle =>
@@ -4825,32 +4186,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get displaySettingsPageLongPasteAsFileThresholdUnit => 'characters';
-
-  @override
-  String get displaySettingsPageSendShortcutTitle => 'Send Shortcut';
-
-  @override
-  String get displaySettingsPageSendShortcutEnter => 'Enter';
-
-  @override
-  String get displaySettingsPageSendShortcutCtrlEnter => 'Ctrl/Cmd + Enter';
-
-  @override
-  String get displaySettingsPageAutoSwitchTopicsTitle =>
-      'Auto switch to Topics';
-
-  @override
-  String get desktopDisplaySettingsTopicPositionTitle => 'Topic position';
-
-  @override
-  String get desktopDisplaySettingsTopicPositionLeft => 'Left';
-
-  @override
-  String get desktopDisplaySettingsTopicPositionRight => 'Right';
-
-  @override
-  String get displaySettingsPageNewChatOnLaunchSubtitle =>
-      'Automatically create a new chat on launch';
 
   @override
   String get displaySettingsPageChatFontSizeTitle => 'Chat Font Size';
@@ -4885,46 +4220,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get displaySettingsPageThemeSettingsTitle => 'Theme Settings';
 
   @override
-  String get displaySettingsPageThemeColorTitle => 'Theme Color';
-
-  @override
-  String get desktopSettingsFontsTitle => 'Fonts';
-
-  @override
-  String get linuxHideTitleBarTitle => 'Hide system title bar';
-
-  @override
-  String get linuxHideTitleBarDescription =>
-      'Also hides window buttons. Use your window manager to move, resize, and close the window.';
-
-  @override
-  String get linuxHideTitleBarError =>
-      'Unable to change the title bar. Please try again.';
-
-  @override
-  String get displaySettingsPageTrayTitle => 'System Tray';
-
-  @override
-  String get displaySettingsPageTrayShowTrayTitle => 'Show tray icon';
-
-  @override
-  String get displaySettingsPageTrayMinimizeOnCloseTitle =>
-      'Minimize to tray on close';
-
-  @override
-  String get desktopFontAppLabel => 'App Font';
-
-  @override
-  String get desktopFontCodeLabel => 'Code Font';
-
-  @override
   String get desktopFontFamilySystemDefault => 'System Default';
 
   @override
   String get desktopFontFamilyMonospaceDefault => 'Monospace';
-
-  @override
-  String get desktopFontFilterHint => 'Filter fonts...';
 
   @override
   String get displaySettingsPageAppFontTitle => 'App Font';
@@ -4936,16 +4235,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fontPickerChooseLocalFile => 'Choose Local File';
 
   @override
-  String get desktopFontLoading => 'Loading fonts…';
-
-  @override
   String get displaySettingsPageFontLocalFileLabel => 'Local file';
 
   @override
   String get displaySettingsPageFontResetLabel => 'Reset font settings';
-
-  @override
-  String get displaySettingsPageOtherSettingsTitle => 'Other Settings';
 
   @override
   String get themeSettingsPageDynamicColorSection => 'Dynamic Color';
@@ -5035,16 +4328,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customThemeCopied => 'Theme JSON copied to clipboard';
 
   @override
-  String get customThemeCopyAction => 'Copy';
-
-  @override
   String get customThemeImportHint => 'Paste the theme JSON here';
 
   @override
   String get customThemeImportInvalid => 'Invalid theme JSON';
-
-  @override
-  String get customThemeHexLabel => 'Hex';
 
   @override
   String get ttsServicesPageBackButton => 'Back';
@@ -5063,10 +4350,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get asrServicesSectionTitle => 'Speech Recognition';
-
-  @override
-  String get asrServicesSectionDescription =>
-      'Turn speech into text with an on-device, system, or cloud service.';
 
   @override
   String get asrServicesAddTooltip => 'Add speech recognition service';
@@ -5133,12 +4416,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get asrServicesEditTitle => 'Edit Speech Recognition';
-
-  @override
-  String get asrServicesSelectedLabel => 'Selected';
-
-  @override
-  String get asrServicesUnavailableLabel => 'Unavailable';
 
   @override
   String get asrServicesEditAction => 'Edit';
@@ -5229,10 +4506,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ttsServicesPageAddNotImplemented =>
-      'Add TTS service not implemented';
-
-  @override
   String get ttsServicesPageSystemTtsTitle => 'System TTS';
 
   @override
@@ -5250,18 +4523,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ttsServicesPageTestSpeechText => 'Hello, this is a test speech.';
-
-  @override
-  String get ttsServicesPageConfigureTooltip => 'Configure';
-
-  @override
-  String get ttsServicesPageTestVoiceTooltip => 'Test voice';
-
-  @override
-  String get ttsServicesPageStopTooltip => 'Stop';
-
-  @override
-  String get ttsServicesPageDeleteTooltip => 'Delete';
 
   @override
   String get ttsServicesPageSystemTtsSettingsTitle => 'System TTS Settings';
@@ -5288,12 +4549,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ttsServicesPageDoneButton => 'Done';
 
   @override
-  String get ttsServicesPageNetworkSectionTitle => 'Network TTS';
-
-  @override
-  String get ttsServicesPageNoNetworkServices => 'No TTS services.';
-
-  @override
   String get ttsServicesDialogAddTitle => 'Add TTS Service';
 
   @override
@@ -5301,9 +4556,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ttsServicesDialogProviderType => 'Provider';
-
-  @override
-  String get ttsServicesDialogCancelButton => 'Cancel';
 
   @override
   String get ttsServicesDialogAddButton => 'Add';
@@ -5370,9 +4622,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ttsServicesFieldChannelLabel => 'Channels';
-
-  @override
-  String get ttsServicesFieldSubtitlesLabel => 'Generate subtitles';
 
   @override
   String get ttsServicesFieldPronunciationDictionaryLabel =>
@@ -5563,9 +4812,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get imageViewerPageSaveButton => 'Save Image';
 
   @override
-  String get imageViewerPageCopyButton => 'Copy Image';
-
-  @override
   String get imageViewerPagePreviousButton => 'Previous Image';
 
   @override
@@ -5612,9 +4858,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String imageViewerPageSaveFailed(String error) {
     return 'Save failed: $error';
   }
-
-  @override
-  String get settingsShare => 'Kelivo - Open Source AI Assistant';
 
   @override
   String get searchProviderBingLocalDescription =>
@@ -5959,10 +5202,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get instructionInjectionSheetSubtitle =>
-      'Choose a prompt to apply before chatting';
-
-  @override
   String get mcpJsonEditButtonTooltip => 'Edit JSON';
 
   @override
@@ -5987,9 +5226,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mcpTimeoutInvalid => 'Enter a positive number of seconds';
 
   @override
-  String get quickPhraseEditButton => 'Edit';
-
-  @override
   String get quickPhraseDeleteButton => 'Delete';
 
   @override
@@ -6001,9 +5237,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get assistantEditQuickPhraseDescription =>
       'Manage quick phrases for this assistant. Click the button below to add phrases.';
-
-  @override
-  String get assistantEditManageQuickPhraseButton => 'Manage Quick Phrases';
 
   @override
   String get assistantEditPageMemoryTab => 'Memory';
@@ -6096,20 +5329,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantEditLocalToolWeatherTitle => 'Weather';
 
   @override
-  String get assistantEditLocalToolWeatherSubtitle =>
-      'Get Apple Weather for the current or a specified location. WeatherKit attribution is shown in the result.';
-
-  @override
   String get assistantEditLocalToolHealthTitle => 'Health Summary';
-
-  @override
-  String get assistantEditLocalToolHealthSubtitle =>
-      'Read a privacy-preserving activity summary from Apple Health, requires Health access.';
-
-  @override
-  String assistantEditLocalToolHealthSelectedCount(int selected, int total) {
-    return '$selected/$total selected';
-  }
 
   @override
   String get healthDataSettingsTitle => 'Health Data';
@@ -6269,34 +5489,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantEditLocalToolRemindersQueryTitle => 'Query Reminders';
 
   @override
-  String get assistantEditLocalToolRemindersQuerySubtitle =>
-      'Read reminders on this device, requires full reminders access.';
-
-  @override
   String get assistantEditLocalToolRemindersCreateTitle => 'Create Reminder';
-
-  @override
-  String get assistantEditLocalToolRemindersCreateSubtitle =>
-      'Create a reminder on this device with your confirmation, requires full reminders access.';
 
   @override
   String get assistantEditLocalToolRemindersCompleteTitle =>
       'Complete Reminder';
 
   @override
-  String get assistantEditLocalToolRemindersCompleteSubtitle =>
-      'Mark a reminder as done with your confirmation, requires full reminders access.';
-
-  @override
-  String get assistantEditMemorySwitchDescription =>
-      'Allow the assistant to create and use memories across chats.';
-
-  @override
   String get assistantEditRecentChatsSwitchTitle => 'Recent Chats Reference';
-
-  @override
-  String get assistantEditRecentChatsSwitchDescription =>
-      'Include recent conversation titles to help with context.';
 
   @override
   String get assistantEditAddMemoryButton => 'Add Memory';
@@ -6409,22 +5609,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantEditPresetEditDialogTitle => 'Edit preset message';
 
   @override
-  String get assistantEditPresetRoleUser => 'User';
-
-  @override
-  String get assistantEditPresetRoleAssistant => 'Assistant';
-
-  @override
-  String get desktopTtsPleaseAddProvider => 'Please add a TTS provider first';
-
-  @override
   String get settingsPageNetworkProxy => 'Network Proxy';
 
   @override
   String get networkProxyEnableLabel => 'Enable Proxy';
-
-  @override
-  String get networkProxySettingsHeader => 'Proxy Settings';
 
   @override
   String get networkProxyType => 'Proxy Type';
@@ -6539,10 +5727,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get desktopShowProviderInModelCapsule =>
-      'Show provider in model capsule';
-
-  @override
   String get messageWebViewOpenInBrowser => 'Open in Browser';
 
   @override
@@ -6570,9 +5754,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerDetailPageBatchDetecting => 'Detecting...';
 
   @override
-  String get providerDetailPageBatchDetectStart => 'Start Detection';
-
-  @override
   String get providerDetailPageDetectSuccess => 'Detection successful';
 
   @override
@@ -6582,10 +5763,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerDetailPageDeleteSelectedModelsButton => 'Delete';
 
   @override
-  String get providerDetailPageDeleteSelectedModelsTooltip =>
-      'Delete selected models';
-
-  @override
   String providerDetailPageDeleteSelectedModelsConfirm(int count) {
     return 'Delete $count selected model(s)? This cannot be undone.';
   }
@@ -6593,10 +5770,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get providerDetailPageDeleteFailedDetectedModelsButton =>
       'Delete unavailable';
-
-  @override
-  String get providerDetailPageDeleteFailedDetectedModelsTooltip =>
-      'Delete models that failed detection';
 
   @override
   String providerDetailPageDeleteFailedDetectedModelsConfirm(int count) {
@@ -6698,9 +5871,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contextLogKindUpdate => 'Incremental update';
 
   @override
-  String get contextLogSectionComposition => 'Composition';
-
-  @override
   String get contextLogLoadOlder => 'Load earlier logs';
 
   @override
@@ -6720,9 +5890,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logViewerExport => 'Export';
-
-  @override
-  String get logViewerOpenFolder => 'Open Logs Folder';
 
   @override
   String logViewerRequestsCount(int count) {
@@ -7159,12 +6326,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryEntrySourceDistilled => 'Distilled';
 
   @override
-  String get memoryEntryStatusActive => 'Active';
-
-  @override
-  String get memoryEntryStatusArchived => 'Archived';
-
-  @override
   String memoryEntryUpdatedAt(String date) {
     return 'Updated $date';
   }
@@ -7442,10 +6603,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfilePreferredName => 'Preferred name';
 
   @override
-  String get userProfilePreferredNameHint =>
-      'How the model should address you — unrelated to the sidebar display name';
-
-  @override
   String get userProfileGender => 'Gender';
 
   @override
@@ -7649,9 +6806,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get memoryUiContentLabel => 'Content';
-
-  @override
   String get memoryUiValueLabel => 'Value';
 
   @override
@@ -7668,13 +6822,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get memoryUiSearchClear => 'Clear search';
-
-  @override
-  String get memoryUiAssistantLegacyTitle => 'Legacy memories (read-only)';
-
-  @override
-  String get memoryUiAssistantLegacySubtitle =>
-      'Old memories of this assistant from previous versions';
 
   @override
   String get assistantEditMemorySwitchTitle => 'Use long-term memory';
@@ -7852,11 +6999,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get worldBookUnnamedEntry => 'Unnamed Entry';
 
   @override
-  String worldBookKeywordsLine(String keywords) {
-    return 'Keywords: $keywords';
-  }
-
-  @override
   String get worldBookEditEntry => 'Edit Entry';
 
   @override
@@ -7965,11 +7107,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolApprovalDenyHint => 'Reason (optional)';
 
   @override
-  String toolApprovalDeniedMessage(Object reason, Object toolName) {
-    return 'Tool call \"$toolName\" was denied by user. Reason: $reason';
-  }
-
-  @override
   String get askUserCardSubmit => 'Submit answer';
 
   @override
@@ -7990,9 +7127,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get askUserCardInactive =>
       'This question is no longer active. Regenerate or continue the conversation.';
-
-  @override
-  String get askUserCardCancelled => 'Question cancelled';
 
   @override
   String askUserCardQuestionCount(int count) {
@@ -8223,9 +7357,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get migrationBackupFileSavedTitle => 'Backup ZIP saved';
 
   @override
-  String get migrationChecklistBackupFiles => 'Export Hive backup ZIP';
-
-  @override
   String get migrationChecklistPrepareSqlite => 'Prepare SQLite database';
 
   @override
@@ -8267,9 +7398,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get migrationMalformedCount => 'Malformed';
 
   @override
-  String get migrationMissingFilesCount => 'Missing files';
-
-  @override
   String get migrationRestartButton => 'Restart Kelivo';
 
   @override
@@ -8307,9 +7435,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get migrationChatsExportDegradedNote =>
       'The chats.json export was skipped because of an error. The backup ZIP still contains the raw Hive files with your complete chat history.';
-
-  @override
-  String get timelineJumpToLatest => 'Jump to latest';
 
   @override
   String largeContentShowMore(int count) {
@@ -8590,9 +7715,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryTraceAfter => 'After';
 
   @override
-  String get memoryTraceEmptyValue => '(empty)';
-
-  @override
   String memoryTraceStepsCount(int count) {
     return '$count steps';
   }
@@ -8789,10 +7911,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get localSnapshotKeepSubtitle =>
-      'Plus one from last week and one from last month, so a problem that went unnoticed is still recoverable.';
-
-  @override
   String get localSnapshotKeepWeekly => 'Keep one from last week';
 
   @override
@@ -8810,10 +7928,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get localSnapshotAnnounceTitle => 'Notify when a copy is saved';
-
-  @override
-  String get localSnapshotAnnounceSubtitle =>
-      'Failures are always reported. This only adds a brief message on success.';
 
   @override
   String get localSnapshotTakeNow => 'Save a copy now';
@@ -8849,10 +7963,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get localSnapshotStatusSkippedSpace =>
       'Skipped: not enough free space on this device';
-
-  @override
-  String get localSnapshotStatusUnchanged =>
-      'Nothing has changed since the last copy';
 
   @override
   String get localSnapshotCopiesTitle => 'Local Copies';
@@ -8900,9 +8010,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get localSnapshotCopyContentsUnknown =>
       'Contents unknown until restored';
-
-  @override
-  String get localSnapshotCopyPinned => 'Kept';
 
   @override
   String get localSnapshotActionRestore => 'Restore';
@@ -8962,10 +8069,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get localSnapshotDeleteDone => 'Copy deleted';
-
-  @override
-  String get localSnapshotBusyMessage =>
-      'Another backup task is already running';
 
   @override
   String get localSnapshotRunInBackground => 'Continue in background';
@@ -9064,38 +8167,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceFileNotAvailable => 'File not available';
 
   @override
-  String get workspaceTerminalNotAvailable => 'Terminal not available';
-
-  @override
-  String get workspacePreviewCopyPath => 'Copy path';
-
-  @override
   String get workspacePreviewShare => 'Share';
 
   @override
-  String get workspacePreviewOpenExternally => 'Open externally';
-
-  @override
   String get workspacePreviewOpenWith => 'Open with…';
-
-  @override
-  String get workspacePreviewFileTooLarge =>
-      'This file is too large to preview. Open it externally instead.';
 
   @override
   String get workspacePreviewSource => 'Source';
 
   @override
   String get workspacePreviewRendered => 'Rendered';
-
-  @override
-  String get workspacePreviewFileName => 'Name';
-
-  @override
-  String get workspacePreviewFileSize => 'Size';
-
-  @override
-  String get workspacePreviewFileModified => 'Modified';
 
   @override
   String get workspacePreviewPathCopied => 'Path copied';
@@ -9163,9 +8244,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceFilesRename => 'Rename';
 
   @override
-  String get workspaceFilesMove => 'Move';
-
-  @override
   String get workspaceFilesDelete => 'Delete';
 
   @override
@@ -9190,9 +8268,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceFilesCancel => 'Cancel';
 
   @override
-  String get workspaceFilesConfirm => 'Confirm';
-
-  @override
   String get workspaceFilesSave => 'Save';
 
   @override
@@ -9210,9 +8285,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspaceFilesMoveTitle => 'Move to folder';
-
-  @override
-  String get workspaceFilesMoveHere => 'Move here';
 
   @override
   String get workspaceFilesPathCopied => 'Path copied';
@@ -9277,13 +8349,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceFilesMissingWorkspace => 'Workspace not found';
 
   @override
-  String get workspaceFilesClose => 'Close';
-
-  @override
   String get workspacesTitle => 'Workspaces';
-
-  @override
-  String get workspacesCreate => 'Create';
 
   @override
   String get workspacesCreateTitle => 'New workspace';
@@ -9305,17 +8371,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspacesSettings => 'Settings';
-
-  @override
-  String get workspacesOpenFiles => 'Open files';
-
-  @override
-  String get workspacesLastUsedNever => 'Never used';
-
-  @override
-  String workspacesLastUsed(String when) {
-    return 'Last used $when';
-  }
 
   @override
   String get workspacesDeleteTitle => 'Delete this workspace?';
@@ -9347,18 +8402,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspacesDefaultCwd => 'Default working directory';
 
   @override
-  String get workspacesDefaultCwdHint => 'Relative path, e.g. src';
-
-  @override
-  String get workspacesDefaultCwdInvalid => 'Use a relative path without ..';
-
-  @override
-  String get workspacesCreateManaged => 'Create workspace';
-
-  @override
-  String get workspacesLinkExisting => 'Link an existing folder';
-
-  @override
   String get workspacesUnlink => 'Unlink';
 
   @override
@@ -9384,21 +8427,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceToolInstall => 'Install';
 
   @override
-  String get workspaceToolFuzzy => 'fuzzy';
-
-  @override
-  String get workspaceToolCreated => 'created';
-
-  @override
-  String get workspaceToolUpdated => 'updated';
-
-  @override
-  String get workspaceToolTruncated => 'truncated';
-
-  @override
-  String get workspaceToolImageTag => 'image';
-
-  @override
   String get workspaceToolAllowAll => 'Allow all this session';
 
   @override
@@ -9406,9 +8434,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspaceToolStderr => 'stderr';
-
-  @override
-  String get workspaceToolOpenFullOutput => 'Open full output';
 
   @override
   String get workspaceToolChangedFiles => 'Changed files';
@@ -9441,9 +8466,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspaceToolDiffTruncated => 'Diff truncated';
-
-  @override
-  String get workspaceToolOpenPreview => 'Open preview';
 
   @override
   String get workspaceToolNoOutput => 'No output';
@@ -9490,11 +8512,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceToolTitleShellOutput => 'Background job';
 
   @override
-  String workspaceToolCount(int count) {
-    return '$count';
-  }
-
-  @override
   String workspaceToolMoreFiles(int count) {
     return '+$count';
   }
@@ -9523,9 +8540,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get workspaceEnvEngineNative => 'Native shell';
-
-  @override
   String get workspaceEnvPhaseNotInstalled => 'Not installed';
 
   @override
@@ -9550,34 +8564,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceEnvPhaseNeedsRestart => 'Restart required';
 
   @override
-  String workspaceEnvMetaLine(String version, String arch) {
-    return '$version · $arch';
-  }
-
-  @override
-  String workspaceEnvInstalledAt(String date) {
-    return 'Installed $date';
-  }
-
-  @override
-  String workspaceEnvDiskUsage(String size) {
-    return 'Disk usage $size';
-  }
-
-  @override
-  String workspaceEnvRuntimeReason(String reason) {
-    return '$reason';
-  }
-
-  @override
   String get workspaceEnvInstall => 'Install';
 
   @override
   String get workspaceEnvInstallSubtitleAndroid =>
       'Choose Ubuntu, Alpine, Debian, or import a local rootfs image.';
-
-  @override
-  String get workspaceEnvInstallSubtitleIos => 'Bundled, no download';
 
   @override
   String get workspaceEnvCancel => 'Cancel';
@@ -9595,25 +8586,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceEnvResetConfirmTitle => 'Reset environment?';
 
   @override
-  String get workspaceEnvResetConfirmBody =>
-      'This deletes installed packages and the sandbox filesystem.';
-
-  @override
   String get workspaceEnvCheckForUpdate => 'Check for update';
 
   @override
-  String get workspaceEnvUpdate => 'Update';
-
-  @override
-  String workspaceEnvAvailableVersion(String version) {
-    return 'Version $version is available';
-  }
-
-  @override
   String get workspaceEnvUpToDate => 'You\'re up to date';
-
-  @override
-  String get workspaceEnvRestartBanner => 'Restart Kelivo to finish';
 
   @override
   String get workspaceEnvDetectingMirrors => 'Detecting fastest mirrors…';
@@ -9630,31 +8606,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceEnvUseMirror => 'Use mirror';
 
   @override
-  String get workspaceEnvDetect => 'Detect';
-
-  @override
   String get workspaceEnvOfficial => 'Official';
-
-  @override
-  String get workspaceEnvMirrorsDisabled =>
-      'Mirror changes run in the sandbox and are unavailable until it is ready.';
-
-  @override
-  String workspaceEnvMirrorsDisabledReason(String reason) {
-    return 'Mirror changes run in the sandbox and are unavailable: $reason';
-  }
-
-  @override
-  String get workspaceEnvMirrorDetectTitle => 'Mirror speed';
 
   @override
   String workspaceEnvMirrorLatency(int ms) {
     return '$ms ms';
-  }
-
-  @override
-  String workspaceEnvMirrorFailed(String reason) {
-    return '$reason';
   }
 
   @override
@@ -9717,25 +8673,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceEnvChipRestart => 'Restart required';
 
   @override
-  String get workspaceEnvNativeExplanation =>
-      'On desktop, Kelivo uses your system shell instead of a Linux sandbox.';
-
-  @override
   String workspaceEnvNativeShellPath(String path) {
     return 'Shell: $path';
-  }
-
-  @override
-  String get workspaceEnvNativeShellApproval =>
-      'The shell tool needs approval unless this session allows all tools.';
-
-  @override
-  String workspaceEnvDownloadProgress(
-    String downloaded,
-    String total,
-    int percent,
-  ) {
-    return '$downloaded / $total MB ($percent%)';
   }
 
   @override
@@ -9766,15 +8705,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get skillsEmptyTitle => 'No skills yet';
 
   @override
-  String get skillsEmptyBody =>
-      'A skill is a folder with a SKILL.md file. Import markdown, a .md or .zip file, or a GitHub URL.';
-
-  @override
   String get skillsEmptyFormat =>
       '---\nname: my-skill\ndescription: What this skill does\n---\n\n# Instructions';
-
-  @override
-  String get skillsImport => 'Import';
 
   @override
   String get skillsImportPaste => 'Paste markdown';
@@ -9790,13 +8722,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get skillsImportPasteHint => 'Paste a SKILL.md with YAML frontmatter';
-
-  @override
-  String get skillsImportGitHubLabel => 'GitHub URL';
-
-  @override
-  String get skillsImportGitHubHint =>
-      'github.com/owner/repo or github.com/owner/repo/tree/ref/path';
 
   @override
   String get skillsImportConfirm => 'Import';
@@ -9853,13 +8778,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get skillsInheritAssistant => 'Inherit from assistant';
 
   @override
-  String get skillsInheritAssistantSubtitle =>
-      'Use the same skills as this conversation’s assistant.';
-
-  @override
-  String get skillsActiveLabel => 'Active';
-
-  @override
   String get skillsSessionTitle => 'Skills for this chat';
 
   @override
@@ -9867,9 +8785,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get skillsDetailKindLabel => 'Skill';
-
-  @override
-  String get skillsNoEnabled => 'No enabled skills';
 
   @override
   String get terminalTitle => 'Terminal';
@@ -9920,35 +8835,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get terminalCancel => 'Cancel';
 
   @override
-  String get terminalSave => 'Save';
-
-  @override
-  String get workspaceDeskMenuWorkspace => 'Workspace';
-
-  @override
-  String get workspaceDeskMenuSkills => 'Skills';
-
-  @override
-  String get workspaceDeskBarTitle => 'Workspace';
-
-  @override
-  String get workspaceDeskBarNoWorkspace => 'No workspace';
-
-  @override
   String get workspaceDeskBarEmptyHint =>
       'Bind a workspace from the toolbar to browse files here';
-
-  @override
-  String get workspaceDeskBarToggle => 'Workspace files';
 
   @override
   String get workspaceDeskOpenSystemTerminal => 'Open in system terminal';
 
   @override
   String get workspaceDeskReveal => 'Reveal in file manager';
-
-  @override
-  String get workspaceDeskBarClose => 'Close workspace bar';
 
   @override
   String get workspaceEntryBind => 'Bind workspace';
@@ -9961,9 +8855,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspaceEntrySetAssistantDefault => 'Set as assistant default';
-
-  @override
-  String get workspaceEntryLocked => 'Locked';
 
   @override
   String get workspaceEntryChangeConfirmTitle => 'Change workspace?';
@@ -9979,17 +8870,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceEntryCwd => 'Working directory';
 
   @override
-  String get workspaceEntryCwdHint => 'Relative to the workspace root';
-
-  @override
   String get workspaceEntryCwdInvalid =>
       'That path is invalid or leaves the workspace';
-
-  @override
-  String get workspaceEntryCwdMissing => 'That directory does not exist';
-
-  @override
-  String get workspaceEntryCwdCreate => 'Create it';
 
   @override
   String get workspaceEntryFiles => 'Files';
@@ -10056,14 +8938,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceEntryNone => 'None';
 
   @override
-  String get workspaceEntryStartConversationFirst =>
-      'Start a conversation first';
-
-  @override
   String get workspaceEntryTooltip => 'Workspace';
-
-  @override
-  String get workspaceEntryPickerTitle => 'Choose a workspace';
 
   @override
   String get settingsPageWorkspace => 'Workspace & environment';
@@ -10130,9 +9005,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspaceMgmtCreate => 'Create';
-
-  @override
-  String get workspaceMgmtShellApprovalSubtitle => 'Ask before each command';
 
   @override
   String get workspaceMgmtDefaultCwdRoot => '/';
@@ -10208,22 +9080,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspacePreviewLoadError => 'Couldn’t load this file.';
 
   @override
-  String get workspacePreviewRevealInFinder => 'Show in Finder';
-
-  @override
-  String get workspacePreviewOpenInSystemApp => 'Open with system app';
-
-  @override
   String get workspacePreviewOpenInBrowser => 'Open in browser';
 
   @override
   String get workspacePreviewTable => 'Table';
-
-  @override
-  String get workspacePreviewPlainLanguage => 'Code';
-
-  @override
-  String get workspacePreviewOpen => 'Open';
 
   @override
   String get workspacePreviewRevealFailed =>
@@ -10263,16 +9123,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get skillsImportTooltip => 'Import skill';
 
   @override
-  String get skillsImportPasteSubtitle =>
-      'Paste SKILL.md with YAML frontmatter';
-
-  @override
-  String get skillsImportFileSubtitle => 'Choose a .md or .zip file';
-
-  @override
-  String get skillsImportGitHubSubtitle => 'Import SKILL.md from a repository';
-
-  @override
   String get skillsImportResolving => 'Resolving repository…';
 
   @override
@@ -10290,10 +9140,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get skillsImportGitHubUrlHint =>
       'https://github.com/owner/repo or owner/repo[/path]';
-
-  @override
-  String get skillsImportGitHubHelp =>
-      'SKILL.md at the repo root or in a subdirectory is supported.';
 
   @override
   String get skillsEmptyHint =>
@@ -10318,12 +9164,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get workspaceToolAwaitingApproval => 'Awaiting approval';
-
-  @override
-  String get workspaceToolCompleted => 'Done';
-
-  @override
   String workspaceToolLines(int count) {
     return '$count lines';
   }
@@ -10342,9 +9182,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String workspaceToolContentMatches(int count) {
     return '$count matches';
   }
-
-  @override
-  String get workspaceToolExpand => 'Expand';
 
   @override
   String get workspaceToolSectionCommand => 'Command';
@@ -10366,9 +9203,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspaceToolSavedOutput => 'Full output saved';
-
-  @override
-  String get workspaceToolApprove => 'Allow';
 
   @override
   String get workspaceToolDeny => 'Deny';
@@ -10424,9 +9258,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspaceEnvActionsSection => 'Actions';
-
-  @override
-  String get workspaceEnvInfoSection => 'Info';
 
   @override
   String get workspaceEnvInfoBody =>
@@ -10516,10 +9347,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get workspaceEnvNativeUnsandboxed =>
-      'Commands run on this computer, not in a sandbox, and need approval unless this session allows all tools.';
-
-  @override
   String get workspaceEnvRootfsTitle => '/';
 
   @override
@@ -10592,16 +9419,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceEnvSizeTimeout => 'Timed out';
 
   @override
-  String get workspaceEnvInfoCopied => 'Environment info copied';
-
-  @override
   String get workspacePreviewEmptyFile => 'This file is empty';
 
   @override
   String get workspacePreviewEmptyHint => 'There\'s nothing to preview.';
-
-  @override
-  String get workspacePreviewRevealInExplorer => 'Show in File Explorer';
 
   @override
   String get workspacePreviewRevealInFileManager => 'Show in Files';
@@ -10734,9 +9555,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get workspaceEnvDependencySourcesDetail =>
       'Installation uses the selected apt/apk source. pip and npm sources apply to packages you install later.';
-
-  @override
-  String get workspaceEnvDownloadSource => 'Sandbox download source';
 
   @override
   String get workspaceEnvDownloadAutomatic => 'Auto-select fastest';
@@ -11522,9 +10340,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scheduledTasksTime => 'Time';
 
   @override
-  String get scheduledTasksTimeHint => '24-hour time, e.g. 08:00';
-
-  @override
   String get scheduledTasksRepeat => 'Repeat';
 
   @override
@@ -11732,17 +10547,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'This conversation is generating a reply. The scheduled run was skipped.';
 
   @override
-  String get scheduledTasksDesktopEmpty => 'No scheduled tasks';
-
-  @override
-  String get scheduledTasksDesktopReliability =>
-      'Tasks run only while Kelivo is running, including when minimized or in the system tray. Missed times are skipped after quitting or computer sleep. Kelivo will not start automatically.';
-
-  @override
-  String get scheduledTasksDesktopExecutionDetail =>
-      'Results are saved in chats. Open them from the task’s run history. Runs stop after 10 minutes or when user input or tool approval is needed.';
-
-  @override
   String get worldBookStickyLabel => 'Sticky (messages)';
 
   @override
@@ -11811,15 +10615,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get oauthLogin => 'Log in';
 
   @override
-  String oauthLoginTo(String provider) {
-    return 'Log in to $provider';
-  }
-
-  @override
   String get oauthConnected => 'Connected';
-
-  @override
-  String get oauthNotConnected => 'Not connected';
 
   @override
   String oauthWaiting(String provider) {
@@ -11904,9 +10700,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get oauthNoModels => 'Sync models to start chatting';
 
   @override
-  String get oauthConnection => 'Connection';
-
-  @override
   String get oauthConnectionInfo => 'Connection details';
 
   @override
@@ -11926,15 +10719,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get oauthEnabledHint => 'Show these models in the model picker';
-
-  @override
-  String get oauthNetwork => 'Network proxy';
-
-  @override
-  String get oauthFollowGlobal => 'Follow global settings';
-
-  @override
-  String get oauthCustomRequest => 'Custom request';
 
   @override
   String get oauthWeekly => 'Weekly window';
@@ -11981,9 +10765,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get oauthDenied => 'Authorization was not granted. Please try again.';
-
-  @override
-  String get oauthSaving => 'Connecting account…';
 
   @override
   String get oauthQuotaExceeded => 'This account has no available quota.';
@@ -12064,115 +10845,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scheduledTasksPreparation => 'Execution and notifications';
 
   @override
-  String get scheduledTasksAllowPreparation => 'Allow advance preparation';
-
-  @override
-  String get scheduledTasksPreparationDetail =>
-      'Advance preparation is for text tasks that do not need current information. It cannot use tools or attachments, or perform external actions.';
-
-  @override
-  String get scheduledTasksIOSDetail =>
-      'iOS background limits prevent Kelivo from waking at a set time to run a model. Instead, content is prepared while the app can run, and the system shows a notification at the scheduled time. Only the next occurrence is prepared. Preparation may not finish after leaving the app; reopen Kelivo to prepare subsequent occurrences.';
-
-  @override
-  String get scheduledTasksContextPolicy => 'Conversation context';
-
-  @override
-  String get scheduledTasksContextLatest => 'Follow the latest conversation';
-
-  @override
-  String get scheduledTasksContextSnapshot => 'Use the prepared snapshot';
-
-  @override
-  String get scheduledTasksUnavailable => 'When unable to execute';
-
-  @override
-  String get scheduledTasksRemind => 'Send a reminder only';
-
-  @override
-  String get scheduledTasksSkip => 'Skip this occurrence';
-
-  @override
   String get scheduledTasksNotify => 'Result notifications';
 
   @override
   String get scheduledTasksShowPreview => 'Show result text in notifications';
 
   @override
-  String get scheduledTasksPreparationWindow => 'Prepare up to';
-
-  @override
-  String get scheduledTasksPreparationAttempts => 'Automatic attempt limit';
-
-  @override
-  String get scheduledTasksPreparationCooldown => 'Minimum interval (minutes)';
-
-  @override
-  String get scheduledTasksPreparationBudget =>
-      'At most one preparation at a time across all tasks. Automatic preparation pauses after six total attempts per hour, including cancelled requests. Prepare now is not limited by attempt counts.';
-
-  @override
-  String get scheduledTasksPreparing => 'Preparing result';
-
-  @override
-  String get scheduledTasksPrepared => 'Result prepared';
-
-  @override
-  String get scheduledTasksPendingPreparation => 'Result not prepared yet';
-
-  @override
-  String get scheduledTasksNotificationRegistered => 'Notification scheduled';
-
-  @override
-  String get scheduledTasksNotificationUnavailable =>
-      'Notification not scheduled';
-
-  @override
-  String get scheduledTasksReminded => 'Due · reminder only';
-
-  @override
-  String get scheduledTasksSkipped => 'Skipped';
-
-  @override
   String get scheduledTasksCancelled => 'Cancelled';
-
-  @override
-  String get scheduledTasksReminderBody =>
-      'Your scheduled task is due. Open Moru to continue.';
-
-  @override
-  String get scheduledTasksResultBody => 'Your scheduled task result is ready.';
-
-  @override
-  String get scheduledTasksNotificationPermission => 'Allow task notifications';
-
-  @override
-  String get scheduledTasksPreparationCost =>
-      'Preparation calls the model and may cost extra. With “Follow latest conversation”, new messages before the due time can invalidate a prepared result. Unused or cancelled output may still be billed, and preparing again makes another model request.';
-
-  @override
-  String get scheduledTasksAllowPreparationTip =>
-      'Generate the next result before its scheduled time, while Kelivo can run. The result stays out of the chat until it is due. Preparation uses text only, without tools, attachments or custom request bodies. It may incur model charges.';
-
-  @override
-  String get scheduledTasksContextPolicyTip =>
-      'Follow latest conversation: before the task is due, new messages, edits or switching message versions invalidate the prepared result; preparing again uses another attempt and may cost extra. Once due, the saved notification result is added to the chat unchanged.\n\nUse preparation snapshot: keep the prepared result even if the conversation changes. It will not reflect later messages.';
-
-  @override
-  String get scheduledTasksPreparationWindowTip =>
-      'How far ahead of the scheduled time preparation may begin, up to 24 hours. For example, opening Kelivo at noon can prepare the next morning’s reminder. A larger window gives more chances to prepare, but the result may be less current. It does not change the scheduled time or guarantee background execution. Prepare now bypasses this automatic waiting period and all attempt limits.';
-
-  @override
-  String get scheduledTasksPreparationAttemptsTip =>
-      'Automatic preparation pauses when this occurrence reaches the total attempt limit. First attempts, failures, cancellations and manual preparation all count in the record. Prepare now can still run after this limit is reached. More attempts may incur more model charges; this is not a spending limit.';
-
-  @override
-  String get scheduledTasksPreparationCooldownTip =>
-      'Minimum time between the start of preparation attempts for the same occurrence. Waiting longer reduces repeated requests. A retry still needs the app to be able to run; it is not a background timer. Prepare now bypasses this automatic waiting period and all attempt limits.';
-
-  @override
-  String get scheduledTasksUnavailableTip =>
-      'If no prepared result is available and the task cannot run when due, send a reminder or skip the occurrence. A reminder contains no generated answer and requires notifications to be enabled. If Kelivo is open when the task is due, it can run the task then.';
 
   @override
   String get scheduledTasksNotifyTip =>
@@ -12181,96 +10860,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get scheduledTasksShowPreviewTip =>
       'Show the prepared result text in the notification, including on the lock screen if allowed by system settings. Turn this off to show a generic notice; the full result remains available in the chat. Global notification privacy settings also apply.';
-
-  @override
-  String scheduledTasksHours(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count hours',
-      one: '1 hour',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String scheduledTasksMinutes(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count minutes',
-      one: '1 minute',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get scheduledTasksPreparationOff => 'Preparation off';
-
-  @override
-  String get scheduledTasksPreparationQueued => 'Queued';
-
-  @override
-  String get scheduledTasksPreparationQueuedDetail =>
-      'Another task is being prepared. Eligible tasks continue in due-time order.';
-
-  @override
-  String get scheduledTasksPreparationIdle => 'Waiting for chat';
-
-  @override
-  String get scheduledTasksPreparationIdleDetail =>
-      'Preparation resumes after active replies finish and this task’s context settles.';
-
-  @override
-  String get scheduledTasksPreparationWindowWaiting =>
-      'Outside preparation window';
-
-  @override
-  String get scheduledTasksPreparationCooldownWaiting => 'Waiting to retry';
-
-  @override
-  String scheduledTasksPreparationRetryAt(String time) {
-    return 'Can retry after $time';
-  }
-
-  @override
-  String get scheduledTasksPreparationLimitReached =>
-      'Automatic attempt limit reached';
-
-  @override
-  String scheduledTasksPreparationAttemptsUsed(int count, int limit) {
-    return 'This occurrence has used $count attempts; the automatic limit is $limit. Use Prepare now to continue manually.';
-  }
-
-  @override
-  String get scheduledTasksPreparationHourlyLimit =>
-      'Automatic hourly limit reached';
-
-  @override
-  String get scheduledTasksPreparationHourlyLimitDetail =>
-      'Automatic preparation is paused until hourly capacity is available. You can still use Prepare now.';
-
-  @override
-  String get scheduledTasksPreparationUnavailable => 'Preparation unavailable';
-
-  @override
-  String get scheduledTasksPreparationReadFailed =>
-      'Could not read task context. It will be checked again shortly; see execution history for details.';
-
-  @override
-  String get scheduledTasksPreparationResultRetained =>
-      'Context could not be checked. The prepared result is retained and will be checked again.';
-
-  @override
-  String get scheduledTasksPreparationContextChanged =>
-      'The conversation or task context changed, so the earlier result was discarded.';
-
-  @override
-  String get scheduledTasksPreparationPublishing => 'Waiting to add to chat';
-
-  @override
-  String get scheduledTasksPreparationPublishingDetail =>
-      'The saved result will be added to the conversation when the current reply finishes.';
 
   @override
   String get moruChatNotificationChannel => 'Chat Background';
@@ -12413,12 +11002,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserMenuSettings => 'Browser settings';
 
   @override
-  String get browserSchemeSecure => 'Encrypted connection (https)';
-
-  @override
-  String get browserSchemeInsecure => 'Not encrypted (http)';
-
-  @override
   String get browserComposerHint => 'Tell the AI what to do…';
 
   @override
@@ -12435,9 +11018,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get browserStateRunning => 'Working…';
-
-  @override
-  String get browserStateAwaitingApproval => 'Waiting for your approval…';
 
   @override
   String get browserStateStopping => 'Stopping…';
@@ -12565,60 +11145,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get browserApprovalHeadingUnknownSite =>
       'Moru wants to perform a browser action';
-
-  @override
-  String get scheduledTasksPreparationPrompt => 'Preparation prompt';
-
-  @override
-  String get scheduledTasksPreparationPromptTip =>
-      'Extra system instructions used only when preparing this task in advance, separate from the task instructions. You can change the style or remove these instructions entirely. Tools and live information remain unavailable. Editing this prompt invalidates any result prepared before the due time; preparing it again may incur another model charge.';
-
-  @override
-  String get scheduledTasksPreparationPromptEmpty =>
-      'Leave empty to add no preparation instructions';
-
-  @override
-  String scheduledTasksPreparationPromptVariables(
-    String timeVariable,
-    String offsetVariable,
-  ) {
-    return 'Placeholders: $timeVariable is the planned local delivery time; $offsetVariable is its UTC offset. These are replaced when preparing the result.';
-  }
-
-  @override
-  String get scheduledTasksPrepareNow => 'Prepare now';
-
-  @override
-  String get scheduledTasksPrepareNowDetail =>
-      'Prepare the next result now and deliver it at the scheduled time. Automatic waiting periods and attempt limits do not apply. This may incur model charges. An existing prepared result is reused.';
-
-  @override
-  String get scheduledTasksPrepareNowReady =>
-      'The next result is already prepared. No additional model request was made.';
-
-  @override
-  String get scheduledTasksPrepareNowStarted =>
-      'Preparing the next result for its scheduled time.';
-
-  @override
-  String get scheduledTasksPrepareNowBusy =>
-      'Another task is being prepared. Please try again when it finishes.';
-
-  @override
-  String get scheduledTasksPrepareNowChatBusy =>
-      'Please wait for the current reply to finish, then try again.';
-
-  @override
-  String get scheduledTasksPrepareNowDisabled =>
-      'Enable this task and advance preparation first. Regenerate tasks cannot be prepared in advance.';
-
-  @override
-  String get scheduledTasksPrepareNowUnavailable =>
-      'Preparation is not available yet. Please try again shortly.';
-
-  @override
-  String get scheduledTasksPrepareNowNoUpcoming =>
-      'There is no upcoming occurrence to prepare. Check the task time and enabled state.';
 
   @override
   String get assistantManagerToolTitle => 'Manage Assistants';

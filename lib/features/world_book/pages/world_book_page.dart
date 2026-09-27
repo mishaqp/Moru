@@ -208,26 +208,6 @@ class _WorldBookPageState extends State<WorldBookPage> {
       final exportName = '$fileName.json';
       final json = jsonEncode(_toRikkaHubExportJson(book));
 
-      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-        final String? savePath = await FilePicker.platform.saveFile(
-          dialogTitle: l10n.backupPageExportToFile,
-          fileName: exportName,
-          type: FileType.custom,
-          allowedExtensions: const ['json'],
-        );
-        if (savePath == null) return;
-
-        await File(savePath).parent.create(recursive: true);
-        await File(savePath).writeAsString(json);
-        if (!mounted) return;
-        showAppSnackBar(
-          context,
-          message: l10n.messageExportSheetExportedAs(_baseName(savePath)),
-          type: NotificationType.success,
-        );
-        return;
-      }
-
       final bytes = Uint8List.fromList(utf8.encode(json));
       final String? savePath = await FilePicker.platform.saveFile(
         dialogTitle: l10n.backupPageExportToFile,
@@ -305,10 +285,6 @@ class _WorldBookPageState extends State<WorldBookPage> {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isDesktop =
-        Theme.of(context).platform == TargetPlatform.macOS ||
-        Theme.of(context).platform == TargetPlatform.windows ||
-        Theme.of(context).platform == TargetPlatform.linux;
 
     final provider = context.watch<WorldBookProvider>();
     final books = provider.books;
@@ -473,7 +449,7 @@ class _WorldBookPageState extends State<WorldBookPage> {
                           newIndex: newEntryIndex,
                         );
                       },
-                      isDesktop: isDesktop,
+                      isDesktop: false,
                     ),
                   ),
                 );

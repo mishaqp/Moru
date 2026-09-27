@@ -5,7 +5,6 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -42,12 +41,10 @@ import '../../../core/services/memory/memory_pipeline.dart';
 import '../../settings/pages/memory_settings_page.dart';
 import '../../settings/widgets/memory_ui.dart';
 import '../../../core/services/haptics.dart';
-import '../../../core/services/scheduled_tasks_service.dart';
 import '../../../shared/widgets/context_menu.dart';
 import '../../../shared/widgets/select_dropdown.dart';
 import '../../home/services/local_tool_toggle.dart';
 import '../../home/services/local_tools_service.dart';
-import '../../../core/models/health_data_type.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/emoji_picker_dialog.dart';
@@ -60,13 +57,11 @@ import '../../../theme/app_font_weights.dart';
 import '../../../theme/design_tokens.dart';
 import '../../../utils/avatar_cache.dart';
 import '../../../utils/brand_assets.dart';
-import '../../../utils/platform_utils.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../utils/assistant_edit_tab_layout.dart';
 import 'assistant_regex_tab.dart';
 import 'assistant_settings_edit_skills_tab.dart';
 import '../widgets/assistant_default_workspace_row.dart';
-import 'health_data_settings_page.dart';
 import '../../settings/pages/phone_control_settings_page.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 import 'package:Kelivo/shared/widgets/section_card.dart';
@@ -1646,9 +1641,6 @@ Future<void> openAssistantBasicSettings(
   BuildContext context, {
   required String assistantId,
 }) {
-  if (PlatformUtils.isDesktopTarget) {
-    return showAssistantDesktopDialog(context, assistantId: assistantId);
-  }
   return Navigator.of(context).push<void>(
     MaterialPageRoute(
       builder: (_) => _AssistantDetailSectionPage(

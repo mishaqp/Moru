@@ -1,7 +1,5 @@
 import 'dart:io' show File;
 
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -17,184 +15,71 @@ import '../../../theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 import '../../../shared/widgets/section_card.dart';
 
-// Show an assistant picker for moving a topic.
-// - Mobile: bottom sheet
-// - Desktop: custom dialog
+// Show an assistant picker for moving a topic as a bottom sheet.
 // Returns selected assistant id, or null if cancelled.
 Future<String?> showAssistantMoveSelector(
   BuildContext context, {
   String? excludeAssistantId,
 }) async {
-  final isDesktop =
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux;
   final ap = context.read<AssistantProvider>();
   final List<Assistant> assistants = excludeAssistantId == null
       ? List.of(ap.assistants)
       : ap.assistants.where((a) => a.id != excludeAssistantId).toList();
 
-  if (!isDesktop) {
-    final cs = Theme.of(context).colorScheme;
-    final maxHeight = MediaQuery.of(context).size.height * 0.8;
-    return showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: context.overlaySurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        final l10n = AppLocalizations.of(ctx)!;
-        return SafeArea(
-          top: false,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: cs.onSurface.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        l10n.sideDrawerChooseAssistantTitle,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: AppFontWeights.emphasis,
-                        ),
-                      ),
-                    ),
-                    ...assistants.map((a) => _assistantRow(ctx, a)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // Desktop: custom dialog with hover effects, no ripples, no header divider
-  String? result;
-  await showGeneralDialog<void>(
+  final cs = Theme.of(context).colorScheme;
+  final maxHeight = MediaQuery.of(context).size.height * 0.8;
+  return showModalBottomSheet<String>(
     context: context,
-    barrierDismissible: true,
-    barrierLabel: 'assistant-move-selector',
-    barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.15),
-    pageBuilder: (ctx, _, __) {
+    isScrollControlled: true,
+    backgroundColor: context.overlaySurface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) {
       final l10n = AppLocalizations.of(ctx)!;
-      final cs = Theme.of(ctx).colorScheme;
-      final isDark = Theme.of(ctx).brightness == Brightness.dark;
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => Navigator.of(ctx).maybePop(),
-        child: Material(
-          type: MaterialType.transparency,
-          child: Center(
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: () {},
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: 560,
-                  minWidth: 420,
-                  maxHeight: 560,
-                ),
-                child: DecoratedBox(
-                  decoration: ShapeDecoration(
-                    color: ctx.overlaySurface,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      side: BorderSide(
-                        color: isDark
-                            ? cs.onSurface.withValues(alpha: 0.08)
-                            : cs.outlineVariant.withValues(alpha: 0.2),
+      return SafeArea(
+        top: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: cs.onSurface.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(999),
                       ),
                     ),
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Header (no divider below)
-                        SizedBox(
-                          height: 48,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    l10n.sideDrawerChooseAssistantTitle,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 13.5,
-                                      fontWeight: AppFontWeights.emphasis,
-                                    ),
-                                  ),
-                                ),
-                                _SmallIconBtn2(
-                                  icon: Icons.close,
-                                  onTap: () => Navigator.of(ctx).maybePop(),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(8, 6, 8, 12),
-                            itemCount: assistants.length,
-                            itemBuilder: (c, i) => _DeskAssistantRow(
-                              assistant: assistants[i],
-                              onTap: (id) {
-                                result = id;
-                                Navigator.of(ctx).maybePop();
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      l10n.sideDrawerChooseAssistantTitle,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: AppFontWeights.emphasis,
+                      ),
                     ),
                   ),
-                ),
+                  ...assistants.map((a) => _assistantRow(ctx, a)),
+                ],
               ),
             ),
           ),
-        ),
-      );
-    },
-    transitionBuilder: (ctx, anim, _, child) {
-      final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.98, end: 1.0).animate(curved),
-          child: child,
         ),
       );
     },
   );
-  return result;
 }
 
 Widget _assistantAvatar(BuildContext context, Assistant a, {double size = 28}) {
@@ -227,7 +112,7 @@ Widget _assistantAvatar(BuildContext context, Assistant a, {double size = 28}) {
           );
         },
       );
-    } else if (!kIsWeb && (av.startsWith('/') || av.contains(':'))) {
+    } else if ((av.startsWith('/') || av.contains(':'))) {
       final fixed = SandboxPathResolver.fix(av);
       final f = File(fixed);
       if (f.existsSync()) {

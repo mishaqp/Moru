@@ -1872,9 +1872,6 @@ class HiveToSqliteMigrationService {
     );
     // POSIX rename replaces an existing target atomically. Windows requires
     // the target to be absent, which briefly opens a neither-file window.
-    if (Platform.isWindows && await file.exists()) {
-      await file.delete();
-    }
     await temporary.rename(file.path);
   }
 

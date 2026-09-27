@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -53,22 +52,18 @@ void main() {
   });
 
   testWidgets(
-    'phone tool and search entry are Android-only, including restored assistants',
+    'phone tool and search entry work for restored assistants',
     (tester) async {
-      final android = defaultTargetPlatform == TargetPlatform.android;
       final definitions = LocalToolsService.buildToolDefinitions(
         assistant: _enabled,
         supportsTools: true,
       );
-      expect(definitions.isNotEmpty, android);
+      expect(definitions, isNotEmpty);
       expect(
-        SettingsSearchIndex(
-          AppLocalizationsEn(),
-          platform: defaultTargetPlatform,
-        ).entries.any(
+        SettingsSearchIndex(AppLocalizationsEn()).entries.any(
           (e) => e.destination == SettingsSearchDestination.phoneControl,
         ),
-        android,
+        isTrue,
       );
       final calls = <MethodCall>[];
       messenger.setMockMethodCallHandler(_channel, (call) async {
@@ -80,8 +75,8 @@ void main() {
         {'action': 'home'},
         _enabled,
       );
-      expect(result != null, android);
-      expect(calls.length, android ? 1 : 0);
+      expect(result, isNotNull);
+      expect(calls, hasLength(1));
       expect(
         LocalToolsService.buildToolDefinitions(
           assistant: _enabled,
@@ -90,7 +85,7 @@ void main() {
         isEmpty,
       );
     },
-    variant: TargetPlatformVariant.all(),
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
   testWidgets(

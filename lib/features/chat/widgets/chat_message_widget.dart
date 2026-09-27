@@ -1,8 +1,6 @@
 import '../../provider/widgets/oauth_message_recovery.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform, visibleForTesting;
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/services.dart';
@@ -44,7 +42,6 @@ import '../../../shared/widgets/ios_checkbox.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/thinking_sheen.dart';
 import '../../../shared/widgets/emoji_text.dart';
-import '../../../utils/platform_utils.dart';
 import '../../home/services/ask_user_interaction_service.dart';
 import '../utils/tool_timing.dart';
 import '../../home/services/assistant_manager_tool.dart';
@@ -779,28 +776,6 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
       ? weather.attribution
       : null;
 
-  if (PlatformUtils.isDesktopTarget) {
-    unawaited(
-      showDialog<void>(
-        context: context,
-        barrierDismissible: true,
-        builder: (dialogContext) => _ToolDetailDesktopDialog(
-          title: title,
-          closeSemanticLabel: closeSemanticLabel,
-          argsPretty: argsPretty,
-          resultText: resultText,
-          images: images,
-          argumentsLabel: l10n.chatMessageWidgetArguments,
-          resultLabel: l10n.chatMessageWidgetResult,
-          imagesLabel: l10n.chatMessageWidgetImages,
-          screenTimeResult: useScreenTimeDetail ? screenTime : null,
-          weatherAttribution: weatherAttribution,
-        ),
-      ),
-    );
-    return;
-  }
-
   unawaited(
     showCustomBottomSheet<void>(
       context: context,
@@ -828,139 +803,6 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
   );
 }
 
-class _ToolDetailDesktopDialog extends StatefulWidget {
-  const _ToolDetailDesktopDialog({
-    required this.title,
-    required this.closeSemanticLabel,
-    required this.argsPretty,
-    required this.resultText,
-    required this.images,
-    required this.argumentsLabel,
-    required this.resultLabel,
-    required this.imagesLabel,
-    this.screenTimeResult,
-    this.weatherAttribution,
-  });
-
-  static const dialogKey = ValueKey('tool_detail_desktop_dialog');
-  static const closeButtonKey = ValueKey('tool_detail_desktop_dialog_close');
-
-  final String title;
-  final String closeSemanticLabel;
-  final String argsPretty;
-  final String resultText;
-  final List<String> images;
-  final String argumentsLabel;
-  final String resultLabel;
-  final String imagesLabel;
-  final ScreenTimeResult? screenTimeResult;
-  final WeatherAttribution? weatherAttribution;
-
-  @override
-  State<_ToolDetailDesktopDialog> createState() =>
-      _ToolDetailDesktopDialogState();
-}
-
-class _ToolDetailDesktopDialogState extends State<_ToolDetailDesktopDialog> {
-  late final ScrollController _scrollController;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Dialog(
-      key: _ToolDetailDesktopDialog.dialogKey,
-      elevation: 12,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minWidth: 420,
-          maxWidth: 640,
-          maxHeight: 680,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Material(
-            color: context.overlaySurface,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 12, 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: cs.onSurface,
-                            fontSize: 16,
-                            fontWeight: AppFontWeights.emphasis,
-                            height: 1.2,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        key: _ToolDetailDesktopDialog.closeButtonKey,
-                        width: 28,
-                        height: 28,
-                        child: IosIconButton(
-                          icon: Lucide.X,
-                          size: 20,
-                          padding: EdgeInsets.zero,
-                          color: cs.onSurface.withValues(alpha: 0.62),
-                          semanticLabel: widget.closeSemanticLabel,
-                          onTap: () => Navigator.of(context).maybePop(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Scrollbar(
-                    controller: _scrollController,
-                    child: widget.screenTimeResult != null
-                        ? ScreenTimeToolDetailBody(
-                            result: widget.screenTimeResult!,
-                            scrollController: _scrollController,
-                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                          )
-                        : _ToolDetailBody(
-                            scrollController: _scrollController,
-                            argsPretty: widget.argsPretty,
-                            resultText: widget.resultText,
-                            images: widget.images,
-                            argumentsLabel: widget.argumentsLabel,
-                            resultLabel: widget.resultLabel,
-                            imagesLabel: widget.imagesLabel,
-                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                            weatherAttribution: widget.weatherAttribution,
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ToolDetailBody extends StatelessWidget {
   const _ToolDetailBody({
     required this.scrollController,
@@ -970,7 +812,6 @@ class _ToolDetailBody extends StatelessWidget {
     required this.argumentsLabel,
     required this.resultLabel,
     required this.imagesLabel,
-    this.padding = const EdgeInsets.fromLTRB(16, 8, 16, 24),
     this.weatherAttribution,
   });
 
@@ -981,7 +822,6 @@ class _ToolDetailBody extends StatelessWidget {
   final String argumentsLabel;
   final String resultLabel;
   final String imagesLabel;
-  final EdgeInsets padding;
   final WeatherAttribution? weatherAttribution;
 
   @override
@@ -992,7 +832,7 @@ class _ToolDetailBody extends StatelessWidget {
         controller: scrollController,
         slivers: [
           SliverPadding(
-            padding: padding,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             sliver: SliverMainAxisGroup(
               slivers: [
                 ToolDetailTextSection(label: argumentsLabel, text: argsPretty),
@@ -1658,9 +1498,8 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     Widget avatarContent;
 
     if (avatarType == 'emoji' && avatarValue != null) {
-      final bool isIOS = defaultTargetPlatform == TargetPlatform.iOS;
       final double fs = 18;
-      final Offset? nudge = isIOS ? Offset(fs * 0.065, fs * -0.05) : null;
+      final Offset? nudge = null;
       avatarContent = Center(
         child: EmojiText(
           avatarValue,
@@ -2017,11 +1856,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     bool enableUserMarkdown,
     int collapseChars,
   ) {
-    final bool isDesktop =
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux;
-    final double baseUser = isDesktop ? 14.0 : 15.5;
+    final double baseUser = 15.5;
 
     Widget content;
     if (enableUserMarkdown) {
@@ -2041,13 +1876,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
           height: 1.4,
           color: chatSurfacePlainTextColor(context, isUser: true),
         ),
-      );
-    }
-
-    if (isDesktop) {
-      content = SelectionArea(
-        key: ValueKey('user_${widget.message.id}'),
-        child: content,
       );
     }
 
@@ -2408,11 +2236,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     Map<String, String> citationIndexLookup, {
     String contentKey = '',
   }) {
-    final bool isDesktop =
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux;
-    final double baseAssistant = isDesktop ? 14.0 : 15.7;
+    final double baseAssistant = 15.7;
 
     Widget assistantContent;
     if (enableAssistantMarkdown) {
@@ -3099,17 +2923,10 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                                   const SizedBox(width: 8),
                                   Builder(
                                     builder: (context) {
-                                      final bool isDesktop =
-                                          defaultTargetPlatform ==
-                                              TargetPlatform.macOS ||
-                                          defaultTargetPlatform ==
-                                              TargetPlatform.windows ||
-                                          defaultTargetPlatform ==
-                                              TargetPlatform.linux;
                                       return Text(
                                         l10n.chatMessageWidgetTranslating,
                                         style: TextStyle(
-                                          fontSize: isDesktop ? 14.0 : 15.5,
+                                          fontSize: 15.5,
                                           color: fg.muted,
                                           fontStyle: FontStyle.italic,
                                         ),
@@ -3129,16 +2946,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                                   ),
                                   child: Builder(
                                     builder: (context) {
-                                      final bool isDesktop =
-                                          defaultTargetPlatform ==
-                                              TargetPlatform.macOS ||
-                                          defaultTargetPlatform ==
-                                              TargetPlatform.windows ||
-                                          defaultTargetPlatform ==
-                                              TargetPlatform.linux;
-                                      final double baseTranslation = isDesktop
-                                          ? 14.0
-                                          : 15.5;
+                                      final double baseTranslation = 15.5;
                                       Widget translationContent;
                                       if (enableAssistantMarkdown) {
                                         translationContent =
@@ -3621,9 +3429,8 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         return _assistantInitial(cs);
       }
       // treat as emoji or single char label
-      final bool isIOS = defaultTargetPlatform == TargetPlatform.iOS;
       final double fs = 18;
-      final Offset? nudge = isIOS ? Offset(fs * 0.065, fs * -0.05) : null;
+      final Offset? nudge = null;
       return Container(
         width: 32,
         height: 32,

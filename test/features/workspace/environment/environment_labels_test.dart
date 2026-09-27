@@ -64,16 +64,6 @@ void main() {
         Lucide.Package,
       );
     });
-
-    test('uses the terminal icon for desktop native shells', () {
-      expect(
-        workspaceEnvEngineIcon(
-          state: const EnvironmentState(),
-          desktopNative: true,
-        ),
-        Lucide.SquareTerminal,
-      );
-    });
   });
 
   group('workspaceEnvDisplayVersion', () {

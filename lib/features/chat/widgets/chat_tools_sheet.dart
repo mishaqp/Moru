@@ -13,7 +13,6 @@ import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/services/haptics.dart';
 import 'package:Kelivo/features/home/services/local_tool_labels.dart';
 import 'package:Kelivo/features/home/services/local_tool_toggle.dart';
-import 'package:Kelivo/features/home/services/local_tools_service.dart';
 import 'package:Kelivo/features/workspace/widgets/workspace_section.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
@@ -319,14 +318,6 @@ class _LocalToolsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (DeviceLocalTools.iosDeviceToolsSupported) {
-      // Weather / health availability is only known after the capability
-      // prefetch resolves; rebuild once it does so those rows can appear.
-      return FutureBuilder<bool>(
-        future: DeviceLocalTools.prefetchIosCapabilities(),
-        builder: (context, _) => _build(context),
-      );
-    }
     return _build(context);
   }
 

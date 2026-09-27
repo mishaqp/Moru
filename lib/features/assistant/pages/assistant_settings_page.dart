@@ -7,7 +7,6 @@ import '../../../core/providers/assistant_provider.dart';
 import '../../home/controllers/chat_actions.dart';
 import '../../../core/models/assistant.dart';
 import 'dart:io' show File;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'assistant_settings_edit_page.dart';
 import '../../../utils/avatar_cache.dart';
 import '../../../utils/sandbox_path_resolver.dart';
@@ -594,7 +593,7 @@ class _AssistantAvatar extends StatelessWidget {
             );
           },
         );
-      } else if (!kIsWeb && (av.startsWith('/') || av.contains(':'))) {
+      } else if ((av.startsWith('/') || av.contains(':'))) {
         final fixed = SandboxPathResolver.fix(av);
         final f = File(fixed);
         if (f.existsSync()) {

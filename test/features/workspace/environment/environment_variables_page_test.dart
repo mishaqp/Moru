@@ -27,11 +27,7 @@ void main() {
         .setMockMethodCallHandler(const MethodChannel('haptic_feedback'), null);
   });
 
-  for (final platform in [
-    TargetPlatform.android,
-    TargetPlatform.iOS,
-    TargetPlatform.macOS,
-  ]) {
+  for (final platform in [TargetPlatform.android]) {
     testWidgets(
       'environment variables CRUD, visibility and privacy on $platform',
       (tester) async {
@@ -42,9 +38,7 @@ void main() {
           );
           await env.loaded;
         });
-        tester.view.physicalSize = platform == TargetPlatform.macOS
-            ? const Size(1100, 900)
-            : const Size(390, 844);
+        tester.view.physicalSize = (const Size(390, 844));
         tester.view.devicePixelRatio = 1;
         addTearDown(() {
           tester.view.resetPhysicalSize();
@@ -83,10 +77,7 @@ void main() {
           find.byKey(const ValueKey('environment-variable-add')),
         );
         await tester.pumpAndSettle();
-        expect(
-          find.byType(BottomSheet),
-          platform == TargetPlatform.macOS ? findsNothing : findsOneWidget,
-        );
+        expect(find.byType(BottomSheet), findsOneWidget);
         final nameField = find.descendant(
           of: find.byKey(const ValueKey('environment-variable-name')),
           matching: find.byType(TextField),

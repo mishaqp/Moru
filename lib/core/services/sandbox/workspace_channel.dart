@@ -38,9 +38,7 @@ class WorkspaceChannel {
   Stream<Map<String, Object?>>? _eventStream;
 
   static bool get isSupportedPlatform =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
+      (defaultTargetPlatform == TargetPlatform.android);
 
   Stream<Map<String, Object?>> get events {
     return _eventStream ??= _events.receiveBroadcastStream().map(_asEventMap);

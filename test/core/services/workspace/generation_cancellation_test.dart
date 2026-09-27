@@ -6,12 +6,15 @@ import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/models/workspace.dart';
 import 'package:Kelivo/core/models/workspace_binding.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
-import 'package:Kelivo/core/services/workspace/desktop_process_runtime.dart';
 import 'package:Kelivo/core/services/workspace/workspace_paths.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tools_service.dart';
 
-class ObservedRuntime extends DesktopProcessRuntime {
+import '../../../support/fake_workspace_runtime.dart';
+
+class ObservedRuntime extends FakeWorkspaceRuntime {
+  ObservedRuntime() : super(useRealProcess: true);
+
   final runIds = <String>[];
   final started = Completer<void>();
   final exited = Completer<void>();

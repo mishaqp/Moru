@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
@@ -95,48 +94,7 @@ Future<void> revealPreviewFileInFileManager(
   File file,
 ) async {
   final l10n = AppLocalizations.of(context)!;
-  if (kIsWeb) {
-    showAppSnackBar(
-      context,
-      message: l10n.workspacePreviewRevealFailed,
-      type: NotificationType.error,
-    );
-    return;
-  }
   try {
-    final hostPath = file.absolute.path;
-    if (Platform.isMacOS) {
-      final result = await Process.run('open', <String>['-R', hostPath]);
-      if (result.exitCode != 0) {
-        throw ProcessException(
-          'open',
-          <String>['-R', hostPath],
-          result.stderr.toString(),
-          result.exitCode,
-        );
-      }
-      return;
-    }
-    if (Platform.isLinux) {
-      final dir = p.dirname(hostPath);
-      final result = await Process.run('xdg-open', <String>[dir]);
-      if (result.exitCode != 0) {
-        throw ProcessException(
-          'xdg-open',
-          <String>[dir],
-          result.stderr.toString(),
-          result.exitCode,
-        );
-      }
-      return;
-    }
-    if (Platform.isWindows) {
-      // Explorer can return a nonzero exit code even when reveal succeeds.
-      await Process.start('explorer', <String>[
-        '/select,$hostPath',
-      ], mode: ProcessStartMode.detached);
-      return;
-    }
     throw UnsupportedError('Reveal is only supported on desktop');
   } catch (e) {
     if (!context.mounted) return;
@@ -155,7 +113,7 @@ Future<void> openPreviewFileInBrowser(BuildContext context, File file) async {
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (ok) return;
     if (!context.mounted) return;
-    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
+    if (Platform.isAndroid) {
       await openPreviewFileExternally(context, file);
       return;
     }
@@ -180,7 +138,7 @@ Future<void> openPreviewFileInBrowser(BuildContext context, File file) async {
 /// Serve the file (and siblings) over loopback so the system browser can
 /// load it.
 Future<Uri> _browserUriForPreviewFile(File file) async {
-  if (kIsWeb || !(Platform.isIOS || Platform.isAndroid)) {
+  if (!Platform.isAndroid) {
     return Uri.file(file.absolute.path);
   }
   return startPreviewFileBrowserServer(file);
@@ -277,12 +235,6 @@ String _mimeForPreviewPath(String path) {
 }
 
 String revealInFileManagerLabel(AppLocalizations l10n) {
-  if (!kIsWeb && Platform.isMacOS) {
-    return l10n.workspacePreviewRevealInFinder;
-  }
-  if (!kIsWeb && Platform.isWindows) {
-    return l10n.workspacePreviewRevealInExplorer;
-  }
   return l10n.workspacePreviewRevealInFileManager;
 }
 

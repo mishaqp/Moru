@@ -25,11 +25,6 @@ void main() {
     expect(ru.memorySettingsProfileTitle, 'Профиль пользователя');
     expect(ru.scheduledTasksTitle, 'Задачи по расписанию');
     expect(ru.toolSchemaSettingsPageTitle, 'Инструменты и разрешения');
-    expect(ru.oauthLoginTo('ChatGPT'), 'Войти в ChatGPT');
-    expect(
-      ru.modelDetailSheetModelIdDisabledHint('gpt-technical-id'),
-      'gpt-technical-id',
-    );
   });
 
   test('RU count grammar handles zero and compound numbers', () async {

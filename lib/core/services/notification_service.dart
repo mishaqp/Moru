@@ -99,7 +99,7 @@ class NotificationService {
   }
 
   static Future<void> ensureInitialized() async {
-    if (!Platform.isAndroid && !Platform.isIOS) return;
+    if (!Platform.isAndroid) return;
     if (_inited) return;
     final existing = _initialization;
     if (existing != null) {
@@ -183,7 +183,7 @@ class NotificationService {
     String? title,
     String? body,
   }) async {
-    if (!Platform.isAndroid && !Platform.isIOS) return;
+    if (!Platform.isAndroid) return;
     if (conversationId.trim().isEmpty) return;
     await ensureInitialized();
     await _plugin.show(

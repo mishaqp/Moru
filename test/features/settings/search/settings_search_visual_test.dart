@@ -118,12 +118,7 @@ void main() {
                 key: boundaryKey,
                 child: Scaffold(
                   body: SettingsSearchView(
-                    index: SettingsSearchIndex(
-                      AppLocalizations.of(context)!,
-                      platform: scenario.name == 'desktop'
-                          ? TargetPlatform.macOS
-                          : TargetPlatform.iOS,
-                    ),
+                    index: SettingsSearchIndex(AppLocalizations.of(context)!),
                     autofocus: false,
                     safeAreaInsets: scenario.insets,
                     onSelected: (_) {},

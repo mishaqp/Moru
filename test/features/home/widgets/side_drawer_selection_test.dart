@@ -147,8 +147,8 @@ void main() {
     return service;
   }
 
-  Future<void> asDesktop(Future<void> Function() body) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+  Future<void> asAndroid(Future<void> Function() body) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
       await body();
     } finally {
@@ -159,8 +159,6 @@ void main() {
   Future<void> pumpDrawer(
     WidgetTester tester,
     ChatService service, {
-    bool desktopTopicsOnly = true,
-    bool desktopAssistantsOnly = false,
     bool globalSearchMode = false,
     String globalSearchQuery = '',
     Locale locale = const Locale('en'),
@@ -190,8 +188,6 @@ void main() {
             userName: 'User',
             assistantName: 'Assistant',
             embedded: embedded,
-            desktopTopicsOnly: desktopTopicsOnly,
-            desktopAssistantsOnly: desktopAssistantsOnly,
             globalSearchMode: globalSearchMode,
             globalSearchQuery: globalSearchQuery,
             showBottomBar: showBottomBar,
@@ -242,7 +238,7 @@ void main() {
   testWidgets(
     'entering selection does not recompute sidebar rows or bump revision',
     (tester) async {
-      await asDesktop(() async {
+      await asAndroid(() async {
         final service = createService();
         late final String alphaId;
         await tester.runAsync(() async {
@@ -271,7 +267,7 @@ void main() {
   testWidgets(
     'multi-select delete removes conversations with one ChatService notify',
     (tester) async {
-      await asDesktop(() async {
+      await asAndroid(() async {
         final service = createService();
         late final String alphaId;
         await tester.runAsync(() async {
@@ -352,7 +348,7 @@ void main() {
   testWidgets(
     'external delete updates selection header count and disables empty actions',
     (tester) async {
-      await asDesktop(() async {
+      await asAndroid(() async {
         final service = createService();
         late final String alphaId;
         late final String betaId;
@@ -434,12 +430,7 @@ void main() {
   ) async {
     final service = createService();
     await tester.runAsync(service.init);
-    await pumpDrawer(
-      tester,
-      service,
-      embedded: false,
-      desktopTopicsOnly: false,
-    );
+    await pumpDrawer(tester, service, embedded: false);
     expect(find.byType(ChatGradientBackground), findsNothing);
 
     final settings = Provider.of<SettingsProvider>(

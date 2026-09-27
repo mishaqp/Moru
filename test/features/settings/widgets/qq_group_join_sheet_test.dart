@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/custom_bottom_sheet.dart';
-import 'package:Kelivo/shared/widgets/ios_tactile.dart';
 import 'package:Kelivo/shared/widgets/qq_group_join_sheet.dart';
 
 Widget _opener() {
@@ -51,28 +50,4 @@ void main() {
       }
     },
   );
-
-  testWidgets('qq group picker uses dialog on desktop and can be closed', (
-    tester,
-  ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-    try {
-      await tester.pumpWidget(_opener());
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(Dialog), findsOneWidget);
-      expect(find.byKey(CustomBottomSheet.panelKey), findsNothing);
-      expect(find.text('Kelivo Group 1'), findsOneWidget);
-      expect(find.text('Kelivo Group 2'), findsOneWidget);
-      expect(find.text('Kelivo Group 3'), findsOneWidget);
-
-      // Close via the X button.
-      await tester.tap(find.byType(IosIconButton));
-      await tester.pumpAndSettle();
-      expect(find.byType(Dialog), findsNothing);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
 }

@@ -1955,10 +1955,6 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
   }
 
   Future<void> _pickLocalImage(BuildContext context, Assistant a) async {
-    if (kIsWeb) {
-      await _inputAvatarUrl(context, a);
-      return;
-    }
     try {
       final assistantProvider = context.read<AssistantProvider>();
       final picker = ImagePicker();

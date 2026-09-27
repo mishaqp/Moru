@@ -114,63 +114,6 @@ void main() {
     },
   );
 
-  testWidgets('citation sources opener uses dialog on desktop targets', (
-    tester,
-  ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-
-    try {
-      var opened = '';
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) {
-                return TextButton(
-                  onPressed: () {
-                    showCitationSourcesBottomSheet(
-                      context: context,
-                      title: '搜索结果',
-                      closeSemanticLabel: '关闭',
-                      items: const [
-                        CitationSourceItem(
-                          title: 'Desktop source',
-                          url: 'https://desktop.example.com/source',
-                          text: 'Desktop quote',
-                        ),
-                      ],
-                      onOpen: (item) => opened = item.url,
-                    );
-                  },
-                  child: const Text('Open'),
-                );
-              },
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(CitationSourcesDialog), findsOneWidget);
-      expect(find.byKey(CustomBottomSheet.panelKey), findsNothing);
-      expect(find.text('搜索结果'), findsOneWidget);
-      expect(find.byType(CitationSourceCard), findsOneWidget);
-      expect(find.text('Desktop source'), findsOneWidget);
-
-      await tester.tap(find.text('Desktop source'));
-      expect(opened, 'https://desktop.example.com/source');
-
-      await tester.tap(find.byKey(CitationSourcesDialog.closeButtonKey));
-      await tester.pumpAndSettle();
-      expect(find.byType(CitationSourcesDialog), findsNothing);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
-
   testWidgets('citation sources opener keeps bottom sheet on mobile targets', (
     tester,
   ) async {

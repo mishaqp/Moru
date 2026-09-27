@@ -1,6 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import '../../icons/lucide_adapter.dart' as lucide;
 import '../../l10n/app_localizations.dart';
@@ -13,25 +11,12 @@ Future<int?> showIosTimePicker(
   int? initialMinutes,
   required String title,
 }) async {
-  if (_isDesktopPlatform) {
-    return _showIosDesktopTimeDialog(
-      context,
-      initialMinutes: initialMinutes,
-      title: title,
-    );
-  }
-
   return _showIosMobileTimePicker(
     context,
     initialMinutes: initialMinutes,
     title: title,
   );
 }
-
-bool get _isDesktopPlatform =>
-    defaultTargetPlatform == TargetPlatform.macOS ||
-    defaultTargetPlatform == TargetPlatform.windows ||
-    defaultTargetPlatform == TargetPlatform.linux;
 
 Future<int?> _showIosMobileTimePicker(
   BuildContext context, {
@@ -51,36 +36,6 @@ Future<int?> _showIosMobileTimePicker(
         isDesktop: false,
         onCancel: () => Navigator.of(ctx).pop(),
         onSave: (minutes) => Navigator.of(ctx).pop(minutes),
-      );
-    },
-  );
-}
-
-Future<int?> _showIosDesktopTimeDialog(
-  BuildContext context, {
-  int? initialMinutes,
-  required String title,
-}) {
-  final initial = _resolveInitialTimeMinutes(initialMinutes);
-
-  return showDialog<int>(
-    context: context,
-    builder: (ctx) {
-      return Dialog(
-        elevation: 0,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 380),
-          child: _IosTimeWheelPanel(
-            initialMinutes: initial,
-            title: title,
-            isDesktop: true,
-            onCancel: () => Navigator.of(ctx).pop(),
-            onSave: (minutes) => Navigator.of(ctx).pop(minutes),
-          ),
-        ),
       );
     },
   );

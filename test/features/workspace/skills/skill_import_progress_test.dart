@@ -36,17 +36,11 @@ class _ProgressSkillsService extends FakeSkillsService {
 }
 
 void main() {
-  for (final platform in [
-    TargetPlatform.android,
-    TargetPlatform.iOS,
-    TargetPlatform.macOS,
-  ]) {
+  for (final platform in [TargetPlatform.android]) {
     testWidgets(
       'GitHub progress, retry and dismissal on $platform',
       (tester) async {
-        tester.view.physicalSize = platform == TargetPlatform.macOS
-            ? const Size(1100, 800)
-            : const Size(390, 844);
+        tester.view.physicalSize = (const Size(390, 844));
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
@@ -78,10 +72,7 @@ void main() {
         );
         await tester.tap(find.text('open'));
         await tester.pumpAndSettle();
-        expect(
-          find.byType(BottomSheet),
-          platform == TargetPlatform.macOS ? findsNothing : findsOneWidget,
-        );
+        expect(find.byType(BottomSheet), findsOneWidget);
         await tester.enterText(
           find.byType(TextField),
           'https://github.com/acme/demo',

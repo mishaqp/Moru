@@ -705,37 +705,6 @@ Future<void> _saveExportTextWithPicker(
 }) async {
   final l10n = AppLocalizations.of(context)!;
 
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    final String? savePath = await FilePicker.platform.saveFile(
-      dialogTitle: l10n.backupPageExportToFile,
-      fileName: filename,
-      type: FileType.custom,
-      allowedExtensions: allowedExtensions,
-    );
-    if (savePath == null) return; // user cancelled
-
-    try {
-      await File(savePath).parent.create(recursive: true);
-      await File(savePath).writeAsString(content);
-    } catch (e) {
-      if (!context.mounted) return;
-      showAppSnackBar(
-        context,
-        message: l10n.messageExportSheetExportFailed('$e'),
-        type: NotificationType.error,
-      );
-      return;
-    }
-
-    if (!context.mounted) return;
-    showAppSnackBar(
-      context,
-      message: l10n.messageExportSheetExportedAs(p.basename(savePath)),
-      type: NotificationType.success,
-    );
-    return;
-  }
-
   // Mobile: use FilePicker with bytes parameter (required on Android & iOS).
   final contentBytes = utf8.encode(content);
   final String? savePath = await FilePicker.platform.saveFile(
@@ -973,9 +942,7 @@ Future<File?> _renderAndSaveMessageImage(
     await preRenderDiagramCodesForExport(context, codes);
   } catch (_) {}
 
-  final bool isDesktop =
-      Platform.isWindows || Platform.isLinux || Platform.isMacOS;
-  final exportConfig = _exportImageRenderConfig(isDesktop: isDesktop);
+  final exportConfig = _exportImageRenderConfig(isDesktop: false);
 
   Widget buildContent() => ExportCaptureScope(
     enabled: true,
@@ -986,7 +953,7 @@ Future<File?> _renderAndSaveMessageImage(
       chatFontScale: settings.chatFontScale,
       showThinkingAndToolCards: showThinkingAndToolCards,
       expandThinkingContent: expandThinkingContent,
-      isDesktop: isDesktop,
+      isDesktop: false,
     ),
   );
   if (!context.mounted) return null;
@@ -1019,9 +986,7 @@ Future<File?> _renderAndSaveChatImage(
     await preRenderDiagramCodesForExport(context, codes);
   } catch (_) {}
 
-  final bool isDesktop =
-      Platform.isWindows || Platform.isLinux || Platform.isMacOS;
-  final exportConfig = _exportImageRenderConfig(isDesktop: isDesktop);
+  final exportConfig = _exportImageRenderConfig(isDesktop: false);
 
   Widget buildContent() => ExportCaptureScope(
     enabled: true,
@@ -1035,7 +1000,7 @@ Future<File?> _renderAndSaveChatImage(
       timestamp: conversation.updatedAt,
       showThinkingAndToolCards: showThinkingAndToolCards,
       expandThinkingContent: expandThinkingContent,
-      isDesktop: isDesktop,
+      isDesktop: false,
     ),
   );
   if (!context.mounted) return null;
@@ -1780,33 +1745,6 @@ Future<void> showChatExportSheet(
   required Conversation conversation,
   required List<ChatMessage> selectedMessages,
 }) async {
-  try {
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      // Desktop: show centered dialog
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: true,
-        builder: (ctx) => Dialog(
-          elevation: 12,
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 24,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: _BatchExportDialog(
-            conversation: conversation,
-            messages: selectedMessages,
-            parentContext: context,
-          ),
-        ),
-      );
-      return;
-    }
-  } catch (_) {
-    // Fallback to bottom sheet below
-  }
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,

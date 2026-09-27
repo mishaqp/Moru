@@ -328,11 +328,6 @@ Widget _markdownHarness(
   );
 }
 
-void _overrideMarkdownTablePlatform(TargetPlatform platform) {
-  markdownTableTargetPlatformOverride = platform;
-  addTearDown(() => markdownTableTargetPlatformOverride = null);
-}
-
 Widget _streamingMarkdownHarness(
   ValueListenable<String> text, {
   double? width,
@@ -792,7 +787,6 @@ Inline ***strong emphasis*** text.
   testWidgets('MarkdownWithCodeHighlight renders mobile table export action', (
     tester,
   ) async {
-    _overrideMarkdownTablePlatform(TargetPlatform.android);
     await tester.pumpWidget(
       _markdownHarness('''
 | Name | Value |
@@ -828,7 +822,6 @@ Inline ***strong emphasis*** text.
   testWidgets('MarkdownWithCodeHighlight expands compact tables for export', (
     tester,
   ) async {
-    _overrideMarkdownTablePlatform(TargetPlatform.android);
     await tester.pumpWidget(
       _settingsHarness(
         onSettingsReady: (_) {},
@@ -858,7 +851,6 @@ Inline ***strong emphasis*** text.
   testWidgets('MarkdownWithCodeHighlight keeps table actions out of body', (
     tester,
   ) async {
-    _overrideMarkdownTablePlatform(TargetPlatform.android);
     await tester.pumpWidget(
       _markdownHarness('''
 | Name | Value |
@@ -887,7 +879,6 @@ Inline ***strong emphasis*** text.
   testWidgets('MarkdownWithCodeHighlight copies markdown table syntax', (
     tester,
   ) async {
-    _overrideMarkdownTablePlatform(TargetPlatform.android);
     String? clipboardText;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, (call) async {
@@ -926,7 +917,6 @@ Inline ***strong emphasis*** text.
   testWidgets('MarkdownWithCodeHighlight centers padded table cells', (
     tester,
   ) async {
-    _overrideMarkdownTablePlatform(TargetPlatform.android);
     await tester.pumpWidget(
       _markdownHarness('''
 | 项目 | 状态 |
@@ -959,7 +949,6 @@ Inline ***strong emphasis*** text.
   testWidgets('MarkdownWithCodeHighlight does not scroll narrow table', (
     tester,
   ) async {
-    _overrideMarkdownTablePlatform(TargetPlatform.android);
     await tester.pumpWidget(
       _markdownHarness('''
 | Name | Value |
@@ -990,7 +979,6 @@ Inline ***strong emphasis*** text.
   testWidgets(
     'MarkdownWithCodeHighlight does not scroll three-column narrow table',
     (tester) async {
-      _overrideMarkdownTablePlatform(TargetPlatform.android);
       await tester.pumpWidget(
         _markdownHarness('''
 | Name | Value | Note |
@@ -1017,7 +1005,6 @@ Inline ***strong emphasis*** text.
   testWidgets(
     'MarkdownWithCodeHighlight saves table image on image action tap',
     (tester) async {
-      _overrideMarkdownTablePlatform(TargetPlatform.android);
       var savedToGallery = false;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
@@ -1061,7 +1048,6 @@ Inline ***strong emphasis*** text.
   testWidgets('MarkdownWithCodeHighlight saves an opaque table image', (
     tester,
   ) async {
-    _overrideMarkdownTablePlatform(TargetPlatform.android);
     Uint8List? savedBytes;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
@@ -1182,7 +1168,6 @@ Inline ***strong emphasis*** text.
     testWidgets(
       'streaming table preserves its offset and active drag (long=$longReply)',
       (tester) async {
-        _overrideMarkdownTablePlatform(TargetPlatform.iOS);
         await tester.binding.setSurfaceSize(const Size(800, 1600));
         addTearDown(() => tester.binding.setSurfaceSize(null));
         final prefix = longReply ? '${'Intro text. ' * 50}\n\n' : '';
@@ -1235,7 +1220,6 @@ Inline ***strong emphasis*** text.
   testWidgets(
     'table offset survives stream growth, block close and completion',
     (tester) async {
-      _overrideMarkdownTablePlatform(TargetPlatform.iOS);
       var text =
           '| A | B | C | D | E |\n'
           '| --- | --- | --- | --- | --- |\n| apple';
@@ -1293,7 +1277,6 @@ Inline ***strong emphasis*** text.
   testWidgets('appending to a table reuses the earlier table and its offset', (
     tester,
   ) async {
-    _overrideMarkdownTablePlatform(TargetPlatform.iOS);
     const header =
         '| A | B | C | D | E |\n'
         '| --- | --- | --- | --- | --- |\n';
@@ -1340,7 +1323,6 @@ Inline ***strong emphasis*** text.
   testWidgets('MarkdownWithCodeHighlight scrolls only overflowing table', (
     tester,
   ) async {
-    _overrideMarkdownTablePlatform(TargetPlatform.android);
     await tester.pumpWidget(
       _markdownHarness('''
 | Very long header | Another very long header | Third very long header | Fourth very long header |
@@ -2598,7 +2580,6 @@ A-->B
   testWidgets(
     'MarkdownWithCodeHighlight keeps dollar signs inside table code',
     (tester) async {
-      _overrideMarkdownTablePlatform(TargetPlatform.android);
       await tester.pumpWidget(
         _markdownHarness(r'''
 | 对比点 | 行内 `$...$` | 行间 `$$...$$` |
@@ -3195,8 +3176,8 @@ $$
       await tester.pump();
 
       expect(_findMathWidget(), findsOneWidget);
-      expect(find.textContaining(r'$a'), findsOneWidget);
-      expect(find.textContaining(r'b$'), findsOneWidget);
+      expect(find.textContaining(r'$a', findRichText: true), findsOneWidget);
+      expect(find.textContaining(r'b$', findRichText: true), findsOneWidget);
     },
   );
 
@@ -3297,86 +3278,6 @@ final price = "$12";
 
     expect(identical(before, after), isTrue);
   });
-
-  testWidgets(
-    'SelectableHighlightView adds iOS native translation for non-empty selection',
-    (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-      addTearDown(() => debugDefaultTargetPlatformOverride = null);
-      const channel = MethodChannel('app.ios_translation');
-      final calls = <MethodCall>[];
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (call) async {
-            calls.add(call);
-            return call.method == 'isAvailable' ? true : null;
-          });
-      addTearDown(
-        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(channel, null),
-      );
-
-      await tester.pumpWidget(
-        const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: SelectableHighlightView(
-              'final value = 1;',
-              language: 'dart',
-              theme: {},
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-
-      final editableTextState = tester.state<EditableTextState>(
-        find.byType(EditableText),
-      );
-      final contextMenuBuilder = tester
-          .widget<SelectableText>(find.byType(SelectableText))
-          .contextMenuBuilder!;
-      final editableContext = tester.element(find.byType(EditableText));
-
-      final collapsedMenu =
-          contextMenuBuilder(editableContext, editableTextState)
-              as AdaptiveTextSelectionToolbar;
-      expect(
-        collapsedMenu.buttonItems,
-        isNot(
-          contains(
-            predicate<ContextMenuButtonItem>((item) {
-              return item.label == 'Translate';
-            }),
-          ),
-        ),
-      );
-
-      editableTextState.userUpdateTextEditingValue(
-        editableTextState.textEditingValue.copyWith(
-          selection: const TextSelection(baseOffset: 0, extentOffset: 5),
-        ),
-        SelectionChangedCause.longPress,
-      );
-      await tester.pump();
-
-      final selectionMenu =
-          contextMenuBuilder(editableContext, editableTextState)
-              as AdaptiveTextSelectionToolbar;
-      final translateItem = selectionMenu.buttonItems!.singleWhere(
-        (item) => item.label == 'Translate',
-      );
-      translateItem.onPressed!();
-      await tester.pump();
-
-      final presentCall = calls.singleWhere((call) => call.method == 'present');
-      final arguments = presentCall.arguments as Map<Object?, Object?>;
-      expect(arguments['text'], 'final');
-      expect(arguments['anchorX'], isA<double>());
-      expect(arguments['anchorY'], isA<double>());
-      debugDefaultTargetPlatformOverride = null;
-    },
-  );
 
   testWidgets(
     'SelectableHighlightView keeps stock menu when iOS translation is unavailable',
@@ -4905,7 +4806,6 @@ void main() {
   ) async {
     const inheritedInk = Color(0xFF224466);
     const themeInk = Color(0xFF112233);
-    _overrideMarkdownTablePlatform(TargetPlatform.android);
     final baseTheme = ThemeData.light();
     final theme = baseTheme.copyWith(
       colorScheme: baseTheme.colorScheme.copyWith(onSurface: themeInk),

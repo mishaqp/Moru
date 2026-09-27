@@ -9,7 +9,6 @@ import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart';
 
-import 'health_data_selection.dart';
 import 'local_tools_service.dart';
 import '../../settings/pages/phone_control_settings_page.dart';
 
@@ -124,39 +123,6 @@ Future<void> setLocalToolEnabled(
       }
     }
     await write(true);
-    return;
-  }
-
-  if ((toolId == LocalToolNames.remindersQuery ||
-          toolId == LocalToolNames.remindersCreate ||
-          toolId == LocalToolNames.remindersComplete) &&
-      DeviceLocalTools.remindersSupported) {
-    final granted = await DeviceLocalTools.hasRemindersPermission();
-    if (!granted) {
-      final requested = await DeviceLocalTools.requestRemindersPermission();
-      if (!requested) return;
-    }
-    await write(true);
-    return;
-  }
-
-  if (toolId == LocalToolNames.healthSummary &&
-      DeviceLocalTools.healthSupported) {
-    final next = HealthDataSelection.setMasterEnabled(
-      assistant,
-      enabled: true,
-      availableIds: DeviceLocalTools.availableHealthTypeIds,
-    );
-    final types = HealthDataSelection.queryTypes(
-      next,
-      availableIds: DeviceLocalTools.availableHealthTypeIds,
-    );
-    final requested = await DeviceLocalTools.requestHealthPermission(
-      types: types,
-    );
-    if (!requested) return;
-    if (!context.mounted) return;
-    await context.read<AssistantProvider>().updateAssistant(next);
     return;
   }
 

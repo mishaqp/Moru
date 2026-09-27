@@ -340,31 +340,6 @@ void main() {
   }
 
   test(
-    'desktop rejects a mobile binding before launching a host process',
-    () async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-      final harness = await createBusinessTestHarness();
-      final provider = McpProvider(preferences: harness.preferences);
-      addTearDown(() {
-        provider.dispose();
-        debugDefaultTargetPlatformOverride = null;
-      });
-      await provider.replaceAllFromJson(
-        jsonEncode({
-          'mcpServers': {
-            'guest': {'command': 'python3', 'workspaceId': 'mobile-workspace'},
-          },
-        }),
-      );
-      await _waitFor(() => provider.statusFor('guest') == McpStatus.error);
-      expect(
-        provider.errorFor('guest'),
-        contains('requires the mobile Linux environment'),
-      );
-    },
-  );
-
-  test(
     'package startup can outlast tool timeout, which is restored after connect',
     () async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;

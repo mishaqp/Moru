@@ -24,25 +24,8 @@ class UpdateInfo {
   });
 
   String? bestDownloadUrl() {
-    if (Platform.isIOS) {
-      return downloads['ios'] ??
-          downloads['iosAppStore'] ??
-          downloads['universal'];
-    }
     if (Platform.isAndroid) {
       return downloads['android'] ?? downloads['universal'];
-    }
-    if (Platform.isMacOS) {
-      return downloads['macos'] ??
-          downloads['mac'] ??
-          downloads['darwin'] ??
-          downloads['universal'];
-    }
-    if (Platform.isWindows) {
-      return downloads['windows'] ?? downloads['win'] ?? downloads['universal'];
-    }
-    if (Platform.isLinux) {
-      return downloads['linux'] ?? downloads['universal'];
     }
     return downloads['universal'] ?? downloads['android'] ?? downloads['ios'];
   }

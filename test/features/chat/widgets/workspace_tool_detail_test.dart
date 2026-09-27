@@ -166,7 +166,8 @@ void main() {
     testWidgets(
       '${live ? 'live' : 'stored'} shell copies both streams and preserves whitespace',
       (tester) async {
-        tester.view.physicalSize = const Size(1000, 800);
+        // A large screen shows the detail as a dialog.
+        tester.view.physicalSize = const Size(1280, 900);
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
@@ -262,7 +263,6 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
       },
-      variant: TargetPlatformVariant({TargetPlatform.macOS}),
     );
   }
 

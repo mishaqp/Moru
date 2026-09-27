@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 
 import '../../../core/services/browser/browser_agent_session.dart';
@@ -16,8 +16,7 @@ import '../../../shared/widgets/snackbar.dart';
 class BrowserAgentTool {
   const BrowserAgentTool._();
 
-  static bool get supported =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  static bool get supported => defaultTargetPlatform == TargetPlatform.android;
 
   static Future<String> execute(
     Map<String, dynamic> args, {

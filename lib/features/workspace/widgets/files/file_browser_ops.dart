@@ -501,7 +501,7 @@ class FileBrowserOps {
 class WorkspaceModelPaths {
   WorkspaceModelPaths._();
 
-  static bool get useGuestPaths => Platform.isAndroid || Platform.isIOS;
+  static bool get useGuestPaths => Platform.isAndroid;
 
   static String workspaceFile(String hostPath, String workspaceRoot) {
     if (!useGuestPaths) return hostPath;

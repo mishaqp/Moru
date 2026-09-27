@@ -69,7 +69,7 @@ void main() {
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
       },
-      variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
     );
   }
 
@@ -133,7 +133,7 @@ void main() {
       }
       await tester.pumpWidget(const SizedBox.shrink());
     },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
   testWidgets(
@@ -147,7 +147,12 @@ void main() {
         '\r\n',
         '',
       ];
-      final provider = await _openEditor(tester, arguments);
+      final provider = await _openEditor(
+        tester,
+        arguments,
+        withWorkspaces: true,
+        workspaceId: 'scripts',
+      );
       await tester.enterText(_fieldWithText('Imported server'), 'Renamed');
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
@@ -161,13 +166,18 @@ void main() {
       );
       await tester.pumpWidget(const SizedBox.shrink());
     },
-    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
   testWidgets(
     'space separated arguments preserve quotes, empty strings and scripts',
     (tester) async {
-      final provider = await _openEditor(tester, ['--yes']);
+      final provider = await _openEditor(
+        tester,
+        ['--yes'],
+        withWorkspaces: true,
+        workspaceId: 'scripts',
+      );
       final field = _fieldWithText('--yes');
       await tester.ensureVisible(field);
       await tester.enterText(
@@ -184,13 +194,18 @@ void main() {
       ]);
       await tester.pumpWidget(const SizedBox.shrink());
     },
-    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
   testWidgets(
     'unclosed argument quotes prevent saving',
     (tester) async {
-      final provider = await _openEditor(tester, ['--yes']);
+      final provider = await _openEditor(
+        tester,
+        ['--yes'],
+        withWorkspaces: true,
+        workspaceId: 'scripts',
+      );
       await tester.enterText(_fieldWithText('--yes'), '"unterminated');
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
@@ -203,13 +218,18 @@ void main() {
       );
       await tester.pumpWidget(const SizedBox.shrink());
     },
-    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
   testWidgets(
     'imports an environment variable into the server override',
     (tester) async {
-      final provider = await _openEditor(tester, []);
+      final provider = await _openEditor(
+        tester,
+        [],
+        withWorkspaces: true,
+        workspaceId: 'scripts',
+      );
       await tester.ensureVisible(find.text('Import from Environment'));
       await tester.tap(find.text('Import from Environment'));
       await tester.pumpAndSettle();
@@ -220,7 +240,7 @@ void main() {
       expect(provider.getById('guest')!.env, {'API_TOKEN': 'test-token'});
       await tester.pumpWidget(const SizedBox.shrink());
     },
-    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 }
 

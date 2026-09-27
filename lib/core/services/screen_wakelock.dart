@@ -119,7 +119,6 @@ class ScreenWakelock {
     Future<void> Function() action, {
     void Function()? onError,
   }) {
-    if (kIsWeb) return;
     try {
       unawaited(
         action().catchError((Object _) {
@@ -131,11 +130,8 @@ class ScreenWakelock {
     }
   }
 
-  static bool get _isIOS =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-  static bool get _isAndroid =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-  static bool get _isMobile => _isIOS || _isAndroid;
+  static bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
+  static bool get _isMobile => _isAndroid;
 
   @visibleForTesting
   static bool get debugEnabled => _enabled;
