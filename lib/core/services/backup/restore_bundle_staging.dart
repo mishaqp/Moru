@@ -78,6 +78,7 @@ final class RestoreBundleStaging {
     'skills',
     'workspaces',
     'sessions',
+    'mini_apps',
   ];
   static const _databaseEntry = 'database/kelivo.db';
   static const _maximumManifestBytes = 16 * 1024 * 1024;

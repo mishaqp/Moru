@@ -66,6 +66,7 @@ void main() {
         'skills': RestorePreviousAssetRootState.missing,
         'workspaces': RestorePreviousAssetRootState.missing,
         'sessions': RestorePreviousAssetRootState.missing,
+        'mini_apps': RestorePreviousAssetRootState.missing,
       });
       expect(bundle.plan.assets?.entries.keys, [
         'fonts/font.bin',

@@ -65,6 +65,29 @@ class MiniAppReminders {
     await store.writeReminders(appId, all);
   }
 
+  /// Schedules every stored reminder again. Notification ids are derived from
+  /// the reminder, so this only replaces what is already scheduled; after a
+  /// backup restore it brings the restored apps' reminders back.
+  Future<void> rescheduleAll() async {
+    await store.load();
+    for (final app in store.apps) {
+      final all = await store.readReminders(app.id);
+      for (final entry in all.entries) {
+        final reminder = entry.value;
+        if (reminder is! Map) continue;
+        try {
+          await _schedule(
+            app.id,
+            entry.key,
+            normalize(reminder, fallbackTitle: app.name),
+          );
+        } on MiniAppException {
+          // A damaged definition stays unscheduled; the app can set it again.
+        }
+      }
+    }
+  }
+
   /// Cancels every reminder of the app, for example before it is deleted.
   Future<void> cancelAll(String appId) async {
     final all = await store.readReminders(appId);

@@ -824,6 +824,7 @@ void main() {
         'skills',
         'workspaces',
         'sessions',
+        'mini_apps',
       ]) {
         expect(
           await Directory(

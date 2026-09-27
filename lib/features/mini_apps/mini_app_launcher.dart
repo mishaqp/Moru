@@ -134,6 +134,7 @@ class MiniAppLauncher {
   static void ensureInitialized() {
     if (_initialized) return;
     _initialized = true;
+    unawaited(reminders.rescheduleAll().catchError((_) {}));
     _channel.setMethodCallHandler((call) async {
       if (call.method != 'onOpenApp') return;
       final id = '${call.arguments ?? ''}'.trim();

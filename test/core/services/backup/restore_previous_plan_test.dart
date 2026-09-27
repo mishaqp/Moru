@@ -75,6 +75,7 @@ void main() {
             'skills': RestorePreviousAssetRootState.missing,
             'workspaces': RestorePreviousAssetRootState.missing,
             'sessions': RestorePreviousAssetRootState.missing,
+            'mini_apps': RestorePreviousAssetRootState.missing,
           },
           entries: const {
             'upload/note.txt': RestoreFileDescriptor(bytes: 4, sha256: _hashC),
@@ -148,6 +149,7 @@ void main() {
               'skills': RestorePreviousAssetRootState.missing,
               'workspaces': RestorePreviousAssetRootState.missing,
               'sessions': RestorePreviousAssetRootState.missing,
+              'mini_apps': RestorePreviousAssetRootState.missing,
             },
             entries: const {},
           ),
@@ -183,6 +185,7 @@ void main() {
             'skills': RestorePreviousAssetRootState.directory,
             'workspaces': RestorePreviousAssetRootState.directory,
             'sessions': RestorePreviousAssetRootState.directory,
+            'mini_apps': RestorePreviousAssetRootState.directory,
           },
           entries: const {
             'upload/../secret': RestoreFileDescriptor(bytes: 1, sha256: _hashA),

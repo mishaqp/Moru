@@ -258,6 +258,28 @@ void main() {
       expect(await reminders.list('water'), isEmpty);
     });
 
+    test(
+      'stored reminders are scheduled again, e.g. after a restore',
+      () async {
+        await reminders.set('water', 'morning', {
+          'time': '09:30',
+          'days': [1, 5],
+          'title': 'Пей воду',
+        });
+        final ids = MiniAppReminders.notificationIds('water', 'morning', {
+          'days': [1, 5],
+        });
+        log.clear();
+
+        await reminders.rescheduleAll();
+
+        expect(log, [
+          'schedule ${ids[0]} 9:30 1 Пей воду|',
+          'schedule ${ids[1]} 9:30 5 Пей воду|',
+        ]);
+      },
+    );
+
     test('all seven days become one daily reminder', () {
       expect(
         MiniAppReminders.normalize({

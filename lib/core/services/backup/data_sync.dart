@@ -288,6 +288,7 @@ class DataSync {
     'skills',
     'workspaces',
     'sessions',
+    'mini_apps',
   ];
   // A 16 MiB metadata cap keeps manifest parsing and entry metadata bounded.
   static const _maxManifestBytes = 16 * 1024 * 1024;
