@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import '../storage/device_storage_probe.dart';
 import 'local_snapshot_retention.dart';
 import 'local_snapshot_schedule.dart';
 import 'restore_durability.dart';
@@ -86,10 +85,6 @@ final class LocalSnapshotStore {
       await durability.restrictDirectory(target);
       await durability.syncDirectory(appDataDirectory);
     }
-    // Re-applied rather than set once at creation: a directory that predates
-    // this call -- or that a restore recreated -- must not silently start
-    // being uploaded again.
-    await DeviceStorageProbe.excludeFromCloudBackup(target.path);
     return target;
   }
 
