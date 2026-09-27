@@ -40,7 +40,6 @@ Future<String?> showConversationSystemPromptEditor(
   BuildContext context, {
   required String initial,
 }) {
-  final platform = Theme.of(context).platform;
   if (ResponsiveHelper.isDesktop(context)) {
     return showDialog<String>(
       context: context,

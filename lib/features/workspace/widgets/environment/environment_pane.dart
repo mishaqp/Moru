@@ -378,9 +378,7 @@ class _EnvironmentPaneState extends State<EnvironmentPane> {
     context.watch<EnvironmentManager?>();
     context.watch<MirrorService?>();
     final padding = widget.padding ?? const EdgeInsets.fromLTRB(16, 12, 16, 16);
-    final children = workspaceEnvIsDesktopTarget()
-        ? _nativeChildren()
-        : _sandboxChildren();
+    final children = _sandboxChildren();
     if (widget.embedded) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -391,25 +389,6 @@ class _EnvironmentPaneState extends State<EnvironmentPane> {
     return ListView(padding: padding, children: children);
   }
 
-  List<Widget> _nativeChildren() {
-    final l10n = AppLocalizations.of(context)!;
-    final shell = workspaceEnvNativeShellPath();
-    return [
-      _StatusCard(
-        diskUsageBytes: null,
-        rootfsPath: shell,
-        desktopNative: true,
-        onCopyPath: () => unawaited(_copyPath(shell)),
-      ),
-      KeyedSubtree(
-        key: EnvironmentPane.nativeExplanationKey,
-        child: IosSectionFooter(text: l10n.workspaceEnvNativeExplanation),
-      ),
-      IosSectionFooter(text: l10n.workspaceEnvNativeUnsandboxed),
-      ..._variablesSection(),
-    ];
-  }
-
   List<Widget> _sandboxChildren() {
     final l10n = AppLocalizations.of(context)!;
     final state = context.watch<EnvironmentProvider>().state;
@@ -418,7 +397,7 @@ class _EnvironmentPaneState extends State<EnvironmentPane> {
     final dependencies = context.watch<EnvironmentDependencies?>();
     final busy = _busy || (dependencies?.busy ?? false);
     final ready = state.phase == EnvironmentPhase.ready;
-    final showBrowse = ready && !workspaceEnvIsDesktopTarget();
+    final showBrowse = ready;
     final showExternalMounts = WorkspaceChannel.isSupportedPlatform;
     final showMirrors = ready && manager != null;
     final showActions =
@@ -599,7 +578,6 @@ class _StatusCard extends StatelessWidget {
     this.diskUsageBytes,
     this.diskUsageTimedOut = false,
     this.rootfsPath,
-    this.desktopNative = false,
     this.busy = false,
     this.onInstall,
     this.onCancel,
@@ -610,7 +588,6 @@ class _StatusCard extends StatelessWidget {
   final int? diskUsageBytes;
   final bool diskUsageTimedOut;
   final String? rootfsPath;
-  final bool desktopNative;
   final bool busy;
   final VoidCallback? onInstall;
   final VoidCallback? onCancel;
@@ -631,11 +608,7 @@ class _StatusCard extends StatelessWidget {
       state: state,
       status: status,
     );
-    final icon = workspaceEnvEngineIcon(
-      state: state,
-      status: status,
-      desktopNative: desktopNative,
-    );
+    final icon = workspaceEnvEngineIcon(state: state, status: status);
 
     final installing =
         state.phase == EnvironmentPhase.downloading ||
@@ -652,29 +625,10 @@ class _StatusCard extends StatelessWidget {
             IosNavRow(
               icon: icon,
               label: engine,
-              subtitle: desktopNative
-                  ? null
-                  : workspaceEnvPhaseLabel(l10n, state.phase),
+              subtitle: workspaceEnvPhaseLabel(l10n, state.phase),
               trailing: const SizedBox.shrink(),
             ),
-            if (desktopNative) ...[
-              const IosRowDivider(),
-              EnvironmentMetricRow(
-                label: l10n.workspaceEnvPathLabel,
-                onTap: onCopyPath,
-                value: Text(
-                  workspaceEnvMiddleTruncate(rootfsPath ?? ''),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontFamily: 'monospace',
-                    color: cs.onSurface,
-                  ),
-                ),
-              ),
-            ] else if (state.phase == EnvironmentPhase.notInstalled)
+            if (state.phase == EnvironmentPhase.notInstalled)
               _NotInstalledBody(busy: busy, onInstall: onInstall)
             else if (installing)
               _InstallingBody(state: state, onCancel: onCancel)

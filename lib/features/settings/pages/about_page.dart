@@ -43,11 +43,7 @@ class _AboutPageState extends State<AboutPage> {
 
   Future<void> _loadInfo() async {
     final pkg = await PackageInfo.fromPlatform();
-    String sys;
-    if (Platform.isAndroid) {
-      sys = 'Android';
-    } else
-      sys = Platform.operatingSystem;
+    final sys = Platform.isAndroid ? 'Android' : Platform.operatingSystem;
 
     setState(() {
       _version = pkg.version;

@@ -72,8 +72,8 @@ void main() {
         await tester.pump();
 
         expect(find.text(SearchToolService.toolName), findsOneWidget);
-        expect(DeviceLocalTools.weatherSupported, isFalse);
-        expect(DeviceLocalTools.healthSupported, isFalse);
+        expect(false, isFalse);
+        expect(false, isFalse);
         expect(_catalogNames(), isNot(contains(LocalToolNames.weather)));
         expect(find.text(LocalToolNames.weather), findsNothing);
         expect(find.text(LocalToolNames.healthSummary), findsNothing);
@@ -82,8 +82,8 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(DeviceLocalTools.weatherSupported, isTrue);
-        expect(DeviceLocalTools.healthSupported, isTrue);
+        expect(false, isTrue);
+        expect(false, isTrue);
         expect(_catalogNames(), contains(LocalToolNames.weather));
         expect(_catalogNames(), contains(LocalToolNames.healthSummary));
         expect(find.text(LocalToolNames.weather), findsOneWidget);

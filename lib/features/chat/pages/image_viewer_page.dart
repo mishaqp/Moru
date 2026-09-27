@@ -312,7 +312,6 @@ class _ImageViewerPageState extends State<ImageViewerPage>
   bool _dragActive = false; // only when zoom ~ 1.0
   double _animFrom = 0.0; // for restore animation
   Offset? _lastDoubleTapPos; // focal point for double-tap zoom
-  Offset? _lastTapPos; // local tap point for desktop image/background split
   bool _saving = false; // saving to gallery state
   bool _sharing = false; // sharing state
   // copying to clipboard state
@@ -1246,9 +1245,6 @@ class _ImageViewerPageState extends State<ImageViewerPage>
                   child: SizedBox.expand(
                     child: GestureDetector(
                       behavior: HitTestBehavior.translucent,
-                      onTapDown: (details) =>
-                          _lastTapPos = details.localPosition,
-                      onTapCancel: () => _lastTapPos = null,
                       onDoubleTapDown: (details) =>
                           _lastDoubleTapPos = details.localPosition,
                       onTap: () => _handleImageTap(

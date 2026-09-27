@@ -27,7 +27,6 @@ class EmojiText extends StatelessWidget {
     final String glyph = text.characters.take(1).toString();
 
     // Optional platform-specific scaling for Windows to reduce line jitter
-    const double winScale = 0.9;
     final double scaleFactor = 1.0;
     double fs = fontSize * scaleFactor;
 
@@ -72,9 +71,9 @@ class EmojiText extends StatelessWidget {
       if (nudge != null) {
         dx = nudge!.dx;
         dy = nudge!.dy;
-      } else // Linux/others (Noto, etc.)
+      } else {
         dx = fs * 0.012; // tiny right
-      dy = 0;
+      }
     }
 
     return Transform.translate(

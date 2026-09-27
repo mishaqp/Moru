@@ -161,7 +161,6 @@ class _PromptTabState extends State<_PromptTab> {
   }
 
   Future<void> _openSystemPromptEditor() async {
-    final platform = Theme.of(context).platform;
     final initial = _sysCtrl.text;
     final String? next = (await _showSystemPromptMobileSheet(initial));
     if (!mounted || next == null || next == _sysCtrl.text) return;
@@ -1274,140 +1273,6 @@ class _SystemPromptMobileSheetState extends State<_SystemPromptMobileSheet> {
   }
 }
 
-class _SystemPromptDesktopDialog extends StatefulWidget {
-  const _SystemPromptDesktopDialog({required this.initial});
-  final String initial;
-
-  @override
-  State<_SystemPromptDesktopDialog> createState() =>
-      _SystemPromptDesktopDialogState();
-}
-
-class _SystemPromptDesktopDialogState
-    extends State<_SystemPromptDesktopDialog> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.initial,
-  );
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Center(
-      child: Material(
-        type: MaterialType.transparency,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 860, maxHeight: 660),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: context.overlaySurface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: cs.outlineVariant.withValues(
-                  alpha: isDark ? 0.22 : 0.18,
-                ),
-              ),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 12, 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            l10n.assistantEditSystemPromptTitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 14.5,
-                              fontWeight: AppFontWeights.emphasis,
-                            ),
-                          ),
-                        ),
-                        _HoverTextButton(
-                          label: MaterialLocalizations.of(
-                            context,
-                          ).closeButtonLabel,
-                          color: cs.onSurface,
-                          onTap: () => Navigator.of(context).maybePop(),
-                          dense: true,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(
-                    height: 1,
-                    thickness: 0.6,
-                    color: cs.outlineVariant.withValues(alpha: 0.14),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: context.appColors.surfaceFill,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: cs.outlineVariant.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: TextField(
-                          controller: _controller,
-                          autofocus: true,
-                          expands: true,
-                          maxLines: null,
-                          minLines: null,
-                          keyboardType: TextInputType.multiline,
-                          textAlignVertical: TextAlignVertical.top,
-                          decoration: InputDecoration(
-                            hintText: l10n.assistantEditSystemPromptHint,
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.fromLTRB(
-                              14,
-                              14,
-                              14,
-                              14,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: _HoverTextButton(
-                        label: l10n.assistantEditEmojiDialogSave,
-                        color: cs.primary,
-                        onTap: () =>
-                            Navigator.of(context).pop(_controller.text),
-                        dense: true,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _HoverPillButton extends StatefulWidget {
   const _HoverPillButton({
     required this.icon,
@@ -1479,7 +1344,6 @@ Future<void> _showEditPresetDialog(
   final l10n = AppLocalizations.of(context)!;
   final cs = Theme.of(context).colorScheme;
   final controller = TextEditingController(text: m.content);
-  final platform = Theme.of(context).platform;
   Future<void> save() async {
     final text = controller.text.trim();
     if (text.isEmpty) return;

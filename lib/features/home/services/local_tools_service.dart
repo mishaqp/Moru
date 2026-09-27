@@ -142,36 +142,14 @@ class DeviceLocalTools {
   static bool get calendarSupported =>
       (defaultTargetPlatform == TargetPlatform.android);
 
-  static bool get iosDeviceToolsSupported => false;
-
   static bool get locationSupported =>
       (defaultTargetPlatform == TargetPlatform.android);
-
-  /// WeatherKit is iOS 16+. Defaults false until [prefetchIosCapabilities].
-  static bool? _weatherKitAvailable;
-
-  /// HealthKit may be absent on older iPads. Defaults false until prefetch.
-  static bool? _healthDataAvailable;
-  static List<String>? _availableHealthTypeIds;
-  static Future<bool>? _prefetchFuture;
-  static int _capabilityEpoch = 0;
-
-  static bool get weatherSupported =>
-      iosDeviceToolsSupported && (_weatherKitAvailable ?? false);
-
-  static bool get healthSupported =>
-      iosDeviceToolsSupported && (_healthDataAvailable ?? false);
 
   /// HealthKit type IDs the current OS can query. Until prefetch finishes,
   /// version-gated types (daylight) are omitted.
   static List<String> get availableHealthTypeIds {
-    if (!iosDeviceToolsSupported) return const [];
-    return List<String>.unmodifiable(
-      _availableHealthTypeIds ?? HealthDataTypeIds.withoutOsVersionGate,
-    );
+    return const [];
   }
-
-  static bool get remindersSupported => iosDeviceToolsSupported;
 
   /// Whether Android Usage Access (PACKAGE_USAGE_STATS) is granted.
   static Future<bool> hasUsageStatsPermission() async {
@@ -265,130 +243,11 @@ class DeviceLocalTools {
   }
 
   static Future<bool> hasRemindersPermission() async {
-    if (!remindersSupported) return false;
-    try {
-      final result = await _channel.invokeMethod<bool>(
-        'hasRemindersPermission',
-      );
-      return result == true;
-    } on MissingPluginException {
-      return false;
-    } on PlatformException {
-      return false;
-    }
+    return false;
   }
 
   static Future<bool> requestRemindersPermission() async {
-    if (!remindersSupported) return false;
-    try {
-      final result = await _channel.invokeMethod<bool>(
-        'requestRemindersPermission',
-      );
-      return result == true;
-    } on MissingPluginException {
-      return false;
-    } on PlatformException {
-      return false;
-    }
-  }
-
-  /// Warms WeatherKit and HealthKit availability caches used by the sync
-  /// [weatherSupported] / [healthSupported] getters.
-  static Future<bool> prefetchIosCapabilities() {
-    final existing = _prefetchFuture;
-    if (existing != null) return existing;
-    final epoch = _capabilityEpoch;
-    final future = _queryIosCapabilities(epoch);
-    _prefetchFuture = future;
-    return future;
-  }
-
-  static Future<bool> _queryIosCapabilities(int epoch) async {
-    if (!iosDeviceToolsSupported) {
-      if (epoch == _capabilityEpoch) {
-        _weatherKitAvailable = false;
-        _healthDataAvailable = false;
-        _availableHealthTypeIds = const [];
-      }
-      return false;
-    }
-    final results = await Future.wait([
-      _invokeCapabilityFlag('isWeatherKitAvailable'),
-      _invokeCapabilityFlag('isHealthDataAvailable'),
-    ]);
-    final weatherAvailable = results[0];
-    final healthAvailable = results[1];
-    final typeIds = healthAvailable
-        ? await _invokeHealthTypeIds()
-        : const <String>[];
-    if (epoch == _capabilityEpoch) {
-      _weatherKitAvailable = weatherAvailable;
-      _healthDataAvailable = healthAvailable;
-      _availableHealthTypeIds = typeIds;
-    }
-    return _weatherKitAvailable ?? weatherAvailable;
-  }
-
-  static Future<bool> _invokeCapabilityFlag(String method) async {
-    try {
-      final result = await _channel.invokeMethod<bool>(method);
-      return result == true;
-    } on MissingPluginException {
-      return false;
-    } on PlatformException {
-      return false;
-    }
-  }
-
-  static Future<List<String>> _invokeHealthTypeIds() async {
-    try {
-      final result = await _channel.invokeMethod<List<dynamic>>(
-        'availableHealthTypes',
-      );
-      if (result == null) {
-        return List<String>.from(HealthDataTypeIds.withoutOsVersionGate);
-      }
-      return HealthDataTypeIds.knownOnly(result.whereType<String>());
-    } on MissingPluginException {
-      return List<String>.from(HealthDataTypeIds.withoutOsVersionGate);
-    } on PlatformException {
-      return List<String>.from(HealthDataTypeIds.withoutOsVersionGate);
-    }
-  }
-
-  @visibleForTesting
-  static void debugResetIosCapabilities() {
-    _capabilityEpoch++;
-    _weatherKitAvailable = null;
-    _healthDataAvailable = null;
-    _availableHealthTypeIds = null;
-    _prefetchFuture = null;
-  }
-
-  @visibleForTesting
-  static void debugSetWeatherKitAvailable(bool? value) {
-    _capabilityEpoch++;
-    _weatherKitAvailable = value;
-    _prefetchFuture = value == null ? null : Future<bool>.value(value);
-  }
-
-  @visibleForTesting
-  static void debugSetHealthDataAvailable(bool? value) {
-    _capabilityEpoch++;
-    _healthDataAvailable = value;
-    _availableHealthTypeIds = value == true
-        ? List<String>.from(HealthDataTypeIds.all)
-        : (value == false ? const <String>[] : null);
-    _prefetchFuture = value == null
-        ? null
-        : Future<bool>.value(_weatherKitAvailable ?? false);
-  }
-
-  @visibleForTesting
-  static void debugSetAvailableHealthTypeIds(List<String>? ids) {
-    _availableHealthTypeIds = ids == null
-        ? null
-        : HealthDataTypeIds.knownOnly(ids);
+    return false;
   }
 
   /// Presents the HealthKit read sheet for [types] only. The returned flag is
@@ -396,23 +255,7 @@ class DeviceLocalTools {
   static Future<bool> requestHealthPermission({
     List<String> types = const [],
   }) async {
-    if (!healthSupported) return false;
-    final filtered = HealthDataTypeIds.intersectAvailable(
-      types,
-      availableHealthTypeIds,
-    );
-    if (filtered.isEmpty) return true;
-    try {
-      final result = await _channel.invokeMethod<bool>(
-        'requestHealthPermission',
-        jsonEncode({'types': filtered}),
-      );
-      return result == true;
-    } on MissingPluginException {
-      return false;
-    } on PlatformException {
-      return false;
-    }
+    return false;
   }
 
   /// Opens this app's system settings page on Android or iOS.
@@ -449,13 +292,13 @@ class LocalToolsService {
       case LocalToolNames.currentLocation:
         return DeviceLocalTools.locationSupported;
       case LocalToolNames.weather:
-        return DeviceLocalTools.weatherSupported;
+        return false;
       case LocalToolNames.healthSummary:
-        return DeviceLocalTools.healthSupported;
+        return false;
       case LocalToolNames.remindersQuery:
       case LocalToolNames.remindersCreate:
       case LocalToolNames.remindersComplete:
-        return DeviceLocalTools.remindersSupported;
+        return false;
       case LocalToolNames.miniApps:
         return defaultTargetPlatform == TargetPlatform.android;
       default:
@@ -535,10 +378,6 @@ class LocalToolsService {
   }) {
     if (!supportsTools || assistant == null) {
       return const <Map<String, dynamic>>[];
-    }
-
-    if (DeviceLocalTools.iosDeviceToolsSupported) {
-      unawaited(DeviceLocalTools.prefetchIosCapabilities());
     }
 
     final tools = <Map<String, dynamic>>[];
@@ -623,46 +462,6 @@ class LocalToolsService {
     if (name == LocalToolNames.phoneControl &&
         DeviceLocalTools.phoneControlSupported) {
       return invokeDeviceTool('phoneControl', args);
-    }
-    if (name == LocalToolNames.weather &&
-        DeviceLocalTools.iosDeviceToolsSupported) {
-      await DeviceLocalTools.prefetchIosCapabilities();
-      if (!DeviceLocalTools.weatherSupported) {
-        return jsonEncode({
-          'error': 'unsupported_os',
-          'message': 'Weather requires iOS 16 or later.',
-        });
-      }
-      return invokeDeviceTool('getWeather', args);
-    }
-    if (name == LocalToolNames.healthSummary &&
-        DeviceLocalTools.iosDeviceToolsSupported) {
-      await DeviceLocalTools.prefetchIosCapabilities();
-      if (!DeviceLocalTools.healthSupported) {
-        return jsonEncode({
-          'error': 'unsupported_os',
-          'message': 'Health data is not available on this device.',
-        });
-      }
-      // Always send the collaborator's configured types. Ignore any `types`
-      // the model may have passed so unselected metrics cannot be queried.
-      final types = HealthDataTypeIds.intersectAvailable(
-        assistant.healthDataTypeIds,
-        DeviceLocalTools.availableHealthTypeIds,
-      );
-      return invokeDeviceTool('getHealthSummary', {'types': types});
-    }
-    if (name == LocalToolNames.remindersQuery &&
-        DeviceLocalTools.remindersSupported) {
-      return invokeDeviceTool('queryReminders', args);
-    }
-    if (name == LocalToolNames.remindersCreate &&
-        DeviceLocalTools.remindersSupported) {
-      return invokeDeviceTool('createReminder', args);
-    }
-    if (name == LocalToolNames.remindersComplete &&
-        DeviceLocalTools.remindersSupported) {
-      return invokeDeviceTool('completeReminder', args);
     }
     return null;
   }

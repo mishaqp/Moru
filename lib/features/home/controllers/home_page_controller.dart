@@ -48,7 +48,6 @@ import 'scroll_controller.dart' as scroll_ctrl;
 import 'home_view_model.dart';
 import '../services/message_builder_service.dart';
 import '../services/message_generation_service.dart';
-import '../services/local_tools_service.dart';
 import '../services/ask_user_interaction_service.dart';
 import '../../../core/services/browser/browser_agent_session.dart';
 import '../services/browser_ask_ai_bridge.dart';
@@ -371,8 +370,6 @@ class HomePageController extends ChangeNotifier {
   // Delegate to scroll controller
   scroll_ctrl.ChatScrollController get scrollCtrl => _scrollCtrl;
 
-  bool get isDesktopPlatform => false;
-
   bool get isCurrentConversationLoading =>
       _viewModel.isCurrentConversationLoading;
 
@@ -667,9 +664,6 @@ class HomePageController extends ChangeNotifier {
     try {
       _mcpProvider = _context.read<McpProvider>();
       _mcpProvider!.addListener(_onMcpChanged);
-    } catch (_) {}
-    try {
-      unawaited(DeviceLocalTools.prefetchIosCapabilities());
     } catch (_) {}
   }
 
@@ -1293,76 +1287,52 @@ class HomePageController extends ChangeNotifier {
       // Already on the target: the serial bump above cancels any in-flight
       // switch; reveal the current list again in case a fade-out is pending
       // or in flight. forward() is a no-op when the list is fully visible.
-      if (!isDesktopPlatform) {
-        unawaited(_forwardConvoFade());
-      }
+      unawaited(_forwardConvoFade());
+
       return;
     }
     // Invalidate in-flight select-all / toggle / invert for the prior chat.
     _selectionEpoch++;
     _exitUserMessageEdit(clearDraft: true);
 
-    if (!isDesktopPlatform) {
-      // Fetch-then-commit: fade-out, progress flush, and the DB fetch run
-      // concurrently, but the fetched window is committed only after the
-      // fade-out completes so no new data flashes while opacity is not 0.
-      final fadeFuture = _reverseConvoFade();
-      final flushFuture = _flushProgressSilently();
-      final PreparedConversationSwitch? prepared;
-      try {
-        prepared = await _viewModel.prepareConversationSwitch(id);
-      } catch (_) {
-        if (serial == _switchSerial) await _forwardConvoFade();
-        rethrow;
-      }
-      if (serial != _switchSerial) return;
-      await Future.wait([fadeFuture, flushFuture]);
-      if (serial != _switchSerial) return;
-      if (prepared == null) {
-        // Target vanished; reveal the current list again.
-        await _forwardConvoFade();
+    // Fetch-then-commit: fade-out, progress flush, and the DB fetch run
+    // concurrently, but the fetched window is committed only after the
+    // fade-out completes so no new data flashes while opacity is not 0.
+    final fadeFuture = _reverseConvoFade();
+    final flushFuture = _flushProgressSilently();
+    final PreparedConversationSwitch? prepared;
+    try {
+      prepared = await _viewModel.prepareConversationSwitch(id);
+    } catch (_) {
+      if (serial == _switchSerial) await _forwardConvoFade();
+      rethrow;
+    }
+    if (serial != _switchSerial) return;
+    await Future.wait([fadeFuture, flushFuture]);
+    if (serial != _switchSerial) return;
+    if (prepared == null) {
+      // Target vanished; reveal the current list again.
+      await _forwardConvoFade();
+      return;
+    }
+    _viewModel.commitConversationSwitch(prepared);
+    _clearSelectionState();
+    notifyListeners();
+
+    try {
+      await WidgetsBinding.instance.endOfFrame;
+      if (serial != _switchSerial || currentConversation?.id != id) return;
+      // Resolve the real last item while the new conversation is still
+      // transparent. Its first maxScrollExtent can contain lazy estimates.
+      final activeScrollController = _scrollCtrl;
+      await activeScrollController.settleAtBottomBeforeReveal();
+      if (serial != _switchSerial ||
+          currentConversation?.id != id ||
+          !identical(_scrollCtrl, activeScrollController)) {
         return;
       }
-      _viewModel.commitConversationSwitch(prepared);
-      _clearSelectionState();
-      notifyListeners();
-
-      try {
-        await WidgetsBinding.instance.endOfFrame;
-        if (serial != _switchSerial || currentConversation?.id != id) return;
-        // Resolve the real last item while the new conversation is still
-        // transparent. Its first maxScrollExtent can contain lazy estimates.
-        final activeScrollController = _scrollCtrl;
-        await activeScrollController.settleAtBottomBeforeReveal();
-        if (serial != _switchSerial ||
-            currentConversation?.id != id ||
-            !identical(_scrollCtrl, activeScrollController)) {
-          return;
-        }
-        await _convoFadeController.forward();
-      } catch (_) {}
-    } else {
-      // Desktop uses the same prepare/commit atomicity as mobile, without
-      // fade: current conversation/selection stay unchanged until commit.
-      await _flushProgressSilently();
-      try {
-        _convoFadeController.stop();
-        _convoFadeController.value = 1.0;
-      } catch (_) {}
-      if (serial != _switchSerial) return;
-      final prepared = await _viewModel.prepareConversationSwitch(id);
-      if (serial != _switchSerial) return;
-      if (prepared == null) return;
-      _viewModel.commitConversationSwitch(prepared);
-      _clearSelectionState();
-      notifyListeners();
-    }
-
-    if (isDesktopPlatform) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _inputFocus.requestFocus();
-      });
-    }
+      await _convoFadeController.forward();
+    } catch (_) {}
   }
 
   Future<void> _reverseConvoFade() async {
@@ -1394,23 +1364,15 @@ class HomePageController extends ChangeNotifier {
       await _viewModel.flushCurrentConversationProgress();
     } catch (_) {}
     _exitUserMessageEdit(clearDraft: !preserveDraft);
-    if (!isDesktopPlatform) {
-      try {
-        await _convoFadeController.reverse();
-      } catch (_) {}
-    }
+    try {
+      await _convoFadeController.reverse();
+    } catch (_) {}
+
     await _createNewConversation(preserveDraft: preserveDraft);
-    if (!isDesktopPlatform) {
-      try {
-        await WidgetsBinding.instance.endOfFrame;
-        await _convoFadeController.forward();
-      } catch (_) {}
-    }
-    if (isDesktopPlatform) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _inputFocus.requestFocus();
-      });
-    }
+    try {
+      await WidgetsBinding.instance.endOfFrame;
+      await _convoFadeController.forward();
+    } catch (_) {}
   }
 
   Future<void> _createNewConversation({bool preserveDraft = false}) async {
@@ -1685,9 +1647,7 @@ class HomePageController extends ChangeNotifier {
 
   Future<void> forkConversation(ChatMessage message) async {
     if (currentConversation == null) return;
-    if (!isDesktopPlatform) {
-      await _convoFadeController.reverse();
-    }
+    await _convoFadeController.reverse();
 
     await _viewModel.forkConversation(message);
     notifyListeners();
@@ -1695,9 +1655,7 @@ class HomePageController extends ChangeNotifier {
       await WidgetsBinding.instance.endOfFrame;
     } catch (_) {}
     _scrollToBottom(animate: false);
-    if (!isDesktopPlatform) {
-      await _convoFadeController.forward();
-    }
+    await _convoFadeController.forward();
   }
 
   Future<void> editMessage(ChatMessage message) async {
@@ -2463,11 +2421,6 @@ class HomePageController extends ChangeNotifier {
     } catch (_) {}
     _tabletSidebarOpen = !_tabletSidebarOpen;
     notifyListeners();
-    try {
-      _context.read<SettingsProvider>().setDesktopSidebarOpen(
-        _tabletSidebarOpen,
-      );
-    } catch (_) {}
   }
 
   // ============================================================================
@@ -2928,13 +2881,7 @@ class HomePageController extends ChangeNotifier {
   void onDidPopNext() {
     _homeRouteVisible = true;
     unawaited(_openPendingNotificationConversation());
-    if (isDesktopPlatform) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _inputFocus.requestFocus();
-      });
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) => dismissKeyboard());
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => dismissKeyboard());
   }
 
   void onDidPushNext() {

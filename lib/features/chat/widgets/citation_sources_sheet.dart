@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 
 import '../../../icons/lucide_adapter.dart';
@@ -96,23 +94,6 @@ Future<void> showCitationSourcesBottomSheet({
   required List<CitationSourceItem> items,
   required ValueChanged<CitationSourceItem> onOpen,
 }) {
-  if (_isDesktopTarget) {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (dialogContext) {
-        return CitationSourcesDialog(
-          title: title,
-          count: items.length,
-          closeSemanticLabel: closeSemanticLabel,
-          items: items,
-          onDismiss: () => Navigator.of(dialogContext).maybePop(),
-          onOpen: onOpen,
-        );
-      },
-    );
-  }
-
   return showCustomBottomSheet<void>(
     context: context,
     title: title,
@@ -320,19 +301,6 @@ class _CitationSourceList extends StatelessWidget {
         );
       },
     );
-  }
-}
-
-bool get _isDesktopTarget {
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.macOS:
-    case TargetPlatform.windows:
-    case TargetPlatform.linux:
-      return true;
-    case TargetPlatform.android:
-    case TargetPlatform.iOS:
-    case TargetPlatform.fuchsia:
-      return false;
   }
 }
 

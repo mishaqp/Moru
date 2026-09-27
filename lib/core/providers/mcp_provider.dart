@@ -6,7 +6,6 @@ import 'package:mcp_client/mcp_client.dart' as mcp;
 import '../database/business_preferences.dart';
 import '../services/mcp/kelivo_fetch/kelivo_fetch_server.dart';
 import '../services/mcp/mcp_oauth_service.dart';
-import '../services/mcp/stdio_command_resolver.dart';
 import '../services/mcp/workspace_stdio_transport.dart';
 import '../services/mcp/workspace_stdio_command.dart';
 import '../services/workspace/workspace_runtime.dart';
@@ -363,16 +362,12 @@ class McpProvider extends ChangeNotifier {
   Future<void> _serverMutationTail = Future<void>.value();
   Duration _requestTimeout = const Duration(seconds: 30);
   bool _disposed = false;
-  final McpStdioCommandResolver _stdioCommandResolver =
-      McpStdioCommandResolver();
-
   final WorkspaceRuntimeProvider? workspaceRuntime;
   final EnvironmentProvider? environment;
   final WorkspaceProvider? workspaces;
   bool _stdioWasAvailable = false;
 
-  bool get supportsStdioWorkspaceBinding =>
-      !_isDesktopPlatform() && workspaces != null;
+  bool get supportsStdioWorkspaceBinding => workspaces != null;
 
   void _onWorkspacesChanged() {
     if (_disposed || !supportsStdioWorkspaceBinding) return;
@@ -398,10 +393,9 @@ class McpProvider extends ChangeNotifier {
   }
 
   bool get supportsStdio =>
-      _isDesktopPlatform() ||
       (workspaceRuntime?.runtime is WorkspaceStdioRuntime &&
-          workspaceRuntime?.lastStatus?.ready == true &&
-          environment?.state.phase == EnvironmentPhase.ready);
+      workspaceRuntime?.lastStatus?.ready == true &&
+      environment?.state.phase == EnvironmentPhase.ready);
 
   void _onEnvironmentChanged() {
     if (_disposed) return;
@@ -1160,20 +1154,7 @@ class McpProvider extends ChangeNotifier {
       if (!persisted) return false;
       state.reRegisterDynamicClient = false;
       final connected = await _connect(server.id, retryUnauthorized: false);
-      if (connected ||
-          !_isDesktopPlatform() ||
-          state.status != McpStatus.error ||
-          _activeCooldown(state) != null ||
-          !_authorizationIsCurrent(server, state, generation)) {
-        return connected;
-      }
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      if (state.status != McpStatus.error ||
-          _activeCooldown(state) != null ||
-          !_authorizationIsCurrent(server, state, generation)) {
-        return false;
-      }
-      return _connect(server.id, retryUnauthorized: false);
+      return connected;
     } catch (error) {
       if (!_authorizationIsCurrent(server, state, generation)) return false;
       state.status =
@@ -1450,8 +1431,7 @@ class McpProvider extends ChangeNotifier {
         await client.connect(
           KelivoInMemoryClientTransport(KelivoFetchMcpServerEngine()),
         );
-      } else if (server.transport == McpTransportType.stdio &&
-          !_isDesktopPlatform()) {
+      } else if (server.transport == McpTransportType.stdio) {
         final runtime = workspaceRuntime?.runtime;
         if (!supportsStdio || runtime is! WorkspaceStdioRuntime) {
           throw StateError('Workspace environment is not ready');
@@ -1606,28 +1586,7 @@ class McpProvider extends ChangeNotifier {
         terminateOnClose: false,
       );
     }
-    if (!_isDesktopPlatform()) {
-      throw StateError('STDIO transport not supported on this platform');
-    }
-    final command = server.command;
-    if (command == null || command.isEmpty) {
-      throw StateError('STDIO command is empty');
-    }
-    final environment = await _stdioCommandResolver.resolveEnvironmentWithPath(
-      server.env,
-    );
-    if (!await _stdioCommandResolver.commandExists(command, environment)) {
-      throw StateError(
-        'Command "$command" not found in PATH. '
-        'Ensure the command is installed and accessible.',
-      );
-    }
-    return mcp.TransportConfig.stdio(
-      command: command,
-      arguments: server.args,
-      workingDirectory: server.workingDirectory,
-      environment: environment.isEmpty ? null : environment,
-    );
+    throw StateError('STDIO transport not supported on this platform');
   }
 
   Future<bool> _requiresOAuthAuthorization(
@@ -2913,9 +2872,5 @@ class McpProvider extends ChangeNotifier {
       throw StateError('Bound workspace folder is unavailable: $root');
     }
     return [Mount(host: root, guest: '/workspace')];
-  }
-
-  bool _isDesktopPlatform() {
-    return false;
   }
 }

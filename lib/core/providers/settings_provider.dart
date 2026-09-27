@@ -42,10 +42,8 @@ import '../../theme/custom_theme.dart';
 import '../../theme/chat_bubble_style.dart';
 import '../models/tool_schema_override.dart';
 import '../services/app_exit_flush.dart';
-import '../services/linux_window_service.dart';
 
 // Desktop: topic list position
-enum DesktopTopicPosition { left, right }
 
 // Desktop: send message shortcut
 enum DesktopSendShortcut { enter, ctrlEnter }
@@ -303,12 +301,6 @@ class SettingsProvider extends ChangeNotifier {
       'display_collapse_long_user_messages_v1';
   static const String _displayCollapseLongUserMessageCharsKey =
       'display_collapse_long_user_message_chars_v1';
-  static const String _displayDesktopAutoSwitchTopicsKey =
-      'display_desktop_auto_switch_topics_v1';
-  static const String _displayDesktopShowTrayKey =
-      'display_desktop_show_tray_v1';
-  static const String _displayDesktopMinimizeToTrayOnCloseKey =
-      'display_desktop_minimize_to_tray_on_close_v1';
   static const String _displayUsePureBackgroundKey =
       'display_use_pure_background_v1';
   static const String _displayUseLayeredSurfacesKey =
@@ -349,10 +341,6 @@ class SettingsProvider extends ChangeNotifier {
   static const String _logAutoDeleteDaysKey = 'log_auto_delete_days_v1';
   static const String _logMaxSizeMBKey = 'log_max_size_mb_v1';
   static const String _appLaunchCountKey = 'app_launch_count_v1';
-  // Desktop topic panel placement + right sidebar open state
-  static const String _desktopTopicPositionKey = 'desktop_topic_position_v1';
-  static const String _desktopRightSidebarOpenKey =
-      'desktop_right_sidebar_open_v1';
   static const String _mobileBackgroundKey = 'mobile_background_settings_v1';
   // Fonts
   static const String _displayAppFontFamilyKey = 'display_app_font_family_v1';
@@ -408,13 +396,6 @@ class SettingsProvider extends ChangeNotifier {
   static const String _ttsTextSelectionModeKey = 'tts_text_selection_mode_v1';
   static const String _asrServicesKey = 'asr_services_v1';
   static const String _asrSelectedServiceIdKey = 'asr_selected_service_id_v1';
-  // Desktop UI
-  static const String _desktopSidebarWidthKey = 'desktop_sidebar_width_v1';
-  static const String _desktopSidebarOpenKey = 'desktop_sidebar_open_v1';
-  static const String _desktopRightSidebarWidthKey =
-      'desktop_right_sidebar_width_v1';
-  static const String _desktopWorkspaceBarOpenKey =
-      'desktop_workspace_bar_open_v1';
 
   // ===== Network TTS services =====
   List<TtsServiceOptions> _ttsServices = const <TtsServiceOptions>[];
@@ -548,24 +529,6 @@ class SettingsProvider extends ChangeNotifier {
 
   /// Glass without live blur: translucent surfaces only, for slow phones.
   bool get glassEconomy => _glassEconomy;
-
-  // Desktop UI persisted state
-  double _desktopSidebarWidth = 240;
-  bool _desktopSidebarOpen = true;
-  double get desktopSidebarWidth => _desktopSidebarWidth;
-  bool get desktopSidebarOpen => _desktopSidebarOpen;
-  double _desktopRightSidebarWidth = 300;
-  double get desktopRightSidebarWidth => _desktopRightSidebarWidth;
-
-  // Desktop: topic list position (left or right) and right sidebar open state
-  DesktopTopicPosition _desktopTopicPosition = DesktopTopicPosition.left;
-  DesktopTopicPosition get desktopTopicPosition => _desktopTopicPosition;
-  bool get desktopTopicsOnRight =>
-      _desktopTopicPosition == DesktopTopicPosition.right;
-  bool _desktopRightSidebarOpen = true;
-  bool get desktopRightSidebarOpen => _desktopRightSidebarOpen;
-  bool _desktopWorkspaceBarOpen = false;
-  bool get desktopWorkspaceBarOpen => _desktopWorkspaceBarOpen;
 
   Map<String, ProviderConfig> _providerConfigs = {};
   Map<String, ProviderConfig> get providerConfigs =>
@@ -1292,53 +1255,7 @@ class SettingsProvider extends ChangeNotifier {
               minCollapseLongUserMessageChars,
               maxCollapseLongUserMessageChars,
             );
-    _desktopAutoSwitchTopics =
-        prefs.getBool(_displayDesktopAutoSwitchTopicsKey) ?? false;
-    _linuxHideTitleBar =
-        LinuxWindowService.isSupported &&
-        (localPreferences.getBool(LinuxWindowService.hideTitleBarKey) ?? false);
 
-    // Desktop: tray settings (default enabled on desktop platforms)
-    final trayPref = prefs.getBool(_displayDesktopShowTrayKey);
-    if (trayPref == null) {
-      _desktopShowTray = false;
-      await prefs.setBool(_displayDesktopShowTrayKey, _desktopShowTray);
-    } else {
-      _desktopShowTray = trayPref;
-    }
-    final minimizeTrayPref = prefs.getBool(
-      _displayDesktopMinimizeToTrayOnCloseKey,
-    );
-    if (minimizeTrayPref == null) {
-      _desktopMinimizeToTrayOnClose = _desktopShowTray;
-      await prefs.setBool(
-        _displayDesktopMinimizeToTrayOnCloseKey,
-        _desktopMinimizeToTrayOnClose,
-      );
-    } else {
-      // Enforce invariant: cannot minimize to tray if tray is hidden.
-      _desktopMinimizeToTrayOnClose = minimizeTrayPref && _desktopShowTray;
-      if (minimizeTrayPref && !_desktopShowTray) {
-        await prefs.setBool(
-          _displayDesktopMinimizeToTrayOnCloseKey,
-          _desktopMinimizeToTrayOnClose,
-        );
-      }
-    }
-    // desktop: topic panel placement + right sidebar open state
-    final topicPos = prefs.getString(_desktopTopicPositionKey);
-    switch (topicPos) {
-      case 'right':
-        _desktopTopicPosition = DesktopTopicPosition.right;
-        break;
-      case 'left':
-      default:
-        _desktopTopicPosition = DesktopTopicPosition.left;
-    }
-    _desktopRightSidebarOpen =
-        prefs.getBool(_desktopRightSidebarOpenKey) ?? true;
-    _desktopWorkspaceBarOpen =
-        prefs.getBool(_desktopWorkspaceBarOpenKey) ?? false;
     // Chat message background style (default | frosted | solid)
     final bgStyleStr =
         prefs.getString(_displayChatMessageBackgroundStyleKey) ?? 'default';
@@ -1399,11 +1316,6 @@ class SettingsProvider extends ChangeNotifier {
     );
     _mobileAssistantDetailOutlineEnabled =
         prefs.getBool(_mobileAssistantDetailOutlineEnabledKey) ?? false;
-    // desktop UI
-    _desktopSidebarWidth = prefs.getDouble(_desktopSidebarWidthKey) ?? 300;
-    _desktopSidebarOpen = prefs.getBool(_desktopSidebarOpenKey) ?? true;
-    _desktopRightSidebarWidth =
-        prefs.getDouble(_desktopRightSidebarWidthKey) ?? 300;
     // New Moru installations default to Russian; preserve explicit choices.
     final storedAppLocale = prefs.get(_appLocaleKey);
     _appLocaleTag = _readAppLocaleTag(prefs);
@@ -2190,61 +2102,8 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   // ===== Desktop UI setters =====
-  Future<void> setDesktopSidebarWidth(double width) async {
-    final w = width.clamp(200.0, 640.0).toDouble();
-    if ((w - _desktopSidebarWidth).abs() < 0.5) return;
-    _desktopSidebarWidth = w;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setDouble(_desktopSidebarWidthKey, _desktopSidebarWidth);
-  }
-
-  Future<void> setDesktopSidebarOpen(bool open) async {
-    if (_desktopSidebarOpen == open) return;
-    _desktopSidebarOpen = open;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setBool(_desktopSidebarOpenKey, _desktopSidebarOpen);
-  }
-
-  Future<void> setDesktopRightSidebarWidth(double w) async {
-    if ((_desktopRightSidebarWidth - w).abs() < 0.5) return;
-    _desktopRightSidebarWidth = w;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setDouble(
-      _desktopRightSidebarWidthKey,
-      _desktopRightSidebarWidth,
-    );
-  }
-
   // Desktop: topic panel placement (left/right)
-  Future<void> setDesktopTopicPosition(DesktopTopicPosition pos) async {
-    if (_desktopTopicPosition == pos) return;
-    _desktopTopicPosition = pos;
-    notifyListeners();
-    final prefs = _preferences;
-    final v = (pos == DesktopTopicPosition.right) ? 'right' : 'left';
-    await prefs.setString(_desktopTopicPositionKey, v);
-  }
-
   // Desktop: right sidebar visible state
-  Future<void> setDesktopRightSidebarOpen(bool open) async {
-    if (_desktopRightSidebarOpen == open) return;
-    _desktopRightSidebarOpen = open;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setBool(_desktopRightSidebarOpenKey, _desktopRightSidebarOpen);
-  }
-
-  Future<void> setDesktopWorkspaceBarOpen(bool open) async {
-    if (_desktopWorkspaceBarOpen == open) return;
-    _desktopWorkspaceBarOpen = open;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setBool(_desktopWorkspaceBarOpenKey, _desktopWorkspaceBarOpen);
-  }
-
   // ===== App locale (UI language) =====
   String? _appLocaleTag; // 'system', 'ru', 'zh_CN', 'zh_Hant', 'en_US'
   static String _readAppLocaleTag(BusinessPreferences preferences) {
@@ -5485,61 +5344,6 @@ Requirements:
     await prefs.setInt(_displayCollapseLongUserMessageCharsKey, next);
   }
 
-  // Desktop-only: auto switch to Topics tab when changing assistant
-  bool _desktopAutoSwitchTopics = false;
-  bool get desktopAutoSwitchTopics => _desktopAutoSwitchTopics;
-  Future<void> setDesktopAutoSwitchTopics(bool v) async {
-    if (_desktopAutoSwitchTopics == v) return;
-    _desktopAutoSwitchTopics = v;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setBool(_displayDesktopAutoSwitchTopicsKey, v);
-  }
-
-  bool _linuxHideTitleBar = false;
-  bool get linuxHideTitleBar => _linuxHideTitleBar;
-  Future<void> setLinuxHideTitleBar(bool value) async {
-    if (!LinuxWindowService.isSupported || _linuxHideTitleBar == value) return;
-    await LinuxWindowService.setTitleBarHidden(value);
-    final localPreferences = await SharedPreferences.getInstance();
-    await localPreferences.setBool(LinuxWindowService.hideTitleBarKey, value);
-    _linuxHideTitleBar = value;
-    notifyListeners();
-  }
-
-  // Desktop-only: show system tray icon
-  bool _desktopShowTray = false;
-  bool get desktopShowTray => _desktopShowTray;
-  Future<void> setDesktopShowTray(bool v) async {
-    if (_desktopShowTray == v) return;
-    _desktopShowTray = v;
-    if (!_desktopShowTray && _desktopMinimizeToTrayOnClose) {
-      _desktopMinimizeToTrayOnClose = false;
-    }
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setBool(_displayDesktopShowTrayKey, _desktopShowTray);
-    await prefs.setBool(
-      _displayDesktopMinimizeToTrayOnCloseKey,
-      _desktopMinimizeToTrayOnClose,
-    );
-  }
-
-  // Desktop-only: minimize to tray when closing window
-  bool _desktopMinimizeToTrayOnClose = false;
-  bool get desktopMinimizeToTrayOnClose => _desktopMinimizeToTrayOnClose;
-  Future<void> setDesktopMinimizeToTrayOnClose(bool v) async {
-    final next = _desktopShowTray ? v : false;
-    if (_desktopMinimizeToTrayOnClose == next) return;
-    _desktopMinimizeToTrayOnClose = next;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setBool(
-      _displayDesktopMinimizeToTrayOnCloseKey,
-      _desktopMinimizeToTrayOnClose,
-    );
-  }
-
   // Display: haptics on message generation
   bool _hapticsOnGenerate = false;
   bool get hapticsOnGenerate => _hapticsOnGenerate;
@@ -6021,10 +5825,6 @@ Requirements:
     copy._autoCollapseCodeBlockLines = _autoCollapseCodeBlockLines;
     copy._collapseLongUserMessages = _collapseLongUserMessages;
     copy._collapseLongUserMessageChars = _collapseLongUserMessageChars;
-    copy._desktopAutoSwitchTopics = _desktopAutoSwitchTopics;
-    copy._linuxHideTitleBar = _linuxHideTitleBar;
-    copy._desktopShowTray = _desktopShowTray;
-    copy._desktopMinimizeToTrayOnClose = _desktopMinimizeToTrayOnClose;
     copy._usePureBackground = _usePureBackground;
     copy._useLayeredSurfaces = _useLayeredSurfaces;
     copy._useLayeredSheetTiles = _useLayeredSheetTiles;

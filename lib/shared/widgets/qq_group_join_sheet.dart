@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -9,7 +7,6 @@ import '../../l10n/app_localizations.dart';
 import '../../theme/app_font_weights.dart';
 import 'custom_bottom_sheet.dart';
 import 'ios_tactile.dart';
-import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class _QQGroupEntry {
   const _QQGroupEntry({required this.name, required this.joinUrl});
@@ -44,40 +41,11 @@ Future<void> _openJoinUrl(String url) async {
   }
 }
 
-bool get _isDesktopTarget {
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.macOS:
-    case TargetPlatform.windows:
-    case TargetPlatform.linux:
-      return true;
-    case TargetPlatform.android:
-    case TargetPlatform.iOS:
-    case TargetPlatform.fuchsia:
-      return false;
-  }
-}
-
 /// Shows the "join QQ group" picker: a bottom sheet on mobile, a dialog on
 /// desktop. Tapping an entry opens its join link directly.
 Future<void> showQQGroupJoinSheet({required BuildContext context}) {
   final l10n = AppLocalizations.of(context)!;
   final groups = _groups(l10n);
-
-  if (_isDesktopTarget) {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (dialogContext) => _QQGroupJoinDialog(
-        title: l10n.aboutPageJoinQQGroup,
-        closeSemanticLabel: l10n.mcpPageClose,
-        groups: groups,
-        onSelect: (entry) {
-          Navigator.of(dialogContext).maybePop();
-          _openJoinUrl(entry.joinUrl);
-        },
-      ),
-    );
-  }
 
   return showCustomBottomSheet<void>(
     context: context,
@@ -153,79 +121,6 @@ class _QQGroupRow extends StatelessWidget {
             color: cs.onSurface.withValues(alpha: 0.6),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _QQGroupJoinDialog extends StatelessWidget {
-  const _QQGroupJoinDialog({
-    required this.title,
-    required this.closeSemanticLabel,
-    required this.groups,
-    required this.onSelect,
-  });
-
-  final String title;
-  final String closeSemanticLabel;
-  final List<_QQGroupEntry> groups;
-  final ValueChanged<_QQGroupEntry> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Dialog(
-      backgroundColor: context.overlaySurface,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 360, maxWidth: 480),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 12, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: AppFontWeights.emphasis,
-                        color: cs.onSurface,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: IosIconButton(
-                      icon: Lucide.X,
-                      size: 20,
-                      padding: EdgeInsets.zero,
-                      color: cs.onSurface.withValues(alpha: 0.62),
-                      semanticLabel: closeSemanticLabel,
-                      onTap: () => Navigator.of(context).maybePop(),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              for (final entry in groups)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _QQGroupRow(
-                    entry: entry,
-                    onTap: () => onSelect(entry),
-                  ),
-                ),
-            ],
-          ),
-        ),
       ),
     );
   }

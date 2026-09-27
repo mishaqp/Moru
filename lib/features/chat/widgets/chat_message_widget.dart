@@ -803,139 +803,6 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
   );
 }
 
-class _ToolDetailDesktopDialog extends StatefulWidget {
-  const _ToolDetailDesktopDialog({
-    required this.title,
-    required this.closeSemanticLabel,
-    required this.argsPretty,
-    required this.resultText,
-    required this.images,
-    required this.argumentsLabel,
-    required this.resultLabel,
-    required this.imagesLabel,
-    this.screenTimeResult,
-    this.weatherAttribution,
-  });
-
-  static const dialogKey = ValueKey('tool_detail_desktop_dialog');
-  static const closeButtonKey = ValueKey('tool_detail_desktop_dialog_close');
-
-  final String title;
-  final String closeSemanticLabel;
-  final String argsPretty;
-  final String resultText;
-  final List<String> images;
-  final String argumentsLabel;
-  final String resultLabel;
-  final String imagesLabel;
-  final ScreenTimeResult? screenTimeResult;
-  final WeatherAttribution? weatherAttribution;
-
-  @override
-  State<_ToolDetailDesktopDialog> createState() =>
-      _ToolDetailDesktopDialogState();
-}
-
-class _ToolDetailDesktopDialogState extends State<_ToolDetailDesktopDialog> {
-  late final ScrollController _scrollController;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Dialog(
-      key: _ToolDetailDesktopDialog.dialogKey,
-      elevation: 12,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minWidth: 420,
-          maxWidth: 640,
-          maxHeight: 680,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Material(
-            color: context.overlaySurface,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 12, 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: cs.onSurface,
-                            fontSize: 16,
-                            fontWeight: AppFontWeights.emphasis,
-                            height: 1.2,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        key: _ToolDetailDesktopDialog.closeButtonKey,
-                        width: 28,
-                        height: 28,
-                        child: IosIconButton(
-                          icon: Lucide.X,
-                          size: 20,
-                          padding: EdgeInsets.zero,
-                          color: cs.onSurface.withValues(alpha: 0.62),
-                          semanticLabel: widget.closeSemanticLabel,
-                          onTap: () => Navigator.of(context).maybePop(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Scrollbar(
-                    controller: _scrollController,
-                    child: widget.screenTimeResult != null
-                        ? ScreenTimeToolDetailBody(
-                            result: widget.screenTimeResult!,
-                            scrollController: _scrollController,
-                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                          )
-                        : _ToolDetailBody(
-                            scrollController: _scrollController,
-                            argsPretty: widget.argsPretty,
-                            resultText: widget.resultText,
-                            images: widget.images,
-                            argumentsLabel: widget.argumentsLabel,
-                            resultLabel: widget.resultLabel,
-                            imagesLabel: widget.imagesLabel,
-                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                            weatherAttribution: widget.weatherAttribution,
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ToolDetailBody extends StatelessWidget {
   const _ToolDetailBody({
     required this.scrollController,
@@ -945,7 +812,6 @@ class _ToolDetailBody extends StatelessWidget {
     required this.argumentsLabel,
     required this.resultLabel,
     required this.imagesLabel,
-    this.padding = const EdgeInsets.fromLTRB(16, 8, 16, 24),
     this.weatherAttribution,
   });
 
@@ -956,7 +822,6 @@ class _ToolDetailBody extends StatelessWidget {
   final String argumentsLabel;
   final String resultLabel;
   final String imagesLabel;
-  final EdgeInsets padding;
   final WeatherAttribution? weatherAttribution;
 
   @override
@@ -967,7 +832,7 @@ class _ToolDetailBody extends StatelessWidget {
         controller: scrollController,
         slivers: [
           SliverPadding(
-            padding: padding,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             sliver: SliverMainAxisGroup(
               slivers: [
                 ToolDetailTextSection(label: argumentsLabel, text: argsPretty),

@@ -667,7 +667,6 @@ Future<_RegexFormData?> _showRegexEditor(
   BuildContext context, {
   AssistantRegex? rule,
 }) async {
-  final platform = Theme.of(context).platform;
   return _showRegexBottomSheet(context, rule: rule);
 }
 

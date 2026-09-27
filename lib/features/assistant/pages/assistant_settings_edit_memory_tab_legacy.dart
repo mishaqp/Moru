@@ -14,7 +14,6 @@ class _LegacyMemoryTabBody extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final controller = TextEditingController(text: initial);
     // Desktop: custom dialog; Mobile: keep bottom sheet
-    final platform = Theme.of(context).platform;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -455,7 +454,6 @@ class _LegacyMemoryTabBody extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final controller = TextEditingController(text: conversation.summary ?? '');
-    final platform = Theme.of(context).platform;
 
     // Mobile: BottomSheet
     await showModalBottomSheet<void>(
@@ -613,7 +611,6 @@ class _LegacyRecentChatsSummaryFrequencySection extends StatelessWidget {
       text: assistant.recentChatsSummaryMessageCount.toString(),
     );
     final ap = context.read<AssistantProvider>();
-    final platform = Theme.of(context).platform;
 
     int? parseValue() {
       final value = int.tryParse(controller.text.trim());

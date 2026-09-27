@@ -3556,9 +3556,6 @@ String markdownTableRowsToCsvForTesting(List<List<String>> rows) =>
 String markdownTableRowsToMarkdownForTesting(List<List<String>> rows) =>
     _rowsToMarkdown(rows);
 
-@visibleForTesting
-TargetPlatform? markdownTableTargetPlatformOverride;
-
 class _MarkdownTableBlock extends StatefulWidget {
   const _MarkdownTableBlock({
     required this.rows,
@@ -3614,10 +3611,7 @@ class _MarkdownTableBlockState extends State<_MarkdownTableBlock> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final bool isDesktopPlatform = _markdownTableTargetPlatformIsDesktop();
         final bool isExporting = ExportCaptureScope.of(context);
-        final bool useCompactTable =
-            !isDesktopPlatform || constraints.maxWidth < 520;
 
         final columnWidth = _compactColumnWidth(
           constraints.maxWidth.isFinite
@@ -3630,14 +3624,13 @@ class _MarkdownTableBlockState extends State<_MarkdownTableBlock> {
             : MediaQuery.sizeOf(context).width;
         final shouldScrollHorizontally =
             !isExporting &&
-            useCompactTable &&
             rows.columnCount >= 4 &&
             columnWidth * rows.columnCount > viewportWidth;
         final table = _buildTable(
           context,
           borderColor: borderColor,
           headerBg: headerBg,
-          compact: useCompactTable,
+          compact: true,
           columnWidth: columnWidth,
           fixedColumns: shouldScrollHorizontally,
           rowCount: isExporting
@@ -3652,26 +3645,10 @@ class _MarkdownTableBlockState extends State<_MarkdownTableBlock> {
           // container; a second body fill would stack and hide wallpaper.
           // During image capture the boundary is only this surface, so
           // keep an opaque body fill or JPEG export turns holes black.
-          bodyBg: useCompactTable && !_capturingTableImage
-              ? Colors.transparent
-              : bodyBg,
+          bodyBg: !_capturingTableImage ? Colors.transparent : bodyBg,
           borderColor: borderColor,
-          compact: useCompactTable,
+          compact: true,
         );
-
-        if (!useCompactTable) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                tableSurface,
-                if (!isExporting) _buildRowPager(context),
-              ],
-            ),
-          );
-        }
 
         final l10n = AppLocalizations.of(context)!;
         return SelectionContainer.disabled(
@@ -3700,16 +3677,12 @@ class _MarkdownTableBlockState extends State<_MarkdownTableBlock> {
                   backgroundColor: headerBg,
                   copyLabel: l10n.shareProviderSheetCopyButton,
                   exportLabel: l10n.markdownTableExportCsvTooltip,
-                  imageActionLabel: isDesktopPlatform
-                      ? l10n.messageExportSheetExportImage
-                      : l10n.markdownTableSaveImageTooltip,
+                  imageActionLabel: l10n.markdownTableSaveImageTooltip,
                   onCopy: () => _copyMarkdown(context),
                   onCopyImage: () => _copyImage(context),
                   onExport: () => _exportCsv(context),
                   onExportImage: () => _exportImage(context),
-                  onImageAction: () => isDesktopPlatform
-                      ? _exportImage(context)
-                      : _saveImageToGallery(context),
+                  onImageAction: () => _saveImageToGallery(context),
                 ),
                 GestureDetector(
                   key: const ValueKey('markdown-table-body'),
@@ -4325,16 +4298,6 @@ class _MarkdownTableCellData {
 
 String _rowsToCsv(List<List<String>> rows) {
   return rows.map((row) => row.map(_csvCell).join(',')).join('\r\n');
-}
-
-bool _markdownTableTargetPlatformIsDesktop() {
-  final override = markdownTableTargetPlatformOverride;
-  if (override != null) {
-    return override == TargetPlatform.macOS ||
-        override == TargetPlatform.windows ||
-        override == TargetPlatform.linux;
-  }
-  return false;
 }
 
 String _rowsToMarkdown(List<List<String>> rows) {
@@ -4979,10 +4942,7 @@ class _DiagramBlockState extends State<_DiagramBlock> {
 
   Future<bool> _saveCachedMermaidPng(Uint8List bytes) async {
     try {
-      final l10n = AppLocalizations.of(context)!;
       final prefix = widget.isSvg ? 'svg' : 'mermaid';
-      final suggested =
-          '${prefix}_${DateTime.now().millisecondsSinceEpoch}.png';
       final result = await ImageGallerySaverPlus.saveImage(
         bytes,
         quality: 100,
@@ -6316,14 +6276,8 @@ class SelectableHighlightView extends StatefulWidget {
 }
 
 class _SelectableHighlightViewState extends State<SelectableHighlightView> {
-  static const MethodChannel _iosTranslationChannel = MethodChannel(
-    'app.ios_translation',
-  );
-
   late List<TextSpan> _codeTextSpans;
-  bool _iosTranslationAvailable = false;
   Widget? _selectable;
-  String _selectedCode = '';
 
   @override
   void initState() {
@@ -6363,60 +6317,6 @@ class _SelectableHighlightViewState extends State<SelectableHighlightView> {
     }
   }
 
-  Widget _buildSelectionContextMenu(
-    BuildContext context,
-    EditableTextState editableTextState,
-  ) {
-    final value = editableTextState.textEditingValue;
-    final selection = value.selection;
-    if (!_iosTranslationAvailable ||
-        !selection.isValid ||
-        selection.isCollapsed) {
-      return AdaptiveTextSelectionToolbar.editableText(
-        editableTextState: editableTextState,
-      );
-    }
-
-    final selectedText = selection.textInside(value.text);
-    if (selectedText.trim().isEmpty) {
-      return AdaptiveTextSelectionToolbar.editableText(
-        editableTextState: editableTextState,
-      );
-    }
-
-    final anchors = editableTextState.contextMenuAnchors;
-    final buttonItems = <ContextMenuButtonItem>[
-      ...editableTextState.contextMenuButtonItems,
-      ContextMenuButtonItem(
-        label: AppLocalizations.of(context)!.chatMessageWidgetTranslateTooltip,
-        onPressed: () {
-          editableTextState.hideToolbar();
-          unawaited(
-            _presentIosTranslation(selectedText, anchors.primaryAnchor),
-          );
-        },
-      ),
-    ];
-    return AdaptiveTextSelectionToolbar.buttonItems(
-      anchors: anchors,
-      buttonItems: buttonItems,
-    );
-  }
-
-  Future<void> _presentIosTranslation(String text, Offset anchor) async {
-    try {
-      await _iosTranslationChannel.invokeMethod<void>('present', {
-        'text': text,
-        'anchorX': anchor.dx,
-        'anchorY': anchor.dy,
-      });
-    } on MissingPluginException {
-      // The toolbar has already closed; there is no native UI to present.
-    } on PlatformException {
-      // Do not let a native presentation failure affect text selection.
-    }
-  }
-
   /// Converts a highlight Node tree to a TextSpan tree with appropriate styling
   List<TextSpan> _convertNodes(List<Node> nodes) {
     final List<TextSpan> spans = [];
@@ -6451,9 +6351,6 @@ class _SelectableHighlightViewState extends State<SelectableHighlightView> {
     );
     return _selectable ??= widget.source.length > 2048
         ? SelectionArea(
-            onSelectionChanged: (selection) =>
-                _selectedCode = selection?.plainText ?? '',
-            contextMenuBuilder: _buildChunkSelectionContextMenu,
             // SelectableText reserves its 2px cursor plus RenderEditable's 1px
             // caret gap, even when read-only. Keep the same wrapping and width.
             child: Padding(
@@ -6461,36 +6358,7 @@ class _SelectableHighlightViewState extends State<SelectableHighlightView> {
               child: StreamingRichText(text: Text.rich(span)),
             ),
           )
-        : SelectableText.rich(
-            span,
-            contextMenuBuilder: _buildSelectionContextMenu,
-          );
-  }
-
-  Widget _buildChunkSelectionContextMenu(
-    BuildContext context,
-    SelectableRegionState region,
-  ) {
-    final anchors = region.contextMenuAnchors;
-    final selectedText = _selectedCode;
-    return AdaptiveTextSelectionToolbar.buttonItems(
-      anchors: anchors,
-      buttonItems: [
-        ...region.contextMenuButtonItems,
-        if (_iosTranslationAvailable && selectedText.trim().isNotEmpty)
-          ContextMenuButtonItem(
-            label: AppLocalizations.of(
-              context,
-            )!.chatMessageWidgetTranslateTooltip,
-            onPressed: () {
-              region.hideToolbar();
-              unawaited(
-                _presentIosTranslation(selectedText, anchors.primaryAnchor),
-              );
-            },
-          ),
-      ],
-    );
+        : SelectableText.rich(span);
   }
 }
 

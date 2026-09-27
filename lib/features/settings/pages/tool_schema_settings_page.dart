@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../../core/models/tool_schema_override.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/tools/built_in_tool_catalog.dart';
-import '../../home/services/local_tools_service.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
@@ -22,14 +21,6 @@ class ToolSchemaSettingsPage extends StatefulWidget {
 }
 
 class _ToolSchemaSettingsPageState extends State<ToolSchemaSettingsPage> {
-  @override
-  void initState() {
-    super.initState();
-    DeviceLocalTools.prefetchIosCapabilities().then((_) {
-      if (mounted) setState(() {});
-    });
-  }
-
   Future<void> _confirmResetAll() async {
     final confirmed = await confirmResetAllToolSchemas(context);
     if (!confirmed || !mounted) return;

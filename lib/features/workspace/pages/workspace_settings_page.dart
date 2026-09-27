@@ -46,7 +46,6 @@ class _WorkspaceSettingsPageState extends State<WorkspaceSettingsPage> {
     }
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final showEnv = !_envIsDesktopTarget();
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
@@ -65,12 +64,10 @@ class _WorkspaceSettingsPageState extends State<WorkspaceSettingsPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         children: [
-          if (showEnv) ...[
-            IosSectionHeader(text: l10n.workspaceEnvTitle, first: true),
-            const _EnvironmentNavRow(),
-            const SizedBox(height: 12),
-          ],
-          IosSectionHeader(text: l10n.workspacesTitle, first: !showEnv),
+          IosSectionHeader(text: l10n.workspaceEnvTitle, first: true),
+          const _EnvironmentNavRow(),
+          const SizedBox(height: 12),
+          IosSectionHeader(text: l10n.workspacesTitle, first: false),
           const WorkspacesPane(showHeader: false),
         ],
       ),
@@ -107,10 +104,6 @@ class _EnvironmentNavRow extends StatelessWidget {
       ],
     );
   }
-}
-
-bool _envIsDesktopTarget() {
-  return false;
 }
 
 String _phaseLabel(AppLocalizations l10n, EnvironmentPhase phase) {

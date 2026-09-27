@@ -8,11 +8,7 @@ class _QuickPhraseTab extends StatelessWidget {
     BuildContext context, {
     QuickPhrase? phrase,
   }) async {
-    final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-
     // Desktop: custom dialog; Mobile: bottom sheet
-    final platform = Theme.of(context).platform;
     final quickPhraseProvider = context.read<QuickPhraseProvider>();
     final result = await showModalBottomSheet<Map<String, String>?>(
       context: context,

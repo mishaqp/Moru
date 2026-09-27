@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/models/workspace_binding.dart';
-import '../../../core/models/skills_binding.dart';
 import '../../../core/providers/asr_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/assistant_provider.dart';
@@ -16,7 +15,6 @@ import '../../../core/providers/quick_phrase_provider.dart';
 import '../../../core/providers/world_book_provider.dart';
 import '../../../core/providers/instruction_injection_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
-import '../../../core/services/skills/skills_service.dart';
 import '../../workspace/widgets/environment/environment_status_chip.dart';
 import '../../workspace/workspace_navigation.dart';
 import '../../../theme/design_tokens.dart';
@@ -166,13 +164,11 @@ class ChatInputSection extends StatelessWidget {
       _enforceModelCapabilities(context, settings, ap, a, pk, mid);
     }
 
-    final isDesktop = _isDesktopPlatform(context);
     final hasWorldBooks =
         isTablet && context.watch<WorldBookProvider>().books.isNotEmpty;
-    final showWorkspaceButton = isDesktop && onOpenWorkspace != null;
-    final showEnvChip = !isDesktop && Platform.isAndroid;
+    final showEnvChip = Platform.isAndroid;
     var workspaceBound = false;
-    if (showWorkspaceButton || showEnvChip) {
+    if (showEnvChip) {
       workspaceBound = _isWorkspaceBound(context);
     }
 
@@ -187,11 +183,10 @@ class ChatInputSection extends StatelessWidget {
       onOpenTools: onOpenTools,
       onLongPressTools: onLongPressTools,
       onOpenWorkspace: onOpenWorkspace,
-      showWorkspaceButton: showWorkspaceButton,
+      showWorkspaceButton: false,
       workspaceActive: workspaceBound,
-      onOpenSkills: isDesktop ? onOpenSkills : null,
-      skillsActive:
-          isDesktop && onOpenSkills != null && _isSkillsActive(context, a),
+      onOpenSkills: null,
+      skillsActive: false,
       onStop: onStop,
       modelIcon: (pk != null && mid != null)
           ? CurrentModelIcon(
@@ -235,16 +230,14 @@ class ChatInputSection extends StatelessWidget {
       // OCR button: show on desktop for mobile layout, always check settings for tablet layout
       showOcrButton: isTablet
           ? (settings.ocrModelProvider != null && settings.ocrModelId != null)
-          : (isDesktop &&
-                settings.ocrModelProvider != null &&
-                settings.ocrModelId != null),
+          : false,
       ocrActive: settings.ocrEnabled,
       onToggleOcr: onToggleOcr,
       // Tablet-specific parameters
       showMiniMapButton: isTablet,
       onOpenMiniMap: isTablet ? onOpenMiniMap : null,
-      onPickCamera: isTablet ? (isDesktop ? null : onPickCamera) : null,
-      onPickPhotos: isTablet ? (isDesktop ? null : onPickPhotos) : null,
+      onPickCamera: isTablet ? onPickCamera : null,
+      onPickPhotos: isTablet ? onPickPhotos : null,
       onUploadFiles: isTablet ? onUploadFiles : null,
       onToggleLearningMode: isTablet ? onToggleLearningMode : null,
       onOpenWorldBook: hasWorldBooks ? onOpenWorldBook : null,
@@ -325,20 +318,6 @@ class ChatInputSection extends StatelessWidget {
           );
   }
 
-  bool _isSkillsActive(BuildContext context, Assistant? assistant) {
-    final skillIds = context.select<ChatService?, List<String>?>((chat) {
-      final extras = chat?.getConversation(conversationId ?? '')?.extras;
-      return SkillsBinding.fromExtras(extras ?? const {}).skillIds;
-    });
-    return context.select<SkillsService?, bool>(
-      (skills) =>
-          skills
-              ?.resolveForAssistant(assistant, conversationOverride: skillIds)
-              .isNotEmpty ??
-          false,
-    );
-  }
-
   bool _isWorkspaceBound(BuildContext context) {
     try {
       return context.select<ChatService, bool>((chat) {
@@ -351,11 +330,6 @@ class ChatInputSection extends StatelessWidget {
     } catch (_) {
       return false;
     }
-  }
-
-  bool _isDesktopPlatform(BuildContext context) {
-    final platform = Theme.of(context).platform;
-    return false;
   }
 
   void _enforceModelCapabilities(

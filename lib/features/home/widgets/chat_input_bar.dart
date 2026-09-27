@@ -1161,9 +1161,6 @@ class _ChatInputBarState extends State<ChatInputBar>
     final isEnter =
         key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.numpadEnter;
-    final isArrow =
-        key == LogicalKeyboardKey.arrowLeft ||
-        key == LogicalKeyboardKey.arrowRight;
     final isPasteV = key == LogicalKeyboardKey.keyV;
 
     // Enter handling on tablet/desktop: configurable shortcut
@@ -1434,11 +1431,7 @@ class _ChatInputBarState extends State<ChatInputBar>
       return;
     }
 
-    // 3) Try files via platform channel on desktop (Finder/Explorer copies)
-    bool handledFiles = false;
-    if (handledFiles) return;
-
-    // 4) Last resort: paste text via Flutter Clipboard API
+    // 3) Last resort: paste text via Flutter Clipboard API
     try {
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       final text = data?.text ?? '';

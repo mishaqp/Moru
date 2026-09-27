@@ -24,10 +24,6 @@ class OptionSheetItem<T> {
   final Key? key;
 }
 
-bool _isDesktopPlatform() {
-  return false;
-}
-
 /// Single-select list. Mobile uses the World Book form-sheet shell;
 /// desktop uses [showAppDialog] + [AppDialogHeader] (`maxWidth: 420`).
 ///
@@ -39,18 +35,6 @@ Future<T?> showOptionSheet<T>(
   T? selected,
   Widget? footer,
 }) {
-  if (_isDesktopPlatform()) {
-    return showAppDialog<T>(
-      context,
-      maxWidth: 420,
-      child: _OptionSheetDialog(
-        title: title,
-        items: items,
-        selected: selected,
-        footer: footer,
-      ),
-    );
-  }
   return showFormSheet<T>(
     context,
     builder: (ctx) => FormSheet(
@@ -61,46 +45,6 @@ Future<T?> showOptionSheet<T>(
       ],
     ),
   );
-}
-
-class _OptionSheetDialog<T> extends StatelessWidget {
-  const _OptionSheetDialog({
-    required this.title,
-    required this.items,
-    required this.selected,
-    this.footer,
-  });
-
-  final String title;
-  final List<OptionSheetItem<T>> items;
-  final T? selected;
-  final Widget? footer;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppDialogHeader(title: title),
-        Flexible(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _OptionList<T>(items: items, selected: selected),
-                  if (footer != null) footer!,
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 class _OptionList<T> extends StatelessWidget {

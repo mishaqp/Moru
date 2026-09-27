@@ -154,7 +154,7 @@ class FileUploadService {
   Future<void> onPickCamera(BuildContext context) async {
     try {
       // Proactive permission check on mobile
-      if (PlatformUtils.isMobile) {
+      if (PlatformUtils.isAndroid) {
         var status = await Permission.camera.status;
         // Request if not determined; otherwise guide user
         if (status.isDenied || status.isRestricted) {

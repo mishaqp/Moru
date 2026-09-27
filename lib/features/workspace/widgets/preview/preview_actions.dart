@@ -95,7 +95,6 @@ Future<void> revealPreviewFileInFileManager(
 ) async {
   final l10n = AppLocalizations.of(context)!;
   try {
-    final hostPath = file.absolute.path;
     throw UnsupportedError('Reveal is only supported on desktop');
   } catch (e) {
     if (!context.mounted) return;

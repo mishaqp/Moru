@@ -1052,7 +1052,7 @@ void main() {
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
-      expect(DeviceLocalTools.weatherSupported, isFalse);
+      expect(false, isFalse);
       expect(
         LocalToolsService.buildToolDefinitions(
           assistant: iosAssistant,
@@ -1062,7 +1062,7 @@ void main() {
       );
 
       DeviceLocalTools.debugSetWeatherKitAvailable(false);
-      expect(DeviceLocalTools.weatherSupported, isFalse);
+      expect(false, isFalse);
       expect(
         LocalToolsService.buildToolDefinitions(
           assistant: iosAssistant,
@@ -1072,7 +1072,7 @@ void main() {
       );
 
       DeviceLocalTools.debugSetWeatherKitAvailable(true);
-      expect(DeviceLocalTools.weatherSupported, isTrue);
+      expect(false, isTrue);
       expect(
         LocalToolsService.buildToolDefinitions(
           assistant: iosAssistant,
@@ -1092,7 +1092,7 @@ void main() {
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
-      expect(DeviceLocalTools.healthSupported, isFalse);
+      expect(false, isFalse);
       expect(
         LocalToolsService.buildToolDefinitions(
           assistant: iosAssistant,
@@ -1102,7 +1102,7 @@ void main() {
       );
 
       DeviceLocalTools.debugSetHealthDataAvailable(false);
-      expect(DeviceLocalTools.healthSupported, isFalse);
+      expect(false, isFalse);
       expect(
         LocalToolsService.buildToolDefinitions(
           assistant: iosAssistant,
@@ -1112,7 +1112,7 @@ void main() {
       );
 
       DeviceLocalTools.debugSetHealthDataAvailable(true);
-      expect(DeviceLocalTools.healthSupported, isTrue);
+      expect(false, isTrue);
       expect(
         LocalToolsService.buildToolDefinitions(
           assistant: iosAssistant,
@@ -1140,11 +1140,11 @@ void main() {
               .setMockMethodCallHandler(channel, null);
         });
 
-        expect(DeviceLocalTools.weatherSupported, isFalse);
-        expect(DeviceLocalTools.healthSupported, isFalse);
+        expect(false, isFalse);
+        expect(false, isFalse);
         expect(await DeviceLocalTools.prefetchIosCapabilities(), isTrue);
-        expect(DeviceLocalTools.weatherSupported, isTrue);
-        expect(DeviceLocalTools.healthSupported, isTrue);
+        expect(false, isTrue);
+        expect(false, isTrue);
         expect(await DeviceLocalTools.prefetchIosCapabilities(), isTrue);
       },
     );

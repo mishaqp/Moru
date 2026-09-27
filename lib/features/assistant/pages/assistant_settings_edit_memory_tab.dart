@@ -148,7 +148,6 @@ class _MemoryTabState extends State<_MemoryTab> {
   }
 
   bool get _isDesktopPlatform {
-    final platform = Theme.of(context).platform;
     return false;
   }
 
@@ -811,11 +810,6 @@ class _MemoryTextInputFormState extends State<_MemoryTextInputForm> {
 
 const int _kMemoryFrequencyCustomSentinel = -1;
 
-bool _isDesktopMemorySettings(BuildContext context) {
-  final platform = Theme.of(context).platform;
-  return false;
-}
-
 Future<T?> _showMemoryChoiceSheet<T>(
   BuildContext context, {
   required String title,
@@ -1076,7 +1070,7 @@ class _MemoryOrganizeFrequencySection extends StatelessWidget {
     final selected = assistant.memoryOrganizeEveryNTurns;
     final detail = l10n.assistantEditOrganizeFrequencyOption(selected);
 
-    if (desktop || _isDesktopMemorySettings(context)) {
+    if (desktop) {
       final counts = <int>{..._options, selected}.toList()..sort();
       return _memoryDesktopSelectRow<int>(
         context: context,
@@ -1167,7 +1161,7 @@ class _MemoryDedupeModeSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final selected = assistant.memorySmartAddMode;
 
-    if (desktop || _isDesktopMemorySettings(context)) {
+    if (desktop) {
       return _memoryDesktopSelectRow<MemorySmartAddMode>(
         context: context,
         icon: Lucide.Layers,
@@ -1260,7 +1254,7 @@ class _MemoryWriteScopeSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final selected = assistant.memoryWriteScope;
 
-    if (desktop || _isDesktopMemorySettings(context)) {
+    if (desktop) {
       return _memoryDesktopSelectRow<MemoryWriteScope>(
         context: context,
         icon: Lucide.Globe,
@@ -1361,7 +1355,7 @@ class _RecentChatsSummaryFrequencySection extends StatelessWidget {
       selected,
     );
 
-    if (desktop || _isDesktopMemorySettings(context)) {
+    if (desktop) {
       final counts = <int>{
         ...Assistant.recentChatsSummaryMessageCountOptions,
         selected,

@@ -12,10 +12,6 @@ import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/utils/format_bytes.dart';
 
-bool workspaceEnvIsDesktopTarget() {
-  return false;
-}
-
 bool workspaceEnvIsAlpine({
   required EnvironmentState state,
   RuntimeStatus? status,
@@ -36,11 +32,7 @@ bool workspaceEnvIsUbuntu({
 IconData workspaceEnvEngineIcon({
   required EnvironmentState state,
   RuntimeStatus? status,
-  bool desktopNative = false,
 }) {
-  if (desktopNative || workspaceEnvIsDesktopTarget()) {
-    return Lucide.SquareTerminal;
-  }
   if (status?.engine == 'proot' ||
       workspaceEnvIsUbuntu(state: state, status: status) ||
       workspaceEnvIsAlpine(state: state, status: status)) {
@@ -71,9 +63,6 @@ String workspaceEnvEngineLabel({
   required EnvironmentState state,
   RuntimeStatus? status,
 }) {
-  if (workspaceEnvIsDesktopTarget()) {
-    return l10n.workspaceEnvEngineLocalShell;
-  }
   if ((status?.engine == 'proot' ||
           defaultTargetPlatform == TargetPlatform.android) &&
       state.distro != null &&
