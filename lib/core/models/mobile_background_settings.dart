@@ -2,15 +2,10 @@
 class MobileBackgroundSettings {
   const MobileBackgroundSettings({
     this.androidEnabled = false,
-    this.iosEnabled = false,
     this.notificationsEnabled = false,
     this.privacyMode = false,
     this.overlayEnabled = false,
     this.liveUpdatesEnabled = false,
-    this.liveActivitiesEnabled = false,
-    this.locationEnabled = false,
-    this.silentAudioEnabled = false,
-    this.backgroundSpeechEnabled = false,
     this.completionVisibility = BackgroundCompletionVisibility.oneMinute,
     this.overlayIconKind = 'app',
     this.overlayIconValue = '',
@@ -18,15 +13,10 @@ class MobileBackgroundSettings {
   });
 
   final bool androidEnabled;
-  final bool iosEnabled;
   final bool notificationsEnabled;
   final bool privacyMode;
   final bool overlayEnabled;
   final bool liveUpdatesEnabled;
-  final bool liveActivitiesEnabled;
-  final bool locationEnabled;
-  final bool silentAudioEnabled;
-  final bool backgroundSpeechEnabled;
   final BackgroundCompletionVisibility completionVisibility;
   final String overlayIconKind;
   final String overlayIconValue;
@@ -40,15 +30,10 @@ class MobileBackgroundSettings {
     final kind = json['overlayIconKind'];
     return MobileBackgroundSettings(
       androidEnabled: json['androidEnabled'] == true,
-      iosEnabled: json['iosEnabled'] == true,
       notificationsEnabled: json['notificationsEnabled'] == true,
       privacyMode: json['privacyMode'] == true,
       overlayEnabled: json['overlayEnabled'] == true,
       liveUpdatesEnabled: json['liveUpdatesEnabled'] == true,
-      liveActivitiesEnabled: json['liveActivitiesEnabled'] == true,
-      locationEnabled: json['locationEnabled'] == true,
-      silentAudioEnabled: json['silentAudioEnabled'] == true,
-      backgroundSpeechEnabled: json['backgroundSpeechEnabled'] == true,
       completionVisibility: visibility,
       overlayIconKind: kind == 'image' || kind == 'emoji' ? kind : 'app',
       overlayIconValue: json['overlayIconValue'] as String? ?? '',
@@ -61,15 +46,10 @@ class MobileBackgroundSettings {
 
   Map<String, dynamic> toJson() => {
     'androidEnabled': androidEnabled,
-    'iosEnabled': iosEnabled,
     'notificationsEnabled': notificationsEnabled,
     'privacyMode': privacyMode,
     'overlayEnabled': overlayEnabled,
     'liveUpdatesEnabled': liveUpdatesEnabled,
-    'liveActivitiesEnabled': liveActivitiesEnabled,
-    'locationEnabled': locationEnabled,
-    'silentAudioEnabled': silentAudioEnabled,
-    'backgroundSpeechEnabled': backgroundSpeechEnabled,
     'completionVisibility': completionVisibility.name,
     'overlayIconKind': overlayIconKind,
     'overlayIconValue': overlayIconValue,
@@ -78,31 +58,20 @@ class MobileBackgroundSettings {
 
   MobileBackgroundSettings copyWith({
     bool? androidEnabled,
-    bool? iosEnabled,
     bool? notificationsEnabled,
     bool? privacyMode,
     bool? overlayEnabled,
     bool? liveUpdatesEnabled,
-    bool? liveActivitiesEnabled,
-    bool? locationEnabled,
-    bool? silentAudioEnabled,
-    bool? backgroundSpeechEnabled,
     BackgroundCompletionVisibility? completionVisibility,
     String? overlayIconKind,
     String? overlayIconValue,
     BackgroundOverlayAppearance? overlayAppearance,
   }) => MobileBackgroundSettings(
     androidEnabled: androidEnabled ?? this.androidEnabled,
-    iosEnabled: iosEnabled ?? this.iosEnabled,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     privacyMode: privacyMode ?? this.privacyMode,
     overlayEnabled: overlayEnabled ?? this.overlayEnabled,
     liveUpdatesEnabled: liveUpdatesEnabled ?? this.liveUpdatesEnabled,
-    liveActivitiesEnabled: liveActivitiesEnabled ?? this.liveActivitiesEnabled,
-    locationEnabled: locationEnabled ?? this.locationEnabled,
-    silentAudioEnabled: silentAudioEnabled ?? this.silentAudioEnabled,
-    backgroundSpeechEnabled:
-        backgroundSpeechEnabled ?? this.backgroundSpeechEnabled,
     completionVisibility: completionVisibility ?? this.completionVisibility,
     overlayIconKind: overlayIconKind ?? this.overlayIconKind,
     overlayIconValue: overlayIconValue ?? this.overlayIconValue,

@@ -201,7 +201,7 @@ class NotificationService {
           enableVibration: true,
           category: AndroidNotificationCategory.message,
           visibility: NotificationVisibility.public,
-          ticker: 'Kelivo',
+          ticker: 'Moru',
           styleInformation: BigTextStyleInformation(
             body ?? completionText.body,
           ),

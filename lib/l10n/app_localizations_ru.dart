@@ -11321,13 +11321,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Продолжать текущие задачи при блокировке, в фоне и после удаления приложения из недавних. Во время работы требуется системное уведомление.';
 
   @override
-  String get backgroundIosEnabled => 'Расширенное выполнение в фоне';
-
-  @override
-  String get backgroundIosEnabledDetail =>
-      'Запрашивать время для завершения текущих задач. Для дополнительной поддержки фона отдельно включите геопозицию или беззвучное аудио.';
-
-  @override
   String get backgroundNotifications => 'Уведомления задач';
 
   @override
@@ -11342,13 +11335,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Скрывать названия диалогов, текст ответа и подробности инструментов в уведомлениях и текущем статусе. Отображаются только общий статус, число задач и прошедшее время.';
 
   @override
-  String get backgroundLiveActivities => 'Текущие активности';
-
-  @override
-  String get backgroundLiveActivitiesDetail =>
-      'Показывать текущие задачи на экране блокировки и в Dynamic Island. Доступность и отображение зависят от системы.';
-
-  @override
   String get backgroundOverlay => 'Плавающий статус задач';
 
   @override
@@ -11361,27 +11347,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get backgroundLiveUpdatesDetail =>
       'Использовать Live Updates Android 16 на поддерживаемых устройствах. Уведомление повышенной заметности имеет приоритет над плавающей капсулой.';
-
-  @override
-  String get backgroundLocation => 'Поддержка фона через геопозицию';
-
-  @override
-  String get backgroundLocationDetail =>
-      'Использовать обновления приблизительного местоположения во время фоновых задач. Координаты не сохраняются и не передаются ИИ-сервисам. Требуются расширенное выполнение в фоне и разрешение на геопозицию.';
-
-  @override
-  String get backgroundSilentAudio => 'Поддержка фона беззвучным аудио';
-
-  @override
-  String get backgroundSilentAudioDetail =>
-      'Воспроизводить беззвучное аудио во время фоновых задач. При записи и озвучивании оно приостанавливается. Требуется расширенное выполнение в фоне; разрешение на микрофон не нужно.';
-
-  @override
-  String get backgroundSpeech => 'Озвучивание в фоне';
-
-  @override
-  String get backgroundSpeechDetail =>
-      'Продолжать системное и сетевое озвучивание при блокировке и в фоне. Если отключено, переход в фон приостанавливает речь.';
 
   @override
   String get backgroundFinishVisibility =>
@@ -11401,7 +11366,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get backgroundFinishVisibilityDetail =>
-      'Применяется к капсуле Android и карточке завершения на экране блокировки iOS. При возвращении в приложение завершённый статус очищается; максимум — 15 минут. При отмене он скрывается сразу.';
+      'Применяется к капсуле завершения. При возвращении в приложение завершённый статус очищается; максимум — 15 минут. При отмене он скрывается сразу.';
 
   @override
   String get backgroundOverlayIcon => 'Плавающий значок';
@@ -11436,16 +11401,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Вручную проверьте автозапуск и ограничения фоновой работы устройства. Android не предоставляет надёжного способа проверить эти настройки производителя.';
 
   @override
-  String get backgroundLocationPermission => 'Доступ к геопозиции';
-
-  @override
-  String get backgroundLocationAlways => 'Разрешить геопозицию в фоне';
-
-  @override
-  String get backgroundLocationAlwaysDetail =>
-      'Можно предоставить постоянный доступ к геопозиции для работы в фоне. Разрешение запрашивается только при выборе этого действия.';
-
-  @override
   String get backgroundSystemSettings => 'Системные настройки приложения';
 
   @override
@@ -11455,13 +11410,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get backgroundPermissionDenied => 'Не разрешено';
 
   @override
-  String get backgroundPermissionLimited => 'При использовании приложения';
-
-  @override
   String get backgroundPermissionUnknown => 'Проверить вручную';
-
-  @override
-  String get backgroundPermissionNotDetermined => 'Не запрашивалось';
 
   @override
   String get backgroundRuntimeTitle => 'Текущее состояние';
@@ -11471,15 +11420,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get backgroundRuntimeIdle => 'Неактивно';
-
-  @override
-  String get backgroundLocationActive => 'Геопозиция в фоне';
-
-  @override
-  String get backgroundAudioActive => 'Беззвучное аудио';
-
-  @override
-  String get backgroundActivityActive => 'Текущая активность';
 
   @override
   String get backgroundOverlayActive => 'Плавающее окно';
@@ -11495,10 +11435,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Недоступно на устройстве или отключено в системных настройках';
 
   @override
-  String get backgroundIosLimit =>
-      'Фоновым выполнением управляет iOS. Сами по себе Live Activities не поддерживают работу приложения. Принудительное закрытие может прервать генерацию и задержать удаление статуса до следующего открытия приложения.';
-
-  @override
   String get backgroundAndroidLimit =>
       'Если задачи останавливаются, проверьте уведомления, батарею и настройки фона производителя. Принудительная остановка и завершение процесса системой всё равно могут прервать генерацию.';
 
@@ -11509,9 +11445,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get backgroundIconError =>
       'Не удалось импортировать изображение. Выберите другое.';
-
-  @override
-  String get backgroundNotificationChannels => 'Каналы уведомлений';
 
   @override
   String get backgroundCompletionChannel => 'Канал уведомлений о завершении';

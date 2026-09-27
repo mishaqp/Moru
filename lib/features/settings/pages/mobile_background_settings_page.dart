@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,17 +14,11 @@ import '../../../shared/widgets/option_sheet.dart';
 import '../../../shared/widgets/ios_settings_rows.dart';
 import 'background_overlay_settings_page.dart';
 
-/// Both mobile platforms have a full page; platform-only controls are grouped
-/// here rather than duplicating the permission and task-status UI.
+/// Background execution settings, permissions and live task status.
 class MobileBackgroundSettingsPage extends StatefulWidget {
-  const MobileBackgroundSettingsPage({
-    super.key,
-    this.coordinator,
-    this.platform,
-  });
+  const MobileBackgroundSettingsPage({super.key, this.coordinator});
 
   final MobileBackgroundCoordinator? coordinator;
-  final TargetPlatform? platform;
 
   @override
   State<MobileBackgroundSettingsPage> createState() =>
@@ -37,8 +30,6 @@ class _MobileBackgroundSettingsPageState
     with WidgetsBindingObserver {
   late final coordinator =
       widget.coordinator ?? MobileBackgroundCoordinator.instance;
-  bool get _android =>
-      (widget.platform ?? defaultTargetPlatform) == TargetPlatform.android;
 
   @override
   void initState() {
@@ -111,12 +102,6 @@ class _MobileBackgroundSettingsPageState
       BackgroundCompletionVisibility.untilForeground =>
         l.backgroundFinishUntilForeground,
     };
-    final location = switch (status.text('locationAuthorization')) {
-      'always' => l.backgroundPermissionGranted,
-      'whenInUse' => l.backgroundPermissionLimited,
-      'notDetermined' => l.backgroundPermissionNotDetermined,
-      _ => l.backgroundPermissionDenied,
-    };
     final nativeError = status.text('lastError');
     final error =
         coordinator.lastError ??
@@ -147,16 +132,10 @@ class _MobileBackgroundSettingsPageState
               _toggle(
                 'execution',
                 Lucide.Activity,
-                _android ? l.backgroundAndroidEnabled : l.backgroundIosEnabled,
-                _android
-                    ? l.backgroundAndroidEnabledDetail
-                    : l.backgroundIosEnabledDetail,
-                _android ? value.androidEnabled : value.iosEnabled,
-                (on) => _save(
-                  _android
-                      ? value.copyWith(androidEnabled: on)
-                      : value.copyWith(iosEnabled: on),
-                ),
+                l.backgroundAndroidEnabled,
+                l.backgroundAndroidEnabledDetail,
+                value.androidEnabled,
+                (on) => _save(value.copyWith(androidEnabled: on)),
               ),
               _toggle(
                 'notifications',
@@ -184,75 +163,29 @@ class _MobileBackgroundSettingsPageState
           const SizedBox(height: 16),
           SectionCard(
             children: _withDividers([
-              if (_android) ...[
-                _toggle(
-                  'overlay',
-                  Lucide.Layers,
-                  l.backgroundOverlay,
-                  l.backgroundOverlayDetail,
-                  value.overlayEnabled,
-                  (on) => _save(
-                    value.copyWith(overlayEnabled: on),
-                    permission: on && !status.flag('overlayAuthorized')
-                        ? 'overlay'
-                        : null,
-                  ),
+              _toggle(
+                'overlay',
+                Lucide.Layers,
+                l.backgroundOverlay,
+                l.backgroundOverlayDetail,
+                value.overlayEnabled,
+                (on) => _save(
+                  value.copyWith(overlayEnabled: on),
+                  permission: on && !status.flag('overlayAuthorized')
+                      ? 'overlay'
+                      : null,
                 ),
-                _toggle(
-                  'liveUpdates',
-                  Lucide.Zap,
-                  l.backgroundLiveUpdates,
-                  status.flag('liveUpdatesSupported')
-                      ? l.backgroundLiveUpdatesDetail
-                      : l.backgroundUnsupported,
-                  value.liveUpdatesEnabled,
-                  (on) => _save(value.copyWith(liveUpdatesEnabled: on)),
-                ),
-              ] else ...[
-                _toggle(
-                  'liveActivities',
-                  Lucide.Activity,
-                  l.backgroundLiveActivities,
-                  status.flag('liveActivitiesSupported')
-                      ? l.backgroundLiveActivitiesDetail
-                      : l.backgroundUnsupported,
-                  value.liveActivitiesEnabled,
-                  (on) => _save(value.copyWith(liveActivitiesEnabled: on)),
-                ),
-                _toggle(
-                  'speech',
-                  Lucide.Volume2,
-                  l.backgroundSpeech,
-                  l.backgroundSpeechDetail,
-                  value.backgroundSpeechEnabled,
-                  (on) => _save(value.copyWith(backgroundSpeechEnabled: on)),
-                ),
-                _toggle(
-                  'location',
-                  Lucide.MapPin,
-                  l.backgroundLocation,
-                  l.backgroundLocationDetail,
-                  value.locationEnabled,
-                  (on) => _save(
-                    value.copyWith(locationEnabled: on),
-                    permission:
-                        on &&
-                            (status.text('locationAuthorization') ==
-                                    'notDetermined' ||
-                                status.text('locationAuthorization').isEmpty)
-                        ? 'location'
-                        : null,
-                  ),
-                ),
-                _toggle(
-                  'silentAudio',
-                  Lucide.AudioLines,
-                  l.backgroundSilentAudio,
-                  l.backgroundSilentAudioDetail,
-                  value.silentAudioEnabled,
-                  (on) => _save(value.copyWith(silentAudioEnabled: on)),
-                ),
-              ],
+              ),
+              _toggle(
+                'liveUpdates',
+                Lucide.Zap,
+                l.backgroundLiveUpdates,
+                status.flag('liveUpdatesSupported')
+                    ? l.backgroundLiveUpdatesDetail
+                    : l.backgroundUnsupported,
+                value.liveUpdatesEnabled,
+                (on) => _save(value.copyWith(liveUpdatesEnabled: on)),
+              ),
               IosNavRow(
                 key: const ValueKey('completionVisibility'),
                 icon: Lucide.Timer,
@@ -286,27 +219,24 @@ class _MobileBackgroundSettingsPageState
             ]),
           ),
           IosSectionFooter(text: l.backgroundFinishVisibilityDetail),
-          if (_android) ...[
-            const SizedBox(height: 16),
-            SectionCard(
-              children: [
-                IosNavRow(
-                  key: const ValueKey('overlayAppearance'),
-                  icon: Lucide.SlidersHorizontal,
-                  label: l.backgroundOverlayAppearance,
-                  subtitle: l.backgroundOverlayAppearanceDetail,
-                  subtitleMaxLines: 2,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => BackgroundOverlaySettingsPage(
-                        coordinator: coordinator,
-                      ),
-                    ),
+          const SizedBox(height: 16),
+          SectionCard(
+            children: [
+              IosNavRow(
+                key: const ValueKey('overlayAppearance'),
+                icon: Lucide.SlidersHorizontal,
+                label: l.backgroundOverlayAppearance,
+                subtitle: l.backgroundOverlayAppearanceDetail,
+                subtitleMaxLines: 2,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        BackgroundOverlaySettingsPage(coordinator: coordinator),
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
           IosSectionHeader(text: l.backgroundPermissionsTitle),
           SectionCard(
             children: _withDividers([
@@ -318,71 +248,43 @@ class _MobileBackgroundSettingsPageState
               ),
               _action(
                 Lucide.Settings,
-                _android
-                    ? l.backgroundCompletionChannel
-                    : l.backgroundNotificationChannels,
-                _android ? grant(status.flag('completionChannelEnabled')) : '',
-                () => _open(_android ? 'channels' : 'notifications'),
+                l.backgroundCompletionChannel,
+                grant(status.flag('completionChannelEnabled')),
+                () => _open('channels'),
               ),
-              if (_android) ...[
-                _action(
-                  Lucide.Activity,
-                  l.backgroundOngoingChannel,
-                  grant(status.flag('ongoingChannelEnabled')),
-                  () => _open('ongoingChannel'),
-                ),
-                _action(
-                  Lucide.Battery,
-                  l.backgroundBatteryOptimization,
-                  grant(status.flag('batteryExempt')),
-                  () => _open('battery'),
-                  subtitle: l.backgroundBatteryOptimizationDetail,
-                ),
-                _action(
-                  Lucide.Power,
-                  l.backgroundAutostart,
-                  l.backgroundPermissionUnknown,
-                  () => _open('autostart'),
-                  subtitle:
-                      '${status.text('manufacturer')} · ${l.backgroundAutostartDetail}',
-                ),
-                _action(
-                  Lucide.Layers,
-                  l.backgroundOverlay,
-                  grant(status.flag('overlayAuthorized')),
-                  () => _open('overlay'),
-                ),
-                _action(
-                  Lucide.Zap,
-                  l.backgroundLiveUpdates,
-                  grant(status.flag('liveUpdatesAuthorized')),
-                  () => _open('liveUpdates'),
-                ),
-              ] else ...[
-                _action(
-                  Lucide.MapPin,
-                  l.backgroundLocationPermission,
-                  location,
-                  () => status.text('locationAuthorization') == 'notDetermined'
-                      ? _permission('location')
-                      : _open('app'),
-                ),
-                if (value.locationEnabled &&
-                    status.text('locationAuthorization') == 'whenInUse')
-                  _action(
-                    Lucide.MapPin,
-                    l.backgroundLocationAlways,
-                    '',
-                    () => _permission('locationAlways'),
-                    subtitle: l.backgroundLocationAlwaysDetail,
-                  ),
-                _action(
-                  Lucide.Activity,
-                  l.backgroundLiveActivities,
-                  grant(status.flag('liveActivitiesEnabled')),
-                  () => _open('app'),
-                ),
-              ],
+              _action(
+                Lucide.Activity,
+                l.backgroundOngoingChannel,
+                grant(status.flag('ongoingChannelEnabled')),
+                () => _open('ongoingChannel'),
+              ),
+              _action(
+                Lucide.Battery,
+                l.backgroundBatteryOptimization,
+                grant(status.flag('batteryExempt')),
+                () => _open('battery'),
+                subtitle: l.backgroundBatteryOptimizationDetail,
+              ),
+              _action(
+                Lucide.Power,
+                l.backgroundAutostart,
+                l.backgroundPermissionUnknown,
+                () => _open('autostart'),
+                subtitle:
+                    '${status.text('manufacturer')} · ${l.backgroundAutostartDetail}',
+              ),
+              _action(
+                Lucide.Layers,
+                l.backgroundOverlay,
+                grant(status.flag('overlayAuthorized')),
+                () => _open('overlay'),
+              ),
+              _action(
+                Lucide.Zap,
+                l.backgroundLiveUpdates,
+                grant(status.flag('liveUpdatesAuthorized')),
+                () => _open('liveUpdates'),
+              ),
               _action(
                 Lucide.Settings,
                 l.backgroundSystemSettings,
@@ -401,28 +303,15 @@ class _MobileBackgroundSettingsPageState
                     : status.text('activeTasks'),
               ),
               _status(
-                _android ? l.backgroundAndroidEnabled : l.backgroundIosEnabled,
-                active(
-                  _android ? 'foregroundServiceActive' : 'backgroundTaskActive',
-                ),
+                l.backgroundAndroidEnabled,
+                active('foregroundServiceActive'),
               ),
-              if (_android) ...[
-                _status(l.backgroundOverlayActive, active('overlayVisible')),
-                _status(l.backgroundLiveUpdates, active('liveUpdatePromoted')),
-              ] else ...[
-                _status(
-                  l.backgroundActivityActive,
-                  active('liveActivityActive'),
-                ),
-                _status(l.backgroundLocationActive, active('locationActive')),
-                _status(l.backgroundAudioActive, active('silentAudioActive')),
-              ],
+              _status(l.backgroundOverlayActive, active('overlayVisible')),
+              _status(l.backgroundLiveUpdates, active('liveUpdatePromoted')),
               _status(l.backgroundLastError, error),
             ]),
           ),
-          IosSectionFooter(
-            text: _android ? l.backgroundAndroidLimit : l.backgroundIosLimit,
-          ),
+          IosSectionFooter(text: l.backgroundAndroidLimit),
         ],
       ),
     );
