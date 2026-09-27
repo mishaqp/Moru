@@ -34,10 +34,13 @@ class MiniAppServers {
     MiniAppFetch? fetch,
     Future<int> Function()? freePort,
     Future<bool> Function(int port)? probe,
+    DateTime Function()? now,
     this.startTimeout = const Duration(seconds: 120),
+    this.restartDelay = const Duration(seconds: 10),
   }) : _fetch = fetch ?? MiniAppFetch(),
        _freePort = freePort ?? _loopbackPort,
-       _probe = probe ?? _accepts;
+       _probe = probe ?? _accepts,
+       _now = now ?? DateTime.now;
 
   static const String appMount = '/app';
   static const String dataMount = '/data';
@@ -48,6 +51,11 @@ class MiniAppServers {
   final Future<int> Function() _freePort;
   final Future<bool> Function(int port) _probe;
   final Duration startTimeout;
+
+  /// A crashed server starts again on a request only this long after its
+  /// last start, so a server that dies at once is not restarted in a loop.
+  final Duration restartDelay;
+  final DateTime Function() _now;
   final Map<String, _Server> _servers = {};
 
   /// Uses the server of [app] until [MiniAppServerLease.release]; starts it
@@ -68,6 +76,7 @@ class MiniAppServers {
     unawaited(server.events?.cancel());
     server
       ..runId = 'mini-app-server-${const Uuid().v4()}'
+      ..startedAt = _now()
       ..exitCode = null
       ..killed = false;
     final started = server.started = _start(server);
@@ -109,7 +118,10 @@ class MiniAppServers {
             runId: server.runId,
             command: server.command,
             cwd: appMount,
+            // Unlimited lifetime; the runtime only allows it with stdin kept
+            // open, as for protocol servers.
             timeout: Duration.zero,
+            keepStdinOpen: true,
             mounts: [
               Mount(host: app.codeDirectory, guest: appMount, readOnly: true),
               Mount(host: data.path, guest: dataMount),
@@ -205,8 +217,17 @@ class MiniAppServers {
     _Server server,
     Map<String, dynamic> args,
   ) async {
-    // A server that crashed while the app is open starts again.
-    if (server.exitCode != null && !server.stopping) _run(server);
+    // A server that crashed while the app is open starts again, but not
+    // right after its last start.
+    if (server.exitCode != null && !server.stopping) {
+      if (_now().difference(server.startedAt) < restartDelay) {
+        throw MiniAppException(
+          'server_exited',
+          'The server exited with code ${server.exitCode}: ${_tail(server)}',
+        );
+      }
+      _run(server);
+    }
     final port = await server.started!;
     return _fetch.fetchLocal(port, args);
   }
@@ -248,6 +269,7 @@ class _Server {
   final String command;
   final MiniAppServerEnvironment environment;
   String runId = '';
+  DateTime startedAt = DateTime.fromMillisecondsSinceEpoch(0);
   int leases = 0;
   bool stopping = false;
 

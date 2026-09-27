@@ -64,6 +64,7 @@ void main() {
   late MiniAppServers servers;
   late MiniAppServerEnvironment environment;
   var listening = false;
+  late DateTime clock;
 
   setUp(() async {
     temp = await Directory.systemTemp.createTemp('mini-app-servers-');
@@ -92,10 +93,12 @@ void main() {
       await request.response.close();
     });
     listening = false;
+    clock = DateTime(2026, 9, 28, 2);
     servers = MiniAppServers(
       store: store,
       freePort: () async => http.port,
       probe: (_) async => listening,
+      now: () => clock,
       startTimeout: const Duration(seconds: 5),
     );
     environment = MiniAppServerEnvironment(
@@ -167,6 +170,8 @@ void main() {
     expect(request.command, 'python3 server.py');
     expect(request.cwd, MiniAppServers.appMount);
     expect(request.timeout, Duration.zero);
+    // Without stdin kept open the runtime would stop it at once.
+    expect(request.keepStdinOpen, isTrue);
     expect(request.mounts, [
       Mount(host: app.codeDirectory, guest: '/app', readOnly: true),
       Mount(host: p.join(app.directory, 'server-data'), guest: '/data'),
@@ -237,6 +242,17 @@ void main() {
     expect(errors.single.message, contains('ModuleNotFoundError: flask'));
 
     listening = true;
+    // Right after the crash a request does not start it again.
+    await expectLater(
+      lease.fetch({'path': '/ok'}),
+      throwsA(
+        isA<MiniAppException>()
+            .having((e) => e.code, 'code', 'server_exited')
+            .having((e) => e.message, 'message', contains('flask')),
+      ),
+    );
+    expect(runtime.requests, hasLength(1));
+    clock = clock.add(servers.restartDelay);
     final response = await lease.fetch({'path': '/ok'});
     expect(response['status'], 200);
     expect(runtime.requests, hasLength(2));
