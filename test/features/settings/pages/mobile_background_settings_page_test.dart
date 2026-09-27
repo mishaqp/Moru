@@ -40,13 +40,13 @@ void main() {
         .setMockMethodCallHandler(channel, null);
   });
 
-  Future<void> show(WidgetTester tester, TargetPlatform platform) async {
+  Future<void> show(WidgetTester tester) async {
     final harness = await createBusinessTestHarness();
     settings = SettingsProvider(harness.preferences);
     await settings.loaded;
 
     coordinator = MobileBackgroundCoordinator(
-      platform: platform,
+      platform: TargetPlatform.android,
       channel: channel,
     );
     await tester.pumpWidget(
@@ -56,10 +56,7 @@ void main() {
           locale: const Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: MobileBackgroundSettingsPage(
-            coordinator: coordinator,
-            platform: platform,
-          ),
+          home: MobileBackgroundSettingsPage(coordinator: coordinator),
         ),
       ),
     );
@@ -79,7 +76,7 @@ void main() {
   testWidgets(
     'Android page defaults off and opening it never requests permission',
     (tester) async {
-      await show(tester, TargetPlatform.android);
+      await show(tester);
       expect(find.byType(MobileBackgroundSettingsPage), findsOneWidget);
       expect(
         tester
@@ -99,7 +96,7 @@ void main() {
   testWidgets(
     'denied permission keeps user intent separate and refreshes on return',
     (tester) async {
-      await show(tester, TargetPlatform.android);
+      await show(tester);
       await toggle(tester, 'notifications');
       expect(settings.mobileBackground.notificationsEnabled, isTrue);
       expect(coordinator.status.flag('notificationsAuthorized'), isFalse);
@@ -124,32 +121,15 @@ void main() {
     },
   );
 
-  testWidgets(
-    'iOS location requests only on explicit enable and does not enable enhanced runtime',
-    (tester) async {
-      grants = {'locationAuthorization': 'notDetermined'};
-      await show(tester, TargetPlatform.iOS);
-      expect(calls.where((c) => c.method == 'requestPermission'), isEmpty);
-      await toggle(tester, 'location');
-      expect(settings.mobileBackground.locationEnabled, isTrue);
-      expect(settings.mobileBackground.iosEnabled, isFalse);
-      expect(settings.mobileBackground.silentAudioEnabled, isFalse);
-      expect(
-        calls.where((c) => c.method == 'requestPermission').single.arguments,
-        'location',
-      );
-    },
-  );
-
-  testWidgets('iOS toggle and completion icons share the same leading slot', (
+  testWidgets('toggle and completion icons share the same leading slot', (
     tester,
   ) async {
-    await show(tester, TargetPlatform.iOS);
-    final locationIcon = find.byIcon(Lucide.MapPin).first;
+    await show(tester);
     final timerIcon = find.byIcon(Lucide.Timer);
     await tester.scrollUntilVisible(timerIcon, 250);
     await tester.pumpAndSettle();
-    expect(tester.getTopLeft(timerIcon).dx, tester.getTopLeft(locationIcon).dx);
+    final overlayIcon = find.byIcon(Lucide.Layers).first;
+    expect(tester.getTopLeft(timerIcon).dx, tester.getTopLeft(overlayIcon).dx);
   });
 
   testWidgets(
@@ -159,7 +139,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      await show(tester, TargetPlatform.android);
+      await show(tester);
       final choiceRow = find.byKey(const ValueKey('completionVisibility'));
       await tester.scrollUntilVisible(choiceRow, 250);
       await tester.pumpAndSettle();
@@ -184,7 +164,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      await show(tester, TargetPlatform.android);
+      await show(tester);
       final entry = find.byKey(const ValueKey('overlayAppearance'));
       await tester.scrollUntilVisible(entry, 250);
       await tester.pumpAndSettle();

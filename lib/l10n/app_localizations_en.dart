@@ -11136,7 +11136,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backgroundSettingsTitle => 'Background tasks';
 
   @override
-  String get backgroundTaskTitle => 'Kelivo task';
+  String get backgroundTaskTitle => 'Moru task';
 
   @override
   String get backgroundCompleted => 'Generation complete';
@@ -11187,13 +11187,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Keep current tasks running when locked, in the background, or removed from recent apps. A system notification is required while tasks run.';
 
   @override
-  String get backgroundIosEnabled => 'Enhanced background execution';
-
-  @override
-  String get backgroundIosEnabledDetail =>
-      'Request time to finish current tasks. Enable location or silent audio separately for additional background support.';
-
-  @override
   String get backgroundNotifications => 'Task notifications';
 
   @override
@@ -11208,13 +11201,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Hide conversation titles, reply text and tool details in notifications and live status. Only generic status, task count and elapsed time are shown.';
 
   @override
-  String get backgroundLiveActivities => 'Live Activities';
-
-  @override
-  String get backgroundLiveActivitiesDetail =>
-      'Show current tasks on the Lock Screen and Dynamic Island. Availability and visibility depend on the system.';
-
-  @override
   String get backgroundOverlay => 'Floating task status';
 
   @override
@@ -11227,27 +11213,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get backgroundLiveUpdatesDetail =>
       'Use Android 16 Live Updates on supported devices. A promoted notification takes priority over the floating capsule.';
-
-  @override
-  String get backgroundLocation => 'Location-assisted execution';
-
-  @override
-  String get backgroundLocationDetail =>
-      'Use coarse location updates during background tasks. Coordinates are not stored or sent to AI services. Requires enhanced background execution and location permission.';
-
-  @override
-  String get backgroundSilentAudio => 'Silent audio keep-alive';
-
-  @override
-  String get backgroundSilentAudioDetail =>
-      'Play silent audio while background tasks run. Yields to recording and speech playback. Requires enhanced background execution; no microphone permission is needed.';
-
-  @override
-  String get backgroundSpeech => 'Background read-aloud';
-
-  @override
-  String get backgroundSpeechDetail =>
-      'Continue system and network read-aloud when locked or in the background. When disabled, moving to the background pauses speech.';
 
   @override
   String get backgroundFinishVisibility => 'Completed status duration';
@@ -11266,13 +11231,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backgroundFinishVisibilityDetail =>
-      'Applies to the Android capsule and iOS Lock Screen completion card. Returning to the app clears completed status; the maximum is 15 minutes. Cancellation dismisses immediately.';
+      'Applies to the completion capsule. Returning to the app clears completed status; the maximum is 15 minutes. Cancellation dismisses immediately.';
 
   @override
   String get backgroundOverlayIcon => 'Floating icon';
 
   @override
-  String get backgroundIconDefault => 'Kelivo icon';
+  String get backgroundIconDefault => 'Moru icon';
 
   @override
   String get backgroundIconImage => 'Choose image';
@@ -11301,16 +11266,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Check your device’s autostart and background restrictions manually. Android does not provide a reliable permission query for these vendor settings.';
 
   @override
-  String get backgroundLocationPermission => 'Location permission';
-
-  @override
-  String get backgroundLocationAlways => 'Allow location in the background';
-
-  @override
-  String get backgroundLocationAlwaysDetail =>
-      'You can grant Always access for background location. Permission is requested only when you choose this action.';
-
-  @override
   String get backgroundSystemSettings => 'App system settings';
 
   @override
@@ -11320,13 +11275,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backgroundPermissionDenied => 'Not allowed';
 
   @override
-  String get backgroundPermissionLimited => 'While using the app';
-
-  @override
   String get backgroundPermissionUnknown => 'Check manually';
-
-  @override
-  String get backgroundPermissionNotDetermined => 'Not requested';
 
   @override
   String get backgroundRuntimeTitle => 'Current status';
@@ -11336,15 +11285,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backgroundRuntimeIdle => 'Inactive';
-
-  @override
-  String get backgroundLocationActive => 'Background location';
-
-  @override
-  String get backgroundAudioActive => 'Silent audio';
-
-  @override
-  String get backgroundActivityActive => 'Live Activity';
 
   @override
   String get backgroundOverlayActive => 'Floating window';
@@ -11360,10 +11300,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Unavailable on this device or disabled in system settings';
 
   @override
-  String get backgroundIosLimit =>
-      'iOS controls background execution. Live Activities alone do not keep the app running. Force-quitting can stop generation and delay removal of live status until the app opens again.';
-
-  @override
   String get backgroundAndroidLimit =>
       'Check notification, battery and vendor background settings if tasks stop. Force stop and system process termination can still interrupt generation.';
 
@@ -11374,9 +11310,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get backgroundIconError =>
       'Unable to import this image. Please choose another image.';
-
-  @override
-  String get backgroundNotificationChannels => 'Notification channels';
 
   @override
   String get backgroundCompletionChannel => 'Completion notification channel';
@@ -12178,7 +12111,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get scheduledTasksReminderBody =>
-      'Your scheduled task is due. Open Kelivo to continue.';
+      'Your scheduled task is due. Open Moru to continue.';
 
   @override
   String get scheduledTasksResultBody => 'Your scheduled task result is ready.';

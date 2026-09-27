@@ -867,18 +867,9 @@ class MyApp extends StatelessWidget {
                     final backgroundSettings = ctx.read<SettingsProvider>();
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (!ctx.mounted) return;
-                      final coordinator = MobileBackgroundCoordinator.instance;
-                      coordinator.pauseSpeech = () async {
-                        final tts = ctx.read<TtsProvider>();
-                        if (tts.playbackState.isActive || tts.isSpeaking) {
-                          await tts.pause();
-                        }
-                      };
                       unawaited(
-                        coordinator.configureFromSettings(
-                          backgroundSettings,
-                          l10n,
-                        ),
+                        MobileBackgroundCoordinator.instance
+                            .configureFromSettings(backgroundSettings, l10n),
                       );
                     });
                   }

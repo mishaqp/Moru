@@ -212,7 +212,7 @@ void main() {
           (call) async => call.method == 'sync' ? <String, dynamic>{} : null,
         );
     final background = MobileBackgroundCoordinator(
-      platform: TargetPlatform.iOS,
+      platform: TargetPlatform.android,
       channel: channel,
       notificationSender: ({required conversationId, title, body}) async {
         expect(service.terminalStates.last, GenerationRunState.failed);
@@ -430,35 +430,24 @@ void main() {
       final service = _ThrowingFinalizeChatService(failCompletion: false);
       final settings = SettingsProvider(createBusinessTestPreferences());
       const channel = MethodChannel('test.chat_actions.handoff');
-      final owners = <String>{};
-      final terminalOwners = <Set<String>>[];
+      var terminalSyncs = 0;
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
         call,
       ) async {
-        final args = call.arguments;
-        if (call.method == 'audioOwner') {
-          final map = args as Map;
-          if (map['active'] == true) {
-            owners.add(map['owner'] as String);
-          } else {
-            owners.remove(map['owner']);
-          }
-        } else if (call.method == 'sync' && (args as Map)['terminal'] != null) {
-          terminalOwners.add(Set.of(owners));
+        if (call.method == 'sync' &&
+            (call.arguments as Map)['terminal'] != null) {
+          terminalSyncs++;
         }
         return call.method == 'sync' ? <String, dynamic>{} : null;
       });
       final background = MobileBackgroundCoordinator(
-        platform: TargetPlatform.iOS,
+        platform: TargetPlatform.android,
         channel: channel,
       );
       addTearDown(background.dispose);
       addTearDown(settings.dispose);
       await background.configure(
-        const MobileBackgroundSettings(
-          iosEnabled: true,
-          backgroundSpeechEnabled: true,
-        ),
+        const MobileBackgroundSettings(androidEnabled: true),
         await AppLocalizations.delegate.load(const Locale('en')),
       );
       await background.start(
@@ -496,7 +485,6 @@ void main() {
                   ]);
                   preparing.complete();
                   await ready.future;
-                  await background.setAudioOwner('speechBuffering', true);
                 };
                 return const SizedBox.shrink();
               },
@@ -538,15 +526,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 40));
       await background.flush();
       expect(background.activeTaskIds, {'assistant-1'});
-      expect(terminalOwners, isEmpty);
+      expect(terminalSyncs, 0);
       ready.complete();
       await finished;
       await background.flush();
       expect(background.activeTaskIds, isEmpty);
-      expect(terminalOwners, [
-        {'speechBuffering'},
-      ]);
-      await background.setAudioOwner('speechBuffering', false);
+      expect(terminalSyncs, 1);
     },
   );
 }

@@ -10652,7 +10652,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backgroundSettingsTitle => '后台任务';
 
   @override
-  String get backgroundTaskTitle => 'Kelivo 任务';
+  String get backgroundTaskTitle => 'Moru 任务';
 
   @override
   String get backgroundCompleted => '生成完成';
@@ -10701,12 +10701,6 @@ class AppLocalizationsZh extends AppLocalizations {
       '在锁屏、切到后台或划掉最近任务后继续当前生成。任务运行期间会显示系统常驻通知。';
 
   @override
-  String get backgroundIosEnabled => '增强后台运行';
-
-  @override
-  String get backgroundIosEnabledDetail => '为当前任务申请后台执行时间。可另外开启定位或静音音频辅助保活。';
-
-  @override
   String get backgroundNotifications => '任务通知';
 
   @override
@@ -10721,12 +10715,6 @@ class AppLocalizationsZh extends AppLocalizations {
       '在通知和实时状态中隐藏会话标题、回复内容及工具详情，仅显示通用状态、任务数量和耗时。';
 
   @override
-  String get backgroundLiveActivities => '实时活动';
-
-  @override
-  String get backgroundLiveActivitiesDetail => '在锁屏和灵动岛显示当前任务，是否可用及展示位置由系统决定。';
-
-  @override
   String get backgroundOverlay => '任务悬浮窗';
 
   @override
@@ -10738,26 +10726,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get backgroundLiveUpdatesDetail =>
       '在支持的设备上使用 Android 16 实时通知。系统成功展示实时通知时优先于悬浮窗。';
-
-  @override
-  String get backgroundLocation => '定位辅助保活';
-
-  @override
-  String get backgroundLocationDetail =>
-      '在后台任务期间使用低精度定位辅助运行，不保存坐标或发送给 AI 服务。需要开启增强后台运行并授权定位。';
-
-  @override
-  String get backgroundSilentAudio => '静音音频保活';
-
-  @override
-  String get backgroundSilentAudioDetail =>
-      '后台任务运行时播放静音音频，并让位于录音和朗读。需要开启增强后台运行，无需麦克风权限。';
-
-  @override
-  String get backgroundSpeech => '后台朗读';
-
-  @override
-  String get backgroundSpeechDetail => '锁屏或切到后台时继续系统及网络朗读。关闭时，切到后台会暂停朗读。';
 
   @override
   String get backgroundFinishVisibility => '完成状态保留时间';
@@ -10776,13 +10744,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get backgroundFinishVisibilityDetail =>
-      '用于 Android 悬浮窗和 iOS 锁屏完成卡片。回到应用时清理完成状态，最长保留 15 分钟；取消任务立即收起。';
+      '用于完成悬浮窗。回到应用时清理完成状态，最长保留 15 分钟；取消任务立即收起。';
 
   @override
   String get backgroundOverlayIcon => '悬浮窗图标';
 
   @override
-  String get backgroundIconDefault => 'Kelivo 图标';
+  String get backgroundIconDefault => 'Moru 图标';
 
   @override
   String get backgroundIconImage => '选择图片';
@@ -10810,15 +10778,6 @@ class AppLocalizationsZh extends AppLocalizations {
       '请手动检查设备的自启动和后台限制。Android 无法可靠查询这些厂商设置的授权状态。';
 
   @override
-  String get backgroundLocationPermission => '定位权限';
-
-  @override
-  String get backgroundLocationAlways => '允许持续后台定位';
-
-  @override
-  String get backgroundLocationAlwaysDetail => '可进一步授予“始终允许”定位权限，仅在点击此入口时申请。';
-
-  @override
   String get backgroundSystemSettings => '应用系统设置';
 
   @override
@@ -10828,13 +10787,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backgroundPermissionDenied => '未允许';
 
   @override
-  String get backgroundPermissionLimited => '使用应用期间';
-
-  @override
   String get backgroundPermissionUnknown => '需手动检查';
-
-  @override
-  String get backgroundPermissionNotDetermined => '尚未申请';
 
   @override
   String get backgroundRuntimeTitle => '当前状态';
@@ -10844,15 +10797,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get backgroundRuntimeIdle => '未运行';
-
-  @override
-  String get backgroundLocationActive => '后台定位';
-
-  @override
-  String get backgroundAudioActive => '静音音频';
-
-  @override
-  String get backgroundActivityActive => '实时活动';
 
   @override
   String get backgroundOverlayActive => '悬浮窗';
@@ -10867,10 +10811,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backgroundUnsupported => '当前设备不支持或系统设置未允许';
 
   @override
-  String get backgroundIosLimit =>
-      '后台执行由 iOS 控制，实时活动本身不能保活。强退可能停止生成，实时状态可能要等再次打开应用后才能清理。';
-
-  @override
   String get backgroundAndroidLimit =>
       '如任务中断，请检查通知、电池及厂商后台设置。系统强行停止或终止进程仍可能中断生成。';
 
@@ -10879,9 +10819,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get backgroundIconError => '无法导入此图片，请选择其他图片。';
-
-  @override
-  String get backgroundNotificationChannels => '通知渠道';
 
   @override
   String get backgroundCompletionChannel => '任务完成通知渠道';
@@ -11638,7 +11575,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get scheduledTasksCancelled => '已取消';
 
   @override
-  String get scheduledTasksReminderBody => '定时任务已到期，打开 Kelivo 继续。';
+  String get scheduledTasksReminderBody => '定时任务已到期，打开 Moru 继续。';
 
   @override
   String get scheduledTasksResultBody => '定时任务结果已准备好。';
@@ -22878,7 +22815,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get backgroundSettingsTitle => '后台任务';
 
   @override
-  String get backgroundTaskTitle => 'Kelivo 任务';
+  String get backgroundTaskTitle => 'Moru 任务';
 
   @override
   String get backgroundCompleted => '生成完成';
@@ -22927,12 +22864,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       '在锁屏、切到后台或划掉最近任务后继续当前生成。任务运行期间会显示系统常驻通知。';
 
   @override
-  String get backgroundIosEnabled => '增强后台运行';
-
-  @override
-  String get backgroundIosEnabledDetail => '为当前任务申请后台执行时间。可另外开启定位或静音音频辅助保活。';
-
-  @override
   String get backgroundNotifications => '任务通知';
 
   @override
@@ -22947,12 +22878,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       '在通知和实时状态中隐藏会话标题、回复内容及工具详情，仅显示通用状态、任务数量和耗时。';
 
   @override
-  String get backgroundLiveActivities => '实时活动';
-
-  @override
-  String get backgroundLiveActivitiesDetail => '在锁屏和灵动岛显示当前任务，是否可用及展示位置由系统决定。';
-
-  @override
   String get backgroundOverlay => '任务悬浮窗';
 
   @override
@@ -22964,26 +22889,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get backgroundLiveUpdatesDetail =>
       '在支持的设备上使用 Android 16 实时通知。系统成功展示实时通知时优先于悬浮窗。';
-
-  @override
-  String get backgroundLocation => '定位辅助保活';
-
-  @override
-  String get backgroundLocationDetail =>
-      '在后台任务期间使用低精度定位辅助运行，不保存坐标或发送给 AI 服务。需要开启增强后台运行并授权定位。';
-
-  @override
-  String get backgroundSilentAudio => '静音音频保活';
-
-  @override
-  String get backgroundSilentAudioDetail =>
-      '后台任务运行时播放静音音频，并让位于录音和朗读。需要开启增强后台运行，无需麦克风权限。';
-
-  @override
-  String get backgroundSpeech => '后台朗读';
-
-  @override
-  String get backgroundSpeechDetail => '锁屏或切到后台时继续系统及网络朗读。关闭时，切到后台会暂停朗读。';
 
   @override
   String get backgroundFinishVisibility => '完成状态保留时间';
@@ -23002,13 +22907,13 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get backgroundFinishVisibilityDetail =>
-      '用于 Android 悬浮窗和 iOS 锁屏完成卡片。回到应用时清理完成状态，最长保留 15 分钟；取消任务立即收起。';
+      '用于完成悬浮窗。回到应用时清理完成状态，最长保留 15 分钟；取消任务立即收起。';
 
   @override
   String get backgroundOverlayIcon => '悬浮窗图标';
 
   @override
-  String get backgroundIconDefault => 'Kelivo 图标';
+  String get backgroundIconDefault => 'Moru 图标';
 
   @override
   String get backgroundIconImage => '选择图片';
@@ -23036,15 +22941,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       '请手动检查设备的自启动和后台限制。Android 无法可靠查询这些厂商设置的授权状态。';
 
   @override
-  String get backgroundLocationPermission => '定位权限';
-
-  @override
-  String get backgroundLocationAlways => '允许持续后台定位';
-
-  @override
-  String get backgroundLocationAlwaysDetail => '可进一步授予“始终允许”定位权限，仅在点击此入口时申请。';
-
-  @override
   String get backgroundSystemSettings => '应用系统设置';
 
   @override
@@ -23054,13 +22950,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get backgroundPermissionDenied => '未允许';
 
   @override
-  String get backgroundPermissionLimited => '使用应用期间';
-
-  @override
   String get backgroundPermissionUnknown => '需手动检查';
-
-  @override
-  String get backgroundPermissionNotDetermined => '尚未申请';
 
   @override
   String get backgroundRuntimeTitle => '当前状态';
@@ -23070,15 +22960,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get backgroundRuntimeIdle => '未运行';
-
-  @override
-  String get backgroundLocationActive => '后台定位';
-
-  @override
-  String get backgroundAudioActive => '静音音频';
-
-  @override
-  String get backgroundActivityActive => '实时活动';
 
   @override
   String get backgroundOverlayActive => '悬浮窗';
@@ -23093,10 +22974,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get backgroundUnsupported => '当前设备不支持或系统设置未允许';
 
   @override
-  String get backgroundIosLimit =>
-      '后台执行由 iOS 控制，实时活动本身不能保活。强退可能停止生成，实时状态可能要等再次打开应用后才能清理。';
-
-  @override
   String get backgroundAndroidLimit =>
       '如任务中断，请检查通知、电池及厂商后台设置。系统强行停止或终止进程仍可能中断生成。';
 
@@ -23105,9 +22982,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get backgroundIconError => '无法导入此图片，请选择其他图片。';
-
-  @override
-  String get backgroundNotificationChannels => '通知渠道';
 
   @override
   String get backgroundCompletionChannel => '任务完成通知渠道';
@@ -23864,7 +23738,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get scheduledTasksCancelled => '已取消';
 
   @override
-  String get scheduledTasksReminderBody => '定时任务已到期，打开 Kelivo 继续。';
+  String get scheduledTasksReminderBody => '定时任务已到期，打开 Moru 继续。';
 
   @override
   String get scheduledTasksResultBody => '定时任务结果已准备好。';
@@ -35181,7 +35055,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get backgroundSettingsTitle => '背景任務';
 
   @override
-  String get backgroundTaskTitle => 'Kelivo 任務';
+  String get backgroundTaskTitle => 'Moru 任務';
 
   @override
   String get backgroundCompleted => '生成完成';
@@ -35230,12 +35104,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '在鎖定螢幕、切到背景或劃掉最近任務後繼續目前的生成。任務執行期間會顯示系統常駐通知。';
 
   @override
-  String get backgroundIosEnabled => '增強背景執行';
-
-  @override
-  String get backgroundIosEnabledDetail => '為目前任務申請背景執行時間。可另外開啟定位或靜音音訊輔助保活。';
-
-  @override
   String get backgroundNotifications => '任務通知';
 
   @override
@@ -35250,13 +35118,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '在通知和即時狀態中隱藏對話標題、回覆內容及工具詳情，僅顯示通用狀態、任務數量和耗時。';
 
   @override
-  String get backgroundLiveActivities => '即時動態';
-
-  @override
-  String get backgroundLiveActivitiesDetail =>
-      '在鎖定畫面和動態島顯示目前任務，是否可用及展示位置由系統決定。';
-
-  @override
   String get backgroundOverlay => '任務懸浮視窗';
 
   @override
@@ -35269,26 +35130,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get backgroundLiveUpdatesDetail =>
       '在支援的裝置上使用 Android 16 即時通知。系統成功展示即時通知時優先於懸浮視窗。';
-
-  @override
-  String get backgroundLocation => '定位輔助保活';
-
-  @override
-  String get backgroundLocationDetail =>
-      '在背景任務期間使用低精度定位輔助執行，不儲存座標或傳送給 AI 服務。需要開啟增強背景執行並授權定位。';
-
-  @override
-  String get backgroundSilentAudio => '靜音音訊保活';
-
-  @override
-  String get backgroundSilentAudioDetail =>
-      '背景任務執行時播放靜音音訊，並讓位於錄音和朗讀。需要開啟增強背景執行，無需麥克風權限。';
-
-  @override
-  String get backgroundSpeech => '背景朗讀';
-
-  @override
-  String get backgroundSpeechDetail => '鎖定螢幕或切到背景時繼續系統及網路朗讀。關閉時，切到背景會暫停朗讀。';
 
   @override
   String get backgroundFinishVisibility => '完成狀態保留時間';
@@ -35307,13 +35148,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backgroundFinishVisibilityDetail =>
-      '用於 Android 懸浮視窗和 iOS 鎖定畫面完成卡片。回到應用程式時清理完成狀態，最長保留 15 分鐘；取消任務立即收起。';
+      '用於完成懸浮視窗。回到應用程式時清理完成狀態，最長保留 15 分鐘；取消任務立即收起。';
 
   @override
   String get backgroundOverlayIcon => '懸浮視窗圖示';
 
   @override
-  String get backgroundIconDefault => 'Kelivo 圖示';
+  String get backgroundIconDefault => 'Moru 圖示';
 
   @override
   String get backgroundIconImage => '選擇圖片';
@@ -35341,15 +35182,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '請手動檢查裝置的自動啟動和背景限制。Android 無法可靠查詢這些廠商設定的授權狀態。';
 
   @override
-  String get backgroundLocationPermission => '定位權限';
-
-  @override
-  String get backgroundLocationAlways => '允許持續背景定位';
-
-  @override
-  String get backgroundLocationAlwaysDetail => '可進一步授予「永遠允許」定位權限，僅在點擊此入口時申請。';
-
-  @override
   String get backgroundSystemSettings => '應用程式系統設定';
 
   @override
@@ -35359,13 +35191,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get backgroundPermissionDenied => '未允許';
 
   @override
-  String get backgroundPermissionLimited => '使用應用程式期間';
-
-  @override
   String get backgroundPermissionUnknown => '需手動檢查';
-
-  @override
-  String get backgroundPermissionNotDetermined => '尚未申請';
 
   @override
   String get backgroundRuntimeTitle => '目前狀態';
@@ -35375,15 +35201,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backgroundRuntimeIdle => '未執行';
-
-  @override
-  String get backgroundLocationActive => '背景定位';
-
-  @override
-  String get backgroundAudioActive => '靜音音訊';
-
-  @override
-  String get backgroundActivityActive => '即時動態';
 
   @override
   String get backgroundOverlayActive => '懸浮視窗';
@@ -35398,10 +35215,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get backgroundUnsupported => '目前裝置不支援或系統設定未允許';
 
   @override
-  String get backgroundIosLimit =>
-      '背景執行由 iOS 控制，即時動態本身無法保活。強制結束可能停止生成，即時狀態可能要等再次開啟應用程式後才能清理。';
-
-  @override
   String get backgroundAndroidLimit =>
       '如任務中斷，請檢查通知、電池及廠商背景設定。系統強制停止或終止程序仍可能中斷生成。';
 
@@ -35410,9 +35223,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backgroundIconError => '無法匯入此圖片，請選擇其他圖片。';
-
-  @override
-  String get backgroundNotificationChannels => '通知管道';
 
   @override
   String get backgroundCompletionChannel => '任務完成通知頻道';
@@ -36169,7 +35979,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get scheduledTasksCancelled => '已取消';
 
   @override
-  String get scheduledTasksReminderBody => '定時任務已到期，開啟 Kelivo 繼續。';
+  String get scheduledTasksReminderBody => '定時任務已到期，開啟 Moru 繼續。';
 
   @override
   String get scheduledTasksResultBody => '定時任務結果已準備好。';

@@ -19932,7 +19932,7 @@ abstract class AppLocalizations {
   /// No description provided for @backgroundTaskTitle.
   ///
   /// In en, this message translates to:
-  /// **'Kelivo task'**
+  /// **'Moru task'**
   String get backgroundTaskTitle;
 
   /// No description provided for @backgroundCompleted.
@@ -20025,18 +20025,6 @@ abstract class AppLocalizations {
   /// **'Keep current tasks running when locked, in the background, or removed from recent apps. A system notification is required while tasks run.'**
   String get backgroundAndroidEnabledDetail;
 
-  /// No description provided for @backgroundIosEnabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Enhanced background execution'**
-  String get backgroundIosEnabled;
-
-  /// No description provided for @backgroundIosEnabledDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Request time to finish current tasks. Enable location or silent audio separately for additional background support.'**
-  String get backgroundIosEnabledDetail;
-
   /// No description provided for @backgroundNotifications.
   ///
   /// In en, this message translates to:
@@ -20061,18 +20049,6 @@ abstract class AppLocalizations {
   /// **'Hide conversation titles, reply text and tool details in notifications and live status. Only generic status, task count and elapsed time are shown.'**
   String get backgroundPrivacyDetail;
 
-  /// No description provided for @backgroundLiveActivities.
-  ///
-  /// In en, this message translates to:
-  /// **'Live Activities'**
-  String get backgroundLiveActivities;
-
-  /// No description provided for @backgroundLiveActivitiesDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Show current tasks on the Lock Screen and Dynamic Island. Availability and visibility depend on the system.'**
-  String get backgroundLiveActivitiesDetail;
-
   /// No description provided for @backgroundOverlay.
   ///
   /// In en, this message translates to:
@@ -20096,42 +20072,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Use Android 16 Live Updates on supported devices. A promoted notification takes priority over the floating capsule.'**
   String get backgroundLiveUpdatesDetail;
-
-  /// No description provided for @backgroundLocation.
-  ///
-  /// In en, this message translates to:
-  /// **'Location-assisted execution'**
-  String get backgroundLocation;
-
-  /// No description provided for @backgroundLocationDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Use coarse location updates during background tasks. Coordinates are not stored or sent to AI services. Requires enhanced background execution and location permission.'**
-  String get backgroundLocationDetail;
-
-  /// No description provided for @backgroundSilentAudio.
-  ///
-  /// In en, this message translates to:
-  /// **'Silent audio keep-alive'**
-  String get backgroundSilentAudio;
-
-  /// No description provided for @backgroundSilentAudioDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Play silent audio while background tasks run. Yields to recording and speech playback. Requires enhanced background execution; no microphone permission is needed.'**
-  String get backgroundSilentAudioDetail;
-
-  /// No description provided for @backgroundSpeech.
-  ///
-  /// In en, this message translates to:
-  /// **'Background read-aloud'**
-  String get backgroundSpeech;
-
-  /// No description provided for @backgroundSpeechDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Continue system and network read-aloud when locked or in the background. When disabled, moving to the background pauses speech.'**
-  String get backgroundSpeechDetail;
 
   /// No description provided for @backgroundFinishVisibility.
   ///
@@ -20166,7 +20106,7 @@ abstract class AppLocalizations {
   /// No description provided for @backgroundFinishVisibilityDetail.
   ///
   /// In en, this message translates to:
-  /// **'Applies to the Android capsule and iOS Lock Screen completion card. Returning to the app clears completed status; the maximum is 15 minutes. Cancellation dismisses immediately.'**
+  /// **'Applies to the completion capsule. Returning to the app clears completed status; the maximum is 15 minutes. Cancellation dismisses immediately.'**
   String get backgroundFinishVisibilityDetail;
 
   /// No description provided for @backgroundOverlayIcon.
@@ -20178,7 +20118,7 @@ abstract class AppLocalizations {
   /// No description provided for @backgroundIconDefault.
   ///
   /// In en, this message translates to:
-  /// **'Kelivo icon'**
+  /// **'Moru icon'**
   String get backgroundIconDefault;
 
   /// No description provided for @backgroundIconImage.
@@ -20229,24 +20169,6 @@ abstract class AppLocalizations {
   /// **'Check your device’s autostart and background restrictions manually. Android does not provide a reliable permission query for these vendor settings.'**
   String get backgroundAutostartDetail;
 
-  /// No description provided for @backgroundLocationPermission.
-  ///
-  /// In en, this message translates to:
-  /// **'Location permission'**
-  String get backgroundLocationPermission;
-
-  /// No description provided for @backgroundLocationAlways.
-  ///
-  /// In en, this message translates to:
-  /// **'Allow location in the background'**
-  String get backgroundLocationAlways;
-
-  /// No description provided for @backgroundLocationAlwaysDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'You can grant Always access for background location. Permission is requested only when you choose this action.'**
-  String get backgroundLocationAlwaysDetail;
-
   /// No description provided for @backgroundSystemSettings.
   ///
   /// In en, this message translates to:
@@ -20265,23 +20187,11 @@ abstract class AppLocalizations {
   /// **'Not allowed'**
   String get backgroundPermissionDenied;
 
-  /// No description provided for @backgroundPermissionLimited.
-  ///
-  /// In en, this message translates to:
-  /// **'While using the app'**
-  String get backgroundPermissionLimited;
-
   /// No description provided for @backgroundPermissionUnknown.
   ///
   /// In en, this message translates to:
   /// **'Check manually'**
   String get backgroundPermissionUnknown;
-
-  /// No description provided for @backgroundPermissionNotDetermined.
-  ///
-  /// In en, this message translates to:
-  /// **'Not requested'**
-  String get backgroundPermissionNotDetermined;
 
   /// No description provided for @backgroundRuntimeTitle.
   ///
@@ -20300,24 +20210,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Inactive'**
   String get backgroundRuntimeIdle;
-
-  /// No description provided for @backgroundLocationActive.
-  ///
-  /// In en, this message translates to:
-  /// **'Background location'**
-  String get backgroundLocationActive;
-
-  /// No description provided for @backgroundAudioActive.
-  ///
-  /// In en, this message translates to:
-  /// **'Silent audio'**
-  String get backgroundAudioActive;
-
-  /// No description provided for @backgroundActivityActive.
-  ///
-  /// In en, this message translates to:
-  /// **'Live Activity'**
-  String get backgroundActivityActive;
 
   /// No description provided for @backgroundOverlayActive.
   ///
@@ -20343,12 +20235,6 @@ abstract class AppLocalizations {
   /// **'Unavailable on this device or disabled in system settings'**
   String get backgroundUnsupported;
 
-  /// No description provided for @backgroundIosLimit.
-  ///
-  /// In en, this message translates to:
-  /// **'iOS controls background execution. Live Activities alone do not keep the app running. Force-quitting can stop generation and delay removal of live status until the app opens again.'**
-  String get backgroundIosLimit;
-
   /// No description provided for @backgroundAndroidLimit.
   ///
   /// In en, this message translates to:
@@ -20366,12 +20252,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to import this image. Please choose another image.'**
   String get backgroundIconError;
-
-  /// No description provided for @backgroundNotificationChannels.
-  ///
-  /// In en, this message translates to:
-  /// **'Notification channels'**
-  String get backgroundNotificationChannels;
 
   /// No description provided for @backgroundCompletionChannel.
   ///
@@ -21804,7 +21684,7 @@ abstract class AppLocalizations {
   /// No description provided for @scheduledTasksReminderBody.
   ///
   /// In en, this message translates to:
-  /// **'Your scheduled task is due. Open Kelivo to continue.'**
+  /// **'Your scheduled task is due. Open Moru to continue.'**
   String get scheduledTasksReminderBody;
 
   /// No description provided for @scheduledTasksResultBody.

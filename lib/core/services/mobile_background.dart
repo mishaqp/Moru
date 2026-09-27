@@ -47,7 +47,7 @@ class _BackgroundTask {
   bool interrupted = false;
 }
 
-/// Owns task identities for both platforms. Native code receives whole snapshots
+/// Owns background task identities. Native code receives whole snapshots
 /// on one serial channel; a late update/finish cannot resurrect a removed run.
 class MobileBackgroundCoordinator extends ChangeNotifier
     with WidgetsBindingObserver {
@@ -73,9 +73,7 @@ class MobileBackgroundCoordinator extends ChangeNotifier
   bool _initialized = false;
   bool _foreground = true;
   bool get isForeground => _foreground;
-  bool get supported =>
-      !kIsWeb &&
-      (platform == TargetPlatform.android || platform == TargetPlatform.iOS);
+  bool get supported => !kIsWeb && platform == TargetPlatform.android;
   String? Function()? visibleConversation;
 
   /// Whether [taskId] (this task's own id -- see [finish]) belongs to a
@@ -90,7 +88,6 @@ class MobileBackgroundCoordinator extends ChangeNotifier
   /// by `HomePageController._setupBrowserAskAi` to
   /// `BrowserAgentSession.instance.consumeVisibleAskAiTask`.
   bool Function(String taskId, String conversationId)? visibleBrowserAskAiTask;
-  Future<void> Function()? pauseSpeech;
   Future<void>? _tail;
   Timer? _updateTimer;
   int _revision = 0;
@@ -136,14 +133,7 @@ class MobileBackgroundCoordinator extends ChangeNotifier
     _l10n = l10n;
     await NotificationService.configureLocalizations(l10n);
     await initialize();
-    if (changed) {
-      if (platform == TargetPlatform.iOS &&
-          !_foreground &&
-          !settings.backgroundSpeechEnabled) {
-        await pauseSpeech?.call();
-      }
-      await _sync();
-    }
+    if (changed) await _sync();
   }
 
   Future<void> start({
@@ -226,7 +216,7 @@ class MobileBackgroundCoordinator extends ChangeNotifier
           await _notificationSender(
             conversationId: task.conversationId,
             title: _settings.privacyMode || task.title.trim().isEmpty
-                ? (l10n?.backgroundTaskTitle ?? 'Kelivo')
+                ? (l10n?.backgroundTaskTitle ?? 'Moru')
                 : task.title,
             body:
                 (!task.scheduled || task.scheduledPreview) &&
@@ -240,8 +230,8 @@ class MobileBackgroundCoordinator extends ChangeNotifier
           _recordError(error);
         }
       }
-      // Earlier queued updates retain their active-task snapshot, so they
-      // cannot release the iOS assertion before this notification is posted.
+      // Earlier queued updates retain their active-task snapshot, so the
+      // native runtime keeps the task until this notification is posted.
       await _sendSnapshot(snapshot);
     });
   }
@@ -269,7 +259,7 @@ class MobileBackgroundCoordinator extends ChangeNotifier
       'id': task.id,
       'conversationId': task.conversationId,
       'title': _settings.privacyMode
-          ? (_l10n?.backgroundTaskTitle ?? 'Kelivo')
+          ? (_l10n?.backgroundTaskTitle ?? 'Moru')
           : task.title,
       'detail': _settings.privacyMode
           ? (_l10n?.backgroundWorking ?? 'Working')
@@ -294,7 +284,7 @@ class MobileBackgroundCoordinator extends ChangeNotifier
     'tasks': _tasks.values.map(_taskMap).toList(),
     'terminal': terminal,
     'labels': {
-      'app': 'Kelivo',
+      'app': 'Moru',
       'working': _l10n?.backgroundWorking ?? 'Working',
       'tasks': _l10n?.backgroundTasks ?? 'Tasks',
       'stop': _l10n?.backgroundStopTasks ?? 'Stop tasks',
@@ -314,7 +304,7 @@ class MobileBackgroundCoordinator extends ChangeNotifier
         'privacyMode': true,
       };
       void redact(Map<String, Object?> task, {bool terminal = false}) {
-        task['title'] = _l10n?.backgroundTaskTitle ?? 'Kelivo';
+        task['title'] = _l10n?.backgroundTaskTitle ?? 'Moru';
         if (!terminal) task['detail'] = _l10n?.backgroundWorking ?? 'Working';
         task['tokens'] = 0;
       }
@@ -358,33 +348,6 @@ class MobileBackgroundCoordinator extends ChangeNotifier
     }
   }
 
-  /// Await before a real audio source takes ownership; release in all terminal
-  /// paths. Native silent audio must never reconfigure an active recording.
-  final Set<String> _captureOwners = {};
-  bool get hasCaptureAudio => _captureOwners.isNotEmpty;
-
-  Future<void> setAudioOwner(String owner, bool active) async {
-    if (platform != TargetPlatform.iOS) return;
-    if (owner.startsWith('capture:')) {
-      if (active) {
-        _captureOwners.add(owner);
-        try {
-          await pauseSpeech?.call();
-        } catch (error) {
-          _recordError(error);
-        }
-      } else {
-        _captureOwners.remove(owner);
-      }
-    }
-    await _enqueue(() async {
-      await _channel.invokeMethod<void>('audioOwner', {
-        'owner': owner,
-        'active': active,
-      });
-    });
-  }
-
   Future<void> _handleNativeCall(MethodCall call) async {
     if (call.method == 'openConversation') {
       final id = call.arguments as String?;
@@ -400,13 +363,10 @@ class MobileBackgroundCoordinator extends ChangeNotifier
         }
       }
       // A channel callback must not wait for cancellation to call back into the
-      // same native sync queue (notably while an iOS assertion is expiring).
+      // same native sync queue.
       for (final task in tasks) {
         unawaited(task.cancel().catchError(_recordError));
       }
-    } else if (call.method == 'pauseSpeech') {
-      final pause = pauseSpeech;
-      if (pause != null) unawaited(pause().catchError(_recordError));
     } else if (call.method == 'statusChanged') {
       unawaited(refreshStatus());
     }
@@ -421,11 +381,6 @@ class MobileBackgroundCoordinator extends ChangeNotifier
         state == AppLifecycleState.detached ||
         state == AppLifecycleState.hidden) {
       _foreground = false;
-      if (platform == TargetPlatform.iOS &&
-          !_settings.backgroundSpeechEnabled) {
-        final pause = pauseSpeech;
-        if (pause != null) unawaited(pause().catchError(_recordError));
-      }
     }
   }
 

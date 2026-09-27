@@ -37,7 +37,7 @@ void main() {
       await settings.setMobileBackground(
         settings.mobileBackground.copyWith(
           androidEnabled: true,
-          locationEnabled: true,
+          liveUpdatesEnabled: true,
           overlayIconKind: 'emoji',
           overlayIconValue: '🐱',
           completionVisibility: BackgroundCompletionVisibility.untilForeground,
@@ -51,10 +51,8 @@ void main() {
       final reloaded = SettingsProvider(harness.preferences);
       await reloaded.loaded;
       expect(reloaded.mobileBackground.androidEnabled, isTrue);
-      expect(reloaded.mobileBackground.locationEnabled, isTrue);
-      expect(reloaded.mobileBackground.iosEnabled, isFalse);
+      expect(reloaded.mobileBackground.liveUpdatesEnabled, isTrue);
       expect(reloaded.mobileBackground.notificationsEnabled, isFalse);
-      expect(reloaded.mobileBackground.backgroundSpeechEnabled, isFalse);
       expect(reloaded.mobileBackground.overlayIconValue, '🐱');
       expect(reloaded.mobileBackground.completionVisibility.seconds, 900);
       expect(reloaded.mobileBackground.overlayAppearance.width, 88);
