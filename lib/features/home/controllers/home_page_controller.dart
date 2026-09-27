@@ -40,7 +40,6 @@ import '../../chat/widgets/message_edit_sheet.dart';
 import '../pages/home_mobile_layout.dart' show kChatHeaderHeight;
 import '../../chat/widgets/message_export_sheet.dart';
 import 'chat_action_bus.dart';
-import 'sidebar_tab_bus.dart';
 import 'chat_actions.dart';
 import 'chat_controller.dart';
 import 'stream_controller.dart' as stream_ctrl;
@@ -60,7 +59,6 @@ import '../services/file_upload_service.dart';
 import '../utils/chat_layout_constants.dart';
 import '../widgets/chat_input_bar.dart';
 import '../widgets/share_destination_sheet.dart';
-import '../../model/widgets/model_select_sheet.dart';
 
 enum ChatSelectionMode { share, delete }
 
@@ -268,10 +266,7 @@ class HomePageController extends ChangeNotifier {
 
   // Sidebar state (tablet/desktop)
   bool _tabletSidebarOpen = true;
-  bool _rightSidebarOpen = true;
-  double _embeddedSidebarWidth = 300;
-  double _rightSidebarWidth = 300;
-  bool _desktopUiInited = false;
+  static const double _embeddedSidebarWidth = 300;
 
   // Drawer state
   double _lastDrawerValue = 0.0;
@@ -303,8 +298,6 @@ class HomePageController extends ChangeNotifier {
 
   // Animation tuning
   static const Duration _postSwitchScrollDelay = Duration(milliseconds: 220);
-  static const double _sidebarMinWidth = 200;
-  static const double _sidebarMaxWidth = 360;
 
   // ============================================================================
   // Getters - State Access
@@ -331,23 +324,17 @@ class HomePageController extends ChangeNotifier {
   bool get showThinkingContent => _showThinkingContent;
   bool get isDragHovering => _isDragHovering;
   bool get tabletSidebarOpen => _tabletSidebarOpen;
-  bool get rightSidebarOpen => _rightSidebarOpen;
   double get embeddedSidebarWidth => _embeddedSidebarWidth;
-  double get rightSidebarWidth => _rightSidebarWidth;
   double get inputBarHeight => inputBarHeightListenable.value;
 
   /// Height the chat must keep clear at the bottom, strip included.
   double get composerAreaHeight => composerAreaHeightListenable.value;
-  bool get desktopUiInited => _desktopUiInited;
   bool get isGlobalSearchMode => _isGlobalSearchMode;
   String get globalSearchQuery => _globalSearchQuery;
   String? get spotlightMessageId => _spotlightMessageId;
   int get spotlightToken => _spotlightToken;
   UserMessageEditState? get userMessageEditState => _userMessageEditState;
   bool get isUserMessageEditActive => _userMessageEditState != null;
-
-  static double get sidebarMinWidth => _sidebarMinWidth;
-  static double get sidebarMaxWidth => _sidebarMaxWidth;
 
   // Delegate to ChatController
   Conversation? get currentConversation => _chatController.currentConversation;
@@ -429,7 +416,7 @@ class HomePageController extends ChangeNotifier {
     _wireViewModelCallbacks();
     _initializeProviders();
     _setupKeyboardListeners();
-    _setupDesktopFeatures();
+    _setupChatActions();
     _setupNotificationActions();
     _setupBrowserAskAi();
   }
@@ -688,57 +675,14 @@ class HomePageController extends ChangeNotifier {
 
   void _setupKeyboardListeners() {}
 
-  void _setupDesktopFeatures() {
-    if (isDesktopPlatform) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _inputFocus.requestFocus();
-      });
-    }
+  void _setupChatActions() {
     _chatActionSub = ChatActionBus.instance.stream.listen((action) {
-      final ctx = _context;
-      if (!ctx.mounted) return;
-      final settingsProvider = ctx.read<SettingsProvider>();
+      if (!_context.mounted) return;
       switch (action) {
-        case ChatAction.newTopic:
-          unawaited(createNewConversationAnimated());
-          break;
-        case ChatAction.toggleLeftPanelTopics:
-        case ChatAction.toggleLeftPanelAssistants:
-          if (settingsProvider.desktopTopicPosition !=
-              DesktopTopicPosition.left) {
-            return;
-          }
-          final wantAssistants =
-              (action == ChatAction.toggleLeftPanelAssistants);
-          if (!_tabletSidebarOpen) {
-            _tabletSidebarOpen = true;
-            notifyListeners();
-            try {
-              settingsProvider.setDesktopSidebarOpen(true);
-            } catch (_) {}
-          }
-          if (wantAssistants) {
-            DesktopSidebarTabBus.instance.switchToAssistants();
-          } else {
-            DesktopSidebarTabBus.instance.switchToTopics();
-          }
-          break;
-        case ChatAction.focusInput:
-          if (isDesktopPlatform) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _inputFocus.requestFocus();
-            });
-          }
-          break;
-        case ChatAction.switchModel:
-          unawaited(showModelSelectSheet(ctx, controller: this));
-          break;
         case ChatAction.enterGlobalSearch:
           enterGlobalSearchMode(preserveQuery: true);
-          break;
         case ChatAction.exitGlobalSearch:
           exitGlobalSearchMode(clearQuery: true);
-          break;
       }
     });
   }
@@ -1028,25 +972,6 @@ class HomePageController extends ChangeNotifier {
       } catch (_) {
         // Warm-up failures lose nothing user-visible.
       }
-    }
-  }
-
-  void initDesktopUi() {
-    if (PlatformUtils.isDesktopTarget && !_desktopUiInited) {
-      _desktopUiInited = true;
-      try {
-        final sp = _context.read<SettingsProvider>();
-        _embeddedSidebarWidth = sp.desktopSidebarWidth.clamp(
-          _sidebarMinWidth,
-          _sidebarMaxWidth,
-        );
-        _tabletSidebarOpen = sp.desktopSidebarOpen;
-        _rightSidebarOpen = sp.desktopRightSidebarOpen;
-        _rightSidebarWidth = sp.desktopRightSidebarWidth.clamp(
-          _sidebarMinWidth,
-          _sidebarMaxWidth,
-        );
-      } catch (_) {}
     }
   }
 
@@ -2554,54 +2479,6 @@ class HomePageController extends ChangeNotifier {
     try {
       _context.read<SettingsProvider>().setDesktopSidebarOpen(
         _tabletSidebarOpen,
-      );
-    } catch (_) {}
-  }
-
-  void toggleRightSidebar() {
-    dismissKeyboard();
-    try {
-      if (_context.read<SettingsProvider>().hapticsOnDrawer) {
-        Haptics.drawerPulse();
-      }
-    } catch (_) {}
-    _rightSidebarOpen = !_rightSidebarOpen;
-    notifyListeners();
-    try {
-      _context.read<SettingsProvider>().setDesktopRightSidebarOpen(
-        _rightSidebarOpen,
-      );
-    } catch (_) {}
-  }
-
-  void updateSidebarWidth(double dx) {
-    _embeddedSidebarWidth = (_embeddedSidebarWidth + dx).clamp(
-      _sidebarMinWidth,
-      _sidebarMaxWidth,
-    );
-    notifyListeners();
-  }
-
-  void saveSidebarWidth() {
-    try {
-      _context.read<SettingsProvider>().setDesktopSidebarWidth(
-        _embeddedSidebarWidth,
-      );
-    } catch (_) {}
-  }
-
-  void updateRightSidebarWidth(double dx) {
-    _rightSidebarWidth = (_rightSidebarWidth - dx).clamp(
-      _sidebarMinWidth,
-      _sidebarMaxWidth,
-    );
-    notifyListeners();
-  }
-
-  void saveRightSidebarWidth() {
-    try {
-      _context.read<SettingsProvider>().setDesktopRightSidebarWidth(
-        _rightSidebarWidth,
       );
     } catch (_) {}
   }

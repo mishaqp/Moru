@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
 import 'dart:async';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -10,18 +8,13 @@ import '../../../l10n/app_localizations.dart';
 import '../widgets/side_drawer.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/models/assistant.dart';
-import '../../../core/models/workspace_binding.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/assistant_provider.dart';
-import '../../../core/providers/workspace_provider.dart';
-import '../../../core/services/chat/chat_service.dart';
-import '../../workspace/widgets/desktop_workspace_bar.dart';
 import '../../../shared/animations/widgets.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../utils/brand_assets.dart';
 import '../controllers/chat_action_bus.dart';
-import '../controllers/sidebar_tab_bus.dart';
 import '../../chat/widgets/frosted/chat_frosted_backdrop.dart';
 import '../widgets/assistant_avatar.dart';
 import '../widgets/assistant_entry_actions.dart';
@@ -41,14 +34,9 @@ class HomeDesktopScaffold extends StatelessWidget {
     required this.modelDisplay,
     // Sidebar state
     required this.tabletSidebarOpen,
-    required this.rightSidebarOpen,
     required this.embeddedSidebarWidth,
-    required this.rightSidebarWidth,
-    required this.sidebarMinWidth,
-    required this.sidebarMaxWidth,
     // Callbacks
     required this.onToggleSidebar,
-    required this.onToggleRightSidebar,
     required this.onSelectConversation,
     required this.onNewConversation,
     required this.onCreateNewConversation,
@@ -60,10 +48,6 @@ class HomeDesktopScaffold extends StatelessWidget {
     required this.globalSearchQuery,
     required this.onGlobalSearchQueryChanged,
     required this.onOpenGlobalSearchResult,
-    required this.onSidebarWidthChanged,
-    required this.onSidebarWidthChangeEnd,
-    required this.onRightSidebarWidthChanged,
-    required this.onRightSidebarWidthChangeEnd,
     required this.buildAssistantBackground,
     this.appBarOverride,
     required this.body,
@@ -78,15 +62,10 @@ class HomeDesktopScaffold extends StatelessWidget {
 
   // Sidebar state
   final bool tabletSidebarOpen;
-  final bool rightSidebarOpen;
   final double embeddedSidebarWidth;
-  final double rightSidebarWidth;
-  final double sidebarMinWidth;
-  final double sidebarMaxWidth;
 
   // Callbacks
   final VoidCallback onToggleSidebar;
-  final VoidCallback onToggleRightSidebar;
   final void Function(String id) onSelectConversation;
   final VoidCallback onNewConversation;
   final Future<void> Function() onCreateNewConversation;
@@ -99,10 +78,6 @@ class HomeDesktopScaffold extends StatelessWidget {
   final ValueChanged<String> onGlobalSearchQueryChanged;
   final Future<void> Function(String conversationId, String messageId)
   onOpenGlobalSearchResult;
-  final void Function(double dx) onSidebarWidthChanged;
-  final VoidCallback onSidebarWidthChangeEnd;
-  final void Function(double dx) onRightSidebarWidthChanged;
-  final VoidCallback onRightSidebarWidthChangeEnd;
   final Widget Function(BuildContext context) buildAssistantBackground;
   final PreferredSizeWidget? appBarOverride;
   final Widget body;
@@ -110,17 +85,9 @@ class HomeDesktopScaffold extends StatelessWidget {
   static const Duration _sidebarAnimDuration = Duration(milliseconds: 260);
   static const Curve _sidebarAnimCurve = Curves.easeOutCubic;
 
-  bool get _isDesktop =>
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux;
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final sp = context.watch<SettingsProvider>();
-    final topicsOnRight = sp.desktopTopicPosition == DesktopTopicPosition.right;
-    final workspaceBound = _isDesktop && _hasBoundWorkspace(context);
 
     return ChatFrostedBackdrop(
       backdrop: buildAssistantBackground(context),
@@ -128,27 +95,19 @@ class HomeDesktopScaffold extends StatelessWidget {
         child: Row(
           children: [
             // Left sidebar
-            _buildLeftSidebar(context, cs, topicsOnRight),
-            // Left sidebar resize handle / divider
-            if (_isDesktop)
-              SidebarResizeHandle(
-                visible: tabletSidebarOpen,
-                onDrag: onSidebarWidthChanged,
-                onDragEnd: onSidebarWidthChangeEnd,
-              )
-            else
-              AnimatedContainer(
-                duration: _sidebarAnimDuration,
-                curve: _sidebarAnimCurve,
-                width: tabletSidebarOpen ? 0.6 : 0,
-                child: tabletSidebarOpen
-                    ? VerticalDivider(
-                        width: 0.6,
-                        thickness: 0.5,
-                        color: cs.outlineVariant.withValues(alpha: 0.20),
-                      )
-                    : const SizedBox.shrink(),
-              ),
+            _buildLeftSidebar(context),
+            AnimatedContainer(
+              duration: _sidebarAnimDuration,
+              curve: _sidebarAnimCurve,
+              width: tabletSidebarOpen ? 0.6 : 0,
+              child: tabletSidebarOpen
+                  ? VerticalDivider(
+                      width: 0.6,
+                      thickness: 0.5,
+                      color: cs.outlineVariant.withValues(alpha: 0.20),
+                    )
+                  : const SizedBox.shrink(),
+            ),
             // Main content
             Expanded(
               child: Scaffold(
@@ -156,31 +115,17 @@ class HomeDesktopScaffold extends StatelessWidget {
                 resizeToAvoidBottomInset: true,
                 extendBodyBehindAppBar: true,
                 backgroundColor: Colors.transparent,
-                appBar:
-                    appBarOverride ??
-                    _buildAppBar(
-                      context,
-                      cs,
-                      topicsOnRight,
-                      workspaceBound: workspaceBound,
-                    ),
+                appBar: appBarOverride ?? _buildAppBar(context, cs),
                 body: body,
               ),
             ),
-            _buildWorkspaceBar(context, cs, workspaceBound: workspaceBound),
-            // Right sidebar (desktop only with topics on right)
-            _buildRightSidebar(context, cs, topicsOnRight),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLeftSidebar(
-    BuildContext context,
-    ColorScheme cs,
-    bool topicsOnRight,
-  ) {
+  Widget _buildLeftSidebar(BuildContext context) {
     final sidebar = SideDrawer(
       embedded: true,
       embeddedWidth: embeddedSidebarWidth,
@@ -188,8 +133,6 @@ class HomeDesktopScaffold extends StatelessWidget {
       assistantName: _getAssistantName(context),
       closePickerTicker: assistantPickerCloseTick,
       loadingConversationIds: loadingConversationIds,
-      useDesktopTabs: _isDesktop && !topicsOnRight,
-      desktopAssistantsOnly: _isDesktop && topicsOnRight,
       globalSearchMode: globalSearchMode,
       globalSearchQuery: globalSearchQuery,
       onGlobalSearchQueryChanged: onGlobalSearchQueryChanged,
@@ -221,120 +164,6 @@ class HomeDesktopScaffold extends StatelessWidget {
     );
   }
 
-  Widget _buildRightSidebar(
-    BuildContext context,
-    ColorScheme cs,
-    bool topicsOnRight,
-  ) {
-    if (!_isDesktop || !topicsOnRight) return const SizedBox.shrink();
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SidebarResizeHandle(
-          visible: rightSidebarOpen,
-          onDrag: onRightSidebarWidthChanged,
-          onDragEnd: onRightSidebarWidthChangeEnd,
-        ),
-        AnimatedContainer(
-          duration: _sidebarAnimDuration,
-          curve: _sidebarAnimCurve,
-          width: rightSidebarOpen ? rightSidebarWidth : 0,
-          child: ClipRect(
-            child: OverflowBox(
-              alignment: Alignment.centerRight,
-              minWidth: 0,
-              maxWidth: rightSidebarWidth,
-              child: SizedBox(
-                width: rightSidebarWidth,
-                child: SideDrawer(
-                  embedded: true,
-                  embeddedWidth: rightSidebarWidth,
-                  userName: context.watch<UserProvider>().name,
-                  assistantName: _getAssistantName(context),
-                  closePickerTicker: assistantPickerCloseTick,
-                  loadingConversationIds: loadingConversationIds,
-                  useDesktopTabs: false,
-                  desktopTopicsOnly: true,
-                  globalSearchMode: false,
-                  globalSearchQuery: '',
-                  onGlobalSearchQueryChanged: (_) {},
-                  onEnterGlobalSearch: () {},
-                  onExitGlobalSearch: () {},
-                  onOpenGlobalSearchResult: (_, __) async {},
-                  onSelectConversation: (id, {closeDrawer = true}) =>
-                      onSelectConversation(id),
-                  onNewConversation: ({closeDrawer = true}) =>
-                      onNewConversation(),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  bool _hasBoundWorkspace(BuildContext context) {
-    try {
-      final chat = context.watch<ChatService>();
-      final workspaces = context.watch<WorkspaceProvider>();
-      final id = chat.currentConversationId;
-      if (id == null) return false;
-      return WorkspaceBinding.extrasHaveWorkspace(
-        chat.getConversation(id)?.extras,
-        (workspaceId) => workspaces.byId(workspaceId) != null,
-      );
-    } on ProviderNotFoundException {
-      return false;
-    }
-  }
-
-  Widget _buildWorkspaceBar(
-    BuildContext context,
-    ColorScheme cs, {
-    required bool workspaceBound,
-  }) {
-    if (!_isDesktop) return const SizedBox.shrink();
-    final open =
-        workspaceBound &&
-        context.watch<SettingsProvider>().desktopWorkspaceBarOpen;
-    final conversationId = context.watch<ChatService>().currentConversationId;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AnimatedContainer(
-          duration: _sidebarAnimDuration,
-          curve: _sidebarAnimCurve,
-          width: open ? 0.6 : 0,
-          child: open
-              ? VerticalDivider(
-                  width: 0.6,
-                  thickness: 0.5,
-                  color: cs.outlineVariant.withValues(alpha: 0.20),
-                )
-              : const SizedBox.shrink(),
-        ),
-        AnimatedContainer(
-          duration: _sidebarAnimDuration,
-          curve: _sidebarAnimCurve,
-          width: open ? DesktopWorkspaceBar.width : 0,
-          child: ClipRect(
-            child: OverflowBox(
-              alignment: Alignment.centerRight,
-              minWidth: 0,
-              maxWidth: DesktopWorkspaceBar.width,
-              child: SizedBox(
-                width: DesktopWorkspaceBar.width,
-                child: DesktopWorkspaceBar(conversationId: conversationId),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   String _getAssistantName(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final a = context.watch<AssistantProvider>().currentAssistant;
@@ -342,12 +171,7 @@ class HomeDesktopScaffold extends StatelessWidget {
     return (n == null || n.isEmpty) ? l10n.homePageDefaultAssistant : n;
   }
 
-  PreferredSizeWidget _buildAppBar(
-    BuildContext context,
-    ColorScheme cs,
-    bool topicsOnRight, {
-    required bool workspaceBound,
-  }) {
+  PreferredSizeWidget _buildAppBar(BuildContext context, ColorScheme cs) {
     return AppBar(
       centerTitle: false,
       systemOverlayStyle: (Theme.of(context).brightness == Brightness.dark)
@@ -379,11 +203,7 @@ class HomeDesktopScaffold extends StatelessWidget {
       ),
       titleSpacing: 2,
       title: _buildTitle(context, cs),
-      actions: _buildActions(
-        context,
-        topicsOnRight,
-        workspaceBound: workspaceBound,
-      ),
+      actions: _buildActions(context),
     );
   }
 
@@ -567,23 +387,12 @@ class HomeDesktopScaffold extends StatelessWidget {
   }) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onSecondaryTapDown: !_isDesktop || assistant == null
-          ? null
-          : (details) {
-              AssistantEntryActions.showAssistantItemMenu(
-                context: context,
-                assistant: assistant,
-                globalPosition: details.globalPosition,
-              );
-            },
       child: IosCardPress(
         borderRadius: BorderRadius.circular(999),
         baseColor: Colors.transparent,
         padding: const EdgeInsets.all(2),
-        onTap: _isDesktop
-            ? () => _revealAssistantTopics(context)
-            : onToggleSidebar,
-        onLongPress: !_isDesktop && assistant != null
+        onTap: onToggleSidebar,
+        onLongPress: assistant != null
             ? () {
                 AssistantEntryActions.openAssistantSettings(
                   context,
@@ -600,57 +409,8 @@ class HomeDesktopScaffold extends StatelessWidget {
     );
   }
 
-  void _revealAssistantTopics(BuildContext context) {
-    final topicsOnRight =
-        context.read<SettingsProvider>().desktopTopicPosition ==
-        DesktopTopicPosition.right;
-    if (topicsOnRight) {
-      if (!rightSidebarOpen) {
-        onToggleRightSidebar();
-      }
-      return;
-    }
-    if (!tabletSidebarOpen) {
-      onToggleSidebar();
-    }
-    DesktopSidebarTabBus.instance.switchToTopics();
-  }
-
-  List<Widget> _buildActions(
-    BuildContext context,
-    bool topicsOnRight, {
-    required bool workspaceBound,
-  }) {
-    final l10n = AppLocalizations.of(context)!;
+  List<Widget> _buildActions(BuildContext context) {
     return [
-      if (_isDesktop && workspaceBound)
-        Tooltip(
-          message: l10n.workspaceDeskBarToggle,
-          child: IosIconButton(
-            size: 20,
-            padding: const EdgeInsets.all(8),
-            minSize: 40,
-            icon: Lucide.panelRight,
-            semanticLabel: l10n.workspaceDeskBarToggle,
-            onTap: () {
-              final settings = context.read<SettingsProvider>();
-              unawaited(
-                settings.setDesktopWorkspaceBarOpen(
-                  !settings.desktopWorkspaceBarOpen,
-                ),
-              );
-            },
-          ),
-        ),
-      // Right sidebar toggle (desktop + topics on right)
-      if (_isDesktop && topicsOnRight)
-        IosIconButton(
-          size: 20,
-          padding: const EdgeInsets.all(8),
-          minSize: 40,
-          icon: Lucide.panelRight,
-          onTap: onToggleRightSidebar,
-        ),
       const SizedBox(width: 2),
       IosIconButton(
         size: 20,
@@ -680,55 +440,5 @@ class HomeDesktopScaffold extends StatelessWidget {
       ),
       const SizedBox(width: 6),
     ];
-  }
-}
-
-/// Sidebar resize handle widget for desktop
-class SidebarResizeHandle extends StatefulWidget {
-  const SidebarResizeHandle({
-    super.key,
-    required this.visible,
-    required this.onDrag,
-    this.onDragEnd,
-  });
-
-  final bool visible;
-  final ValueChanged<double> onDrag;
-  final VoidCallback? onDragEnd;
-
-  @override
-  State<SidebarResizeHandle> createState() => _SidebarResizeHandleState();
-}
-
-class _SidebarResizeHandleState extends State<SidebarResizeHandle> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    if (!widget.visible) return const SizedBox.shrink();
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onHorizontalDragUpdate: (details) => widget.onDrag(details.delta.dx),
-      onHorizontalDragEnd: (_) => widget.onDragEnd?.call(),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.resizeColumn,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: Container(
-          width: 6,
-          height: double.infinity,
-          color: Colors.transparent,
-          alignment: Alignment.center,
-          child: Container(
-            width: 1,
-            height: double.infinity,
-            color: _hovered
-                ? cs.primary.withValues(alpha: 0.28)
-                : cs.outlineVariant.withValues(alpha: 0.10),
-          ),
-        ),
-      ),
-    );
   }
 }
