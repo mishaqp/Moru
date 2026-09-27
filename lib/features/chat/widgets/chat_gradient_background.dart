@@ -19,6 +19,7 @@ class ChatGradientBackgroundHost extends StatefulWidget {
     this.active = true,
     this.offset = Offset.zero,
     this.phase = 0,
+    this.accent,
     this.onFrame,
     required this.child,
   });
@@ -26,6 +27,9 @@ class ChatGradientBackgroundHost extends StatefulWidget {
   final bool enabled;
   final bool active;
   final Offset offset;
+
+  /// Glass theme: the largest colour field takes the theme accent.
+  final Color? accent;
 
   /// An actual point on the shared animation timeline, also used when static.
   final double phase;
@@ -147,9 +151,15 @@ class _ChatGradientBackgroundHostState extends State<ChatGradientBackgroundHost>
         } else if (_artwork == null ||
             _artwork!.size != size ||
             _artwork!.dark != dark ||
-            _artwork!.offset != widget.offset) {
+            _artwork!.offset != widget.offset ||
+            _artwork!.accent != widget.accent) {
           _artwork?.dispose();
-          _artwork = _GradientArtwork(size, dark, widget.offset);
+          _artwork = _GradientArtwork(
+            size,
+            dark,
+            widget.offset,
+            accent: widget.accent,
+          );
         }
         return _GradientScope(
           seconds: _seconds,
@@ -247,7 +257,7 @@ class _GradientPainter extends CustomPainter {
 /// copies replay the same display list; trigonometry/recording runs once per
 /// animation frame, and never again for unchanged static artwork.
 class _GradientArtwork {
-  _GradientArtwork(this.size, this.dark, this.offset) {
+  _GradientArtwork(this.size, this.dark, this.offset, {this.accent}) {
     final rect = Offset.zero & size;
     _base = Paint()
       ..shader = LinearGradient(
@@ -272,19 +282,22 @@ class _GradientArtwork {
       ).createShader(rect.shift(Offset(0, offset.dy * size.height * 0.5)));
     final r = math.max(size.width, size.height);
     _radii = [r * 0.36, r * 0.28, r * 0.30, r * 0.26];
-    final colors = dark
-        ? const [
-            Color(0xFF3E6FB0),
-            Color(0xFF2E7D74),
-            Color(0xFF4A6E96),
-            Color(0xFF7C5F9E),
-          ]
-        : const [
-            Color(0xFF9EC5F0),
-            Color(0xFFA8E6E0),
-            Color(0xFFB6D7F2),
-            Color(0xFFFFC8D2),
-          ];
+    final colors = [
+      ...dark
+          ? const [
+              Color(0xFF3E6FB0),
+              Color(0xFF2E7D74),
+              Color(0xFF4A6E96),
+              Color(0xFF7C5F9E),
+            ]
+          : const [
+              Color(0xFF9EC5F0),
+              Color(0xFFA8E6E0),
+              Color(0xFFB6D7F2),
+              Color(0xFFFFC8D2),
+            ],
+    ];
+    if (accent != null) colors[0] = accent!;
     final alphas = dark ? [0.56, 0.44, 0.48, 0.32] : [0.72, 0.56, 0.62, 0.42];
     _blobs = List.generate(
       4,
@@ -305,6 +318,7 @@ class _GradientArtwork {
   final Size size;
   final bool dark;
   final Offset offset;
+  final Color? accent;
   late final Paint _base;
   late final List<Paint> _blobs;
   late final List<double> _radii;

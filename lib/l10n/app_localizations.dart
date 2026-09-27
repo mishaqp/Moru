@@ -15661,6 +15661,78 @@ abstract class AppLocalizations {
   /// **'Blank lines break an assistant reply into one bubble per paragraph'**
   String get messageStyleSettingsPageAssistantSplitParagraphsSubtitle;
 
+  /// No description provided for @glassThemeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Glass'**
+  String get glassThemeTitle;
+
+  /// No description provided for @glassThemeOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get glassThemeOn;
+
+  /// No description provided for @glassThemeOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get glassThemeOff;
+
+  /// No description provided for @glassThemeEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Glass theme'**
+  String get glassThemeEnable;
+
+  /// No description provided for @glassThemeEnableDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Frosted header and messages over a colour backdrop. An assistant\'s own wallpaper still shows.'**
+  String get glassThemeEnableDetail;
+
+  /// No description provided for @glassFrostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Frost'**
+  String get glassFrostTitle;
+
+  /// No description provided for @glassFrostSoft.
+  ///
+  /// In en, this message translates to:
+  /// **'Soft'**
+  String get glassFrostSoft;
+
+  /// No description provided for @glassFrostMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get glassFrostMedium;
+
+  /// No description provided for @glassFrostStrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Strong'**
+  String get glassFrostStrong;
+
+  /// No description provided for @glassEconomyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Economy mode'**
+  String get glassEconomyTitle;
+
+  /// No description provided for @glassEconomyDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'No live blur, only translucency. For slower phones.'**
+  String get glassEconomyDetail;
+
+  /// No description provided for @glassThemeFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Colours follow the theme palette. To show a reply as one card, turn off “Split paragraphs into bubbles” in Message style.'**
+  String get glassThemeFooter;
+
   /// No description provided for @messageStyleSettingsPageStyleFrostedSubtitle.
   ///
   /// In en, this message translates to:

@@ -8776,6 +8776,45 @@ class AppLocalizationsRu extends AppLocalizations {
       'Пустые строки разделяют ответ ассистента на отдельные пузыри по абзацам';
 
   @override
+  String get glassThemeTitle => 'Стекло';
+
+  @override
+  String get glassThemeOn => 'Вкл.';
+
+  @override
+  String get glassThemeOff => 'Выкл.';
+
+  @override
+  String get glassThemeEnable => 'Тема «Стекло»';
+
+  @override
+  String get glassThemeEnableDetail =>
+      'Матовая шапка и сообщения поверх цветного фона. Своя картинка ассистента остаётся.';
+
+  @override
+  String get glassFrostTitle => 'Матовость';
+
+  @override
+  String get glassFrostSoft => 'Мягкая';
+
+  @override
+  String get glassFrostMedium => 'Средняя';
+
+  @override
+  String get glassFrostStrong => 'Сильная';
+
+  @override
+  String get glassEconomyTitle => 'Экономный режим';
+
+  @override
+  String get glassEconomyDetail =>
+      'Без живого размытия, только прозрачность. Для слабых телефонов.';
+
+  @override
+  String get glassThemeFooter =>
+      'Цвета берутся из палитры темы. Чтобы ответ был одной карточкой, выключите «Разделять абзацы на пузыри» в стиле сообщений.';
+
+  @override
   String get messageStyleSettingsPageStyleFrostedSubtitle =>
       'Полупрозрачное матовое стекло';
 

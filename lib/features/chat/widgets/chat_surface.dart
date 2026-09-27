@@ -12,12 +12,18 @@ _chatSurfaceStyleSelection(BuildContext context, {bool isUser = false}) {
     return context.select<
       SettingsProvider,
       ({ChatMessageBackgroundStyle style, ChatBubbleStyleOverrides overrides})
-    >(
-      (s) => (
-        style: s.chatMessageBackgroundStyle,
-        overrides: s.chatBubbleStyleOverridesFor(isUser: isUser),
-      ),
-    );
+    >((s) {
+      final overrides = s.chatBubbleStyleOverridesFor(isUser: isUser);
+      if (!s.glassTheme) {
+        return (style: s.chatMessageBackgroundStyle, overrides: overrides);
+      }
+      // Glass bubbles are always frosted; the Glass settings pick the blur.
+      final sigma = s.glassEconomy ? 0.0 : s.glassFrost.sigma;
+      return (
+        style: ChatMessageBackgroundStyle.frosted,
+        overrides: overrides.copyWith(blurSigma: () => sigma),
+      );
+    });
   } on ProviderNotFoundException {
     return (
       style: ChatMessageBackgroundStyle.defaultStyle,

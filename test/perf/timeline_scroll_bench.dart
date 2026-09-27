@@ -55,10 +55,18 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  for (final cfg in const <(int, int)>[(40, 0), (40, 4), (40, 12)]) {
+  for (final cfg in const <(int, int, bool)>[
+    (40, 0, false),
+    (40, 4, false),
+    (40, 12, false),
+    (40, 4, true),
+  ]) {
     final rounds = cfg.$1;
     final perTurn = cfg.$2;
-    testWidgets('scroll rounds=$rounds tools=$perTurn', (tester) async {
+    final glass = cfg.$3;
+    testWidgets('scroll rounds=$rounds tools=$perTurn glass=$glass', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1170, 2100);
       tester.view.devicePixelRatio = 3.0;
       addTearDown(tester.view.reset);
@@ -67,6 +75,11 @@ void main() {
       await tester.pumpWidget(_H(key: key, rounds: rounds, perTurn: perTurn));
       await tester.pump(const Duration(milliseconds: 100));
       final state = key.currentState!;
+      if (glass) {
+        await state.settings.loaded;
+        await state.settings.setGlassTheme(true);
+        await tester.pump(const Duration(milliseconds: 100));
+      }
 
       final elements = _countElements(tester);
       final renders = _countRenderObjects(tester);
@@ -110,7 +123,7 @@ void main() {
 
       // ignore: avoid_print
       print(
-        'RESULT rounds=$rounds tools=$perTurn elements=$elements renders=$renders '
+        'RESULT rounds=$rounds tools=$perTurn glass=$glass elements=$elements renders=$renders '
         'estExtent=${total.toStringAsFixed(0)} measuredExtent=${measuredExtent.toStringAsFixed(0)} '
         'extentCorrections=$corrections '
         'rootRebuildMs=${(rb.elapsedMicroseconds / 20 / 1000).toStringAsFixed(2)} '
@@ -135,6 +148,7 @@ class _HState extends State<_H> {
   final scrollController = scroll_ctrl.ChatAutoFollowScrollController();
   late final scroll_ctrl.ChatScrollController scrollCtrl;
   final processingFilesMessageId = ValueNotifier<String?>(null);
+  final settings = SettingsProvider(createBusinessTestPreferences());
   int tick = 0;
 
   late final List<ChatMessage> messages = <ChatMessage>[
@@ -170,6 +184,7 @@ class _HState extends State<_H> {
     scrollCtrl.dispose();
     scrollController.dispose();
     processingFilesMessageId.dispose();
+    settings.dispose();
     super.dispose();
   }
 
@@ -177,9 +192,7 @@ class _HState extends State<_H> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => SettingsProvider(createBusinessTestPreferences()),
-        ),
+        ChangeNotifierProvider.value(value: settings),
         ChangeNotifierProvider(
           create: (_) =>
               AssistantProvider(preferences: createBusinessTestPreferences()),

@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
 class ChatInputOverlayLayout extends StatelessWidget {
@@ -9,6 +11,7 @@ class ChatInputOverlayLayout extends StatelessWidget {
     this.topBackground,
     this.foreground,
     this.backgroundImageActive = false,
+    this.frostedTopSigma,
   });
 
   static const double _topOverlayTailHeight = 24;
@@ -21,6 +24,10 @@ class ChatInputOverlayLayout extends StatelessWidget {
   final Widget? foreground;
   final bool backgroundImageActive;
 
+  /// Glass theme: the header strip blurs the chat scrolled under it instead of
+  /// covering it with a copy of the background. Null keeps the copy.
+  final double? frostedTopSigma;
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -29,7 +36,15 @@ class ChatInputOverlayLayout extends StatelessWidget {
           child: Stack(
             children: [
               Positioned.fill(child: content),
-              if (backgroundImageActive && topBackground != null)
+              if (backgroundImageActive && frostedTopSigma != null)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  height: topInset,
+                  child: _FrostedTopBar(sigma: frostedTopSigma!),
+                )
+              else if (backgroundImageActive && topBackground != null)
                 Positioned.fill(
                   child: RepaintBoundary(
                     child: ClipRect(
@@ -296,6 +311,40 @@ class _BottomOverlayFade extends StatelessWidget {
     return IgnorePointer(
       key: const Key('chat-input-overlay-bottom-fade'),
       child: DecoratedBox(decoration: BoxDecoration(gradient: gradient)),
+    );
+  }
+}
+
+/// Frosted glass behind the chat header: blurs whatever scrolls under it.
+class _FrostedTopBar extends StatelessWidget {
+  const _FrostedTopBar({required this.sigma});
+
+  final double sigma;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final cs = theme.colorScheme;
+    return IgnorePointer(
+      key: const Key('chat-input-overlay-top-frosted'),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: cs.surface.withValues(alpha: isDark ? 0.28 : 0.42),
+              border: Border(
+                bottom: BorderSide(
+                  color: cs.onSurface.withValues(alpha: isDark ? 0.12 : 0.08),
+                  width: 0.8,
+                ),
+              ),
+            ),
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ),
     );
   }
 }
