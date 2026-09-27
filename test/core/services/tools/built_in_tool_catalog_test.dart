@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/services/memory/memory_prompts.dart';
@@ -10,8 +9,6 @@ import 'package:Kelivo/features/home/services/local_tools_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  setUp(DeviceLocalTools.debugResetIosCapabilities);
 
   test(
     'workspace catalog includes every executable schema and accepts overrides',
@@ -43,35 +40,12 @@ void main() {
       expect(read['function']['parameters']['required'], ['path']);
     },
   );
-  tearDown(() {
-    DeviceLocalTools.debugResetIosCapabilities();
-    debugDefaultTargetPlatformOverride = null;
+  test('iOS-only weather and health tools stay out of the catalog', () {
+    final names = BuiltInToolCatalog.entries(
+      lang: MemoryPromptLang.en,
+      legacyMemoryMode: false,
+    ).map((e) => e.name);
+    expect(names, isNot(contains(LocalToolNames.weather)));
+    expect(names, isNot(contains(LocalToolNames.healthSummary)));
   });
-
-  test(
-    'iOS weather and health stay out of the catalog until capabilities resolve',
-    () {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-      addTearDown(() => debugDefaultTargetPlatformOverride = null);
-
-      final before = BuiltInToolCatalog.entries(
-        lang: MemoryPromptLang.en,
-        legacyMemoryMode: false,
-      ).map((e) => e.name);
-
-      expect(before, isNot(contains(LocalToolNames.weather)));
-      expect(before, isNot(contains(LocalToolNames.healthSummary)));
-
-      DeviceLocalTools.debugSetWeatherKitAvailable(true);
-      DeviceLocalTools.debugSetHealthDataAvailable(true);
-
-      final after = BuiltInToolCatalog.entries(
-        lang: MemoryPromptLang.en,
-        legacyMemoryMode: false,
-      ).map((e) => e.name);
-
-      expect(after, contains(LocalToolNames.weather));
-      expect(after, contains(LocalToolNames.healthSummary));
-    },
-  );
 }

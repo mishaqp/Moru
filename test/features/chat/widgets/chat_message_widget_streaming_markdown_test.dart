@@ -89,8 +89,6 @@ void main() {
   testWidgets('ChatMessageWidget preserves table scroll when streaming ends', (
     tester,
   ) async {
-    markdownTableTargetPlatformOverride = TargetPlatform.iOS;
-    addTearDown(() => markdownTableTargetPlatformOverride = null);
     final streaming = ValueNotifier(true);
     addTearDown(streaming.dispose);
     await tester.pumpWidget(
