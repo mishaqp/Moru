@@ -144,12 +144,6 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 result} other{{count} results}}'**
   String settingsSearchResultCount(int count);
 
-  /// No description provided for @helloWorld.
-  ///
-  /// In en, this message translates to:
-  /// **'Hello World!'**
-  String get helloWorld;
-
   /// No description provided for @settingsPageBackButton.
   ///
   /// In en, this message translates to:
@@ -204,23 +198,11 @@ abstract class AppLocalizations {
   /// **'Preferences'**
   String get settingsPageDisplay;
 
-  /// No description provided for @settingsPageDisplaySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Appearance, behavior, and interaction preferences'**
-  String get settingsPageDisplaySubtitle;
-
   /// No description provided for @settingsPageAssistant.
   ///
   /// In en, this message translates to:
   /// **'Assistant'**
   String get settingsPageAssistant;
-
-  /// No description provided for @settingsPageAssistantSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Default assistant and style'**
-  String get settingsPageAssistantSubtitle;
 
   /// No description provided for @settingsPageModelsServicesSection.
   ///
@@ -329,12 +311,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Used'**
   String get storageSpaceTotalLabel;
-
-  /// No description provided for @storageSpaceClearableLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Clearable: {size}'**
-  String storageSpaceClearableLabel(String size);
 
   /// No description provided for @storageSpaceClearableHint.
   ///
@@ -768,12 +744,6 @@ abstract class AppLocalizations {
   /// **'Smallest'**
   String get storageSpaceSortSmallest;
 
-  /// No description provided for @settingsPageAboutSection.
-  ///
-  /// In en, this message translates to:
-  /// **'About'**
-  String get settingsPageAboutSection;
-
   /// No description provided for @settingsPageAbout.
   ///
   /// In en, this message translates to:
@@ -786,12 +756,6 @@ abstract class AppLocalizations {
   /// **'Statistics'**
   String get settingsPageStatistics;
 
-  /// No description provided for @settingsPageDocs.
-  ///
-  /// In en, this message translates to:
-  /// **'Docs'**
-  String get settingsPageDocs;
-
   /// No description provided for @settingsPageLogs.
   ///
   /// In en, this message translates to:
@@ -803,12 +767,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sponsor'**
   String get settingsPageSponsor;
-
-  /// No description provided for @settingsPageShare.
-  ///
-  /// In en, this message translates to:
-  /// **'Share'**
-  String get settingsPageShare;
 
   /// No description provided for @statsPageTitle.
   ///
@@ -1014,12 +972,6 @@ abstract class AppLocalizations {
   /// **'Default Assistant'**
   String get statsPageUnknownAssistant;
 
-  /// No description provided for @statsPageUnknownModel.
-  ///
-  /// In en, this message translates to:
-  /// **'Unknown Model'**
-  String get statsPageUnknownModel;
-
   /// No description provided for @statsPageUnknownTopic.
   ///
   /// In en, this message translates to:
@@ -1080,29 +1032,11 @@ abstract class AppLocalizations {
   /// **'Afdian'**
   String get sponsorPageAfdianTitle;
 
-  /// No description provided for @sponsorPageAfdianSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'afdian.com/a/kelivo'**
-  String get sponsorPageAfdianSubtitle;
-
   /// No description provided for @sponsorPageWeChatTitle.
   ///
   /// In en, this message translates to:
   /// **'WeChat Sponsor'**
   String get sponsorPageWeChatTitle;
-
-  /// No description provided for @sponsorPageWeChatSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'WeChat sponsor code'**
-  String get sponsorPageWeChatSubtitle;
-
-  /// No description provided for @sponsorPageScanQrHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Scan the QR code to sponsor'**
-  String get sponsorPageScanQrHint;
 
   /// No description provided for @languageDisplaySimplifiedChinese.
   ///
@@ -1157,12 +1091,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Spanish'**
   String get languageDisplaySpanish;
-
-  /// No description provided for @languageSelectSheetTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Select Translation Language'**
-  String get languageSelectSheetTitle;
 
   /// No description provided for @languageSelectSheetClearButton.
   ///
@@ -1278,23 +1206,11 @@ abstract class AppLocalizations {
   /// **'App Language'**
   String get displaySettingsPageLanguageTitle;
 
-  /// No description provided for @displaySettingsPageLanguageSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose interface language'**
-  String get displaySettingsPageLanguageSubtitle;
-
   /// No description provided for @assistantTagsManageTitle.
   ///
   /// In en, this message translates to:
   /// **'Manage Tags'**
   String get assistantTagsManageTitle;
-
-  /// No description provided for @assistantTagsCreateButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Create'**
-  String get assistantTagsCreateButton;
 
   /// No description provided for @assistantTagsCreateDialogTitle.
   ///
@@ -1320,12 +1236,6 @@ abstract class AppLocalizations {
   /// **'Tag name'**
   String get assistantTagsNameHint;
 
-  /// No description provided for @assistantTagsRenameButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Rename'**
-  String get assistantTagsRenameButton;
-
   /// No description provided for @assistantTagsRenameDialogTitle.
   ///
   /// In en, this message translates to:
@@ -1337,12 +1247,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rename'**
   String get assistantTagsRenameDialogOk;
-
-  /// No description provided for @assistantTagsDeleteButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete'**
-  String get assistantTagsDeleteButton;
 
   /// No description provided for @assistantTagsDeleteConfirmTitle.
   ///
@@ -1584,18 +1488,6 @@ abstract class AppLocalizations {
   /// **'Please select messages to share'**
   String get homePageSelectMessagesToShare;
 
-  /// No description provided for @homePageDone.
-  ///
-  /// In en, this message translates to:
-  /// **'Done'**
-  String get homePageDone;
-
-  /// No description provided for @homePageDropToUpload.
-  ///
-  /// In en, this message translates to:
-  /// **'Drop files to upload'**
-  String get homePageDropToUpload;
-
   /// No description provided for @assistantEditPageTitle.
   ///
   /// In en, this message translates to:
@@ -1800,12 +1692,6 @@ abstract class AppLocalizations {
   /// **'Invalid regular expression'**
   String get assistantRegexInvalidPattern;
 
-  /// No description provided for @assistantRegexCancelButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
-  String get assistantRegexCancelButton;
-
   /// No description provided for @assistantRegexUntitled.
   ///
   /// In en, this message translates to:
@@ -1872,12 +1758,6 @@ abstract class AppLocalizations {
   /// **'Body Value (JSON)'**
   String get assistantEditBodyValueLabel;
 
-  /// No description provided for @assistantEditDeleteTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete'**
-  String get assistantEditDeleteTooltip;
-
   /// No description provided for @assistantEditAssistantNameLabel.
   ///
   /// In en, this message translates to:
@@ -1889,12 +1769,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Use Assistant Avatar'**
   String get assistantEditUseAssistantAvatarTitle;
-
-  /// No description provided for @assistantEditUseAssistantAvatarSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Use assistant avatar instead of model avatar'**
-  String get assistantEditUseAssistantAvatarSubtitle;
 
   /// No description provided for @assistantEditUseAssistantNameTitle.
   ///
@@ -1956,23 +1830,11 @@ abstract class AppLocalizations {
   /// **'Stream Output'**
   String get assistantEditStreamOutputTitle;
 
-  /// No description provided for @assistantEditStreamOutputDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable streaming responses'**
-  String get assistantEditStreamOutputDescription;
-
   /// No description provided for @assistantEditThinkingBudgetTitle.
   ///
   /// In en, this message translates to:
   /// **'Thinking Budget'**
   String get assistantEditThinkingBudgetTitle;
-
-  /// No description provided for @assistantEditConfigureButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Configure'**
-  String get assistantEditConfigureButton;
 
   /// No description provided for @assistantEditMaxTokensTitle.
   ///
@@ -2016,41 +1878,11 @@ abstract class AppLocalizations {
   /// **'Clear'**
   String get assistantEditClearButton;
 
-  /// No description provided for @desktopNavChatTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Chat'**
-  String get desktopNavChatTooltip;
-
   /// No description provided for @desktopNavTranslateTooltip.
   ///
   /// In en, this message translates to:
   /// **'Translate'**
   String get desktopNavTranslateTooltip;
-
-  /// No description provided for @desktopNavStorageTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Storage'**
-  String get desktopNavStorageTooltip;
-
-  /// No description provided for @desktopNavGlobalSearchTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Global Search'**
-  String get desktopNavGlobalSearchTooltip;
-
-  /// No description provided for @desktopNavThemeToggleTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Theme'**
-  String get desktopNavThemeToggleTooltip;
-
-  /// No description provided for @desktopNavSettingsTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Settings'**
-  String get desktopNavSettingsTooltip;
 
   /// No description provided for @desktopAvatarMenuUseEmoji.
   ///
@@ -2112,12 +1944,6 @@ abstract class AppLocalizations {
   /// **'Reset'**
   String get assistantEditAvatarReset;
 
-  /// No description provided for @displaySettingsPageChatMessageBackgroundTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Chat Message Background'**
-  String get displaySettingsPageChatMessageBackgroundTitle;
-
   /// No description provided for @displaySettingsPageChatMessageBackgroundDefault.
   ///
   /// In en, this message translates to:
@@ -2135,42 +1961,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Solid Color'**
   String get displaySettingsPageChatMessageBackgroundSolid;
-
-  /// No description provided for @displaySettingsPageAndroidBackgroundChatTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Background Generation (Android)'**
-  String get displaySettingsPageAndroidBackgroundChatTitle;
-
-  /// No description provided for @displaySettingsPageIosBackgroundChatTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Background Generation (iOS)'**
-  String get displaySettingsPageIosBackgroundChatTitle;
-
-  /// No description provided for @iosBackgroundStatusOn.
-  ///
-  /// In en, this message translates to:
-  /// **'On'**
-  String get iosBackgroundStatusOn;
-
-  /// No description provided for @iosBackgroundStatusOff.
-  ///
-  /// In en, this message translates to:
-  /// **'Off'**
-  String get iosBackgroundStatusOff;
-
-  /// No description provided for @iosLiveActivityTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Live Activity'**
-  String get iosLiveActivityTitle;
-
-  /// No description provided for @iosLiveActivitySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show background replies on the Lock Screen and Dynamic Island when supported.'**
-  String get iosLiveActivitySubtitle;
 
   /// No description provided for @notificationChatCompletedTitle.
   ///
@@ -2346,12 +2136,6 @@ abstract class AppLocalizations {
   /// **'Error'**
   String get multiKeyPageError;
 
-  /// No description provided for @multiKeyPageAccuracy.
-  ///
-  /// In en, this message translates to:
-  /// **'Accuracy'**
-  String get multiKeyPageAccuracy;
-
   /// No description provided for @multiKeyPageStrategyTitle.
   ///
   /// In en, this message translates to:
@@ -2411,12 +2195,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rate Limited'**
   String get multiKeyPageStatusRateLimited;
-
-  /// No description provided for @multiKeyPageEditAlias.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit Alias'**
-  String get multiKeyPageEditAlias;
 
   /// No description provided for @multiKeyPageEdit.
   ///
@@ -2730,35 +2508,11 @@ abstract class AppLocalizations {
   /// **'table'**
   String get markdownTableDefaultFileNameStem;
 
-  /// No description provided for @markdownTableCopiedCsvSnackbar.
-  ///
-  /// In en, this message translates to:
-  /// **'CSV copied. Long press Copy to copy as image.'**
-  String get markdownTableCopiedCsvSnackbar;
-
   /// No description provided for @markdownTableCopiedMarkdownSnackbar.
   ///
   /// In en, this message translates to:
   /// **'Table copied.'**
   String get markdownTableCopiedMarkdownSnackbar;
-
-  /// No description provided for @codeBlockCollapsedLines.
-  ///
-  /// In en, this message translates to:
-  /// **'… {n} lines folded'**
-  String codeBlockCollapsedLines(int n);
-
-  /// No description provided for @htmlPreviewNotSupportedOnLinux.
-  ///
-  /// In en, this message translates to:
-  /// **'HTML preview is not supported on Linux'**
-  String get htmlPreviewNotSupportedOnLinux;
-
-  /// No description provided for @assistantEditSampleUser.
-  ///
-  /// In en, this message translates to:
-  /// **'User'**
-  String get assistantEditSampleUser;
 
   /// No description provided for @assistantEditSampleMessage.
   ///
@@ -2777,12 +2531,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No running MCP servers'**
   String get assistantEditMcpNoServersMessage;
-
-  /// No description provided for @assistantEditMcpConnectedTag.
-  ///
-  /// In en, this message translates to:
-  /// **'Connected'**
-  String get assistantEditMcpConnectedTag;
 
   /// No description provided for @assistantEditMcpToolsCountTag.
   ///
@@ -2826,12 +2574,6 @@ abstract class AppLocalizations {
   /// **'Delete'**
   String get assistantSettingsDeleteButton;
 
-  /// No description provided for @assistantSettingsEditButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit'**
-  String get assistantSettingsEditButton;
-
   /// No description provided for @assistantSettingsAddSheetTitle.
   ///
   /// In en, this message translates to:
@@ -2856,101 +2598,11 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get assistantSettingsAddSheetSave;
 
-  /// No description provided for @desktopAssistantsListTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Assistants'**
-  String get desktopAssistantsListTitle;
-
-  /// No description provided for @desktopSidebarTabAssistants.
-  ///
-  /// In en, this message translates to:
-  /// **'Assistants'**
-  String get desktopSidebarTabAssistants;
-
-  /// No description provided for @desktopSidebarTabTopics.
-  ///
-  /// In en, this message translates to:
-  /// **'Topics'**
-  String get desktopSidebarTabTopics;
-
-  /// No description provided for @desktopTrayMenuShowWindow.
-  ///
-  /// In en, this message translates to:
-  /// **'Show Window'**
-  String get desktopTrayMenuShowWindow;
-
-  /// No description provided for @desktopTrayMenuExit.
-  ///
-  /// In en, this message translates to:
-  /// **'Exit'**
-  String get desktopTrayMenuExit;
-
-  /// No description provided for @hotkeyToggleAppVisibility.
-  ///
-  /// In en, this message translates to:
-  /// **'Show/Hide App'**
-  String get hotkeyToggleAppVisibility;
-
-  /// No description provided for @hotkeyCloseWindow.
-  ///
-  /// In en, this message translates to:
-  /// **'Close Window'**
-  String get hotkeyCloseWindow;
-
   /// No description provided for @hotkeyOpenSettings.
   ///
   /// In en, this message translates to:
   /// **'Open Settings'**
   String get hotkeyOpenSettings;
-
-  /// No description provided for @hotkeyNewTopic.
-  ///
-  /// In en, this message translates to:
-  /// **'New Topic'**
-  String get hotkeyNewTopic;
-
-  /// No description provided for @hotkeySwitchModel.
-  ///
-  /// In en, this message translates to:
-  /// **'Switch Model'**
-  String get hotkeySwitchModel;
-
-  /// No description provided for @hotkeyToggleAssistantPanel.
-  ///
-  /// In en, this message translates to:
-  /// **'Toggle Assistants'**
-  String get hotkeyToggleAssistantPanel;
-
-  /// No description provided for @hotkeyToggleTopicPanel.
-  ///
-  /// In en, this message translates to:
-  /// **'Toggle Topics'**
-  String get hotkeyToggleTopicPanel;
-
-  /// No description provided for @hotkeysPressShortcut.
-  ///
-  /// In en, this message translates to:
-  /// **'Press a shortcut'**
-  String get hotkeysPressShortcut;
-
-  /// No description provided for @hotkeysResetDefault.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset to default'**
-  String get hotkeysResetDefault;
-
-  /// No description provided for @hotkeysClearShortcut.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear shortcut'**
-  String get hotkeysClearShortcut;
-
-  /// No description provided for @hotkeysResetAll.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset all to defaults'**
-  String get hotkeysResetAll;
 
   /// No description provided for @assistantEditTemperatureTitle.
   ///
@@ -3023,18 +2675,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Backup & Restore'**
   String get backupPageTitle;
-
-  /// No description provided for @backupPageWebDavTab.
-  ///
-  /// In en, this message translates to:
-  /// **'WebDAV'**
-  String get backupPageWebDavTab;
-
-  /// No description provided for @backupPageImportExportTab.
-  ///
-  /// In en, this message translates to:
-  /// **'Import/Export'**
-  String get backupPageImportExportTab;
 
   /// No description provided for @backupPageWebDavServerUrl.
   ///
@@ -3198,29 +2838,11 @@ abstract class AppLocalizations {
   /// **'Restart Kelivo'**
   String get backupRestoreFailureRestartButton;
 
-  /// No description provided for @backupRestoreFailureCopyButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Copy diagnostic code'**
-  String get backupRestoreFailureCopyButton;
-
-  /// No description provided for @backupRestoreFailureCopied.
-  ///
-  /// In en, this message translates to:
-  /// **'Diagnostic code copied'**
-  String get backupRestoreFailureCopied;
-
   /// No description provided for @backupRestoreFailureDiagnostic.
   ///
   /// In en, this message translates to:
   /// **'Diagnostic code: {code}'**
   String backupRestoreFailureDiagnostic(String code);
-
-  /// No description provided for @startupRecoveryMoreOptions.
-  ///
-  /// In en, this message translates to:
-  /// **'More recovery options'**
-  String get startupRecoveryMoreOptions;
 
   /// No description provided for @startupRecoveryRepairButton.
   ///
@@ -3390,12 +3012,6 @@ abstract class AppLocalizations {
   /// **'A copy of this report was saved to {path}'**
   String startupRecoveryReportStored(String path);
 
-  /// No description provided for @startupRecoveryReportSaved.
-  ///
-  /// In en, this message translates to:
-  /// **'Report saved to {path}'**
-  String startupRecoveryReportSaved(String path);
-
   /// No description provided for @startupRecoveryReportShared.
   ///
   /// In en, this message translates to:
@@ -3419,12 +3035,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing has been deleted. Save a copy somewhere safe before trying anything below.'**
   String get startupRecoverySectionDataBody;
-
-  /// No description provided for @startupRecoveryExportSavedTo.
-  ///
-  /// In en, this message translates to:
-  /// **'A copy of your data was saved to {path}'**
-  String startupRecoveryExportSavedTo(String path);
 
   /// No description provided for @startupRecoverySectionRepairTitle.
   ///
@@ -3564,12 +3174,6 @@ abstract class AppLocalizations {
   /// **'Select Import Mode'**
   String get backupPageSelectImportMode;
 
-  /// No description provided for @backupPageSelectImportModeDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose a restore mode. The chat and file switches determine which components are included.'**
-  String get backupPageSelectImportModeDescription;
-
   /// No description provided for @backupPageOverwriteMode.
   ///
   /// In en, this message translates to:
@@ -3635,18 +3239,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Backup uploaded'**
   String get backupPageBackupUploaded;
-
-  /// No description provided for @backupPageBackup.
-  ///
-  /// In en, this message translates to:
-  /// **'Backup'**
-  String get backupPageBackup;
-
-  /// No description provided for @backupPageExporting.
-  ///
-  /// In en, this message translates to:
-  /// **'Exporting...'**
-  String get backupPageExporting;
 
   /// No description provided for @backupProgressCancel.
   ///
@@ -3774,35 +3366,11 @@ abstract class AppLocalizations {
   /// **'Export to File'**
   String get backupPageExportToFile;
 
-  /// No description provided for @backupPageExportToFileSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Export app data to a file'**
-  String get backupPageExportToFileSubtitle;
-
   /// No description provided for @backupPageImportBackupFile.
   ///
   /// In en, this message translates to:
   /// **'Import Backup File'**
   String get backupPageImportBackupFile;
-
-  /// No description provided for @backupPageImportBackupFileSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Import a local backup file'**
-  String get backupPageImportBackupFileSubtitle;
-
-  /// No description provided for @backupPageImportFromOtherApps.
-  ///
-  /// In en, this message translates to:
-  /// **'Import from Other Apps'**
-  String get backupPageImportFromOtherApps;
-
-  /// No description provided for @backupPageNotSupportedYet.
-  ///
-  /// In en, this message translates to:
-  /// **'Not supported yet'**
-  String get backupPageNotSupportedYet;
 
   /// No description provided for @backupPageRemoteBackups.
   ///
@@ -3815,12 +3383,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No backups'**
   String get backupPageNoBackups;
-
-  /// No description provided for @backupPageRestoreTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Restore'**
-  String get backupPageRestoreTooltip;
 
   /// No description provided for @backupPageDeleteTooltip.
   ///
@@ -3989,18 +3551,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reminder Time'**
   String get backupReminderTimeTitle;
-
-  /// No description provided for @backupReminderTimeInputHint.
-  ///
-  /// In en, this message translates to:
-  /// **'HH:mm'**
-  String get backupReminderTimeInputHint;
-
-  /// No description provided for @backupReminderTimeInvalid.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter a time from 00:00 to 23:59.'**
-  String get backupReminderTimeInvalid;
 
   /// No description provided for @backupReminderLastBackupTitle.
   ///
@@ -4440,24 +3990,6 @@ abstract class AppLocalizations {
     int totalTokens,
   );
 
-  /// No description provided for @bottomToolsSheetLearningMode.
-  ///
-  /// In en, this message translates to:
-  /// **'Learning Mode'**
-  String get bottomToolsSheetLearningMode;
-
-  /// No description provided for @bottomToolsSheetLearningModeDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Help you learn step by step'**
-  String get bottomToolsSheetLearningModeDescription;
-
-  /// No description provided for @bottomToolsSheetConfigurePrompt.
-  ///
-  /// In en, this message translates to:
-  /// **'Configure prompt'**
-  String get bottomToolsSheetConfigurePrompt;
-
   /// No description provided for @bottomToolsSheetPrompt.
   ///
   /// In en, this message translates to:
@@ -4469,12 +4001,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter prompt text to inject'**
   String get bottomToolsSheetPromptHint;
-
-  /// No description provided for @bottomToolsSheetResetDefault.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset to default'**
-  String get bottomToolsSheetResetDefault;
 
   /// No description provided for @bottomToolsSheetSave.
   ///
@@ -4488,12 +4014,6 @@ abstract class AppLocalizations {
   /// **'Image OCR'**
   String get bottomToolsSheetOcr;
 
-  /// No description provided for @messageMoreSheetTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'More Actions'**
-  String get messageMoreSheetTitle;
-
   /// No description provided for @messageMoreSheetSelectCopy.
   ///
   /// In en, this message translates to:
@@ -4505,12 +4025,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Render Web View'**
   String get messageMoreSheetRenderWebView;
-
-  /// No description provided for @messageMoreSheetNotImplemented.
-  ///
-  /// In en, this message translates to:
-  /// **'Not yet implemented'**
-  String get messageMoreSheetNotImplemented;
 
   /// No description provided for @messageMoreSheetEdit.
   ///
@@ -4560,47 +4074,11 @@ abstract class AppLocalizations {
   /// **'Auto'**
   String get reasoningBudgetSheetAuto;
 
-  /// No description provided for @reasoningBudgetSheetLight.
-  ///
-  /// In en, this message translates to:
-  /// **'Light Reasoning'**
-  String get reasoningBudgetSheetLight;
-
-  /// No description provided for @reasoningBudgetSheetMedium.
-  ///
-  /// In en, this message translates to:
-  /// **'Medium Reasoning'**
-  String get reasoningBudgetSheetMedium;
-
-  /// No description provided for @reasoningBudgetSheetHeavy.
-  ///
-  /// In en, this message translates to:
-  /// **'Heavy Reasoning'**
-  String get reasoningBudgetSheetHeavy;
-
-  /// No description provided for @reasoningBudgetSheetXhigh.
-  ///
-  /// In en, this message translates to:
-  /// **'Extreme Reasoning'**
-  String get reasoningBudgetSheetXhigh;
-
-  /// No description provided for @reasoningBudgetSheetMax.
-  ///
-  /// In en, this message translates to:
-  /// **'Maximum Reasoning'**
-  String get reasoningBudgetSheetMax;
-
   /// No description provided for @reasoningBudgetSheetTitle.
   ///
   /// In en, this message translates to:
   /// **'Reasoning Chain Strength'**
   String get reasoningBudgetSheetTitle;
-
-  /// No description provided for @reasoningBudgetSheetCurrentLevel.
-  ///
-  /// In en, this message translates to:
-  /// **'Current Level: {level}'**
-  String reasoningBudgetSheetCurrentLevel(String level);
 
   /// No description provided for @reasoningBudgetSheetOffSubtitle.
   ///
@@ -4674,18 +4152,6 @@ abstract class AppLocalizations {
   /// **'Copied to clipboard'**
   String get chatMessageWidgetCopiedToClipboard;
 
-  /// No description provided for @chatMessageWidgetResendTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Resend'**
-  String get chatMessageWidgetResendTooltip;
-
-  /// No description provided for @chatMessageWidgetMoreTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'More'**
-  String get chatMessageWidgetMoreTooltip;
-
   /// No description provided for @chatMessageWidgetThinking.
   ///
   /// In en, this message translates to:
@@ -4728,29 +4194,11 @@ abstract class AppLocalizations {
   /// **'Attachment unavailable'**
   String get chatMessageWidgetAttachmentUnavailable;
 
-  /// No description provided for @chatMessageWidgetCitationsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Citations ({count})'**
-  String chatMessageWidgetCitationsTitle(int count);
-
   /// No description provided for @chatMessageWidgetSearchResultsTitle.
   ///
   /// In en, this message translates to:
   /// **'Search results'**
   String get chatMessageWidgetSearchResultsTitle;
-
-  /// No description provided for @chatMessageWidgetCitationSourcesTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Citation sources'**
-  String get chatMessageWidgetCitationSourcesTitle;
-
-  /// No description provided for @chatMessageWidgetRegenerateTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Regenerate'**
-  String get chatMessageWidgetRegenerateTooltip;
 
   /// No description provided for @chatMessageWidgetRegenerateConfirmTitle.
   ///
@@ -4788,23 +4236,11 @@ abstract class AppLocalizations {
   /// **'Stop'**
   String get chatMessageWidgetStopTooltip;
 
-  /// No description provided for @chatMessageWidgetSpeakTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Speak'**
-  String get chatMessageWidgetSpeakTooltip;
-
   /// No description provided for @chatMessageWidgetTranslateTooltip.
   ///
   /// In en, this message translates to:
   /// **'Translate'**
   String get chatMessageWidgetTranslateTooltip;
-
-  /// No description provided for @chatMessageWidgetBuiltinSearchHideNote.
-  ///
-  /// In en, this message translates to:
-  /// **'Hide builtin search tool cards'**
-  String get chatMessageWidgetBuiltinSearchHideNote;
 
   /// No description provided for @chatMessageWidgetDeepThinking.
   ///
@@ -4841,12 +4277,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Speaking:'**
   String get chatMessageWidgetSpeakingTitle;
-
-  /// No description provided for @chatMessageWidgetSpeakText.
-  ///
-  /// In en, this message translates to:
-  /// **'Speaking: {text}'**
-  String chatMessageWidgetSpeakText(String text);
 
   /// No description provided for @chatMessageWidgetMemoryRead.
   ///
@@ -5034,23 +4464,11 @@ abstract class AppLocalizations {
   /// **'Inline \$...\$ Rendering'**
   String get displaySettingsPageEnableDollarLatexTitle;
 
-  /// No description provided for @displaySettingsPageEnableDollarLatexSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Render inline math inside \$...\$'**
-  String get displaySettingsPageEnableDollarLatexSubtitle;
-
   /// No description provided for @displaySettingsPageEnableMathTitle.
   ///
   /// In en, this message translates to:
   /// **'Math Formula Rendering'**
   String get displaySettingsPageEnableMathTitle;
-
-  /// No description provided for @displaySettingsPageEnableMathSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Render LaTeX math (inline and block)'**
-  String get displaySettingsPageEnableMathSubtitle;
 
   /// No description provided for @displaySettingsPageEnableUserMarkdownTitle.
   ///
@@ -5382,30 +4800,6 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get sideDrawerSave;
 
-  /// No description provided for @sideDrawerGreetingMorning.
-  ///
-  /// In en, this message translates to:
-  /// **'Good morning 👋'**
-  String get sideDrawerGreetingMorning;
-
-  /// No description provided for @sideDrawerGreetingNoon.
-  ///
-  /// In en, this message translates to:
-  /// **'Good afternoon 👋'**
-  String get sideDrawerGreetingNoon;
-
-  /// No description provided for @sideDrawerGreetingAfternoon.
-  ///
-  /// In en, this message translates to:
-  /// **'Good afternoon 👋'**
-  String get sideDrawerGreetingAfternoon;
-
-  /// No description provided for @sideDrawerGreetingEvening.
-  ///
-  /// In en, this message translates to:
-  /// **'Good evening 👋'**
-  String get sideDrawerGreetingEvening;
-
   /// No description provided for @sideDrawerDateToday.
   ///
   /// In en, this message translates to:
@@ -5436,24 +4830,6 @@ abstract class AppLocalizations {
   /// **'Search current assistant'**
   String get sideDrawerSearchHint;
 
-  /// No description provided for @sideDrawerSearchAssistantsHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search assistants'**
-  String get sideDrawerSearchAssistantsHint;
-
-  /// No description provided for @sideDrawerTopicSearchModeLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Topic mode'**
-  String get sideDrawerTopicSearchModeLabel;
-
-  /// No description provided for @sideDrawerGlobalSearchModeLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Global mode'**
-  String get sideDrawerGlobalSearchModeLabel;
-
   /// No description provided for @sideDrawerSearchModeSwipeToTopicHint.
   ///
   /// In en, this message translates to:
@@ -5471,12 +4847,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search all sessions'**
   String get sideDrawerGlobalSearchHint;
-
-  /// No description provided for @sideDrawerGlobalSearchEmptyHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search across titles and messages'**
-  String get sideDrawerGlobalSearchEmptyHint;
 
   /// No description provided for @sideDrawerGlobalSearchNoResults.
   ///
@@ -5513,18 +4883,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pinned'**
   String get sideDrawerPinnedLabel;
-
-  /// No description provided for @sideDrawerHistory.
-  ///
-  /// In en, this message translates to:
-  /// **'History'**
-  String get sideDrawerHistory;
-
-  /// No description provided for @sideDrawerSettings.
-  ///
-  /// In en, this message translates to:
-  /// **'Settings'**
-  String get sideDrawerSettings;
 
   /// No description provided for @sideDrawerChooseAssistantTitle.
   ///
@@ -5591,12 +4949,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter LobeHub Icon'**
   String get providerAvatarInputLobehubIcon;
-
-  /// No description provided for @providerAvatarChooseLobehubIcon.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter LobeHub Icon'**
-  String get providerAvatarChooseLobehubIcon;
 
   /// No description provided for @providerAvatarLobehubDialogTitle.
   ///
@@ -5688,12 +5040,6 @@ abstract class AppLocalizations {
   /// **'Enter new nickname'**
   String get sideDrawerNicknameHint;
 
-  /// No description provided for @sideDrawerRename.
-  ///
-  /// In en, this message translates to:
-  /// **'Rename'**
-  String get sideDrawerRename;
-
   /// No description provided for @chatInputBarHint.
   ///
   /// In en, this message translates to:
@@ -5717,12 +5063,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reasoning Strength'**
   String get chatInputBarReasoningStrengthTooltip;
-
-  /// No description provided for @chatInputBarMcpServersTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'MCP Servers'**
-  String get chatInputBarMcpServersTooltip;
 
   /// No description provided for @chatInputBarToolsTooltip.
   ///
@@ -5789,30 +5129,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Queued to send'**
   String get chatInputBarQueuedPending;
-
-  /// No description provided for @chatInputBarQueuedCancel.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel Queue'**
-  String get chatInputBarQueuedCancel;
-
-  /// No description provided for @chatInputBarInsertNewline.
-  ///
-  /// In en, this message translates to:
-  /// **'Newline'**
-  String get chatInputBarInsertNewline;
-
-  /// No description provided for @chatInputBarExpand.
-  ///
-  /// In en, this message translates to:
-  /// **'Expand'**
-  String get chatInputBarExpand;
-
-  /// No description provided for @chatInputBarCollapse.
-  ///
-  /// In en, this message translates to:
-  /// **'Collapse'**
-  String get chatInputBarCollapse;
 
   /// No description provided for @mcpPageBackTooltip.
   ///
@@ -6101,12 +5417,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No tools, tap refresh to sync'**
   String get mcpServerEditSheetNoToolsHint;
-
-  /// No description provided for @mcpServerEditSheetCancel.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
-  String get mcpServerEditSheetCancel;
 
   /// No description provided for @mcpServerEditSheetSave.
   ///
@@ -6465,12 +5775,6 @@ abstract class AppLocalizations {
   /// **'Required, suggest lowercase/digits/hyphens'**
   String get modelDetailSheetModelIdHint;
 
-  /// No description provided for @modelDetailSheetModelIdDisabledHint.
-  ///
-  /// In en, this message translates to:
-  /// **'{modelId}'**
-  String modelDetailSheetModelIdDisabledHint(String modelId);
-
   /// No description provided for @modelDetailSheetModelNameLabel.
   ///
   /// In en, this message translates to:
@@ -6579,18 +5883,6 @@ abstract class AppLocalizations {
   /// **'Built-in tools depend on the provider and API mode.'**
   String get modelDetailSheetBuiltinToolsDescription;
 
-  /// No description provided for @modelDetailSheetSearchTool.
-  ///
-  /// In en, this message translates to:
-  /// **'Search'**
-  String get modelDetailSheetSearchTool;
-
-  /// No description provided for @modelDetailSheetSearchToolDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable Google Search integration'**
-  String get modelDetailSheetSearchToolDescription;
-
   /// No description provided for @modelDetailSheetUrlContextTool.
   ///
   /// In en, this message translates to:
@@ -6626,12 +5918,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enable YouTube URL ingestion (auto-detect links in prompts)'**
   String get modelDetailSheetYoutubeToolDescription;
-
-  /// No description provided for @modelDetailSheetOpenaiBuiltinToolsResponsesOnlyHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Requires OpenAI Responses API.'**
-  String get modelDetailSheetOpenaiBuiltinToolsResponsesOnlyHint;
 
   /// No description provided for @modelDetailSheetWebFetchTool.
   ///
@@ -6716,12 +6002,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enter a valid model ID (>=2 chars)'**
   String get modelDetailSheetInvalidIdError;
-
-  /// No description provided for @modelDetailSheetModelIdExistsError.
-  ///
-  /// In en, this message translates to:
-  /// **'Model ID already exists'**
-  String get modelDetailSheetModelIdExistsError;
 
   /// No description provided for @modelDetailSheetHeaderKeyHint.
   ///
@@ -6987,12 +6267,6 @@ abstract class AppLocalizations {
   /// **'Checking...'**
   String get providerDetailPageBalanceQuerying;
 
-  /// No description provided for @providerDetailPageBalanceResetDefaultsButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset'**
-  String get providerDetailPageBalanceResetDefaultsButton;
-
   /// No description provided for @providerDetailPageBalanceResetDefaultsTooltip.
   ///
   /// In en, this message translates to:
@@ -7041,23 +6315,11 @@ abstract class AppLocalizations {
   /// **'Import JSON'**
   String get providerDetailPageImportJsonButton;
 
-  /// No description provided for @providerDetailPageImportJsonReadFailedMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to read file'**
-  String get providerDetailPageImportJsonReadFailedMessage;
-
   /// No description provided for @providerDetailPageTestButton.
   ///
   /// In en, this message translates to:
   /// **'Test'**
   String get providerDetailPageTestButton;
-
-  /// No description provided for @providerDetailPageSaveButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Save'**
-  String get providerDetailPageSaveButton;
 
   /// No description provided for @providerDetailPageProviderRemovedMessage.
   ///
@@ -7155,12 +6417,6 @@ abstract class AppLocalizations {
   /// **'Password (optional)'**
   String get providerDetailPagePasswordOptionalLabel;
 
-  /// No description provided for @providerDetailPageSavedSnackbar.
-  ///
-  /// In en, this message translates to:
-  /// **'Saved'**
-  String get providerDetailPageSavedSnackbar;
-
   /// No description provided for @providerDetailPageEmbeddingsGroupTitle.
   ///
   /// In en, this message translates to:
@@ -7190,12 +6446,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Type model name to filter'**
   String get providerDetailPageFilterHint;
-
-  /// No description provided for @providerDetailPageDeleteText.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete'**
-  String get providerDetailPageDeleteText;
 
   /// No description provided for @providerDetailPageEditTooltip.
   ///
@@ -7419,18 +6669,6 @@ abstract class AppLocalizations {
   /// **'OFF'**
   String get providersPageDisabledStatus;
 
-  /// No description provided for @providersPageModelsCountSuffix.
-  ///
-  /// In en, this message translates to:
-  /// **' models'**
-  String get providersPageModelsCountSuffix;
-
-  /// No description provided for @providersPageModelsCountSingleSuffix.
-  ///
-  /// In en, this message translates to:
-  /// **' models'**
-  String get providersPageModelsCountSingleSuffix;
-
   /// No description provided for @addProviderSheetTitle.
   ///
   /// In en, this message translates to:
@@ -7479,12 +6717,6 @@ abstract class AppLocalizations {
   /// **'Import JSON'**
   String get addProviderSheetImportJsonButton;
 
-  /// No description provided for @addProviderSheetCancelButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
-  String get addProviderSheetCancelButton;
-
   /// No description provided for @addProviderSheetAddButton.
   ///
   /// In en, this message translates to:
@@ -7526,12 +6758,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Paste share strings (multi-line supported) or ChatBox JSON'**
   String get importProviderSheetDescription;
-
-  /// No description provided for @importProviderSheetInputHint.
-  ///
-  /// In en, this message translates to:
-  /// **'ai-provider:v1:... or JSON'**
-  String get importProviderSheetInputHint;
 
   /// No description provided for @importProviderSheetCancelButton.
   ///
@@ -7575,24 +6801,6 @@ abstract class AppLocalizations {
   /// **'Share'**
   String get shareProviderSheetShareButton;
 
-  /// No description provided for @desktopProviderContextMenuShare.
-  ///
-  /// In en, this message translates to:
-  /// **'Share'**
-  String get desktopProviderContextMenuShare;
-
-  /// No description provided for @desktopProviderShareCopyText.
-  ///
-  /// In en, this message translates to:
-  /// **'Copy code'**
-  String get desktopProviderShareCopyText;
-
-  /// No description provided for @desktopProviderShareCopyQr.
-  ///
-  /// In en, this message translates to:
-  /// **'Copy QR'**
-  String get desktopProviderShareCopyQr;
-
   /// No description provided for @providerDetailPageApiBaseUrlLabel.
   ///
   /// In en, this message translates to:
@@ -7604,36 +6812,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Models'**
   String get providerDetailPageModelsTitle;
-
-  /// No description provided for @providerModelsGetButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Get'**
-  String get providerModelsGetButton;
-
-  /// No description provided for @providerDetailPageCapsVision.
-  ///
-  /// In en, this message translates to:
-  /// **'Vision'**
-  String get providerDetailPageCapsVision;
-
-  /// No description provided for @providerDetailPageCapsImage.
-  ///
-  /// In en, this message translates to:
-  /// **'Image'**
-  String get providerDetailPageCapsImage;
-
-  /// No description provided for @providerDetailPageCapsTool.
-  ///
-  /// In en, this message translates to:
-  /// **'Tool'**
-  String get providerDetailPageCapsTool;
-
-  /// No description provided for @providerDetailPageCapsReasoning.
-  ///
-  /// In en, this message translates to:
-  /// **'Reasoning'**
-  String get providerDetailPageCapsReasoning;
 
   /// No description provided for @qrScanPageTitle.
   ///
@@ -7664,12 +6842,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get searchServicesPageDone;
-
-  /// No description provided for @searchServicesPageEdit.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit'**
-  String get searchServicesPageEdit;
 
   /// No description provided for @searchServicesPageAddProvider.
   ///
@@ -7737,29 +6909,11 @@ abstract class AppLocalizations {
   /// **'Not tested'**
   String get searchServicesPageNotTestedStatus;
 
-  /// No description provided for @searchServicesPageEditServiceTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit Service'**
-  String get searchServicesPageEditServiceTooltip;
-
   /// No description provided for @searchServicesPageTestConnectionTooltip.
   ///
   /// In en, this message translates to:
   /// **'Test Connection'**
   String get searchServicesPageTestConnectionTooltip;
-
-  /// No description provided for @searchServicesPageDeleteServiceTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete Service'**
-  String get searchServicesPageDeleteServiceTooltip;
-
-  /// No description provided for @searchServicesPageConfiguredStatus.
-  ///
-  /// In en, this message translates to:
-  /// **'Configured'**
-  String get searchServicesPageConfiguredStatus;
 
   /// No description provided for @miniMapTitle.
   ///
@@ -7791,35 +6945,11 @@ abstract class AppLocalizations {
   /// **'No matching messages'**
   String get miniMapSearchNoResults;
 
-  /// No description provided for @searchServicesPageApiKeyRequiredStatus.
-  ///
-  /// In en, this message translates to:
-  /// **'API Key Required'**
-  String get searchServicesPageApiKeyRequiredStatus;
-
-  /// No description provided for @searchServicesPageUrlRequiredStatus.
-  ///
-  /// In en, this message translates to:
-  /// **'URL Required'**
-  String get searchServicesPageUrlRequiredStatus;
-
   /// No description provided for @searchServicesAddDialogTitle.
   ///
   /// In en, this message translates to:
   /// **'Add Search Service'**
   String get searchServicesAddDialogTitle;
-
-  /// No description provided for @searchServicesAddDialogServiceType.
-  ///
-  /// In en, this message translates to:
-  /// **'Service Type'**
-  String get searchServicesAddDialogServiceType;
-
-  /// No description provided for @searchServicesAddDialogBingLocal.
-  ///
-  /// In en, this message translates to:
-  /// **'Local'**
-  String get searchServicesAddDialogBingLocal;
 
   /// No description provided for @searchServicesAddDialogCancel.
   ///
@@ -7832,12 +6962,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add'**
   String get searchServicesAddDialogAdd;
-
-  /// No description provided for @searchServicesAddDialogApiKeyRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'API Key is required'**
-  String get searchServicesAddDialogApiKeyRequired;
 
   /// No description provided for @searchServicesFieldCustomUrlOptional.
   ///
@@ -7863,71 +6987,17 @@ abstract class AppLocalizations {
   /// **'System Prompt'**
   String get searchServicesDialogSystemPrompt;
 
-  /// No description provided for @searchServicesAddDialogInstanceUrl.
-  ///
-  /// In en, this message translates to:
-  /// **'Instance URL'**
-  String get searchServicesAddDialogInstanceUrl;
-
   /// No description provided for @searchServicesAddDialogUrlRequired.
   ///
   /// In en, this message translates to:
   /// **'URL is required'**
   String get searchServicesAddDialogUrlRequired;
 
-  /// No description provided for @searchServicesAddDialogEnginesOptional.
-  ///
-  /// In en, this message translates to:
-  /// **'Engines (optional)'**
-  String get searchServicesAddDialogEnginesOptional;
-
-  /// No description provided for @searchServicesAddDialogLanguageOptional.
-  ///
-  /// In en, this message translates to:
-  /// **'Language (optional)'**
-  String get searchServicesAddDialogLanguageOptional;
-
-  /// No description provided for @searchServicesAddDialogUsernameOptional.
-  ///
-  /// In en, this message translates to:
-  /// **'Username (optional)'**
-  String get searchServicesAddDialogUsernameOptional;
-
-  /// No description provided for @searchServicesAddDialogPasswordOptional.
-  ///
-  /// In en, this message translates to:
-  /// **'Password (optional)'**
-  String get searchServicesAddDialogPasswordOptional;
-
-  /// No description provided for @searchServicesAddDialogRegionOptional.
-  ///
-  /// In en, this message translates to:
-  /// **'Region (optional, default: us-en)'**
-  String get searchServicesAddDialogRegionOptional;
-
-  /// No description provided for @searchServicesEditDialogEdit.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit'**
-  String get searchServicesEditDialogEdit;
-
-  /// No description provided for @searchServicesEditDialogCancel.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
-  String get searchServicesEditDialogCancel;
-
   /// No description provided for @searchServicesEditDialogSave.
   ///
   /// In en, this message translates to:
   /// **'Save'**
   String get searchServicesEditDialogSave;
-
-  /// No description provided for @searchServicesEditDialogBingLocalNoConfig.
-  ///
-  /// In en, this message translates to:
-  /// **'No configuration required for Bing Local search.'**
-  String get searchServicesEditDialogBingLocalNoConfig;
 
   /// No description provided for @searchServicesEditDialogApiKeyRequired.
   ///
@@ -8163,30 +7233,6 @@ abstract class AppLocalizations {
   /// **'Delete'**
   String get searchServiceEditorDeleteConfirm;
 
-  /// No description provided for @searchServiceEditorDiscardTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Discard changes?'**
-  String get searchServiceEditorDiscardTitle;
-
-  /// No description provided for @searchServiceEditorDiscardMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Your unsaved search service settings will be lost.'**
-  String get searchServiceEditorDiscardMessage;
-
-  /// No description provided for @searchServiceEditorKeepEditing.
-  ///
-  /// In en, this message translates to:
-  /// **'Keep editing'**
-  String get searchServiceEditorKeepEditing;
-
-  /// No description provided for @searchServiceEditorDiscard.
-  ///
-  /// In en, this message translates to:
-  /// **'Discard'**
-  String get searchServiceEditorDiscard;
-
   /// No description provided for @searchSettingsSheetTitle.
   ///
   /// In en, this message translates to:
@@ -8198,12 +7244,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Built-in Search'**
   String get searchSettingsSheetBuiltinSearchTitle;
-
-  /// No description provided for @searchSettingsSheetBuiltinSearchDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable model\'s built-in search'**
-  String get searchSettingsSheetBuiltinSearchDescription;
 
   /// No description provided for @searchSettingsSheetClaudeDynamicSearchTitle.
   ///
@@ -8223,12 +7263,6 @@ abstract class AppLocalizations {
   /// **'Web Search'**
   String get searchSettingsSheetWebSearchTitle;
 
-  /// No description provided for @searchSettingsSheetWebSearchDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable web search in chat'**
-  String get searchSettingsSheetWebSearchDescription;
-
   /// No description provided for @searchSettingsSheetOpenSearchServicesTooltip.
   ///
   /// In en, this message translates to:
@@ -8240,12 +7274,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No services. Add from Search Services.'**
   String get searchSettingsSheetNoServicesMessage;
-
-  /// No description provided for @aboutPageEasterEggMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Thanks for exploring! \n (No egg yet)'**
-  String get aboutPageEasterEggMessage;
 
   /// No description provided for @aboutPageEasterEggButton.
   ///
@@ -8265,23 +7293,11 @@ abstract class AppLocalizations {
   /// **'You\'ve already been through this door.'**
   String get aboutPageKelivoSearchAlreadyUnlocked;
 
-  /// No description provided for @aboutPageAppName.
-  ///
-  /// In en, this message translates to:
-  /// **'Kelivo'**
-  String get aboutPageAppName;
-
   /// No description provided for @aboutPageAppDescription.
   ///
   /// In en, this message translates to:
   /// **'Open-source AI Assistant'**
   String get aboutPageAppDescription;
-
-  /// No description provided for @aboutPageNoQQGroup.
-  ///
-  /// In en, this message translates to:
-  /// **'No QQ group yet'**
-  String get aboutPageNoQQGroup;
 
   /// No description provided for @aboutPageVersion.
   ///
@@ -8289,65 +7305,11 @@ abstract class AppLocalizations {
   /// **'Version'**
   String get aboutPageVersion;
 
-  /// No description provided for @aboutPageVersionDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'{version} / {buildNumber}'**
-  String aboutPageVersionDetail(String version, String buildNumber);
-
   /// No description provided for @aboutPageSystem.
   ///
   /// In en, this message translates to:
   /// **'System'**
   String get aboutPageSystem;
-
-  /// No description provided for @aboutPageLoadingPlaceholder.
-  ///
-  /// In en, this message translates to:
-  /// **'...'**
-  String get aboutPageLoadingPlaceholder;
-
-  /// No description provided for @aboutPageUnknownPlaceholder.
-  ///
-  /// In en, this message translates to:
-  /// **'-'**
-  String get aboutPageUnknownPlaceholder;
-
-  /// No description provided for @aboutPagePlatformMacos.
-  ///
-  /// In en, this message translates to:
-  /// **'macOS'**
-  String get aboutPagePlatformMacos;
-
-  /// No description provided for @aboutPagePlatformWindows.
-  ///
-  /// In en, this message translates to:
-  /// **'Windows'**
-  String get aboutPagePlatformWindows;
-
-  /// No description provided for @aboutPagePlatformLinux.
-  ///
-  /// In en, this message translates to:
-  /// **'Linux'**
-  String get aboutPagePlatformLinux;
-
-  /// No description provided for @aboutPagePlatformAndroid.
-  ///
-  /// In en, this message translates to:
-  /// **'Android'**
-  String get aboutPagePlatformAndroid;
-
-  /// No description provided for @aboutPagePlatformIos.
-  ///
-  /// In en, this message translates to:
-  /// **'iOS'**
-  String get aboutPagePlatformIos;
-
-  /// No description provided for @aboutPagePlatformOther.
-  ///
-  /// In en, this message translates to:
-  /// **'Other ({os})'**
-  String aboutPagePlatformOther(String os);
 
   /// No description provided for @aboutPageWebsite.
   ///
@@ -8403,24 +7365,6 @@ abstract class AppLocalizations {
   /// **'Show User Avatar'**
   String get displaySettingsPageShowUserAvatarTitle;
 
-  /// No description provided for @displaySettingsPageShowUserAvatarSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Display user avatar in chat messages'**
-  String get displaySettingsPageShowUserAvatarSubtitle;
-
-  /// No description provided for @displaySettingsPageShowUserNameTimestampTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show User Name & Timestamp'**
-  String get displaySettingsPageShowUserNameTimestampTitle;
-
-  /// No description provided for @displaySettingsPageShowUserNameTimestampSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show user name and the timestamp below it in chat messages'**
-  String get displaySettingsPageShowUserNameTimestampSubtitle;
-
   /// No description provided for @displaySettingsPageShowUserNameTitle.
   ///
   /// In en, this message translates to:
@@ -8438,24 +7382,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show User Message Actions'**
   String get displaySettingsPageShowUserMessageActionsTitle;
-
-  /// No description provided for @displaySettingsPageShowUserMessageActionsSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Display copy, resend, and more buttons below your messages'**
-  String get displaySettingsPageShowUserMessageActionsSubtitle;
-
-  /// No description provided for @displaySettingsPageShowModelNameTimestampTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show Model Name & Timestamp'**
-  String get displaySettingsPageShowModelNameTimestampTitle;
-
-  /// No description provided for @displaySettingsPageShowModelNameTimestampSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show model name and the timestamp below it in chat messages'**
-  String get displaySettingsPageShowModelNameTimestampSubtitle;
 
   /// No description provided for @displaySettingsPageShowModelNameTitle.
   ///
@@ -8475,35 +7401,17 @@ abstract class AppLocalizations {
   /// **'Show Provider After Model Name'**
   String get displaySettingsPageShowProviderInChatMessageTitle;
 
-  /// No description provided for @displaySettingsPageShowProviderInChatMessageSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Display provider name after the model ID in chat messages (e.g. model | provider)'**
-  String get displaySettingsPageShowProviderInChatMessageSubtitle;
-
   /// No description provided for @displaySettingsPageChatModelIconTitle.
   ///
   /// In en, this message translates to:
   /// **'Chat Model Icon'**
   String get displaySettingsPageChatModelIconTitle;
 
-  /// No description provided for @displaySettingsPageChatModelIconSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show model icon in chat messages'**
-  String get displaySettingsPageChatModelIconSubtitle;
-
   /// No description provided for @displaySettingsPageShowTokenStatsTitle.
   ///
   /// In en, this message translates to:
   /// **'Show Token & Context Stats'**
   String get displaySettingsPageShowTokenStatsTitle;
-
-  /// No description provided for @displaySettingsPageShowTokenStatsSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show token usage and message count'**
-  String get displaySettingsPageShowTokenStatsSubtitle;
 
   /// No description provided for @displaySettingsPageShowThinkingCardsTitle.
   ///
@@ -8535,23 +7443,11 @@ abstract class AppLocalizations {
   /// **'Auto-collapse Thinking'**
   String get displaySettingsPageAutoCollapseThinkingTitle;
 
-  /// No description provided for @displaySettingsPageAutoCollapseThinkingSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Collapse reasoning after finish'**
-  String get displaySettingsPageAutoCollapseThinkingSubtitle;
-
   /// No description provided for @displaySettingsPageCollapseThinkingStepsTitle.
   ///
   /// In en, this message translates to:
   /// **'Collapse Thinking Steps'**
   String get displaySettingsPageCollapseThinkingStepsTitle;
-
-  /// No description provided for @displaySettingsPageCollapseThinkingStepsSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show only the latest steps while replying; fold finished ones into one line'**
-  String get displaySettingsPageCollapseThinkingStepsSubtitle;
 
   /// No description provided for @displaySettingsPageShowToolResultSummaryTitle.
   ///
@@ -8564,12 +7460,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Insert suggestions without sending'**
   String get displaySettingsPageInsertSuggestionOnlyTitle;
-
-  /// No description provided for @displaySettingsPageShowToolResultSummarySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Display the summary text below tool steps'**
-  String get displaySettingsPageShowToolResultSummarySubtitle;
 
   /// No description provided for @displaySettingsPageHideToolResultImagesTitle.
   ///
@@ -8637,12 +7527,6 @@ abstract class AppLocalizations {
   /// **'Show Chat List Dates'**
   String get displaySettingsPageShowChatListDateTitle;
 
-  /// No description provided for @displaySettingsPageShowChatListDateSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Display date group labels in the conversation list'**
-  String get displaySettingsPageShowChatListDateSubtitle;
-
   /// No description provided for @displaySettingsPageEnableImageCropperTitle.
   ///
   /// In en, this message translates to:
@@ -8679,12 +7563,6 @@ abstract class AppLocalizations {
   /// **'Show Updates'**
   String get displaySettingsPageShowUpdatesTitle;
 
-  /// No description provided for @displaySettingsPageShowUpdatesSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show app update notifications'**
-  String get displaySettingsPageShowUpdatesSubtitle;
-
   /// No description provided for @displaySettingsPageKeepScreenOnDuringGenerationTitle.
   ///
   /// In en, this message translates to:
@@ -8703,12 +7581,6 @@ abstract class AppLocalizations {
   /// **'Message Navigation Buttons'**
   String get displaySettingsPageMessageNavButtonsTitle;
 
-  /// No description provided for @displaySettingsPageMessageNavButtonsSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose when quick jump buttons appear'**
-  String get displaySettingsPageMessageNavButtonsSubtitle;
-
   /// No description provided for @displaySettingsPageMessageNavButtonsModeAlways.
   ///
   /// In en, this message translates to:
@@ -8720,18 +7592,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show while scrolling'**
   String get displaySettingsPageMessageNavButtonsModeScroll;
-
-  /// No description provided for @displaySettingsPageMessageNavButtonsModeHover.
-  ///
-  /// In en, this message translates to:
-  /// **'Show on mouse hover'**
-  String get displaySettingsPageMessageNavButtonsModeHover;
-
-  /// No description provided for @displaySettingsPageMessageNavButtonsModeScrollAndHover.
-  ///
-  /// In en, this message translates to:
-  /// **'Show while scrolling or hovering'**
-  String get displaySettingsPageMessageNavButtonsModeScrollAndHover;
 
   /// No description provided for @displaySettingsPageMessageNavButtonsModeNever.
   ///
@@ -8750,12 +7610,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Haptics on Sidebar'**
   String get displaySettingsPageHapticsOnSidebarTitle;
-
-  /// No description provided for @displaySettingsPageHapticsOnSidebarSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable haptic feedback when opening/closing sidebar'**
-  String get displaySettingsPageHapticsOnSidebarSubtitle;
 
   /// No description provided for @displaySettingsPageHapticsGlobalTitle.
   ///
@@ -8786,12 +7640,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Haptics on Generate'**
   String get displaySettingsPageHapticsOnGenerateTitle;
-
-  /// No description provided for @displaySettingsPageHapticsOnGenerateSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable haptic feedback during generation'**
-  String get displaySettingsPageHapticsOnGenerateSubtitle;
 
   /// No description provided for @displaySettingsPageNewChatAfterDeleteTitle.
   ///
@@ -8834,54 +7682,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'characters'**
   String get displaySettingsPageLongPasteAsFileThresholdUnit;
-
-  /// No description provided for @displaySettingsPageSendShortcutTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Send Shortcut'**
-  String get displaySettingsPageSendShortcutTitle;
-
-  /// No description provided for @displaySettingsPageSendShortcutEnter.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter'**
-  String get displaySettingsPageSendShortcutEnter;
-
-  /// No description provided for @displaySettingsPageSendShortcutCtrlEnter.
-  ///
-  /// In en, this message translates to:
-  /// **'Ctrl/Cmd + Enter'**
-  String get displaySettingsPageSendShortcutCtrlEnter;
-
-  /// No description provided for @displaySettingsPageAutoSwitchTopicsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto switch to Topics'**
-  String get displaySettingsPageAutoSwitchTopicsTitle;
-
-  /// No description provided for @desktopDisplaySettingsTopicPositionTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Topic position'**
-  String get desktopDisplaySettingsTopicPositionTitle;
-
-  /// No description provided for @desktopDisplaySettingsTopicPositionLeft.
-  ///
-  /// In en, this message translates to:
-  /// **'Left'**
-  String get desktopDisplaySettingsTopicPositionLeft;
-
-  /// No description provided for @desktopDisplaySettingsTopicPositionRight.
-  ///
-  /// In en, this message translates to:
-  /// **'Right'**
-  String get desktopDisplaySettingsTopicPositionRight;
-
-  /// No description provided for @displaySettingsPageNewChatOnLaunchSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Automatically create a new chat on launch'**
-  String get displaySettingsPageNewChatOnLaunchSubtitle;
 
   /// No description provided for @displaySettingsPageChatFontSizeTitle.
   ///
@@ -8937,66 +7737,6 @@ abstract class AppLocalizations {
   /// **'Theme Settings'**
   String get displaySettingsPageThemeSettingsTitle;
 
-  /// No description provided for @displaySettingsPageThemeColorTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Theme Color'**
-  String get displaySettingsPageThemeColorTitle;
-
-  /// No description provided for @desktopSettingsFontsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Fonts'**
-  String get desktopSettingsFontsTitle;
-
-  /// No description provided for @linuxHideTitleBarTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Hide system title bar'**
-  String get linuxHideTitleBarTitle;
-
-  /// No description provided for @linuxHideTitleBarDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Also hides window buttons. Use your window manager to move, resize, and close the window.'**
-  String get linuxHideTitleBarDescription;
-
-  /// No description provided for @linuxHideTitleBarError.
-  ///
-  /// In en, this message translates to:
-  /// **'Unable to change the title bar. Please try again.'**
-  String get linuxHideTitleBarError;
-
-  /// No description provided for @displaySettingsPageTrayTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'System Tray'**
-  String get displaySettingsPageTrayTitle;
-
-  /// No description provided for @displaySettingsPageTrayShowTrayTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show tray icon'**
-  String get displaySettingsPageTrayShowTrayTitle;
-
-  /// No description provided for @displaySettingsPageTrayMinimizeOnCloseTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Minimize to tray on close'**
-  String get displaySettingsPageTrayMinimizeOnCloseTitle;
-
-  /// No description provided for @desktopFontAppLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'App Font'**
-  String get desktopFontAppLabel;
-
-  /// No description provided for @desktopFontCodeLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Code Font'**
-  String get desktopFontCodeLabel;
-
   /// No description provided for @desktopFontFamilySystemDefault.
   ///
   /// In en, this message translates to:
@@ -9008,12 +7748,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Monospace'**
   String get desktopFontFamilyMonospaceDefault;
-
-  /// No description provided for @desktopFontFilterHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Filter fonts...'**
-  String get desktopFontFilterHint;
 
   /// No description provided for @displaySettingsPageAppFontTitle.
   ///
@@ -9033,12 +7767,6 @@ abstract class AppLocalizations {
   /// **'Choose Local File'**
   String get fontPickerChooseLocalFile;
 
-  /// No description provided for @desktopFontLoading.
-  ///
-  /// In en, this message translates to:
-  /// **'Loading fonts…'**
-  String get desktopFontLoading;
-
   /// No description provided for @displaySettingsPageFontLocalFileLabel.
   ///
   /// In en, this message translates to:
@@ -9050,12 +7778,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset font settings'**
   String get displaySettingsPageFontResetLabel;
-
-  /// No description provided for @displaySettingsPageOtherSettingsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Other Settings'**
-  String get displaySettingsPageOtherSettingsTitle;
 
   /// No description provided for @themeSettingsPageDynamicColorSection.
   ///
@@ -9219,12 +7941,6 @@ abstract class AppLocalizations {
   /// **'Theme JSON copied to clipboard'**
   String get customThemeCopied;
 
-  /// No description provided for @customThemeCopyAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Copy'**
-  String get customThemeCopyAction;
-
   /// No description provided for @customThemeImportHint.
   ///
   /// In en, this message translates to:
@@ -9236,12 +7952,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invalid theme JSON'**
   String get customThemeImportInvalid;
-
-  /// No description provided for @customThemeHexLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Hex'**
-  String get customThemeHexLabel;
 
   /// No description provided for @ttsServicesPageBackButton.
   ///
@@ -9278,12 +7988,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Speech Recognition'**
   String get asrServicesSectionTitle;
-
-  /// No description provided for @asrServicesSectionDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Turn speech into text with an on-device, system, or cloud service.'**
-  String get asrServicesSectionDescription;
 
   /// No description provided for @asrServicesAddTooltip.
   ///
@@ -9410,18 +8114,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit Speech Recognition'**
   String get asrServicesEditTitle;
-
-  /// No description provided for @asrServicesSelectedLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Selected'**
-  String get asrServicesSelectedLabel;
-
-  /// No description provided for @asrServicesUnavailableLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Unavailable'**
-  String get asrServicesUnavailableLabel;
 
   /// No description provided for @asrServicesEditAction.
   ///
@@ -9585,12 +8277,6 @@ abstract class AppLocalizations {
   /// **'Speech recognition failed: {error}'**
   String asrServicesRecognitionFailed(String error);
 
-  /// No description provided for @ttsServicesPageAddNotImplemented.
-  ///
-  /// In en, this message translates to:
-  /// **'Add TTS service not implemented'**
-  String get ttsServicesPageAddNotImplemented;
-
   /// No description provided for @ttsServicesPageSystemTtsTitle.
   ///
   /// In en, this message translates to:
@@ -9620,30 +8306,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hello, this is a test speech.'**
   String get ttsServicesPageTestSpeechText;
-
-  /// No description provided for @ttsServicesPageConfigureTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Configure'**
-  String get ttsServicesPageConfigureTooltip;
-
-  /// No description provided for @ttsServicesPageTestVoiceTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Test voice'**
-  String get ttsServicesPageTestVoiceTooltip;
-
-  /// No description provided for @ttsServicesPageStopTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Stop'**
-  String get ttsServicesPageStopTooltip;
-
-  /// No description provided for @ttsServicesPageDeleteTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete'**
-  String get ttsServicesPageDeleteTooltip;
 
   /// No description provided for @ttsServicesPageSystemTtsSettingsTitle.
   ///
@@ -9693,18 +8355,6 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get ttsServicesPageDoneButton;
 
-  /// No description provided for @ttsServicesPageNetworkSectionTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Network TTS'**
-  String get ttsServicesPageNetworkSectionTitle;
-
-  /// No description provided for @ttsServicesPageNoNetworkServices.
-  ///
-  /// In en, this message translates to:
-  /// **'No TTS services.'**
-  String get ttsServicesPageNoNetworkServices;
-
   /// No description provided for @ttsServicesDialogAddTitle.
   ///
   /// In en, this message translates to:
@@ -9722,12 +8372,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Provider'**
   String get ttsServicesDialogProviderType;
-
-  /// No description provided for @ttsServicesDialogCancelButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
-  String get ttsServicesDialogCancelButton;
 
   /// No description provided for @ttsServicesDialogAddButton.
   ///
@@ -9860,12 +8504,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Channels'**
   String get ttsServicesFieldChannelLabel;
-
-  /// No description provided for @ttsServicesFieldSubtitlesLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Generate subtitles'**
-  String get ttsServicesFieldSubtitlesLabel;
 
   /// No description provided for @ttsServicesFieldPronunciationDictionaryLabel.
   ///
@@ -10197,12 +8835,6 @@ abstract class AppLocalizations {
   /// **'Save Image'**
   String get imageViewerPageSaveButton;
 
-  /// No description provided for @imageViewerPageCopyButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Copy Image'**
-  String get imageViewerPageCopyButton;
-
   /// No description provided for @imageViewerPagePreviousButton.
   ///
   /// In en, this message translates to:
@@ -10286,12 +8918,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save failed: {error}'**
   String imageViewerPageSaveFailed(String error);
-
-  /// No description provided for @settingsShare.
-  ///
-  /// In en, this message translates to:
-  /// **'Kelivo - Open Source AI Assistant'**
-  String get settingsShare;
 
   /// No description provided for @searchProviderBingLocalDescription.
   ///
@@ -10911,12 +9537,6 @@ abstract class AppLocalizations {
   /// **'Imported {count} instruction(s)'**
   String instructionInjectionImportSuccess(int count);
 
-  /// No description provided for @instructionInjectionSheetSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose a prompt to apply before chatting'**
-  String get instructionInjectionSheetSubtitle;
-
   /// No description provided for @mcpJsonEditButtonTooltip.
   ///
   /// In en, this message translates to:
@@ -10965,12 +9585,6 @@ abstract class AppLocalizations {
   /// **'Enter a positive number of seconds'**
   String get mcpTimeoutInvalid;
 
-  /// No description provided for @quickPhraseEditButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit'**
-  String get quickPhraseEditButton;
-
   /// No description provided for @quickPhraseDeleteButton.
   ///
   /// In en, this message translates to:
@@ -10994,12 +9608,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Manage quick phrases for this assistant. Click the button below to add phrases.'**
   String get assistantEditQuickPhraseDescription;
-
-  /// No description provided for @assistantEditManageQuickPhraseButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Manage Quick Phrases'**
-  String get assistantEditManageQuickPhraseButton;
 
   /// No description provided for @assistantEditPageMemoryTab.
   ///
@@ -11157,29 +9765,11 @@ abstract class AppLocalizations {
   /// **'Weather'**
   String get assistantEditLocalToolWeatherTitle;
 
-  /// No description provided for @assistantEditLocalToolWeatherSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Get Apple Weather for the current or a specified location. WeatherKit attribution is shown in the result.'**
-  String get assistantEditLocalToolWeatherSubtitle;
-
   /// No description provided for @assistantEditLocalToolHealthTitle.
   ///
   /// In en, this message translates to:
   /// **'Health Summary'**
   String get assistantEditLocalToolHealthTitle;
-
-  /// No description provided for @assistantEditLocalToolHealthSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Read a privacy-preserving activity summary from Apple Health, requires Health access.'**
-  String get assistantEditLocalToolHealthSubtitle;
-
-  /// No description provided for @assistantEditLocalToolHealthSelectedCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{selected}/{total} selected'**
-  String assistantEditLocalToolHealthSelectedCount(int selected, int total);
 
   /// No description provided for @healthDataSettingsTitle.
   ///
@@ -11463,23 +10053,11 @@ abstract class AppLocalizations {
   /// **'Query Reminders'**
   String get assistantEditLocalToolRemindersQueryTitle;
 
-  /// No description provided for @assistantEditLocalToolRemindersQuerySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Read reminders on this device, requires full reminders access.'**
-  String get assistantEditLocalToolRemindersQuerySubtitle;
-
   /// No description provided for @assistantEditLocalToolRemindersCreateTitle.
   ///
   /// In en, this message translates to:
   /// **'Create Reminder'**
   String get assistantEditLocalToolRemindersCreateTitle;
-
-  /// No description provided for @assistantEditLocalToolRemindersCreateSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Create a reminder on this device with your confirmation, requires full reminders access.'**
-  String get assistantEditLocalToolRemindersCreateSubtitle;
 
   /// No description provided for @assistantEditLocalToolRemindersCompleteTitle.
   ///
@@ -11487,29 +10065,11 @@ abstract class AppLocalizations {
   /// **'Complete Reminder'**
   String get assistantEditLocalToolRemindersCompleteTitle;
 
-  /// No description provided for @assistantEditLocalToolRemindersCompleteSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark a reminder as done with your confirmation, requires full reminders access.'**
-  String get assistantEditLocalToolRemindersCompleteSubtitle;
-
-  /// No description provided for @assistantEditMemorySwitchDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Allow the assistant to create and use memories across chats.'**
-  String get assistantEditMemorySwitchDescription;
-
   /// No description provided for @assistantEditRecentChatsSwitchTitle.
   ///
   /// In en, this message translates to:
   /// **'Recent Chats Reference'**
   String get assistantEditRecentChatsSwitchTitle;
-
-  /// No description provided for @assistantEditRecentChatsSwitchDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Include recent conversation titles to help with context.'**
-  String get assistantEditRecentChatsSwitchDescription;
 
   /// No description provided for @assistantEditAddMemoryButton.
   ///
@@ -11715,24 +10275,6 @@ abstract class AppLocalizations {
   /// **'Edit preset message'**
   String get assistantEditPresetEditDialogTitle;
 
-  /// No description provided for @assistantEditPresetRoleUser.
-  ///
-  /// In en, this message translates to:
-  /// **'User'**
-  String get assistantEditPresetRoleUser;
-
-  /// No description provided for @assistantEditPresetRoleAssistant.
-  ///
-  /// In en, this message translates to:
-  /// **'Assistant'**
-  String get assistantEditPresetRoleAssistant;
-
-  /// No description provided for @desktopTtsPleaseAddProvider.
-  ///
-  /// In en, this message translates to:
-  /// **'Please add a TTS provider first'**
-  String get desktopTtsPleaseAddProvider;
-
   /// No description provided for @settingsPageNetworkProxy.
   ///
   /// In en, this message translates to:
@@ -11744,12 +10286,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enable Proxy'**
   String get networkProxyEnableLabel;
-
-  /// No description provided for @networkProxySettingsHeader.
-  ///
-  /// In en, this message translates to:
-  /// **'Proxy Settings'**
-  String get networkProxySettingsHeader;
 
   /// No description provided for @networkProxyType.
   ///
@@ -11961,12 +10497,6 @@ abstract class AppLocalizations {
   /// **'{seconds}s until retry ({attempt}/{maxRetries})'**
   String autoRetryCountdown(int seconds, int attempt, int maxRetries);
 
-  /// No description provided for @desktopShowProviderInModelCapsule.
-  ///
-  /// In en, this message translates to:
-  /// **'Show provider in model capsule'**
-  String get desktopShowProviderInModelCapsule;
-
   /// No description provided for @messageWebViewOpenInBrowser.
   ///
   /// In en, this message translates to:
@@ -12021,12 +10551,6 @@ abstract class AppLocalizations {
   /// **'Detecting...'**
   String get providerDetailPageBatchDetecting;
 
-  /// No description provided for @providerDetailPageBatchDetectStart.
-  ///
-  /// In en, this message translates to:
-  /// **'Start Detection'**
-  String get providerDetailPageBatchDetectStart;
-
   /// No description provided for @providerDetailPageDetectSuccess.
   ///
   /// In en, this message translates to:
@@ -12045,12 +10569,6 @@ abstract class AppLocalizations {
   /// **'Delete'**
   String get providerDetailPageDeleteSelectedModelsButton;
 
-  /// No description provided for @providerDetailPageDeleteSelectedModelsTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete selected models'**
-  String get providerDetailPageDeleteSelectedModelsTooltip;
-
   /// No description provided for @providerDetailPageDeleteSelectedModelsConfirm.
   ///
   /// In en, this message translates to:
@@ -12062,12 +10580,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete unavailable'**
   String get providerDetailPageDeleteFailedDetectedModelsButton;
-
-  /// No description provided for @providerDetailPageDeleteFailedDetectedModelsTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete models that failed detection'**
-  String get providerDetailPageDeleteFailedDetectedModelsTooltip;
 
   /// No description provided for @providerDetailPageDeleteFailedDetectedModelsConfirm.
   ///
@@ -12237,12 +10749,6 @@ abstract class AppLocalizations {
   /// **'Incremental update'**
   String get contextLogKindUpdate;
 
-  /// No description provided for @contextLogSectionComposition.
-  ///
-  /// In en, this message translates to:
-  /// **'Composition'**
-  String get contextLogSectionComposition;
-
   /// No description provided for @contextLogLoadOlder.
   ///
   /// In en, this message translates to:
@@ -12284,12 +10790,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Export'**
   String get logViewerExport;
-
-  /// No description provided for @logViewerOpenFolder.
-  ///
-  /// In en, this message translates to:
-  /// **'Open Logs Folder'**
-  String get logViewerOpenFolder;
 
   /// No description provided for @logViewerRequestsCount.
   ///
@@ -13051,18 +11551,6 @@ abstract class AppLocalizations {
   /// **'Distilled'**
   String get memoryEntrySourceDistilled;
 
-  /// No description provided for @memoryEntryStatusActive.
-  ///
-  /// In en, this message translates to:
-  /// **'Active'**
-  String get memoryEntryStatusActive;
-
-  /// No description provided for @memoryEntryStatusArchived.
-  ///
-  /// In en, this message translates to:
-  /// **'Archived'**
-  String get memoryEntryStatusArchived;
-
   /// No description provided for @memoryEntryUpdatedAt.
   ///
   /// In en, this message translates to:
@@ -13537,12 +12025,6 @@ abstract class AppLocalizations {
   /// **'Preferred name'**
   String get userProfilePreferredName;
 
-  /// No description provided for @userProfilePreferredNameHint.
-  ///
-  /// In en, this message translates to:
-  /// **'How the model should address you — unrelated to the sidebar display name'**
-  String get userProfilePreferredNameHint;
-
   /// No description provided for @userProfileGender.
   ///
   /// In en, this message translates to:
@@ -13897,12 +12379,6 @@ abstract class AppLocalizations {
   /// **'The default template injects the current time via {token}, which affects cache hit rate. Remove it if you do not need it.'**
   String legacyMemoryModeCacheWarning(String token);
 
-  /// No description provided for @memoryUiContentLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Content'**
-  String get memoryUiContentLabel;
-
   /// No description provided for @memoryUiValueLabel.
   ///
   /// In en, this message translates to:
@@ -13938,18 +12414,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear search'**
   String get memoryUiSearchClear;
-
-  /// No description provided for @memoryUiAssistantLegacyTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Legacy memories (read-only)'**
-  String get memoryUiAssistantLegacyTitle;
-
-  /// No description provided for @memoryUiAssistantLegacySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Old memories of this assistant from previous versions'**
-  String get memoryUiAssistantLegacySubtitle;
 
   /// No description provided for @assistantEditMemorySwitchTitle.
   ///
@@ -14251,12 +12715,6 @@ abstract class AppLocalizations {
   /// **'Unnamed Entry'**
   String get worldBookUnnamedEntry;
 
-  /// No description provided for @worldBookKeywordsLine.
-  ///
-  /// In en, this message translates to:
-  /// **'Keywords: {keywords}'**
-  String worldBookKeywordsLine(String keywords);
-
   /// No description provided for @worldBookEditEntry.
   ///
   /// In en, this message translates to:
@@ -14467,12 +12925,6 @@ abstract class AppLocalizations {
   /// **'Reason (optional)'**
   String get toolApprovalDenyHint;
 
-  /// No description provided for @toolApprovalDeniedMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Tool call \"{toolName}\" was denied by user. Reason: {reason}'**
-  String toolApprovalDeniedMessage(Object reason, Object toolName);
-
   /// No description provided for @askUserCardSubmit.
   ///
   /// In en, this message translates to:
@@ -14514,12 +12966,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This question is no longer active. Regenerate or continue the conversation.'**
   String get askUserCardInactive;
-
-  /// No description provided for @askUserCardCancelled.
-  ///
-  /// In en, this message translates to:
-  /// **'Question cancelled'**
-  String get askUserCardCancelled;
 
   /// No description provided for @askUserCardQuestionCount.
   ///
@@ -14857,12 +13303,6 @@ abstract class AppLocalizations {
   /// **'Backup ZIP saved'**
   String get migrationBackupFileSavedTitle;
 
-  /// No description provided for @migrationChecklistBackupFiles.
-  ///
-  /// In en, this message translates to:
-  /// **'Export Hive backup ZIP'**
-  String get migrationChecklistBackupFiles;
-
   /// No description provided for @migrationChecklistPrepareSqlite.
   ///
   /// In en, this message translates to:
@@ -14941,12 +13381,6 @@ abstract class AppLocalizations {
   /// **'Malformed'**
   String get migrationMalformedCount;
 
-  /// No description provided for @migrationMissingFilesCount.
-  ///
-  /// In en, this message translates to:
-  /// **'Missing files'**
-  String get migrationMissingFilesCount;
-
   /// No description provided for @migrationRestartButton.
   ///
   /// In en, this message translates to:
@@ -15018,12 +13452,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The chats.json export was skipped because of an error. The backup ZIP still contains the raw Hive files with your complete chat history.'**
   String get migrationChatsExportDegradedNote;
-
-  /// No description provided for @timelineJumpToLatest.
-  ///
-  /// In en, this message translates to:
-  /// **'Jump to latest'**
-  String get timelineJumpToLatest;
 
   /// No description provided for @largeContentShowMore.
   ///
@@ -15547,12 +13975,6 @@ abstract class AppLocalizations {
   /// **'After'**
   String get memoryTraceAfter;
 
-  /// No description provided for @memoryTraceEmptyValue.
-  ///
-  /// In en, this message translates to:
-  /// **'(empty)'**
-  String get memoryTraceEmptyValue;
-
   /// No description provided for @memoryTraceStepsCount.
   ///
   /// In en, this message translates to:
@@ -15865,12 +14287,6 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 copy} other{{count} copies}}'**
   String localSnapshotKeepValue(int count);
 
-  /// No description provided for @localSnapshotKeepSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Plus one from last week and one from last month, so a problem that went unnoticed is still recoverable.'**
-  String get localSnapshotKeepSubtitle;
-
   /// No description provided for @localSnapshotKeepWeekly.
   ///
   /// In en, this message translates to:
@@ -15906,12 +14322,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notify when a copy is saved'**
   String get localSnapshotAnnounceTitle;
-
-  /// No description provided for @localSnapshotAnnounceSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Failures are always reported. This only adds a brief message on success.'**
-  String get localSnapshotAnnounceSubtitle;
 
   /// No description provided for @localSnapshotTakeNow.
   ///
@@ -15954,12 +14364,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skipped: not enough free space on this device'**
   String get localSnapshotStatusSkippedSpace;
-
-  /// No description provided for @localSnapshotStatusUnchanged.
-  ///
-  /// In en, this message translates to:
-  /// **'Nothing has changed since the last copy'**
-  String get localSnapshotStatusUnchanged;
 
   /// No description provided for @localSnapshotCopiesTitle.
   ///
@@ -16020,12 +14424,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Contents unknown until restored'**
   String get localSnapshotCopyContentsUnknown;
-
-  /// No description provided for @localSnapshotCopyPinned.
-  ///
-  /// In en, this message translates to:
-  /// **'Kept'**
-  String get localSnapshotCopyPinned;
 
   /// No description provided for @localSnapshotActionRestore.
   ///
@@ -16128,12 +14526,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Copy deleted'**
   String get localSnapshotDeleteDone;
-
-  /// No description provided for @localSnapshotBusyMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Another backup task is already running'**
-  String get localSnapshotBusyMessage;
 
   /// No description provided for @localSnapshotRunInBackground.
   ///
@@ -16261,41 +14653,17 @@ abstract class AppLocalizations {
   /// **'File not available'**
   String get workspaceFileNotAvailable;
 
-  /// No description provided for @workspaceTerminalNotAvailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Terminal not available'**
-  String get workspaceTerminalNotAvailable;
-
-  /// No description provided for @workspacePreviewCopyPath.
-  ///
-  /// In en, this message translates to:
-  /// **'Copy path'**
-  String get workspacePreviewCopyPath;
-
   /// No description provided for @workspacePreviewShare.
   ///
   /// In en, this message translates to:
   /// **'Share'**
   String get workspacePreviewShare;
 
-  /// No description provided for @workspacePreviewOpenExternally.
-  ///
-  /// In en, this message translates to:
-  /// **'Open externally'**
-  String get workspacePreviewOpenExternally;
-
   /// No description provided for @workspacePreviewOpenWith.
   ///
   /// In en, this message translates to:
   /// **'Open with…'**
   String get workspacePreviewOpenWith;
-
-  /// No description provided for @workspacePreviewFileTooLarge.
-  ///
-  /// In en, this message translates to:
-  /// **'This file is too large to preview. Open it externally instead.'**
-  String get workspacePreviewFileTooLarge;
 
   /// No description provided for @workspacePreviewSource.
   ///
@@ -16308,24 +14676,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rendered'**
   String get workspacePreviewRendered;
-
-  /// No description provided for @workspacePreviewFileName.
-  ///
-  /// In en, this message translates to:
-  /// **'Name'**
-  String get workspacePreviewFileName;
-
-  /// No description provided for @workspacePreviewFileSize.
-  ///
-  /// In en, this message translates to:
-  /// **'Size'**
-  String get workspacePreviewFileSize;
-
-  /// No description provided for @workspacePreviewFileModified.
-  ///
-  /// In en, this message translates to:
-  /// **'Modified'**
-  String get workspacePreviewFileModified;
 
   /// No description provided for @workspacePreviewPathCopied.
   ///
@@ -16453,12 +14803,6 @@ abstract class AppLocalizations {
   /// **'Rename'**
   String get workspaceFilesRename;
 
-  /// No description provided for @workspaceFilesMove.
-  ///
-  /// In en, this message translates to:
-  /// **'Move'**
-  String get workspaceFilesMove;
-
   /// No description provided for @workspaceFilesDelete.
   ///
   /// In en, this message translates to:
@@ -16507,12 +14851,6 @@ abstract class AppLocalizations {
   /// **'Cancel'**
   String get workspaceFilesCancel;
 
-  /// No description provided for @workspaceFilesConfirm.
-  ///
-  /// In en, this message translates to:
-  /// **'Confirm'**
-  String get workspaceFilesConfirm;
-
   /// No description provided for @workspaceFilesSave.
   ///
   /// In en, this message translates to:
@@ -16542,12 +14880,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Move to folder'**
   String get workspaceFilesMoveTitle;
-
-  /// No description provided for @workspaceFilesMoveHere.
-  ///
-  /// In en, this message translates to:
-  /// **'Move here'**
-  String get workspaceFilesMoveHere;
 
   /// No description provided for @workspaceFilesPathCopied.
   ///
@@ -16657,23 +14989,11 @@ abstract class AppLocalizations {
   /// **'Workspace not found'**
   String get workspaceFilesMissingWorkspace;
 
-  /// No description provided for @workspaceFilesClose.
-  ///
-  /// In en, this message translates to:
-  /// **'Close'**
-  String get workspaceFilesClose;
-
   /// No description provided for @workspacesTitle.
   ///
   /// In en, this message translates to:
   /// **'Workspaces'**
   String get workspacesTitle;
-
-  /// No description provided for @workspacesCreate.
-  ///
-  /// In en, this message translates to:
-  /// **'Create'**
-  String get workspacesCreate;
 
   /// No description provided for @workspacesCreateTitle.
   ///
@@ -16716,24 +15036,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Settings'**
   String get workspacesSettings;
-
-  /// No description provided for @workspacesOpenFiles.
-  ///
-  /// In en, this message translates to:
-  /// **'Open files'**
-  String get workspacesOpenFiles;
-
-  /// No description provided for @workspacesLastUsedNever.
-  ///
-  /// In en, this message translates to:
-  /// **'Never used'**
-  String get workspacesLastUsedNever;
-
-  /// No description provided for @workspacesLastUsed.
-  ///
-  /// In en, this message translates to:
-  /// **'Last used {when}'**
-  String workspacesLastUsed(String when);
 
   /// No description provided for @workspacesDeleteTitle.
   ///
@@ -16783,30 +15085,6 @@ abstract class AppLocalizations {
   /// **'Default working directory'**
   String get workspacesDefaultCwd;
 
-  /// No description provided for @workspacesDefaultCwdHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Relative path, e.g. src'**
-  String get workspacesDefaultCwdHint;
-
-  /// No description provided for @workspacesDefaultCwdInvalid.
-  ///
-  /// In en, this message translates to:
-  /// **'Use a relative path without ..'**
-  String get workspacesDefaultCwdInvalid;
-
-  /// No description provided for @workspacesCreateManaged.
-  ///
-  /// In en, this message translates to:
-  /// **'Create workspace'**
-  String get workspacesCreateManaged;
-
-  /// No description provided for @workspacesLinkExisting.
-  ///
-  /// In en, this message translates to:
-  /// **'Link an existing folder'**
-  String get workspacesLinkExisting;
-
   /// No description provided for @workspacesUnlink.
   ///
   /// In en, this message translates to:
@@ -16855,36 +15133,6 @@ abstract class AppLocalizations {
   /// **'Install'**
   String get workspaceToolInstall;
 
-  /// No description provided for @workspaceToolFuzzy.
-  ///
-  /// In en, this message translates to:
-  /// **'fuzzy'**
-  String get workspaceToolFuzzy;
-
-  /// No description provided for @workspaceToolCreated.
-  ///
-  /// In en, this message translates to:
-  /// **'created'**
-  String get workspaceToolCreated;
-
-  /// No description provided for @workspaceToolUpdated.
-  ///
-  /// In en, this message translates to:
-  /// **'updated'**
-  String get workspaceToolUpdated;
-
-  /// No description provided for @workspaceToolTruncated.
-  ///
-  /// In en, this message translates to:
-  /// **'truncated'**
-  String get workspaceToolTruncated;
-
-  /// No description provided for @workspaceToolImageTag.
-  ///
-  /// In en, this message translates to:
-  /// **'image'**
-  String get workspaceToolImageTag;
-
   /// No description provided for @workspaceToolAllowAll.
   ///
   /// In en, this message translates to:
@@ -16902,12 +15150,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'stderr'**
   String get workspaceToolStderr;
-
-  /// No description provided for @workspaceToolOpenFullOutput.
-  ///
-  /// In en, this message translates to:
-  /// **'Open full output'**
-  String get workspaceToolOpenFullOutput;
 
   /// No description provided for @workspaceToolChangedFiles.
   ///
@@ -16956,12 +15198,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Diff truncated'**
   String get workspaceToolDiffTruncated;
-
-  /// No description provided for @workspaceToolOpenPreview.
-  ///
-  /// In en, this message translates to:
-  /// **'Open preview'**
-  String get workspaceToolOpenPreview;
 
   /// No description provided for @workspaceToolNoOutput.
   ///
@@ -17047,12 +15283,6 @@ abstract class AppLocalizations {
   /// **'Background job'**
   String get workspaceToolTitleShellOutput;
 
-  /// No description provided for @workspaceToolCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count}'**
-  String workspaceToolCount(int count);
-
   /// No description provided for @workspaceToolMoreFiles.
   ///
   /// In en, this message translates to:
@@ -17088,12 +15318,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Alpine {version} (iSH)'**
   String workspaceEnvEngineAlpine(String version);
-
-  /// No description provided for @workspaceEnvEngineNative.
-  ///
-  /// In en, this message translates to:
-  /// **'Native shell'**
-  String get workspaceEnvEngineNative;
 
   /// No description provided for @workspaceEnvPhaseNotInstalled.
   ///
@@ -17143,30 +15367,6 @@ abstract class AppLocalizations {
   /// **'Restart required'**
   String get workspaceEnvPhaseNeedsRestart;
 
-  /// No description provided for @workspaceEnvMetaLine.
-  ///
-  /// In en, this message translates to:
-  /// **'{version} · {arch}'**
-  String workspaceEnvMetaLine(String version, String arch);
-
-  /// No description provided for @workspaceEnvInstalledAt.
-  ///
-  /// In en, this message translates to:
-  /// **'Installed {date}'**
-  String workspaceEnvInstalledAt(String date);
-
-  /// No description provided for @workspaceEnvDiskUsage.
-  ///
-  /// In en, this message translates to:
-  /// **'Disk usage {size}'**
-  String workspaceEnvDiskUsage(String size);
-
-  /// No description provided for @workspaceEnvRuntimeReason.
-  ///
-  /// In en, this message translates to:
-  /// **'{reason}'**
-  String workspaceEnvRuntimeReason(String reason);
-
   /// No description provided for @workspaceEnvInstall.
   ///
   /// In en, this message translates to:
@@ -17178,12 +15378,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose Ubuntu, Alpine, Debian, or import a local rootfs image.'**
   String get workspaceEnvInstallSubtitleAndroid;
-
-  /// No description provided for @workspaceEnvInstallSubtitleIos.
-  ///
-  /// In en, this message translates to:
-  /// **'Bundled, no download'**
-  String get workspaceEnvInstallSubtitleIos;
 
   /// No description provided for @workspaceEnvCancel.
   ///
@@ -17215,41 +15409,17 @@ abstract class AppLocalizations {
   /// **'Reset environment?'**
   String get workspaceEnvResetConfirmTitle;
 
-  /// No description provided for @workspaceEnvResetConfirmBody.
-  ///
-  /// In en, this message translates to:
-  /// **'This deletes installed packages and the sandbox filesystem.'**
-  String get workspaceEnvResetConfirmBody;
-
   /// No description provided for @workspaceEnvCheckForUpdate.
   ///
   /// In en, this message translates to:
   /// **'Check for update'**
   String get workspaceEnvCheckForUpdate;
 
-  /// No description provided for @workspaceEnvUpdate.
-  ///
-  /// In en, this message translates to:
-  /// **'Update'**
-  String get workspaceEnvUpdate;
-
-  /// No description provided for @workspaceEnvAvailableVersion.
-  ///
-  /// In en, this message translates to:
-  /// **'Version {version} is available'**
-  String workspaceEnvAvailableVersion(String version);
-
   /// No description provided for @workspaceEnvUpToDate.
   ///
   /// In en, this message translates to:
   /// **'You\'re up to date'**
   String get workspaceEnvUpToDate;
-
-  /// No description provided for @workspaceEnvRestartBanner.
-  ///
-  /// In en, this message translates to:
-  /// **'Restart Kelivo to finish'**
-  String get workspaceEnvRestartBanner;
 
   /// No description provided for @workspaceEnvDetectingMirrors.
   ///
@@ -17275,47 +15445,17 @@ abstract class AppLocalizations {
   /// **'Use mirror'**
   String get workspaceEnvUseMirror;
 
-  /// No description provided for @workspaceEnvDetect.
-  ///
-  /// In en, this message translates to:
-  /// **'Detect'**
-  String get workspaceEnvDetect;
-
   /// No description provided for @workspaceEnvOfficial.
   ///
   /// In en, this message translates to:
   /// **'Official'**
   String get workspaceEnvOfficial;
 
-  /// No description provided for @workspaceEnvMirrorsDisabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Mirror changes run in the sandbox and are unavailable until it is ready.'**
-  String get workspaceEnvMirrorsDisabled;
-
-  /// No description provided for @workspaceEnvMirrorsDisabledReason.
-  ///
-  /// In en, this message translates to:
-  /// **'Mirror changes run in the sandbox and are unavailable: {reason}'**
-  String workspaceEnvMirrorsDisabledReason(String reason);
-
-  /// No description provided for @workspaceEnvMirrorDetectTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Mirror speed'**
-  String get workspaceEnvMirrorDetectTitle;
-
   /// No description provided for @workspaceEnvMirrorLatency.
   ///
   /// In en, this message translates to:
   /// **'{ms} ms'**
   String workspaceEnvMirrorLatency(int ms);
-
-  /// No description provided for @workspaceEnvMirrorFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'{reason}'**
-  String workspaceEnvMirrorFailed(String reason);
 
   /// No description provided for @workspaceEnvErrorUnsupportedAbi.
   ///
@@ -17413,33 +15553,11 @@ abstract class AppLocalizations {
   /// **'Restart required'**
   String get workspaceEnvChipRestart;
 
-  /// No description provided for @workspaceEnvNativeExplanation.
-  ///
-  /// In en, this message translates to:
-  /// **'On desktop, Kelivo uses your system shell instead of a Linux sandbox.'**
-  String get workspaceEnvNativeExplanation;
-
   /// No description provided for @workspaceEnvNativeShellPath.
   ///
   /// In en, this message translates to:
   /// **'Shell: {path}'**
   String workspaceEnvNativeShellPath(String path);
-
-  /// No description provided for @workspaceEnvNativeShellApproval.
-  ///
-  /// In en, this message translates to:
-  /// **'The shell tool needs approval unless this session allows all tools.'**
-  String get workspaceEnvNativeShellApproval;
-
-  /// No description provided for @workspaceEnvDownloadProgress.
-  ///
-  /// In en, this message translates to:
-  /// **'{downloaded} / {total} MB ({percent}%)'**
-  String workspaceEnvDownloadProgress(
-    String downloaded,
-    String total,
-    int percent,
-  );
 
   /// No description provided for @workspaceEnvMirrorsFailed.
   ///
@@ -17495,23 +15613,11 @@ abstract class AppLocalizations {
   /// **'No skills yet'**
   String get skillsEmptyTitle;
 
-  /// No description provided for @skillsEmptyBody.
-  ///
-  /// In en, this message translates to:
-  /// **'A skill is a folder with a SKILL.md file. Import markdown, a .md or .zip file, or a GitHub URL.'**
-  String get skillsEmptyBody;
-
   /// No description provided for @skillsEmptyFormat.
   ///
   /// In en, this message translates to:
   /// **'---\nname: my-skill\ndescription: What this skill does\n---\n\n# Instructions'**
   String get skillsEmptyFormat;
-
-  /// No description provided for @skillsImport.
-  ///
-  /// In en, this message translates to:
-  /// **'Import'**
-  String get skillsImport;
 
   /// No description provided for @skillsImportPaste.
   ///
@@ -17542,18 +15648,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Paste a SKILL.md with YAML frontmatter'**
   String get skillsImportPasteHint;
-
-  /// No description provided for @skillsImportGitHubLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'GitHub URL'**
-  String get skillsImportGitHubLabel;
-
-  /// No description provided for @skillsImportGitHubHint.
-  ///
-  /// In en, this message translates to:
-  /// **'github.com/owner/repo or github.com/owner/repo/tree/ref/path'**
-  String get skillsImportGitHubHint;
 
   /// No description provided for @skillsImportConfirm.
   ///
@@ -17651,18 +15745,6 @@ abstract class AppLocalizations {
   /// **'Inherit from assistant'**
   String get skillsInheritAssistant;
 
-  /// No description provided for @skillsInheritAssistantSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Use the same skills as this conversation’s assistant.'**
-  String get skillsInheritAssistantSubtitle;
-
-  /// No description provided for @skillsActiveLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Active'**
-  String get skillsActiveLabel;
-
   /// No description provided for @skillsSessionTitle.
   ///
   /// In en, this message translates to:
@@ -17680,12 +15762,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skill'**
   String get skillsDetailKindLabel;
-
-  /// No description provided for @skillsNoEnabled.
-  ///
-  /// In en, this message translates to:
-  /// **'No enabled skills'**
-  String get skillsNoEnabled;
 
   /// No description provided for @terminalTitle.
   ///
@@ -17783,47 +15859,11 @@ abstract class AppLocalizations {
   /// **'Cancel'**
   String get terminalCancel;
 
-  /// No description provided for @terminalSave.
-  ///
-  /// In en, this message translates to:
-  /// **'Save'**
-  String get terminalSave;
-
-  /// No description provided for @workspaceDeskMenuWorkspace.
-  ///
-  /// In en, this message translates to:
-  /// **'Workspace'**
-  String get workspaceDeskMenuWorkspace;
-
-  /// No description provided for @workspaceDeskMenuSkills.
-  ///
-  /// In en, this message translates to:
-  /// **'Skills'**
-  String get workspaceDeskMenuSkills;
-
-  /// No description provided for @workspaceDeskBarTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Workspace'**
-  String get workspaceDeskBarTitle;
-
-  /// No description provided for @workspaceDeskBarNoWorkspace.
-  ///
-  /// In en, this message translates to:
-  /// **'No workspace'**
-  String get workspaceDeskBarNoWorkspace;
-
   /// No description provided for @workspaceDeskBarEmptyHint.
   ///
   /// In en, this message translates to:
   /// **'Bind a workspace from the toolbar to browse files here'**
   String get workspaceDeskBarEmptyHint;
-
-  /// No description provided for @workspaceDeskBarToggle.
-  ///
-  /// In en, this message translates to:
-  /// **'Workspace files'**
-  String get workspaceDeskBarToggle;
 
   /// No description provided for @workspaceDeskOpenSystemTerminal.
   ///
@@ -17836,12 +15876,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reveal in file manager'**
   String get workspaceDeskReveal;
-
-  /// No description provided for @workspaceDeskBarClose.
-  ///
-  /// In en, this message translates to:
-  /// **'Close workspace bar'**
-  String get workspaceDeskBarClose;
 
   /// No description provided for @workspaceEntryBind.
   ///
@@ -17867,12 +15901,6 @@ abstract class AppLocalizations {
   /// **'Set as assistant default'**
   String get workspaceEntrySetAssistantDefault;
 
-  /// No description provided for @workspaceEntryLocked.
-  ///
-  /// In en, this message translates to:
-  /// **'Locked'**
-  String get workspaceEntryLocked;
-
   /// No description provided for @workspaceEntryChangeConfirmTitle.
   ///
   /// In en, this message translates to:
@@ -17897,29 +15925,11 @@ abstract class AppLocalizations {
   /// **'Working directory'**
   String get workspaceEntryCwd;
 
-  /// No description provided for @workspaceEntryCwdHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Relative to the workspace root'**
-  String get workspaceEntryCwdHint;
-
   /// No description provided for @workspaceEntryCwdInvalid.
   ///
   /// In en, this message translates to:
   /// **'That path is invalid or leaves the workspace'**
   String get workspaceEntryCwdInvalid;
-
-  /// No description provided for @workspaceEntryCwdMissing.
-  ///
-  /// In en, this message translates to:
-  /// **'That directory does not exist'**
-  String get workspaceEntryCwdMissing;
-
-  /// No description provided for @workspaceEntryCwdCreate.
-  ///
-  /// In en, this message translates to:
-  /// **'Create it'**
-  String get workspaceEntryCwdCreate;
 
   /// No description provided for @workspaceEntryFiles.
   ///
@@ -18035,23 +16045,11 @@ abstract class AppLocalizations {
   /// **'None'**
   String get workspaceEntryNone;
 
-  /// No description provided for @workspaceEntryStartConversationFirst.
-  ///
-  /// In en, this message translates to:
-  /// **'Start a conversation first'**
-  String get workspaceEntryStartConversationFirst;
-
   /// No description provided for @workspaceEntryTooltip.
   ///
   /// In en, this message translates to:
   /// **'Workspace'**
   String get workspaceEntryTooltip;
-
-  /// No description provided for @workspaceEntryPickerTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose a workspace'**
-  String get workspaceEntryPickerTitle;
 
   /// No description provided for @settingsPageWorkspace.
   ///
@@ -18173,12 +16171,6 @@ abstract class AppLocalizations {
   /// **'Create'**
   String get workspaceMgmtCreate;
 
-  /// No description provided for @workspaceMgmtShellApprovalSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Ask before each command'**
-  String get workspaceMgmtShellApprovalSubtitle;
-
   /// No description provided for @workspaceMgmtDefaultCwdRoot.
   ///
   /// In en, this message translates to:
@@ -18299,18 +16291,6 @@ abstract class AppLocalizations {
   /// **'Couldn’t load this file.'**
   String get workspacePreviewLoadError;
 
-  /// No description provided for @workspacePreviewRevealInFinder.
-  ///
-  /// In en, this message translates to:
-  /// **'Show in Finder'**
-  String get workspacePreviewRevealInFinder;
-
-  /// No description provided for @workspacePreviewOpenInSystemApp.
-  ///
-  /// In en, this message translates to:
-  /// **'Open with system app'**
-  String get workspacePreviewOpenInSystemApp;
-
   /// No description provided for @workspacePreviewOpenInBrowser.
   ///
   /// In en, this message translates to:
@@ -18322,18 +16302,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Table'**
   String get workspacePreviewTable;
-
-  /// No description provided for @workspacePreviewPlainLanguage.
-  ///
-  /// In en, this message translates to:
-  /// **'Code'**
-  String get workspacePreviewPlainLanguage;
-
-  /// No description provided for @workspacePreviewOpen.
-  ///
-  /// In en, this message translates to:
-  /// **'Open'**
-  String get workspacePreviewOpen;
 
   /// No description provided for @workspacePreviewRevealFailed.
   ///
@@ -18401,24 +16369,6 @@ abstract class AppLocalizations {
   /// **'Import skill'**
   String get skillsImportTooltip;
 
-  /// No description provided for @skillsImportPasteSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Paste SKILL.md with YAML frontmatter'**
-  String get skillsImportPasteSubtitle;
-
-  /// No description provided for @skillsImportFileSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose a .md or .zip file'**
-  String get skillsImportFileSubtitle;
-
-  /// No description provided for @skillsImportGitHubSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Import SKILL.md from a repository'**
-  String get skillsImportGitHubSubtitle;
-
   /// No description provided for @skillsImportResolving.
   ///
   /// In en, this message translates to:
@@ -18454,12 +16404,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'https://github.com/owner/repo or owner/repo[/path]'**
   String get skillsImportGitHubUrlHint;
-
-  /// No description provided for @skillsImportGitHubHelp.
-  ///
-  /// In en, this message translates to:
-  /// **'SKILL.md at the repo root or in a subdirectory is supported.'**
-  String get skillsImportGitHubHelp;
 
   /// No description provided for @skillsEmptyHint.
   ///
@@ -18497,18 +16441,6 @@ abstract class AppLocalizations {
   /// **'exit {code}'**
   String workspaceToolExitCode(int code);
 
-  /// No description provided for @workspaceToolAwaitingApproval.
-  ///
-  /// In en, this message translates to:
-  /// **'Awaiting approval'**
-  String get workspaceToolAwaitingApproval;
-
-  /// No description provided for @workspaceToolCompleted.
-  ///
-  /// In en, this message translates to:
-  /// **'Done'**
-  String get workspaceToolCompleted;
-
   /// No description provided for @workspaceToolLines.
   ///
   /// In en, this message translates to:
@@ -18532,12 +16464,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} matches'**
   String workspaceToolContentMatches(int count);
-
-  /// No description provided for @workspaceToolExpand.
-  ///
-  /// In en, this message translates to:
-  /// **'Expand'**
-  String get workspaceToolExpand;
 
   /// No description provided for @workspaceToolSectionCommand.
   ///
@@ -18580,12 +16506,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Full output saved'**
   String get workspaceToolSavedOutput;
-
-  /// No description provided for @workspaceToolApprove.
-  ///
-  /// In en, this message translates to:
-  /// **'Allow'**
-  String get workspaceToolApprove;
 
   /// No description provided for @workspaceToolDeny.
   ///
@@ -18688,12 +16608,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Actions'**
   String get workspaceEnvActionsSection;
-
-  /// No description provided for @workspaceEnvInfoSection.
-  ///
-  /// In en, this message translates to:
-  /// **'Info'**
-  String get workspaceEnvInfoSection;
 
   /// No description provided for @workspaceEnvInfoBody.
   ///
@@ -18837,12 +16751,6 @@ abstract class AppLocalizations {
     String phase,
   );
 
-  /// No description provided for @workspaceEnvNativeUnsandboxed.
-  ///
-  /// In en, this message translates to:
-  /// **'Commands run on this computer, not in a sandbox, and need approval unless this session allows all tools.'**
-  String get workspaceEnvNativeUnsandboxed;
-
   /// No description provided for @workspaceEnvRootfsTitle.
   ///
   /// In en, this message translates to:
@@ -18975,12 +16883,6 @@ abstract class AppLocalizations {
   /// **'Timed out'**
   String get workspaceEnvSizeTimeout;
 
-  /// No description provided for @workspaceEnvInfoCopied.
-  ///
-  /// In en, this message translates to:
-  /// **'Environment info copied'**
-  String get workspaceEnvInfoCopied;
-
   /// No description provided for @workspacePreviewEmptyFile.
   ///
   /// In en, this message translates to:
@@ -18992,12 +16894,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'There\'s nothing to preview.'**
   String get workspacePreviewEmptyHint;
-
-  /// No description provided for @workspacePreviewRevealInExplorer.
-  ///
-  /// In en, this message translates to:
-  /// **'Show in File Explorer'**
-  String get workspacePreviewRevealInExplorer;
 
   /// No description provided for @workspacePreviewRevealInFileManager.
   ///
@@ -19226,12 +17122,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Installation uses the selected apt/apk source. pip and npm sources apply to packages you install later.'**
   String get workspaceEnvDependencySourcesDetail;
-
-  /// No description provided for @workspaceEnvDownloadSource.
-  ///
-  /// In en, this message translates to:
-  /// **'Sandbox download source'**
-  String get workspaceEnvDownloadSource;
 
   /// No description provided for @workspaceEnvDownloadAutomatic.
   ///
@@ -20631,12 +18521,6 @@ abstract class AppLocalizations {
   /// **'Time'**
   String get scheduledTasksTime;
 
-  /// No description provided for @scheduledTasksTimeHint.
-  ///
-  /// In en, this message translates to:
-  /// **'24-hour time, e.g. 08:00'**
-  String get scheduledTasksTimeHint;
-
   /// No description provided for @scheduledTasksRepeat.
   ///
   /// In en, this message translates to:
@@ -21015,24 +18899,6 @@ abstract class AppLocalizations {
   /// **'This conversation is generating a reply. The scheduled run was skipped.'**
   String get scheduledTasksChatBusy;
 
-  /// No description provided for @scheduledTasksDesktopEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'No scheduled tasks'**
-  String get scheduledTasksDesktopEmpty;
-
-  /// No description provided for @scheduledTasksDesktopReliability.
-  ///
-  /// In en, this message translates to:
-  /// **'Tasks run only while Kelivo is running, including when minimized or in the system tray. Missed times are skipped after quitting or computer sleep. Kelivo will not start automatically.'**
-  String get scheduledTasksDesktopReliability;
-
-  /// No description provided for @scheduledTasksDesktopExecutionDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Results are saved in chats. Open them from the task’s run history. Runs stop after 10 minutes or when user input or tool approval is needed.'**
-  String get scheduledTasksDesktopExecutionDetail;
-
   /// No description provided for @worldBookStickyLabel.
   ///
   /// In en, this message translates to:
@@ -21147,23 +19013,11 @@ abstract class AppLocalizations {
   /// **'Log in'**
   String get oauthLogin;
 
-  /// No description provided for @oauthLoginTo.
-  ///
-  /// In en, this message translates to:
-  /// **'Log in to {provider}'**
-  String oauthLoginTo(String provider);
-
   /// No description provided for @oauthConnected.
   ///
   /// In en, this message translates to:
   /// **'Connected'**
   String get oauthConnected;
-
-  /// No description provided for @oauthNotConnected.
-  ///
-  /// In en, this message translates to:
-  /// **'Not connected'**
-  String get oauthNotConnected;
 
   /// No description provided for @oauthWaiting.
   ///
@@ -21309,12 +19163,6 @@ abstract class AppLocalizations {
   /// **'Sync models to start chatting'**
   String get oauthNoModels;
 
-  /// No description provided for @oauthConnection.
-  ///
-  /// In en, this message translates to:
-  /// **'Connection'**
-  String get oauthConnection;
-
   /// No description provided for @oauthConnectionInfo.
   ///
   /// In en, this message translates to:
@@ -21356,24 +19204,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show these models in the model picker'**
   String get oauthEnabledHint;
-
-  /// No description provided for @oauthNetwork.
-  ///
-  /// In en, this message translates to:
-  /// **'Network proxy'**
-  String get oauthNetwork;
-
-  /// No description provided for @oauthFollowGlobal.
-  ///
-  /// In en, this message translates to:
-  /// **'Follow global settings'**
-  String get oauthFollowGlobal;
-
-  /// No description provided for @oauthCustomRequest.
-  ///
-  /// In en, this message translates to:
-  /// **'Custom request'**
-  String get oauthCustomRequest;
 
   /// No description provided for @oauthWeekly.
   ///
@@ -21446,12 +19276,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Authorization was not granted. Please try again.'**
   String get oauthDenied;
-
-  /// No description provided for @oauthSaving.
-  ///
-  /// In en, this message translates to:
-  /// **'Connecting account…'**
-  String get oauthSaving;
 
   /// No description provided for @oauthQuotaExceeded.
   ///
@@ -21591,60 +19415,6 @@ abstract class AppLocalizations {
   /// **'Execution and notifications'**
   String get scheduledTasksPreparation;
 
-  /// No description provided for @scheduledTasksAllowPreparation.
-  ///
-  /// In en, this message translates to:
-  /// **'Allow advance preparation'**
-  String get scheduledTasksAllowPreparation;
-
-  /// No description provided for @scheduledTasksPreparationDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Advance preparation is for text tasks that do not need current information. It cannot use tools or attachments, or perform external actions.'**
-  String get scheduledTasksPreparationDetail;
-
-  /// No description provided for @scheduledTasksIOSDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'iOS background limits prevent Kelivo from waking at a set time to run a model. Instead, content is prepared while the app can run, and the system shows a notification at the scheduled time. Only the next occurrence is prepared. Preparation may not finish after leaving the app; reopen Kelivo to prepare subsequent occurrences.'**
-  String get scheduledTasksIOSDetail;
-
-  /// No description provided for @scheduledTasksContextPolicy.
-  ///
-  /// In en, this message translates to:
-  /// **'Conversation context'**
-  String get scheduledTasksContextPolicy;
-
-  /// No description provided for @scheduledTasksContextLatest.
-  ///
-  /// In en, this message translates to:
-  /// **'Follow the latest conversation'**
-  String get scheduledTasksContextLatest;
-
-  /// No description provided for @scheduledTasksContextSnapshot.
-  ///
-  /// In en, this message translates to:
-  /// **'Use the prepared snapshot'**
-  String get scheduledTasksContextSnapshot;
-
-  /// No description provided for @scheduledTasksUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'When unable to execute'**
-  String get scheduledTasksUnavailable;
-
-  /// No description provided for @scheduledTasksRemind.
-  ///
-  /// In en, this message translates to:
-  /// **'Send a reminder only'**
-  String get scheduledTasksRemind;
-
-  /// No description provided for @scheduledTasksSkip.
-  ///
-  /// In en, this message translates to:
-  /// **'Skip this occurrence'**
-  String get scheduledTasksSkip;
-
   /// No description provided for @scheduledTasksNotify.
   ///
   /// In en, this message translates to:
@@ -21657,137 +19427,11 @@ abstract class AppLocalizations {
   /// **'Show result text in notifications'**
   String get scheduledTasksShowPreview;
 
-  /// No description provided for @scheduledTasksPreparationWindow.
-  ///
-  /// In en, this message translates to:
-  /// **'Prepare up to'**
-  String get scheduledTasksPreparationWindow;
-
-  /// No description provided for @scheduledTasksPreparationAttempts.
-  ///
-  /// In en, this message translates to:
-  /// **'Automatic attempt limit'**
-  String get scheduledTasksPreparationAttempts;
-
-  /// No description provided for @scheduledTasksPreparationCooldown.
-  ///
-  /// In en, this message translates to:
-  /// **'Minimum interval (minutes)'**
-  String get scheduledTasksPreparationCooldown;
-
-  /// No description provided for @scheduledTasksPreparationBudget.
-  ///
-  /// In en, this message translates to:
-  /// **'At most one preparation at a time across all tasks. Automatic preparation pauses after six total attempts per hour, including cancelled requests. Prepare now is not limited by attempt counts.'**
-  String get scheduledTasksPreparationBudget;
-
-  /// No description provided for @scheduledTasksPreparing.
-  ///
-  /// In en, this message translates to:
-  /// **'Preparing result'**
-  String get scheduledTasksPreparing;
-
-  /// No description provided for @scheduledTasksPrepared.
-  ///
-  /// In en, this message translates to:
-  /// **'Result prepared'**
-  String get scheduledTasksPrepared;
-
-  /// No description provided for @scheduledTasksPendingPreparation.
-  ///
-  /// In en, this message translates to:
-  /// **'Result not prepared yet'**
-  String get scheduledTasksPendingPreparation;
-
-  /// No description provided for @scheduledTasksNotificationRegistered.
-  ///
-  /// In en, this message translates to:
-  /// **'Notification scheduled'**
-  String get scheduledTasksNotificationRegistered;
-
-  /// No description provided for @scheduledTasksNotificationUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Notification not scheduled'**
-  String get scheduledTasksNotificationUnavailable;
-
-  /// No description provided for @scheduledTasksReminded.
-  ///
-  /// In en, this message translates to:
-  /// **'Due · reminder only'**
-  String get scheduledTasksReminded;
-
-  /// No description provided for @scheduledTasksSkipped.
-  ///
-  /// In en, this message translates to:
-  /// **'Skipped'**
-  String get scheduledTasksSkipped;
-
   /// No description provided for @scheduledTasksCancelled.
   ///
   /// In en, this message translates to:
   /// **'Cancelled'**
   String get scheduledTasksCancelled;
-
-  /// No description provided for @scheduledTasksReminderBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Your scheduled task is due. Open Moru to continue.'**
-  String get scheduledTasksReminderBody;
-
-  /// No description provided for @scheduledTasksResultBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Your scheduled task result is ready.'**
-  String get scheduledTasksResultBody;
-
-  /// No description provided for @scheduledTasksNotificationPermission.
-  ///
-  /// In en, this message translates to:
-  /// **'Allow task notifications'**
-  String get scheduledTasksNotificationPermission;
-
-  /// No description provided for @scheduledTasksPreparationCost.
-  ///
-  /// In en, this message translates to:
-  /// **'Preparation calls the model and may cost extra. With “Follow latest conversation”, new messages before the due time can invalidate a prepared result. Unused or cancelled output may still be billed, and preparing again makes another model request.'**
-  String get scheduledTasksPreparationCost;
-
-  /// No description provided for @scheduledTasksAllowPreparationTip.
-  ///
-  /// In en, this message translates to:
-  /// **'Generate the next result before its scheduled time, while Kelivo can run. The result stays out of the chat until it is due. Preparation uses text only, without tools, attachments or custom request bodies. It may incur model charges.'**
-  String get scheduledTasksAllowPreparationTip;
-
-  /// No description provided for @scheduledTasksContextPolicyTip.
-  ///
-  /// In en, this message translates to:
-  /// **'Follow latest conversation: before the task is due, new messages, edits or switching message versions invalidate the prepared result; preparing again uses another attempt and may cost extra. Once due, the saved notification result is added to the chat unchanged.\n\nUse preparation snapshot: keep the prepared result even if the conversation changes. It will not reflect later messages.'**
-  String get scheduledTasksContextPolicyTip;
-
-  /// No description provided for @scheduledTasksPreparationWindowTip.
-  ///
-  /// In en, this message translates to:
-  /// **'How far ahead of the scheduled time preparation may begin, up to 24 hours. For example, opening Kelivo at noon can prepare the next morning’s reminder. A larger window gives more chances to prepare, but the result may be less current. It does not change the scheduled time or guarantee background execution. Prepare now bypasses this automatic waiting period and all attempt limits.'**
-  String get scheduledTasksPreparationWindowTip;
-
-  /// No description provided for @scheduledTasksPreparationAttemptsTip.
-  ///
-  /// In en, this message translates to:
-  /// **'Automatic preparation pauses when this occurrence reaches the total attempt limit. First attempts, failures, cancellations and manual preparation all count in the record. Prepare now can still run after this limit is reached. More attempts may incur more model charges; this is not a spending limit.'**
-  String get scheduledTasksPreparationAttemptsTip;
-
-  /// No description provided for @scheduledTasksPreparationCooldownTip.
-  ///
-  /// In en, this message translates to:
-  /// **'Minimum time between the start of preparation attempts for the same occurrence. Waiting longer reduces repeated requests. A retry still needs the app to be able to run; it is not a background timer. Prepare now bypasses this automatic waiting period and all attempt limits.'**
-  String get scheduledTasksPreparationCooldownTip;
-
-  /// No description provided for @scheduledTasksUnavailableTip.
-  ///
-  /// In en, this message translates to:
-  /// **'If no prepared result is available and the task cannot run when due, send a reminder or skip the occurrence. A reminder contains no generated answer and requires notifications to be enabled. If Kelivo is open when the task is due, it can run the task then.'**
-  String get scheduledTasksUnavailableTip;
 
   /// No description provided for @scheduledTasksNotifyTip.
   ///
@@ -21800,126 +19444,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show the prepared result text in the notification, including on the lock screen if allowed by system settings. Turn this off to show a generic notice; the full result remains available in the chat. Global notification privacy settings also apply.'**
   String get scheduledTasksShowPreviewTip;
-
-  /// No description provided for @scheduledTasksHours.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 hour} other{{count} hours}}'**
-  String scheduledTasksHours(int count);
-
-  /// No description provided for @scheduledTasksMinutes.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 minute} other{{count} minutes}}'**
-  String scheduledTasksMinutes(int count);
-
-  /// No description provided for @scheduledTasksPreparationOff.
-  ///
-  /// In en, this message translates to:
-  /// **'Preparation off'**
-  String get scheduledTasksPreparationOff;
-
-  /// No description provided for @scheduledTasksPreparationQueued.
-  ///
-  /// In en, this message translates to:
-  /// **'Queued'**
-  String get scheduledTasksPreparationQueued;
-
-  /// No description provided for @scheduledTasksPreparationQueuedDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Another task is being prepared. Eligible tasks continue in due-time order.'**
-  String get scheduledTasksPreparationQueuedDetail;
-
-  /// No description provided for @scheduledTasksPreparationIdle.
-  ///
-  /// In en, this message translates to:
-  /// **'Waiting for chat'**
-  String get scheduledTasksPreparationIdle;
-
-  /// No description provided for @scheduledTasksPreparationIdleDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Preparation resumes after active replies finish and this task’s context settles.'**
-  String get scheduledTasksPreparationIdleDetail;
-
-  /// No description provided for @scheduledTasksPreparationWindowWaiting.
-  ///
-  /// In en, this message translates to:
-  /// **'Outside preparation window'**
-  String get scheduledTasksPreparationWindowWaiting;
-
-  /// No description provided for @scheduledTasksPreparationCooldownWaiting.
-  ///
-  /// In en, this message translates to:
-  /// **'Waiting to retry'**
-  String get scheduledTasksPreparationCooldownWaiting;
-
-  /// No description provided for @scheduledTasksPreparationRetryAt.
-  ///
-  /// In en, this message translates to:
-  /// **'Can retry after {time}'**
-  String scheduledTasksPreparationRetryAt(String time);
-
-  /// No description provided for @scheduledTasksPreparationLimitReached.
-  ///
-  /// In en, this message translates to:
-  /// **'Automatic attempt limit reached'**
-  String get scheduledTasksPreparationLimitReached;
-
-  /// No description provided for @scheduledTasksPreparationAttemptsUsed.
-  ///
-  /// In en, this message translates to:
-  /// **'This occurrence has used {count} attempts; the automatic limit is {limit}. Use Prepare now to continue manually.'**
-  String scheduledTasksPreparationAttemptsUsed(int count, int limit);
-
-  /// No description provided for @scheduledTasksPreparationHourlyLimit.
-  ///
-  /// In en, this message translates to:
-  /// **'Automatic hourly limit reached'**
-  String get scheduledTasksPreparationHourlyLimit;
-
-  /// No description provided for @scheduledTasksPreparationHourlyLimitDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Automatic preparation is paused until hourly capacity is available. You can still use Prepare now.'**
-  String get scheduledTasksPreparationHourlyLimitDetail;
-
-  /// No description provided for @scheduledTasksPreparationUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Preparation unavailable'**
-  String get scheduledTasksPreparationUnavailable;
-
-  /// No description provided for @scheduledTasksPreparationReadFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not read task context. It will be checked again shortly; see execution history for details.'**
-  String get scheduledTasksPreparationReadFailed;
-
-  /// No description provided for @scheduledTasksPreparationResultRetained.
-  ///
-  /// In en, this message translates to:
-  /// **'Context could not be checked. The prepared result is retained and will be checked again.'**
-  String get scheduledTasksPreparationResultRetained;
-
-  /// No description provided for @scheduledTasksPreparationContextChanged.
-  ///
-  /// In en, this message translates to:
-  /// **'The conversation or task context changed, so the earlier result was discarded.'**
-  String get scheduledTasksPreparationContextChanged;
-
-  /// No description provided for @scheduledTasksPreparationPublishing.
-  ///
-  /// In en, this message translates to:
-  /// **'Waiting to add to chat'**
-  String get scheduledTasksPreparationPublishing;
-
-  /// No description provided for @scheduledTasksPreparationPublishingDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'The saved result will be added to the conversation when the current reply finishes.'**
-  String get scheduledTasksPreparationPublishingDetail;
 
   /// No description provided for @moruChatNotificationChannel.
   ///
@@ -22173,18 +19697,6 @@ abstract class AppLocalizations {
   /// **'Browser settings'**
   String get browserMenuSettings;
 
-  /// No description provided for @browserSchemeSecure.
-  ///
-  /// In en, this message translates to:
-  /// **'Encrypted connection (https)'**
-  String get browserSchemeSecure;
-
-  /// No description provided for @browserSchemeInsecure.
-  ///
-  /// In en, this message translates to:
-  /// **'Not encrypted (http)'**
-  String get browserSchemeInsecure;
-
   /// No description provided for @browserComposerHint.
   ///
   /// In en, this message translates to:
@@ -22220,12 +19732,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Working…'**
   String get browserStateRunning;
-
-  /// No description provided for @browserStateAwaitingApproval.
-  ///
-  /// In en, this message translates to:
-  /// **'Waiting for your approval…'**
-  String get browserStateAwaitingApproval;
 
   /// No description provided for @browserStateStopping.
   ///
@@ -22448,87 +19954,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Moru wants to perform a browser action'**
   String get browserApprovalHeadingUnknownSite;
-
-  /// No description provided for @scheduledTasksPreparationPrompt.
-  ///
-  /// In en, this message translates to:
-  /// **'Preparation prompt'**
-  String get scheduledTasksPreparationPrompt;
-
-  /// No description provided for @scheduledTasksPreparationPromptTip.
-  ///
-  /// In en, this message translates to:
-  /// **'Extra system instructions used only when preparing this task in advance, separate from the task instructions. You can change the style or remove these instructions entirely. Tools and live information remain unavailable. Editing this prompt invalidates any result prepared before the due time; preparing it again may incur another model charge.'**
-  String get scheduledTasksPreparationPromptTip;
-
-  /// No description provided for @scheduledTasksPreparationPromptEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'Leave empty to add no preparation instructions'**
-  String get scheduledTasksPreparationPromptEmpty;
-
-  /// No description provided for @scheduledTasksPreparationPromptVariables.
-  ///
-  /// In en, this message translates to:
-  /// **'Placeholders: {timeVariable} is the planned local delivery time; {offsetVariable} is its UTC offset. These are replaced when preparing the result.'**
-  String scheduledTasksPreparationPromptVariables(
-    String timeVariable,
-    String offsetVariable,
-  );
-
-  /// No description provided for @scheduledTasksPrepareNow.
-  ///
-  /// In en, this message translates to:
-  /// **'Prepare now'**
-  String get scheduledTasksPrepareNow;
-
-  /// No description provided for @scheduledTasksPrepareNowDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Prepare the next result now and deliver it at the scheduled time. Automatic waiting periods and attempt limits do not apply. This may incur model charges. An existing prepared result is reused.'**
-  String get scheduledTasksPrepareNowDetail;
-
-  /// No description provided for @scheduledTasksPrepareNowReady.
-  ///
-  /// In en, this message translates to:
-  /// **'The next result is already prepared. No additional model request was made.'**
-  String get scheduledTasksPrepareNowReady;
-
-  /// No description provided for @scheduledTasksPrepareNowStarted.
-  ///
-  /// In en, this message translates to:
-  /// **'Preparing the next result for its scheduled time.'**
-  String get scheduledTasksPrepareNowStarted;
-
-  /// No description provided for @scheduledTasksPrepareNowBusy.
-  ///
-  /// In en, this message translates to:
-  /// **'Another task is being prepared. Please try again when it finishes.'**
-  String get scheduledTasksPrepareNowBusy;
-
-  /// No description provided for @scheduledTasksPrepareNowChatBusy.
-  ///
-  /// In en, this message translates to:
-  /// **'Please wait for the current reply to finish, then try again.'**
-  String get scheduledTasksPrepareNowChatBusy;
-
-  /// No description provided for @scheduledTasksPrepareNowDisabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable this task and advance preparation first. Regenerate tasks cannot be prepared in advance.'**
-  String get scheduledTasksPrepareNowDisabled;
-
-  /// No description provided for @scheduledTasksPrepareNowUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Preparation is not available yet. Please try again shortly.'**
-  String get scheduledTasksPrepareNowUnavailable;
-
-  /// No description provided for @scheduledTasksPrepareNowNoUpcoming.
-  ///
-  /// In en, this message translates to:
-  /// **'There is no upcoming occurrence to prepare. Check the task time and enabled state.'**
-  String get scheduledTasksPrepareNowNoUpcoming;
 
   /// No description provided for @assistantManagerToolTitle.
   ///

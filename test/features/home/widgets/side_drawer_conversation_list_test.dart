@@ -683,11 +683,6 @@ void main() {
         expect(find.byType(SideDrawer), findsOneWidget);
         // Independent path: conversation tiles from the topics list are absent.
         expect(find.byType(SideDrawer.debugChatTileType), findsNothing);
-        final l10n = AppLocalizations.of(
-          tester.element(find.byType(SideDrawer)),
-        )!;
-        // Mobile shows nothing until a search runs.
-        expect(find.text(l10n.sideDrawerGlobalSearchEmptyHint), findsNothing);
       });
     },
   );
