@@ -374,6 +374,13 @@ class SettingsProvider extends ChangeNotifier {
       'search_auto_test_on_launch_v1';
   static const String _webDavConfigKey = 'webdav_config_v1';
   static const String _s3ConfigKey = 's3_config_v1';
+  // Mini app web server
+  static const String _miniAppWebPortKey = 'mini_app_web_port_v1';
+  static const String _miniAppWebLocalhostOnlyKey =
+      'mini_app_web_localhost_only_v1';
+  static const String _miniAppWebPasswordEnabledKey =
+      'mini_app_web_password_enabled_v1';
+  static const String _miniAppWebPasswordKey = 'mini_app_web_password_v1';
   // Global network proxy
   static const String _globalProxyEnabledKey = 'global_proxy_enabled_v1';
   static const String _globalProxyTypeKey =
@@ -714,6 +721,38 @@ class SettingsProvider extends ChangeNotifier {
   final Map<String, bool?> _searchConnection = <String, bool?>{};
   Map<String, bool?> get searchConnection =>
       Map.unmodifiable(_searchConnection);
+
+  // ===== Mini app web server =====
+  int _miniAppWebPort = 8080;
+  bool _miniAppWebLocalhostOnly = false;
+  bool _miniAppWebPasswordEnabled = true;
+  String _miniAppWebPassword = '';
+
+  int get miniAppWebPort => _miniAppWebPort;
+  bool get miniAppWebLocalhostOnly => _miniAppWebLocalhostOnly;
+  bool get miniAppWebPasswordEnabled => _miniAppWebPasswordEnabled;
+  String get miniAppWebPassword => _miniAppWebPassword;
+
+  Future<void> setMiniAppWeb({
+    int? port,
+    bool? localhostOnly,
+    bool? passwordEnabled,
+    String? password,
+  }) async {
+    if (port != null) _miniAppWebPort = port;
+    if (localhostOnly != null) _miniAppWebLocalhostOnly = localhostOnly;
+    if (passwordEnabled != null) _miniAppWebPasswordEnabled = passwordEnabled;
+    if (password != null) _miniAppWebPassword = password;
+    notifyListeners();
+    final prefs = _preferences;
+    await prefs.setInt(_miniAppWebPortKey, _miniAppWebPort);
+    await prefs.setBool(_miniAppWebLocalhostOnlyKey, _miniAppWebLocalhostOnly);
+    await prefs.setBool(
+      _miniAppWebPasswordEnabledKey,
+      _miniAppWebPasswordEnabled,
+    );
+    await prefs.setString(_miniAppWebPasswordKey, _miniAppWebPassword);
+  }
 
   // ===== Global Proxy Settings =====
   bool _globalProxyEnabled = false;
@@ -1359,6 +1398,13 @@ class SettingsProvider extends ChangeNotifier {
     _searchEnabled = prefs.getBool(_searchEnabledKey) ?? false;
     _searchAutoTestOnLaunch =
         prefs.getBool(_searchAutoTestOnLaunchKey) ?? false;
+
+    _miniAppWebPort = prefs.getInt(_miniAppWebPortKey) ?? 8080;
+    _miniAppWebLocalhostOnly =
+        prefs.getBool(_miniAppWebLocalhostOnlyKey) ?? false;
+    _miniAppWebPasswordEnabled =
+        prefs.getBool(_miniAppWebPasswordEnabledKey) ?? true;
+    _miniAppWebPassword = prefs.getString(_miniAppWebPasswordKey) ?? '';
 
     // load global proxy
     _globalProxyEnabled = prefs.getBool(_globalProxyEnabledKey) ?? false;

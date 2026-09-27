@@ -18,6 +18,7 @@ class KelivoApplication : Application() {
         FlutterEngine(this).also { engine ->
             val messenger = engine.dartExecutor.binaryMessenger
             backgroundRuntime.configure(messenger)
+            backgroundRuntime.configureKeepAlive(messenger)
             scheduledTasks.configure(messenger)
             workspace.configure(messenger)
             deviceTools.configure(messenger)

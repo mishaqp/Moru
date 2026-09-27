@@ -5143,6 +5143,32 @@
   "miniAppsToolActionServer": "Read app server state",
   "rootShellToolTitle": "Root commands",
   "rootShellToolSubtitle": "Run commands as root (su) on a rooted phone: system settings, apps, logs, screen input. You approve every command.",
+  "miniAppsWebTitle": "Web server",
+  "miniAppsWebPort": "Port",
+  "miniAppsWebLocalhostOnly": "Only this phone",
+  "miniAppsWebLocalhostOnlySubtitle": "Listen on 127.0.0.1 only: no access from the network and no moru.local.",
+  "miniAppsWebPasswordEnabled": "Require a password",
+  "miniAppsWebPasswordEnabledSubtitle": "The browser asks for it; any user name works.",
+  "miniAppsWebPassword": "Password",
+  "miniAppsWebStart": "Start",
+  "miniAppsWebStop": "Stop",
+  "miniAppsWebRunning": "Running. Open in a browser:",
+  "miniAppsWebCopied": "Address copied",
+  "miniAppsWebInvalidPort": "The port must be from 1024 to 65535.",
+  "miniAppsWebNoPassword": "Set a password or turn the password off.",
+  "miniAppsWebFooter": "Your mini apps open in a browser with the same data as in Moru. moru.local and the Wi-Fi address work on devices in the same Wi-Fi, not over mobile data; 127.0.0.1 works in a browser on this phone. While the server runs, Moru keeps a notification; stopping it there stops the server.",
+  "@miniAppsWebNotification": {
+    "placeholders": {
+      "url": {"type": "String"}
+    }
+  },
+  "miniAppsWebNotification": "Web server: {url}",
+  "@miniAppsWebPortInUse": {
+    "placeholders": {
+      "port": {"type": "String"}
+    }
+  },
+  "miniAppsWebPortInUse": "Port {port} is already in use: choose another one.",
   "miniAppsMore": "More",
   "miniAppsErrors": "Error log",
   "miniAppsErrorsEmpty": "No errors recorded.",

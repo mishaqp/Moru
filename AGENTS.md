@@ -76,6 +76,9 @@ package name does not require building other platforms.
   in a hidden WebView. An app may declare a server (`server.command`):
   `MiniAppServers` runs it in the Linux environment on `$PORT` while the app
   or a job uses it, and pages reach it with `moru.server.fetch`.
+  `MiniAppWebHost` serves the apps to browsers in the Wi-Fi
+  (`MiniAppWebServer`, `moru.local` via `MdnsResponder`), kept alive by
+  `ProcessKeepAlive` (`app.keep_alive`).
 
 ## Pre-commit checklist
 

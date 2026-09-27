@@ -85,7 +85,62 @@ class BackgroundRuntime(private val context: Context) {
     fun setting(key: String) = settings[key]
     private val scheduledRuns = mutableSetOf<String>()
     val hasScheduledRuns get() = scheduledRuns.isNotEmpty()
-    fun shouldRunService() = ((enabled("androidEnabled") && tasks.isNotEmpty()) || hasScheduledRuns) && !blocked
+
+    /** Keep-alive holders (e.g. the mini app web server) and their notification text. */
+    private val holds = linkedMapOf<String, String>()
+    private var keepAliveChannel: MethodChannel? = null
+    private var multicastLock: android.net.wifi.WifiManager.MulticastLock? = null
+    fun shouldRunService() =
+        ((enabled("androidEnabled") && tasks.isNotEmpty()) || hasScheduledRuns || holds.isNotEmpty()) && !blocked
+
+    /** `app.keep_alive`: Dart keeps the process alive with the foreground service. */
+    fun configureKeepAlive(messenger: BinaryMessenger) {
+        keepAliveChannel = MethodChannel(messenger, "app.keep_alive").also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "hold" -> {
+                        val id = call.argument<String>("id") ?: return@setMethodCallHandler result.error("args", "id", null)
+                        holds[id] = call.argument<String>("text") ?: ""
+                        blocked = false
+                        reconcileService()
+                        result.success(service != null || serviceStarting)
+                    }
+                    "release" -> {
+                        holds.remove(call.argument<String>("id"))
+                        reconcileService()
+                        result.success(null)
+                    }
+                    "multicast" -> {
+                        setMulticast(call.argument<Boolean>("enabled") == true)
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
+    }
+
+    private fun setMulticast(enabled: Boolean) {
+        if (enabled) {
+            if (multicastLock?.isHeld == true) return
+            val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
+            multicastLock = wifi?.createMulticastLock("moru-mdns")?.apply {
+                setReferenceCounted(false)
+                acquire()
+            }
+        } else {
+            multicastLock?.let { if (it.isHeld) it.release() }
+            multicastLock = null
+        }
+    }
+
+    /** The user stopped the service: holders stop too. */
+    private fun releaseHolds() {
+        if (holds.isEmpty()) return
+        val ids = holds.keys.toList()
+        holds.clear()
+        keepAliveChannel?.invokeMethod("released", ids)
+    }
 
     fun beginScheduledRun(id: String) {
         scheduledRuns.add(id)
@@ -217,6 +272,7 @@ class BackgroundRuntime(private val context: Context) {
 
     fun stopTasks(reason: String? = null) {
         val ids = tasks.map { it.id }
+        releaseHolds()
         blocked = true
         if (reason != null) recordError(reason)
         (context as? KelivoApplication)?.scheduledTasks?.stopAll(reason ?: "cancelled")
@@ -251,7 +307,7 @@ class BackgroundRuntime(private val context: Context) {
         ensureChannel()
         val task = tasks.firstOrNull()
         val title = if (tasks.size > 1) "${tasks.size} ${label("tasks", "Tasks")}" else task?.title ?: "Moru"
-        val content = task?.detail ?: label("working", "Working")
+        val content = task?.detail ?: holds.values.firstOrNull { it.isNotBlank() } ?: label("working", "Working")
         val open = PendingIntent.getActivity(context, 7, openIntent(task?.conversationId ?: ""),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val stop = PendingIntent.getService(context, 8,

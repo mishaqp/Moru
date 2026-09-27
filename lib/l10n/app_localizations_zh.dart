@@ -10869,6 +10869,60 @@ class AppLocalizationsZh extends AppLocalizations {
       '在已 root 的手机上以 root (su) 运行命令：系统设置、应用、日志、屏幕输入。每条命令都需要你确认。';
 
   @override
+  String get miniAppsWebTitle => '网页服务器';
+
+  @override
+  String get miniAppsWebPort => '端口';
+
+  @override
+  String get miniAppsWebLocalhostOnly => '仅限本机';
+
+  @override
+  String get miniAppsWebLocalhostOnlySubtitle =>
+      '只监听 127.0.0.1：网络中无法访问，也没有 moru.local。';
+
+  @override
+  String get miniAppsWebPasswordEnabled => '需要密码';
+
+  @override
+  String get miniAppsWebPasswordEnabledSubtitle => '浏览器会要求输入密码，用户名任意。';
+
+  @override
+  String get miniAppsWebPassword => '密码';
+
+  @override
+  String get miniAppsWebStart => '启动';
+
+  @override
+  String get miniAppsWebStop => '停止';
+
+  @override
+  String get miniAppsWebRunning => '运行中。在浏览器中打开：';
+
+  @override
+  String get miniAppsWebCopied => '地址已复制';
+
+  @override
+  String get miniAppsWebInvalidPort => '端口必须在 1024 到 65535 之间。';
+
+  @override
+  String get miniAppsWebNoPassword => '请设置密码或关闭密码。';
+
+  @override
+  String get miniAppsWebFooter =>
+      '小应用会在浏览器中打开，数据与 Moru 中相同。moru.local 和 Wi-Fi 地址可在同一 Wi-Fi 的设备上使用，移动数据下不可用；127.0.0.1 可在本机浏览器中使用。服务器运行时 Moru 会保留一条通知，在通知中停止也会停止服务器。';
+
+  @override
+  String miniAppsWebNotification(String url) {
+    return '网页服务器：$url';
+  }
+
+  @override
+  String miniAppsWebPortInUse(String port) {
+    return '端口 $port 已被占用：请换一个。';
+  }
+
+  @override
   String get miniAppsMore => '更多';
 
   @override
@@ -21775,6 +21829,60 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get rootShellToolSubtitle =>
       '在已 root 的手机上以 root (su) 运行命令：系统设置、应用、日志、屏幕输入。每条命令都需要你确认。';
+
+  @override
+  String get miniAppsWebTitle => '网页服务器';
+
+  @override
+  String get miniAppsWebPort => '端口';
+
+  @override
+  String get miniAppsWebLocalhostOnly => '仅限本机';
+
+  @override
+  String get miniAppsWebLocalhostOnlySubtitle =>
+      '只监听 127.0.0.1：网络中无法访问，也没有 moru.local。';
+
+  @override
+  String get miniAppsWebPasswordEnabled => '需要密码';
+
+  @override
+  String get miniAppsWebPasswordEnabledSubtitle => '浏览器会要求输入密码，用户名任意。';
+
+  @override
+  String get miniAppsWebPassword => '密码';
+
+  @override
+  String get miniAppsWebStart => '启动';
+
+  @override
+  String get miniAppsWebStop => '停止';
+
+  @override
+  String get miniAppsWebRunning => '运行中。在浏览器中打开：';
+
+  @override
+  String get miniAppsWebCopied => '地址已复制';
+
+  @override
+  String get miniAppsWebInvalidPort => '端口必须在 1024 到 65535 之间。';
+
+  @override
+  String get miniAppsWebNoPassword => '请设置密码或关闭密码。';
+
+  @override
+  String get miniAppsWebFooter =>
+      '小应用会在浏览器中打开，数据与 Moru 中相同。moru.local 和 Wi-Fi 地址可在同一 Wi-Fi 的设备上使用，移动数据下不可用；127.0.0.1 可在本机浏览器中使用。服务器运行时 Moru 会保留一条通知，在通知中停止也会停止服务器。';
+
+  @override
+  String miniAppsWebNotification(String url) {
+    return '网页服务器：$url';
+  }
+
+  @override
+  String miniAppsWebPortInUse(String port) {
+    return '端口 $port 已被占用：请换一个。';
+  }
 
   @override
   String get miniAppsMore => '更多';
@@ -32757,6 +32865,60 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get rootShellToolSubtitle =>
       '在已 root 的手機上以 root (su) 執行命令：系統設定、應用、日誌、螢幕輸入。每條命令都需要你確認。';
+
+  @override
+  String get miniAppsWebTitle => '網頁伺服器';
+
+  @override
+  String get miniAppsWebPort => '連接埠';
+
+  @override
+  String get miniAppsWebLocalhostOnly => '僅限本機';
+
+  @override
+  String get miniAppsWebLocalhostOnlySubtitle =>
+      '只監聽 127.0.0.1：網路中無法存取，也沒有 moru.local。';
+
+  @override
+  String get miniAppsWebPasswordEnabled => '需要密碼';
+
+  @override
+  String get miniAppsWebPasswordEnabledSubtitle => '瀏覽器會要求輸入密碼，使用者名稱任意。';
+
+  @override
+  String get miniAppsWebPassword => '密碼';
+
+  @override
+  String get miniAppsWebStart => '啟動';
+
+  @override
+  String get miniAppsWebStop => '停止';
+
+  @override
+  String get miniAppsWebRunning => '執行中。在瀏覽器中開啟：';
+
+  @override
+  String get miniAppsWebCopied => '地址已複製';
+
+  @override
+  String get miniAppsWebInvalidPort => '連接埠必須在 1024 到 65535 之間。';
+
+  @override
+  String get miniAppsWebNoPassword => '請設定密碼或關閉密碼。';
+
+  @override
+  String get miniAppsWebFooter =>
+      '小應用會在瀏覽器中開啟，資料與 Moru 中相同。moru.local 和 Wi-Fi 位址可在同一 Wi-Fi 的裝置上使用，行動數據下不可用；127.0.0.1 可在本機瀏覽器中使用。伺服器執行時 Moru 會保留一則通知，在通知中停止也會停止伺服器。';
+
+  @override
+  String miniAppsWebNotification(String url) {
+    return '網頁伺服器：$url';
+  }
+
+  @override
+  String miniAppsWebPortInUse(String port) {
+    return '連接埠 $port 已被佔用：請換一個。';
+  }
 
   @override
   String get miniAppsMore => '更多';

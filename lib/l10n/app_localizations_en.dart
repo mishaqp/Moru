@@ -11367,6 +11367,62 @@ class AppLocalizationsEn extends AppLocalizations {
       'Run commands as root (su) on a rooted phone: system settings, apps, logs, screen input. You approve every command.';
 
   @override
+  String get miniAppsWebTitle => 'Web server';
+
+  @override
+  String get miniAppsWebPort => 'Port';
+
+  @override
+  String get miniAppsWebLocalhostOnly => 'Only this phone';
+
+  @override
+  String get miniAppsWebLocalhostOnlySubtitle =>
+      'Listen on 127.0.0.1 only: no access from the network and no moru.local.';
+
+  @override
+  String get miniAppsWebPasswordEnabled => 'Require a password';
+
+  @override
+  String get miniAppsWebPasswordEnabledSubtitle =>
+      'The browser asks for it; any user name works.';
+
+  @override
+  String get miniAppsWebPassword => 'Password';
+
+  @override
+  String get miniAppsWebStart => 'Start';
+
+  @override
+  String get miniAppsWebStop => 'Stop';
+
+  @override
+  String get miniAppsWebRunning => 'Running. Open in a browser:';
+
+  @override
+  String get miniAppsWebCopied => 'Address copied';
+
+  @override
+  String get miniAppsWebInvalidPort => 'The port must be from 1024 to 65535.';
+
+  @override
+  String get miniAppsWebNoPassword =>
+      'Set a password or turn the password off.';
+
+  @override
+  String get miniAppsWebFooter =>
+      'Your mini apps open in a browser with the same data as in Moru. moru.local and the Wi-Fi address work on devices in the same Wi-Fi, not over mobile data; 127.0.0.1 works in a browser on this phone. While the server runs, Moru keeps a notification; stopping it there stops the server.';
+
+  @override
+  String miniAppsWebNotification(String url) {
+    return 'Web server: $url';
+  }
+
+  @override
+  String miniAppsWebPortInUse(String port) {
+    return 'Port $port is already in use: choose another one.';
+  }
+
+  @override
   String get miniAppsMore => 'More';
 
   @override

@@ -11494,6 +11494,61 @@ class AppLocalizationsRu extends AppLocalizations {
       'Команды от root (su) на рутованном телефоне: системные настройки, приложения, логи, нажатия по экрану. Каждую команду вы подтверждаете.';
 
   @override
+  String get miniAppsWebTitle => 'Веб-сервер';
+
+  @override
+  String get miniAppsWebPort => 'Порт';
+
+  @override
+  String get miniAppsWebLocalhostOnly => 'Только этот телефон';
+
+  @override
+  String get miniAppsWebLocalhostOnlySubtitle =>
+      'Слушать только 127.0.0.1: без доступа из сети и без moru.local.';
+
+  @override
+  String get miniAppsWebPasswordEnabled => 'Требовать пароль';
+
+  @override
+  String get miniAppsWebPasswordEnabledSubtitle =>
+      'Браузер спросит его при входе, имя пользователя любое.';
+
+  @override
+  String get miniAppsWebPassword => 'Пароль';
+
+  @override
+  String get miniAppsWebStart => 'Запустить';
+
+  @override
+  String get miniAppsWebStop => 'Остановить';
+
+  @override
+  String get miniAppsWebRunning => 'Работает. Откройте в браузере:';
+
+  @override
+  String get miniAppsWebCopied => 'Адрес скопирован';
+
+  @override
+  String get miniAppsWebInvalidPort => 'Порт должен быть от 1024 до 65535.';
+
+  @override
+  String get miniAppsWebNoPassword => 'Задайте пароль или отключите его.';
+
+  @override
+  String get miniAppsWebFooter =>
+      'Мини-приложения открываются в браузере с теми же данными, что и в Moru. moru.local и Wi-Fi-адрес работают на устройствах в той же Wi-Fi-сети, не через мобильный интернет; 127.0.0.1 — в браузере на этом телефоне. Пока сервер работает, Moru держит уведомление; остановка там останавливает и сервер.';
+
+  @override
+  String miniAppsWebNotification(String url) {
+    return 'Веб-сервер: $url';
+  }
+
+  @override
+  String miniAppsWebPortInUse(String port) {
+    return 'Порт $port уже занят: выберите другой.';
+  }
+
+  @override
   String get miniAppsMore => 'Ещё';
 
   @override

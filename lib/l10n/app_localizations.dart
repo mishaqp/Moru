@@ -20339,6 +20339,102 @@ abstract class AppLocalizations {
   /// **'Run commands as root (su) on a rooted phone: system settings, apps, logs, screen input. You approve every command.'**
   String get rootShellToolSubtitle;
 
+  /// No description provided for @miniAppsWebTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Web server'**
+  String get miniAppsWebTitle;
+
+  /// No description provided for @miniAppsWebPort.
+  ///
+  /// In en, this message translates to:
+  /// **'Port'**
+  String get miniAppsWebPort;
+
+  /// No description provided for @miniAppsWebLocalhostOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Only this phone'**
+  String get miniAppsWebLocalhostOnly;
+
+  /// No description provided for @miniAppsWebLocalhostOnlySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen on 127.0.0.1 only: no access from the network and no moru.local.'**
+  String get miniAppsWebLocalhostOnlySubtitle;
+
+  /// No description provided for @miniAppsWebPasswordEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Require a password'**
+  String get miniAppsWebPasswordEnabled;
+
+  /// No description provided for @miniAppsWebPasswordEnabledSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The browser asks for it; any user name works.'**
+  String get miniAppsWebPasswordEnabledSubtitle;
+
+  /// No description provided for @miniAppsWebPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get miniAppsWebPassword;
+
+  /// No description provided for @miniAppsWebStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get miniAppsWebStart;
+
+  /// No description provided for @miniAppsWebStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get miniAppsWebStop;
+
+  /// No description provided for @miniAppsWebRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running. Open in a browser:'**
+  String get miniAppsWebRunning;
+
+  /// No description provided for @miniAppsWebCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Address copied'**
+  String get miniAppsWebCopied;
+
+  /// No description provided for @miniAppsWebInvalidPort.
+  ///
+  /// In en, this message translates to:
+  /// **'The port must be from 1024 to 65535.'**
+  String get miniAppsWebInvalidPort;
+
+  /// No description provided for @miniAppsWebNoPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a password or turn the password off.'**
+  String get miniAppsWebNoPassword;
+
+  /// No description provided for @miniAppsWebFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Your mini apps open in a browser with the same data as in Moru. moru.local and the Wi-Fi address work on devices in the same Wi-Fi, not over mobile data; 127.0.0.1 works in a browser on this phone. While the server runs, Moru keeps a notification; stopping it there stops the server.'**
+  String get miniAppsWebFooter;
+
+  /// No description provided for @miniAppsWebNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Web server: {url}'**
+  String miniAppsWebNotification(String url);
+
+  /// No description provided for @miniAppsWebPortInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Port {port} is already in use: choose another one.'**
+  String miniAppsWebPortInUse(String port);
+
   /// No description provided for @miniAppsMore.
   ///
   /// In en, this message translates to:
