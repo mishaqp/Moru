@@ -10859,6 +10859,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get miniAppsToolActionServer => '读取应用服务器状态';
+
+  @override
   String get miniAppsMore => '更多';
 
   @override
@@ -21755,6 +21758,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String miniAppsJobLastFailed(String time) {
     return '上次运行 $time：失败';
   }
+
+  @override
+  String get miniAppsToolActionServer => '读取应用服务器状态';
 
   @override
   String get miniAppsMore => '更多';
@@ -32727,6 +32733,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String miniAppsJobLastFailed(String time) {
     return '上次執行 $time：失敗';
   }
+
+  @override
+  String get miniAppsToolActionServer => '讀取應用伺服器狀態';
 
   @override
   String get miniAppsMore => '更多';

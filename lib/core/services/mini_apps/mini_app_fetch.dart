@@ -31,8 +31,41 @@ class MiniAppFetch {
   Future<Map<String, Object?>> fetch(
     MiniApp app,
     Map<String, dynamic> args,
+  ) async => _send(args, _uri(app, args['url']), (uri) => _uri(app, '$uri'));
+
+  /// `moru.server.fetch`: a request to the app's own server on [port] of
+  /// this device; `path` is relative to it and redirects stay on it.
+  Future<Map<String, Object?>> fetchLocal(
+    int port,
+    Map<String, dynamic> args,
   ) async {
-    var uri = _uri(app, args['url']);
+    final path = args['path'];
+    final origin = Uri(scheme: 'http', host: '127.0.0.1', port: port);
+    if (path is! String || !path.startsWith('/') || path.startsWith('//')) {
+      throw const MiniAppException(
+        'invalid_path',
+        'path must start with "/", e.g. "/api/items".',
+      );
+    }
+    Uri local(Uri uri) {
+      if (uri.origin != origin.origin) {
+        throw const MiniAppException(
+          'host_not_allowed',
+          'The server may only redirect to itself.',
+        );
+      }
+      return uri;
+    }
+
+    return _send(args, local(origin.resolve(path)), local);
+  }
+
+  Future<Map<String, Object?>> _send(
+    Map<String, dynamic> args,
+    Uri start,
+    Uri Function(Uri) checkRedirect,
+  ) async {
+    var uri = start;
     var method = '${args['method'] ?? 'GET'}'.toUpperCase();
     if (!methods.contains(method)) {
       throw MiniAppException(
@@ -81,7 +114,7 @@ class MiniAppFetch {
             'The server redirected too many times.',
           );
         }
-        uri = _uri(app, uri.resolve(location).toString());
+        uri = checkRedirect(uri.resolve(location));
         // 303, and 301/302 after POST, turn into GET as browsers do.
         if (response.statusCode == 303 ||
             (method == 'POST' &&

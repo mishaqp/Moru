@@ -73,7 +73,9 @@ package name does not require building other platforms.
   manifest game settings (`MiniAppDisplay`). Background jobs (`moru.jobs`,
   `MiniAppJobs`) are stored with the app and run through the native
   `ScheduledTasks` planner as kind `miniAppJob`. `MiniAppJobRunner` runs them
-  in a hidden WebView.
+  in a hidden WebView. An app may declare a server (`server.command`):
+  `MiniAppServers` runs it in the Linux environment on `$PORT` while the app
+  or a job uses it, and pages reach it with `moru.server.fetch`.
 
 ## Pre-commit checklist
 

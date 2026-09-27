@@ -18,6 +18,7 @@ class MiniAppHost {
     this.close,
     this.jobs,
     this.background = false,
+    this.server,
   });
 
   /// Asks the default model; returns its text.
@@ -48,6 +49,10 @@ class MiniAppHost {
 
   /// The app runs out of sight for a background job.
   final bool background;
+
+  /// `moru.server.fetch`: a request to the app's own server.
+  final Future<Map<String, Object?>> Function(Map<String, dynamic> args)?
+  server;
 }
 
 /// Answers `window.moru` calls from one mini app page. Each message is
@@ -73,6 +78,10 @@ class MiniAppBridge {
   final void Function(String kind, String problem)? onProblem;
 
   static const int maxProblems = 50;
+
+  /// Code of a call the publish check does not make, e.g. to the app's
+  /// server; it is not a problem of the app.
+  static const String notInCheck = 'not_in_check';
 
   static const Set<String> hapticKinds = {
     'light',
@@ -115,7 +124,9 @@ class MiniAppBridge {
       final value = await _dispatch(method, args);
       return _reply(id, true, value);
     } on MiniAppException catch (e) {
-      _note(failedCalls, 'call', '$method: ${e.message}');
+      if (e.code != notInCheck) {
+        _note(failedCalls, 'call', '$method: ${e.message}');
+      }
       return _reply(id, false, e.message);
     } catch (e) {
       _note(failedCalls, 'call', '$method: $e');
@@ -233,6 +244,8 @@ class MiniAppBridge {
         ];
       case 'fetch':
         return _need(host.fetch).fetch(_app(), args);
+      case 'server.fetch':
+        return _need(host.server)(args);
       case 'calendar.list':
         return _calendar('queryCalendar', args, _calendarListKeys);
       case 'calendar.add':

@@ -11484,6 +11484,9 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get miniAppsToolActionServer => 'Состояние сервера приложения';
+
+  @override
   String get miniAppsMore => 'Ещё';
 
   @override

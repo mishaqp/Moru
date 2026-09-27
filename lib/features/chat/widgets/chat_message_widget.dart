@@ -551,6 +551,7 @@ String? _localToolTitleFor(
       MiniAppDataTool.actionRollback => l10n.miniAppsToolActionRollback,
       MiniAppDataTool.actionJobs => l10n.miniAppsToolActionJobs,
       MiniAppDataTool.actionRunJob => l10n.miniAppsToolActionRunJob,
+      MiniAppDataTool.actionServer => l10n.miniAppsToolActionServer,
       _ => l10n.miniAppsToolTitle,
     },
     _ => null,

@@ -4094,6 +4094,7 @@
   "miniAppsJobNext": "下次：{time}",
   "miniAppsJobLastDone": "上次运行 {time}：完成",
   "miniAppsJobLastFailed": "上次运行 {time}：失败",
+  "miniAppsToolActionServer": "读取应用服务器状态",
   "miniAppsMore": "更多",
   "miniAppsErrors": "错误日志",
   "miniAppsErrorsEmpty": "没有记录到错误。",

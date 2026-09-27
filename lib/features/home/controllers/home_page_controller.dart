@@ -19,6 +19,8 @@ import '../../../core/models/quick_phrase.dart';
 import '../../../core/models/assistant_regex.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/providers/environment_provider.dart';
+import '../../../core/services/workspace/workspace_runtime.dart';
 import '../../../core/providers/mcp_provider.dart';
 import '../../../core/providers/tts_provider.dart';
 import '../../../core/providers/quick_phrase_provider.dart';
@@ -916,6 +918,10 @@ class HomePageController extends ChangeNotifier {
             cancellation,
             settings: _context.read<SettingsProvider>(),
             assistants: _context.read<AssistantProvider>(),
+            environment: MiniAppLauncher.serverEnvironment(
+              _context.read<WorkspaceRuntimeProvider>(),
+              _context.read<EnvironmentProvider>(),
+            ),
           );
       await ScheduledTasksService.instance.attach(executor);
     } finally {

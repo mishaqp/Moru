@@ -121,6 +121,10 @@ class MiniAppSandbox {
           haptic: (kind) async {},
           close: () async {},
           jobs: MiniAppJobs(store: store, scheduler: MiniAppJobScheduler.none),
+          server: (_) async => throw const MiniAppException(
+            MiniAppBridge.notInCheck,
+            'The server does not run in the publish check.',
+          ),
         ),
       );
       return MiniAppSandbox._(root, store, bridge);

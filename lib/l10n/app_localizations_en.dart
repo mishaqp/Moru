@@ -11357,6 +11357,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get miniAppsToolActionServer => 'Read app server state';
+
+  @override
   String get miniAppsMore => 'More';
 
   @override

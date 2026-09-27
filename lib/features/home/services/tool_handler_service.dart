@@ -644,6 +644,7 @@ class ToolHandlerService {
           return MiniAppDataTool(
             store: MiniAppStore.instance,
             jobs: MiniAppLauncher.jobs,
+            serverStatus: MiniAppLauncher.servers.status,
           ).execute(args);
         }
 

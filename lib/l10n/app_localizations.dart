@@ -20321,6 +20321,12 @@ abstract class AppLocalizations {
   /// **'Last run {time}: failed'**
   String miniAppsJobLastFailed(String time);
 
+  /// No description provided for @miniAppsToolActionServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Read app server state'**
+  String get miniAppsToolActionServer;
+
   /// No description provided for @miniAppsMore.
   ///
   /// In en, this message translates to:

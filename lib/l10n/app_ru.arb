@@ -5010,6 +5010,7 @@
   "miniAppsJobNext": "Следующий запуск: {time}",
   "miniAppsJobLastDone": "Последний запуск {time}: выполнено",
   "miniAppsJobLastFailed": "Последний запуск {time}: ошибка",
+  "miniAppsToolActionServer": "Состояние сервера приложения",
   "miniAppsMore": "Ещё",
   "miniAppsErrors": "Журнал ошибок",
   "miniAppsErrorsEmpty": "Ошибок нет.",

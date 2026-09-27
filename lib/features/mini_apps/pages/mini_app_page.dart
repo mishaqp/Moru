@@ -8,8 +8,11 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/providers/assistant_provider.dart';
+import '../../../core/providers/environment_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/mini_apps/mini_app_bridge.dart';
+import '../../../core/services/mini_apps/mini_app_servers.dart';
+import '../../../core/services/workspace/workspace_runtime.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
@@ -35,6 +38,9 @@ class MiniAppPage extends StatefulWidget {
 class _MiniAppPageState extends State<MiniAppPage> {
   late final WebViewController _controller;
   late final MiniAppBridge _bridge;
+
+  /// The app's server while the page is open; a rollback may change it.
+  late MiniAppServerLease _server;
   StreamSubscription<({String appId, String key})>? _changes;
   bool _loading = true;
 
@@ -54,6 +60,7 @@ class _MiniAppPageState extends State<MiniAppPage> {
   @override
   void initState() {
     super.initState();
+    _server = _leaseServer(widget.app);
     _bridge = MiniAppBridge(
       store: _store,
       appId: widget.app.id,
@@ -64,6 +71,8 @@ class _MiniAppPageState extends State<MiniAppPage> {
         close: () async {
           if (mounted) Navigator.of(context).pop();
         },
+        // The current lease, also after a rollback.
+        server: (args) => _server.fetch(args),
       ),
       onProblem: (kind, problem) {
         // The console reports script errors and rejected promises with
@@ -123,6 +132,14 @@ class _MiniAppPageState extends State<MiniAppPage> {
     MiniAppDisplay.apply(null, _app);
     unawaited(_load());
   }
+
+  MiniAppServerLease _leaseServer(MiniApp app) => MiniAppLauncher.servers.lease(
+    app,
+    MiniAppLauncher.serverEnvironment(
+      context.read<WorkspaceRuntimeProvider>(),
+      context.read<EnvironmentProvider>(),
+    ),
+  );
 
   Future<void> _load() async {
     await _store.refreshBridge(_app);
@@ -187,6 +204,9 @@ class _MiniAppPageState extends State<MiniAppPage> {
         );
         if (restored == null || !mounted) return;
         MiniAppDisplay.apply(_app, restored);
+        // The restored code may run another server.
+        unawaited(_server.release());
+        _server = _leaseServer(restored);
         setState(() {
           _app = restored;
           _errors = 0;
@@ -207,6 +227,7 @@ class _MiniAppPageState extends State<MiniAppPage> {
   @override
   void dispose() {
     MiniAppDisplay.apply(_app, null);
+    unawaited(_server.release());
     _controlsTimer?.cancel();
     unawaited(_changes?.cancel());
     super.dispose();

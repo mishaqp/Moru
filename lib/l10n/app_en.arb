@@ -5140,6 +5140,7 @@
     }
   },
   "miniAppsJobLastFailed": "Last run {time}: failed",
+  "miniAppsToolActionServer": "Read app server state",
   "miniAppsMore": "More",
   "miniAppsErrors": "Error log",
   "miniAppsErrorsEmpty": "No errors recorded.",

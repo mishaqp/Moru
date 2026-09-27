@@ -14,15 +14,18 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/models/assistant.dart';
 import '../../core/providers/assistant_provider.dart';
+import '../../core/providers/environment_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/api/chat_api_service.dart';
 import '../../core/services/mini_apps/mini_app_bridge.dart';
 import '../../core/services/mini_apps/mini_app_fetch.dart';
 import '../../core/services/mini_apps/mini_app_jobs.dart';
 import '../../core/services/mini_apps/mini_app_reminders.dart';
+import '../../core/services/mini_apps/mini_app_servers.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/scheduled_tasks_service.dart';
+import '../../core/services/workspace/workspace_runtime.dart';
 import '../home/services/local_tools_service.dart';
 import '../../icons/lucide_adapter.dart';
 import '../../l10n/app_localizations.dart';
@@ -57,6 +60,26 @@ class MiniAppLauncher {
     return reminders;
   }();
 
+  /// Servers of the open apps and running jobs.
+  static final MiniAppServers servers = MiniAppServers(
+    store: MiniAppStore.instance,
+    fetch: fetcher,
+  );
+
+  /// The Linux environment for app servers: the workspace runtime once it
+  /// is ready, and the environment variables from settings.
+  static MiniAppServerEnvironment serverEnvironment(
+    WorkspaceRuntimeProvider runtime,
+    EnvironmentProvider environment,
+  ) => MiniAppServerEnvironment(
+    runtime: () async {
+      await runtime.initialization;
+      final status = await runtime.refresh();
+      return status.ready ? runtime.runtime : null;
+    },
+    variables: () async => (await environment.loadExecutionConfig()).variables,
+  );
+
   static MiniAppJobs? _jobs;
 
   /// Background jobs of the installed apps; deleting an app unschedules its
@@ -79,6 +102,7 @@ class MiniAppLauncher {
     ScheduledRunCancellation cancellation, {
     required SettingsProvider settings,
     required AssistantProvider assistants,
+    required MiniAppServerEnvironment environment,
   }) async {
     final store = MiniAppStore.instance;
     await store.load();
@@ -89,14 +113,25 @@ class MiniAppLauncher {
       throw StateError('app_missing');
     }
     await Future.wait([settings.loaded, assistants.loaded]);
-    await MiniAppJobRunner.run(
-      store: store,
-      app: app,
-      jobId: jobId,
-      function: function,
-      host: hostFor(app, settings, assistants, background: true),
-      cancellation: cancellation,
-    );
+    final server = servers.lease(app, environment);
+    try {
+      await MiniAppJobRunner.run(
+        store: store,
+        app: app,
+        jobId: jobId,
+        function: function,
+        host: hostFor(
+          app,
+          settings,
+          assistants,
+          background: true,
+          server: server.fetch,
+        ),
+        cancellation: cancellation,
+      );
+    } finally {
+      await server.release();
+    }
   }
 
   /// The model `moru.ai.ask` uses: the current assistant's chat model, else
@@ -121,6 +156,7 @@ class MiniAppLauncher {
     AssistantProvider assistants, {
     Future<void> Function()? close,
     bool background = false,
+    Future<Map<String, Object?>> Function(Map<String, dynamic> args)? server,
   }) => MiniAppHost(
     ask: (prompt, system) async {
       final target = askModelFor(settings, assistants.currentAssistant);
@@ -166,6 +202,7 @@ class MiniAppLauncher {
     close: close,
     jobs: jobs,
     background: background,
+    server: server,
   );
 
   /// Shared by every open app, so connections are reused.

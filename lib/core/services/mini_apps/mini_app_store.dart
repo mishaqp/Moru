@@ -26,6 +26,7 @@ class MiniApp {
     this.fullscreen = false,
     this.orientation = MiniAppOrientation.any,
     this.keepAwake = false,
+    this.serverCommand,
     required this.updatedAt,
   });
 
@@ -52,6 +53,10 @@ class MiniApp {
 
   /// Keeps the screen on while the app is open.
   final bool keepAwake;
+
+  /// Shell command of the app's server, from `server.command`: Moru runs it
+  /// in the Linux environment while the app is open (see MiniAppServers).
+  final String? serverCommand;
 
   /// Folder of the installed copy (manifest, app/ and data).
   final String directory;
@@ -88,6 +93,9 @@ class MiniApp {
     orientation:
         MiniAppOrientation.parse(json['orientation']) ?? MiniAppOrientation.any,
     keepAwake: json['keepAwake'] == true,
+    serverCommand: json['server'] is Map
+        ? (json['server'] as Map)['command'] as String?
+        : null,
     directory: directory,
     updatedAt: DateTime.fromMillisecondsSinceEpoch(
       json['updatedAt'] as int? ?? 0,
@@ -106,6 +114,7 @@ class MiniApp {
     if (fullscreen) 'fullscreen': true,
     if (orientation != MiniAppOrientation.any) 'orientation': orientation.name,
     if (keepAwake) 'keepAwake': true,
+    if (serverCommand != null) 'server': {'command': serverCommand},
     'updatedAt': updatedAt.millisecondsSinceEpoch,
   };
 }
@@ -192,6 +201,9 @@ class MiniAppStore extends ChangeNotifier {
     'node_modules',
     '.git',
     '__pycache__',
+    // Virtualenvs of a server; it installs its dependencies into /data.
+    '.venv',
+    'venv',
   };
 
   static final RegExp _idPattern = RegExp(r'^[a-z0-9][a-z0-9-]{0,39}$');
@@ -321,6 +333,7 @@ class MiniAppStore extends ChangeNotifier {
         '"orientation" must be "any", "portrait" or "landscape".',
       );
     }
+    final serverCommand = _serverCommand(manifest['server']);
     for (final flag in const ['fullscreen', 'keepAwake']) {
       if (manifest[flag] != null && manifest[flag] is! bool) {
         throw MiniAppException(
@@ -376,6 +389,7 @@ class MiniAppStore extends ChangeNotifier {
       fullscreen: manifest['fullscreen'] == true,
       orientation: orientation,
       keepAwake: manifest['keepAwake'] == true,
+      serverCommand: serverCommand,
       directory: directory.path,
       updatedAt: _now(),
     );
@@ -890,6 +904,24 @@ class MiniAppStore extends ChangeNotifier {
     return hosts.toList();
   }
 
+  static const int maxServerCommandLength = 500;
+
+  static String? _serverCommand(Object? raw) {
+    if (raw == null) return null;
+    final command = raw is Map ? raw['command'] : null;
+    if (command is! String ||
+        command.trim().isEmpty ||
+        command.length > maxServerCommandLength ||
+        command.contains('\u0000')) {
+      throw const MiniAppException(
+        'invalid_server',
+        '"server" must be {"command": "..."} with a shell command of at most '
+            '$maxServerCommandLength characters.',
+      );
+    }
+    return command.trim();
+  }
+
   static Set<String> _permissions(Object? raw) {
     if (raw == null) return const {};
     final names = raw is List ? raw.map((e) => '$e'.trim()).toSet() : null;
@@ -1065,6 +1097,18 @@ class MiniAppStore extends ChangeNotifier {
         response.text = function () { return response.body; };
         return response;
       });
+    },
+    server: {
+      fetch: function (path, options) {
+        options = options || {};
+        return call('server.fetch', {
+          path: path, method: options.method, headers: options.headers, body: options.body
+        }).then(function (response) {
+          response.json = function () { return JSON.parse(response.body); };
+          response.text = function () { return response.body; };
+          return response;
+        });
+      }
     },
     calendar: {
       list: function (query) { return call('calendar.list', query); },

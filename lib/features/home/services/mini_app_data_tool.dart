@@ -13,7 +13,7 @@ class _ToolFailure implements Exception {
 /// The `mini_apps` local tool: the chat reads and changes the data of the
 /// user's mini apps, e.g. "I drank a glass of water", without opening them.
 class MiniAppDataTool {
-  const MiniAppDataTool({required this.store, this.jobs});
+  const MiniAppDataTool({required this.store, this.jobs, this.serverStatus});
 
   static const String toolName = 'mini_apps';
 
@@ -26,6 +26,7 @@ class MiniAppDataTool {
   static const String actionRollback = 'rollback';
   static const String actionJobs = 'jobs';
   static const String actionRunJob = 'run_job';
+  static const String actionServer = 'server';
 
   static const List<String> actions = [
     actionList,
@@ -37,6 +38,7 @@ class MiniAppDataTool {
     actionRollback,
     actionJobs,
     actionRunJob,
+    actionServer,
   ];
 
   /// Larger reads return only the keys, so one app cannot flood the context.
@@ -46,6 +48,9 @@ class MiniAppDataTool {
 
   /// Background jobs; `jobs` and `run_job` are unavailable without them.
   final MiniAppJobs? jobs;
+
+  /// State and output of an app's server (MiniAppServers.status).
+  final Map<String, Object?> Function(String appId)? serverStatus;
 
   static String actionOf(Map<String, dynamic> args) =>
       (args['action'] ?? '').toString().trim().toLowerCase();
@@ -67,7 +72,8 @@ class MiniAppDataTool {
           'kept (the last 5); "rollback" puts one back without touching the '
           'data. "jobs" lists the app\'s background jobs (moru.jobs) with '
           'their next and last runs; "run_job" starts one now to test it, '
-          'then read "jobs" and "errors" about 30 s later.',
+          'then read "jobs" and "errors" about 30 s later. "server" shows '
+          'whether the app\'s server runs and its latest output.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -81,7 +87,8 @@ class MiniAppDataTool {
                 'app_id, oldest first; clear: true empties it after reading. '
                 'versions: earlier versions of app_id. rollback: restore '
                 'version of app_id. jobs: background jobs of app_id. '
-                'run_job: run job of app_id now.',
+                'run_job: run job of app_id now. server: state and output '
+                'of the server of app_id.',
           },
           'app_id': {'type': 'string', 'description': 'App id from "list".'},
           'key': {'type': 'string', 'description': 'Storage key.'},
@@ -180,6 +187,16 @@ class MiniAppDataTool {
                 },
             ],
           };
+        case actionServer:
+          final app = _app(args);
+          final status = serverStatus;
+          if (status == null) {
+            throw const _ToolFailure(
+              'unavailable',
+              'App servers are not available here.',
+            );
+          }
+          result = {'command': app.serverCommand, ...status(app.id)};
         case actionRunJob:
           final app = _app(args);
           final job = '${args['job'] ?? ''}'.trim();
