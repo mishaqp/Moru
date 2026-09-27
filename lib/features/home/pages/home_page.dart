@@ -1386,10 +1386,12 @@ class _HomePageState extends State<HomePage>
 
   /// Glass theme blur behind the header; null without live glass.
   double? _glassHeaderSigma(BuildContext context) {
-    final glass = context.select<SettingsProvider, (bool, bool, GlassFrost)>(
-      (s) => (s.glassTheme, s.glassEconomy, s.glassFrost),
+    // The header follows the bubbles' blur from Message style.
+    return context.select<SettingsProvider, double?>(
+      (s) => s.glassTheme && !s.glassEconomy
+          ? s.assistantChatBubbleStyleOverrides.blurSigma ?? 14
+          : null,
     );
-    return glass.$1 && !glass.$2 ? glass.$3.sigma : null;
   }
 
   double _chatTopOverlayInset(BuildContext context) {

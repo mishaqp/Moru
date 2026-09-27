@@ -14,14 +14,12 @@ _chatSurfaceStyleSelection(BuildContext context, {bool isUser = false}) {
       ({ChatMessageBackgroundStyle style, ChatBubbleStyleOverrides overrides})
     >((s) {
       final overrides = s.chatBubbleStyleOverridesFor(isUser: isUser);
-      if (!s.glassTheme) {
-        return (style: s.chatMessageBackgroundStyle, overrides: overrides);
-      }
-      // Glass bubbles are always frosted; the Glass settings pick the blur.
-      final sigma = s.glassEconomy ? 0.0 : s.glassFrost.sigma;
+      // Glass economy keeps the translucency but drops the blur.
       return (
-        style: ChatMessageBackgroundStyle.frosted,
-        overrides: overrides.copyWith(blurSigma: () => sigma),
+        style: s.chatMessageBackgroundStyle,
+        overrides: s.glassTheme && s.glassEconomy
+            ? overrides.copyWith(blurSigma: () => 0.0)
+            : overrides,
       );
     });
   } on ProviderNotFoundException {

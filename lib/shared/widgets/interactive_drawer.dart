@@ -350,8 +350,11 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
     final double dx =
         hiddenOffset * (1.0 - _anim.value); // 1->hidden, 0->onscreen
 
+    // The drawer paints its own panel, so a see-through one (Glass) stays
+    // see-through.
     final drawerBody = Material(
       elevation: widget.elevation,
+      color: Colors.transparent,
       clipBehavior: Clip.none,
       child: Semantics(
         label: widget.semanticLabel,

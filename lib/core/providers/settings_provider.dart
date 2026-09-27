@@ -320,7 +320,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayAssistantBubbleSplitParagraphsKey =
       'display_assistant_bubble_split_paragraphs_v1';
   static const String _displayGlassThemeKey = 'display_glass_theme_v1';
-  static const String _displayGlassFrostKey = 'display_glass_frost_v1';
+  static const String _displayGlassRestoreKey = 'display_glass_restore_v1';
   static const String _displayGlassEconomyKey = 'display_glass_economy_v1';
   static const String _displayChatMessageBackgroundStyleKey =
       'display_chat_message_background_style_v1';
@@ -544,8 +544,6 @@ class SettingsProvider extends ChangeNotifier {
   /// The Glass look: a gradient backdrop behind every chat, frosted bubbles
   /// and a frosted header. An assistant's own wallpaper still wins.
   bool get glassTheme => _glassTheme;
-  GlassFrost _glassFrost = GlassFrost.medium;
-  GlassFrost get glassFrost => _glassFrost;
   bool _glassEconomy = false;
 
   /// Glass without live blur: translucent surfaces only, for slow phones.
@@ -1253,7 +1251,6 @@ class SettingsProvider extends ChangeNotifier {
     _assistantBubbleSplitParagraphs =
         prefs.getBool(_displayAssistantBubbleSplitParagraphsKey) ?? false;
     _glassTheme = prefs.getBool(_displayGlassThemeKey) ?? false;
-    _glassFrost = GlassFrost.fromName(prefs.getString(_displayGlassFrostKey));
     _glassEconomy = prefs.getBool(_displayGlassEconomyKey) ?? false;
     // display: markdown/math rendering
     _enableDollarLatex = prefs.getBool(_displayEnableDollarLatexKey) ?? true;
@@ -2788,18 +2785,99 @@ class SettingsProvider extends ChangeNotifier {
     await _preferences.setBool(_displayAssistantBubbleSplitParagraphsKey, v);
   }
 
-  Future<void> setGlassTheme(bool v) async {
+  /// Turning Glass on is a preset: it saves the current message style and
+  /// writes the glass one (frosted bubbles, light rims, the user's bubbles in
+  /// [accentLight]/[accentDark]). The style pages still edit it afterwards.
+  /// Turning Glass off puts the saved message style back.
+  Future<void> setGlassTheme(
+    bool v, {
+    Color? accentLight,
+    Color? accentDark,
+  }) async {
     if (_glassTheme == v) return;
-    _glassTheme = v;
+    if (v) {
+      final saved = jsonEncode({
+        'style': _chatMessageBackgroundStyle.name,
+        'assistant': _chatBubbleStyleOverrides.toJson(),
+        if (_userChatBubbleStyleOverrides != null)
+          'user': _userChatBubbleStyleOverrides!.toJson(),
+      });
+      const rim = 0xFFFFFFFF;
+      _chatMessageBackgroundStyle = ChatMessageBackgroundStyle.frosted;
+      _chatBubbleStyleOverrides = ChatBubbleStyleOverrides(
+        borderArgbLight: rim,
+        borderArgbDark: rim,
+        borderOpacity: 0.2,
+        frostedOpacity: 0.34,
+        blurSigma: _chatBubbleStyleOverrides.blurSigma,
+      );
+      _userChatBubbleStyleOverrides = ChatBubbleStyleOverrides(
+        backgroundArgbLight: accentLight?.toARGB32(),
+        backgroundArgbDark: accentDark?.toARGB32(),
+        textArgbLight: accentLight == null ? null : rim,
+        textArgbDark: accentDark == null ? null : rim,
+        borderArgbLight: rim,
+        borderArgbDark: rim,
+        borderOpacity: 0.28,
+        frostedOpacity: 0.72,
+        blurSigma: _chatBubbleStyleOverrides.blurSigma,
+      );
+      _glassTheme = true;
+      notifyListeners();
+      await _preferences.setString(_displayGlassRestoreKey, saved);
+      await _saveMessageStyle();
+      await _preferences.setBool(_displayGlassThemeKey, true);
+      return;
+    }
+    final saved = _preferences.getString(_displayGlassRestoreKey);
+    if (saved != null) {
+      try {
+        final json = jsonDecode(saved) as Map<String, dynamic>;
+        _chatMessageBackgroundStyle = ChatMessageBackgroundStyle.values
+            .firstWhere(
+              (s) => s.name == json['style'],
+              orElse: () => ChatMessageBackgroundStyle.defaultStyle,
+            );
+        _chatBubbleStyleOverrides = ChatBubbleStyleOverrides.fromJson(
+          (json['assistant'] as Map).cast<String, dynamic>(),
+        );
+        final user = json['user'] as Map?;
+        _userChatBubbleStyleOverrides = user == null
+            ? null
+            : ChatBubbleStyleOverrides.fromJson(user.cast<String, dynamic>());
+      } catch (_) {
+        // A damaged record keeps the glass message style.
+      }
+    }
+    _glassTheme = false;
     notifyListeners();
-    await _preferences.setBool(_displayGlassThemeKey, v);
+    await _saveMessageStyle();
+    await _preferences.remove(_displayGlassRestoreKey);
+    await _preferences.setBool(_displayGlassThemeKey, false);
   }
 
-  Future<void> setGlassFrost(GlassFrost v) async {
-    if (_glassFrost == v) return;
-    _glassFrost = v;
-    notifyListeners();
-    await _preferences.setString(_displayGlassFrostKey, v.name);
+  Future<void> _saveMessageStyle() async {
+    await _preferences.setString(
+      _displayChatMessageBackgroundStyleKey,
+      switch (_chatMessageBackgroundStyle) {
+        ChatMessageBackgroundStyle.frosted => 'frosted',
+        ChatMessageBackgroundStyle.solid => 'solid',
+        ChatMessageBackgroundStyle.defaultStyle => 'default',
+      },
+    );
+    await _preferences.setString(
+      _chatBubbleStyleOverridesKey,
+      jsonEncode(_chatBubbleStyleOverrides.toJson()),
+    );
+    final user = _userChatBubbleStyleOverrides;
+    if (user == null) {
+      await _preferences.remove(_userChatBubbleStyleOverridesKey);
+    } else {
+      await _preferences.setString(
+        _userChatBubbleStyleOverridesKey,
+        jsonEncode(user.toJson()),
+      );
+    }
   }
 
   Future<void> setGlassEconomy(bool v) async {
@@ -5957,7 +6035,6 @@ Requirements:
     copy._assistantBubbleFitContent = _assistantBubbleFitContent;
     copy._assistantBubbleSplitParagraphs = _assistantBubbleSplitParagraphs;
     copy._glassTheme = _glassTheme;
-    copy._glassFrost = _glassFrost;
     copy._glassEconomy = _glassEconomy;
     copy._chatMessageBackgroundStyle = _chatMessageBackgroundStyle;
     copy._chatBubbleStyleOverrides = _chatBubbleStyleOverrides;
@@ -6188,20 +6265,6 @@ enum ProviderKind { openai, google, claude, local }
 
 // Background rendering mode for chat message bubbles
 enum ChatMessageBackgroundStyle { defaultStyle, frosted, solid }
-
-/// How strongly the Glass theme blurs what is behind its surfaces.
-enum GlassFrost {
-  soft(8),
-  medium(14),
-  strong(22);
-
-  const GlassFrost(this.sigma);
-
-  final double sigma;
-
-  static GlassFrost fromName(String? name) =>
-      values.firstWhere((v) => v.name == name, orElse: () => GlassFrost.medium);
-}
 
 class ProviderConfig {
   static const _kelivoInPublicApiKey = 'kelivo';

@@ -9,6 +9,7 @@ import 'package:Kelivo/core/providers/backup_reminder_provider.dart';
 import 'package:Kelivo/core/providers/tag_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/models/conversation.dart';
+import 'package:Kelivo/features/chat/widgets/chat_gradient_background.dart';
 import 'package:Kelivo/features/home/widgets/side_drawer.dart';
 import 'package:Kelivo/features/home/widgets/sidebar_selection_bars.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
@@ -427,4 +428,35 @@ void main() {
       });
     },
   );
+
+  testWidgets('glass drawer shows the colour backdrop under a veil', (
+    tester,
+  ) async {
+    final service = createService();
+    await tester.runAsync(service.init);
+    await pumpDrawer(
+      tester,
+      service,
+      embedded: false,
+      desktopTopicsOnly: false,
+    );
+    expect(find.byType(ChatGradientBackground), findsNothing);
+
+    final settings = Provider.of<SettingsProvider>(
+      tester.element(find.byType(SideDrawer)),
+      listen: false,
+    );
+    await settings.loaded;
+    await settings.setGlassTheme(true);
+    await tester.pump();
+    expect(find.byType(ChatGradientBackground), findsOneWidget);
+    expect(
+      tester.widget<Drawer>(find.byType(Drawer)).backgroundColor,
+      Colors.transparent,
+    );
+
+    await settings.setGlassTheme(false);
+    await tester.pump();
+    expect(find.byType(ChatGradientBackground), findsNothing);
+  });
 }
