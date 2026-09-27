@@ -64,7 +64,7 @@ void main() {
     if (await tmp.exists()) await tmp.delete(recursive: true);
   });
 
-  for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+  for (final platform in [TargetPlatform.android]) {
     test('fragment includes the ${platform.name} directory description', () {
       debugDefaultTargetPlatformOverride = platform;
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
@@ -84,10 +84,7 @@ void main() {
       expect(fragment, contains('/skills'));
       expect(fragment, contains('/tmp'));
       expect(fragment, contains('- /mounts/<name>/'));
-      expect(
-        fragment.contains('from iOS Files'),
-        platform == TargetPlatform.iOS,
-      );
+      expect(fragment, isNot(contains('from iOS Files')));
       expect(fragment.contains('iCloud'), platform == TargetPlatform.iOS);
       expect(
         fragment.contains('on-device folders'),

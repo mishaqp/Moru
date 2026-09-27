@@ -132,10 +132,7 @@ void main() {
         tester,
         Scaffold(
           body: SettingsSearchView(
-            index: SettingsSearchIndex(
-              AppLocalizationsEn(),
-              platform: TargetPlatform.iOS,
-            ),
+            index: SettingsSearchIndex(AppLocalizationsEn()),
             onSelected: (item) => selected = item,
             onClose: () => cancelled = true,
           ),
@@ -204,10 +201,7 @@ void main() {
         tester,
         Scaffold(
           body: SettingsSearchView(
-            index: SettingsSearchIndex(
-              AppLocalizationsEn(),
-              platform: TargetPlatform.iOS,
-            ),
+            index: SettingsSearchIndex(AppLocalizationsEn()),
             onSelected: (item) => selected = item,
             onClose: _noop,
           ),
@@ -247,10 +241,7 @@ void main() {
         },
       ),
     );
-    final index = SettingsSearchIndex(
-      AppLocalizationsEn(),
-      platform: TargetPlatform.iOS,
-    );
+    final index = SettingsSearchIndex(AppLocalizationsEn());
     for (final item in index.entries.where(
       (item) => item.targetLabel != null,
     )) {
@@ -301,10 +292,7 @@ void main() {
       tester,
       Scaffold(
         body: SettingsSearchView(
-          index: SettingsSearchIndex(
-            AppLocalizationsEn(),
-            platform: TargetPlatform.macOS,
-          ),
+          index: SettingsSearchIndex(AppLocalizationsEn()),
           onSelected: (item) => selected = item,
           onClose: _noop,
         ),

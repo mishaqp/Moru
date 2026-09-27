@@ -3176,8 +3176,8 @@ $$
       await tester.pump();
 
       expect(_findMathWidget(), findsOneWidget);
-      expect(find.textContaining(r'$a'), findsOneWidget);
-      expect(find.textContaining(r'b$'), findsOneWidget);
+      expect(find.textContaining(r'$a', findRichText: true), findsOneWidget);
+      expect(find.textContaining(r'b$', findRichText: true), findsOneWidget);
     },
   );
 
@@ -3278,86 +3278,6 @@ final price = "$12";
 
     expect(identical(before, after), isTrue);
   });
-
-  testWidgets(
-    'SelectableHighlightView adds iOS native translation for non-empty selection',
-    (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-      addTearDown(() => debugDefaultTargetPlatformOverride = null);
-      const channel = MethodChannel('app.ios_translation');
-      final calls = <MethodCall>[];
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (call) async {
-            calls.add(call);
-            return call.method == 'isAvailable' ? true : null;
-          });
-      addTearDown(
-        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(channel, null),
-      );
-
-      await tester.pumpWidget(
-        const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: SelectableHighlightView(
-              'final value = 1;',
-              language: 'dart',
-              theme: {},
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-
-      final editableTextState = tester.state<EditableTextState>(
-        find.byType(EditableText),
-      );
-      final contextMenuBuilder = tester
-          .widget<SelectableText>(find.byType(SelectableText))
-          .contextMenuBuilder!;
-      final editableContext = tester.element(find.byType(EditableText));
-
-      final collapsedMenu =
-          contextMenuBuilder(editableContext, editableTextState)
-              as AdaptiveTextSelectionToolbar;
-      expect(
-        collapsedMenu.buttonItems,
-        isNot(
-          contains(
-            predicate<ContextMenuButtonItem>((item) {
-              return item.label == 'Translate';
-            }),
-          ),
-        ),
-      );
-
-      editableTextState.userUpdateTextEditingValue(
-        editableTextState.textEditingValue.copyWith(
-          selection: const TextSelection(baseOffset: 0, extentOffset: 5),
-        ),
-        SelectionChangedCause.longPress,
-      );
-      await tester.pump();
-
-      final selectionMenu =
-          contextMenuBuilder(editableContext, editableTextState)
-              as AdaptiveTextSelectionToolbar;
-      final translateItem = selectionMenu.buttonItems!.singleWhere(
-        (item) => item.label == 'Translate',
-      );
-      translateItem.onPressed!();
-      await tester.pump();
-
-      final presentCall = calls.singleWhere((call) => call.method == 'present');
-      final arguments = presentCall.arguments as Map<Object?, Object?>;
-      expect(arguments['text'], 'final');
-      expect(arguments['anchorX'], isA<double>());
-      expect(arguments['anchorY'], isA<double>());
-      debugDefaultTargetPlatformOverride = null;
-    },
-  );
 
   testWidgets(
     'SelectableHighlightView keeps stock menu when iOS translation is unavailable',

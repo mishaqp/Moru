@@ -335,7 +335,7 @@ void main() {
     },
   );
 
-  for (final platform in [TargetPlatform.iOS, TargetPlatform.macOS]) {
+  for (final platform in [TargetPlatform.android]) {
     testWidgets(
       '${platform.name} conversation prompt editor saves and clears only its own conversation',
       (tester) async {

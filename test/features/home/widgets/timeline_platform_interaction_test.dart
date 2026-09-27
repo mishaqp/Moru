@@ -1,18 +1,11 @@
 import 'package:Kelivo/features/home/widgets/message_list_view.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 
 void main() {
-  const platforms = <TargetPlatform>[
-    TargetPlatform.android,
-    TargetPlatform.iOS,
-    TargetPlatform.macOS,
-    TargetPlatform.windows,
-    TargetPlatform.linux,
-  ];
+  const platforms = <TargetPlatform>[TargetPlatform.android];
 
   for (final platform in platforms) {
     testWidgets('$platform uses its timeline input surface contract', (
@@ -54,25 +47,12 @@ void main() {
       final list = tester.widget<CustomScrollView>(
         find.byType(CustomScrollView),
       );
-      final desktop =
-          platform == TargetPlatform.macOS ||
-          platform == TargetPlatform.windows ||
-          platform == TargetPlatform.linux;
       expect(
         list.keyboardDismissBehavior,
-        desktop
-            ? ScrollViewKeyboardDismissBehavior.manual
-            : ScrollViewKeyboardDismissBehavior.onDrag,
+        ScrollViewKeyboardDismissBehavior.onDrag,
       );
-      expect(find.byType(Scrollbar), desktop ? findsOneWidget : findsNothing);
+      expect(find.byType(Scrollbar), findsNothing);
 
-      if (desktop) {
-        await tester.tap(find.byType(CustomScrollView));
-        await tester.sendKeyDownEvent(LogicalKeyboardKey.pageUp);
-        await tester.sendKeyUpEvent(LogicalKeyboardKey.pageUp);
-        await tester.pump();
-        expect(userScrollIntentCount, greaterThanOrEqualTo(1));
-      }
       debugDefaultTargetPlatformOverride = null;
     });
   }

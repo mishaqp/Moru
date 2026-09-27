@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -237,7 +236,7 @@ class _SettingsSearch extends StatefulWidget {
 
 class _SettingsSearchState extends State<_SettingsSearch> {
   SettingsSearchIndex? _index;
-  (AppLocalizations, TargetPlatform, bool, bool)? _configuration;
+  (AppLocalizations, bool, bool)? _configuration;
 
   @override
   Widget build(BuildContext context) {
@@ -250,12 +249,11 @@ class _SettingsSearchState extends State<_SettingsSearch> {
         settings.dynamicColorSupported,
       ),
     );
-    final configuration = (l10n, defaultTargetPlatform, logs, dynamicColor);
+    final configuration = (l10n, logs, dynamicColor);
     if (_configuration != configuration) {
       _configuration = configuration;
       _index = SettingsSearchIndex(
         l10n,
-        platform: defaultTargetPlatform,
         logsEnabled: logs,
         dynamicColorSupported: dynamicColor,
       );

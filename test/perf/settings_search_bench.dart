@@ -7,10 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('settings search index and keystroke timings', () {
     final build = Stopwatch()..start();
-    final index = SettingsSearchIndex(
-      AppLocalizationsZh(),
-      platform: TargetPlatform.macOS,
-    );
+    final index = SettingsSearchIndex(AppLocalizationsZh());
     build.stop();
     const queries = [
       '字',

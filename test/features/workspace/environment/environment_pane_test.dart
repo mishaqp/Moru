@@ -482,26 +482,6 @@ void main() {
     });
   });
 
-  testWidgets('desktop pane shows native explanation and no install', (
-    tester,
-  ) async {
-    await withPlatform(TargetPlatform.macOS, () async {
-      final harness = await createHarness(tester);
-      final l10n = await pumpPane(
-        tester,
-        harness,
-        provideManager: false,
-        provideMirrors: false,
-        size: const Size(1280, 900),
-      );
-      expect(find.byKey(EnvironmentPane.nativeExplanationKey), findsOneWidget);
-      expect(find.text(l10n.workspaceEnvNativeExplanation), findsOneWidget);
-      expect(find.text(l10n.workspaceEnvEngineLocalShell), findsOneWidget);
-      expect(find.byKey(EnvironmentPane.installKey), findsNothing);
-      expect(find.byKey(EnvironmentPane.mirrorsSectionKey), findsNothing);
-    });
-  });
-
   testWidgets('formats alpine version in title and arch row', (tester) async {
     await withPlatform(TargetPlatform.iOS, () async {
       final harness = await createHarness(

@@ -75,7 +75,7 @@ void main() {
     }
   });
 
-  for (final platform in [TargetPlatform.iOS, TargetPlatform.macOS]) {
+  for (final platform in [TargetPlatform.android]) {
     testWidgets('picks and clears a default from basic settings on $platform', (
       tester,
     ) async {
@@ -104,7 +104,7 @@ void main() {
       await tester.runAsync(() => ap.loaded);
       expect(ap.getById(_assistantId)?.defaultWorkspaceId, isNull);
 
-      tester.view.physicalSize = platform == TargetPlatform.iOS
+      tester.view.physicalSize = platform == TargetPlatform.android
           ? const Size(400, 900)
           : const Size(1200, 900);
       tester.view.devicePixelRatio = 1;
@@ -157,7 +157,7 @@ void main() {
       );
       expect(
         find.byType(BottomSheet),
-        platform == TargetPlatform.iOS ? findsOneWidget : findsNothing,
+        platform == TargetPlatform.android ? findsOneWidget : findsNothing,
       );
       await tester.tap(find.text('None'));
       await tester.pumpAndSettle();

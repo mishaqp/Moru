@@ -2,7 +2,6 @@ import 'package:flutter/widgets.dart';
 
 import 'package:Kelivo/shared/responsive/screen_type_helper.dart';
 
-/// Desktop windows keep mouse/keyboard dialogs even when resized below the
-/// large-screen breakpoint. Layouts still measure their own available space.
+/// Large screens (tablets, foldables in landscape) use dialogs and side panes.
 bool useDesktopWorkspaceLayout(BuildContext context) =>
     ResponsiveHelper.isDesktop(context);

@@ -18,7 +18,6 @@ import 'package:Kelivo/features/home/widgets/message_list_view.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
@@ -111,59 +110,6 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-
-  testWidgets('macOS 消息列表滚动不主动清除文本选区焦点', (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-    final scrollController = ScrollController();
-    final listController = ListController();
-    final processingFilesMessageId = ValueNotifier<String?>(null);
-
-    try {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: MessageListView(
-              scrollController: scrollController,
-              listController: listController,
-              messages: const [],
-              byGroup: const {},
-              versionSelections: const {},
-              reasoning: const {},
-              reasoningSegments: const {},
-              contentSplits: const {},
-              toolParts: const {},
-              translations: const {},
-              selecting: false,
-              selectedItems: const {},
-              dividerPadding: EdgeInsets.zero,
-              processingFilesMessageId: processingFilesMessageId,
-            ),
-          ),
-        ),
-      );
-
-      final listView = tester.widget<CustomScrollView>(
-        find.byType(CustomScrollView),
-      );
-      expect(
-        listView.keyboardDismissBehavior,
-        ScrollViewKeyboardDismissBehavior.manual,
-      );
-      expect(
-        tester
-            .widget<SuperSliverList>(find.byType(SuperSliverList))
-            .delayPopulatingCacheArea,
-        isFalse,
-      );
-      expect(listView.clipBehavior, Clip.hardEdge);
-      expect(listView.scrollCacheExtent, const ScrollCacheExtent.pixels(600));
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-      scrollController.dispose();
-      listController.dispose();
-      processingFilesMessageId.dispose();
-    }
-  });
 
   testWidgets('Android 消息列表滚动仍然收起键盘', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;

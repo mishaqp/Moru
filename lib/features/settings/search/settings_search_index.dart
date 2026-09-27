@@ -197,16 +197,9 @@ class SettingsSearchItem {
 class SettingsSearchIndex {
   SettingsSearchIndex(
     AppLocalizations l, {
-    required TargetPlatform platform,
     bool logsEnabled = false,
     bool dynamicColorSupported = false,
   }) {
-    final desktop = switch (platform) {
-      TargetPlatform.macOS ||
-      TargetPlatform.windows ||
-      TargetPlatform.linux => true,
-      _ => false,
-    };
     final en = AppLocalizationsEn();
     final zh = AppLocalizationsZh();
     final hant = AppLocalizationsZhHant();
@@ -221,10 +214,8 @@ class SettingsSearchIndex {
     }) {
       final path = <String>[
         l.settingsPageTitle,
-        if (destination.isDisplaySection ||
-            (desktop && destination == SettingsSearchDestination.colorMode))
-          l.settingsPageDisplay,
-        if (!desktop && destination == SettingsSearchDestination.themeAdvanced)
+        if (destination.isDisplaySection) l.settingsPageDisplay,
+        if (destination == SettingsSearchDestination.themeAdvanced)
           l.displaySettingsPageThemeSettingsTitle,
         if (!page) destination.title(l),
       ];
@@ -254,7 +245,7 @@ class SettingsSearchIndex {
       (l) => l.settingsPageColorMode,
       page: true,
       keywords: 'dark light system night 黑暗 深色 暗黑 浅色 夜间 夜間',
-      targetLabel: desktop ? l.settingsPageColorMode : null,
+      targetLabel: null,
     );
     add(
       'theme',
@@ -262,7 +253,7 @@ class SettingsSearchIndex {
       (l) => l.displaySettingsPageThemeSettingsTitle,
       page: true,
       keywords: 'theme color palette accent 主题 主題 颜色 顏色 配色 自定义 自訂',
-      targetLabel: desktop ? l.displaySettingsPageThemeColorTitle : null,
+      targetLabel: null,
     );
     add(
       'themeAdvanced',
@@ -270,9 +261,7 @@ class SettingsSearchIndex {
       (l) => l.themeAdvancedSettingsPageTitle,
       page: true,
       keywords: 'layered surface 分层 分層 高级 高級',
-      targetLabel: desktop
-          ? l.themeAdvancedSettingsPageUseLayeredSurfacesTitle
-          : null,
+      targetLabel: null,
     );
     add(
       'chatDisplay',
@@ -280,7 +269,7 @@ class SettingsSearchIndex {
       (l) => l.displaySettingsPageChatItemDisplayTitle,
       page: true,
       keywords: 'avatar timestamp token 聊天 头像 頭像 时间戳 時間戳',
-      targetLabel: desktop ? l.displaySettingsPageChatItemDisplayTitle : null,
+      targetLabel: null,
     );
     add(
       'rendering',
@@ -288,7 +277,7 @@ class SettingsSearchIndex {
       (l) => l.displaySettingsPageRenderingSettingsTitle,
       page: true,
       keywords: 'markdown latex math formula 渲染 数学 數學 公式 代码 代碼',
-      targetLabel: desktop ? l.displaySettingsPageRenderingSettingsTitle : null,
+      targetLabel: null,
     );
     add(
       'behavior',
@@ -296,7 +285,7 @@ class SettingsSearchIndex {
       (l) => l.displaySettingsPageBehaviorStartupTitle,
       page: true,
       keywords: 'startup behavior 启动 啟動 行为 行為 折叠 摺疊',
-      targetLabel: desktop ? l.displaySettingsPageBehaviorStartupTitle : null,
+      targetLabel: null,
     );
     add(
       'image',
@@ -304,7 +293,7 @@ class SettingsSearchIndex {
       (l) => l.imageSettingsPageTitle,
       page: true,
       keywords: 'image compress quality 图片 圖片 压缩 壓縮 画质 畫質',
-      targetLabel: desktop ? l.imageSettingsPageTitle : null,
+      targetLabel: null,
     );
     add(
       'messageStyle',
@@ -320,34 +309,31 @@ class SettingsSearchIndex {
       page: true,
       keywords: 'retry timeout error 自动重试 自動重試 失败 失敗 网络 网络错误',
     );
-    if (!desktop) {
-      add(
-        'haptics',
-        SettingsSearchDestination.haptics,
-        (l) => l.displaySettingsPageHapticsSettingsTitle,
-        page: true,
-        keywords: 'haptic vibration 震动 振动 震動 触感 觸感',
-      );
-    }
-    if (!desktop) {
-      add(
-        'background',
-        SettingsSearchDestination.background,
-        (l) => l.backgroundSettingsTitle,
-        page: true,
-        keywords:
-            'background keep alive notification live activity 后台 後台 保活 灵动岛 靈動島',
-      );
-    }
-    if (platform == TargetPlatform.android) {
-      add(
-        'phoneControl',
-        SettingsSearchDestination.phoneControl,
-        (l) => l.phoneControlTitle,
-        page: true,
-        keywords: 'phone control accessibility 手机控制 手機控制 无障碍 無障礙',
-      );
-    }
+    add(
+      'haptics',
+      SettingsSearchDestination.haptics,
+      (l) => l.displaySettingsPageHapticsSettingsTitle,
+      page: true,
+      keywords: 'haptic vibration 震动 振动 震動 触感 觸感',
+    );
+
+    add(
+      'background',
+      SettingsSearchDestination.background,
+      (l) => l.backgroundSettingsTitle,
+      page: true,
+      keywords:
+          'background keep alive notification live activity 后台 後台 保活 灵动岛 靈動島',
+    );
+
+    add(
+      'phoneControl',
+      SettingsSearchDestination.phoneControl,
+      (l) => l.phoneControlTitle,
+      page: true,
+      keywords: 'phone control accessibility 手机控制 手機控制 无障碍 無障礙',
+    );
+
     add(
       'assistant',
       SettingsSearchDestination.assistant,
@@ -453,42 +439,30 @@ class SettingsSearchIndex {
       keywords:
           'backup restore export import webdav s3 cloud sync 备份 備份 恢复 還原 导入 匯入 导出 匯出 同步 快照',
     );
-    if (!desktop) {
-      add(
-        'storage',
-        SettingsSearchDestination.storage,
-        (l) => l.settingsPageChatStorage,
-        page: true,
-        keywords: 'storage cache cleanup database 存储 儲存 缓存 快取 空间 空間 清理 数据库 資料庫',
-      );
-    }
-    if (desktop || platform == TargetPlatform.android) {
-      add(
-        'scheduledTasks',
-        SettingsSearchDestination.scheduledTasks,
-        (l) => l.scheduledTasksTitle,
-        page: true,
-        keywords: 'scheduled timer alarm cron 定时 定時 计划 排程 任务 任務',
-      );
-    }
-    if (platform == TargetPlatform.android) {
-      add(
-        'miniApps',
-        SettingsSearchDestination.miniApps,
-        (l) => l.miniAppsTitle,
-        page: true,
-        keywords: 'mini apps applets widgets приложения мини 小应用 小應用 应用',
-      );
-    }
-    if (desktop) {
-      add(
-        'hotkeys',
-        SettingsSearchDestination.hotkeys,
-        (l) => l.settingsPageHotkeys,
-        page: true,
-        keywords: 'hotkey shortcut 快捷键 快捷鍵 热键 熱鍵',
-      );
-    }
+    add(
+      'storage',
+      SettingsSearchDestination.storage,
+      (l) => l.settingsPageChatStorage,
+      page: true,
+      keywords: 'storage cache cleanup database 存储 儲存 缓存 快取 空间 空間 清理 数据库 資料庫',
+    );
+
+    add(
+      'scheduledTasks',
+      SettingsSearchDestination.scheduledTasks,
+      (l) => l.scheduledTasksTitle,
+      page: true,
+      keywords: 'scheduled timer alarm cron 定时 定時 计划 排程 任务 任務',
+    );
+
+    add(
+      'miniApps',
+      SettingsSearchDestination.miniApps,
+      (l) => l.miniAppsTitle,
+      page: true,
+      keywords: 'mini apps applets widgets приложения мини 小应用 小應用 应用',
+    );
+
     add(
       'stats',
       SettingsSearchDestination.stats,
@@ -503,22 +477,13 @@ class SettingsSearchIndex {
       page: true,
       keywords: 'tool schema json 工具 参数 參數 定义 定義',
     );
-    if (!desktop && logsEnabled) {
+    if (logsEnabled) {
       add(
         'logs',
         SettingsSearchDestination.logs,
         (l) => l.settingsPageLogs,
         page: true,
         keywords: 'log debug request flutter context 日志 日誌 调试 偵錯 请求 請求',
-      );
-    }
-    if (desktop) {
-      add(
-        'about',
-        SettingsSearchDestination.about,
-        (l) => l.settingsPageAbout,
-        page: true,
-        keywords: 'about version update 关于 關於 版本 更新',
       );
     }
 
@@ -534,14 +499,14 @@ class SettingsSearchIndex {
       SettingsSearchDestination.display,
       (l) => l.displaySettingsPageAppFontTitle,
       keywords: 'font typeface 字体 字型 系统字体',
-      targetLabel: desktop ? l.desktopFontAppLabel : null,
+      targetLabel: null,
     );
     add(
       'displaySettingsPageCodeFontTitle',
       SettingsSearchDestination.display,
       (l) => l.displaySettingsPageCodeFontTitle,
       keywords: 'monospace font 等宽 等寬 代码字体',
-      targetLabel: desktop ? l.desktopFontCodeLabel : null,
+      targetLabel: null,
     );
     add(
       'displaySettingsPageChatFontSizeTitle',
@@ -664,13 +629,12 @@ class SettingsSearchIndex {
       (l) => l.displaySettingsPageAutoCollapseCodeBlockTitle,
       keywords: 'code block threshold lines 代码块 折叠 行数',
     );
-    if (!desktop) {
-      add(
-        'displaySettingsPageMobileCodeBlockWrapTitle',
-        SettingsSearchDestination.rendering,
-        (l) => l.displaySettingsPageMobileCodeBlockWrapTitle,
-      );
-    }
+    add(
+      'displaySettingsPageMobileCodeBlockWrapTitle',
+      SettingsSearchDestination.rendering,
+      (l) => l.displaySettingsPageMobileCodeBlockWrapTitle,
+    );
+
     add(
       'displaySettingsPageAutoCollapseThinkingTitle',
       SettingsSearchDestination.behavior,
@@ -728,13 +692,12 @@ class SettingsSearchIndex {
       SettingsSearchDestination.behavior,
       (l) => l.displaySettingsPageShowUpdatesTitle,
     );
-    if (!desktop) {
-      add(
-        'displaySettingsPageKeepScreenOnDuringGenerationTitle',
-        SettingsSearchDestination.behavior,
-        (l) => l.displaySettingsPageKeepScreenOnDuringGenerationTitle,
-      );
-    }
+    add(
+      'displaySettingsPageKeepScreenOnDuringGenerationTitle',
+      SettingsSearchDestination.behavior,
+      (l) => l.displaySettingsPageKeepScreenOnDuringGenerationTitle,
+    );
+
     add(
       'displaySettingsPageMessageNavButtonsTitle',
       SettingsSearchDestination.behavior,
@@ -745,28 +708,24 @@ class SettingsSearchIndex {
       SettingsSearchDestination.behavior,
       (l) => l.displaySettingsPageShowChatListDateTitle,
     );
-    if (!desktop) {
-      add(
-        'displaySettingsPageKeepSidebarOpenOnAssistantTapTitle',
-        SettingsSearchDestination.behavior,
-        (l) => l.displaySettingsPageKeepSidebarOpenOnAssistantTapTitle,
-      );
-    }
-    if (!desktop) {
-      add(
-        'displaySettingsPageKeepSidebarOpenOnTopicTapTitle',
-        SettingsSearchDestination.behavior,
-        (l) => l.displaySettingsPageKeepSidebarOpenOnTopicTapTitle,
-      );
-    }
-    if (!desktop) {
-      add(
-        'displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle',
-        SettingsSearchDestination.behavior,
-        (l) =>
-            l.displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle,
-      );
-    }
+    add(
+      'displaySettingsPageKeepSidebarOpenOnAssistantTapTitle',
+      SettingsSearchDestination.behavior,
+      (l) => l.displaySettingsPageKeepSidebarOpenOnAssistantTapTitle,
+    );
+
+    add(
+      'displaySettingsPageKeepSidebarOpenOnTopicTapTitle',
+      SettingsSearchDestination.behavior,
+      (l) => l.displaySettingsPageKeepSidebarOpenOnTopicTapTitle,
+    );
+
+    add(
+      'displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle',
+      SettingsSearchDestination.behavior,
+      (l) => l.displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle,
+    );
+
     add(
       'displaySettingsPageNewChatOnAssistantSwitchTitle',
       SettingsSearchDestination.behavior,
@@ -782,70 +741,60 @@ class SettingsSearchIndex {
       SettingsSearchDestination.behavior,
       (l) => l.displaySettingsPageNewChatOnLaunchTitle,
     );
-    if (!desktop) {
-      add(
-        'displaySettingsPageEnterToSendTitle',
-        SettingsSearchDestination.behavior,
-        (l) => l.displaySettingsPageEnterToSendTitle,
-      );
-    }
+    add(
+      'displaySettingsPageEnterToSendTitle',
+      SettingsSearchDestination.behavior,
+      (l) => l.displaySettingsPageEnterToSendTitle,
+    );
+
     add(
       'displaySettingsPageLongPasteAsFileTitle',
       SettingsSearchDestination.behavior,
       (l) => l.displaySettingsPageLongPasteAsFileTitle,
       keywords: 'paste clipboard threshold 粘贴 貼上 长文本 长文',
     );
-    if (!desktop) {
-      add(
-        'displaySettingsPageHapticsGlobalTitle',
-        SettingsSearchDestination.haptics,
-        (l) => l.displaySettingsPageHapticsGlobalTitle,
-      );
-    }
-    if (!desktop) {
-      add(
-        'displaySettingsPageHapticsIosSwitchTitle',
-        SettingsSearchDestination.haptics,
-        (l) => l.displaySettingsPageHapticsIosSwitchTitle,
-      );
-    }
-    if (!desktop) {
-      add(
-        'displaySettingsPageHapticsOnSidebarTitle',
-        SettingsSearchDestination.haptics,
-        (l) => l.displaySettingsPageHapticsOnSidebarTitle,
-      );
-    }
-    if (!desktop) {
-      add(
-        'displaySettingsPageHapticsOnListItemTapTitle',
-        SettingsSearchDestination.haptics,
-        (l) => l.displaySettingsPageHapticsOnListItemTapTitle,
-      );
-    }
-    if (!desktop) {
-      add(
-        'displaySettingsPageHapticsOnCardTapTitle',
-        SettingsSearchDestination.haptics,
-        (l) => l.displaySettingsPageHapticsOnCardTapTitle,
-      );
-    }
-    if (!desktop) {
-      add(
-        'displaySettingsPageHapticsOnGenerateTitle',
-        SettingsSearchDestination.haptics,
-        (l) => l.displaySettingsPageHapticsOnGenerateTitle,
-      );
-    }
+    add(
+      'displaySettingsPageHapticsGlobalTitle',
+      SettingsSearchDestination.haptics,
+      (l) => l.displaySettingsPageHapticsGlobalTitle,
+    );
+
+    add(
+      'displaySettingsPageHapticsIosSwitchTitle',
+      SettingsSearchDestination.haptics,
+      (l) => l.displaySettingsPageHapticsIosSwitchTitle,
+    );
+
+    add(
+      'displaySettingsPageHapticsOnSidebarTitle',
+      SettingsSearchDestination.haptics,
+      (l) => l.displaySettingsPageHapticsOnSidebarTitle,
+    );
+
+    add(
+      'displaySettingsPageHapticsOnListItemTapTitle',
+      SettingsSearchDestination.haptics,
+      (l) => l.displaySettingsPageHapticsOnListItemTapTitle,
+    );
+
+    add(
+      'displaySettingsPageHapticsOnCardTapTitle',
+      SettingsSearchDestination.haptics,
+      (l) => l.displaySettingsPageHapticsOnCardTapTitle,
+    );
+
+    add(
+      'displaySettingsPageHapticsOnGenerateTitle',
+      SettingsSearchDestination.haptics,
+      (l) => l.displaySettingsPageHapticsOnGenerateTitle,
+    );
 
     add(
       'themeSettingsPageUsePureBackgroundTitle',
       SettingsSearchDestination.theme,
       (l) => l.themeSettingsPageUsePureBackgroundTitle,
     );
-    if (!desktop &&
-        platform == TargetPlatform.android &&
-        dynamicColorSupported) {
+    if (dynamicColorSupported) {
       add(
         'themeSettingsPageUseDynamicColorTitle',
         SettingsSearchDestination.theme,
@@ -862,55 +811,6 @@ class SettingsSearchIndex {
       SettingsSearchDestination.themeAdvanced,
       (l) => l.themeAdvancedSettingsPageUseLayeredSheetTilesTitle,
     );
-    if (desktop) {
-      add(
-        'desktopDisplaySettingsTopicPositionTitle',
-        SettingsSearchDestination.display,
-        (l) => l.desktopDisplaySettingsTopicPositionTitle,
-      );
-    }
-    if (desktop) {
-      add(
-        'displaySettingsPageTrayShowTrayTitle',
-        SettingsSearchDestination.display,
-        (l) => l.displaySettingsPageTrayShowTrayTitle,
-      );
-    }
-    if (desktop) {
-      add(
-        'displaySettingsPageTrayMinimizeOnCloseTitle',
-        SettingsSearchDestination.display,
-        (l) => l.displaySettingsPageTrayMinimizeOnCloseTitle,
-      );
-    }
-    if (desktop) {
-      add(
-        'desktopShowProviderInModelCapsule',
-        SettingsSearchDestination.display,
-        (l) => l.desktopShowProviderInModelCapsule,
-      );
-    }
-    if (desktop) {
-      add(
-        'displaySettingsPageAutoSwitchTopicsTitle',
-        SettingsSearchDestination.behavior,
-        (l) => l.displaySettingsPageAutoSwitchTopicsTitle,
-      );
-    }
-    if (desktop) {
-      add(
-        'displaySettingsPageSendShortcutTitle',
-        SettingsSearchDestination.behavior,
-        (l) => l.displaySettingsPageSendShortcutTitle,
-      );
-    }
-    if (desktop) {
-      add(
-        'displaySettingsPageAutoScrollEnableTitle',
-        SettingsSearchDestination.display,
-        (l) => l.displaySettingsPageAutoScrollEnableTitle,
-      );
-    }
 
     entries = List.unmodifiable(items);
     suggestions = List.unmodifiable([
