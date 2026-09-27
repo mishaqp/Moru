@@ -54,6 +54,8 @@ IconData localToolIcon(String id) {
       return Lucide.CalendarClock;
     case LocalToolNames.miniApps:
       return Lucide.LayoutGrid;
+    case LocalToolNames.rootShell:
+      return Lucide.ShieldAlert;
     default:
       return Lucide.Wrench;
   }
@@ -101,6 +103,8 @@ String localToolTitle(AppLocalizations l10n, String id) {
       return l10n.scheduledTaskToolTitle;
     case LocalToolNames.miniApps:
       return l10n.miniAppsToolTitle;
+    case LocalToolNames.rootShell:
+      return l10n.rootShellToolTitle;
     default:
       return id;
   }

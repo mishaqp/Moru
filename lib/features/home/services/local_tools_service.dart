@@ -10,6 +10,7 @@ import '../../../core/models/health_data_type.dart';
 import 'assistant_manager_tool.dart';
 import 'browser_agent_tool.dart';
 import 'mini_app_data_tool.dart';
+import 'root_shell_tool.dart';
 import 'scheduled_task_tool.dart';
 
 typedef TextToSpeechStarter = Future<void> Function(String text);
@@ -38,6 +39,7 @@ class LocalToolNames {
   static const String assistantManager = AssistantManagerTool.toolName;
   static const String scheduledTasks = ScheduledTaskTool.toolName;
   static const String miniApps = MiniAppDataTool.toolName;
+  static const String rootShell = RootShellTool.toolName;
 
   static const List<String> all = [
     timeInfo,
@@ -61,6 +63,7 @@ class LocalToolNames {
     assistantManager,
     scheduledTasks,
     miniApps,
+    rootShell,
   ];
 
   static const List<String> requiresUserApproval = [
@@ -69,6 +72,7 @@ class LocalToolNames {
     calendarDelete,
     remindersCreate,
     remindersComplete,
+    rootShell,
   ];
 
   static bool requiresApprovalFor(String name, Map<String, dynamic> arguments) {
@@ -300,6 +304,7 @@ class LocalToolsService {
       case LocalToolNames.remindersComplete:
         return false;
       case LocalToolNames.miniApps:
+      case LocalToolNames.rootShell:
         return defaultTargetPlatform == TargetPlatform.android;
       default:
         return true;
@@ -367,6 +372,8 @@ class LocalToolsService {
         return ScheduledTaskTool.definition;
       case LocalToolNames.miniApps:
         return MiniAppDataTool.definition;
+      case LocalToolNames.rootShell:
+        return RootShellTool.definition;
       default:
         throw ArgumentError.value(name, 'name', 'Unknown local tool');
     }

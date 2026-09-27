@@ -5141,6 +5141,8 @@
   },
   "miniAppsJobLastFailed": "Last run {time}: failed",
   "miniAppsToolActionServer": "Read app server state",
+  "rootShellToolTitle": "Root commands",
+  "rootShellToolSubtitle": "Run commands as root (su) on a rooted phone: system settings, apps, logs, screen input. You approve every command.",
   "miniAppsMore": "More",
   "miniAppsErrors": "Error log",
   "miniAppsErrorsEmpty": "No errors recorded.",

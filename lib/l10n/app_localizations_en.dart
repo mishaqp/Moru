@@ -11360,6 +11360,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get miniAppsToolActionServer => 'Read app server state';
 
   @override
+  String get rootShellToolTitle => 'Root commands';
+
+  @override
+  String get rootShellToolSubtitle =>
+      'Run commands as root (su) on a rooted phone: system settings, apps, logs, screen input. You approve every command.';
+
+  @override
   String get miniAppsMore => 'More';
 
   @override

@@ -36,6 +36,7 @@ import 'assistant_manager_tool.dart';
 import 'built_in_tool_names.dart';
 import 'local_tools_service.dart';
 import 'mini_app_data_tool.dart';
+import 'root_shell_tool.dart';
 import 'scheduled_task_tool.dart';
 import 'tool_approval_service.dart';
 
@@ -636,6 +637,32 @@ class ToolHandlerService {
             callerAssistantId: assistant.id,
             conversationId: conversationId,
           ).execute(args);
+        }
+
+        if (name == LocalToolNames.rootShell &&
+            assistant != null &&
+            LocalToolsService.isEnabledForAssistant(name, assistant)) {
+          // Every root command is approved first; a caller without the
+          // prompt (e.g. a background run) may not run any. The permission
+          // is read again so turning it off stops a running tool loop.
+          final current = assistantProvider.getById(assistant.id);
+          if (current == null || !current.localToolIds.contains(name)) {
+            return _toolError(
+              error: 'permission_denied',
+              message: 'Root commands are disabled for this assistant.',
+              tool: name,
+            );
+          }
+          if (approvalService == null) {
+            return _toolError(
+              error: 'approval_unavailable',
+              message:
+                  'Root commands need the user\'s confirmation, which is not '
+                  'available here.',
+              tool: name,
+            );
+          }
+          return const RootShellTool().execute(args);
         }
 
         if (name == LocalToolNames.miniApps &&

@@ -10862,6 +10862,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get miniAppsToolActionServer => '读取应用服务器状态';
 
   @override
+  String get rootShellToolTitle => 'Root 命令';
+
+  @override
+  String get rootShellToolSubtitle =>
+      '在已 root 的手机上以 root (su) 运行命令：系统设置、应用、日志、屏幕输入。每条命令都需要你确认。';
+
+  @override
   String get miniAppsMore => '更多';
 
   @override
@@ -21761,6 +21768,13 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get miniAppsToolActionServer => '读取应用服务器状态';
+
+  @override
+  String get rootShellToolTitle => 'Root 命令';
+
+  @override
+  String get rootShellToolSubtitle =>
+      '在已 root 的手机上以 root (su) 运行命令：系统设置、应用、日志、屏幕输入。每条命令都需要你确认。';
 
   @override
   String get miniAppsMore => '更多';
@@ -32736,6 +32750,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get miniAppsToolActionServer => '讀取應用伺服器狀態';
+
+  @override
+  String get rootShellToolTitle => 'Root 命令';
+
+  @override
+  String get rootShellToolSubtitle =>
+      '在已 root 的手機上以 root (su) 執行命令：系統設定、應用、日誌、螢幕輸入。每條命令都需要你確認。';
 
   @override
   String get miniAppsMore => '更多';

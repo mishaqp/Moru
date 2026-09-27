@@ -493,6 +493,7 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
     LocalToolNames.assistantManager => Lucide.Bot,
     LocalToolNames.scheduledTasks => Lucide.CalendarClock,
     LocalToolNames.miniApps => Lucide.LayoutGrid,
+    LocalToolNames.rootShell => Lucide.ShieldAlert,
     _ => null,
   };
 }
@@ -554,6 +555,7 @@ String? _localToolTitleFor(
       MiniAppDataTool.actionServer => l10n.miniAppsToolActionServer,
       _ => l10n.miniAppsToolTitle,
     },
+    LocalToolNames.rootShell => l10n.rootShellToolTitle,
     _ => null,
   };
 }

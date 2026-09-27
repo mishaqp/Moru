@@ -11487,6 +11487,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get miniAppsToolActionServer => 'Состояние сервера приложения';
 
   @override
+  String get rootShellToolTitle => 'Root-команды';
+
+  @override
+  String get rootShellToolSubtitle =>
+      'Команды от root (su) на рутованном телефоне: системные настройки, приложения, логи, нажатия по экрану. Каждую команду вы подтверждаете.';
+
+  @override
   String get miniAppsMore => 'Ещё';
 
   @override

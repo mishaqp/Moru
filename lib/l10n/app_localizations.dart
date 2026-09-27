@@ -20327,6 +20327,18 @@ abstract class AppLocalizations {
   /// **'Read app server state'**
   String get miniAppsToolActionServer;
 
+  /// No description provided for @rootShellToolTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Root commands'**
+  String get rootShellToolTitle;
+
+  /// No description provided for @rootShellToolSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Run commands as root (su) on a rooted phone: system settings, apps, logs, screen input. You approve every command.'**
+  String get rootShellToolSubtitle;
+
   /// No description provided for @miniAppsMore.
   ///
   /// In en, this message translates to:

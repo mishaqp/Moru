@@ -4118,6 +4118,8 @@
   "miniAppsJobLastDone": "上次运行 {time}：完成",
   "miniAppsJobLastFailed": "上次运行 {time}：失败",
   "miniAppsToolActionServer": "读取应用服务器状态",
+  "rootShellToolTitle": "Root 命令",
+  "rootShellToolSubtitle": "在已 root 的手机上以 root (su) 运行命令：系统设置、应用、日志、屏幕输入。每条命令都需要你确认。",
   "miniAppsMore": "更多",
   "miniAppsErrors": "错误日志",
   "miniAppsErrorsEmpty": "没有记录到错误。",

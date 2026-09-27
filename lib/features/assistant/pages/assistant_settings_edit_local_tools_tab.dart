@@ -208,6 +208,21 @@ class _LocalToolsTab extends StatelessWidget {
                     toggleTool(LocalToolNames.miniApps, value),
               ),
             ],
+            if (LocalToolsService.isAvailableOnThisPlatform(
+              LocalToolNames.rootShell,
+            )) ...[
+              _iosDivider(context),
+              _LocalToolRow(
+                icon: Lucide.ShieldAlert,
+                title: l10n.rootShellToolTitle,
+                subtitle: l10n.rootShellToolSubtitle,
+                enabled: assistant.localToolIds.contains(
+                  LocalToolNames.rootShell,
+                ),
+                onChanged: (value) =>
+                    toggleTool(LocalToolNames.rootShell, value),
+              ),
+            ],
           ],
         ),
       ],

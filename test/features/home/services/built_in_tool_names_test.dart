@@ -44,6 +44,7 @@ void main() {
       LocalToolNames.assistantManager,
       LocalToolNames.scheduledTasks,
       LocalToolNames.miniApps,
+      LocalToolNames.rootShell,
     ]);
   });
 }
