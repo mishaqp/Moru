@@ -264,15 +264,8 @@ jobs:
         run: |
           set -euo pipefail
           tag="$(python3 -c 'import json; print(json.load(open("dist/release-metadata.json"))["tag"])')"
-          version="$(python3 -c 'import json; print(json.load(open("dist/release-metadata.json"))["version"])')"
-          {
-            printf 'Пререлиз для проверки на телефоне. Ставится поверх Moru без потери данных.\n\n'
-            if [ -s "docs/releases/v$version.md" ]; then cat "docs/releases/v$version.md"; fi
-            printf '\n## Проверка APK\n\n```json\n'
-            cat dist/release-metadata.json
-            printf '```\n'
-          } > dist/release-notes.md
-          gh release create "$tag" dist/*.apk dist/*.sha256 dist/release-metadata.json --prerelease --target "$HEAD_SHA" --title "Moru $tag" --notes-file dist/release-notes.md
+          # Only the APK: its tag names the version, its target the commit.
+          gh release create "$tag" dist/*.apk --prerelease --target "$HEAD_SHA" --title "Moru $tag" --notes ''
           gh release list --limit 100 --json tagName,isPrerelease --jq '.[] | select(.isPrerelease) | .tagName' |
             while read -r old; do
               if [ "$old" != "$tag" ]; then gh release delete "$old" --yes --cleanup-tag; fi
@@ -303,15 +296,15 @@ jobs:
           set -euo pipefail
           pre="$(gh release list --limit 100 --json tagName,isPrerelease,createdAt --jq '[.[] | select(.isPrerelease)] | sort_by(.createdAt) | last | .tagName // empty')"
           if [ -z "$pre" ]; then echo 'No pre-release to promote; publish with the manual release dispatch.'; exit 0; fi
-          gh release download "$pre" --dir pre
-          tested="$(python3 -c 'import json; print(json.load(open("pre/release-metadata.json"))["commit"])')"
+          gh release download "$pre" --dir pre --pattern '*.apk'
+          tested="$(gh release view "$pre" --json targetCommitish --jq .targetCommitish)"
           auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" fetch --no-tags --depth=1 origin "$tested"
           if [ "$(git rev-parse "$tested^{tree}")" != "$(git rev-parse 'HEAD^{tree}')" ]; then
             echo "master differs from the code of $pre; publish with the manual release dispatch."
             exit 0
           fi
-          python3 tool/promote_prerelease.py --prerelease-dir pre --output dist --commit "$GITHUB_SHA"
+          python3 tool/promote_prerelease.py --apk "pre/Moru-$pre-arm64-v8a-release.apk" --tag "$pre" --tested-commit "$tested" --output dist --commit "$GITHUB_SHA"
           tag="$(python3 -c 'import json; print(json.load(open("dist/release-metadata.json"))["tag"])')"
           existing="$(gh release view "$tag" --json tagName --jq .tagName 2>/dev/null || true)"
           test -z "$existing" || { echo "Refusing to replace existing release $tag"; exit 1; }

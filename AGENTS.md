@@ -129,7 +129,9 @@ Work lands through one long-lived PR. Bump `version:` in `pubspec.yaml`
 
 - Every push to a PR of this repository builds the signed release APK and
   publishes it as the pre-release `vX.Y.Z-pre.<run>`, deleting older
-  pre-releases. It installs over the stable app without losing data.
+  pre-releases. It installs over the stable app without losing data. A
+  pre-release holds only the APK: no description, checksum or metadata files
+  (the user's wish); its tag and target commit are all `promote` needs.
 - When the user has tested it, merge the PR (bring `master` into it first so
   the trees match). The `promote` job publishes the last pre-release APK as
   `vX.Y.Z` without rebuilding, when the merged tree equals the tested commit.
