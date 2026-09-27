@@ -1,23 +1,9 @@
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kReleaseMode;
 import 'package:speech_to_text/speech_to_text.dart';
 
 typedef SystemAsrTranscriptCallback =
     void Function(String transcript, bool isFinal);
 typedef SystemAsrSoundLevelCallback = void Function(double level);
 typedef SystemAsrErrorCallback = void Function(SystemAsrError error);
-
-/// macOS debug/profile builds are excluded from the plugin authorization path.
-///
-/// Flutter currently starts desktop debug apps by executing the bundle binary
-/// directly. macOS TCC can then attribute speech authorization to the parent
-/// IDE instead of this app and terminates the process before Dart can handle
-/// the failure. Normal release bundles are launched through LaunchServices and
-/// keep native macOS system recognition available.
-bool canInitializeSystemAsrOnPlatform(
-  TargetPlatform platform, {
-  bool isReleaseMode = kReleaseMode,
-}) => platform != TargetPlatform.macOS || isReleaseMode;
 
 enum SystemAsrState {
   uninitialized,
@@ -87,9 +73,6 @@ class SpeechToTextSystemAsrBackend implements SystemAsrBackend {
     required SystemAsrErrorCallback onError,
     required void Function(String status) onStatus,
   }) {
-    if (!canInitializeSystemAsrOnPlatform(defaultTargetPlatform)) {
-      return Future<bool>.value(false);
-    }
     return _speechToText.initialize(
       onError: (error) => onError(
         SystemAsrError(message: error.errorMsg, isPermanent: error.permanent),

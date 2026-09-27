@@ -1,45 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, debugDefaultTargetPlatformOverride;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/services/asr/system_asr_service.dart';
 
 void main() {
-  test('macOS plugin is guarded in IDE builds and enabled in release', () {
-    expect(
-      canInitializeSystemAsrOnPlatform(
-        TargetPlatform.macOS,
-        isReleaseMode: false,
-      ),
-      isFalse,
-    );
-    expect(
-      canInitializeSystemAsrOnPlatform(
-        TargetPlatform.macOS,
-        isReleaseMode: true,
-      ),
-      isTrue,
-    );
-    expect(canInitializeSystemAsrOnPlatform(TargetPlatform.iOS), isTrue);
-    expect(canInitializeSystemAsrOnPlatform(TargetPlatform.android), isTrue);
-  });
-
-  test(
-    'the real backend short-circuits before the macOS plugin channel',
-    () async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-      addTearDown(() => debugDefaultTargetPlatformOverride = null);
-      final backend = SpeechToTextSystemAsrBackend();
-
-      expect(
-        await backend.initialize(onError: (_) {}, onStatus: (_) {}),
-        isFalse,
-      );
-    },
-  );
-
   group('SystemAsrService', () {
     test(
       'initializes the backend only once, including concurrent callers',

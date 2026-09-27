@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
@@ -388,21 +387,14 @@ class _SaveButtonState extends State<_SaveButton> {
       final extension = audio.$2;
       final fileName =
           'kelivo_tts_${DateTime.now().millisecondsSinceEpoch}.$extension';
-      final isDesktop =
-          Platform.isWindows || Platform.isLinux || Platform.isMacOS;
       final savePath = await FilePicker.platform.saveFile(
         dialogTitle: widget.l10n.ttsSaveDialogTitle,
         fileName: fileName,
         type: FileType.custom,
         allowedExtensions: [extension],
-        bytes: isDesktop ? null : bytes,
+        bytes: bytes,
       );
       if (savePath == null || !mounted) return;
-
-      if (isDesktop) {
-        await File(savePath).writeAsBytes(bytes, flush: true);
-        if (!mounted) return;
-      }
       showAppSnackBar(
         context,
         message: widget.l10n.ttsSaveSuccess,
