@@ -11428,6 +11428,57 @@ class AppLocalizationsRu extends AppLocalizations {
       'Уведомления и напоминания ваших мини-приложений.';
 
   @override
+  String get miniAppsToolActionErrors => 'Чтение журнала ошибок приложения';
+
+  @override
+  String get miniAppsToolActionVersions => 'Версии приложения';
+
+  @override
+  String get miniAppsToolActionRollback => 'Откат приложения';
+
+  @override
+  String get miniAppsMore => 'Ещё';
+
+  @override
+  String get miniAppsErrors => 'Журнал ошибок';
+
+  @override
+  String get miniAppsErrorsEmpty => 'Ошибок нет.';
+
+  @override
+  String get miniAppsErrorsFooter =>
+      'Ошибки текущей версии. Попросите агента в чате исправить приложение — он прочитает этот журнал.';
+
+  @override
+  String get miniAppsErrorsCopy => 'Скопировать всё';
+
+  @override
+  String get miniAppsErrorsCopied => 'Журнал скопирован';
+
+  @override
+  String get miniAppsErrorsClear => 'Очистить';
+
+  @override
+  String get miniAppsVersions => 'Версии';
+
+  @override
+  String get miniAppsVersionsEmpty => 'Предыдущих версий пока нет.';
+
+  @override
+  String get miniAppsVersionsFooter =>
+      'Moru хранит 5 последних версий. Откат меняет только код приложения, данные и напоминания остаются. Текущая версия тоже сохранится, к ней можно вернуться.';
+
+  @override
+  String miniAppsVersionsTitle(String name) {
+    return 'Откатить «$name»';
+  }
+
+  @override
+  String miniAppsRolledBack(String date) {
+    return 'Возвращена версия от $date';
+  }
+
+  @override
   String get phoneControlTitle => 'Управление телефоном';
 
   @override

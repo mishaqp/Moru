@@ -5109,6 +5109,31 @@
   "miniAppsImportFailed": "Could not install the app: {message}",
   "miniAppsNotificationChannel": "Mini apps",
   "miniAppsNotificationChannelDescription": "Notifications and reminders from your mini apps.",
+  "miniAppsToolActionErrors": "Read app error log",
+  "miniAppsToolActionVersions": "List app versions",
+  "miniAppsToolActionRollback": "Roll back app",
+  "miniAppsMore": "More",
+  "miniAppsErrors": "Error log",
+  "miniAppsErrorsEmpty": "No errors recorded.",
+  "miniAppsErrorsFooter": "Errors of the current version. Ask the agent in the chat to fix the app: it reads this log.",
+  "miniAppsErrorsCopy": "Copy all",
+  "miniAppsErrorsCopied": "Log copied",
+  "miniAppsErrorsClear": "Clear",
+  "miniAppsVersions": "Versions",
+  "miniAppsVersionsEmpty": "No earlier versions yet.",
+  "miniAppsVersionsFooter": "Moru keeps the last 5 versions. Rolling back changes only the app's code; its data and reminders stay. The current version is kept, so you can return to it.",
+  "@miniAppsVersionsTitle": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "miniAppsVersionsTitle": "Roll back “{name}”",
+  "@miniAppsRolledBack": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "miniAppsRolledBack": "Restored the version of {date}",
   "phoneControlTitle": "Phone Control",
   "phoneControlSubtitle": "Read the screen and perform actions through Accessibility",
   "phoneControlAccessibilityService": "Accessibility service",

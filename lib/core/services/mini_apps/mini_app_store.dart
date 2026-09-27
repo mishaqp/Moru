@@ -91,6 +91,34 @@ class MiniApp {
   };
 }
 
+/// One line of an app's error journal. Repeats of the last message only
+/// raise [count].
+@immutable
+class MiniAppLogEntry {
+  const MiniAppLogEntry({
+    required this.at,
+    required this.message,
+    this.count = 1,
+  });
+
+  final DateTime at;
+  final String message;
+  final int count;
+
+  factory MiniAppLogEntry.fromJson(Map<String, dynamic> json) =>
+      MiniAppLogEntry(
+        at: DateTime.fromMillisecondsSinceEpoch(json['at'] as int? ?? 0),
+        message: '${json['message'] ?? ''}',
+        count: json['count'] as int? ?? 1,
+      );
+
+  Map<String, dynamic> toJson() => {
+    'at': at.millisecondsSinceEpoch,
+    'message': message,
+    if (count > 1) 'count': count,
+  };
+}
+
 class MiniAppException implements Exception {
   const MiniAppException(this.code, this.message);
 
@@ -107,6 +135,9 @@ class MiniAppException implements Exception {
 /// mini_apps/<id>/manifest.json   what Moru knows about the app
 /// mini_apps/<id>/app/            copy of the published files
 /// mini_apps/<id>/data.json       moru.storage, kept across republishing
+/// mini_apps/<id>/errors.json     error journal of the current code
+/// mini_apps/<id>/versions/<ms>/  earlier manifest.json and app/, named by
+///                                their updatedAt
 /// ```
 class MiniAppStore extends ChangeNotifier {
   MiniAppStore({Future<Directory> Function()? root, DateTime Function()? now})
@@ -176,7 +207,10 @@ class MiniAppStore extends ChangeNotifier {
     final apps = <MiniApp>[];
     if (await root.exists()) {
       await for (final entry in root.list()) {
-        if (entry is! Directory) continue;
+        // Staging folders of an interrupted install or rollback.
+        if (entry is! Directory || p.basename(entry.path).startsWith('.')) {
+          continue;
+        }
         final manifest = File(p.join(entry.path, 'manifest.json'));
         if (!await manifest.exists()) continue;
         try {
@@ -297,12 +331,17 @@ class MiniAppStore extends ChangeNotifier {
 
     await directory.create(recursive: true);
     final oldCode = Directory(p.join(directory.path, 'app'));
-    if (await oldCode.exists()) await oldCode.delete(recursive: true);
+    if (previous != null) {
+      await _keepVersion(previous);
+    } else if (await oldCode.exists()) {
+      await oldCode.delete(recursive: true);
+    }
     await code.rename(oldCode.path);
     await File(
       p.join(staging.path, 'manifest.json'),
     ).rename(p.join(directory.path, 'manifest.json'));
     await staging.delete(recursive: true);
+    if (previous != null) await clearErrors(id);
 
     _apps = _sorted([
       for (final other in _apps)
@@ -327,6 +366,7 @@ class MiniAppStore extends ChangeNotifier {
       await hook(id);
     }
     await _writes[id];
+    await _writes[_journal(id)]?.catchError((_) {});
     final directory = Directory(app.directory);
     if (await directory.exists()) await directory.delete(recursive: true);
     _apps = [
@@ -535,6 +575,173 @@ class MiniAppStore extends ChangeNotifier {
     await temp.rename(file.path);
   }
 
+  // ---------------------------------------------------------------------------
+  // Error journal
+  // ---------------------------------------------------------------------------
+
+  static const int maxLogEntries = 50;
+
+  static String _journal(String id) => '$id/errors';
+
+  File _errorsFile(MiniApp app) => File(p.join(app.directory, 'errors.json'));
+
+  /// The journal of the current code, oldest first.
+  Future<List<MiniAppLogEntry>> readErrors(String id) async {
+    await load();
+    final app = _require(id);
+    await _writes[_journal(id)]?.catchError((_) {});
+    return _readErrors(app);
+  }
+
+  Future<List<MiniAppLogEntry>> _readErrors(MiniApp app) async {
+    final file = _errorsFile(app);
+    if (!await file.exists()) return [];
+    try {
+      return [
+        for (final entry in jsonDecode(await file.readAsString()) as List)
+          MiniAppLogEntry.fromJson(Map<String, dynamic>.from(entry as Map)),
+      ];
+    } on FormatException {
+      return [];
+    }
+  }
+
+  /// Adds [message] to the journal, keeping the last [maxLogEntries].
+  Future<void> logError(String id, String message) async {
+    final app = _require(id);
+    return _queued(_journal(id), () async {
+      final entries = await _readErrors(app);
+      final last = entries.isEmpty ? null : entries.last;
+      if (last != null && last.message == message) {
+        entries.last = MiniAppLogEntry(
+          at: _now(),
+          message: message,
+          count: last.count + 1,
+        );
+      } else {
+        entries.add(MiniAppLogEntry(at: _now(), message: message));
+      }
+      final kept = entries.length > maxLogEntries
+          ? entries.sublist(entries.length - maxLogEntries)
+          : entries;
+      await _writeAtomically(
+        _errorsFile(app),
+        jsonEncode([for (final entry in kept) entry.toJson()]),
+      );
+    });
+  }
+
+  Future<void> clearErrors(String id) async {
+    final app = _require(id);
+    return _queued(_journal(id), () async {
+      final file = _errorsFile(app);
+      if (await file.exists()) await file.delete();
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Versions
+  // ---------------------------------------------------------------------------
+
+  static const int maxVersions = 5;
+  static final RegExp _versionPattern = RegExp(r'^\d{1,16}$');
+
+  /// Earlier copies of the app's code, newest first. [MiniApp.updatedAt]
+  /// tells when each was published; [versionOf] names it for [rollback].
+  Future<List<MiniApp>> versions(String id) async {
+    await load();
+    return _versions(_require(id));
+  }
+
+  static String versionOf(MiniApp version) =>
+      '${version.updatedAt.millisecondsSinceEpoch}';
+
+  Future<List<MiniApp>> _versions(MiniApp app) async {
+    final root = Directory(p.join(app.directory, 'versions'));
+    if (!await root.exists()) return [];
+    final found = <MiniApp>[];
+    await for (final entry in root.list()) {
+      if (entry is! Directory ||
+          !_versionPattern.hasMatch(p.basename(entry.path))) {
+        continue;
+      }
+      try {
+        found.add(
+          MiniApp.fromJson(
+            entry.path,
+            jsonDecode(
+                  await File(
+                    p.join(entry.path, 'manifest.json'),
+                  ).readAsString(),
+                )
+                as Map<String, dynamic>,
+          ),
+        );
+      } catch (e) {
+        debugPrint('[MiniApps] skipping version ${entry.path}: $e');
+      }
+    }
+    return _sorted(found);
+  }
+
+  /// Moves the current code of [app] into `versions/` and drops the oldest
+  /// copies beyond [maxVersions]. The manifest stays until it is replaced.
+  Future<void> _keepVersion(MiniApp app) async {
+    final target = Directory(p.join(app.directory, 'versions', versionOf(app)));
+    if (await target.exists()) await target.delete(recursive: true);
+    await target.create(recursive: true);
+    final code = Directory(app.codeDirectory);
+    if (await code.exists()) {
+      await code.rename(p.join(target.path, 'app'));
+    }
+    await File(
+      p.join(app.directory, 'manifest.json'),
+    ).copy(p.join(target.path, 'manifest.json'));
+    final kept = await _versions(app);
+    for (final old in kept.skip(maxVersions)) {
+      await Directory(old.directory).delete(recursive: true);
+    }
+  }
+
+  /// Puts back the code of [version] (see [versions]). The current code
+  /// becomes a version itself, so a rollback can be undone. Stored data and
+  /// reminders stay as they are.
+  Future<MiniApp> rollback(String id, String version) async {
+    await load();
+    final current = _require(id);
+    final source = Directory(p.join(current.directory, 'versions', version));
+    if (!_versionPattern.hasMatch(version) ||
+        !await File(p.join(source.path, 'manifest.json')).exists() ||
+        !await Directory(p.join(source.path, 'app')).exists()) {
+      throw MiniAppException('not_found', 'No version "$version" of "$id".');
+    }
+    // Move it aside first so pruning while keeping the current code cannot
+    // delete it.
+    final picked = Directory(
+      p.join(p.dirname(current.directory), '.$id.rollback'),
+    );
+    if (await picked.exists()) await picked.delete(recursive: true);
+    await source.rename(picked.path);
+    final manifest = File(p.join(picked.path, 'manifest.json'));
+    final restored = MiniApp.fromJson(
+      current.directory,
+      jsonDecode(await manifest.readAsString()) as Map<String, dynamic>,
+    );
+    await _keepVersion(current);
+    await Directory(p.join(picked.path, 'app')).rename(restored.codeDirectory);
+    await manifest.rename(p.join(current.directory, 'manifest.json'));
+    await picked.delete(recursive: true);
+    await refreshBridge(restored);
+    await clearErrors(id);
+    _apps = _sorted([
+      for (final other in _apps)
+        if (other.id != id) other,
+      restored,
+    ]);
+    notifyListeners();
+    return restored;
+  }
+
   /// Rewrites `moru.js` of an app installed by an older Moru, so it gets the
   /// current bridge without being republished.
   Future<void> refreshBridge(MiniApp app) async {
@@ -548,8 +755,7 @@ class MiniAppStore extends ChangeNotifier {
   /// Writes are queued per app so two quick saves cannot overwrite each other.
   Future<void> _update(String id, void Function(Map<String, dynamic>) change) {
     final app = _require(id);
-    final previous = _writes[id] ?? Future<void>.value();
-    final next = previous.catchError((_) {}).then((_) async {
+    return _queued(id, () async {
       final data = await _readData(app);
       change(data);
       final encoded = jsonEncode(data);
@@ -559,13 +765,21 @@ class MiniAppStore extends ChangeNotifier {
           'App data may not exceed 5 MB.',
         );
       }
-      final file = File(p.join(app.directory, 'data.json'));
-      final temp = File('${file.path}.tmp');
-      await temp.writeAsString(encoded, flush: true);
-      await temp.rename(file.path);
+      await _writeAtomically(File(p.join(app.directory, 'data.json')), encoded);
     });
-    _writes[id] = next;
+  }
+
+  Future<void> _queued(String key, Future<void> Function() action) {
+    final previous = _writes[key] ?? Future<void>.value();
+    final next = previous.catchError((_) {}).then((_) => action());
+    _writes[key] = next;
     return next;
+  }
+
+  static Future<void> _writeAtomically(File file, String text) async {
+    final temp = File('${file.path}.tmp');
+    await temp.writeAsString(text, flush: true);
+    await temp.rename(file.path);
   }
 
   MiniApp _require(String id) {

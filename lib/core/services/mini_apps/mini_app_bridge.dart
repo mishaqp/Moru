@@ -39,6 +39,7 @@ class MiniAppBridge {
     required this.store,
     required this.appId,
     this.host = const MiniAppHost(),
+    this.onProblem,
   });
 
   static const int maxPromptChars = 32000;
@@ -46,6 +47,11 @@ class MiniAppBridge {
   final MiniAppStore store;
   final String appId;
   final MiniAppHost host;
+
+  /// Called with each problem noted in [pageErrors] (its kind: `error`,
+  /// `promise`, `resource`) or [failedCalls] (kind `call`), e.g. to keep it
+  /// in the app's error journal.
+  final void Function(String kind, String problem)? onProblem;
 
   static const int maxProblems = 50;
 
@@ -72,22 +78,25 @@ class MiniAppBridge {
           ? Map<String, dynamic>.from(call['args'] as Map)
           : const <String, dynamic>{};
       if (method == '__report') {
-        _note(pageErrors, '${args['kind']}: ${args['message']}');
+        final kind = '${args['kind']}';
+        _note(pageErrors, kind, '$kind: ${args['message']}');
         return null;
       }
       final value = await _dispatch(method, args);
       return _reply(id, true, value);
     } on MiniAppException catch (e) {
-      _note(failedCalls, '$method: ${e.message}');
+      _note(failedCalls, 'call', '$method: ${e.message}');
       return _reply(id, false, e.message);
     } catch (e) {
-      _note(failedCalls, '$method: $e');
+      _note(failedCalls, 'call', '$method: $e');
       return _reply(id, false, '$e');
     }
   }
 
-  static void _note(List<String> list, String problem) {
-    if (list.length < maxProblems) list.add(problem);
+  void _note(List<String> list, String kind, String problem) {
+    if (list.length >= maxProblems) return;
+    list.add(problem);
+    onProblem?.call(kind, problem);
   }
 
   /// Tells the page that [key] changed outside it.

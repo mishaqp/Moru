@@ -10804,6 +10804,56 @@ class AppLocalizationsZh extends AppLocalizations {
   String get miniAppsNotificationChannelDescription => '来自小应用的通知和提醒。';
 
   @override
+  String get miniAppsToolActionErrors => '读取应用错误日志';
+
+  @override
+  String get miniAppsToolActionVersions => '列出应用版本';
+
+  @override
+  String get miniAppsToolActionRollback => '回滚应用';
+
+  @override
+  String get miniAppsMore => '更多';
+
+  @override
+  String get miniAppsErrors => '错误日志';
+
+  @override
+  String get miniAppsErrorsEmpty => '没有记录到错误。';
+
+  @override
+  String get miniAppsErrorsFooter => '当前版本的错误。在聊天中让代理修复应用，它会读取此日志。';
+
+  @override
+  String get miniAppsErrorsCopy => '全部复制';
+
+  @override
+  String get miniAppsErrorsCopied => '日志已复制';
+
+  @override
+  String get miniAppsErrorsClear => '清空';
+
+  @override
+  String get miniAppsVersions => '版本';
+
+  @override
+  String get miniAppsVersionsEmpty => '还没有旧版本。';
+
+  @override
+  String get miniAppsVersionsFooter =>
+      'Moru 保留最近 5 个版本。回滚只更改应用代码，数据和提醒保持不变。当前版本也会保留，可以再切换回来。';
+
+  @override
+  String miniAppsVersionsTitle(String name) {
+    return '回滚“$name”';
+  }
+
+  @override
+  String miniAppsRolledBack(String date) {
+    return '已恢复 $date 的版本';
+  }
+
+  @override
   String get phoneControlTitle => '手机控制';
 
   @override
@@ -21604,6 +21654,56 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get miniAppsNotificationChannelDescription => '来自小应用的通知和提醒。';
+
+  @override
+  String get miniAppsToolActionErrors => '读取应用错误日志';
+
+  @override
+  String get miniAppsToolActionVersions => '列出应用版本';
+
+  @override
+  String get miniAppsToolActionRollback => '回滚应用';
+
+  @override
+  String get miniAppsMore => '更多';
+
+  @override
+  String get miniAppsErrors => '错误日志';
+
+  @override
+  String get miniAppsErrorsEmpty => '没有记录到错误。';
+
+  @override
+  String get miniAppsErrorsFooter => '当前版本的错误。在聊天中让代理修复应用，它会读取此日志。';
+
+  @override
+  String get miniAppsErrorsCopy => '全部复制';
+
+  @override
+  String get miniAppsErrorsCopied => '日志已复制';
+
+  @override
+  String get miniAppsErrorsClear => '清空';
+
+  @override
+  String get miniAppsVersions => '版本';
+
+  @override
+  String get miniAppsVersionsEmpty => '还没有旧版本。';
+
+  @override
+  String get miniAppsVersionsFooter =>
+      'Moru 保留最近 5 个版本。回滚只更改应用代码，数据和提醒保持不变。当前版本也会保留，可以再切换回来。';
+
+  @override
+  String miniAppsVersionsTitle(String name) {
+    return '回滚“$name”';
+  }
+
+  @override
+  String miniAppsRolledBack(String date) {
+    return '已恢复 $date 的版本';
+  }
 
   @override
   String get phoneControlTitle => '手机控制';
@@ -32480,6 +32580,56 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get miniAppsNotificationChannelDescription => '來自小應用的通知和提醒。';
+
+  @override
+  String get miniAppsToolActionErrors => '讀取應用錯誤日誌';
+
+  @override
+  String get miniAppsToolActionVersions => '列出應用版本';
+
+  @override
+  String get miniAppsToolActionRollback => '回滾應用';
+
+  @override
+  String get miniAppsMore => '更多';
+
+  @override
+  String get miniAppsErrors => '錯誤日誌';
+
+  @override
+  String get miniAppsErrorsEmpty => '沒有記錄到錯誤。';
+
+  @override
+  String get miniAppsErrorsFooter => '目前版本的錯誤。在聊天中讓代理修復應用，它會讀取此日誌。';
+
+  @override
+  String get miniAppsErrorsCopy => '全部複製';
+
+  @override
+  String get miniAppsErrorsCopied => '日誌已複製';
+
+  @override
+  String get miniAppsErrorsClear => '清空';
+
+  @override
+  String get miniAppsVersions => '版本';
+
+  @override
+  String get miniAppsVersionsEmpty => '還沒有舊版本。';
+
+  @override
+  String get miniAppsVersionsFooter =>
+      'Moru 保留最近 5 個版本。回滾只更改應用程式碼，資料和提醒保持不變。目前版本也會保留，可以再切換回來。';
+
+  @override
+  String miniAppsVersionsTitle(String name) {
+    return '回滾「$name」';
+  }
+
+  @override
+  String miniAppsRolledBack(String date) {
+    return '已恢復 $date 的版本';
+  }
 
   @override
   String get phoneControlTitle => '手機控制';

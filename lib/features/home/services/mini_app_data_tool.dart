@@ -20,12 +20,18 @@ class MiniAppDataTool {
   static const String actionRead = 'read';
   static const String actionWrite = 'write';
   static const String actionRemove = 'remove';
+  static const String actionErrors = 'errors';
+  static const String actionVersions = 'versions';
+  static const String actionRollback = 'rollback';
 
   static const List<String> actions = [
     actionList,
     actionRead,
     actionWrite,
     actionRemove,
+    actionErrors,
+    actionVersions,
+    actionRollback,
   ];
 
   /// Larger reads return only the keys, so one app cannot flood the context.
@@ -46,7 +52,12 @@ class MiniAppDataTool {
           'them. Call "list" first: it shows each app\'s id, what it does, '
           'how it stores its data and its keys. Keep the stored format '
           'exactly as the app expects; read a key before writing it. An open '
-          'app redraws when its data changes.',
+          'app redraws when its data changes. To fix an app, read its '
+          '"errors": the journal of script errors, console errors and failed '
+          'moru.* calls the current version hit while the user used it '
+          '(republishing clears it). "versions" lists the earlier code Moru '
+          'kept (the last 5); "rollback" puts one back without touching the '
+          'data.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -56,11 +67,22 @@ class MiniAppDataTool {
             'description':
                 'list: installed apps. read: one key of app_id, or all its '
                 'data without key. write: set key of app_id to value. '
-                'remove: delete key of app_id.',
+                'remove: delete key of app_id. errors: error journal of '
+                'app_id, oldest first; clear: true empties it after reading. '
+                'versions: earlier versions of app_id. rollback: restore '
+                'version of app_id.',
           },
           'app_id': {'type': 'string', 'description': 'App id from "list".'},
           'key': {'type': 'string', 'description': 'Storage key.'},
           'value': {'description': 'JSON value to store under key.'},
+          'clear': {
+            'type': 'boolean',
+            'description': 'errors: empty the journal after reading it.',
+          },
+          'version': {
+            'type': 'string',
+            'description': 'rollback: a version from "versions".',
+          },
         },
         'required': ['action'],
       },
@@ -90,6 +112,48 @@ class MiniAppDataTool {
           final key = _key(args);
           await store.storageRemove(app.id, key);
           result = {'removed': key};
+        case actionErrors:
+          final app = _app(args);
+          final entries = await store.readErrors(app.id);
+          if (args['clear'] == true) await store.clearErrors(app.id);
+          result = {
+            'errors': [
+              for (final entry in entries)
+                {
+                  'at': entry.at.toIso8601String(),
+                  'message': entry.message,
+                  if (entry.count > 1) 'count': entry.count,
+                },
+            ],
+            if (args['clear'] == true) 'cleared': true,
+          };
+        case actionVersions:
+          final app = _app(args);
+          result = {
+            'current': app.updatedAt.toIso8601String(),
+            'versions': [
+              for (final version in await store.versions(app.id))
+                {
+                  'version': MiniAppStore.versionOf(version),
+                  'published': version.updatedAt.toIso8601String(),
+                  if (version.name != app.name) 'name': version.name,
+                },
+            ],
+          };
+        case actionRollback:
+          final app = _app(args);
+          final version = '${args['version'] ?? ''}'.trim();
+          if (version.isEmpty) {
+            throw const _ToolFailure(
+              'missing_version',
+              '"version" is required. Call "versions" to get them.',
+            );
+          }
+          final restored = await store.rollback(app.id, version);
+          result = {
+            'restored': version,
+            'published': restored.updatedAt.toIso8601String(),
+          };
         default:
           throw _ToolFailure(
             'invalid_action',

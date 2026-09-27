@@ -13,6 +13,7 @@ import '../../../shared/widgets/option_sheet.dart';
 import '../../../shared/widgets/section_card.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../mini_app_launcher.dart';
+import '../widgets/mini_app_sheets.dart';
 
 /// "My apps": the mini apps the agent published.
 class MiniAppsPage extends StatefulWidget {
@@ -50,6 +51,16 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
           label: l10n.miniAppsAddToHomeScreen,
         ),
         OptionSheetItem(
+          value: 'versions',
+          icon: Lucide.History,
+          label: l10n.miniAppsVersions,
+        ),
+        OptionSheetItem(
+          value: 'errors',
+          icon: Lucide.Bug,
+          label: l10n.miniAppsErrors,
+        ),
+        OptionSheetItem(
           value: 'share',
           icon: Lucide.Share2,
           label: l10n.miniAppsShare,
@@ -73,6 +84,10 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
           message: ok ? l10n.miniAppsPinRequested : l10n.miniAppsPinUnsupported,
           type: ok ? NotificationType.success : NotificationType.warning,
         );
+      case 'versions':
+        await showMiniAppVersions(context, store: _store, app: app);
+      case 'errors':
+        await showMiniAppErrors(context, store: _store, app: app);
       case 'share':
         await MiniAppLauncher.share(context, app, store: widget._store);
       case 'delete':

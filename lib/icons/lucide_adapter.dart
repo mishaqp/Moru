@@ -67,6 +67,7 @@ class Lucide {
   static const IconData Cable = lucide.LucideIcons.cable;
   static const IconData FileText = lucide.LucideIcons.fileText;
   static const IconData Wrench = lucide.LucideIcons.wrench;
+  static const IconData Bug = lucide.LucideIcons.bug;
   static const IconData Minus = lucide.LucideIcons.minus;
   static const IconData Type = lucide.LucideIcons.type;
   static const IconData ChevronRight = lucide.LucideIcons.chevronRight;

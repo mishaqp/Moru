@@ -11301,6 +11301,57 @@ class AppLocalizationsEn extends AppLocalizations {
       'Notifications and reminders from your mini apps.';
 
   @override
+  String get miniAppsToolActionErrors => 'Read app error log';
+
+  @override
+  String get miniAppsToolActionVersions => 'List app versions';
+
+  @override
+  String get miniAppsToolActionRollback => 'Roll back app';
+
+  @override
+  String get miniAppsMore => 'More';
+
+  @override
+  String get miniAppsErrors => 'Error log';
+
+  @override
+  String get miniAppsErrorsEmpty => 'No errors recorded.';
+
+  @override
+  String get miniAppsErrorsFooter =>
+      'Errors of the current version. Ask the agent in the chat to fix the app: it reads this log.';
+
+  @override
+  String get miniAppsErrorsCopy => 'Copy all';
+
+  @override
+  String get miniAppsErrorsCopied => 'Log copied';
+
+  @override
+  String get miniAppsErrorsClear => 'Clear';
+
+  @override
+  String get miniAppsVersions => 'Versions';
+
+  @override
+  String get miniAppsVersionsEmpty => 'No earlier versions yet.';
+
+  @override
+  String get miniAppsVersionsFooter =>
+      'Moru keeps the last 5 versions. Rolling back changes only the app\'s code; its data and reminders stay. The current version is kept, so you can return to it.';
+
+  @override
+  String miniAppsVersionsTitle(String name) {
+    return 'Roll back “$name”';
+  }
+
+  @override
+  String miniAppsRolledBack(String date) {
+    return 'Restored the version of $date';
+  }
+
+  @override
   String get phoneControlTitle => 'Phone Control';
 
   @override

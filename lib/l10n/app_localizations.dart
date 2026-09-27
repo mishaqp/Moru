@@ -20225,6 +20225,96 @@ abstract class AppLocalizations {
   /// **'Notifications and reminders from your mini apps.'**
   String get miniAppsNotificationChannelDescription;
 
+  /// No description provided for @miniAppsToolActionErrors.
+  ///
+  /// In en, this message translates to:
+  /// **'Read app error log'**
+  String get miniAppsToolActionErrors;
+
+  /// No description provided for @miniAppsToolActionVersions.
+  ///
+  /// In en, this message translates to:
+  /// **'List app versions'**
+  String get miniAppsToolActionVersions;
+
+  /// No description provided for @miniAppsToolActionRollback.
+  ///
+  /// In en, this message translates to:
+  /// **'Roll back app'**
+  String get miniAppsToolActionRollback;
+
+  /// No description provided for @miniAppsMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get miniAppsMore;
+
+  /// No description provided for @miniAppsErrors.
+  ///
+  /// In en, this message translates to:
+  /// **'Error log'**
+  String get miniAppsErrors;
+
+  /// No description provided for @miniAppsErrorsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No errors recorded.'**
+  String get miniAppsErrorsEmpty;
+
+  /// No description provided for @miniAppsErrorsFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Errors of the current version. Ask the agent in the chat to fix the app: it reads this log.'**
+  String get miniAppsErrorsFooter;
+
+  /// No description provided for @miniAppsErrorsCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy all'**
+  String get miniAppsErrorsCopy;
+
+  /// No description provided for @miniAppsErrorsCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Log copied'**
+  String get miniAppsErrorsCopied;
+
+  /// No description provided for @miniAppsErrorsClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get miniAppsErrorsClear;
+
+  /// No description provided for @miniAppsVersions.
+  ///
+  /// In en, this message translates to:
+  /// **'Versions'**
+  String get miniAppsVersions;
+
+  /// No description provided for @miniAppsVersionsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No earlier versions yet.'**
+  String get miniAppsVersionsEmpty;
+
+  /// No description provided for @miniAppsVersionsFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Moru keeps the last 5 versions. Rolling back changes only the app\'s code; its data and reminders stay. The current version is kept, so you can return to it.'**
+  String get miniAppsVersionsFooter;
+
+  /// No description provided for @miniAppsVersionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Roll back “{name}”'**
+  String miniAppsVersionsTitle(String name);
+
+  /// No description provided for @miniAppsRolledBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored the version of {date}'**
+  String miniAppsRolledBack(String date);
+
   /// No description provided for @phoneControlTitle.
   ///
   /// In en, this message translates to:
