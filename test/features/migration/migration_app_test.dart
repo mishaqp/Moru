@@ -196,12 +196,16 @@ void main() {
       );
     });
     await tester.pump();
+    // The page finishes the save with real file IO; let it run between frames.
     for (
       var i = 0;
-      i < 20 && find.byIcon(Lucide.RotateCcw).evaluate().isEmpty;
+      i < 200 && find.byIcon(Lucide.RotateCcw).evaluate().isEmpty;
       i++
     ) {
-      await tester.pump(const Duration(milliseconds: 50));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      await tester.pump();
     }
 
     expect(service.backupCalls, 1);
