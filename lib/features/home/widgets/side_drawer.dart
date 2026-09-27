@@ -9,6 +9,7 @@ import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../chat/widgets/chat_gradient_background.dart';
 import '../../../core/providers/backup_reminder_provider.dart';
 import '../../../core/models/chat_item.dart';
 import '../../../core/providers/user_provider.dart';
@@ -2625,6 +2626,35 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             color: cs.surface.withValues(alpha: 0.60),
             child: SizedBox(width: widget.embeddedWidth ?? 300, child: inner),
           ),
+        ),
+      );
+    }
+
+    final glass = context.select<SettingsProvider, bool>((s) => s.glassTheme);
+    if (glass) {
+      // Glass: the list sits on a still copy of the colour backdrop under a
+      // translucent veil, instead of a solid panel.
+      return Drawer(
+        backgroundColor: Colors.transparent,
+        width: MediaQuery.sizeOf(context).width,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ChatGradientBackgroundHost(
+              enabled: false,
+              phase: 7,
+              accent: cs.primary,
+              child: const ChatGradientBackground(),
+            ),
+            ColoredBox(
+              color: cs.surface.withValues(
+                alpha: Theme.of(context).brightness == Brightness.dark
+                    ? 0.58
+                    : 0.5,
+              ),
+            ),
+            inner,
+          ],
         ),
       );
     }

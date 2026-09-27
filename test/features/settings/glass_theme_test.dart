@@ -12,6 +12,7 @@ import 'package:Kelivo/features/chat/widgets/frosted/frosted_surface.dart';
 import 'package:Kelivo/features/home/widgets/chat_input_overlay_layout.dart';
 import 'package:Kelivo/features/settings/pages/glass_theme_settings_page.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
+import 'package:Kelivo/theme/chat_bubble_style.dart';
 
 Future<SettingsProvider> _settings() async {
   final harness = await createBusinessTestHarness(initial: {});
@@ -44,21 +45,75 @@ void main() {
     final settings = SettingsProvider(harness.preferences);
     await settings.loaded;
     expect(settings.glassTheme, isFalse);
-    expect(settings.glassFrost, GlassFrost.medium);
     expect(settings.glassEconomy, isFalse);
 
     await settings.setGlassTheme(true);
-    await settings.setGlassFrost(GlassFrost.strong);
     await settings.setGlassEconomy(true);
 
     final reloaded = SettingsProvider(harness.preferences);
     await reloaded.loaded;
     expect(reloaded.glassTheme, isTrue);
-    expect(reloaded.glassFrost, GlassFrost.strong);
     expect(reloaded.glassEconomy, isTrue);
     settings.dispose();
     reloaded.dispose();
   });
+
+  test(
+    'glass writes the message style and restores the previous one',
+    () async {
+      final harness = await createBusinessTestHarness(initial: {});
+      final settings = SettingsProvider(harness.preferences);
+      await settings.loaded;
+      await settings.setChatMessageBackgroundStyle(
+        ChatMessageBackgroundStyle.solid,
+      );
+      const mine = ChatBubbleStyleOverrides(cornerRadius: 6, blurSigma: 9);
+      await settings.setChatBubbleStyleOverrides(mine);
+
+      await settings.setGlassTheme(
+        true,
+        accentLight: const Color(0xFF5B48E8),
+        accentDark: const Color(0xFF6F5CF6),
+      );
+      expect(
+        settings.chatMessageBackgroundStyle,
+        ChatMessageBackgroundStyle.frosted,
+      );
+      final assistant = settings.assistantChatBubbleStyleOverrides;
+      expect(assistant.frostedOpacity, 0.34);
+      expect(assistant.blurSigma, 9, reason: 'the user blur carries over');
+      final user = settings.userChatBubbleStyleOverrides;
+      expect(user.backgroundArgbLight, 0xFF5B48E8);
+      expect(user.backgroundArgbDark, 0xFF6F5CF6);
+
+      // The glass style and the saved one survive a restart.
+      final reloaded = SettingsProvider(harness.preferences);
+      await reloaded.loaded;
+      expect(
+        reloaded.chatMessageBackgroundStyle,
+        ChatMessageBackgroundStyle.frosted,
+      );
+      await reloaded.setGlassTheme(false);
+      expect(
+        reloaded.chatMessageBackgroundStyle,
+        ChatMessageBackgroundStyle.solid,
+      );
+      expect(reloaded.assistantChatBubbleStyleOverrides, mine);
+      expect(reloaded.userChatBubbleStyleOverrides, mine);
+
+      final again = SettingsProvider(harness.preferences);
+      await again.loaded;
+      expect(again.glassTheme, isFalse);
+      expect(
+        again.chatMessageBackgroundStyle,
+        ChatMessageBackgroundStyle.solid,
+      );
+      expect(again.assistantChatBubbleStyleOverrides, mine);
+      for (final s in [settings, reloaded, again]) {
+        s.dispose();
+      }
+    },
+  );
 
   testWidgets('glass puts the gradient behind a chat without wallpaper', (
     tester,
@@ -85,7 +140,9 @@ void main() {
     expect(spec.useGradientBackground, isTrue);
   });
 
-  testWidgets('glass bubbles are frosted with the chosen blur', (tester) async {
+  testWidgets('glass bubbles are frosted; economy drops the blur', (
+    tester,
+  ) async {
     final settings = await _settings();
     await tester.pumpWidget(
       _app(
@@ -103,10 +160,9 @@ void main() {
     expect(find.byType(FrostedSurface), findsNothing);
 
     await settings.setGlassTheme(true);
-    await settings.setGlassFrost(GlassFrost.strong);
     await tester.pump();
-    final strong = tester.widget<FrostedSurface>(find.byType(FrostedSurface));
-    expect(strong.style.blurSigma, GlassFrost.strong.sigma);
+    final frosted = tester.widget<FrostedSurface>(find.byType(FrostedSurface));
+    expect(frosted.style.blurSigma, 14);
 
     await settings.setGlassEconomy(true);
     await tester.pump();
@@ -157,9 +213,7 @@ void main() {
     );
   });
 
-  testWidgets('glass page switches the theme, frost and economy mode', (
-    tester,
-  ) async {
+  testWidgets('glass page switches the theme and economy mode', (tester) async {
     final settings = await _settings();
     await tester.pumpWidget(_app(settings, const GlassThemeSettingsPage()));
     await tester.pumpAndSettle();
@@ -167,10 +221,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('glassTheme')));
     await tester.pumpAndSettle();
     expect(settings.glassTheme, isTrue);
-
-    await tester.tap(find.byKey(const ValueKey('glassFrost-soft')));
-    await tester.pumpAndSettle();
-    expect(settings.glassFrost, GlassFrost.soft);
+    expect(
+      settings.userChatBubbleStyleOverrides.backgroundArgbLight,
+      isNotNull,
+      reason: 'the page hands the palette accent to the preset',
+    );
 
     await tester.tap(find.byKey(const ValueKey('glassEconomy')));
     await tester.pumpAndSettle();

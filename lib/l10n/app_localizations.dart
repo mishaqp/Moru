@@ -15688,32 +15688,8 @@ abstract class AppLocalizations {
   /// No description provided for @glassThemeEnableDetail.
   ///
   /// In en, this message translates to:
-  /// **'Frosted header and messages over a colour backdrop. An assistant\'s own wallpaper still shows.'**
+  /// **'Frosted header and messages over a colour backdrop. Turning it on sets Message style to glass; turning it off restores your previous style.'**
   String get glassThemeEnableDetail;
-
-  /// No description provided for @glassFrostTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Frost'**
-  String get glassFrostTitle;
-
-  /// No description provided for @glassFrostSoft.
-  ///
-  /// In en, this message translates to:
-  /// **'Soft'**
-  String get glassFrostSoft;
-
-  /// No description provided for @glassFrostMedium.
-  ///
-  /// In en, this message translates to:
-  /// **'Medium'**
-  String get glassFrostMedium;
-
-  /// No description provided for @glassFrostStrong.
-  ///
-  /// In en, this message translates to:
-  /// **'Strong'**
-  String get glassFrostStrong;
 
   /// No description provided for @glassEconomyTitle.
   ///
@@ -15730,7 +15706,7 @@ abstract class AppLocalizations {
   /// No description provided for @glassThemeFooter.
   ///
   /// In en, this message translates to:
-  /// **'Colours follow the theme palette. To show a reply as one card, turn off “Split paragraphs into bubbles” in Message style.'**
+  /// **'Fine-tune bubbles and blur in Message style, the backdrop in each assistant\'s Chat background. To show a reply as one card, turn off “Split paragraphs into bubbles”.'**
   String get glassThemeFooter;
 
   /// No description provided for @messageStyleSettingsPageStyleFrostedSubtitle.

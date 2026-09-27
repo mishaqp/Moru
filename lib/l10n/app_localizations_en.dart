@@ -8675,19 +8675,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get glassThemeEnableDetail =>
-      'Frosted header and messages over a colour backdrop. An assistant\'s own wallpaper still shows.';
-
-  @override
-  String get glassFrostTitle => 'Frost';
-
-  @override
-  String get glassFrostSoft => 'Soft';
-
-  @override
-  String get glassFrostMedium => 'Medium';
-
-  @override
-  String get glassFrostStrong => 'Strong';
+      'Frosted header and messages over a colour backdrop. Turning it on sets Message style to glass; turning it off restores your previous style.';
 
   @override
   String get glassEconomyTitle => 'Economy mode';
@@ -8698,7 +8686,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get glassThemeFooter =>
-      'Colours follow the theme palette. To show a reply as one card, turn off “Split paragraphs into bubbles” in Message style.';
+      'Fine-tune bubbles and blur in Message style, the backdrop in each assistant\'s Chat background. To show a reply as one card, turn off “Split paragraphs into bubbles”.';
 
   @override
   String get messageStyleSettingsPageStyleFrostedSubtitle =>

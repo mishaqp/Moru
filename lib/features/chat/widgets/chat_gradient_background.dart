@@ -339,22 +339,24 @@ class _GradientArtwork {
     final p2 = seconds * 2 * math.pi / 7;
     final p3 = seconds * 2 * math.pi / 8.5;
     final p4 = seconds * 2 * math.pi / 6.2;
+    // Spread over the full height so the lower chat and the composer sit on
+    // colour too, not on the plain base.
     final centers = [
       Offset(
         w * 0.48 + math.sin(p1) * w * 0.38,
-        h * 0.08 + math.cos(p1 * 1.15) * h * 0.18,
+        h * 0.10 + math.cos(p1 * 1.15) * h * 0.12,
       ),
       Offset(
         w * 0.18 + math.sin(p2 + math.pi * 0.55) * w * 0.30,
-        h * 0.24 + math.cos(p2) * h * 0.20,
+        h * 0.42 + math.cos(p2) * h * 0.14,
       ),
       Offset(
         w * 0.82 - math.sin(p3 + math.pi * 0.9) * w * 0.34,
-        h * 0.12 + math.cos(p3 * 0.9) * h * 0.18,
+        h * 0.66 + math.cos(p3 * 0.9) * h * 0.12,
       ),
       Offset(
-        w * 0.58 + math.sin(p4 + math.pi * 1.25) * w * 0.28,
-        h * 0.34 + math.cos(p4 * 1.1) * h * 0.16,
+        w * 0.42 + math.sin(p4 + math.pi * 1.25) * w * 0.30,
+        h * 0.92 + math.cos(p4 * 1.1) * h * 0.08,
       ),
     ];
     for (var i = 0; i < 4; i++) {

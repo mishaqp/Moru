@@ -8789,19 +8789,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get glassThemeEnableDetail =>
-      'Матовая шапка и сообщения поверх цветного фона. Своя картинка ассистента остаётся.';
-
-  @override
-  String get glassFrostTitle => 'Матовость';
-
-  @override
-  String get glassFrostSoft => 'Мягкая';
-
-  @override
-  String get glassFrostMedium => 'Средняя';
-
-  @override
-  String get glassFrostStrong => 'Сильная';
+      'Матовая шапка и сообщения поверх цветного фона. При включении стиль сообщений становится стеклянным, при выключении возвращается прежний.';
 
   @override
   String get glassEconomyTitle => 'Экономный режим';
@@ -8812,7 +8800,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get glassThemeFooter =>
-      'Цвета берутся из палитры темы. Чтобы ответ был одной карточкой, выключите «Разделять абзацы на пузыри» в стиле сообщений.';
+      'Пузыри и размытие настраиваются в «Стиле сообщений», фон — в «Фоне чата» у ассистента. Чтобы ответ был одной карточкой, выключите «Разделять абзацы на пузыри».';
 
   @override
   String get messageStyleSettingsPageStyleFrostedSubtitle =>

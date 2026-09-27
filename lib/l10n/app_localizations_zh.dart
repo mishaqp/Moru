@@ -8317,19 +8317,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get glassThemeEnable => '玻璃主题';
 
   @override
-  String get glassThemeEnableDetail => '彩色背景上的磨砂标题栏和消息。助手自己的壁纸仍会显示。';
-
-  @override
-  String get glassFrostTitle => '磨砂程度';
-
-  @override
-  String get glassFrostSoft => '轻';
-
-  @override
-  String get glassFrostMedium => '中';
-
-  @override
-  String get glassFrostStrong => '强';
+  String get glassThemeEnableDetail =>
+      '彩色背景上的磨砂标题栏和消息。开启时消息样式切换为玻璃样式，关闭时恢复之前的样式。';
 
   @override
   String get glassEconomyTitle => '省电模式';
@@ -8338,7 +8327,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get glassEconomyDetail => '不实时模糊，仅半透明。适合性能较弱的手机。';
 
   @override
-  String get glassThemeFooter => '颜色跟随主题调色板。若要将回复显示为一张卡片，请在消息样式中关闭“分段显示为多个气泡”。';
+  String get glassThemeFooter =>
+      '气泡和模糊在消息样式中调整，背景在各助手的聊天背景中调整。若要将回复显示为一张卡片，请关闭“分段显示为多个气泡”。';
 
   @override
   String get messageStyleSettingsPageStyleFrostedSubtitle => '半透明毛玻璃';
@@ -20516,19 +20506,8 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get glassThemeEnable => '玻璃主题';
 
   @override
-  String get glassThemeEnableDetail => '彩色背景上的磨砂标题栏和消息。助手自己的壁纸仍会显示。';
-
-  @override
-  String get glassFrostTitle => '磨砂程度';
-
-  @override
-  String get glassFrostSoft => '轻';
-
-  @override
-  String get glassFrostMedium => '中';
-
-  @override
-  String get glassFrostStrong => '强';
+  String get glassThemeEnableDetail =>
+      '彩色背景上的磨砂标题栏和消息。开启时消息样式切换为玻璃样式，关闭时恢复之前的样式。';
 
   @override
   String get glassEconomyTitle => '省电模式';
@@ -20537,7 +20516,8 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get glassEconomyDetail => '不实时模糊，仅半透明。适合性能较弱的手机。';
 
   @override
-  String get glassThemeFooter => '颜色跟随主题调色板。若要将回复显示为一张卡片，请在消息样式中关闭“分段显示为多个气泡”。';
+  String get glassThemeFooter =>
+      '气泡和模糊在消息样式中调整，背景在各助手的聊天背景中调整。若要将回复显示为一张卡片，请关闭“分段显示为多个气泡”。';
 
   @override
   String get messageStyleSettingsPageStyleFrostedSubtitle => '半透明毛玻璃';
@@ -32790,19 +32770,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get glassThemeEnable => '玻璃主題';
 
   @override
-  String get glassThemeEnableDetail => '彩色背景上的磨砂標題列和訊息。助手自己的桌布仍會顯示。';
-
-  @override
-  String get glassFrostTitle => '磨砂程度';
-
-  @override
-  String get glassFrostSoft => '輕';
-
-  @override
-  String get glassFrostMedium => '中';
-
-  @override
-  String get glassFrostStrong => '強';
+  String get glassThemeEnableDetail =>
+      '彩色背景上的磨砂標題列和訊息。開啟時訊息樣式切換為玻璃樣式，關閉時恢復之前的樣式。';
 
   @override
   String get glassEconomyTitle => '省電模式';
@@ -32811,7 +32780,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get glassEconomyDetail => '不即時模糊，僅半透明。適合效能較弱的手機。';
 
   @override
-  String get glassThemeFooter => '顏色跟隨主題調色盤。若要將回覆顯示為一張卡片，請在訊息樣式中關閉「分段顯示為多個氣泡」。';
+  String get glassThemeFooter =>
+      '氣泡和模糊在訊息樣式中調整，背景在各助手的聊天背景中調整。若要將回覆顯示為一張卡片，請關閉「分段顯示為多個氣泡」。';
 
   @override
   String get messageStyleSettingsPageStyleFrostedSubtitle => '半透明毛玻璃';
