@@ -1,9 +1,7 @@
 import 'dart:io';
 import 'dart:isolate';
 
-import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import 'package:Kelivo/utils/app_directories.dart';
 
@@ -60,29 +58,9 @@ DirectoryUsage measureDirectoryUsageSync(String path) {
   return (bytes: total, fileCount: fileCount);
 }
 
-/// iOS fakefs install root: Application Support/environment/alpine-rootfs
-/// (`RootfsInstaller.rootfsDir`).
-Future<Directory> iosAlpineRootfsDir() async {
-  final support = await getApplicationSupportDirectory();
-  return Directory(p.join(support.path, 'environment', 'alpine-rootfs'));
-}
-
-/// Directory that actually holds the extracted / fakefs rootfs.
-///
-/// iOS always measures Application Support `environment/alpine-rootfs`
-/// (`RootfsInstaller.rootfsDir` / [iosAlpineRootfsDir]). [rootfsDir] from
-/// [EnvironmentState] is often a Documents-style or guest path that is empty
-/// to a host walk. Android uses [rootfsDir] when set, otherwise
-/// Documents/environment/rootfs.
-Future<Directory> resolveRootfsUsageDir({
-  String? rootfsDir,
-  TargetPlatform? platform,
-  Future<Directory> Function()? iosAlpineRootfsDirOverride,
-}) async {
-  final target = platform ?? defaultTargetPlatform;
-  if (!kIsWeb && target == TargetPlatform.iOS) {
-    return (iosAlpineRootfsDirOverride ?? iosAlpineRootfsDir)();
-  }
+/// Directory that holds the extracted rootfs: [rootfsDir] when set,
+/// otherwise the environment directory's `rootfs`.
+Future<Directory> resolveRootfsUsageDir({String? rootfsDir}) async {
   if (rootfsDir != null && rootfsDir.isNotEmpty) {
     return Directory(rootfsDir);
   }

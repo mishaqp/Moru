@@ -1,4 +1,3 @@
-import 'core/services/scheduled_tasks_service.dart';
 import 'core/services/model_catalog/model_catalog.dart';
 import 'package:Kelivo/core/services/sandbox/workspace_channel.dart';
 import 'package:Kelivo/core/providers/external_mounts_provider.dart';
@@ -309,7 +308,6 @@ Future<void> main() async {
           return;
         }
       }
-      ScheduledTasksService.configureDevice(businessPreferences);
       // Best-effort trim of archived restore runs after a few cold starts.
       unawaited(_pruneRestoreArchive(appDataDirectory));
       // Enable edge-to-edge to allow content under system bars (Android)

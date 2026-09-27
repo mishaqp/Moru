@@ -1,5 +1,4 @@
 import 'dart:async';
-import '../widgets/scheduled_task_wide_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -10,7 +9,6 @@ import '../widgets/scheduled_tasks_scaffold.dart';
 import 'scheduled_task_editor_page.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/services/scheduled_tasks_service.dart';
-import '../../../core/services/scheduled_task_preparation.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/form_sheet.dart';
@@ -21,7 +19,6 @@ import '../../../shared/widgets/section_card.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../widgets/scheduled_task_tile.dart';
 import '../../settings/pages/mobile_background_settings_page.dart';
-import '../../settings/widgets/custom_theme_widgets.dart';
 
 String _repeatLabel(ScheduledTask task, AppLocalizations l) {
   if (task.onceDate != null) return scheduledRepeatLabel(task.repeat, l);
@@ -37,7 +34,6 @@ String _repeatLabel(ScheduledTask task, AppLocalizations l) {
 String _date(DateTime date, AppLocalizations l) =>
     DateFormat.Md(l.localeName).add_Hm().format(date);
 
-/// Controls use Kelivo's shared iOS/R3 components on mobile and desktop.
 class ScheduledTasksPage extends StatefulWidget {
   const ScheduledTasksPage({
     super.key,
@@ -68,10 +64,7 @@ class _ScheduledTasksPageState extends State<ScheduledTasksPage>
     if (mounted) setState(() {});
   }
 
-  Future<void> _refresh() async {
-    await service.refresh();
-    if (mounted) await service.preparePendingTasks();
-  }
+  Future<void> _refresh() => service.refresh();
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -118,19 +111,13 @@ class _ScheduledTasksPageState extends State<ScheduledTasksPage>
   }
 
   Future<void> _save(ScheduledTask task, {bool? enabled}) async {
-    if (service.isIOS && task.notify && (enabled ?? task.enabled)) {
-      await service.requestPermission();
-    } else if (!service.isDesktop && (enabled ?? task.enabled)) {
+    if (enabled ?? task.enabled) {
       await widget.requestNotificationsPermission();
     }
     await service.save(task, enabled: enabled);
   }
 
-  Future<void> _details(
-    ScheduledTask original, {
-    String? action,
-    Offset? position,
-  }) async {
+  Future<void> _details(ScheduledTask original) async {
     final l = AppLocalizations.of(context)!;
     final items = <OptionSheetItem<String>>[
       if (!original.running)
@@ -138,12 +125,6 @@ class _ScheduledTasksPageState extends State<ScheduledTasksPage>
           value: 'run',
           icon: LucideIcons.play,
           label: l.scheduledTasksRunNow,
-        ),
-      if (service.isIOS && !original.running)
-        OptionSheetItem(
-          value: 'prepare',
-          icon: LucideIcons.sparkles,
-          label: l.scheduledTasksPrepareNow,
         ),
       OptionSheetItem(
         value: 'history',
@@ -163,62 +144,16 @@ class _ScheduledTasksPageState extends State<ScheduledTasksPage>
         ),
       ],
     ];
-    action ??= await showOptionSheet<String>(
+    final action = await showOptionSheet<String>(
       context,
       title: original.name,
       items: items,
-      footer: service.isIOS && !original.running
-          ? IosSectionFooter(text: l.scheduledTasksPrepareNowDetail)
-          : null,
     );
     if (!mounted) return;
     switch (action) {
-      case 'prepare':
-        await _perform(() async {
-          if (original.notify) await service.requestPermission();
-          final status = await service.prepareNow(original.id);
-          if (!mounted) return;
-          final task =
-              service.tasks.where((t) => t.id == original.id).firstOrNull ??
-              original;
-          final run = task.runs.where((r) => r.awaitingPublication).firstOrNull;
-          final message = switch (status) {
-            ScheduledTaskPreparationStatus.prepared =>
-              l.scheduledTasksPrepareNowReady,
-            ScheduledTaskPreparationStatus.preparing =>
-              l.scheduledTasksPrepareNowStarted,
-            ScheduledTaskPreparationStatus.queued =>
-              l.scheduledTasksPrepareNowBusy,
-            ScheduledTaskPreparationStatus.waitingForChat =>
-              l.scheduledTasksPrepareNowChatBusy,
-            ScheduledTaskPreparationStatus.attemptsExhausted =>
-              l.scheduledTasksPreparationAttemptsUsed(
-                run?.prepareAttempts ?? 0,
-                task.maxPrepareAttempts,
-              ),
-            ScheduledTaskPreparationStatus.hourlyLimit =>
-              l.scheduledTasksPreparationHourlyLimitDetail,
-            ScheduledTaskPreparationStatus.disabled =>
-              l.scheduledTasksPrepareNowDisabled,
-            ScheduledTaskPreparationStatus.unavailable =>
-              run?.error == null
-                  ? l.scheduledTasksPrepareNowUnavailable
-                  : _error(run!.error!, l),
-            _ => l.scheduledTasksPrepareNowNoUpcoming,
-          };
-          showAppSnackBar(
-            context,
-            message: message,
-            type:
-                status == ScheduledTaskPreparationStatus.prepared ||
-                    status == ScheduledTaskPreparationStatus.preparing
-                ? NotificationType.success
-                : NotificationType.warning,
-          );
-        });
       case 'run':
         await _perform(() async {
-          if (!service.isDesktop) await widget.requestNotificationsPermission();
+          await widget.requestNotificationsPermission();
           await service.runNow(original.id);
         });
       case 'edit':
@@ -295,64 +230,24 @@ class _ScheduledTasksPageState extends State<ScheduledTasksPage>
     }
   }
 
-  Future<void> _showPanel(WidgetBuilder builder) async {
-    if (service.isDesktop) {
-      await showAppDialog<void>(
-        context,
-        maxWidth: 600,
-        child: Builder(builder: builder),
-      );
-    } else {
-      await showFormSheet<void>(context, builder: builder);
-    }
-  }
+  Future<void> _showPanel(WidgetBuilder builder) =>
+      showFormSheet<void>(context, builder: builder);
 
   Widget _panel(
     BuildContext context, {
     required String title,
     required List<Widget> children,
     Widget? actions,
-  }) {
-    if (!service.isDesktop) {
-      return FormSheet(title: title, actions: actions, children: children);
-    }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppDialogHeader(title: title),
-        Flexible(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ...children,
-                if (actions != null) ...[const SizedBox(height: 12), actions],
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  }) => FormSheet(title: title, actions: actions, children: children);
 
   String _status(String status, AppLocalizations l) => switch (status) {
     'completed' => l.scheduledTasksCompleted,
     'running' => l.scheduledTasksRunning,
-    'pending' => l.scheduledTasksPendingPreparation,
-    'preparing' => l.scheduledTasksPreparing,
-    'prepared' || 'publishing' => l.scheduledTasksPrepared,
-    'reminded' => l.scheduledTasksReminded,
-    'skipped' => l.scheduledTasksSkipped,
     'cancelled' => l.scheduledTasksCancelled,
     'interrupted' => l.scheduledTasksInterrupted,
     _ => l.scheduledTasksFailed,
   };
   String _error(String value, AppLocalizations l) {
-    if (value == 'preparation_context_changed') {
-      return l.scheduledTasksPreparationContextChanged;
-    }
     if (value.contains('user_interaction_required')) {
       return l.scheduledTasksNeedsInput;
     }
@@ -371,14 +266,13 @@ class _ScheduledTasksPageState extends State<ScheduledTasksPage>
     }
     if (value.contains('model_missing')) return l.scheduledTasksModelMissing;
     if (value.contains('in_flight')) return l.scheduledTasksChatBusy;
-    if (value.startsWith('preparation_context_unavailable:')) {
-      return l.scheduledTasksPreparationReadFailed;
-    }
     return value;
   }
 
-  String _desktopTaskDetail(ScheduledTask task, AppLocalizations l) =>
-      task.running
+  String _taskDetail(ScheduledTask task, AppLocalizations l) =>
+      !service.exactAlarms && task.enabled && !task.running
+      ? l.scheduledTasksWaitingPermission
+      : task.running
       ? l.scheduledTasksRunning
       : task.exhausted
       ? l.scheduledTasksFinished
@@ -388,167 +282,10 @@ class _ScheduledTasksPageState extends State<ScheduledTasksPage>
       ? l.scheduledTasksLoading
       : l.scheduledTasksNextRun(_date(task.nextRunAt!, l));
 
-  Widget _desktopLayout(AppLocalizations l) {
-    final cs = Theme.of(context).colorScheme;
-    return ScheduledTasksScaffold(
-      embedded: widget.embedded,
-      title: l.scheduledTasksTitle,
-      actionIcon: LucideIcons.plus,
-      actionLabel: l.scheduledTasksAdd,
-      onAction: _edit,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          if (service.error != null) IosSectionFooter(text: service.error!),
-          if (!service.loaded) IosSectionFooter(text: l.scheduledTasksLoading),
-          if (service.loaded && service.tasks.isEmpty)
-            Padding(
-              key: const ValueKey('desktop-scheduled-tasks-empty'),
-              padding: const EdgeInsets.symmetric(vertical: 40),
-              child: Column(
-                children: [
-                  Text(
-                    l.scheduledTasksDesktopEmpty,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: cs.onSurface.withValues(alpha: .6),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 480),
-                    child: Text(
-                      l.scheduledTasksEmptyDetail,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.5,
-                        color: cs.onSurface.withValues(alpha: .5),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          for (final task in service.tasks)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: DesktopScheduledTaskTile(
-                name: task.name,
-                time: task.timeLabel,
-                repeat: _repeatLabel(task, l),
-                detail: _taskDetail(task, l),
-                enabled: task.enabled,
-                running: task.running,
-                onChanged: (value) =>
-                    _perform(() => _save(task, enabled: value)),
-                onEdit: () => _edit(task),
-                onHistory: () => _details(task, action: 'history'),
-                onMenu: (position) => _details(task, position: position),
-              ),
-            ),
-          Padding(
-            key: const ValueKey('scheduled-tasks-desktop-reliability'),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            child: Text(
-              l.scheduledTasksDesktopReliability,
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.5,
-                color: cs.onSurface.withValues(alpha: .55),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _taskDetail(ScheduledTask task, AppLocalizations l) {
-    if (!service.isIOS &&
-        !service.isDesktop &&
-        !service.exactAlarms &&
-        task.enabled &&
-        !task.running) {
-      return l.scheduledTasksWaitingPermission;
-    }
-    return _desktopTaskDetail(task, l);
-  }
-
-  String? _preparationLabel(ScheduledTask task, AppLocalizations l) {
-    if (!service.isIOS || !task.enabled) return null;
-    return switch (service.preparationStatus(task)) {
-      ScheduledTaskPreparationStatus.disabled => l.scheduledTasksPreparationOff,
-      ScheduledTaskPreparationStatus.preparing => l.scheduledTasksPreparing,
-      ScheduledTaskPreparationStatus.prepared => l.scheduledTasksPrepared,
-      ScheduledTaskPreparationStatus.awaitingPublication =>
-        l.scheduledTasksPreparationPublishing,
-      ScheduledTaskPreparationStatus.waitingForChat =>
-        l.scheduledTasksPreparationIdle,
-      ScheduledTaskPreparationStatus.queued =>
-        l.scheduledTasksPreparationQueued,
-      ScheduledTaskPreparationStatus.outsideWindow =>
-        l.scheduledTasksPreparationWindowWaiting,
-      ScheduledTaskPreparationStatus.cooldown =>
-        l.scheduledTasksPreparationCooldownWaiting,
-      ScheduledTaskPreparationStatus.attemptsExhausted =>
-        l.scheduledTasksPreparationLimitReached,
-      ScheduledTaskPreparationStatus.hourlyLimit =>
-        l.scheduledTasksPreparationHourlyLimit,
-      ScheduledTaskPreparationStatus.unavailable =>
-        l.scheduledTasksPreparationUnavailable,
-      _ => l.scheduledTasksPendingPreparation,
-    };
-  }
-
-  String? _preparationDetail(ScheduledTask task, AppLocalizations l) {
-    if (!service.isIOS || !task.enabled) return null;
-    final run = task.runs.where((r) => r.awaitingPublication).firstOrNull;
-    final status = service.preparationStatus(task);
-    if (status == ScheduledTaskPreparationStatus.prepared) {
-      if (run?.error?.startsWith('preparation_context_unavailable:') == true) {
-        return l.scheduledTasksPreparationResultRetained;
-      }
-      if (task.notify && run?.notificationState != 'registered') {
-        return l.scheduledTasksNotificationUnavailable;
-      }
-      return null;
-    }
-    return switch (status) {
-      ScheduledTaskPreparationStatus.queued =>
-        l.scheduledTasksPreparationQueuedDetail,
-      ScheduledTaskPreparationStatus.waitingForChat =>
-        l.scheduledTasksPreparationIdleDetail,
-      ScheduledTaskPreparationStatus.attemptsExhausted =>
-        l.scheduledTasksPreparationAttemptsUsed(
-          run?.prepareAttempts ?? 0,
-          task.maxPrepareAttempts,
-        ),
-      ScheduledTaskPreparationStatus.hourlyLimit =>
-        l.scheduledTasksPreparationHourlyLimitDetail,
-      ScheduledTaskPreparationStatus.cooldown when run?.lastPrepareAt != null =>
-        l.scheduledTasksPreparationRetryAt(
-          _date(
-            run!.lastPrepareAt!.add(
-              Duration(minutes: task.preparationCooldownMinutes),
-            ),
-            l,
-          ),
-        ),
-      ScheduledTaskPreparationStatus.unavailable =>
-        l.scheduledTasksPreparationReadFailed,
-      ScheduledTaskPreparationStatus.awaitingPublication =>
-        l.scheduledTasksPreparationPublishingDetail,
-      _ => null,
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    if (service.isDesktop) return _desktopLayout(l);
     return ScheduledTasksScaffold(
       embedded: widget.embedded,
       title: l.scheduledTasksTitle,
@@ -560,7 +297,7 @@ class _ScheduledTasksPageState extends State<ScheduledTasksPage>
         children: [
           if (service.error != null) IosSectionFooter(text: service.error!),
           if (!service.loaded) IosSectionFooter(text: l.scheduledTasksLoading),
-          if (!service.isDesktop && service.loaded && !service.exactAlarms) ...[
+          if (service.loaded && !service.exactAlarms) ...[
             SectionCard(
               children: [
                 IosNavRow(
@@ -608,8 +345,6 @@ class _ScheduledTasksPageState extends State<ScheduledTasksPage>
               time: task.timeLabel,
               repeat: _repeatLabel(task, l),
               detail: _taskDetail(task, l),
-              preparationLabel: _preparationLabel(task, l),
-              preparationDetail: _preparationDetail(task, l),
               enabled: task.enabled,
               running: task.running,
               onTap: () => _details(task),
@@ -620,41 +355,24 @@ class _ScheduledTasksPageState extends State<ScheduledTasksPage>
           ],
           IosSectionFooter(
             key: const ValueKey('scheduled-tasks-description'),
-            text: service.isIOS
-                ? l.scheduledTasksIOSDetail
-                : l.scheduledTasksDescription,
+            text: l.scheduledTasksDescription,
           ),
-          if (service.isIOS) ...[
-            const SizedBox(height: 24),
-            SectionCard(
-              key: const ValueKey('scheduled-tasks-notification-permission'),
-              children: [
-                IosNavRow(
-                  label: l.scheduledTasksNotificationPermission,
-                  icon: LucideIcons.bell,
-                  onTap: () => _perform(service.requestPermission),
-                ),
-              ],
-            ),
-          ],
-          if (!service.isIOS) ...[
-            const SizedBox(height: 24),
-            SectionCard(
-              key: const ValueKey('scheduled-tasks-background-settings'),
-              children: [
-                IosNavRow(
-                  icon: LucideIcons.battery,
-                  label: l.backgroundSettingsTitle,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const MobileBackgroundSettingsPage(),
-                    ),
+          const SizedBox(height: 24),
+          SectionCard(
+            key: const ValueKey('scheduled-tasks-background-settings'),
+            children: [
+              IosNavRow(
+                icon: LucideIcons.battery,
+                label: l.backgroundSettingsTitle,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const MobileBackgroundSettingsPage(),
                   ),
                 ),
-              ],
-            ),
-            IosSectionFooter(text: l.scheduledTasksReliability),
-          ],
+              ),
+            ],
+          ),
+          IosSectionFooter(text: l.scheduledTasksReliability),
         ],
       ),
     );

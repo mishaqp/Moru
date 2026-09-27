@@ -1,4 +1,3 @@
-import '../../scheduled_tasks/scheduled_task_preparation_binding.dart';
 import '../../../core/services/scheduled_tasks_service.dart';
 import '../../scheduled_tasks/scheduled_task_runner.dart';
 import 'dart:async';
@@ -962,27 +961,15 @@ class HomePageController extends ChangeNotifier {
         }
       }
       _chatInitialized = true;
-      if (ScheduledTasksService.supported) {
-        if (ScheduledTasksService.instance.isIOS) {
-          final binding = _scheduledPreparation =
-              ScheduledTaskPreparationBinding(ScheduledTasksService.instance);
-          if (!_context.mounted) return;
-          await binding.attach(
+      final executor = _scheduledExecutor =
+          (task, cancellation, onConversation) => runScheduledTask(
             _context,
-            _messageBuilderService,
-            _chatController,
+            _viewModel,
+            task,
+            cancellation,
+            onConversation,
           );
-        }
-        final executor = _scheduledExecutor =
-            (task, cancellation, onConversation) => runScheduledTask(
-              _context,
-              _viewModel,
-              task,
-              cancellation,
-              onConversation,
-            );
-        await ScheduledTasksService.instance.attach(executor);
-      }
+      await ScheduledTasksService.instance.attach(executor);
     } finally {
       _startupConversationPending = false;
       notifyListeners();
@@ -3069,14 +3056,6 @@ class HomePageController extends ChangeNotifier {
     _streamController.setPresentationEnabled(
       _homePresentationVisible && _homeAppVisible,
     );
-    if (state == AppLifecycleState.resumed ||
-        state == AppLifecycleState.paused) {
-      unawaited(
-        ScheduledTasksService.instance.lifecycle(
-          state == AppLifecycleState.resumed,
-        ),
-      );
-    }
     if (state == AppLifecycleState.resumed) {
       ScreenWakelock.reassert();
     }
@@ -3214,12 +3193,10 @@ class HomePageController extends ChangeNotifier {
   // ============================================================================
 
   ScheduledTaskExecutor? _scheduledExecutor;
-  ScheduledTaskPreparationBinding? _scheduledPreparation;
 
   @override
   void dispose() {
     if (_scheduledExecutor case final executor?) {
-      _scheduledPreparation?.dispose();
       ScheduledTasksService.instance.detach(executor);
     }
     final background = MobileBackgroundCoordinator.instance;

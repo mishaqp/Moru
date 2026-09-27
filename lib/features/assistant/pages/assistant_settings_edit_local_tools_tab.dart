@@ -197,19 +197,17 @@ class _LocalToolsTab extends StatelessWidget {
               onChanged: (value) =>
                   toggleTool(LocalToolNames.assistantManager, value),
             ),
-            if (ScheduledTasksService.supported) ...[
-              _iosDivider(context),
-              _LocalToolRow(
-                icon: Lucide.CalendarClock,
-                title: l10n.scheduledTaskToolTitle,
-                subtitle: l10n.scheduledTaskToolSubtitle,
-                enabled: assistant.localToolIds.contains(
-                  LocalToolNames.scheduledTasks,
-                ),
-                onChanged: (value) =>
-                    toggleTool(LocalToolNames.scheduledTasks, value),
+            _iosDivider(context),
+            _LocalToolRow(
+              icon: Lucide.CalendarClock,
+              title: l10n.scheduledTaskToolTitle,
+              subtitle: l10n.scheduledTaskToolSubtitle,
+              enabled: assistant.localToolIds.contains(
+                LocalToolNames.scheduledTasks,
               ),
-            ],
+              onChanged: (value) =>
+                  toggleTool(LocalToolNames.scheduledTasks, value),
+            ),
             if (LocalToolsService.isAvailableOnThisPlatform(
               LocalToolNames.miniApps,
             )) ...[

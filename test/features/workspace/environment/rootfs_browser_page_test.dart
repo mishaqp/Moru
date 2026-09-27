@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
@@ -9,7 +8,6 @@ import 'package:provider/provider.dart';
 import 'package:Kelivo/core/models/environment_state.dart';
 import 'package:Kelivo/core/providers/environment_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
-import 'package:Kelivo/core/services/sandbox/rootfs_disk_usage.dart';
 import 'package:Kelivo/features/workspace/pages/rootfs_browser_page.dart';
 import 'package:Kelivo/features/workspace/widgets/environment/environment_labels.dart';
 import 'package:Kelivo/features/workspace/widgets/files/file_browser.dart';
@@ -18,22 +16,7 @@ import 'package:Kelivo/l10n/app_localizations.dart';
 import '../../../support/business_test_harness.dart';
 
 void main() {
-  test('resolveRootfsBrowserDir appends data on iOS', () async {
-    final alpine = Directory('/tmp/alpine-rootfs');
-    final usage = await resolveRootfsUsageDir(
-      rootfsDir: '/tmp/Documents/environment/rootfs',
-      platform: TargetPlatform.iOS,
-      iosAlpineRootfsDirOverride: () async => alpine,
-    );
-    final dir = Directory(p.join(usage.path, 'data'));
-    expect(dir.path, p.join(alpine.path, 'data'));
-    expect(p.basename(dir.path), 'data');
-    expect(p.basename(p.dirname(dir.path)), 'alpine-rootfs');
-  });
-
-  test('resolveRootfsBrowserDir keeps the host rootfs on Android', () async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+  test('resolveRootfsBrowserDir shows the host rootfs', () async {
     final dir = await resolveRootfsBrowserDir(
       rootfsDir: '/tmp/environment/rootfs',
     );

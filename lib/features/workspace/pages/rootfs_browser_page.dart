@@ -2,9 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import 'package:Kelivo/core/providers/environment_provider.dart';
@@ -17,14 +15,9 @@ import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/ios_tactile.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 
-/// Host directory shown as guest `/`. iOS fakefs files live under `data/`.
-Future<Directory> resolveRootfsBrowserDir({String? rootfsDir}) async {
-  final usage = await resolveRootfsUsageDir(rootfsDir: rootfsDir);
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-    return Directory(p.join(usage.path, 'data'));
-  }
-  return usage;
-}
+/// Host directory shown as guest `/`.
+Future<Directory> resolveRootfsBrowserDir({String? rootfsDir}) =>
+    resolveRootfsUsageDir(rootfsDir: rootfsDir);
 
 class RootfsBrowserPage extends StatefulWidget {
   const RootfsBrowserPage({super.key});

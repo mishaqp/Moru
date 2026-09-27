@@ -7,7 +7,6 @@ import 'package:math_expressions/math_expressions.dart';
 
 import '../../../core/models/assistant.dart';
 import '../../../core/models/health_data_type.dart';
-import '../../../core/services/scheduled_tasks_service.dart';
 import 'assistant_manager_tool.dart';
 import 'browser_agent_tool.dart';
 import 'mini_app_data_tool.dart';
@@ -462,8 +461,6 @@ class LocalToolsService {
       case LocalToolNames.remindersCreate:
       case LocalToolNames.remindersComplete:
         return DeviceLocalTools.remindersSupported;
-      case LocalToolNames.scheduledTasks:
-        return ScheduledTasksService.supported;
       case LocalToolNames.miniApps:
         return !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
       default:
