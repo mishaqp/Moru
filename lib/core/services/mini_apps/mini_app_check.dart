@@ -116,6 +116,9 @@ class MiniAppSandbox {
           fetch: fetch,
           calendar: (method, args) async =>
               method == 'queryCalendar' ? {'events': []} : {'id': 0},
+          vibrate: (pattern) async {},
+          haptic: (kind) async {},
+          close: () async {},
         ),
       );
       return MiniAppSandbox._(root, store, bridge);

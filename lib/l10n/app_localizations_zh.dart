@@ -10813,6 +10813,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get miniAppsToolActionRollback => '回滚应用';
 
   @override
+  String get miniAppsBackAgainToExit => '再按一次返回退出';
+
+  @override
   String get miniAppsMore => '更多';
 
   @override
@@ -21663,6 +21666,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get miniAppsToolActionRollback => '回滚应用';
+
+  @override
+  String get miniAppsBackAgainToExit => '再按一次返回退出';
 
   @override
   String get miniAppsMore => '更多';
@@ -32589,6 +32595,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get miniAppsToolActionRollback => '回滾應用';
+
+  @override
+  String get miniAppsBackAgainToExit => '再按一次返回退出';
 
   @override
   String get miniAppsMore => '更多';

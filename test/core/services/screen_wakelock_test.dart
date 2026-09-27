@@ -155,4 +155,50 @@ void main() {
     expect(calls, <bool>[true, true]);
     expect(ScreenWakelock.debugHeld, isTrue);
   });
+
+  test('hold keeps the screen on whatever the setting and generations', () {
+    fakeAsync((async) {
+      final calls = <bool>[];
+      ScreenWakelock.debugReset(platformApply: calls.add);
+
+      // The generation setting is off, a mini app still holds the screen.
+      ScreenWakelock.hold();
+      expect(calls, <bool>[true]);
+      ScreenWakelock.setEnabled(true);
+      ScreenWakelock.acquire();
+      ScreenWakelock.release();
+      async.elapse(const Duration(seconds: 11));
+      ScreenWakelock.releaseNow();
+      ScreenWakelock.setEnabled(false);
+      expect(calls, <bool>[true]);
+      expect(ScreenWakelock.debugHeld, isTrue);
+
+      ScreenWakelock.unhold();
+      expect(calls, <bool>[true, false]);
+      expect(ScreenWakelock.debugForced, 0);
+      // Extra unholds do not go negative.
+      ScreenWakelock.unhold();
+      expect(ScreenWakelock.debugForced, 0);
+    });
+  });
+
+  test('unhold leaves a running generation and its release delay alone', () {
+    fakeAsync((async) {
+      final calls = <bool>[];
+      ScreenWakelock.debugReset(platformApply: calls.add);
+      ScreenWakelock.setEnabled(true);
+      ScreenWakelock.acquire();
+      ScreenWakelock.hold();
+      ScreenWakelock.unhold();
+      expect(calls, <bool>[true]);
+
+      ScreenWakelock.hold();
+      ScreenWakelock.release();
+      ScreenWakelock.unhold();
+      // The generation's 10 s delay still decides.
+      expect(calls, <bool>[true]);
+      async.elapse(const Duration(seconds: 10));
+      expect(calls, <bool>[true, false]);
+    });
+  });
 }

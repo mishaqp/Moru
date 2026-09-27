@@ -6,12 +6,15 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 ///
 /// Reference-counted: [acquire]/[release] track concurrent conversations.
 /// The last release starts a 10s debounce before the platform lock is dropped.
+/// [hold]/[unhold] keep the screen on regardless of the setting, e.g. while a
+/// mini app that asked for it is open.
 /// Calls are fire-and-forget; platform errors are swallowed.
 class ScreenWakelock {
   ScreenWakelock._();
 
   static bool _enabled = false;
   static int _holders = 0;
+  static int _forced = 0;
   static bool _held = false;
   static Timer? _releaseTimer;
   static const Duration _releaseDelay = Duration(seconds: 10);
@@ -47,6 +50,20 @@ class ScreenWakelock {
     }
   }
 
+  /// Keeps the screen on until the matching [unhold], whatever the setting.
+  static void hold() {
+    _forced++;
+    _setPlatformHeld(true);
+  }
+
+  static void unhold() {
+    if (_forced > 0) _forced--;
+    if (_forced == 0 && !(_enabled && _holders > 0)) {
+      // A pending generation release keeps its own timer.
+      if (_releaseTimer == null) _setPlatformHeld(false);
+    }
+  }
+
   static void releaseNow() {
     _holders = 0;
     _applyRelease();
@@ -54,7 +71,7 @@ class ScreenWakelock {
 
   /// Re-apply the platform lock after resume (window flags can be lost).
   static void reassert() {
-    if (!_enabled || _holders <= 0) return;
+    if (_forced == 0 && (!_enabled || _holders <= 0)) return;
     _applyPlatformHeld(true);
   }
 
@@ -67,7 +84,7 @@ class ScreenWakelock {
   static void _applyRelease() {
     _releaseTimer?.cancel();
     _releaseTimer = null;
-    _setPlatformHeld(false);
+    if (_forced == 0) _setPlatformHeld(false);
   }
 
   static void _scheduleRelease() {
@@ -140,6 +157,9 @@ class ScreenWakelock {
   static int get debugHolders => _holders;
 
   @visibleForTesting
+  static int get debugForced => _forced;
+
+  @visibleForTesting
   static bool get debugHeld => _held;
 
   @visibleForTesting
@@ -148,6 +168,7 @@ class ScreenWakelock {
     _releaseTimer = null;
     _enabled = false;
     _holders = 0;
+    _forced = 0;
     _held = false;
     debugPlatformApply = platformApply;
   }

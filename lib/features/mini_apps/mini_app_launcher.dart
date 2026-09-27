@@ -67,13 +67,14 @@ class MiniAppLauncher {
     return (provider: provider, model: model);
   }
 
-  /// What [app] may use besides its storage: the chat model, notifications
-  /// and reminders.
+  /// What [app] may use besides its storage: the chat model, notifications,
+  /// reminders, vibration. [close] leaves the app screen.
   static MiniAppHost hostFor(
     MiniApp app,
     SettingsProvider settings,
-    AssistantProvider assistants,
-  ) => MiniAppHost(
+    AssistantProvider assistants, {
+    Future<void> Function()? close,
+  }) => MiniAppHost(
     ask: (prompt, system) async {
       final target = askModelFor(settings, assistants.currentAssistant);
       if (target == null) {
@@ -107,6 +108,15 @@ class MiniAppLauncher {
     reminders: reminders,
     fetch: fetcher,
     calendar: _calendar,
+    vibrate: (pattern) =>
+        _channel.invokeMethod<void>('vibrate', {'pattern': pattern}),
+    haptic: (kind) => switch (kind) {
+      'medium' => HapticFeedback.mediumImpact(),
+      'heavy' => HapticFeedback.heavyImpact(),
+      'selection' => HapticFeedback.selectionClick(),
+      _ => HapticFeedback.lightImpact(),
+    },
+    close: close,
   );
 
   /// Shared by every open app, so connections are reused.

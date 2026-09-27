@@ -20243,6 +20243,12 @@ abstract class AppLocalizations {
   /// **'Roll back app'**
   String get miniAppsToolActionRollback;
 
+  /// No description provided for @miniAppsBackAgainToExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Back again to exit'**
+  String get miniAppsBackAgainToExit;
+
   /// No description provided for @miniAppsMore.
   ///
   /// In en, this message translates to:

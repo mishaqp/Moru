@@ -11310,6 +11310,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get miniAppsToolActionRollback => 'Roll back app';
 
   @override
+  String get miniAppsBackAgainToExit => 'Back again to exit';
+
+  @override
   String get miniAppsMore => 'More';
 
   @override

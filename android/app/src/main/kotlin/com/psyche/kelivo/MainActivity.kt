@@ -140,6 +140,10 @@ class MainActivity : FlutterActivity() {
                     result.success(id)
                 }
                 "localTimeZone" -> result.success(java.util.TimeZone.getDefault().id)
+                "vibrate" -> {
+                    val pattern = call.argument<List<Number>>("pattern").orEmpty().map { it.toInt() }
+                    result.success(MiniAppVibration.vibrate(this, pattern))
+                }
                 "pinShortcut" -> {
                     val id = call.argument<String>("id")
                     val icon = call.argument<ByteArray>("icon")

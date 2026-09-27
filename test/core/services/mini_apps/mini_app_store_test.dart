@@ -239,7 +239,7 @@ void main() {
     );
     expect(
       await call({'id': 8, 'method': 'app.info'}),
-      'window.__moruReply(8, true, {"id":"water","name":"Water","platform":"android"});',
+      'window.__moruReply(8, true, {"id":"water","name":"Water","platform":"android","fullscreen":false,"orientation":"any"});',
     );
   });
 

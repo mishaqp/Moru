@@ -4104,6 +4104,7 @@
   "miniAppsToolActionErrors": "讀取應用錯誤日誌",
   "miniAppsToolActionVersions": "列出應用版本",
   "miniAppsToolActionRollback": "回滾應用",
+  "miniAppsBackAgainToExit": "再按一次返回退出",
   "miniAppsMore": "更多",
   "miniAppsErrors": "錯誤日誌",
   "miniAppsErrorsEmpty": "沒有記錄到錯誤。",

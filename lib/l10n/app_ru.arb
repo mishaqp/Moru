@@ -4997,6 +4997,7 @@
   "miniAppsToolActionErrors": "Чтение журнала ошибок приложения",
   "miniAppsToolActionVersions": "Версии приложения",
   "miniAppsToolActionRollback": "Откат приложения",
+  "miniAppsBackAgainToExit": "Ещё раз «Назад» — выход",
   "miniAppsMore": "Ещё",
   "miniAppsErrors": "Журнал ошибок",
   "miniAppsErrorsEmpty": "Ошибок нет.",

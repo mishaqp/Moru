@@ -12,6 +12,9 @@ class MiniAppHost {
     this.reminders,
     this.fetch,
     this.calendar,
+    this.vibrate,
+    this.haptic,
+    this.close,
   });
 
   /// Asks the default model; returns its text.
@@ -29,6 +32,15 @@ class MiniAppHost {
     Map<String, dynamic> args,
   )?
   calendar;
+
+  /// Vibrates for the milliseconds in [pattern]: on, off, on, ...
+  final Future<void> Function(List<int> pattern)? vibrate;
+
+  /// A short system haptic, one of [MiniAppBridge.hapticKinds].
+  final Future<void> Function(String kind)? haptic;
+
+  /// Closes the app screen.
+  final Future<void> Function()? close;
 }
 
 /// Answers `window.moru` calls from one mini app page. Each message is
@@ -54,6 +66,17 @@ class MiniAppBridge {
   final void Function(String kind, String problem)? onProblem;
 
   static const int maxProblems = 50;
+
+  static const Set<String> hapticKinds = {
+    'light',
+    'medium',
+    'heavy',
+    'selection',
+  };
+
+  /// Longest vibration pattern: segments and total milliseconds.
+  static const int maxVibrationSegments = 20;
+  static const int maxVibrationMs = 5000;
 
   /// One model request at a time, so a looping page cannot flood the model.
   bool _asking = false;
@@ -135,7 +158,29 @@ class MiniAppBridge {
         return store.storageKeys(appId);
       case 'app.info':
         final app = store.byId(appId);
-        return {'id': appId, 'name': app?.name, 'platform': 'android'};
+        return {
+          'id': appId,
+          'name': app?.name,
+          'platform': 'android',
+          'fullscreen': app?.fullscreen ?? false,
+          'orientation': (app?.orientation ?? MiniAppOrientation.any).name,
+        };
+      case 'app.close':
+        await _need(host.close)();
+        return null;
+      case 'vibrate':
+        await _need(host.vibrate)(_vibrationPattern(args['pattern']));
+        return null;
+      case 'haptic':
+        final kind = args['kind'] ?? 'light';
+        if (!hapticKinds.contains(kind)) {
+          throw MiniAppException(
+            'invalid_argument',
+            'kind must be one of: ${hapticKinds.join(', ')}.',
+          );
+        }
+        await _need(host.haptic)(kind as String);
+        return null;
       case 'ai.ask':
         final ask = _need(host.ask);
         final prompt = text('prompt', max: maxPromptChars);
@@ -198,6 +243,32 @@ class MiniAppBridge {
     'reminders',
     'calendar_id',
   };
+
+  /// `moru.vibrate(200)` or `moru.vibrate([100, 50, 100])`.
+  static List<int> _vibrationPattern(Object? raw) {
+    final values = raw is List ? raw : [raw];
+    final pattern = <int>[];
+    for (final value in values) {
+      if (value is! num || !value.isFinite || value < 0) {
+        throw const MiniAppException(
+          'invalid_argument',
+          'pattern must be milliseconds or a list of them.',
+        );
+      }
+      pattern.add(value.round());
+    }
+    final total = pattern.fold<int>(0, (sum, ms) => sum + ms);
+    if (pattern.isEmpty ||
+        pattern.length > maxVibrationSegments ||
+        total > maxVibrationMs) {
+      throw const MiniAppException(
+        'invalid_argument',
+        'pattern takes 1-$maxVibrationSegments values and at most '
+            '$maxVibrationMs ms in total.',
+      );
+    }
+    return pattern;
+  }
 
   MiniApp _app() {
     final app = store.byId(appId);

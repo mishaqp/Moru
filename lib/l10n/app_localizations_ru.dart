@@ -11437,6 +11437,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get miniAppsToolActionRollback => 'Откат приложения';
 
   @override
+  String get miniAppsBackAgainToExit => 'Ещё раз «Назад» — выход';
+
+  @override
   String get miniAppsMore => 'Ещё';
 
   @override

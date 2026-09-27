@@ -5112,6 +5112,7 @@
   "miniAppsToolActionErrors": "Read app error log",
   "miniAppsToolActionVersions": "List app versions",
   "miniAppsToolActionRollback": "Roll back app",
+  "miniAppsBackAgainToExit": "Back again to exit",
   "miniAppsMore": "More",
   "miniAppsErrors": "Error log",
   "miniAppsErrorsEmpty": "No errors recorded.",

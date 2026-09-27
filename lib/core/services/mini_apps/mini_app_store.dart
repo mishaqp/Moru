@@ -23,6 +23,9 @@ class MiniApp {
     this.dataHelp = '',
     this.network = const [],
     this.permissions = const {},
+    this.fullscreen = false,
+    this.orientation = MiniAppOrientation.any,
+    this.keepAwake = false,
     required this.updatedAt,
   });
 
@@ -41,6 +44,15 @@ class MiniApp {
   /// Device features the app asked for in `permissions`, e.g. `calendar`.
   final Set<String> permissions;
 
+  /// Hides Moru's app bar and the system bars, e.g. for games.
+  final bool fullscreen;
+
+  /// Screen orientation while the app is open.
+  final MiniAppOrientation orientation;
+
+  /// Keeps the screen on while the app is open.
+  final bool keepAwake;
+
   /// Folder of the installed copy (manifest, app/ and data).
   final String directory;
 
@@ -58,25 +70,29 @@ class MiniApp {
   /// Opens the app from a chat reply.
   String get link => MiniAppStore.linkFor(id);
 
-  factory MiniApp.fromJson(String directory, Map<String, dynamic> json) =>
-      MiniApp(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        description: json['description'] as String? ?? '',
-        entry: json['entry'] as String? ?? 'index.html',
-        icon: json['icon'] as String?,
-        dataHelp: json['data'] as String? ?? '',
-        network: [
-          for (final host in json['network'] as List? ?? const []) '$host',
-        ],
-        permissions: {
-          for (final name in json['permissions'] as List? ?? const []) '$name',
-        },
-        directory: directory,
-        updatedAt: DateTime.fromMillisecondsSinceEpoch(
-          json['updatedAt'] as int? ?? 0,
-        ),
-      );
+  factory MiniApp.fromJson(
+    String directory,
+    Map<String, dynamic> json,
+  ) => MiniApp(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    description: json['description'] as String? ?? '',
+    entry: json['entry'] as String? ?? 'index.html',
+    icon: json['icon'] as String?,
+    dataHelp: json['data'] as String? ?? '',
+    network: [for (final host in json['network'] as List? ?? const []) '$host'],
+    permissions: {
+      for (final name in json['permissions'] as List? ?? const []) '$name',
+    },
+    fullscreen: json['fullscreen'] == true,
+    orientation:
+        MiniAppOrientation.parse(json['orientation']) ?? MiniAppOrientation.any,
+    keepAwake: json['keepAwake'] == true,
+    directory: directory,
+    updatedAt: DateTime.fromMillisecondsSinceEpoch(
+      json['updatedAt'] as int? ?? 0,
+    ),
+  );
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -87,8 +103,26 @@ class MiniApp {
     if (dataHelp.isNotEmpty) 'data': dataHelp,
     if (network.isNotEmpty) 'network': network,
     if (permissions.isNotEmpty) 'permissions': permissions.toList()..sort(),
+    if (fullscreen) 'fullscreen': true,
+    if (orientation != MiniAppOrientation.any) 'orientation': orientation.name,
+    if (keepAwake) 'keepAwake': true,
     'updatedAt': updatedAt.millisecondsSinceEpoch,
   };
+}
+
+enum MiniAppOrientation {
+  any,
+  portrait,
+  landscape;
+
+  /// The value of `orientation` in moru-app.json, or null when it is not
+  /// one of these names.
+  static MiniAppOrientation? parse(Object? raw) {
+    for (final value in values) {
+      if (value.name == raw) return value;
+    }
+    return null;
+  }
 }
 
 /// One line of an app's error journal. Repeats of the last message only
@@ -278,6 +312,23 @@ class MiniAppStore extends ChangeNotifier {
     final network = _hosts(manifest['network']);
     final permissions = _permissions(manifest['permissions']);
     final icon = _relative(manifest['icon'], fallback: null);
+    final orientation = manifest['orientation'] == null
+        ? MiniAppOrientation.any
+        : MiniAppOrientation.parse(manifest['orientation']);
+    if (orientation == null) {
+      throw const MiniAppException(
+        'invalid_orientation',
+        '"orientation" must be "any", "portrait" or "landscape".',
+      );
+    }
+    for (final flag in const ['fullscreen', 'keepAwake']) {
+      if (manifest[flag] != null && manifest[flag] is! bool) {
+        throw MiniAppException(
+          'invalid_manifest',
+          '"$flag" must be a boolean.',
+        );
+      }
+    }
 
     final files = await _collect(sourceDir);
     final names = files.map((f) => f.relative).toSet();
@@ -322,6 +373,9 @@ class MiniAppStore extends ChangeNotifier {
       dataHelp: _limited('${manifest['data'] ?? ''}'.trim(), 2000),
       network: network,
       permissions: permissions,
+      fullscreen: manifest['fullscreen'] == true,
+      orientation: orientation,
+      keepAwake: manifest['keepAwake'] == true,
       directory: directory.path,
       updatedAt: _now(),
     );
@@ -997,8 +1051,11 @@ class MiniAppStore extends ChangeNotifier {
       list: function (query) { return call('calendar.list', query); },
       add: function (event) { return call('calendar.add', event); }
     },
+    vibrate: function (pattern) { return call('vibrate', { pattern: pattern }); },
+    haptic: function (kind) { return call('haptic', { kind: kind }); },
     app: {
-      info: function () { return call('app.info'); }
+      info: function () { return call('app.info'); },
+      close: function () { return call('app.close'); }
     }
   };
 })();
