@@ -104,4 +104,65 @@ void main() {
       expect(result['error'], contains('model_failed'));
     },
   );
+
+  test(
+    'mini app jobs go to their own executor and report the outcome',
+    () async {
+      var chatRuns = 0;
+      await service.attach((task, cancellation, onConversation) async {
+        chatRuns++;
+        return {'status': 'completed'};
+      });
+      final jobs = <String>[];
+      service.miniAppJobs = (appId, jobId, function, cancellation) async {
+        jobs.add('$appId/$jobId/$function');
+        if (jobId == 'broken') throw StateError('checkWeather() failed');
+      };
+      Map<String, String> job(String runId, String jobId) => {
+        'runId': runId,
+        'task': jsonEncode({
+          'id': 'miniapp:weather:$jobId',
+          'kind': 'miniAppJob',
+          'appId': 'weather',
+          'jobId': jobId,
+          'run': 'checkWeather',
+        }),
+      };
+      await native('run', job('run-1', 'morning'));
+      await native('run', job('run-2', 'broken'));
+      await pumpEventQueue();
+
+      expect(chatRuns, 0);
+      expect(jobs, [
+        'weather/morning/checkWeather',
+        'weather/broken/checkWeather',
+      ]);
+      final finished = {
+        for (final call in calls.where((c) => c.method == 'finish'))
+          (call.arguments as Map)['runId']: call.arguments as Map,
+      };
+      expect(finished['run-1'], {'runId': 'run-1', 'status': 'completed'});
+      expect(finished['run-2'], {
+        'runId': 'run-2',
+        'status': 'failed',
+        'error': 'checkWeather() failed',
+      });
+    },
+  );
+
+  test('a job without an executor fails instead of hanging', () async {
+    await native('run', {
+      'runId': 'run-1',
+      'task': jsonEncode({
+        'id': 'miniapp:weather:morning',
+        'kind': 'miniAppJob',
+        'appId': 'weather',
+        'jobId': 'morning',
+        'run': 'checkWeather',
+      }),
+    });
+    await pumpEventQueue();
+    final finish = calls.singleWhere((c) => c.method == 'finish');
+    expect(finish.arguments, containsPair('error', 'runner_not_ready'));
+  });
 }

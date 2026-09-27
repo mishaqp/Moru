@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../../core/services/mini_apps/mini_app_jobs.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
@@ -17,9 +18,10 @@ import '../widgets/mini_app_sheets.dart';
 
 /// "My apps": the mini apps the agent published.
 class MiniAppsPage extends StatefulWidget {
-  const MiniAppsPage({super.key, this._store});
+  const MiniAppsPage({super.key, this._store, this._jobs});
 
   final MiniAppStore? _store;
+  final MiniAppJobs? _jobs;
 
   @override
   State<MiniAppsPage> createState() => _MiniAppsPageState();
@@ -27,6 +29,7 @@ class MiniAppsPage extends StatefulWidget {
 
 class _MiniAppsPageState extends State<MiniAppsPage> {
   MiniAppStore get _store => widget._store ?? MiniAppStore.instance;
+  MiniAppJobs get _jobs => widget._jobs ?? MiniAppLauncher.jobs;
 
   @override
   void initState() {
@@ -54,6 +57,11 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
           value: 'versions',
           icon: Lucide.History,
           label: l10n.miniAppsVersions,
+        ),
+        OptionSheetItem(
+          value: 'jobs',
+          icon: Lucide.CalendarClock,
+          label: l10n.miniAppsJobs,
         ),
         OptionSheetItem(
           value: 'errors',
@@ -86,6 +94,8 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
         );
       case 'versions':
         await showMiniAppVersions(context, store: _store, app: app);
+      case 'jobs':
+        await showMiniAppJobs(context, jobs: _jobs, app: app);
       case 'errors':
         await showMiniAppErrors(context, store: _store, app: app);
       case 'share':

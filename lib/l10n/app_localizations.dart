@@ -20249,6 +20249,78 @@ abstract class AppLocalizations {
   /// **'Back again to exit'**
   String get miniAppsBackAgainToExit;
 
+  /// No description provided for @miniAppsJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Background jobs'**
+  String get miniAppsJobs;
+
+  /// No description provided for @miniAppsJobsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No background jobs. Ask the agent, e.g. “every morning at 8 check the weather and notify me”.'**
+  String get miniAppsJobsEmpty;
+
+  /// No description provided for @miniAppsJobsFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'At the set time Moru opens the app out of sight and runs the job for up to 30 seconds, even when Moru is closed. Errors go to the error log.'**
+  String get miniAppsJobsFooter;
+
+  /// No description provided for @miniAppsJobRunNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Run now'**
+  String get miniAppsJobRunNow;
+
+  /// No description provided for @miniAppsJobStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Job started'**
+  String get miniAppsJobStarted;
+
+  /// No description provided for @miniAppsJobEveryDay.
+  ///
+  /// In en, this message translates to:
+  /// **'every day'**
+  String get miniAppsJobEveryDay;
+
+  /// No description provided for @miniAppsJobRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running…'**
+  String get miniAppsJobRunning;
+
+  /// No description provided for @miniAppsToolActionJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'List app background jobs'**
+  String get miniAppsToolActionJobs;
+
+  /// No description provided for @miniAppsToolActionRunJob.
+  ///
+  /// In en, this message translates to:
+  /// **'Run app background job'**
+  String get miniAppsToolActionRunJob;
+
+  /// No description provided for @miniAppsJobNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {time}'**
+  String miniAppsJobNext(String time);
+
+  /// No description provided for @miniAppsJobLastDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Last run {time}: done'**
+  String miniAppsJobLastDone(String time);
+
+  /// No description provided for @miniAppsJobLastFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Last run {time}: failed'**
+  String miniAppsJobLastFailed(String time);
+
   /// No description provided for @miniAppsMore.
   ///
   /// In en, this message translates to:

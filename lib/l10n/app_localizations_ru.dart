@@ -11440,6 +11440,50 @@ class AppLocalizationsRu extends AppLocalizations {
   String get miniAppsBackAgainToExit => 'Ещё раз «Назад» — выход';
 
   @override
+  String get miniAppsJobs => 'Фоновые задачи';
+
+  @override
+  String get miniAppsJobsEmpty =>
+      'Фоновых задач нет. Попросите агента, например: «каждое утро в 8 проверяй погоду и присылай уведомление».';
+
+  @override
+  String get miniAppsJobsFooter =>
+      'В назначенное время Moru невидимо открывает приложение и выполняет задачу до 30 секунд, даже если Moru закрыт. Ошибки попадают в журнал.';
+
+  @override
+  String get miniAppsJobRunNow => 'Запустить сейчас';
+
+  @override
+  String get miniAppsJobStarted => 'Задача запущена';
+
+  @override
+  String get miniAppsJobEveryDay => 'каждый день';
+
+  @override
+  String get miniAppsJobRunning => 'Выполняется…';
+
+  @override
+  String get miniAppsToolActionJobs => 'Фоновые задачи приложения';
+
+  @override
+  String get miniAppsToolActionRunJob => 'Запуск фоновой задачи приложения';
+
+  @override
+  String miniAppsJobNext(String time) {
+    return 'Следующий запуск: $time';
+  }
+
+  @override
+  String miniAppsJobLastDone(String time) {
+    return 'Последний запуск $time: выполнено';
+  }
+
+  @override
+  String miniAppsJobLastFailed(String time) {
+    return 'Последний запуск $time: ошибка';
+  }
+
+  @override
   String get miniAppsMore => 'Ещё';
 
   @override

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/services/mini_apps/mini_app_jobs.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
@@ -180,4 +181,155 @@ Future<MiniApp?> showMiniAppVersions(
     );
   }
   return restored;
+}
+
+/// The app's background jobs: when each runs, how the last run went, and
+/// run now or delete.
+Future<void> showMiniAppJobs(
+  BuildContext context, {
+  required MiniAppJobs jobs,
+  required MiniApp app,
+}) => showFormSheet<void>(
+  context,
+  builder: (_) => _JobsSheet(jobs: jobs, app: app),
+);
+
+class _JobsSheet extends StatefulWidget {
+  const _JobsSheet({required this.jobs, required this.app});
+
+  final MiniAppJobs jobs;
+  final MiniApp app;
+
+  @override
+  State<_JobsSheet> createState() => _JobsSheetState();
+}
+
+class _JobsSheetState extends State<_JobsSheet> {
+  List<MiniAppJob>? _jobs;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    final jobs = await widget.jobs.list(widget.app.id);
+    if (mounted) setState(() => _jobs = jobs);
+  }
+
+  String _schedule(MiniAppJob job) {
+    final l10n = AppLocalizations.of(context)!;
+    final days = job.days;
+    if (days == null) return '${job.time} · ${l10n.miniAppsJobEveryDay}';
+    final format = DateFormat.E(
+      Localizations.localeOf(context).toLanguageTag(),
+    );
+    // 2024-01-01 was a Monday.
+    final names = [
+      for (final day in days) format.format(DateTime(2024, 1, day)),
+    ];
+    return '${job.time} · ${names.join(', ')}';
+  }
+
+  String _status(MiniAppJob job) {
+    final l10n = AppLocalizations.of(context)!;
+    final lines = <String>[
+      if (job.nextRunAt case final next?)
+        l10n.miniAppsJobNext(_when(context, next)),
+    ];
+    if (job.runs.firstOrNull case final last?) {
+      final at = _when(context, last.startedAt);
+      lines.add(switch (last.status) {
+        'running' => l10n.miniAppsJobRunning,
+        'completed' => l10n.miniAppsJobLastDone(at),
+        _ => [
+          l10n.miniAppsJobLastFailed(at),
+          if (last.error case final error?) error,
+        ].join(' — '),
+      });
+    }
+    return lines.join('\n');
+  }
+
+  Future<void> _actions(MiniAppJob job) async {
+    final l10n = AppLocalizations.of(context)!;
+    final action = await showOptionSheet<String>(
+      context,
+      title: job.id,
+      items: [
+        OptionSheetItem(
+          value: 'run',
+          icon: Lucide.Play,
+          label: l10n.miniAppsJobRunNow,
+        ),
+        OptionSheetItem(
+          value: 'delete',
+          icon: Lucide.Trash2,
+          label: l10n.miniAppsDelete,
+        ),
+      ],
+    );
+    if (!mounted || action == null) return;
+    try {
+      if (action == 'run') {
+        await widget.jobs.runNow(widget.app.id, job.id);
+        if (mounted) {
+          showAppSnackBar(context, message: l10n.miniAppsJobStarted);
+        }
+      } else {
+        await widget.jobs.remove(widget.app.id, job.id);
+      }
+    } on MiniAppException catch (e) {
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          message: e.message,
+          type: NotificationType.warning,
+        );
+      }
+    }
+    await _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final jobs = _jobs;
+    return FormSheet(
+      title: l10n.miniAppsJobs,
+      children: [
+        if (jobs == null)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: CircularProgressIndicator(),
+          )
+        else if (jobs.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+            child: Text(l10n.miniAppsJobsEmpty, textAlign: TextAlign.center),
+          )
+        else
+          SectionCard(
+            children: [
+              for (final job in jobs) ...[
+                if (job != jobs.first) const IosRowDivider(indent: 54),
+                IosNavRow(
+                  key: ValueKey('mini-app-job-${job.id}'),
+                  icon: Lucide.CalendarClock,
+                  label: '${job.id} · ${job.run}()',
+                  subtitle: [
+                    _schedule(job),
+                    _status(job),
+                  ].where((line) => line.isNotEmpty).join('\n'),
+                  onTap: () => unawaited(_actions(job)),
+                ),
+              ],
+            ],
+          ),
+        const SizedBox(height: 8),
+        IosSectionFooter(text: l10n.miniAppsJobsFooter),
+      ],
+    );
+  }
 }

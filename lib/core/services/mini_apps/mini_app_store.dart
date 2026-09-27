@@ -611,23 +611,37 @@ class MiniAppStore extends ChangeNotifier {
   }
 
   // ---------------------------------------------------------------------------
-  // Reminders (scheduled by MiniAppNotifications)
+  // Reminders and background jobs, kept with the app
   // ---------------------------------------------------------------------------
 
-  Future<Map<String, dynamic>> readReminders(String id) async {
-    final file = File(p.join(_require(id).directory, 'reminders.json'));
+  Future<Map<String, dynamic>> readReminders(String id) =>
+      _readMap(id, 'reminders.json');
+
+  Future<void> writeReminders(String id, Map<String, dynamic> reminders) =>
+      _writeMap(id, 'reminders.json', reminders);
+
+  /// Background jobs set with `moru.jobs` (scheduled by MiniAppJobs).
+  Future<Map<String, dynamic>> readJobs(String id) => _readMap(id, 'jobs.json');
+
+  Future<void> writeJobs(String id, Map<String, dynamic> jobs) =>
+      _writeMap(id, 'jobs.json', jobs);
+
+  Future<Map<String, dynamic>> _readMap(String id, String name) async {
+    final file = File(p.join(_require(id).directory, name));
     if (!await file.exists()) return <String, dynamic>{};
     return Map<String, dynamic>.from(
       jsonDecode(await file.readAsString()) as Map,
     );
   }
 
-  Future<void> writeReminders(String id, Map<String, dynamic> reminders) async {
-    final file = File(p.join(_require(id).directory, 'reminders.json'));
-    final temp = File('${file.path}.tmp');
-    await temp.writeAsString(jsonEncode(reminders), flush: true);
-    await temp.rename(file.path);
-  }
+  Future<void> _writeMap(
+    String id,
+    String name,
+    Map<String, dynamic> map,
+  ) async => _writeAtomically(
+    File(p.join(_require(id).directory, name)),
+    jsonEncode(map),
+  );
 
   // ---------------------------------------------------------------------------
   // Error journal
@@ -1036,6 +1050,11 @@ class MiniAppStore extends ChangeNotifier {
       set: function (id, reminder) { return call('reminders.set', { id: id, reminder: reminder }); },
       remove: function (id) { return call('reminders.remove', { id: id }); },
       list: function () { return call('reminders.list'); }
+    },
+    jobs: {
+      set: function (id, job) { return call('jobs.set', { id: id, job: job }); },
+      remove: function (id) { return call('jobs.remove', { id: id }); },
+      list: function () { return call('jobs.list'); }
     },
     fetch: function (url, options) {
       options = options || {};

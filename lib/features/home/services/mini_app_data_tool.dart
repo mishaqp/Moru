@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../core/services/mini_apps/mini_app_jobs.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
 
 class _ToolFailure implements Exception {
@@ -12,7 +13,7 @@ class _ToolFailure implements Exception {
 /// The `mini_apps` local tool: the chat reads and changes the data of the
 /// user's mini apps, e.g. "I drank a glass of water", without opening them.
 class MiniAppDataTool {
-  const MiniAppDataTool({required this.store});
+  const MiniAppDataTool({required this.store, this.jobs});
 
   static const String toolName = 'mini_apps';
 
@@ -23,6 +24,8 @@ class MiniAppDataTool {
   static const String actionErrors = 'errors';
   static const String actionVersions = 'versions';
   static const String actionRollback = 'rollback';
+  static const String actionJobs = 'jobs';
+  static const String actionRunJob = 'run_job';
 
   static const List<String> actions = [
     actionList,
@@ -32,12 +35,17 @@ class MiniAppDataTool {
     actionErrors,
     actionVersions,
     actionRollback,
+    actionJobs,
+    actionRunJob,
   ];
 
   /// Larger reads return only the keys, so one app cannot flood the context.
   static const int maxReadChars = 20000;
 
   final MiniAppStore store;
+
+  /// Background jobs; `jobs` and `run_job` are unavailable without them.
+  final MiniAppJobs? jobs;
 
   static String actionOf(Map<String, dynamic> args) =>
       (args['action'] ?? '').toString().trim().toLowerCase();
@@ -57,7 +65,9 @@ class MiniAppDataTool {
           'moru.* calls the current version hit while the user used it '
           '(republishing clears it). "versions" lists the earlier code Moru '
           'kept (the last 5); "rollback" puts one back without touching the '
-          'data.',
+          'data. "jobs" lists the app\'s background jobs (moru.jobs) with '
+          'their next and last runs; "run_job" starts one now to test it, '
+          'then read "jobs" and "errors" about 30 s later.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -70,7 +80,8 @@ class MiniAppDataTool {
                 'remove: delete key of app_id. errors: error journal of '
                 'app_id, oldest first; clear: true empties it after reading. '
                 'versions: earlier versions of app_id. rollback: restore '
-                'version of app_id.',
+                'version of app_id. jobs: background jobs of app_id. '
+                'run_job: run job of app_id now.',
           },
           'app_id': {'type': 'string', 'description': 'App id from "list".'},
           'key': {'type': 'string', 'description': 'Storage key.'},
@@ -82,6 +93,10 @@ class MiniAppDataTool {
           'version': {
             'type': 'string',
             'description': 'rollback: a version from "versions".',
+          },
+          'job': {
+            'type': 'string',
+            'description': 'run_job: a job id from "jobs".',
           },
         },
         'required': ['action'],
@@ -154,6 +169,27 @@ class MiniAppDataTool {
             'restored': version,
             'published': restored.updatedAt.toIso8601String(),
           };
+        case actionJobs:
+          final app = _app(args);
+          result = {
+            'jobs': [
+              for (final job in await _jobs().list(app.id))
+                {
+                  ...job.toJson()..remove('lastRun'),
+                  'runs': [for (final run in job.runs) run.toJson()],
+                },
+            ],
+          };
+        case actionRunJob:
+          final app = _app(args);
+          final job = '${args['job'] ?? ''}'.trim();
+          await _jobs().runNow(app.id, job);
+          result = {
+            'started': job,
+            'note':
+                'The job runs in the background for up to 30 s. Read "jobs" '
+                'for its result and "errors" for what went wrong.',
+          };
         default:
           throw _ToolFailure(
             'invalid_action',
@@ -193,6 +229,17 @@ class MiniAppDataTool {
       };
     }
     return {'data': all};
+  }
+
+  MiniAppJobs _jobs() {
+    final jobs = this.jobs;
+    if (jobs == null) {
+      throw const _ToolFailure(
+        'unavailable',
+        'Background jobs are not available here.',
+      );
+    }
+    return jobs;
   }
 
   MiniApp _app(Map<String, dynamic> args) {

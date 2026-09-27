@@ -68,6 +68,13 @@ package name does not require building other platforms.
   `ComposerStatusStrip` shows the open plan (`TaskPlanChip`) and the running
   command (`RunningToolChip`) side by side above the composer.
 
+- **Mini apps**: published web apps (`MiniAppStore`, bridge `moru.*` in
+  `MiniAppBridge`). They keep an error journal, the last 5 versions, and
+  manifest game settings (`MiniAppDisplay`). Background jobs (`moru.jobs`,
+  `MiniAppJobs`) are stored with the app and run through the native
+  `ScheduledTasks` planner as kind `miniAppJob`. `MiniAppJobRunner` runs them
+  in a hidden WebView.
+
 ## Pre-commit checklist
 
 ```bash

@@ -549,6 +549,8 @@ String? _localToolTitleFor(
       MiniAppDataTool.actionErrors => l10n.miniAppsToolActionErrors,
       MiniAppDataTool.actionVersions => l10n.miniAppsToolActionVersions,
       MiniAppDataTool.actionRollback => l10n.miniAppsToolActionRollback,
+      MiniAppDataTool.actionJobs => l10n.miniAppsToolActionJobs,
+      MiniAppDataTool.actionRunJob => l10n.miniAppsToolActionRunJob,
       _ => l10n.miniAppsToolTitle,
     },
     _ => null,

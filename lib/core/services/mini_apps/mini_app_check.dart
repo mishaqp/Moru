@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 
 import 'mini_app_bridge.dart';
 import 'mini_app_fetch.dart';
+import 'mini_app_jobs.dart';
 import 'mini_app_reminders.dart';
 import 'mini_app_store.dart';
 
@@ -119,6 +120,7 @@ class MiniAppSandbox {
           vibrate: (pattern) async {},
           haptic: (kind) async {},
           close: () async {},
+          jobs: MiniAppJobs(store: store, scheduler: MiniAppJobScheduler.none),
         ),
       );
       return MiniAppSandbox._(root, store, bridge);

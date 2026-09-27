@@ -5113,6 +5113,33 @@
   "miniAppsToolActionVersions": "List app versions",
   "miniAppsToolActionRollback": "Roll back app",
   "miniAppsBackAgainToExit": "Back again to exit",
+  "miniAppsJobs": "Background jobs",
+  "miniAppsJobsEmpty": "No background jobs. Ask the agent, e.g. “every morning at 8 check the weather and notify me”.",
+  "miniAppsJobsFooter": "At the set time Moru opens the app out of sight and runs the job for up to 30 seconds, even when Moru is closed. Errors go to the error log.",
+  "miniAppsJobRunNow": "Run now",
+  "miniAppsJobStarted": "Job started",
+  "miniAppsJobEveryDay": "every day",
+  "miniAppsJobRunning": "Running…",
+  "miniAppsToolActionJobs": "List app background jobs",
+  "miniAppsToolActionRunJob": "Run app background job",
+  "@miniAppsJobNext": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "miniAppsJobNext": "Next: {time}",
+  "@miniAppsJobLastDone": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "miniAppsJobLastDone": "Last run {time}: done",
+  "@miniAppsJobLastFailed": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "miniAppsJobLastFailed": "Last run {time}: failed",
   "miniAppsMore": "More",
   "miniAppsErrors": "Error log",
   "miniAppsErrorsEmpty": "No errors recorded.",

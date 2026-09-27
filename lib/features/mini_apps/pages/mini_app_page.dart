@@ -161,6 +161,11 @@ class _MiniAppPageState extends State<MiniAppPage> {
           label: l10n.miniAppsVersions,
         ),
         OptionSheetItem(
+          value: 'jobs',
+          icon: Lucide.CalendarClock,
+          label: l10n.miniAppsJobs,
+        ),
+        OptionSheetItem(
           value: 'errors',
           icon: Lucide.Bug,
           label: l10n.miniAppsErrors,
@@ -190,6 +195,8 @@ class _MiniAppPageState extends State<MiniAppPage> {
           _loading = true;
         });
         await _controller.loadFile(restored.entryPath);
+      case 'jobs':
+        await showMiniAppJobs(context, jobs: MiniAppLauncher.jobs, app: _app);
       case 'errors':
         await _showErrors();
       case 'pin':

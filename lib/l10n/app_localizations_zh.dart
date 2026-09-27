@@ -10816,6 +10816,49 @@ class AppLocalizationsZh extends AppLocalizations {
   String get miniAppsBackAgainToExit => '再按一次返回退出';
 
   @override
+  String get miniAppsJobs => '后台任务';
+
+  @override
+  String get miniAppsJobsEmpty => '没有后台任务。可以让代理这样做，例如：“每天早上 8 点查看天气并通知我”。';
+
+  @override
+  String get miniAppsJobsFooter =>
+      '到设定时间，Moru 会在后台打开应用并运行任务最多 30 秒，即使 Moru 已关闭。错误会写入错误日志。';
+
+  @override
+  String get miniAppsJobRunNow => '立即运行';
+
+  @override
+  String get miniAppsJobStarted => '任务已开始';
+
+  @override
+  String get miniAppsJobEveryDay => '每天';
+
+  @override
+  String get miniAppsJobRunning => '运行中…';
+
+  @override
+  String get miniAppsToolActionJobs => '列出应用后台任务';
+
+  @override
+  String get miniAppsToolActionRunJob => '运行应用后台任务';
+
+  @override
+  String miniAppsJobNext(String time) {
+    return '下次：$time';
+  }
+
+  @override
+  String miniAppsJobLastDone(String time) {
+    return '上次运行 $time：完成';
+  }
+
+  @override
+  String miniAppsJobLastFailed(String time) {
+    return '上次运行 $time：失败';
+  }
+
+  @override
   String get miniAppsMore => '更多';
 
   @override
@@ -21669,6 +21712,49 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get miniAppsBackAgainToExit => '再按一次返回退出';
+
+  @override
+  String get miniAppsJobs => '后台任务';
+
+  @override
+  String get miniAppsJobsEmpty => '没有后台任务。可以让代理这样做，例如：“每天早上 8 点查看天气并通知我”。';
+
+  @override
+  String get miniAppsJobsFooter =>
+      '到设定时间，Moru 会在后台打开应用并运行任务最多 30 秒，即使 Moru 已关闭。错误会写入错误日志。';
+
+  @override
+  String get miniAppsJobRunNow => '立即运行';
+
+  @override
+  String get miniAppsJobStarted => '任务已开始';
+
+  @override
+  String get miniAppsJobEveryDay => '每天';
+
+  @override
+  String get miniAppsJobRunning => '运行中…';
+
+  @override
+  String get miniAppsToolActionJobs => '列出应用后台任务';
+
+  @override
+  String get miniAppsToolActionRunJob => '运行应用后台任务';
+
+  @override
+  String miniAppsJobNext(String time) {
+    return '下次：$time';
+  }
+
+  @override
+  String miniAppsJobLastDone(String time) {
+    return '上次运行 $time：完成';
+  }
+
+  @override
+  String miniAppsJobLastFailed(String time) {
+    return '上次运行 $time：失败';
+  }
 
   @override
   String get miniAppsMore => '更多';
@@ -32598,6 +32684,49 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get miniAppsBackAgainToExit => '再按一次返回退出';
+
+  @override
+  String get miniAppsJobs => '後台任務';
+
+  @override
+  String get miniAppsJobsEmpty => '沒有後台任務。可以讓代理這樣做，例如：「每天早上 8 點查看天氣並通知我」。';
+
+  @override
+  String get miniAppsJobsFooter =>
+      '到設定時間，Moru 會在後台開啟應用並執行任務最多 30 秒，即使 Moru 已關閉。錯誤會寫入錯誤日誌。';
+
+  @override
+  String get miniAppsJobRunNow => '立即執行';
+
+  @override
+  String get miniAppsJobStarted => '任務已開始';
+
+  @override
+  String get miniAppsJobEveryDay => '每天';
+
+  @override
+  String get miniAppsJobRunning => '執行中…';
+
+  @override
+  String get miniAppsToolActionJobs => '列出應用後台任務';
+
+  @override
+  String get miniAppsToolActionRunJob => '執行應用後台任務';
+
+  @override
+  String miniAppsJobNext(String time) {
+    return '下次：$time';
+  }
+
+  @override
+  String miniAppsJobLastDone(String time) {
+    return '上次執行 $time：完成';
+  }
+
+  @override
+  String miniAppsJobLastFailed(String time) {
+    return '上次執行 $time：失敗';
+  }
 
   @override
   String get miniAppsMore => '更多';

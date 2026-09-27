@@ -1,5 +1,6 @@
 import '../../../core/services/scheduled_tasks_service.dart';
 import '../../scheduled_tasks/scheduled_task_runner.dart';
+import '../../mini_apps/mini_app_launcher.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart' show listEquals, defaultTargetPlatform;
 import 'package:flutter/material.dart';
@@ -906,6 +907,15 @@ class HomePageController extends ChangeNotifier {
             task,
             cancellation,
             onConversation,
+          );
+      ScheduledTasksService.instance.miniAppJobs = _jobExecutor =
+          (appId, jobId, function, cancellation) => MiniAppLauncher.runJob(
+            appId,
+            jobId,
+            function,
+            cancellation,
+            settings: _context.read<SettingsProvider>(),
+            assistants: _context.read<AssistantProvider>(),
           );
       await ScheduledTasksService.instance.attach(executor);
     } finally {
@@ -3004,11 +3014,16 @@ class HomePageController extends ChangeNotifier {
   // ============================================================================
 
   ScheduledTaskExecutor? _scheduledExecutor;
+  MiniAppJobExecutor? _jobExecutor;
 
   @override
   void dispose() {
     if (_scheduledExecutor case final executor?) {
       ScheduledTasksService.instance.detach(executor);
+    }
+    final scheduled = ScheduledTasksService.instance;
+    if (identical(scheduled.miniAppJobs, _jobExecutor)) {
+      scheduled.miniAppJobs = null;
     }
     final background = MobileBackgroundCoordinator.instance;
     if (background.visibleConversation == _visibleBackgroundConversation) {

@@ -30,6 +30,7 @@ import '../../../core/services/workspace/workspace_tools_service.dart';
 import '../../../core/providers/workspace_provider.dart';
 import '../../../core/services/browser/browser_agent_session.dart';
 import '../../mini_apps/mini_app_checker.dart';
+import '../../mini_apps/mini_app_launcher.dart';
 import 'ask_user_interaction_service.dart';
 import 'assistant_manager_tool.dart';
 import 'built_in_tool_names.dart';
@@ -640,7 +641,10 @@ class ToolHandlerService {
         if (name == LocalToolNames.miniApps &&
             assistant != null &&
             LocalToolsService.isEnabledForAssistant(name, assistant)) {
-          return MiniAppDataTool(store: MiniAppStore.instance).execute(args);
+          return MiniAppDataTool(
+            store: MiniAppStore.instance,
+            jobs: MiniAppLauncher.jobs,
+          ).execute(args);
         }
 
         // Local tools

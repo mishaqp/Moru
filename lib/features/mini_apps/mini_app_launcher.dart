@@ -18,15 +18,18 @@ import '../../core/providers/settings_provider.dart';
 import '../../core/services/api/chat_api_service.dart';
 import '../../core/services/mini_apps/mini_app_bridge.dart';
 import '../../core/services/mini_apps/mini_app_fetch.dart';
+import '../../core/services/mini_apps/mini_app_jobs.dart';
 import '../../core/services/mini_apps/mini_app_reminders.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/scheduled_tasks_service.dart';
 import '../home/services/local_tools_service.dart';
 import '../../icons/lucide_adapter.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/ios_settings_rows.dart';
 import '../../shared/widgets/option_sheet.dart';
 import '../../shared/widgets/snackbar.dart';
+import 'mini_app_job_runner.dart';
 import 'pages/mini_app_page.dart';
 
 /// Opens mini apps from links, lists and home screen shortcuts.
@@ -54,6 +57,48 @@ class MiniAppLauncher {
     return reminders;
   }();
 
+  static MiniAppJobs? _jobs;
+
+  /// Background jobs of the installed apps; deleting an app unschedules its
+  /// own.
+  static MiniAppJobs get jobs => _jobs ??= () {
+    final jobs = MiniAppJobs(
+      store: MiniAppStore.instance,
+      scheduler: MiniAppJobScheduler.platform,
+    );
+    MiniAppStore.instance.addDeleteHook(jobs.cancelAll);
+    return jobs;
+  }();
+
+  /// Runs job [jobId] of app [appId] out of sight: the planner's executor
+  /// for mini app jobs.
+  static Future<void> runJob(
+    String appId,
+    String jobId,
+    String function,
+    ScheduledRunCancellation cancellation, {
+    required SettingsProvider settings,
+    required AssistantProvider assistants,
+  }) async {
+    final store = MiniAppStore.instance;
+    await store.load();
+    final app = store.byId(appId);
+    if (app == null) {
+      // The app is gone; its job must not fire again.
+      await jobs.scheduler.delete(MiniAppJobs.scheduledId(appId, jobId));
+      throw StateError('app_missing');
+    }
+    await Future.wait([settings.loaded, assistants.loaded]);
+    await MiniAppJobRunner.run(
+      store: store,
+      app: app,
+      jobId: jobId,
+      function: function,
+      host: hostFor(app, settings, assistants, background: true),
+      cancellation: cancellation,
+    );
+  }
+
   /// The model `moru.ai.ask` uses: the current assistant's chat model, else
   /// the default model, the same order the chat uses.
   static ({String provider, String model})? askModelFor(
@@ -68,12 +113,14 @@ class MiniAppLauncher {
   }
 
   /// What [app] may use besides its storage: the chat model, notifications,
-  /// reminders, vibration. [close] leaves the app screen.
+  /// reminders, jobs, vibration. [close] leaves the app screen; [background]
+  /// marks a run without one.
   static MiniAppHost hostFor(
     MiniApp app,
     SettingsProvider settings,
     AssistantProvider assistants, {
     Future<void> Function()? close,
+    bool background = false,
   }) => MiniAppHost(
     ask: (prompt, system) async {
       final target = askModelFor(settings, assistants.currentAssistant);
@@ -117,6 +164,8 @@ class MiniAppLauncher {
       _ => HapticFeedback.lightImpact(),
     },
     close: close,
+    jobs: jobs,
+    background: background,
   );
 
   /// Shared by every open app, so connections are reused.
@@ -145,6 +194,7 @@ class MiniAppLauncher {
     if (_initialized) return;
     _initialized = true;
     unawaited(reminders.rescheduleAll().catchError((_) {}));
+    unawaited(jobs.rescheduleAll().catchError((_) {}));
     _channel.setMethodCallHandler((call) async {
       if (call.method != 'onOpenApp') return;
       final id = '${call.arguments ?? ''}'.trim();

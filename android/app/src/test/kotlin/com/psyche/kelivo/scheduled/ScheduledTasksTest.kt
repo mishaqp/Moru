@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.content.Context
 import com.psyche.kelivo.KelivoApplication
 import io.flutter.plugin.common.BinaryMessenger
+import io.flutter.plugin.common.FlutterException
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.StandardMethodCodec
 import org.json.JSONArray
@@ -32,7 +33,10 @@ class ScheduledTasksTest {
             var result: Any? = null
             handler!!.onMessage(data) { reply ->
                 reply?.flip()
-                result = reply?.let { StandardMethodCodec.INSTANCE.decodeEnvelope(it) }
+                // An error reply comes back as the FlutterException itself.
+                result = reply?.let {
+                    try { StandardMethodCodec.INSTANCE.decodeEnvelope(it) } catch (error: FlutterException) { error }
+                }
             }
             return result
         }
@@ -125,5 +129,61 @@ class ScheduledTasksTest {
         assertEquals("chat", stored().getString("conversationId"))
         assertEquals("question", stored().getString("messageId"))
         assertEquals("model", stored().getString("modelId"))
+    }
+
+    private fun job(appId: String = "weather", jobId: String = "morning", run: String = "checkWeather") = mapOf(
+        "id" to "${ScheduledTasks.JOB_PREFIX}$appId:$jobId", "kind" to "miniAppJob",
+        "appId" to appId, "jobId" to jobId, "run" to run,
+        "hour" to 8, "minute" to 0, "weekdays" to (1..7).toList(),
+    )
+    private fun storedJob(id: String = "miniapp:weather:morning") = JSONObject(prefs.getString("job:$id", "")!!)
+
+    @Test fun miniAppJobsAreScheduledApartFromChatTasks() {
+        val m = setup()
+        m.call("save", task())
+        m.call("saveJob", job())
+        m.call("saveJob", job(appId = "water", jobId = "noon"))
+        val alarms = shadowOf(app.getSystemService(AlarmManager::class.java))
+        assertEquals(3, alarms.scheduledAlarms.size)
+        assertTrue(storedJob().getBoolean("enabled"))
+        assertTrue(storedJob().getLong("nextRunAt") > System.currentTimeMillis())
+        // The chat's task list does not show jobs.
+        val snapshot = m.call("list") as Map<*, *>
+        assertEquals(1, (snapshot["tasks"] as List<*>).size)
+        val listed = m.call("listJobs", mapOf("appId" to "weather")) as List<*>
+        assertEquals(listOf("miniapp:weather:morning"), listed.map { JSONObject(it as String).getString("id") })
+        m.call("deleteJob", mapOf("id" to "miniapp:weather:morning"))
+        assertFalse(prefs.contains("job:miniapp:weather:morning"))
+        assertEquals(2, alarms.scheduledAlarms.size)
+    }
+    @Test fun invalidJobsAreRefused() {
+        val m = setup()
+        for (bad in listOf(
+            job(run = "alert('x')"),
+            job(run = ""),
+            job() + mapOf("id" to "miniapp:other:morning"),
+            job() + mapOf("kind" to "chat"),
+            job() + mapOf("hour" to 25),
+        )) {
+            val error = m.call("saveJob", bad) as FlutterException
+            assertEquals("scheduled_task", error.code)
+        }
+        assertTrue(prefs.all.keys.none { it.startsWith("job:") })
+    }
+    @Test fun aJobRunIsRecordedAndKeepsItsDefinitionAndFiveRuns() {
+        val m = setup()
+        m.call("saveJob", job())
+        repeat(7) {
+            m.call("runNow", mapOf("id" to "miniapp:weather:morning"))
+            val run = storedJob().getJSONArray("runs").getJSONObject(0)
+            m.call("finish", mapOf("runId" to run.getString("id"), "status" to "completed"))
+        }
+        assertEquals(5, storedJob().getJSONArray("runs").length())
+        assertEquals("completed", storedJob().getJSONArray("runs").getJSONObject(0).getString("status"))
+        assertFalse(app.backgroundRuntime.shouldRunService())
+        // Saving again keeps the history.
+        m.call("saveJob", job(run = "other"))
+        assertEquals(5, storedJob().getJSONArray("runs").length())
+        assertEquals("other", storedJob().getString("run"))
     }
 }

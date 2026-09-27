@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'mini_app_fetch.dart';
+import 'mini_app_jobs.dart';
 import 'mini_app_reminders.dart';
 import 'mini_app_store.dart';
 
@@ -15,6 +16,8 @@ class MiniAppHost {
     this.vibrate,
     this.haptic,
     this.close,
+    this.jobs,
+    this.background = false,
   });
 
   /// Asks the default model; returns its text.
@@ -41,6 +44,10 @@ class MiniAppHost {
 
   /// Closes the app screen.
   final Future<void> Function()? close;
+  final MiniAppJobs? jobs;
+
+  /// The app runs out of sight for a background job.
+  final bool background;
 }
 
 /// Answers `window.moru` calls from one mini app page. Each message is
@@ -164,6 +171,7 @@ class MiniAppBridge {
           'platform': 'android',
           'fullscreen': app?.fullscreen ?? false,
           'orientation': (app?.orientation ?? MiniAppOrientation.any).name,
+          'background': host.background,
         };
       case 'app.close':
         await _need(host.close)();
@@ -213,6 +221,16 @@ class MiniAppBridge {
         return null;
       case 'reminders.list':
         return _need(host.reminders).list(appId);
+      case 'jobs.set':
+        await _need(host.jobs).set(appId, text('id', max: 40), args['job']);
+        return null;
+      case 'jobs.remove':
+        await _need(host.jobs).remove(appId, text('id', max: 40));
+        return null;
+      case 'jobs.list':
+        return [
+          for (final job in await _need(host.jobs).list(appId)) job.toJson(),
+        ];
       case 'fetch':
         return _need(host.fetch).fetch(_app(), args);
       case 'calendar.list':

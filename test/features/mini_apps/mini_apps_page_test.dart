@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
+import 'package:Kelivo/core/services/mini_apps/mini_app_jobs.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
 import 'package:Kelivo/features/mini_apps/pages/mini_apps_page.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
@@ -17,6 +18,8 @@ void main() {
   late Directory temp;
   late MiniAppStore store;
   late DateTime clock;
+  late MiniAppJobs jobs;
+  late List<String> ran;
 
   setUp(() async {
     temp = await Directory.systemTemp.createTemp('mini-apps-page-');
@@ -25,6 +28,28 @@ void main() {
       root: () async => Directory(p.join(temp.path, 'installed')),
       // Each publish a minute later, so versions have distinct times.
       now: () => clock = clock.add(const Duration(minutes: 1)),
+    );
+    ran = [];
+    final scheduled = <String, Map<String, Object?>>{};
+    jobs = MiniAppJobs(
+      store: store,
+      scheduler: MiniAppJobScheduler(
+        save: (job) async => scheduled['${job['id']}'] = job,
+        delete: (id) async => scheduled.remove(id),
+        list: (appId) async => [
+          for (final job in scheduled.values)
+            {
+              ...job,
+              'runs': [
+                {
+                  'status': 'completed',
+                  'startedAt': DateTime(2026, 9, 30, 8).millisecondsSinceEpoch,
+                },
+              ],
+            },
+        ],
+        runNow: (id) async => ran.add(id),
+      ),
     );
   });
   tearDown(() => temp.delete(recursive: true));
@@ -67,7 +92,7 @@ void main() {
           locale: const Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: MiniAppsPage(store: store),
+          home: MiniAppsPage(store: store, jobs: jobs),
         ),
       ),
     );
@@ -179,5 +204,41 @@ void main() {
     await tester.pumpAndSettle();
     final entry = File(store.byId('water')!.entryPath);
     expect(await tester.runAsync(entry.readAsString), contains('v1'));
+  });
+
+  testWidgets('background jobs show their schedule and run on demand', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      await install('water', 'Water', '');
+      await jobs.set('water', 'morning', {
+        'time': '08:00',
+        'days': [1, 3],
+        'run': 'remind',
+      });
+    });
+    await pump(tester);
+
+    await tester.longPress(find.byKey(const ValueKey('mini-app-water')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Background jobs'));
+    await ioUntil(
+      tester,
+      () => find.text('morning · remind()').evaluate().isNotEmpty,
+    );
+    expect(find.textContaining('08:00 · Mon, Wed'), findsOneWidget);
+    expect(
+      find.textContaining('Last run Sep 30, 2026 08:00: done'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('morning · remind()'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Run now'));
+    await ioUntil(tester, () => ran.isNotEmpty);
+    expect(ran, ['miniapp:water:morning']);
+    // Let the confirmation snack bar time out.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
   });
 }

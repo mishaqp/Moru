@@ -11313,6 +11313,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get miniAppsBackAgainToExit => 'Back again to exit';
 
   @override
+  String get miniAppsJobs => 'Background jobs';
+
+  @override
+  String get miniAppsJobsEmpty =>
+      'No background jobs. Ask the agent, e.g. “every morning at 8 check the weather and notify me”.';
+
+  @override
+  String get miniAppsJobsFooter =>
+      'At the set time Moru opens the app out of sight and runs the job for up to 30 seconds, even when Moru is closed. Errors go to the error log.';
+
+  @override
+  String get miniAppsJobRunNow => 'Run now';
+
+  @override
+  String get miniAppsJobStarted => 'Job started';
+
+  @override
+  String get miniAppsJobEveryDay => 'every day';
+
+  @override
+  String get miniAppsJobRunning => 'Running…';
+
+  @override
+  String get miniAppsToolActionJobs => 'List app background jobs';
+
+  @override
+  String get miniAppsToolActionRunJob => 'Run app background job';
+
+  @override
+  String miniAppsJobNext(String time) {
+    return 'Next: $time';
+  }
+
+  @override
+  String miniAppsJobLastDone(String time) {
+    return 'Last run $time: done';
+  }
+
+  @override
+  String miniAppsJobLastFailed(String time) {
+    return 'Last run $time: failed';
+  }
+
+  @override
   String get miniAppsMore => 'More';
 
   @override
