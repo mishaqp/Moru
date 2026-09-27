@@ -12,7 +12,6 @@ import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/features/home/widgets/side_drawer.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -148,8 +147,8 @@ void main() {
   // The drawer only enables topics-only mode and hover prefetch on desktop;
   // the platform override must be reset inside the test body because the
   // binding verifies foundation debug variables before package:test tearDowns.
-  Future<void> asDesktop(Future<void> Function() body) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+  Future<void> asAndroid(Future<void> Function() body) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
       await body();
     } finally {
@@ -160,8 +159,6 @@ void main() {
   Future<void> pumpDrawer(
     WidgetTester tester,
     ChatService service, {
-    bool desktopTopicsOnly = true,
-    bool desktopAssistantsOnly = false,
     bool globalSearchMode = false,
     String globalSearchQuery = '',
     Locale locale = const Locale('en'),
@@ -189,8 +186,6 @@ void main() {
             userName: 'User',
             assistantName: 'Assistant',
             embedded: true,
-            desktopTopicsOnly: desktopTopicsOnly,
-            desktopAssistantsOnly: desktopAssistantsOnly,
             globalSearchMode: globalSearchMode,
             globalSearchQuery: globalSearchQuery,
             showBottomBar: false,
@@ -276,7 +271,7 @@ void main() {
   testWidgets('list does not rebuild on unrelated ChatService notify', (
     tester,
   ) async {
-    await asDesktop(() async {
+    await asAndroid(() async {
       final service = createService();
       await tester.runAsync(() async {
         await service.init();
@@ -298,7 +293,7 @@ void main() {
   testWidgets('list rebuilds when the conversation list revision changes', (
     tester,
   ) async {
-    await asDesktop(() async {
+    await asAndroid(() async {
       final service = createService();
       await tester.runAsync(() async {
         await service.init();
@@ -327,7 +322,7 @@ void main() {
   testWidgets(
     'topics appear when initialization completes after revision is published',
     (tester) async {
-      await asDesktop(() async {
+      await asAndroid(() async {
         final service = createService();
         service.stageConversationsBeforeInitialization([
           Conversation(title: 'Recovered topic'),
@@ -353,7 +348,7 @@ void main() {
   testWidgets('switching the selected conversation does not rebuild the list', (
     tester,
   ) async {
-    await asDesktop(() async {
+    await asAndroid(() async {
       final service = createService();
       await tester.runAsync(() async {
         await service.init();
@@ -375,60 +370,10 @@ void main() {
     });
   });
 
-  testWidgets('desktop hover prefetches the tail window without notifying', (
-    tester,
-  ) async {
-    await asDesktop(() async {
-      final service = createService();
-      late final String alphaId;
-      await tester.runAsync(() async {
-        await service.init();
-        final alpha = await service.createConversation(title: 'Alpha');
-        alphaId = alpha.id;
-        for (var i = 0; i < 3; i++) {
-          await service.addMessage(
-            conversationId: alpha.id,
-            role: i.isEven ? 'user' : 'assistant',
-            content: 'message $i',
-          );
-        }
-        // The most recently created conversation becomes the current one, so
-        // Alpha is a non-current hover target.
-        await service.createConversation(title: 'Beta');
-      });
-      await pumpDrawer(tester, service);
-      expect(service.isConversationFullyCached(alphaId), isFalse);
-
-      final notifyBefore = service.notifyCount;
-      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
-      await gesture.addPointer(location: Offset.zero);
-      await gesture.moveTo(tester.getCenter(find.text('Alpha')));
-      await tester.pump();
-
-      expect(service.timelineCalls, contains(alphaId));
-      expect(service.notifyCount, notifyBefore);
-
-      // The prefetch chains several sequential database hops; each hop needs
-      // a real-async window (isolate round trip) followed by a pump (fake-zone
-      // continuation microtasks).
-      for (var i = 0; i < 20; i++) {
-        if (service.isConversationFullyCached(alphaId)) break;
-        await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 100)),
-        );
-        await tester.pump();
-      }
-      expect(service.isConversationFullyCached(alphaId), isTrue);
-      expect(service.notifyCount, notifyBefore);
-
-      await gesture.removePointer();
-    });
-  });
-
   testWidgets(
     'sidebar rows recompute when memo key changes but not on host rebuild',
     (tester) async {
-      await asDesktop(() async {
+      await asAndroid(() async {
         final service = createService();
         await tester.runAsync(() async {
           await service.init();
@@ -463,7 +408,7 @@ void main() {
   testWidgets('pin moves a conversation into the pinned section', (
     tester,
   ) async {
-    await asDesktop(() async {
+    await asAndroid(() async {
       final service = createService();
       await tester.runAsync(() async {
         await service.init();
@@ -502,7 +447,7 @@ void main() {
   testWidgets(
     'virtualized conversation list builds only viewport-constrained tiles',
     (tester) async {
-      await asDesktop(() async {
+      await asAndroid(() async {
         final service = createService();
         await tester.runAsync(() => service.init());
         final now = DateTime.now();
@@ -578,7 +523,7 @@ void main() {
   testWidgets('scroll to end keeps last tile tappable with correct id', (
     tester,
   ) async {
-    await asDesktop(() async {
+    await asAndroid(() async {
       final service = createService();
       await tester.runAsync(() => service.init());
       final now = DateTime.now();
@@ -637,7 +582,7 @@ void main() {
   testWidgets(
     'locale switch relocalizes headers without recomputing rows or jumping scroll',
     (tester) async {
-      await asDesktop(() async {
+      await asAndroid(() async {
         final service = createService();
         await tester.runAsync(() => service.init());
         final now = DateTime.now();
@@ -724,54 +669,16 @@ void main() {
     },
   );
 
-  testWidgets('topicsOnly mode renders the conversation list without errors', (
-    tester,
-  ) async {
-    await asDesktop(() async {
-      final service = createService();
-      await tester.runAsync(() async {
-        await service.init();
-        await service.createConversation(title: 'Topic A');
-      });
-      await pumpDrawer(tester, service, desktopTopicsOnly: true);
-      expect(tester.takeException(), isNull);
-      expect(find.text('Topic A'), findsOneWidget);
-      expect(find.byType(SideDrawer), findsOneWidget);
-    });
-  });
-
-  testWidgets('assistOnly mode renders without errors', (tester) async {
-    await asDesktop(() async {
-      final service = createService();
-      await tester.runAsync(() => service.init());
-      await pumpDrawer(
-        tester,
-        service,
-        desktopTopicsOnly: false,
-        desktopAssistantsOnly: true,
-      );
-      expect(tester.takeException(), isNull);
-      expect(find.byType(SideDrawer), findsOneWidget);
-      // Assistants path must not mount conversation tiles.
-      expect(find.byType(SideDrawer.debugChatTileType), findsNothing);
-    });
-  });
-
   testWidgets(
     'global search mode uses its independent results path without errors',
     (tester) async {
-      await asDesktop(() async {
+      await asAndroid(() async {
         final service = createService();
         await tester.runAsync(() async {
           await service.init();
           await service.createConversation(title: 'Should Not Appear As Tile');
         });
-        await pumpDrawer(
-          tester,
-          service,
-          desktopTopicsOnly: false,
-          globalSearchMode: true,
-        );
+        await pumpDrawer(tester, service, globalSearchMode: true);
         expect(tester.takeException(), isNull);
         expect(find.byType(SideDrawer), findsOneWidget);
         // Independent path: conversation tiles from the topics list are absent.
@@ -779,7 +686,8 @@ void main() {
         final l10n = AppLocalizations.of(
           tester.element(find.byType(SideDrawer)),
         )!;
-        expect(find.text(l10n.sideDrawerGlobalSearchEmptyHint), findsOneWidget);
+        // Mobile shows nothing until a search runs.
+        expect(find.text(l10n.sideDrawerGlobalSearchEmptyHint), findsNothing);
       });
     },
   );

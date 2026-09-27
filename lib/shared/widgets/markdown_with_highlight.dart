@@ -2836,8 +2836,6 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
     final highlightEnabled = !_shouldSkipHighlightWhileStreaming();
 
     Widget buildCodeView(String visibleCode) {
-      final bool isDesktop =
-          Platform.isMacOS || Platform.isWindows || Platform.isLinux;
       if (_exceedsLineThreshold(visibleCode, 1000)) {
         return _VirtualizedCodeView(
           code: visibleCode,
@@ -2845,7 +2843,7 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
           theme: codeTheme,
           textStyle: codeTextStyle,
           enableHighlight: highlightEnabled,
-          wrap: isDesktop || settings.mobileCodeBlockWrap,
+          wrap: settings.mobileCodeBlockWrap,
         );
       }
       final codeView = SelectableHighlightView(
@@ -2857,7 +2855,7 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
         enableHighlight: highlightEnabled,
       );
 
-      if (isDesktop || settings.mobileCodeBlockWrap) {
+      if (settings.mobileCodeBlockWrap) {
         return codeView;
       }
 
@@ -3060,25 +3058,6 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
         '${l10n.codeBlockDefaultFileNameStem}_$timestamp$extension';
 
     try {
-      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-        final savePath = await FilePicker.platform.saveFile(
-          dialogTitle: l10n.backupPageExportToFile,
-          fileName: filename,
-          type: FileType.custom,
-          allowedExtensions: [_extensionWithoutDot(extension)],
-        );
-        if (savePath == null) return;
-        await File(savePath).parent.create(recursive: true);
-        await File(savePath).writeAsString(widget.code);
-        if (!context.mounted) return;
-        showAppSnackBar(
-          context,
-          message: l10n.messageExportSheetExportedAs(p.basename(savePath)),
-          type: NotificationType.success,
-        );
-        return;
-      }
-
       final savePath = await FilePicker.platform.saveFile(
         dialogTitle: l10n.backupPageExportToFile,
         fileName: filename,
@@ -3909,25 +3888,6 @@ class _MarkdownTableBlockState extends State<_MarkdownTableBlock> {
     final csv = rows.toCsv();
 
     try {
-      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-        final savePath = await FilePicker.platform.saveFile(
-          dialogTitle: l10n.backupPageExportToFile,
-          fileName: filename,
-          type: FileType.custom,
-          allowedExtensions: const ['csv'],
-        );
-        if (savePath == null) return;
-        await File(savePath).parent.create(recursive: true);
-        await File(savePath).writeAsString(csv);
-        if (!context.mounted) return;
-        showAppSnackBar(
-          context,
-          message: l10n.messageExportSheetExportedAs(p.basename(savePath)),
-          type: NotificationType.success,
-        );
-        return;
-      }
-
       final savePath = await FilePicker.platform.saveFile(
         dialogTitle: l10n.backupPageExportToFile,
         fileName: filename,
@@ -4078,19 +4038,6 @@ class _MarkdownTableBlockState extends State<_MarkdownTableBlock> {
     required String filename,
     required Uint8List bytes,
   }) async {
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      final savePath = await FilePicker.platform.saveFile(
-        dialogTitle: dialogTitle,
-        fileName: filename,
-        type: FileType.custom,
-        allowedExtensions: const ['png'],
-      );
-      if (savePath == null) return null;
-      await File(savePath).parent.create(recursive: true);
-      await File(savePath).writeAsBytes(bytes, flush: true);
-      return savePath;
-    }
-
     return FilePicker.platform.saveFile(
       dialogTitle: dialogTitle,
       fileName: filename,
@@ -4387,7 +4334,7 @@ bool _markdownTableTargetPlatformIsDesktop() {
         override == TargetPlatform.windows ||
         override == TargetPlatform.linux;
   }
-  return Platform.isMacOS || Platform.isWindows || Platform.isLinux;
+  return false;
 }
 
 String _rowsToMarkdown(List<List<String>> rows) {
@@ -4993,7 +4940,7 @@ class _DiagramBlockState extends State<_DiagramBlock> {
         message: l10n.mermaidExportFailed,
         type: NotificationType.error,
       );
-    } else if (Platform.isAndroid || Platform.isIOS) {
+    } else if (Platform.isAndroid) {
       showAppSnackBar(
         context,
         message: l10n.imageViewerPageSaveSuccess,
@@ -5036,18 +4983,6 @@ class _DiagramBlockState extends State<_DiagramBlock> {
       final prefix = widget.isSvg ? 'svg' : 'mermaid';
       final suggested =
           '${prefix}_${DateTime.now().millisecondsSinceEpoch}.png';
-      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-        final savePath = await FilePicker.platform.saveFile(
-          dialogTitle: l10n.backupPageExportToFile,
-          fileName: suggested,
-          type: FileType.custom,
-          allowedExtensions: const ['png'],
-        );
-        if (savePath == null || savePath.isEmpty) return false;
-        await File(savePath).parent.create(recursive: true);
-        await File(savePath).writeAsBytes(bytes);
-        return true;
-      }
       final result = await ImageGallerySaverPlus.saveImage(
         bytes,
         quality: 100,
@@ -6394,9 +6329,6 @@ class _SelectableHighlightViewState extends State<SelectableHighlightView> {
   void initState() {
     super.initState();
     _codeTextSpans = _highlightSource();
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      unawaited(_loadIosTranslationAvailability());
-    }
   }
 
   @override
@@ -6428,21 +6360,6 @@ class _SelectableHighlightViewState extends State<SelectableHighlightView> {
       return _convertNodes(nodes);
     } catch (_) {
       return const [];
-    }
-  }
-
-  Future<void> _loadIosTranslationAvailability() async {
-    try {
-      final available =
-          await _iosTranslationChannel.invokeMethod<bool>('isAvailable') ??
-          false;
-      if (mounted && available != _iosTranslationAvailable) {
-        setState(() => _iosTranslationAvailable = available);
-      }
-    } on MissingPluginException {
-      // Keep the stock selection menu when the native bridge is unavailable.
-    } on PlatformException {
-      // Keep the stock selection menu when the availability check fails.
     }
   }
 

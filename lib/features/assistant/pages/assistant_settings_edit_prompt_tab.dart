@@ -99,7 +99,7 @@ class _PromptTabState extends State<_PromptTab> {
       String? content;
       if (picked.bytes != null && picked.bytes!.isNotEmpty) {
         content = utf8.decode(picked.bytes!, allowMalformed: true);
-      } else if (!kIsWeb && picked.path != null && picked.path!.isNotEmpty) {
+      } else if (picked.path != null && picked.path!.isNotEmpty) {
         content = await File(picked.path!).readAsString();
       }
       if (!mounted) return;
@@ -160,43 +160,10 @@ class _PromptTabState extends State<_PromptTab> {
     );
   }
 
-  Future<String?> _showSystemPromptDesktopDialog(String initial) {
-    return showGeneralDialog<String>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'system-prompt-editor',
-      barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.12),
-      pageBuilder: (ctx, _, __) {
-        return _SystemPromptDesktopDialog(initial: initial);
-      },
-      transitionBuilder: (ctx, anim, _, child) {
-        final curved = CurvedAnimation(
-          parent: anim,
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInCubic,
-        );
-        return FadeTransition(
-          opacity: curved,
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.98, end: 1.0).animate(curved),
-            child: child,
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _openSystemPromptEditor() async {
     final platform = Theme.of(context).platform;
-    final bool isDesktop =
-        kIsWeb ||
-        platform == TargetPlatform.macOS ||
-        platform == TargetPlatform.linux ||
-        platform == TargetPlatform.windows;
     final initial = _sysCtrl.text;
-    final String? next = isDesktop
-        ? await _showSystemPromptDesktopDialog(initial)
-        : await _showSystemPromptMobileSheet(initial);
+    final String? next = (await _showSystemPromptMobileSheet(initial));
     if (!mounted || next == null || next == _sysCtrl.text) return;
     await _applySystemPromptChange(next);
   }
@@ -608,15 +575,9 @@ class _PromptTabState extends State<_PromptTab> {
     Widget presetCard() {
       final a = ap.getById(widget.assistantId)!;
       final items = a.presetMessages;
-      final isDesktop =
-          Theme.of(context).platform == TargetPlatform.macOS ||
-          Theme.of(context).platform == TargetPlatform.linux ||
-          Theme.of(context).platform == TargetPlatform.windows;
 
       Widget dragWrapper({required int index, required Widget child}) {
-        return isDesktop
-            ? ReorderableDragStartListener(index: index, child: child)
-            : ReorderableDelayedDragStartListener(index: index, child: child);
+        return ReorderableDelayedDragStartListener(index: index, child: child);
       }
 
       Widget headerButtons() {
@@ -1519,10 +1480,6 @@ Future<void> _showEditPresetDialog(
   final cs = Theme.of(context).colorScheme;
   final controller = TextEditingController(text: m.content);
   final platform = Theme.of(context).platform;
-  final isDesktop =
-      platform == TargetPlatform.macOS ||
-      platform == TargetPlatform.linux ||
-      platform == TargetPlatform.windows;
   Future<void> save() async {
     final text = controller.text.trim();
     if (text.isEmpty) return;
@@ -1536,93 +1493,6 @@ Future<void> _showEditPresetDialog(
     );
   }
 
-  if (isDesktop) {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => Dialog(
-        backgroundColor: context.overlaySurface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.assistantEditPresetEditDialogTitle,
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: AppFontWeights.emphasis,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: MaterialLocalizations.of(ctx).closeButtonTooltip,
-                      icon: const Icon(Lucide.X, size: 18),
-                      color: cs.onSurface,
-                      onPressed: () => Navigator.of(ctx).maybePop(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: controller,
-                  minLines: 3,
-                  maxLines: 8,
-                  decoration: InputDecoration(
-                    hintText: m.role == 'assistant'
-                        ? l10n.assistantEditPresetInputHintAssistant
-                        : l10n.assistantEditPresetInputHintUser,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: cs.primary.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    _IosButton(
-                      label: l10n.assistantEditEmojiDialogCancel,
-                      onTap: () => Navigator.of(ctx).pop(),
-                      filled: false,
-                      neutral: true,
-                      dense: true,
-                    ),
-                    const SizedBox(width: 8),
-                    _IosButton(
-                      label: l10n.assistantEditEmojiDialogSave,
-                      onTap: () async {
-                        await save();
-                        if (context.mounted) Navigator.of(ctx).pop();
-                      },
-                      filled: true,
-                      neutral: false,
-                      dense: true,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    return;
-  }
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,

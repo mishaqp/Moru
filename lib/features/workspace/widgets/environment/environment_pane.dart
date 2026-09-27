@@ -9,7 +9,6 @@ import 'package:Kelivo/features/workspace/pages/environment_variables_page.dart'
 import 'environment_dependencies_section.dart';
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -829,9 +828,7 @@ class _NotInstalledBody extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            defaultTargetPlatform == TargetPlatform.iOS
-                ? l10n.workspaceEnvInstallSubtitleIos
-                : l10n.workspaceEnvInstallSubtitleAndroid,
+            l10n.workspaceEnvInstallSubtitleAndroid,
             style: TextStyle(
               fontSize: 12,
               color: cs.onSurface.withValues(alpha: 0.6),

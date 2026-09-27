@@ -13,9 +13,7 @@ import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/utils/format_bytes.dart';
 
 bool workspaceEnvIsDesktopTarget() {
-  return defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux;
+  return false;
 }
 
 bool workspaceEnvIsAlpine({
@@ -353,13 +351,6 @@ String workspaceEnvMb(int bytes) {
 }
 
 String workspaceEnvNativeShellPath() {
-  if (defaultTargetPlatform == TargetPlatform.windows) {
-    final shell = Platform.environment['SHELL'];
-    if (shell != null && shell.isNotEmpty) return shell;
-    final comspec = Platform.environment['COMSPEC'];
-    if (comspec != null && comspec.isNotEmpty) return comspec;
-    return 'PowerShell';
-  }
   final shell = Platform.environment['SHELL'];
   if (shell != null && shell.isNotEmpty) return shell;
   return '/bin/sh';

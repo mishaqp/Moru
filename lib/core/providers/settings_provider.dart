@@ -1199,7 +1199,7 @@ class SettingsProvider extends ChangeNotifier {
     // Enter to send on mobile: iOS defaults to true, Android defaults to false
     final enterToSendPref = prefs.getBool(_displayEnterToSendOnMobileKey);
     if (enterToSendPref == null) {
-      _enterToSendOnMobile = Platform.isIOS;
+      _enterToSendOnMobile = false;
       await prefs.setBool(_displayEnterToSendOnMobileKey, _enterToSendOnMobile);
     } else {
       _enterToSendOnMobile = enterToSendPref;
@@ -1236,9 +1236,7 @@ class SettingsProvider extends ChangeNotifier {
             .clamp(0.0, 1.0);
     final pureBgPref = prefs.getBool(_displayUsePureBackgroundKey);
     if (pureBgPref == null) {
-      final isDesktop =
-          Platform.isMacOS || Platform.isWindows || Platform.isLinux;
-      _usePureBackground = isDesktop;
+      _usePureBackground = false;
       await prefs.setBool(_displayUsePureBackgroundKey, _usePureBackground);
     } else {
       _usePureBackground = pureBgPref;
@@ -1303,9 +1301,7 @@ class SettingsProvider extends ChangeNotifier {
     // Desktop: tray settings (default enabled on desktop platforms)
     final trayPref = prefs.getBool(_displayDesktopShowTrayKey);
     if (trayPref == null) {
-      final isDesktop =
-          Platform.isMacOS || Platform.isWindows || Platform.isLinux;
-      _desktopShowTray = isDesktop;
+      _desktopShowTray = false;
       await prefs.setBool(_displayDesktopShowTrayKey, _desktopShowTray);
     } else {
       _desktopShowTray = trayPref;

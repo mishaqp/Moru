@@ -372,7 +372,7 @@ class McpProvider extends ChangeNotifier {
   bool _stdioWasAvailable = false;
 
   bool get supportsStdioWorkspaceBinding =>
-      !kIsWeb && !_isDesktopPlatform() && workspaces != null;
+      !_isDesktopPlatform() && workspaces != null;
 
   void _onWorkspacesChanged() {
     if (_disposed || !supportsStdioWorkspaceBinding) return;
@@ -399,8 +399,7 @@ class McpProvider extends ChangeNotifier {
 
   bool get supportsStdio =>
       _isDesktopPlatform() ||
-      (!kIsWeb &&
-          workspaceRuntime?.runtime is WorkspaceStdioRuntime &&
+      (workspaceRuntime?.runtime is WorkspaceStdioRuntime &&
           workspaceRuntime?.lastStatus?.ready == true &&
           environment?.state.phase == EnvironmentPhase.ready);
 
@@ -2917,9 +2916,6 @@ class McpProvider extends ChangeNotifier {
   }
 
   bool _isDesktopPlatform() {
-    if (kIsWeb) return false;
-    return defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux ||
-        defaultTargetPlatform == TargetPlatform.macOS;
+    return false;
   }
 }

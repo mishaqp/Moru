@@ -1,6 +1,5 @@
 import 'dart:io' show File;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../../core/models/assistant.dart';
@@ -57,8 +56,7 @@ class AssistantAvatar extends StatelessWidget {
             );
           },
         );
-      } else if (!kIsWeb &&
-          (avatarValue.startsWith('/') || avatarValue.contains(':'))) {
+      } else if ((avatarValue.startsWith('/') || avatarValue.contains(':'))) {
         final fixedPath = SandboxPathResolver.fix(avatarValue);
         final file = File(fixedPath);
         if (file.existsSync()) {

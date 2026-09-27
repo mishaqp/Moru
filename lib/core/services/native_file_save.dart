@@ -54,7 +54,7 @@ class NativeFileSave {
     required String sourcePath,
     String? fileName,
   }) async {
-    if (!Platform.isAndroid && !Platform.isIOS) {
+    if (!Platform.isAndroid) {
       throw UnsupportedError(
         'Native file save is only supported on Android and iOS.',
       );

@@ -138,35 +138,6 @@ class FileUploadService {
   Future<void> onPickPhotos() async {
     try {
       // On desktop, fall back to FilePicker as image_picker is not supported.
-      if (PlatformUtils.isDesktopTarget) {
-        final res = await FilePicker.platform.pickFiles(
-          allowMultiple: true,
-          withData: false,
-          type: FileType.custom,
-          allowedExtensions: const [
-            'png',
-            'jpg',
-            'jpeg',
-            'gif',
-            'webp',
-            'bmp',
-            'heic',
-            'heif',
-          ],
-        );
-        if (res == null || res.files.isEmpty) return;
-        final toCopy = <XFile>[];
-        for (final f in res.files) {
-          if (f.path != null && f.path!.isNotEmpty) {
-            toCopy.add(XFile(f.path!));
-          }
-        }
-        if (toCopy.isEmpty) return;
-        final croppedFiles = await _maybeCropImages(toCopy);
-        if (croppedFiles.isEmpty) return;
-        _enqueuePickedImages(croppedFiles);
-        return;
-      }
 
       final picker = ImagePicker();
       final files = await picker.pickMultiImage();

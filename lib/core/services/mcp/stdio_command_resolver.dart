@@ -143,8 +143,8 @@ class McpStdioCommandResolver {
     return false;
   }
 
-  bool get _isWindows => _isWindowsOverride ?? Platform.isWindows;
-  bool get _isMacOS => _isMacOSOverride ?? Platform.isMacOS;
+  bool get _isWindows => _isWindowsOverride ?? false;
+  bool get _isMacOS => _isMacOSOverride ?? false;
 
   Map<String, String> get _environment =>
       _platformEnvironment ?? Platform.environment;

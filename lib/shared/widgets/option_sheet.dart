@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 
 import 'package:Kelivo/features/settings/widgets/custom_theme_widgets.dart';
@@ -27,9 +25,7 @@ class OptionSheetItem<T> {
 }
 
 bool _isDesktopPlatform() {
-  return defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux;
+  return false;
 }
 
 /// Single-select list. Mobile uses the World Book form-sheet shell;

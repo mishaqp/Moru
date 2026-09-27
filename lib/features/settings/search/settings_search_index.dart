@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -340,7 +339,7 @@ class SettingsSearchIndex {
             'background keep alive notification live activity 后台 後台 保活 灵动岛 靈動島',
       );
     }
-    if (!kIsWeb && platform == TargetPlatform.android) {
+    if (platform == TargetPlatform.android) {
       add(
         'phoneControl',
         SettingsSearchDestination.phoneControl,
@@ -463,9 +462,7 @@ class SettingsSearchIndex {
         keywords: 'storage cache cleanup database 存储 儲存 缓存 快取 空间 空間 清理 数据库 資料庫',
       );
     }
-    if (desktop ||
-        platform == TargetPlatform.android ||
-        platform == TargetPlatform.iOS) {
+    if (desktop || platform == TargetPlatform.android) {
       add(
         'scheduledTasks',
         SettingsSearchDestination.scheduledTasks,
@@ -870,13 +867,6 @@ class SettingsSearchIndex {
         'desktopDisplaySettingsTopicPositionTitle',
         SettingsSearchDestination.display,
         (l) => l.desktopDisplaySettingsTopicPositionTitle,
-      );
-    }
-    if (!kIsWeb && platform == TargetPlatform.linux) {
-      add(
-        'linuxHideTitleBarTitle',
-        SettingsSearchDestination.display,
-        (l) => l.linuxHideTitleBarTitle,
       );
     }
     if (desktop) {

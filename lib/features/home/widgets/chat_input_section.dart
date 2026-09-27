@@ -170,7 +170,7 @@ class ChatInputSection extends StatelessWidget {
     final hasWorldBooks =
         isTablet && context.watch<WorldBookProvider>().books.isNotEmpty;
     final showWorkspaceButton = isDesktop && onOpenWorkspace != null;
-    final showEnvChip = !isDesktop && (Platform.isAndroid || Platform.isIOS);
+    final showEnvChip = !isDesktop && Platform.isAndroid;
     var workspaceBound = false;
     if (showWorkspaceButton || showEnvChip) {
       workspaceBound = _isWorkspaceBound(context);
@@ -355,9 +355,7 @@ class ChatInputSection extends StatelessWidget {
 
   bool _isDesktopPlatform(BuildContext context) {
     final platform = Theme.of(context).platform;
-    return platform == TargetPlatform.macOS ||
-        platform == TargetPlatform.windows ||
-        platform == TargetPlatform.linux;
+    return false;
   }
 
   void _enforceModelCapabilities(

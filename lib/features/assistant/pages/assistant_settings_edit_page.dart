@@ -5,7 +5,6 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -59,7 +58,6 @@ import '../../../theme/app_font_weights.dart';
 import '../../../theme/design_tokens.dart';
 import '../../../utils/avatar_cache.dart';
 import '../../../utils/brand_assets.dart';
-import '../../../utils/platform_utils.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../utils/assistant_edit_tab_layout.dart';
 import 'assistant_regex_tab.dart';
@@ -1645,9 +1643,6 @@ Future<void> openAssistantBasicSettings(
   BuildContext context, {
   required String assistantId,
 }) {
-  if (PlatformUtils.isDesktopTarget) {
-    return showAssistantDesktopDialog(context, assistantId: assistantId);
-  }
   return Navigator.of(context).push<void>(
     MaterialPageRoute(
       builder: (_) => _AssistantDetailSectionPage(

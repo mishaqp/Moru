@@ -161,7 +161,7 @@ class WorkspaceToolsService {
     }
     final sandboxed = runtime != null
         ? (status?.sandboxed ?? false)
-        : (Platform.isAndroid || Platform.isIOS);
+        : Platform.isAndroid;
 
     final sessionDir = await AppDirectories.sessionDir(conversationId);
     final skillsDir = await AppDirectories.getSkillsDirectory();
@@ -516,9 +516,7 @@ class WorkspaceToolsService {
       ..writeln('- $chat — this chat\'s attachments/ and outputs/ (writable)')
       ..writeln('- $skills — installed skills (read-only)');
     if (paths.sandboxed) {
-      final source = defaultTargetPlatform == TargetPlatform.iOS
-          ? "from iOS Files (e.g. an Obsidian vault, Downloads, another app's iCloud container)"
-          : 'from Environment settings (on-device folders)';
+      final source = ('from Environment settings (on-device folders)');
       final readOnly = paths.externalMounts
           .where((mount) => mount.readOnly)
           .map((mount) => mount.guest)

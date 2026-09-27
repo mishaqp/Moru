@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -77,9 +76,6 @@ class _RestoreFailureScreenState extends State<RestoreFailureScreen> {
   StartupIntegrityResult? _integrity;
   String? _integrityError;
   List<LocalCopy> _localCopies = const <LocalCopy>[];
-
-  bool get _isDesktop =>
-      Platform.isWindows || Platform.isMacOS || Platform.isLinux;
 
   bool get _isLeaseUnavailable =>
       _report.diagnosticCode == 'RestoreBusinessLeaseUnavailable';
@@ -193,23 +189,10 @@ class _RestoreFailureScreenState extends State<RestoreFailureScreen> {
         '${Directory.systemTemp.path}/kelivo-startup-failure-$stamp.txt',
       );
       await file.writeAsString(_report.toText(), flush: true);
-      if (_isDesktop) {
-        final destination = await FilePicker.platform.getDirectoryPath();
-        if (destination == null || destination.trim().isEmpty) {
-          if (mounted) setState(() => _recoveryBusy = false);
-          return;
-        }
-        final target = File(
-          '$destination${Platform.pathSeparator}${_basename(file.path)}',
-        );
-        await file.copy(target.path);
-        _finishRecovery(l10n.startupRecoveryReportSaved(target.path));
-      } else {
-        await SharePlus.instance.share(
-          ShareParams(files: [XFile(file.path)], subject: _basename(file.path)),
-        );
-        _finishRecovery(l10n.startupRecoveryReportShared);
-      }
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], subject: _basename(file.path)),
+      );
+      _finishRecovery(l10n.startupRecoveryReportShared);
     } catch (error) {
       _finishRecovery(l10n.startupRecoveryReportSaveFailed, isError: true);
     }
@@ -224,19 +207,6 @@ class _RestoreFailureScreenState extends State<RestoreFailureScreen> {
       _recoveryMessage = null;
     });
     try {
-      if (_isDesktop) {
-        final destination = await FilePicker.platform.getDirectoryPath();
-        if (destination == null || destination.trim().isEmpty) {
-          if (mounted) setState(() => _recoveryBusy = false);
-          return;
-        }
-        final target = await StartupRecoveryService.exportDataCopy(
-          appDataDirectory: directory,
-          destinationParent: Directory(destination),
-        );
-        _finishRecovery(l10n.startupRecoveryExportSavedTo(target.path));
-        return;
-      }
       // Mobile has no folder to hand back, so the copy leaves as one archive
       // through the share sheet. The temporary file is removed either way.
       final archive = await StartupDiagnosticsService.createDataArchive(

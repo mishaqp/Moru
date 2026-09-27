@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -20,21 +18,12 @@ import 'package:Kelivo/theme/app_semantic_colors.dart';
 class AssistantEntryActions {
   const AssistantEntryActions._();
 
-  static bool get _isDesktopPlatform =>
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux;
-
   static void openAssistantSettings(
     BuildContext context,
     String assistantId, {
     VoidCallback? beforeAction,
   }) {
     beforeAction?.call();
-    if (_isDesktopPlatform) {
-      showAssistantDesktopDialog(context, assistantId: assistantId);
-      return;
-    }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AssistantSettingsEditPage(assistantId: assistantId),

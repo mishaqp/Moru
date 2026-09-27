@@ -371,7 +371,7 @@ class HomePageController extends ChangeNotifier {
   // Delegate to scroll controller
   scroll_ctrl.ChatScrollController get scrollCtrl => _scrollCtrl;
 
-  bool get isDesktopPlatform => PlatformUtils.isDesktopTarget;
+  bool get isDesktopPlatform => false;
 
   bool get isCurrentConversationLoading =>
       _viewModel.isCurrentConversationLoading;
@@ -1972,19 +1972,6 @@ class HomePageController extends ChangeNotifier {
     if (!autoPlay && tts.playbackState.isActive) {
       await tts.stop();
       return;
-    }
-
-    if (PlatformUtils.isDesktopTarget) {
-      final sp = _context.read<SettingsProvider>();
-      final hasNetworkTts = sp.selectedTtsService != null;
-      if (!hasNetworkTts && !tts.isAvailable) {
-        showAppSnackBar(
-          _context,
-          message: AppLocalizations.of(_context)!.desktopTtsPleaseAddProvider,
-          type: NotificationType.warning,
-        );
-        return;
-      }
     }
 
     final sp = _context.read<SettingsProvider>();

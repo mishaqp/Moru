@@ -1,8 +1,6 @@
 import '../../provider/widgets/oauth_message_recovery.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform, visibleForTesting;
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/services.dart';
@@ -44,7 +42,6 @@ import '../../../shared/widgets/ios_checkbox.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/thinking_sheen.dart';
 import '../../../shared/widgets/emoji_text.dart';
-import '../../../utils/platform_utils.dart';
 import '../../home/services/ask_user_interaction_service.dart';
 import '../utils/tool_timing.dart';
 import '../../home/services/assistant_manager_tool.dart';
@@ -778,28 +775,6 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
   final weatherAttribution = weather != null && !weather.isError
       ? weather.attribution
       : null;
-
-  if (PlatformUtils.isDesktopTarget) {
-    unawaited(
-      showDialog<void>(
-        context: context,
-        barrierDismissible: true,
-        builder: (dialogContext) => _ToolDetailDesktopDialog(
-          title: title,
-          closeSemanticLabel: closeSemanticLabel,
-          argsPretty: argsPretty,
-          resultText: resultText,
-          images: images,
-          argumentsLabel: l10n.chatMessageWidgetArguments,
-          resultLabel: l10n.chatMessageWidgetResult,
-          imagesLabel: l10n.chatMessageWidgetImages,
-          screenTimeResult: useScreenTimeDetail ? screenTime : null,
-          weatherAttribution: weatherAttribution,
-        ),
-      ),
-    );
-    return;
-  }
 
   unawaited(
     showCustomBottomSheet<void>(
@@ -1658,9 +1633,8 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     Widget avatarContent;
 
     if (avatarType == 'emoji' && avatarValue != null) {
-      final bool isIOS = defaultTargetPlatform == TargetPlatform.iOS;
       final double fs = 18;
-      final Offset? nudge = isIOS ? Offset(fs * 0.065, fs * -0.05) : null;
+      final Offset? nudge = null;
       avatarContent = Center(
         child: EmojiText(
           avatarValue,
@@ -2017,11 +1991,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     bool enableUserMarkdown,
     int collapseChars,
   ) {
-    final bool isDesktop =
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux;
-    final double baseUser = isDesktop ? 14.0 : 15.5;
+    final double baseUser = 15.5;
 
     Widget content;
     if (enableUserMarkdown) {
@@ -2041,13 +2011,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
           height: 1.4,
           color: chatSurfacePlainTextColor(context, isUser: true),
         ),
-      );
-    }
-
-    if (isDesktop) {
-      content = SelectionArea(
-        key: ValueKey('user_${widget.message.id}'),
-        child: content,
       );
     }
 
@@ -2408,11 +2371,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     Map<String, String> citationIndexLookup, {
     String contentKey = '',
   }) {
-    final bool isDesktop =
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux;
-    final double baseAssistant = isDesktop ? 14.0 : 15.7;
+    final double baseAssistant = 15.7;
 
     Widget assistantContent;
     if (enableAssistantMarkdown) {
@@ -3099,17 +3058,10 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                                   const SizedBox(width: 8),
                                   Builder(
                                     builder: (context) {
-                                      final bool isDesktop =
-                                          defaultTargetPlatform ==
-                                              TargetPlatform.macOS ||
-                                          defaultTargetPlatform ==
-                                              TargetPlatform.windows ||
-                                          defaultTargetPlatform ==
-                                              TargetPlatform.linux;
                                       return Text(
                                         l10n.chatMessageWidgetTranslating,
                                         style: TextStyle(
-                                          fontSize: isDesktop ? 14.0 : 15.5,
+                                          fontSize: 15.5,
                                           color: fg.muted,
                                           fontStyle: FontStyle.italic,
                                         ),
@@ -3129,16 +3081,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                                   ),
                                   child: Builder(
                                     builder: (context) {
-                                      final bool isDesktop =
-                                          defaultTargetPlatform ==
-                                              TargetPlatform.macOS ||
-                                          defaultTargetPlatform ==
-                                              TargetPlatform.windows ||
-                                          defaultTargetPlatform ==
-                                              TargetPlatform.linux;
-                                      final double baseTranslation = isDesktop
-                                          ? 14.0
-                                          : 15.5;
+                                      final double baseTranslation = 15.5;
                                       Widget translationContent;
                                       if (enableAssistantMarkdown) {
                                         translationContent =
@@ -3621,9 +3564,8 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         return _assistantInitial(cs);
       }
       // treat as emoji or single char label
-      final bool isIOS = defaultTargetPlatform == TargetPlatform.iOS;
       final double fs = 18;
-      final Offset? nudge = isIOS ? Offset(fs * 0.065, fs * -0.05) : null;
+      final Offset? nudge = null;
       return Container(
         width: 32,
         height: 32,

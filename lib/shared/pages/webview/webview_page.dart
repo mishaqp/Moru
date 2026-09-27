@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -325,16 +323,6 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
   }
 
   Future<void> _initialLoad() async {
-    if (defaultTargetPlatform == TargetPlatform.linux) {
-      // Keep parity with existing Linux limitation: no WebView support
-      final l10n = AppLocalizations.of(context)!;
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.htmlPreviewNotSupportedOnLinux)),
-      );
-      Navigator.of(context).maybePop();
-      return;
-    }
     final url = widget.url?.trim() ?? '';
     if (url.isNotEmpty) {
       await _controller.loadRequest(Uri.parse(url));

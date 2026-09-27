@@ -1,7 +1,5 @@
 import 'dart:io' show File;
 
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -25,71 +23,65 @@ Future<String?> showAssistantMoveSelector(
   BuildContext context, {
   String? excludeAssistantId,
 }) async {
-  final isDesktop =
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux;
   final ap = context.read<AssistantProvider>();
   final List<Assistant> assistants = excludeAssistantId == null
       ? List.of(ap.assistants)
       : ap.assistants.where((a) => a.id != excludeAssistantId).toList();
 
-  if (!isDesktop) {
-    final cs = Theme.of(context).colorScheme;
-    final maxHeight = MediaQuery.of(context).size.height * 0.8;
-    return showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: context.overlaySurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        final l10n = AppLocalizations.of(ctx)!;
-        return SafeArea(
-          top: false,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: cs.onSurface.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
+  final cs = Theme.of(context).colorScheme;
+  final maxHeight = MediaQuery.of(context).size.height * 0.8;
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: context.overlaySurface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) {
+      final l10n = AppLocalizations.of(ctx)!;
+      return SafeArea(
+        top: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: cs.onSurface.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(999),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        l10n.sideDrawerChooseAssistantTitle,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: AppFontWeights.emphasis,
-                        ),
+                  ),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      l10n.sideDrawerChooseAssistantTitle,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: AppFontWeights.emphasis,
                       ),
                     ),
-                    ...assistants.map((a) => _assistantRow(ctx, a)),
-                  ],
-                ),
+                  ),
+                  ...assistants.map((a) => _assistantRow(ctx, a)),
+                ],
               ),
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
 
   // Desktop: custom dialog with hover effects, no ripples, no header divider
   String? result;
@@ -227,7 +219,7 @@ Widget _assistantAvatar(BuildContext context, Assistant a, {double size = 28}) {
           );
         },
       );
-    } else if (!kIsWeb && (av.startsWith('/') || av.contains(':'))) {
+    } else if ((av.startsWith('/') || av.contains(':'))) {
       final fixed = SandboxPathResolver.fix(av);
       final f = File(fixed);
       if (f.existsSync()) {

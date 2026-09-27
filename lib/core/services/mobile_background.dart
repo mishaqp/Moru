@@ -73,7 +73,7 @@ class MobileBackgroundCoordinator extends ChangeNotifier
   bool _initialized = false;
   bool _foreground = true;
   bool get isForeground => _foreground;
-  bool get supported => !kIsWeb && platform == TargetPlatform.android;
+  bool get supported => platform == TargetPlatform.android;
   String? Function()? visibleConversation;
 
   /// Whether [taskId] (this task's own id -- see [finish]) belongs to a

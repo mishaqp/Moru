@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show File, Platform;
+import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show MissingPluginException;
 import 'package:desktop_drop/desktop_drop.dart';
@@ -1464,11 +1464,7 @@ class _HomePageState extends State<HomePage>
           ? settings.autoCollapseCodeBlockLines
           : null,
       // Mirrors the wrap decision in the code block renderer.
-      wrapCodeBlocks:
-          Platform.isMacOS ||
-          Platform.isWindows ||
-          Platform.isLinux ||
-          settings.mobileCodeBlockWrap,
+      wrapCodeBlocks: settings.mobileCodeBlockWrap,
       showModelIcon: settings.showModelIcon,
       showUserAvatar: settings.showUserAvatar,
       showTokenStats: settings.showTokenStats,

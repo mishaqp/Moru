@@ -10,7 +10,6 @@ import 'package:webview_windows/webview_windows.dart' as winweb;
 import 'mermaid_cache.dart';
 import '../../utils/svg_preview_html.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 
 class MermaidViewHandle {
@@ -375,59 +374,8 @@ MermaidViewHandle? createMermaidView(
   bool isSvg = false,
 }) {
   // Windows: use webview_windows with messaging for height + export.
-  if (Platform.isWindows) {
-    final usedKey = viewKey ?? GlobalKey<_MermaidInlineWindowsViewState>();
-    final widget = _MermaidInlineWindowsView(
-      key: usedKey,
-      code: code,
-      dark: dark,
-      themeVars: themeVars,
-      isSvg: isSvg,
-    );
-    Future<bool> doExport() async {
-      try {
-        final state = usedKey.currentState;
-        if (state is _MermaidInlineWindowsViewState) {
-          final bytes = await state.exportPngBytes();
-          if (bytes == null || bytes.isEmpty) return false;
-          final suggested =
-              'mermaid_${DateTime.now().millisecondsSinceEpoch}.png';
-          final savePath = await FilePicker.platform.saveFile(
-            dialogTitle: 'Save PNG',
-            fileName: suggested,
-            type: FileType.custom,
-            allowedExtensions: const ['png'],
-          );
-          if (savePath == null || savePath.isEmpty) return false; // cancelled
-          await File(savePath).parent.create(recursive: true);
-          await File(savePath).writeAsBytes(bytes);
-          return true;
-        }
-      } catch (_) {}
-      return false;
-    }
-
-    Future<Uint8List?> doExportBytes() async {
-      try {
-        final state = usedKey.currentState;
-        if (state is _MermaidInlineWindowsViewState) {
-          return await state.exportPngBytes();
-        }
-      } catch (_) {}
-      return null;
-    }
-
-    return MermaidViewHandle(
-      widget: widget,
-      exportPng: doExport,
-      exportPngBytes: doExportBytes,
-    );
-  }
 
   // Linux: downgrade to plain code block (no WebView, no export)
-  if (Platform.isLinux) {
-    return null;
-  }
 
   // Other platforms keep using webview_flutter (unchanged behavior).
   final usedKey = viewKey ?? GlobalKey<_MermaidInlineWebViewState>();
@@ -730,20 +678,6 @@ class _MermaidInlineWebViewState extends State<_MermaidInlineWebView> {
       if (b64 == null || b64.isEmpty) return false;
       final bytes = base64Decode(b64);
       // Desktop: Save As dialog (use existing file_picker, same as image viewer)
-      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-        final suggested =
-            'mermaid_${DateTime.now().millisecondsSinceEpoch}.png';
-        final savePath = await FilePicker.platform.saveFile(
-          dialogTitle: 'Save PNG',
-          fileName: suggested,
-          type: FileType.custom,
-          allowedExtensions: const ['png'],
-        );
-        if (savePath == null || savePath.isEmpty) return false; // cancelled
-        await File(savePath).parent.create(recursive: true);
-        await File(savePath).writeAsBytes(bytes);
-        return true;
-      }
       // Mobile: save directly to gallery
       final name = 'kelivo-mermaid-${DateTime.now().millisecondsSinceEpoch}';
       final result = await ImageGallerySaverPlus.saveImage(

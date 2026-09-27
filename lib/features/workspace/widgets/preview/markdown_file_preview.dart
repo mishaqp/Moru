@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:Kelivo/icons/lucide_adapter.dart';
@@ -137,11 +136,7 @@ class _MarkdownRenderedView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final desktop = useDesktopWorkspaceLayout(context);
-    final bool isDesktopPlatform =
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux;
-    final double baseSize = isDesktopPlatform ? 14.0 : 15.7;
+    final double baseSize = 15.7;
     final baseStyle = TextStyle(fontSize: baseSize, height: 1.5);
 
     final markdown = SelectionArea(

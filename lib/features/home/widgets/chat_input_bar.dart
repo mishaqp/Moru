@@ -10,8 +10,6 @@ import '../../../icons/reasoning_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
-import 'package:image_picker/image_picker.dart';
-import '../../../utils/file_import_helper.dart';
 import '../../../utils/image_compressor.dart';
 import '../../../utils/upload_dedupe.dart';
 import 'package:flutter/services.dart';
@@ -275,8 +273,6 @@ class _ChatInputBarState extends State<ChatInputBar>
   final List<DocumentAttachment> _docs =
       <DocumentAttachment>[]; // files to upload
   final Map<LogicalKeyboardKey, Timer?> _repeatTimers = {};
-  static const Duration _repeatInitialDelay = Duration(milliseconds: 300);
-  static const Duration _repeatPeriod = Duration(milliseconds: 35);
   // Anchor for the responsive overflow menu on the left action bar
   final GlobalKey _leftOverflowAnchorKey = GlobalKey(
     debugLabel: 'left-overflow-anchor',
@@ -1013,11 +1009,6 @@ class _ChatInputBarState extends State<ChatInputBar>
         _discardImageState(submittedImageIds);
         setState(() {});
         // Keep focus on desktop so user can continue typing
-        try {
-          if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-            widget.focusNode?.requestFocus();
-          }
-        } catch (_) {}
       } else if (_draftReplacementRevision == submittedDraftRevision) {
         setState(
           () => _restoreSubmittedDraft(
@@ -1142,102 +1133,6 @@ class _ChatInputBarState extends State<ChatInputBar>
     if (_suppressContextMenu) {
       return const SizedBox.shrink();
     }
-    if (Platform.isIOS) {
-      final items = <ContextMenuButtonItem>[];
-      try {
-        final appL10n = AppLocalizations.of(context)!;
-        final materialL10n = MaterialLocalizations.of(context);
-        final value = _controller.value;
-        final selection = value.selection;
-        final hasSelection = selection.isValid && !selection.isCollapsed;
-        final hasText = value.text.isNotEmpty;
-
-        // Cut
-        if (hasSelection) {
-          items.add(
-            ContextMenuButtonItem(
-              onPressed: () async {
-                try {
-                  final start = selection.start;
-                  final end = selection.end;
-                  final text = value.text.substring(start, end);
-                  await Clipboard.setData(ClipboardData(text: text));
-                  final newText = value.text.replaceRange(start, end, '');
-                  _controller.value = value.copyWith(
-                    text: newText,
-                    selection: TextSelection.collapsed(offset: start),
-                  );
-                } catch (_) {}
-                state.hideToolbar();
-              },
-              label: materialL10n.cutButtonLabel,
-            ),
-          );
-        }
-
-        // Copy
-        if (hasSelection) {
-          items.add(
-            ContextMenuButtonItem(
-              onPressed: () async {
-                try {
-                  final start = selection.start;
-                  final end = selection.end;
-                  final text = value.text.substring(start, end);
-                  await Clipboard.setData(ClipboardData(text: text));
-                } catch (_) {}
-                state.hideToolbar();
-              },
-              label: materialL10n.copyButtonLabel,
-            ),
-          );
-        }
-
-        // Paste (text or image via _handlePasteFromClipboard)
-        items.add(
-          ContextMenuButtonItem(
-            onPressed: () {
-              _handlePasteFromClipboard();
-              state.hideToolbar();
-            },
-            label: materialL10n.pasteButtonLabel,
-          ),
-        );
-
-        // Insert newline
-        items.add(
-          ContextMenuButtonItem(
-            onPressed: () {
-              _insertNewlineAtCursor();
-              state.hideToolbar();
-            },
-            label: appL10n.chatInputBarInsertNewline,
-          ),
-        );
-
-        // Select all
-        if (hasText) {
-          items.add(
-            ContextMenuButtonItem(
-              onPressed: () {
-                try {
-                  _controller.selection = TextSelection(
-                    baseOffset: 0,
-                    extentOffset: value.text.length,
-                  );
-                } catch (_) {}
-                state.hideToolbar();
-              },
-              label: materialL10n.selectAllButtonLabel,
-            ),
-          );
-        }
-      } catch (_) {}
-      return AdaptiveTextSelectionToolbar.buttonItems(
-        anchors: state.contextMenuAnchors,
-        buttonItems: items,
-      );
-    }
 
     final items = state.contextMenuButtonItems
         .map((item) {
@@ -1260,7 +1155,6 @@ class _ChatInputBarState extends State<ChatInputBar>
     // Enhance hardware keyboard behavior
     final w = MediaQuery.sizeOf(node.context!).width;
     final isTabletOrDesktop = w >= AppBreakpoints.tablet;
-    final isIosTablet = Platform.isIOS && isTabletOrDesktop;
 
     final isDown = event is KeyDownEvent;
     final key = event.logicalKey;
@@ -1332,54 +1226,7 @@ class _ChatInputBarState extends State<ChatInputBar>
     }
 
     // Arrow repeat fix only needed on iOS tablets
-    if (!isIosTablet || !isArrow) return KeyEventResult.ignored;
-
-    final keys = HardwareKeyboard.instance.logicalKeysPressed;
-    final shift =
-        keys.contains(LogicalKeyboardKey.shiftLeft) ||
-        keys.contains(LogicalKeyboardKey.shiftRight);
-    final alt =
-        keys.contains(LogicalKeyboardKey.altLeft) ||
-        keys.contains(LogicalKeyboardKey.altRight) ||
-        keys.contains(LogicalKeyboardKey.metaLeft) ||
-        keys.contains(LogicalKeyboardKey.metaRight) ||
-        keys.contains(LogicalKeyboardKey.controlLeft) ||
-        keys.contains(LogicalKeyboardKey.controlRight);
-
-    void moveOnce() {
-      if (key == LogicalKeyboardKey.arrowLeft) {
-        _moveCaret(-1, extend: shift, byWord: alt);
-      } else if (key == LogicalKeyboardKey.arrowRight) {
-        _moveCaret(1, extend: shift, byWord: alt);
-      }
-    }
-
-    if (event is KeyDownEvent) {
-      // Initial move
-      moveOnce();
-      // Start repeat timer if not already
-      if (!_repeatTimers.containsKey(key)) {
-        Timer? periodic;
-        final starter = Timer(_repeatInitialDelay, () {
-          periodic = Timer.periodic(_repeatPeriod, (_) => moveOnce());
-          _repeatTimers[key] = periodic!;
-        });
-        // Store starter temporarily; replace when periodic begins
-        _repeatTimers[key] = starter;
-      }
-      return KeyEventResult.handled;
-    }
-
-    if (event is KeyUpEvent) {
-      // Key up -> cancel repeat
-      final t = _repeatTimers.remove(key);
-      try {
-        t?.cancel();
-      } catch (_) {}
-      return KeyEventResult.handled;
-    }
-
-    return KeyEventResult.handled;
+    return KeyEventResult.ignored;
   }
 
   Future<String?> _savePastedImageBytes(String format, Uint8List bytes) async {
@@ -1589,42 +1436,6 @@ class _ChatInputBarState extends State<ChatInputBar>
 
     // 3) Try files via platform channel on desktop (Finder/Explorer copies)
     bool handledFiles = false;
-    try {
-      if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-        final filePaths = await ClipboardImages.getFilePaths();
-        if (filePaths.isNotEmpty) {
-          final imagePaths = <String>[];
-          final otherPaths = <String>[];
-          for (final raw in filePaths) {
-            final src = raw.startsWith('file://') ? raw.substring(7) : raw;
-            if (_isImageExtension(p.basename(src))) {
-              imagePaths.add(src);
-            } else {
-              otherPaths.add(src);
-            }
-          }
-          _enqueueImages(
-            imagePaths,
-            compressConfig,
-            deleteSourcesAfterProcessing: false,
-          );
-
-          final saved = await _copyFilesToUpload(otherPaths);
-          if (saved.images.isNotEmpty) {
-            _enqueueImages(
-              saved.images,
-              compressConfig,
-              deleteSourcesAfterProcessing: false,
-            );
-          }
-          if (saved.docs.isNotEmpty) _addFiles(saved.docs);
-          handledFiles =
-              imagePaths.isNotEmpty ||
-              saved.images.isNotEmpty ||
-              saved.docs.isNotEmpty;
-        }
-      }
-    } catch (_) {}
     if (handledFiles) return;
 
     // 4) Last resort: paste text via Flutter Clipboard API
@@ -1738,44 +1549,6 @@ class _ChatInputBarState extends State<ChatInputBar>
         '[ChatInputBar] Failed to delete unclaimed pasted text ${file.path}: $error',
       );
     }
-  }
-
-  // Copy arbitrary files to upload directory (without deleting the source),
-  // split into images and document attachments.
-  Future<({List<String> images, List<DocumentAttachment> docs})>
-  _copyFilesToUpload(List<String> srcPaths) async {
-    final images = <String>[];
-    final docs = <DocumentAttachment>[];
-    try {
-      final dir = await AppDirectories.getUploadDirectory();
-      for (final raw in srcPaths) {
-        if (!mounted) {
-          return (images: images, docs: docs);
-        }
-        final src = raw.startsWith('file://') ? raw.substring(7) : raw;
-        if (_isImageExtension(p.basename(src))) {
-          images.add(src);
-          continue;
-        }
-        final savedPath = await FileImportHelper.copyXFile(XFile(src), dir);
-        if (savedPath != null) {
-          final savedName = p.basename(savedPath);
-          if (_isImageExtension(savedName)) {
-            images.add(savedPath);
-          } else {
-            final mime = _inferMimeByExtension(savedName);
-            docs.add(
-              DocumentAttachment(
-                path: savedPath,
-                fileName: savedName,
-                mime: mime,
-              ),
-            );
-          }
-        }
-      }
-    } catch (_) {}
-    return (images: images, docs: docs);
   }
 
   // Build a responsive left action bar that hides overflowing actions
@@ -2267,49 +2040,6 @@ class _ChatInputBarState extends State<ChatInputBar>
     );
   }
 
-  String _inferMimeByExtension(String name) {
-    final mediaMime = inferMediaMimeFromSource(name);
-    if (mediaMime.isNotEmpty) return mediaMime;
-    final lower = name.toLowerCase();
-    // Documents / text
-    if (lower.endsWith('.pdf')) return 'application/pdf';
-    if (lower.endsWith('.docx')) {
-      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    }
-    if (lower.endsWith('.json')) return 'application/json';
-    if (lower.endsWith('.js')) return 'application/javascript';
-    if (lower.endsWith('.txt') ||
-        lower.endsWith('.md') ||
-        lower.endsWith('.markdown') ||
-        lower.endsWith('.mdx')) {
-      return 'text/plain';
-    }
-    if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'text/html';
-    if (lower.endsWith('.xml')) return 'application/xml';
-    if (lower.endsWith('.yml') || lower.endsWith('.yaml')) {
-      return 'application/x-yaml';
-    }
-    if (lower.endsWith('.py')) return 'text/x-python';
-    if (lower.endsWith('.java')) return 'text/x-java-source';
-    if (lower.endsWith('.kt') || lower.endsWith('.kts')) return 'text/x-kotlin';
-    if (lower.endsWith('.dart')) return 'text/x-dart';
-    if (lower.endsWith('.ts')) return 'text/typescript';
-    if (lower.endsWith('.tsx')) return 'text/tsx';
-    return 'application/octet-stream';
-  }
-
-  bool _isImageExtension(String name) {
-    final lower = name.toLowerCase();
-    return lower.endsWith('.png') ||
-        lower.endsWith('.jpg') ||
-        lower.endsWith('.jpeg') ||
-        lower.endsWith('.gif') ||
-        lower.endsWith('.webp') ||
-        lower.endsWith('.bmp') ||
-        lower.endsWith('.heic') ||
-        lower.endsWith('.heif');
-  }
-
   Future<void> _enqueueClipboardImages(List<String> srcPaths) async {
     try {
       final compressConfig = context
@@ -2338,51 +2068,6 @@ class _ChatInputBarState extends State<ChatInputBar>
         deleteSourcesAfterProcessing: true,
       );
     } catch (_) {}
-  }
-
-  void _moveCaret(int dir, {bool extend = false, bool byWord = false}) {
-    final text = _controller.text;
-    if (text.isEmpty) return;
-    TextSelection sel = _controller.selection;
-    if (!sel.isValid) {
-      final off = dir < 0 ? text.length : 0;
-      _controller.selection = TextSelection.collapsed(offset: off);
-      return;
-    }
-
-    int nextOffset(int from, int direction) {
-      if (!byWord) return (from + direction).clamp(0, text.length);
-      // Move by simple word boundary: skip whitespace; then skip non-whitespace
-      int i = from;
-      if (direction < 0) {
-        // Move left
-        while (i > 0 && text[i - 1].trim().isEmpty) {
-          i--;
-        }
-        while (i > 0 && text[i - 1].trim().isNotEmpty) {
-          i--;
-        }
-      } else {
-        // Move right
-        while (i < text.length && text[i].trim().isEmpty) {
-          i++;
-        }
-        while (i < text.length && text[i].trim().isNotEmpty) {
-          i++;
-        }
-      }
-      return i.clamp(0, text.length);
-    }
-
-    if (extend) {
-      final newExtent = nextOffset(sel.extentOffset, dir);
-      _controller.selection = sel.copyWith(extentOffset: newExtent);
-    } else {
-      final base = dir < 0 ? sel.start : sel.end;
-      final collapsed = nextOffset(base, dir);
-      _controller.selection = TextSelection.collapsed(offset: collapsed);
-    }
-    setState(() {});
   }
 
   Widget _buildImageAttachmentPreview(
@@ -2897,12 +2582,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                                             style: TextStyle(
                                               color:
                                                   theme.colorScheme.onSurface,
-                                              fontSize:
-                                                  (Platform.isWindows ||
-                                                      Platform.isLinux ||
-                                                      Platform.isMacOS)
-                                                  ? 14
-                                                  : 15,
+                                              fontSize: 15,
                                             ),
                                             cursorColor:
                                                 theme.colorScheme.primary,
@@ -3418,8 +3098,6 @@ class _CompactIconButton extends StatelessWidget {
     final fgColor = active
         ? theme.colorScheme.primary
         : theme.colorScheme.onSurface.withValues(alpha: isDark ? 0.70 : 0.54);
-    final bool isDesktop =
-        Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 
     // Keep overall button size constant. For model icon with child, enlarge child slightly
     // and reduce padding so (2*padding + childSize) stays unchanged.
@@ -3437,7 +3115,7 @@ class _CompactIconButton extends StatelessWidget {
       padding: EdgeInsets.all(padding),
       onTap: onTap,
       // Disable long press on desktop platforms
-      onLongPress: isDesktop ? null : onLongPress,
+      onLongPress: onLongPress,
       color: fgColor,
       builder: childBuilder != null
           ? (c) => SizedBox(

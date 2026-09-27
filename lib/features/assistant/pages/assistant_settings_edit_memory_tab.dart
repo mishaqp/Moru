@@ -149,9 +149,7 @@ class _MemoryTabState extends State<_MemoryTab> {
 
   bool get _isDesktopPlatform {
     final platform = Theme.of(context).platform;
-    return platform == TargetPlatform.macOS ||
-        platform == TargetPlatform.linux ||
-        platform == TargetPlatform.windows;
+    return false;
   }
 
   @override
@@ -815,9 +813,7 @@ const int _kMemoryFrequencyCustomSentinel = -1;
 
 bool _isDesktopMemorySettings(BuildContext context) {
   final platform = Theme.of(context).platform;
-  return platform == TargetPlatform.macOS ||
-      platform == TargetPlatform.linux ||
-      platform == TargetPlatform.windows;
+  return false;
 }
 
 Future<T?> _showMemoryChoiceSheet<T>(

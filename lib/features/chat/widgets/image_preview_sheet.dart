@@ -34,14 +34,6 @@ Future<void> showImagePreviewSheet(
   required File file,
 }) async {
   // On desktop platforms, show a custom dialog instead of bottom sheet
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => _ImagePreviewDesktopDialog(file: file),
-    );
-    return;
-  }
 
   await showModalBottomSheet<void>(
     context: context,
@@ -848,7 +840,7 @@ double? _previewDisplayHeight({
 
 Future<dynamic> _saveImagePreviewFile(File file, {required String name}) async {
   return ImageGallerySaverPlus.saveFile(
-    Platform.isIOS ? file.uri.toString() : file.path,
+    file.path,
     name: name,
     isReturnPathOfIOS: true,
   );

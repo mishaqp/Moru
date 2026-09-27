@@ -14,8 +14,6 @@ Future<String?> saveBytesWithPicker({
   required List<int> bytes,
   String? dialogTitle,
 }) async {
-  final desktop =
-      !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
   final ext = p.extension(fileName).replaceFirst('.', '');
   final custom = ext.isNotEmpty;
   final payload = Uint8List.fromList(bytes);
@@ -24,13 +22,9 @@ Future<String?> saveBytesWithPicker({
     fileName: fileName,
     type: custom ? FileType.custom : FileType.any,
     allowedExtensions: custom ? <String>[ext] : null,
-    bytes: desktop ? null : payload,
+    bytes: payload,
   );
   if (savePath == null) return null;
-  if (desktop) {
-    await File(savePath).parent.create(recursive: true);
-    await File(savePath).writeAsBytes(payload, flush: true);
-  }
   return savePath;
 }
 

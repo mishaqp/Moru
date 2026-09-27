@@ -326,17 +326,9 @@ class TerminalSessionManager extends ChangeNotifier {
     );
     final terminal = Terminal(
       maxLines: 10000,
-      platform: defaultTargetPlatform == TargetPlatform.iOS
-          ? TerminalTargetPlatform.ios
-          : defaultTargetPlatform == TargetPlatform.android
+      platform: (defaultTargetPlatform == TargetPlatform.android
           ? TerminalTargetPlatform.android
-          : defaultTargetPlatform == TargetPlatform.macOS
-          ? TerminalTargetPlatform.macos
-          : defaultTargetPlatform == TargetPlatform.windows
-          ? TerminalTargetPlatform.windows
-          : defaultTargetPlatform == TargetPlatform.linux
-          ? TerminalTargetPlatform.linux
-          : TerminalTargetPlatform.unknown,
+          : TerminalTargetPlatform.unknown),
     );
     final rawTitle = (title != null && title.isNotEmpty)
         ? title

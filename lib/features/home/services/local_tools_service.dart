@@ -104,7 +104,7 @@ class DeviceLocalTools {
   static const MethodChannel _channel = MethodChannel('app.device_tools');
 
   static bool get phoneControlSupported =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+      defaultTargetPlatform == TargetPlatform.android;
 
   static Future<PhoneControlStatus?> phoneControlStatus() async {
     if (!phoneControlSupported) return null;
@@ -137,20 +137,15 @@ class DeviceLocalTools {
   }
 
   static bool get screenTimeSupported =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+      defaultTargetPlatform == TargetPlatform.android;
 
   static bool get calendarSupported =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
+      (defaultTargetPlatform == TargetPlatform.android);
 
-  static bool get iosDeviceToolsSupported =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  static bool get iosDeviceToolsSupported => false;
 
   static bool get locationSupported =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
+      (defaultTargetPlatform == TargetPlatform.android);
 
   /// WeatherKit is iOS 16+. Defaults false until [prefetchIosCapabilities].
   static bool? _weatherKitAvailable;
@@ -462,7 +457,7 @@ class LocalToolsService {
       case LocalToolNames.remindersComplete:
         return DeviceLocalTools.remindersSupported;
       case LocalToolNames.miniApps:
-        return !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+        return defaultTargetPlatform == TargetPlatform.android;
       default:
         return true;
     }
