@@ -1133,6 +1133,7 @@ class _HomePageState extends State<HomePage>
           ? const ChatAssistantBackground(expand: false, pinnedToBackdrop: true)
           : null,
       backgroundImageActive: backgroundImageActive,
+      frostedTopSigma: _glassHeaderSigma(context),
       content: Builder(
         builder: (context) {
           final content = KeyedSubtree(
@@ -1313,6 +1314,7 @@ class _HomePageState extends State<HomePage>
             )
           : null,
       backgroundImageActive: backgroundImageActive,
+      frostedTopSigma: _glassHeaderSigma(context),
       content: FadeTransition(
         opacity: _controller.convoFade,
         child: _wrapMessageJumpTransition(
@@ -1380,6 +1382,14 @@ class _HomePageState extends State<HomePage>
 
   bool _assistantBackgroundActive(BuildContext context) {
     return ChatBackdropSpec.resolve(context).active;
+  }
+
+  /// Glass theme blur behind the header; null without live glass.
+  double? _glassHeaderSigma(BuildContext context) {
+    final glass = context.select<SettingsProvider, (bool, bool, GlassFrost)>(
+      (s) => (s.glassTheme, s.glassEconomy, s.glassFrost),
+    );
+    return glass.$1 && !glass.$2 ? glass.$3.sigma : null;
   }
 
   double _chatTopOverlayInset(BuildContext context) {

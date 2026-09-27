@@ -7,6 +7,7 @@ import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import 'chat_gradient_background.dart';
+import 'frosted/chat_frosted_backdrop.dart';
 
 /// Shared assistant wallpaper + surface-mask gradient for chat surfaces.
 ///
@@ -37,10 +38,12 @@ class ChatAssistantBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final assistant = context.watch<AssistantProvider>().currentAssistant;
-    if (assistant?.useGradientBackground ?? false) {
+    final bg = assistant?.background;
+    final glass = context.select<SettingsProvider, bool>((s) => s.glassTheme);
+    if ((assistant?.useGradientBackground ?? false) ||
+        (glass && !ChatBackdropSpec.isBackgroundActive(bg ?? ''))) {
       return ChatGradientBackground(pinned: pinnedToBackdrop);
     }
-    final bg = assistant?.background;
     final maskStrength = context
         .watch<SettingsProvider>()
         .chatBackgroundMaskStrength;

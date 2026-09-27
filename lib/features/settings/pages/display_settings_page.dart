@@ -1,6 +1,8 @@
 import '../widgets/settings_search_target.dart';
 import 'mobile_background_settings_page.dart';
 import 'package:flutter/material.dart';
+
+import 'glass_theme_settings_page.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../icons/lucide_adapter.dart';
@@ -79,6 +81,26 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                 detailText: paletteName(),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ThemeSettingsPage()),
+                ),
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.Sparkles,
+                label: l10n.glassThemeTitle,
+                detailBuilder: (ctx) => Text(
+                  ctx.select<SettingsProvider, bool>((s) => s.glassTheme)
+                      ? l10n.glassThemeOn
+                      : l10n.glassThemeOff,
+                  style: TextStyle(
+                    color: cs.onSurface.withValues(alpha: 0.6),
+                    fontSize: 13,
+                  ),
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const GlassThemeSettingsPage(),
+                  ),
                 ),
               ),
               _iosDivider(context),

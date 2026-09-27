@@ -319,6 +319,9 @@ class SettingsProvider extends ChangeNotifier {
       'display_assistant_bubble_fit_content_v1';
   static const String _displayAssistantBubbleSplitParagraphsKey =
       'display_assistant_bubble_split_paragraphs_v1';
+  static const String _displayGlassThemeKey = 'display_glass_theme_v1';
+  static const String _displayGlassFrostKey = 'display_glass_frost_v1';
+  static const String _displayGlassEconomyKey = 'display_glass_economy_v1';
   static const String _displayChatMessageBackgroundStyleKey =
       'display_chat_message_background_style_v1';
   static const String _chatBubbleStyleOverridesKey =
@@ -535,6 +538,18 @@ class SettingsProvider extends ChangeNotifier {
   // When on, blank lines split assistant text into one bubble per paragraph.
   bool _assistantBubbleSplitParagraphs = false;
   bool get assistantBubbleSplitParagraphs => _assistantBubbleSplitParagraphs;
+
+  bool _glassTheme = false;
+
+  /// The Glass look: a gradient backdrop behind every chat, frosted bubbles
+  /// and a frosted header. An assistant's own wallpaper still wins.
+  bool get glassTheme => _glassTheme;
+  GlassFrost _glassFrost = GlassFrost.medium;
+  GlassFrost get glassFrost => _glassFrost;
+  bool _glassEconomy = false;
+
+  /// Glass without live blur: translucent surfaces only, for slow phones.
+  bool get glassEconomy => _glassEconomy;
 
   // Desktop UI persisted state
   double _desktopSidebarWidth = 240;
@@ -1237,6 +1252,9 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getBool(_displayAssistantBubbleFitContentKey) ?? false;
     _assistantBubbleSplitParagraphs =
         prefs.getBool(_displayAssistantBubbleSplitParagraphsKey) ?? false;
+    _glassTheme = prefs.getBool(_displayGlassThemeKey) ?? false;
+    _glassFrost = GlassFrost.fromName(prefs.getString(_displayGlassFrostKey));
+    _glassEconomy = prefs.getBool(_displayGlassEconomyKey) ?? false;
     // display: markdown/math rendering
     _enableDollarLatex = prefs.getBool(_displayEnableDollarLatexKey) ?? true;
     _enableMathRendering =
@@ -2768,6 +2786,27 @@ class SettingsProvider extends ChangeNotifier {
     _assistantBubbleSplitParagraphs = v;
     notifyListeners();
     await _preferences.setBool(_displayAssistantBubbleSplitParagraphsKey, v);
+  }
+
+  Future<void> setGlassTheme(bool v) async {
+    if (_glassTheme == v) return;
+    _glassTheme = v;
+    notifyListeners();
+    await _preferences.setBool(_displayGlassThemeKey, v);
+  }
+
+  Future<void> setGlassFrost(GlassFrost v) async {
+    if (_glassFrost == v) return;
+    _glassFrost = v;
+    notifyListeners();
+    await _preferences.setString(_displayGlassFrostKey, v.name);
+  }
+
+  Future<void> setGlassEconomy(bool v) async {
+    if (_glassEconomy == v) return;
+    _glassEconomy = v;
+    notifyListeners();
+    await _preferences.setBool(_displayGlassEconomyKey, v);
   }
 
   Future<void> setUseLayeredSheetTiles(bool v) async {
@@ -5917,6 +5956,9 @@ Requirements:
     copy._useLayeredSheetTiles = _useLayeredSheetTiles;
     copy._assistantBubbleFitContent = _assistantBubbleFitContent;
     copy._assistantBubbleSplitParagraphs = _assistantBubbleSplitParagraphs;
+    copy._glassTheme = _glassTheme;
+    copy._glassFrost = _glassFrost;
+    copy._glassEconomy = _glassEconomy;
     copy._chatMessageBackgroundStyle = _chatMessageBackgroundStyle;
     copy._chatBubbleStyleOverrides = _chatBubbleStyleOverrides;
     copy._userChatBubbleStyleOverrides = _userChatBubbleStyleOverrides;
@@ -6146,6 +6188,20 @@ enum ProviderKind { openai, google, claude, local }
 
 // Background rendering mode for chat message bubbles
 enum ChatMessageBackgroundStyle { defaultStyle, frosted, solid }
+
+/// How strongly the Glass theme blurs what is behind its surfaces.
+enum GlassFrost {
+  soft(8),
+  medium(14),
+  strong(22);
+
+  const GlassFrost(this.sigma);
+
+  final double sigma;
+
+  static GlassFrost fromName(String? name) =>
+      values.firstWhere((v) => v.name == name, orElse: () => GlassFrost.medium);
+}
 
 class ProviderConfig {
   static const _kelivoInPublicApiKey = 'kelivo';

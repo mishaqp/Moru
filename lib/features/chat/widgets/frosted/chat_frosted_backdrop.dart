@@ -101,9 +101,14 @@ class ChatBackdropSpec {
     final backgroundRaw = context.select<AssistantProvider, String>(
       (p) => (p.currentAssistant?.background ?? '').trim(),
     );
-    final useGradientBackground = context.select<AssistantProvider, bool>(
+    final assistantGradient = context.select<AssistantProvider, bool>(
       (p) => p.currentAssistant?.useGradientBackground ?? false,
     );
+    final glass = context.select<SettingsProvider, bool>((s) => s.glassTheme);
+    // The Glass theme puts the gradient behind every chat; an assistant's own
+    // wallpaper still wins.
+    final useGradientBackground =
+        assistantGradient || (glass && !isBackgroundActive(backgroundRaw));
     final gradientOptions = context
         .select<AssistantProvider, (bool, double, double, double)>(
           (p) => (
@@ -796,11 +801,13 @@ class _ChatFrostedBackdropState extends State<ChatFrostedBackdrop> {
       _requestCapture(pixelsChanged: true);
     };
 
+    final glass = context.select<SettingsProvider, bool>((s) => s.glassTheme);
     return ChatGradientBackgroundHost(
       enabled: spec.animatedGradient,
       active: spec.useGradientBackground,
       offset: spec.gradientBackgroundOffset,
       phase: spec.gradientBackgroundPhase,
+      accent: glass ? Theme.of(context).colorScheme.primary : null,
       child: Stack(
         fit: StackFit.expand,
         children: [

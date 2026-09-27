@@ -8662,6 +8662,45 @@ class AppLocalizationsEn extends AppLocalizations {
       'Blank lines break an assistant reply into one bubble per paragraph';
 
   @override
+  String get glassThemeTitle => 'Glass';
+
+  @override
+  String get glassThemeOn => 'On';
+
+  @override
+  String get glassThemeOff => 'Off';
+
+  @override
+  String get glassThemeEnable => 'Glass theme';
+
+  @override
+  String get glassThemeEnableDetail =>
+      'Frosted header and messages over a colour backdrop. An assistant\'s own wallpaper still shows.';
+
+  @override
+  String get glassFrostTitle => 'Frost';
+
+  @override
+  String get glassFrostSoft => 'Soft';
+
+  @override
+  String get glassFrostMedium => 'Medium';
+
+  @override
+  String get glassFrostStrong => 'Strong';
+
+  @override
+  String get glassEconomyTitle => 'Economy mode';
+
+  @override
+  String get glassEconomyDetail =>
+      'No live blur, only translucency. For slower phones.';
+
+  @override
+  String get glassThemeFooter =>
+      'Colours follow the theme palette. To show a reply as one card, turn off “Split paragraphs into bubbles” in Message style.';
+
+  @override
   String get messageStyleSettingsPageStyleFrostedSubtitle =>
       'Translucent frosted glass';
 
