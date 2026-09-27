@@ -117,6 +117,7 @@ class TtsProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
+    unawaited(_deleteStalePlaybackFiles());
     try {
       _tts = FlutterTts();
       await preferences.load();
@@ -605,6 +606,7 @@ class TtsProvider extends ChangeNotifier {
     _sessionId++;
     await _stopPlaybackEngines();
     _stopInternal(updateState: true);
+    await _deletePlaybackFile();
   }
 
   Future<void> seekBackward() => seekRelative(-_seekStep);
@@ -759,14 +761,10 @@ class TtsProvider extends ChangeNotifier {
   }) async {
     await _player.stop();
     await Future<void>.delayed(const Duration(milliseconds: 20));
-    final ext = _extForMime(result.mime);
-    final dir = await getTemporaryDirectory();
-    final path = p.join(
-      dir.path,
-      'kelivo_tts_${DateTime.now().microsecondsSinceEpoch}.$ext',
+    final path = await _writePlaybackFile(
+      result.bytes,
+      _extForMime(result.mime),
     );
-    final f = io.File(path);
-    await f.writeAsBytes(result.bytes, flush: true);
 
     if (session != _sessionId) return false;
     if (_isPaused) {
@@ -996,6 +994,7 @@ class TtsProvider extends ChangeNotifier {
     }
     _speakingCompleter = null;
     notifyListeners();
+    unawaited(_deletePlaybackFile());
   }
 
   Future<void> _stopPlaybackEngines() async {
@@ -1063,14 +1062,7 @@ class TtsProvider extends ChangeNotifier {
       await Future<void>.delayed(const Duration(milliseconds: 20));
     } catch (_) {}
     try {
-      final ext = _extForMime(mime);
-      final dir = await getTemporaryDirectory();
-      final path = p.join(
-        dir.path,
-        'kelivo_tts_${DateTime.now().millisecondsSinceEpoch}.$ext',
-      );
-      final f = io.File(path);
-      await f.writeAsBytes(bytes, flush: true);
+      final path = await _writePlaybackFile(bytes, _extForMime(mime));
       if (session != _sessionId) return;
       _previewPlaying = true;
       await _player.play(DeviceFileSource(path));
@@ -1083,6 +1075,56 @@ class TtsProvider extends ChangeNotifier {
   }
 
   String _extForMime(String? mime) => ttsAudioFileExtensionForMime(mime);
+
+  /// The only temporary audio file the player may read. Each new file replaces
+  /// it; stop, the end of playback and dispose delete it.
+  io.File? _playbackFile;
+
+  static final _playbackFileName = RegExp(r'^(?:kelivo|moru)_tts_\d+\.\w+$');
+
+  Future<String> _writePlaybackFile(Uint8List bytes, String ext) async {
+    await _deletePlaybackFile();
+    final dir = await getTemporaryDirectory();
+    final file = io.File(
+      p.join(
+        dir.path,
+        'moru_tts_${DateTime.now().microsecondsSinceEpoch}.$ext',
+      ),
+    );
+    await file.writeAsBytes(bytes, flush: true);
+    _playbackFile = file;
+    return file.path;
+  }
+
+  Future<void> _deletePlaybackFile() async {
+    final file = _playbackFile;
+    _playbackFile = null;
+    if (file == null) return;
+    try {
+      await file.delete();
+    } on io.FileSystemException {
+      // Already gone.
+    }
+  }
+
+  /// Removes audio left behind by a previous process (killed mid-playback).
+  Future<void> _deleteStalePlaybackFiles() async {
+    try {
+      final dir = await getTemporaryDirectory();
+      await for (final entity in dir.list(followLinks: false)) {
+        if (entity is io.File &&
+            _playbackFileName.hasMatch(p.basename(entity.path))) {
+          try {
+            await entity.delete();
+          } on io.FileSystemException {
+            // Another process may still hold it; try again next launch.
+          }
+        }
+      }
+    } catch (_) {
+      // Temporary storage is best effort.
+    }
+  }
 
   Future<(Uint8List, String)?> synthesizeAllAndCollect() async {
     final cached = _collectResolvedNetworkAudio();
@@ -1200,5 +1242,6 @@ class TtsProvider extends ChangeNotifier {
     try {
       await _player.dispose();
     } catch (_) {}
+    await _deletePlaybackFile();
   }
 }

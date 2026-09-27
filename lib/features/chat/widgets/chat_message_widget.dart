@@ -3075,9 +3075,11 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          Consumer<TtsProvider>(
-                            builder: (context, tts, _) {
-                              final ttsActive = tts.playbackState.isActive;
+                          // Only the active flag matters; playback progress
+                          // must not rebuild every message's action row.
+                          Selector<TtsProvider, bool>(
+                            selector: (_, tts) => tts.playbackState.isActive,
+                            builder: (context, ttsActive, _) {
                               return SizedBox(
                                 width: 28,
                                 height: 28,
