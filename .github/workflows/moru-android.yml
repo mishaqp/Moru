@@ -25,7 +25,10 @@ concurrency:
   cancel-in-progress: true
 env:
   FLUTTER_VERSION: '3.44.9'
-  BUILD_VARIANT: ${{ github.event_name == 'push' && 'release' || inputs.variant || 'debug' }}
+  # Pull requests from this repository build the signed release APK and publish
+  # it as a pre-release; fork pull requests have no signing secrets.
+  SAME_REPO_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+  BUILD_VARIANT: ${{ (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) && 'release' || inputs.variant || 'debug' }}
 jobs:
   android:
     name: Android arm64 APK and native tests
@@ -41,6 +44,7 @@ jobs:
           python3 -m unittest discover -s tool -p 'test_verify_apk_arm64.py' -v
           python3 -m unittest discover -s tool -p 'test_verify_release_keep_rules.py' -v
           python3 -m unittest discover -s tool -p 'test_prepare_release.py' -v
+          python3 -m unittest discover -s tool -p 'test_promote_prerelease.py' -v
           bash -n tool/fetch_proot.sh
       - uses: actions/setup-java@v6
         with:
@@ -62,8 +66,9 @@ jobs:
           flutter pub get
           flutter gen-l10n
           git diff --exit-code -- pubspec.lock lib/l10n
+      # Pull requests run the same analyzer and tests in pr-check.yml.
       - name: Verify full application checks for a release
-        if: env.BUILD_VARIANT == 'release'
+        if: env.BUILD_VARIANT == 'release' && github.event_name != 'pull_request'
         run: |
           dart analyze --fatal-infos lib test integration_test
           flutter test
@@ -76,7 +81,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         shell: bash
         run: |
-          test "$GITHUB_REF" = 'refs/heads/master' || { echo 'Stable signing is allowed only from master'; exit 1; }
+          test "$GITHUB_REF" = 'refs/heads/master' || test "$SAME_REPO_PR" = 'true' || { echo 'Stable signing is allowed only from master or a pull request of this repository'; exit 1; }
           python3 - <<'PY'
           import base64, os
           from pathlib import Path
@@ -216,4 +221,108 @@ jobs:
           } > dist/release-notes.md
           gh release create "$tag" dist/*.apk dist/*.sha256 dist/release-metadata.json --draft --target "$GITHUB_SHA" --title "Moru $tag" --notes-file dist/release-notes.md
           gh release edit "$tag" --draft=false --latest
+          gh release view "$tag" --json url,tagName,isDraft,assets
+  prerelease:
+    name: Publish signed arm64 pre-release
+    needs: android
+    # Each push to a pull request of this repository replaces the previous
+    # pre-release; it installs over the stable app because the key is the same.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: moru-prerelease
+      cancel-in-progress: false
+    env:
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: Moru-android-arm64-release
+          path: out
+      - uses: actions/download-artifact@v8
+        with:
+          name: Moru-android-verification
+          path: verification
+      - name: Recheck and package the exact verified APK
+        run: |
+          python3 tool/verify_apk_arm64.py out/Moru-arm64-v8a-release.apk
+          python3 tool/prepare_release.py --apk-dir out --reports-dir verification --output dist --commit "$HEAD_SHA" --prerelease "$GITHUB_RUN_NUMBER"
+      - name: Publish the pre-release and remove older ones
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="$(python3 -c 'import json; print(json.load(open("dist/release-metadata.json"))["tag"])')"
+          version="$(python3 -c 'import json; print(json.load(open("dist/release-metadata.json"))["version"])')"
+          {
+            printf 'Пререлиз для проверки на телефоне. Ставится поверх Moru без потери данных.\n\n'
+            if [ -s "docs/releases/v$version.md" ]; then cat "docs/releases/v$version.md"; fi
+            printf '\n## Проверка APK\n\n```json\n'
+            cat dist/release-metadata.json
+            printf '```\n'
+          } > dist/release-notes.md
+          gh release create "$tag" dist/*.apk dist/*.sha256 dist/release-metadata.json --prerelease --target "$HEAD_SHA" --title "Moru $tag" --notes-file dist/release-notes.md
+          gh release list --limit 100 --json tagName,isPrerelease --jq '.[] | select(.isPrerelease) | .tagName' |
+            while read -r old; do
+              if [ "$old" != "$tag" ]; then gh release delete "$old" --yes --cleanup-tag; fi
+            done
+          gh release view "$tag" --json url,tagName,isPrerelease,assets
+  promote:
+    name: Promote the tested pre-release to the stable release
+    # A merge whose tree equals the last pre-release's commit publishes that
+    # exact APK as the stable release. Anything else keeps the manual dispatch.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: moru-prerelease
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Publish the tested APK under the stable tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pre="$(gh release list --limit 100 --json tagName,isPrerelease,createdAt --jq '[.[] | select(.isPrerelease)] | sort_by(.createdAt) | last | .tagName // empty')"
+          if [ -z "$pre" ]; then echo 'No pre-release to promote; publish with the manual release dispatch.'; exit 0; fi
+          gh release download "$pre" --dir pre
+          tested="$(python3 -c 'import json; print(json.load(open("pre/release-metadata.json"))["commit"])')"
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" fetch --no-tags --depth=1 origin "$tested"
+          if [ "$(git rev-parse "$tested^{tree}")" != "$(git rev-parse 'HEAD^{tree}')" ]; then
+            echo "master differs from the code of $pre; publish with the manual release dispatch."
+            exit 0
+          fi
+          python3 tool/promote_prerelease.py --prerelease-dir pre --output dist --commit "$GITHUB_SHA"
+          tag="$(python3 -c 'import json; print(json.load(open("dist/release-metadata.json"))["tag"])')"
+          existing="$(gh release view "$tag" --json tagName --jq .tagName 2>/dev/null || true)"
+          test -z "$existing" || { echo "Refusing to replace existing release $tag"; exit 1; }
+          test -s "docs/releases/$tag.md"
+          {
+            cat "docs/releases/$tag.md"
+            printf '\n## Проверка APK\n\n```json\n'
+            cat dist/release-metadata.json
+            printf '```\n'
+          } > dist/release-notes.md
+          gh release create "$tag" dist/*.apk dist/*.sha256 dist/release-metadata.json --draft --target "$GITHUB_SHA" --title "Moru $tag" --notes-file dist/release-notes.md
+          gh release edit "$tag" --draft=false --latest
+          gh release delete "$pre" --yes --cleanup-tag
           gh release view "$tag" --json url,tagName,isDraft,assets

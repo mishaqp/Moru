@@ -82,8 +82,8 @@ python3 -m unittest discover -s tool -p 'test_verify_release_keep_rules.py' -v
 Format only changed Dart files. `pr-check.yml` enforces the existing analyzer,
 tests and localization gates. `moru-android.yml` additionally builds one arm64
 APK, runs Android JVM tests and inspects actual APK libraries/signature. PRs
-build a debug APK, which R8 does not shrink; `tool/verify_release_keep_rules.py`
-checks the release APK built on `master` before it can be published. Code that
+of this repository build the signed release APK (fork PRs build debug);
+`tool/verify_release_keep_rules.py` checks every release APK R8 shrinks. Code that
 reads generic types by reflection (Gson `TypeToken`) needs keep rules in
 `android/app/proguard-rules.pro`.
 
@@ -123,10 +123,18 @@ or loosen tests to get CI green.
 
 ## Releases
 
-Bump `version:` in `pubspec.yaml` (`x.y.z+N`, `N` = previous build + 1) and add
-`docs/releases/vX.Y.Z.md` in Russian in the same PR. After it merges, the push
-to `master` builds a signed APK; publishing is a manual `moru-android.yml`
-dispatch on `master` with `variant=release`, `publish=true`.
+Work lands through one long-lived PR. Bump `version:` in `pubspec.yaml`
+(`x.y.z+N`, `N` = previous build + 1) once when the PR starts and keep
+`docs/releases/vX.Y.Z.md` (Russian) up to date in it.
+
+- Every push to a PR of this repository builds the signed release APK and
+  publishes it as the pre-release `vX.Y.Z-pre.<run>`, deleting older
+  pre-releases. It installs over the stable app without losing data.
+- When the user has tested it, merge the PR (bring `master` into it first so
+  the trees match). The `promote` job publishes the last pre-release APK as
+  `vX.Y.Z` without rebuilding, when the merged tree equals the tested commit.
+- Otherwise publish with the manual `moru-android.yml` dispatch on `master`
+  (`variant=release`, `publish=true`).
 
 ## Benchmarks are not tests
 
