@@ -33,6 +33,7 @@ class Lucide {
   static const IconData History = lucide.LucideIcons.history;
   static const IconData Settings = lucide.LucideIcons.settings;
   static const IconData Search = lucide.LucideIcons.search;
+  static const IconData Gamepad = lucide.LucideIcons.gamepad2;
   static const IconData SearchX = lucide.LucideIcons.searchX;
   static const IconData Play = lucide.LucideIcons.play;
   static const IconData ExternalLink = lucide.LucideIcons.externalLink;

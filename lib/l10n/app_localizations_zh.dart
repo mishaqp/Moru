@@ -10954,6 +10954,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get miniAppsSearch => '搜索应用';
+
+  @override
+  String get miniAppsBadgeGame => '游戏';
+
+  @override
   String get miniAppsMore => '更多';
 
   @override
@@ -21945,6 +21951,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String miniAppsServerExited(String code) {
     return '已停止，代码 $code';
   }
+
+  @override
+  String get miniAppsSearch => '搜索应用';
+
+  @override
+  String get miniAppsBadgeGame => '游戏';
 
   @override
   String get miniAppsMore => '更多';
@@ -33012,6 +33024,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String miniAppsServerExited(String code) {
     return '已停止，代碼 $code';
   }
+
+  @override
+  String get miniAppsSearch => '搜尋應用';
+
+  @override
+  String get miniAppsBadgeGame => '遊戲';
 
   @override
   String get miniAppsMore => '更多';

@@ -31,10 +31,59 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
   MiniAppStore get _store => widget._store ?? MiniAppStore.instance;
   MiniAppJobs get _jobs => widget._jobs ?? MiniAppLauncher.jobs;
 
+  /// Background jobs and journal entries per app, shown as badges.
+  Map<String, ({int jobs, int errors})> _counts = const {};
+  final TextEditingController _search = TextEditingController();
+
+  static const int searchFrom = 5;
+
   @override
   void initState() {
     super.initState();
-    unawaited(_store.load());
+    _store.addListener(_onStore);
+    unawaited(_store.load().then((_) => _loadCounts()));
+  }
+
+  @override
+  void dispose() {
+    _store.removeListener(_onStore);
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _onStore() => unawaited(_loadCounts());
+
+  Future<void> _loadCounts() async {
+    final counts = <String, ({int jobs, int errors})>{};
+    for (final app in _store.apps) {
+      try {
+        counts[app.id] = (
+          jobs: (await _store.readJobs(app.id)).length,
+          errors: (await _store.readErrors(app.id)).length,
+        );
+      } on Object {
+        // Deleted meanwhile, or unreadable: no badges.
+      }
+    }
+    if (mounted) setState(() => _counts = counts);
+  }
+
+  Future<void> _open(MiniApp app) async {
+    await MiniAppLauncher.open(context, app.id, store: widget._store);
+    // The app may have logged errors or set jobs.
+    await _loadCounts();
+  }
+
+  List<MiniApp> _filtered(List<MiniApp> apps) {
+    final query = _search.text.trim().toLowerCase();
+    if (query.isEmpty) return apps;
+    return [
+      for (final app in apps)
+        if ('${app.name} ${app.description} ${app.id}'.toLowerCase().contains(
+          query,
+        ))
+          app,
+    ];
   }
 
   Future<void> _actions(MiniApp app) async {
@@ -89,7 +138,7 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
     if (!mounted) return;
     switch (action) {
       case 'open':
-        await MiniAppLauncher.open(context, app.id, store: widget._store);
+        await _open(app);
       case 'pin':
         final ok = await MiniAppLauncher.pinShortcut(app);
         if (!mounted) return;
@@ -165,13 +214,35 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
           if (!_store.loaded) {
             return const Center(child: CircularProgressIndicator());
           }
-          final apps = _store.apps;
+          final all = _store.apps;
+          final apps = _filtered(all);
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
-              if (apps.isEmpty)
+              if (all.length >= searchFrom) ...[
+                TextField(
+                  key: const ValueKey('mini-apps-search'),
+                  controller: _search,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: l10n.miniAppsSearch,
+                    prefixIcon: const Icon(Lucide.Search, size: 18),
+                    isDense: true,
+                    filled: true,
+                    fillColor: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.06),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (all.isEmpty)
                 _EmptyState(text: l10n.miniAppsEmpty)
-              else
+              else if (apps.isNotEmpty)
                 SectionCard(
                   children: [
                     for (final app in apps) ...[
@@ -180,16 +251,14 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
                         key: ValueKey('mini-app-${app.id}'),
                         leading: MiniAppIcon(app: app, size: 32),
                         label: app.name,
+                        labelTrailing: _Badges(
+                          app: app,
+                          counts: _counts[app.id],
+                        ),
                         subtitle: app.description.isEmpty
                             ? null
                             : app.description,
-                        onTap: () => unawaited(
-                          MiniAppLauncher.open(
-                            context,
-                            app.id,
-                            store: widget._store,
-                          ),
-                        ),
+                        onTap: () => unawaited(_open(app)),
                         onLongPress: () => unawaited(_actions(app)),
                         trailing: IosIconButton(
                           icon: Lucide.Ellipsis,
@@ -207,6 +276,51 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
           );
         },
       ),
+    );
+  }
+}
+
+/// What an app does beyond a page: game, server, jobs, errors.
+class _Badges extends StatelessWidget {
+  const _Badges({required this.app, required this.counts});
+
+  final MiniApp app;
+  final ({int jobs, int errors})? counts;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final muted = cs.onSurface.withValues(alpha: 0.5);
+    final jobs = counts?.jobs ?? 0;
+    final errors = counts?.errors ?? 0;
+    Widget badge(IconData icon, String tooltip, Color color, [int? count]) =>
+        Tooltip(
+          message: tooltip,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 14, color: color),
+                if (count != null)
+                  Text(' $count', style: TextStyle(fontSize: 12, color: color)),
+              ],
+            ),
+          ),
+        );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (app.fullscreen)
+          badge(Lucide.Gamepad, l10n.miniAppsBadgeGame, muted),
+        if (app.serverCommand != null)
+          badge(Lucide.Server, l10n.miniAppsServer, muted),
+        if (jobs > 0)
+          badge(Lucide.CalendarClock, l10n.miniAppsJobs, muted, jobs),
+        if (errors > 0)
+          badge(Lucide.Bug, l10n.miniAppsErrors, cs.error, errors),
+      ],
     );
   }
 }

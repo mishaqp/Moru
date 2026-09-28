@@ -5038,6 +5038,8 @@
   "miniAppsServerNoOutput": "Вывода пока нет.",
   "miniAppsServerRunning": "Работает, порт {port}",
   "miniAppsServerExited": "Остановлен, код {code}",
+  "miniAppsSearch": "Поиск приложений",
+  "miniAppsBadgeGame": "Игра",
   "miniAppsMore": "Ещё",
   "miniAppsErrors": "Журнал ошибок",
   "miniAppsErrorsEmpty": "Ошибок нет.",

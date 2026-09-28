@@ -20489,6 +20489,18 @@ abstract class AppLocalizations {
   /// **'Stopped with code {code}'**
   String miniAppsServerExited(String code);
 
+  /// No description provided for @miniAppsSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search apps'**
+  String get miniAppsSearch;
+
+  /// No description provided for @miniAppsBadgeGame.
+  ///
+  /// In en, this message translates to:
+  /// **'Game'**
+  String get miniAppsBadgeGame;
+
   /// No description provided for @miniAppsMore.
   ///
   /// In en, this message translates to:

@@ -11582,6 +11582,12 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get miniAppsSearch => 'Поиск приложений';
+
+  @override
+  String get miniAppsBadgeGame => 'Игра';
+
+  @override
   String get miniAppsMore => 'Ещё';
 
   @override

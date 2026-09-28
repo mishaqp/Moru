@@ -4122,6 +4122,8 @@
   "miniAppsServerNoOutput": "暂无输出。",
   "miniAppsServerRunning": "运行中，端口 {port}",
   "miniAppsServerExited": "已停止，代码 {code}",
+  "miniAppsSearch": "搜索应用",
+  "miniAppsBadgeGame": "游戏",
   "miniAppsMore": "更多",
   "miniAppsErrors": "错误日志",
   "miniAppsErrorsEmpty": "没有记录到错误。",

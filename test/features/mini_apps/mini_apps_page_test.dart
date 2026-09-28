@@ -282,4 +282,50 @@ void main() {
     await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('badges show game, server, jobs and errors; search filters', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      await install(
+        'snake',
+        'Snake',
+        'Arcade',
+        manifest: {
+          'fullscreen': true,
+          'server': {'command': 'python3 s.py'},
+        },
+      );
+      await jobs.set('snake', 'daily', {'time': '09:00', 'run': 'tick'});
+      await store.logError('snake', 'console: boom');
+      await store.logError('snake', 'console: bang');
+      for (final name in ['Water', 'Notes', 'Budget', 'Weather']) {
+        await install(name.toLowerCase(), name, '');
+      }
+    });
+    await pump(tester);
+    await ioUntil(
+      tester,
+      () => find.byTooltip('Error log').evaluate().isNotEmpty,
+    );
+    expect(find.byTooltip('Game'), findsOneWidget);
+    expect(find.byTooltip('Server'), findsOneWidget);
+    expect(find.byTooltip('Background jobs'), findsOneWidget);
+    // The number of journal entries.
+    expect(
+      find.descendant(
+        of: find.byTooltip('Error log'),
+        matching: find.text(' 2'),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.enterText(
+      find.byKey(const ValueKey('mini-apps-search')),
+      'arca',
+    );
+    await tester.pump();
+    expect(find.text('Snake'), findsOneWidget);
+    expect(find.text('Water'), findsNothing);
+  });
 }

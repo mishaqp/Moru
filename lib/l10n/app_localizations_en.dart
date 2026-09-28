@@ -11456,6 +11456,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get miniAppsSearch => 'Search apps';
+
+  @override
+  String get miniAppsBadgeGame => 'Game';
+
+  @override
   String get miniAppsMore => 'More';
 
   @override
