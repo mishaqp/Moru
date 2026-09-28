@@ -10,6 +10,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:provider/provider.dart';
 
 import '../../../support/business_test_harness.dart';
+import 'package:Kelivo/core/services/workspace/task_plan.dart';
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/chat_input_data.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
@@ -66,6 +67,7 @@ void main() {
       '{"suggestions":["suggestion one","suggestion two"]}';
   var suggestionResponsesSent = 0;
   late AskUserInteractionService questions;
+  late TaskPlanRegistry plans;
 
   Future<void> handleApiRequest(HttpRequest request) async {
     final body =
@@ -182,6 +184,7 @@ void main() {
     suggestionResponsesSent = 0;
     suggestionResponse = '{"suggestions":["suggestion one","suggestion two"]}';
     questions = AskUserInteractionService();
+    plans = TaskPlanRegistry();
     server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     server.listen(handleApiRequest);
   });
@@ -257,6 +260,7 @@ void main() {
           ChangeNotifierProvider<McpToolService>(
             create: (_) => McpToolService(),
           ),
+          ChangeNotifierProvider<TaskPlanRegistry>.value(value: plans),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -282,6 +286,37 @@ void main() {
     }
     fail('timed out waiting for $description');
   }
+
+  testWidgets('a new reply and a regenerated one start without the plan the '
+      'last reply left open', (tester) async {
+    final controller = await pumpHarness(tester);
+    const stale = TaskPlan([
+      PlanStep('Done', PlanStepStatus.completed),
+      PlanStep('Left open', PlanStepStatus.inProgress),
+    ]);
+    await tester.runAsync(() async {
+      final convo = await openConversation(controller);
+      plans.set(convo.id, stale);
+      await controller.sendMessage(ChatInputData(text: 'hello'));
+      expect(plans.of(convo.id), isNull);
+      await waitFor(
+        () => !controller.chatController.isConversationLoading(convo.id),
+        'streaming to finish',
+      );
+
+      plans.set(convo.id, stale);
+      final assistantMessage = (await service.loadMessages(
+        convo.id,
+      )).firstWhere((m) => m.role == 'assistant');
+      await controller.regenerateAtMessage(assistantMessage);
+      expect(plans.of(convo.id), isNull);
+      await waitFor(
+        () => !controller.chatController.isConversationLoading(convo.id),
+        'regeneration to finish',
+      );
+    });
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('concurrent sends persist a single user/assistant pair', (
     tester,

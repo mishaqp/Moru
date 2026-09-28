@@ -19,6 +19,7 @@ import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/api/retry_policy.dart';
 import '../../../core/services/api/stream/stream_chunk.dart';
 import '../../../core/services/chat/chat_service.dart';
+import '../../../core/services/workspace/task_plan.dart';
 import '../../../core/services/mobile_background.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../l10n/app_localizations.dart';
@@ -500,6 +501,14 @@ class ChatActions {
       // Cancellation keeps running in the background.
     } catch (_) {
       // The HTTP request is already aborted; local terminal cleanup must still run.
+    }
+  }
+
+  TaskPlanRegistry? _taskPlans() {
+    try {
+      return contextProvider.read<TaskPlanRegistry>();
+    } catch (_) {
+      return null;
     }
   }
 
@@ -1295,6 +1304,7 @@ class ChatActions {
     try {
       askUserService = contextProvider.read<AskUserInteractionService>();
     } catch (_) {}
+    final plans = _taskPlans();
     try {
       await assistantProvider.loaded;
     } catch (e) {
@@ -1356,6 +1366,9 @@ class ChatActions {
       return ChatActionResult.error(e.toString());
     }
     _activeAssistantMessages.put(assistantMessage);
+    // A new reply starts without the last one's plan, even when the model
+    // left steps open there.
+    plans?.clear(conversation.id);
     _setConversationLoading(conversation.id, true);
     // The loading guard now owns re-entry exclusion for this conversation.
     _sendInFlightClaims.remove(conversation.id);
@@ -1691,6 +1704,7 @@ class ChatActions {
     try {
       regenAskUserService = contextProvider.read<AskUserInteractionService>();
     } catch (_) {}
+    final plans = _taskPlans();
     try {
       await assistantProvider.loaded;
     } catch (e) {
@@ -1847,6 +1861,7 @@ class ChatActions {
     }
     onMessagesChanged?.call();
 
+    plans?.clear(conversation.id);
     _setConversationLoading(conversation.id, true);
     onGenerationStarted?.call(assistantMessage.id);
     // The loading guard now owns re-entry exclusion for this conversation.
