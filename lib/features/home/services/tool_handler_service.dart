@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/assistant.dart';
@@ -36,6 +37,7 @@ import 'assistant_manager_tool.dart';
 import 'built_in_tool_names.dart';
 import 'local_tools_service.dart';
 import 'mini_app_data_tool.dart';
+import 'root_phone_control.dart';
 import 'root_shell_tool.dart';
 import 'scheduled_task_tool.dart';
 import 'tool_approval_service.dart';
@@ -642,9 +644,9 @@ class ToolHandlerService {
         if (name == LocalToolNames.rootShell &&
             assistant != null &&
             LocalToolsService.isEnabledForAssistant(name, assistant)) {
-          // Every root command is approved first; a caller without the
-          // prompt (e.g. a background run) may not run any. The permission
-          // is read again so turning it off stops a running tool loop.
+          // Commands that change anything are approved first; a caller
+          // without the prompt (e.g. a background run) may only read. The
+          // permission is read again so turning it off stops a tool loop.
           final current = assistantProvider.getById(assistant.id);
           if (current == null || !current.localToolIds.contains(name)) {
             return _toolError(
@@ -653,12 +655,13 @@ class ToolHandlerService {
               tool: name,
             );
           }
-          if (approvalService == null) {
+          if (approvalService == null &&
+              LocalToolNames.requiresApprovalFor(name, args)) {
             return _toolError(
               error: 'approval_unavailable',
               message:
-                  'Root commands need the user\'s confirmation, which is not '
-                  'available here.',
+                  'Root commands that change something need the user\'s '
+                  'confirmation, which is not available here.',
               tool: name,
             );
           }
@@ -702,6 +705,20 @@ class ToolHandlerService {
           },
         );
         if (localResult != null) {
+          if (name == LocalToolNames.phoneControl &&
+              assistant != null &&
+              RootPhoneControl.accessibilityUnavailable(localResult) &&
+              (assistantProvider
+                      .getById(assistant.id)
+                      ?.localToolIds
+                      .contains(LocalToolNames.rootShell) ??
+                  false)) {
+            // Accessibility is off; root can still read and drive the screen.
+            return RootPhoneControl(
+              setClipboard: (text) =>
+                  Clipboard.setData(ClipboardData(text: text)),
+            ).execute(args);
+          }
           return localResult;
         }
 

@@ -98,11 +98,55 @@ void main() {
     expect(calls, isEmpty);
   });
 
-  test('every root command needs the user\'s approval', () {
+  test('reading commands run at once, anything else is approved', () {
+    bool approval(String command) => LocalToolNames.requiresApprovalFor(
+      LocalToolNames.rootShell,
+      {'command': command},
+    );
+    for (final command in [
+      'dumpsys battery',
+      'dumpsys battery | grep -E "level|temperature|status"',
+      'getprop ro.build.version.release',
+      'settings get system screen_brightness',
+      'pm list packages -3',
+      'logcat -d -t 200',
+      'ls -la /sdcard/*.png',
+      'cat /proc/meminfo | head -n 5',
+    ]) {
+      expect(approval(command), isFalse, reason: command);
+      expect(RootShellTool.isReadOnly(command), isTrue, reason: command);
+    }
+    for (final command in [
+      'settings put system screen_brightness 50',
+      'pm uninstall com.example',
+      'logcat',
+      'input tap 100 200',
+      'reboot',
+      'rm -rf /sdcard/x',
+      'dumpsys battery > /sdcard/b.txt',
+      'dumpsys battery; reboot',
+      'dumpsys battery && reboot',
+      'dumpsys battery & reboot',
+      r'cat $(which su)',
+      'cat `which su`',
+      'echo "\$(reboot)"',
+      'getprop | sh',
+      'find /sdcard -delete',
+      'tail -f /data/log',
+      'date -s 20260101',
+      'sort -o /system/x in',
+      'FOO=1 dumpsys',
+      'wm size 1080x1920',
+      'dumpsys battery ||',
+      'cat "unclosed',
+      '',
+      '   ',
+    ]) {
+      expect(approval(command), isTrue, reason: command);
+    }
+    expect(approval(''), isTrue);
     expect(
-      LocalToolNames.requiresApprovalFor(LocalToolNames.rootShell, {
-        'command': 'getprop ro.build.version.release',
-      }),
+      LocalToolNames.requiresApprovalFor(LocalToolNames.rootShell, {}),
       isTrue,
     );
     expect(

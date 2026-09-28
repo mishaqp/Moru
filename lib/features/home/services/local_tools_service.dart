@@ -72,7 +72,6 @@ class LocalToolNames {
     calendarDelete,
     remindersCreate,
     remindersComplete,
-    rootShell,
   ];
 
   static bool requiresApprovalFor(String name, Map<String, dynamic> arguments) {
@@ -82,6 +81,10 @@ class LocalToolNames {
     }
     if (name == scheduledTasks) {
       return ScheduledTaskTool.requiresApproval(arguments);
+    }
+    if (name == rootShell) {
+      final command = arguments['command'];
+      return command is! String || !RootShellTool.isReadOnly(command);
     }
     if (name != browserUse) return false;
     final action = (arguments['action'] ?? '').toString().trim().toLowerCase();
