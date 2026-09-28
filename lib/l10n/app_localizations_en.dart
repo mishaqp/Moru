@@ -11042,6 +11042,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserClearHistory => 'Clear';
 
   @override
+  String get browserClearHistoryConfirm =>
+      'Clear the history of the last 7 days?';
+
+  @override
   String get browserLibrarySearch => 'Search';
 
   @override

@@ -50,8 +50,11 @@ class _UserscriptsSheetState extends State<UserscriptsSheet> {
 
   Future<void> _install() async {
     final l10n = AppLocalizations.of(context)!;
-    final uri = Uri.tryParse(_link.text.trim());
-    if (uri == null || !(uri.isScheme('http') || uri.isScheme('https'))) {
+    // A link has no spaces; keyboards add them after dots.
+    final uri = Uri.tryParse(_link.text.replaceAll(RegExp(r'\s'), ''));
+    if (uri == null ||
+        !(uri.isScheme('http') || uri.isScheme('https')) ||
+        uri.host.isEmpty) {
       showAppSnackBar(
         context,
         message: l10n.userscriptsBadLink,

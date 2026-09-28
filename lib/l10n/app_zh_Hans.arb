@@ -3994,6 +3994,7 @@
   "browserBookmarks": "书签",
   "browserHistory": "历史记录",
   "browserClearHistory": "清除",
+  "browserClearHistoryConfirm": "清除最近 7 天的历史记录？",
   "browserLibrarySearch": "搜索",
   "browserHistoryEmpty": "最近 7 天没有访问记录",
   "browserBookmarksEmpty": "还没有书签。点按地址栏中的星标。",

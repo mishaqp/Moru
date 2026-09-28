@@ -266,6 +266,10 @@ class FakeWebViewController extends PlatformWebViewController {
     _delegate?.onPageFinished?.call(url);
   }
 
+  void simulateProgress(int progress) {
+    _delegate?.onProgress?.call(progress);
+  }
+
   void simulateSslError(PlatformSslAuthError error) {
     _delegate?.onSslAuthError?.call(error);
   }

@@ -45,6 +45,27 @@ class BrowserLibrarySheet extends StatefulWidget {
 class _BrowserLibrarySheetState extends State<BrowserLibrarySheet> {
   String _query = '';
 
+  Future<void> _confirmClear() async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        content: Text(l10n.browserClearHistoryConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.homePageCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.browserClearHistory),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await BrowserLibrary.instance.clearHistory();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -78,7 +99,7 @@ class _BrowserLibrarySheetState extends State<BrowserLibrarySheet> {
                   if (widget.history)
                     TextButton(
                       key: BrowserLibrarySheet.clearKey,
-                      onPressed: () => unawaited(library.clearHistory()),
+                      onPressed: () => unawaited(_confirmClear()),
                       child: Text(l10n.browserClearHistory),
                     ),
                 ],

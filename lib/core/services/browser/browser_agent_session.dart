@@ -1168,6 +1168,25 @@ class BrowserAgentSession {
     if (ready != null && !ready.isCompleted) ready.complete();
   }
 
+  /// A navigation was refused before its page loaded (an invalid
+  /// certificate): the tab shows [shownUrl] again, the wait ends, and the
+  /// refused address is not a visit.
+  void navigationBlocked(String? shownUrl) {
+    final tab = _active;
+    if (tab != null) {
+      tab
+        ..url = shownUrl
+        ..loading = false;
+      _publishTabs();
+    }
+    _loading = false;
+    pageLoading.value = false;
+    pageUrl.value = shownUrl;
+    _pageUrl = shownUrl;
+    final ready = _readyCompleter;
+    if (ready != null && !ready.isCompleted) ready.complete();
+  }
+
   Future<void> waitUntilAttached({
     Duration timeout = const Duration(seconds: 5),
   }) async {

@@ -4978,6 +4978,7 @@
   "browserBookmarks": "Bookmarks",
   "browserHistory": "History",
   "browserClearHistory": "Clear",
+  "browserClearHistoryConfirm": "Clear the history of the last 7 days?",
   "browserLibrarySearch": "Search",
   "browserHistoryEmpty": "No pages visited in the last 7 days",
   "browserBookmarksEmpty": "No bookmarks yet. Tap the star in the address bar.",

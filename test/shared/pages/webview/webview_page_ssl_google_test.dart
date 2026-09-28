@@ -123,4 +123,41 @@ void main() {
     expect(notes.single['kind'], 'ssl_error');
     expect(notes.single['site'], 'bad-cert.example');
   });
+
+  testWidgets('a refused certificate leaves the page that was shown: no '
+      'stuck progress, no visit, the wait ends', (tester) async {
+    final fake = await openBrowser(tester, 'https://ok.example/');
+    final visits = <String>[];
+    final original = session.onVisit;
+    session.onVisit = (url, _) => visits.add(url);
+    addTearDown(() => session.onVisit = original);
+    session.currentActivity.value = BrowserActivity(
+      id: 'o',
+      action: 'open',
+      startedAt: DateTime(2026),
+    );
+
+    fake.autoFinish = false;
+    final opened = session.load(Uri.parse('https://bad-cert.example/'));
+    fake.startNext();
+    fake.simulateProgress(10);
+    final error = FakeSslAuthError();
+    fake.simulateSslError(error);
+    await tester.pump();
+    expect(await error.answer.future, 'cancel');
+    // Chromium may still report the refused load's end afterwards.
+    fake.simulateProgress(10);
+    fake.finishNext();
+    await tester.pump();
+    await opened;
+
+    expect(
+      find.byKey(const ValueKey('browser_address_progress')),
+      findsNothing,
+    );
+    expect(find.textContaining('bad-cert.example'), findsNothing);
+    expect(session.pageUrl.value, 'https://ok.example/');
+    expect(session.pageLoading.value, isFalse);
+    expect(visits, isEmpty);
+  });
 }

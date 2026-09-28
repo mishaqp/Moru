@@ -10558,6 +10558,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserClearHistory => '清除';
 
   @override
+  String get browserClearHistoryConfirm => '清除最近 7 天的历史记录？';
+
+  @override
   String get browserLibrarySearch => '搜索';
 
   @override
@@ -21785,6 +21788,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get browserClearHistory => '清除';
+
+  @override
+  String get browserClearHistoryConfirm => '清除最近 7 天的历史记录？';
 
   @override
   String get browserLibrarySearch => '搜索';
@@ -33088,6 +33094,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get browserClearHistory => '清除';
+
+  @override
+  String get browserClearHistoryConfirm => '清除最近 7 天的歷史記錄？';
 
   @override
   String get browserLibrarySearch => '搜尋';

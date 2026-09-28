@@ -4017,6 +4017,7 @@
   "browserBookmarks": "書籤",
   "browserHistory": "歷史記錄",
   "browserClearHistory": "清除",
+  "browserClearHistoryConfirm": "清除最近 7 天的歷史記錄？",
   "browserLibrarySearch": "搜尋",
   "browserHistoryEmpty": "最近 7 天沒有瀏覽記錄",
   "browserBookmarksEmpty": "還沒有書籤。點按網址列中的星號。",

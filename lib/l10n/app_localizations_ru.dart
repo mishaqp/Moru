@@ -11167,6 +11167,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserClearHistory => 'Очистить';
 
   @override
+  String get browserClearHistoryConfirm =>
+      'Очистить историю за последние 7 дней?';
+
+  @override
   String get browserLibrarySearch => 'Поиск';
 
   @override

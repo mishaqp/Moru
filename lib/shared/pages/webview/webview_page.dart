@@ -96,6 +96,14 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
   bool _minimizing = false;
   String? _title;
   String? _currentUrl;
+
+  /// The last page that finished loading: what the view still shows when a
+  /// navigation is refused (an invalid certificate).
+  String? _shownUrl;
+
+  /// The address whose certificate was refused, until the next navigation:
+  /// its late progress and finish events are not a page load.
+  String? _sslRefusedUrl;
   bool _isLoading = true;
   int _progress = 0;
   bool _canGoBack = false;
@@ -209,6 +217,8 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     setState(() {
       _controller = active;
       _currentUrl = null;
+      _shownUrl = null;
+      _sslRefusedUrl = null;
       _title = null;
       _mainFrameError = null;
       _isLoading = false;
@@ -285,13 +295,15 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
   /// and the agent session's bookkeeping.
   NavigationDelegate _pageDelegate() => NavigationDelegate(
     onProgress: (p) {
-      if (!mounted) return;
+      if (!mounted || _sslRefusedUrl != null) return;
       setState(() {
         _isLoading = p < 100;
         _progress = p;
       });
     },
     onPageStarted: (url) {
+      if (url == _sslRefusedUrl) return;
+      _sslRefusedUrl = null;
       _navGeneration++;
       if (!mounted) return;
       setState(() {
@@ -304,7 +316,9 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
       }
     },
     onPageFinished: (url) async {
+      if (url == _sslRefusedUrl) return;
       final generation = _navGeneration;
+      _shownUrl = url;
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -433,7 +447,7 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
         ? session.isRouteCurrent && !session.minimized.value
         : true;
     if (!mounted || agentWorking || !visible) {
-      await error.cancel();
+      await _refuseSsl(error, url);
       if (widget.agentSession) {
         BrowserHandoffs.instance.noteSslError(host, platform.description);
       }
@@ -462,7 +476,24 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
       if (host.isNotEmpty) _sslAcceptedHosts.add(host);
       await error.proceed();
     } else {
-      await error.cancel();
+      await _refuseSsl(error, url);
+    }
+  }
+
+  /// Refuses the page: the view keeps the page it showed, so the address
+  /// bar, progress and the session go back to it.
+  Future<void> _refuseSsl(SslAuthError error, String? url) async {
+    _sslRefusedUrl = url;
+    await error.cancel();
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _progress = 100;
+        _currentUrl = _shownUrl;
+      });
+    }
+    if (widget.agentSession) {
+      BrowserAgentSession.instance.navigationBlocked(_shownUrl);
     }
   }
 
@@ -676,6 +707,7 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     final generation = _navGeneration;
     final url = await _controller.currentUrl();
     if (!mounted || generation != _navGeneration) return;
+    _shownUrl = url;
     setState(() => _currentUrl = url);
     await _refreshCanGoStates(generation);
     await _updateTitle(generation);

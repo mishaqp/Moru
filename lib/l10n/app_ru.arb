@@ -4910,6 +4910,7 @@
   "browserBookmarks": "Закладки",
   "browserHistory": "История",
   "browserClearHistory": "Очистить",
+  "browserClearHistoryConfirm": "Очистить историю за последние 7 дней?",
   "browserLibrarySearch": "Поиск",
   "browserHistoryEmpty": "За последние 7 дней страниц нет",
   "browserBookmarksEmpty": "Закладок пока нет. Нажмите звёздочку в адресной строке.",

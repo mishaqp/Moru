@@ -112,4 +112,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(await session.controller!.currentUrl(), 'https://mars.example/');
   });
+
+  testWidgets('clearing the history asks first', (tester) async {
+    await openBrowser(tester);
+    final library = BrowserLibrary.instance;
+    await tester.tap(find.byTooltip('More options'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('History'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(BrowserLibrarySheet.clearKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await settle(tester);
+    expect(library.history.value, isNotEmpty);
+
+    await tester.tap(find.byKey(BrowserLibrarySheet.clearKey));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Clear'),
+      ),
+    );
+    await settle(tester);
+    expect(library.history.value, isEmpty);
+  });
 }

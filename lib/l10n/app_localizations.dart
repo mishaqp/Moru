@@ -19757,6 +19757,12 @@ abstract class AppLocalizations {
   /// **'Clear'**
   String get browserClearHistory;
 
+  /// No description provided for @browserClearHistoryConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear the history of the last 7 days?'**
+  String get browserClearHistoryConfirm;
+
   /// No description provided for @browserLibrarySearch.
   ///
   /// In en, this message translates to:
