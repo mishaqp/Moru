@@ -112,8 +112,17 @@ class BrowserAgentActions {
       requiresApproval: true,
       labelRu: 'Нажать',
       labelEn: 'Click',
-      descriptionRu: 'Нажатие на элемент.',
-      descriptionEn: 'Click an element.',
+      descriptionRu: 'Нажатие на элемент или на точку страницы.',
+      descriptionEn: 'Click an element or a point on the page.',
+    ),
+    BrowserAgentAction(
+      id: 'hover',
+      requiresApproval: false,
+      labelRu: 'Навести указатель',
+      labelEn: 'Hover',
+      descriptionRu:
+          'Наведение на элемент или точку: открывает меню и подсказки.',
+      descriptionEn: 'Move the pointer over an element or point to open menus.',
     ),
     BrowserAgentAction(
       id: 'type',

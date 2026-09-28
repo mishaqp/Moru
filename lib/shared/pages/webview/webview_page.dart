@@ -112,6 +112,9 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
                 ? _agentConsoleSink?.call(message)
                 : _onConsoleMessage(message),
           ));
+    if (widget.agentSession && adopted == null) {
+      BrowserAgentSession.instance.installDialogHandlers(_controller);
+    }
     _controller.setNavigationDelegate(
       NavigationDelegate(
         onProgress: (p) {
@@ -147,6 +150,14 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
           await _refreshCanGoStates(generation);
           await _updateTitle(generation);
         },
+        onHttpError: (error) {
+          if (widget.agentSession) {
+            BrowserAgentSession.instance.noteHttpError(
+              error.request?.uri,
+              error.response?.statusCode,
+            );
+          }
+        },
         onWebResourceError: (err) {
           // Only a main-frame failure replaces the page with an error
           // screen. A subresource error (isForMainFrame == false), and
@@ -173,7 +184,9 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
       // Just pushed, so this route is current from the start -- didPushNext/
       // didPopNext (via routeObserver, subscribed in didChangeDependencies)
       // keep this accurate as later routes cover and uncover it.
-      BrowserAgentSession.instance.isRouteCurrent = true;
+      BrowserAgentSession.instance
+        ..isRouteCurrent = true
+        ..dialogPresenter = _showPageDialog;
       final bridge = context.read<BrowserAskAiBridge>();
       _askAiController = AskAiPanelController(bridge: bridge)
         ..addListener(_onAskAiControllerChanged);
@@ -217,6 +230,12 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
       if (identical(_agentConsoleSink, _onConsoleMessage)) {
         _agentConsoleSink = null;
       }
+      if (identical(
+        BrowserAgentSession.instance.dialogPresenter,
+        _showPageDialog,
+      )) {
+        BrowserAgentSession.instance.dialogPresenter = null;
+      }
       if (_minimizing) {
         BrowserAgentSession.instance.minimize(_controller);
       } else {
@@ -236,6 +255,55 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     _askAiController?.removeListener(_onAskAiControllerChanged);
     _askAiController?.dispose();
     super.dispose();
+  }
+
+  /// A page's alert/confirm/prompt while the user looks at the browser.
+  Future<String?> _showPageDialog(
+    String kind,
+    String message,
+    String? defaultText,
+  ) async {
+    if (!mounted) return kind == 'confirm' ? 'declined' : null;
+    final l10n = AppLocalizations.of(context)!;
+    final input = kind == 'prompt'
+        ? TextEditingController(text: defaultText ?? '')
+        : null;
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(Uri.tryParse(_currentUrl ?? '')?.host ?? ''),
+        content: input == null
+            ? SingleChildScrollView(child: Text(message))
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(message),
+                  const SizedBox(height: 8),
+                  TextField(controller: input, autofocus: true),
+                ],
+              ),
+        actions: [
+          if (kind != 'alert')
+            TextButton(
+              onPressed: () => Navigator.of(
+                context,
+              ).pop(kind == 'confirm' ? 'declined' : null),
+              child: Text(l10n.homePageCancel),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(switch (kind) {
+              'alert' => 'ok',
+              'confirm' => 'accepted',
+              _ => input!.text,
+            }),
+            child: Text(l10n.sideDrawerOK),
+          ),
+        ],
+      ),
+    );
+    input?.dispose();
+    return result ?? (kind == 'confirm' ? 'declined' : null);
   }
 
   void _onSessionActivityChanged() {

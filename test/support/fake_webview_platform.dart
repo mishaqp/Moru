@@ -55,6 +55,12 @@ class FakeNavigationDelegate extends PlatformNavigationDelegate {
   WebResourceErrorCallback? onWebResourceError;
   ProgressCallback? onProgress;
   NavigationRequestCallback? onNavigationRequest;
+  HttpResponseErrorCallback? onHttpError;
+
+  @override
+  Future<void> setOnHttpError(HttpResponseErrorCallback onHttpError) async {
+    this.onHttpError = onHttpError;
+  }
 
   @override
   Future<void> setOnPageStarted(PageEventCallback onPageStarted) async {
@@ -262,6 +268,28 @@ class FakeWebViewController extends PlatformWebViewController {
     final url = currentUrlSync;
     if (url != null) _fireNavigation(url);
   }
+
+  Future<void> Function(JavaScriptAlertDialogRequest)? onAlert;
+  Future<bool> Function(JavaScriptConfirmDialogRequest)? onConfirm;
+  Future<String> Function(JavaScriptTextInputDialogRequest)? onPrompt;
+
+  @override
+  Future<void> setOnJavaScriptAlertDialog(
+    Future<void> Function(JavaScriptAlertDialogRequest request)
+    onJavaScriptAlertDialog,
+  ) async => onAlert = onJavaScriptAlertDialog;
+
+  @override
+  Future<void> setOnJavaScriptConfirmDialog(
+    Future<bool> Function(JavaScriptConfirmDialogRequest request)
+    onJavaScriptConfirmDialog,
+  ) async => onConfirm = onJavaScriptConfirmDialog;
+
+  @override
+  Future<void> setOnJavaScriptTextInputDialog(
+    Future<String> Function(JavaScriptTextInputDialogRequest request)
+    onJavaScriptTextInputDialog,
+  ) async => onPrompt = onJavaScriptTextInputDialog;
 
   @override
   Future<String?> currentUrl() async => currentUrlSync;

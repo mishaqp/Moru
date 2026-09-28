@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 
 import '../../../core/services/browser/browser_agent_session.dart';
+import '../../../core/services/browser/browser_guard.dart';
 import '../../../core/services/browser/browser_research.dart';
 import 'browser_agent_actions.dart';
 import '../../../core/services/browser/web_source.dart';
@@ -48,7 +49,13 @@ class BrowserAgentTool {
             detail: _activityDetail(action, args),
           )
         : null;
-    final result = await _dispatch(action, args, session);
+    session.beginAction();
+    String result;
+    try {
+      result = await _guarded(action, args, session);
+    } finally {
+      session.endAction();
+    }
     if (activityId != null) {
       final decoded = jsonDecode(result) as Map<String, dynamic>;
       final ok = decoded['ok'] == true;
@@ -81,6 +88,64 @@ class BrowserAgentTool {
     }
   }
 
+  /// Actions after which the page may be a different one.
+  static const Set<String> _navigating = {
+    'open',
+    'back',
+    'forward',
+    'reload',
+    'click',
+    'submit',
+    'press_key',
+  };
+
+  /// [_dispatch] with the guard around it: a blocking verification page
+  /// refuses interaction, actions are paced per site, and the result says
+  /// which check the page shows and which dialogs were answered.
+  static Future<String> _guarded(
+    String action,
+    Map<String, dynamic> args,
+    BrowserAgentSession session,
+  ) async {
+    try {
+      if (BrowserGuard.blockedByChallenge.contains(action) &&
+          session.isAttached &&
+          session.challenge.value?.blocking == true &&
+          (await session.checkChallenge())?.blocking == true) {
+        return jsonEncode({
+          'ok': false,
+          'error': 'challenge_detected',
+          'message':
+              'The page is a verification check. Ask the user to complete it '
+              'in the browser, then observe again.',
+          'challenge': session.challenge.value!.toJson(),
+        });
+      }
+      if (session.isAttached || action == 'open') {
+        await session.pace(
+          action,
+          url: action == 'open' ? _stringArg(args, 'url') : null,
+        );
+      }
+      final raw = await _dispatch(action, args, session);
+      if (!session.isAttached) return raw;
+      final result = jsonDecode(raw) as Map<String, dynamic>;
+      if (_navigating.contains(action) || action == 'observe') {
+        final found = await session.checkChallenge();
+        if (found != null) result['challenge'] = found.toJson();
+      }
+      final dialogs = session.drainDialogs();
+      if (dialogs.isNotEmpty) result['dialogs'] = dialogs;
+      return jsonEncode(result);
+    } on BrowserStoppedException {
+      return jsonEncode({
+        'ok': false,
+        'error': 'stopped_by_user',
+        'message': 'The user stopped this browser action.',
+      });
+    }
+  }
+
   static Future<String> _dispatch(
     String action,
     Map<String, dynamic> args,
@@ -101,7 +166,20 @@ class BrowserAgentTool {
             ),
           );
         case 'click':
+          final point = _point(args);
+          if (point != null && _nullableIntArg(args, 'element_id') == null) {
+            return jsonEncode(await session.clickAt(point.x, point.y));
+          }
           return jsonEncode(await session.click(_elementId(args)));
+        case 'hover':
+          final at = _point(args);
+          final id = _nullableIntArg(args, 'element_id');
+          if (at == null && id == null) {
+            throw ArgumentError('hover needs element_id or x and y.');
+          }
+          return jsonEncode(
+            await session.hover(elementId: id, x: at?.x, y: at?.y),
+          );
         case 'type':
           return jsonEncode(
             await session.type(
@@ -161,7 +239,7 @@ class BrowserAgentTool {
             'ok': false,
             'error': 'invalid_action',
             'message':
-                'Use action open, observe, click, type, submit, press_key, scroll, back, forward, reload, read, wait_for, eval_js, done, or close.',
+                'Use action open, observe, click, hover, type, submit, press_key, scroll, back, forward, reload, read, wait_for, eval_js, done, or close.',
           });
       }
     } on TimeoutException {
@@ -277,11 +355,24 @@ class BrowserAgentTool {
     return {'ok': true, 'url': uri.toString(), 'reused': false};
   }
 
+  /// Viewport point in CSS pixels from `x` and `y`, when both are given.
+  static ({num x, num y})? _point(Map<String, dynamic> args) {
+    num? read(String key) {
+      final raw = args[key];
+      return raw is num ? raw : num.tryParse('${raw ?? ''}');
+    }
+
+    final x = read('x');
+    final y = read('y');
+    return x == null || y == null ? null : (x: x, y: y);
+  }
+
   static int _elementId(Map<String, dynamic> args) {
     final id = _nullableIntArg(args, 'element_id');
     if (id == null || id < 1) {
       throw ArgumentError(
-        'element_id must be a positive integer from observe.',
+        'element_id must be a positive integer from observe (or give x and '
+        'y for click).',
       );
     }
     return id;

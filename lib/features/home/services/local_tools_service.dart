@@ -675,7 +675,7 @@ class LocalToolsService {
     'function': {
       'name': LocalToolNames.browserUse,
       'description':
-          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, submit a form (action=submit) or synthesize a key press on the focused element (action=press_key, e.g. Enter), scroll, use browser history, read the full page text with action=read, wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again), or run arbitrary JavaScript with action=eval_js when nothing else covers the task. click, type, submit, press_key, and eval_js each require explicit user approval unless full tool trust is on; open, observe, read, scroll, back/forward/reload, wait_for, and done never do. Call action=done with a short summary once the browser task is complete, so the app can show that clearly instead of leaving the last action as the visible status. Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
+          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, submit a form (action=submit) or synthesize a key press on the focused element (action=press_key, e.g. Enter), scroll, use browser history, read the full page text with action=read, wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again), or run arbitrary JavaScript with action=eval_js when nothing else covers the task. click, type, submit, press_key, and eval_js each require explicit user approval unless full tool trust is on; open, observe, read, scroll, back/forward/reload, wait_for, and done never do. click also takes x and y (CSS pixels in the viewport; observe reports its size) for things observe lists no element for, such as canvases and maps; hover moves the pointer over an element_id or x/y to open hover menus and needs no approval. Actions are paced per site like a person would act, so do not add your own waits between them. A result may carry "challenge" (a captcha, Cloudflare check, rate limit or refusal): then follow its "next" advice - ask the user to complete a verification themselves and never try to solve it; while a blocking check is shown, click/hover/type/submit/press_key/eval_js are refused. A result may carry "dialogs": alert/confirm/prompt boxes the page opened, already answered with the default (OK / accept / suggested text). A result with error "stopped_by_user" means the user pressed Stop: do not repeat the action unless asked. Call action=done with a short summary once the browser task is complete, so the app can show that clearly instead of leaving the last action as the visible status. Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -685,6 +685,7 @@ class LocalToolsService {
               'open',
               'observe',
               'click',
+              'hover',
               'type',
               'submit',
               'press_key',
@@ -707,7 +708,17 @@ class LocalToolsService {
           'element_id': {
             'type': 'integer',
             'description':
-                'Interactive element ID returned by the latest observe. Required for click/type. For submit, may be the submit button or any element inside the target form.',
+                'Interactive element ID returned by the latest observe. Required for type; for click and hover unless x and y are given. For submit, may be the submit button or any element inside the target form.',
+          },
+          'x': {
+            'type': 'number',
+            'description':
+                'click/hover: horizontal viewport point in CSS pixels, with y, instead of element_id.',
+          },
+          'y': {
+            'type': 'number',
+            'description':
+                'click/hover: vertical viewport point in CSS pixels, with x.',
           },
           'text': {
             'type': 'string',

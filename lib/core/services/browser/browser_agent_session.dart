@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../utils/utf16_safe_cut.dart';
+import 'browser_guard.dart';
 import 'browser_research.dart';
 
 /// Lifecycle state of a [BrowserActivity]: [running] the moment it is
@@ -55,6 +57,19 @@ class BrowserActivity {
     finishedAt: finishedAt ?? this.finishedAt,
   );
 }
+
+/// The user pressed Stop while a `browser_use` action ran.
+class BrowserStoppedException implements Exception {
+  const BrowserStoppedException();
+
+  @override
+  String toString() => 'The user stopped this browser action.';
+}
+
+/// Shows a page's JavaScript dialog to the user. Returns `ok`, `accepted`,
+/// `declined`, the prompt's text, or null when a prompt was cancelled.
+typedef BrowserDialogPresenter =
+    Future<String?> Function(String kind, String message, String? defaultText);
 
 class BrowserAgentProtocolException implements Exception {
   const BrowserAgentProtocolException(this.message);
@@ -297,6 +312,156 @@ class BrowserAgentSession {
 
   bool get isAttached => _controller != null;
 
+  // ---------------------------------------------------------------------------
+  // Guard: challenge pages, JavaScript dialogs, pacing, Stop
+  // ---------------------------------------------------------------------------
+
+  /// The verification or refusal the current page shows, if any; the page
+  /// shows a banner for it.
+  final ValueNotifier<BrowserChallenge?> challenge =
+      ValueNotifier<BrowserChallenge?>(null);
+
+  String? _pageUrl;
+  int? _mainFrameStatus;
+
+  /// An HTTP error of a request; only the page's own one counts.
+  void noteHttpError(Uri? uri, int? status) {
+    if (uri != null && uri.toString() == _pageUrl) _mainFrameStatus = status;
+  }
+
+  /// Looks for a verification or refusal on the current page and publishes
+  /// it on [challenge]. Never throws: a page that cannot be read has none.
+  Future<BrowserChallenge?> checkChallenge() async {
+    final controller = _controller;
+    if (controller == null) return null;
+    Map<String, dynamic>? signals;
+    try {
+      signals = await _runJson(BrowserGuard.challengeScript);
+    } catch (_) {}
+    final url = await controller.currentUrl();
+    final found = BrowserGuard.classify(
+      status: _mainFrameStatus,
+      url: url,
+      signals: signals,
+    );
+    challenge.value = found;
+    return found;
+  }
+
+  /// Shows dialogs to the user while they look at the browser page and
+  /// nothing runs; set by that page.
+  BrowserDialogPresenter? dialogPresenter;
+
+  final List<BrowserDialogRecord> _dialogs = <BrowserDialogRecord>[];
+
+  /// Answers the page's `alert`, `confirm` and `prompt` so they never hang
+  /// it: the user answers them while looking at the page, otherwise the page
+  /// gets the default (OK, accept, the suggested text) and the model hears
+  /// about it with its next result.
+  void installDialogHandlers(WebViewController controller) {
+    controller
+      ..setOnJavaScriptAlertDialog((request) async {
+        await _answerDialog('alert', request.message, null);
+      })
+      ..setOnJavaScriptConfirmDialog(
+        (request) async =>
+            await _answerDialog('confirm', request.message, null) == 'accepted',
+      )
+      ..setOnJavaScriptTextInputDialog(
+        (request) async =>
+            await _answerDialog(
+              'prompt',
+              request.message,
+              request.defaultText ?? '',
+            ) ??
+            '',
+      );
+  }
+
+  Future<String?> _answerDialog(
+    String kind,
+    String message,
+    String? defaultText,
+  ) async {
+    final presenter = dialogPresenter;
+    final agentRunning =
+        currentActivity.value?.outcome == BrowserActivityOutcome.running;
+    if (presenter != null && isRouteCurrent && !agentRunning) {
+      return presenter(kind, message, defaultText);
+    }
+    final answer = switch (kind) {
+      'alert' => 'ok',
+      'confirm' => 'accepted',
+      _ => defaultText ?? '',
+    };
+    _dialogs.add(
+      BrowserDialogRecord(kind: kind, message: message, answer: answer),
+    );
+    if (_dialogs.length > 10) _dialogs.removeAt(0);
+    return answer;
+  }
+
+  /// The dialogs answered for the model since it last asked, oldest first.
+  List<Map<String, Object?>> drainDialogs() {
+    final drained = [for (final dialog in _dialogs) dialog.toJson()];
+    _dialogs.clear();
+    return drained;
+  }
+
+  final Map<String, DateTime> _lastActionAt = <String, DateTime>{};
+  final math.Random _random = math.Random();
+
+  /// Waits as long as [BrowserGuard.throttle] asks before [action] on the
+  /// site of [url] (the current page when null).
+  Future<void> pace(String action, {String? url}) async {
+    final target = url ?? await _controller?.currentUrl();
+    final host = BrowserGuard.host(target);
+    if (host == null) return;
+    final last = _lastActionAt[host];
+    final delay = BrowserGuard.throttle(
+      action,
+      target,
+      sinceLast: last == null ? null : DateTime.now().difference(last),
+      jitter: _random.nextDouble(),
+    );
+    if (delay > Duration.zero) {
+      await _interruptible(Future<void>.delayed(delay));
+    }
+    _lastActionAt[host] = DateTime.now();
+  }
+
+  Completer<void>? _stopSignal;
+
+  /// A `browser_use` action starts; [requestStop] ends its waits.
+  void beginAction() {
+    _stopSignal = Completer<void>()..future.ignore();
+  }
+
+  void endAction() {
+    _stopSignal = null;
+  }
+
+  /// Stops the running action at its next wait (loading, pacing, polling).
+  void requestStop() {
+    final signal = _stopSignal;
+    if (signal != null && !signal.isCompleted) {
+      signal.completeError(const BrowserStoppedException());
+    }
+  }
+
+  Future<T> _interruptible<T>(Future<T> future) {
+    final signal = _stopSignal;
+    if (signal == null) return future;
+    if (signal.isCompleted) {
+      future.ignore();
+      return Future<T>.error(const BrowserStoppedException());
+    }
+    return Future.any<T>([
+      future,
+      signal.future.then<T>((_) => throw const BrowserStoppedException()),
+    ]);
+  }
+
   /// The live controller, for the mini window and a page re-expanding it.
   WebViewController? get controller => _controller;
 
@@ -320,6 +485,8 @@ class BrowserAgentSession {
       NavigationDelegate(
         onPageStarted: pageStarted,
         onPageFinished: pageFinished,
+        onHttpError: (error) =>
+            noteHttpError(error.request?.uri, error.response?.statusCode),
       ),
     );
     _parked = true;
@@ -390,6 +557,9 @@ class BrowserAgentSession {
     ownerConversationId = null;
     isRouteCurrent = false;
     _askAiTasks.clear();
+    challenge.value = null;
+    _dialogs.clear();
+    dialogPresenter = null;
     currentActivity.value = null;
     recentActivityNotifier.value = const <BrowserActivity>[];
     final ready = _readyCompleter;
@@ -402,6 +572,9 @@ class BrowserAgentSession {
   void pageStarted(String url) {
     _navigationSequence++;
     _loading = true;
+    _pageUrl = url;
+    _mainFrameStatus = null;
+    challenge.value = null;
     final previous = _readyCompleter;
     if (previous == null || previous.isCompleted) {
       _readyCompleter = Completer<void>();
@@ -438,7 +611,7 @@ class BrowserAgentSession {
     }
     if (!_loading) return;
     final ready = _readyCompleter ??= Completer<void>();
-    await ready.future.timeout(timeout);
+    await _interruptible(ready.future.timeout(timeout));
   }
 
   Future<void> load(Uri uri) async {
@@ -529,6 +702,45 @@ class BrowserAgentSession {
       ..remove('may_navigate');
     return _withCurrentUrl(visibleResult);
   }
+
+  /// Clicks the page at viewport point ([x], [y]) in CSS pixels, for what
+  /// observe lists no element for: canvases, maps, custom widgets.
+  Future<Map<String, dynamic>> clickAt(num x, num y) async {
+    await waitUntilReady();
+    final controller = _requireController();
+    final beforeUrl = await controller.currentUrl();
+    final beforeSequence = _navigationSequence;
+    final result = await _runJson(_pointerScript('click', x: x, y: y));
+    if (result['ok'] == true) {
+      await _settleAfterInteraction(
+        navigationSequence: beforeSequence,
+        urlBefore: beforeUrl,
+        navigationGrace: const Duration(seconds: 1),
+      );
+    }
+    return _withCurrentUrl(result);
+  }
+
+  /// Moves the pointer over an element from observe or a viewport point,
+  /// which opens hover menus and tooltips.
+  Future<Map<String, dynamic>> hover({int? elementId, num? x, num? y}) async {
+    await waitUntilReady();
+    final result = await _runJson(
+      _pointerScript('hover', elementId: elementId, x: x, y: y),
+    );
+    // Menus open on the next frames.
+    await _interruptible(
+      Future<void>.delayed(const Duration(milliseconds: 200)),
+    );
+    return result;
+  }
+
+  static String _pointerScript(String mode, {int? elementId, num? x, num? y}) =>
+      _pointerScriptTemplate
+          .replaceAll('__MODE__', jsonEncode(mode))
+          .replaceAll('__ELEMENT_ID__', '${elementId ?? 0}')
+          .replaceAll('__X__', '${x ?? -1}')
+          .replaceAll('__Y__', '${y ?? -1}');
 
   Future<Map<String, dynamic>> type(int elementId, String text) async {
     await waitUntilReady();
@@ -704,7 +916,9 @@ class BrowserAgentSession {
           'elapsed_ms': DateTime.now().difference(start).inMilliseconds,
         };
       }
-      await Future<void>.delayed(const Duration(milliseconds: 150));
+      await _interruptible(
+        Future<void>.delayed(const Duration(milliseconds: 150)),
+      );
     }
   }
 
@@ -814,13 +1028,17 @@ class BrowserAgentSession {
       }
       final currentUrl = await _requireController().currentUrl();
       if (urlBefore != null && currentUrl != null && currentUrl != urlBefore) {
-        await Future<void>.delayed(const Duration(milliseconds: 40));
+        await _interruptible(
+          Future<void>.delayed(const Duration(milliseconds: 40)),
+        );
         if (_loading) {
           await waitUntilReady(timeout: const Duration(seconds: 15));
         }
         return;
       }
-      await Future<void>.delayed(const Duration(milliseconds: 40));
+      await _interruptible(
+        Future<void>.delayed(const Duration(milliseconds: 40)),
+      );
     }
   }
 
@@ -918,6 +1136,74 @@ class BrowserAgentSession {
     element_id: id,
     may_navigate: mayNavigate
   });
+})();
+''';
+
+  static const String _pointerScriptTemplate = r'''
+(() => {
+  const mode = __MODE__;
+  const id = __ELEMENT_ID__;
+  let x = __X__;
+  let y = __Y__;
+  let element = null;
+  if (id > 0) {
+    const elements = window.__moruBrowserElementRegistry;
+    element = elements instanceof Map ? elements.get(id) : null;
+    if (!element || !element.isConnected) {
+      return JSON.stringify({
+        ok: false,
+        error: 'stale_element',
+        message: 'The element is no longer on the page. Observe again.'
+      });
+    }
+    element.scrollIntoView({block: 'center', inline: 'center'});
+    const rect = element.getBoundingClientRect();
+    x = rect.left + rect.width / 2;
+    y = rect.top + rect.height / 2;
+  } else {
+    if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) {
+      return JSON.stringify({
+        ok: false,
+        error: 'point_outside_viewport',
+        message: 'x and y are CSS pixels inside the viewport (' +
+            window.innerWidth + 'x' + window.innerHeight + ').'
+      });
+    }
+    element = document.elementFromPoint(x, y);
+    if (!element) {
+      return JSON.stringify({
+        ok: false,
+        error: 'nothing_at_point',
+        message: 'There is no element at that point.'
+      });
+    }
+  }
+  const base = {bubbles: true, cancelable: true, view: window, clientX: x, clientY: y};
+  const pointer = (type) => {
+    try {
+      element.dispatchEvent(new PointerEvent(type, Object.assign({pointerType: 'touch', isPrimary: true}, base)));
+    } catch (e) {}
+  };
+  const mouse = (type) => element.dispatchEvent(new MouseEvent(type, base));
+  pointer('pointerover');
+  pointer('pointerenter');
+  mouse('mouseover');
+  mouse('mouseenter');
+  mouse('mousemove');
+  if (mode === 'click') {
+    pointer('pointerdown');
+    mouse('mousedown');
+    if (typeof element.focus === 'function') element.focus();
+    pointer('pointerup');
+    mouse('mouseup');
+    element.click();
+  }
+  const tag = element.tagName.toLowerCase();
+  const label = String(element.innerText || element.getAttribute('aria-label') ||
+      element.getAttribute('title') || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  const result = {ok: true, x: Math.round(x), y: Math.round(y), tag};
+  if (label) result.text = label;
+  return JSON.stringify(result);
 })();
 ''';
 
@@ -1385,6 +1671,7 @@ class BrowserAgentSession {
     title: document.title || '',
     page: {
       scroll_y: Math.round(window.scrollY),
+      viewport_w: window.innerWidth,
       viewport_h: window.innerHeight,
       document_h: doc.scrollHeight,
       at_top: window.scrollY <= 1,
