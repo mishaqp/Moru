@@ -32,6 +32,7 @@ import 'webview_site_handlers.dart';
 import 'webview_library_sheet.dart';
 import 'webview_status_banner.dart';
 import 'webview_tabs_sheet.dart';
+import 'webview_userscripts_sheet.dart';
 import 'webview_top_bar.dart';
 
 /// Why the browser page is being closed -- used only to keep the three
@@ -924,6 +925,9 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
                   history: false,
                   onOpen: _openFromLibrary,
                 )
+              : null,
+          onShowUserscripts: widget.agentSession && !contentMode
+              ? () => showUserscriptsSheet(context, pageUrl: _currentUrl)
               : null,
           onShowHistory: widget.agentSession && !contentMode
               ? () => showBrowserLibrarySheet(

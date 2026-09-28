@@ -19655,6 +19655,54 @@ abstract class AppLocalizations {
   /// **'Browser'**
   String get browserMiniTitle;
 
+  /// No description provided for @userscriptsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'User scripts'**
+  String get userscriptsTitle;
+
+  /// No description provided for @userscriptsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Scripts like in Tampermonkey: they change the sites they are made for. Install only scripts you trust — they see everything on those sites.'**
+  String get userscriptsHint;
+
+  /// No description provided for @userscriptsInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Install'**
+  String get userscriptsInstall;
+
+  /// No description provided for @userscriptsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No scripts yet. Paste a link to a .user.js file, e.g. from greasyfork.org.'**
+  String get userscriptsEmpty;
+
+  /// No description provided for @userscriptsBadLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an http(s) link to a .user.js file'**
+  String get userscriptsBadLink;
+
+  /// No description provided for @userscriptsNotAScript.
+  ///
+  /// In en, this message translates to:
+  /// **'That file is not a user script (no ==UserScript== header)'**
+  String get userscriptsNotAScript;
+
+  /// No description provided for @userscriptsInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed: {name}'**
+  String userscriptsInstalled(String name);
+
+  /// No description provided for @userscriptsInstallFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not install: {error}'**
+  String userscriptsInstallFailed(String error);
+
   /// No description provided for @browserGoogleSignInBlocked.
   ///
   /// In en, this message translates to:

@@ -10499,6 +10499,35 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserMiniTitle => '浏览器';
 
   @override
+  String get userscriptsTitle => '用户脚本';
+
+  @override
+  String get userscriptsHint =>
+      '类似 Tampermonkey 的脚本：会修改其适用的网站。只安装你信任的脚本——它们能看到这些网站上的一切。';
+
+  @override
+  String get userscriptsInstall => '安装';
+
+  @override
+  String get userscriptsEmpty => '还没有脚本。粘贴 .user.js 文件的链接，例如来自 greasyfork.org。';
+
+  @override
+  String get userscriptsBadLink => '请输入指向 .user.js 文件的 http(s) 链接';
+
+  @override
+  String get userscriptsNotAScript => '该文件不是用户脚本（没有 ==UserScript== 头）';
+
+  @override
+  String userscriptsInstalled(String name) {
+    return '已安装：$name';
+  }
+
+  @override
+  String userscriptsInstallFailed(String error) {
+    return '无法安装：$error';
+  }
+
+  @override
   String get browserGoogleSignInBlocked =>
       'Google 不允许在此内置浏览器中登录。请换一种方式登录，或在 Chrome 中打开该网站。';
 
@@ -21697,6 +21726,35 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '浏览器';
+
+  @override
+  String get userscriptsTitle => '用户脚本';
+
+  @override
+  String get userscriptsHint =>
+      '类似 Tampermonkey 的脚本：会修改其适用的网站。只安装你信任的脚本——它们能看到这些网站上的一切。';
+
+  @override
+  String get userscriptsInstall => '安装';
+
+  @override
+  String get userscriptsEmpty => '还没有脚本。粘贴 .user.js 文件的链接，例如来自 greasyfork.org。';
+
+  @override
+  String get userscriptsBadLink => '请输入指向 .user.js 文件的 http(s) 链接';
+
+  @override
+  String get userscriptsNotAScript => '该文件不是用户脚本（没有 ==UserScript== 头）';
+
+  @override
+  String userscriptsInstalled(String name) {
+    return '已安装：$name';
+  }
+
+  @override
+  String userscriptsInstallFailed(String error) {
+    return '无法安装：$error';
+  }
 
   @override
   String get browserGoogleSignInBlocked =>
@@ -32971,6 +33029,35 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '瀏覽器';
+
+  @override
+  String get userscriptsTitle => '使用者腳本';
+
+  @override
+  String get userscriptsHint =>
+      '類似 Tampermonkey 的腳本：會修改其適用的網站。只安裝你信任的腳本——它們能看到這些網站上的一切。';
+
+  @override
+  String get userscriptsInstall => '安裝';
+
+  @override
+  String get userscriptsEmpty => '還沒有腳本。貼上 .user.js 檔案的連結，例如來自 greasyfork.org。';
+
+  @override
+  String get userscriptsBadLink => '請輸入指向 .user.js 檔案的 http(s) 連結';
+
+  @override
+  String get userscriptsNotAScript => '該檔案不是使用者腳本（沒有 ==UserScript== 標頭）';
+
+  @override
+  String userscriptsInstalled(String name) {
+    return '已安裝：$name';
+  }
+
+  @override
+  String userscriptsInstallFailed(String error) {
+    return '無法安裝：$error';
+  }
 
   @override
   String get browserGoogleSignInBlocked =>

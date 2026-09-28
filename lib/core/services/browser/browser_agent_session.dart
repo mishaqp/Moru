@@ -17,6 +17,7 @@ import 'browser_handoffs.dart';
 import 'browser_library.dart';
 import 'browser_page_scripts.dart';
 import 'browser_tabs.dart';
+import 'browser_userscripts.dart';
 import 'browser_research.dart';
 
 /// Lifecycle state of a [BrowserActivity]: [running] the moment it is
@@ -794,6 +795,19 @@ class BrowserAgentSession {
     _publishTabs();
   }
 
+  /// A page finished loading in a tab: the user scripts that match it run.
+  /// Replaced in tests.
+  @visibleForTesting
+  void Function(WebViewController controller, String url) onPageLoaded =
+      (controller, url) => unawaited(
+        BrowserUserscripts.instance.runIn(controller, url).catchError((
+          Object error,
+        ) {
+          debugPrint('Userscripts: $error');
+          return const <String>[];
+        }),
+      );
+
   /// A page finished loading in a tab: it goes into the history.
   /// Replaced in tests.
   @visibleForTesting
@@ -828,6 +842,7 @@ class BrowserAgentSession {
       tab.history.reconcileCommitted(url);
       _publishTabs();
       unawaited(_refreshTitle(tab));
+      onPageLoaded(tab.controller, url);
     },
     onHttpError: (error) {
       if (identical(tab, _active)) {
@@ -1136,6 +1151,7 @@ class BrowserAgentSession {
         ..url = url
         ..loading = false;
       unawaited(_refreshTitle(tab));
+      onPageLoaded(tab.controller, url);
     }
     _loading = false;
     pageLoading.value = false;

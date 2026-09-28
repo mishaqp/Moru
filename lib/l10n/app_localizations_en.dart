@@ -10981,6 +10981,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserMiniTitle => 'Browser';
 
   @override
+  String get userscriptsTitle => 'User scripts';
+
+  @override
+  String get userscriptsHint =>
+      'Scripts like in Tampermonkey: they change the sites they are made for. Install only scripts you trust — they see everything on those sites.';
+
+  @override
+  String get userscriptsInstall => 'Install';
+
+  @override
+  String get userscriptsEmpty =>
+      'No scripts yet. Paste a link to a .user.js file, e.g. from greasyfork.org.';
+
+  @override
+  String get userscriptsBadLink => 'Enter an http(s) link to a .user.js file';
+
+  @override
+  String get userscriptsNotAScript =>
+      'That file is not a user script (no ==UserScript== header)';
+
+  @override
+  String userscriptsInstalled(String name) {
+    return 'Installed: $name';
+  }
+
+  @override
+  String userscriptsInstallFailed(String error) {
+    return 'Could not install: $error';
+  }
+
+  @override
   String get browserGoogleSignInBlocked =>
       'Google does not allow signing in inside this browser. Sign in another way or open the site in Chrome.';
 

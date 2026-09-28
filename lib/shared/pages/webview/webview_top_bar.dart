@@ -37,7 +37,10 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.onToggleBookmark,
     this.onShowBookmarks,
     this.onShowHistory,
+    this.onShowUserscripts,
   });
+
+  final VoidCallback? onShowUserscripts;
 
   /// Whether the page is bookmarked; with [onToggleBookmark], the address
   /// shows a star that adds or removes it.
@@ -286,6 +289,9 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
               case 'history':
                 onShowHistory?.call();
                 break;
+              case 'userscripts':
+                onShowUserscripts?.call();
+                break;
             }
           },
           itemBuilder: (ctx) => [
@@ -319,6 +325,14 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
                 child: _MenuRow(
                   icon: Lucide.History,
                   label: l10n.browserHistory,
+                ),
+              ),
+            if (onShowUserscripts != null)
+              PopupMenuItem<String>(
+                value: 'userscripts',
+                child: _MenuRow(
+                  icon: Lucide.Code,
+                  label: l10n.userscriptsTitle,
                 ),
               ),
             if (onDesktopModeChanged != null)

@@ -11106,6 +11106,37 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserMiniTitle => 'Браузер';
 
   @override
+  String get userscriptsTitle => 'Юзерскрипты';
+
+  @override
+  String get userscriptsHint =>
+      'Скрипты как в Tampermonkey: меняют сайты, для которых написаны. Ставьте только те, которым доверяете, — они видят всё на этих сайтах.';
+
+  @override
+  String get userscriptsInstall => 'Установить';
+
+  @override
+  String get userscriptsEmpty =>
+      'Скриптов пока нет. Вставьте ссылку на файл .user.js, например с greasyfork.org.';
+
+  @override
+  String get userscriptsBadLink => 'Нужна http(s)-ссылка на файл .user.js';
+
+  @override
+  String get userscriptsNotAScript =>
+      'Это не юзерскрипт: нет заголовка ==UserScript==';
+
+  @override
+  String userscriptsInstalled(String name) {
+    return 'Установлен: $name';
+  }
+
+  @override
+  String userscriptsInstallFailed(String error) {
+    return 'Не удалось установить: $error';
+  }
+
+  @override
   String get browserGoogleSignInBlocked =>
       'Google не пускает вход во встроенном браузере. Войдите другим способом или откройте сайт в Chrome.';
 
