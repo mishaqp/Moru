@@ -137,6 +137,10 @@ void main() {
 
   test('desktop mode sets a desktop user agent of the same Chrome and '
       'reloads; mobile restores the WebView\'s own', () async {
+    final wide = <bool>[];
+    final originalWide = session.setWideViewport;
+    session.setWideViewport = (_, value) async => wide.add(value);
+    addTearDown(() => session.setWideViewport = originalWide);
     final desktop = await run({'action': 'set_mode', 'mode': 'desktop'});
     expect(desktop['mode'], 'desktop');
     expect(
@@ -148,6 +152,8 @@ void main() {
 
     await run({'action': 'set_mode', 'mode': 'mobile'});
     expect(first.userAgent, isNull);
+    // Desktop pages get their own width, the phone layout the screen's.
+    expect(wide, [true, false]);
     expect(session.tabs.value.single.desktop, isFalse);
     expect(
       (await run({'action': 'set_mode', 'mode': 'tv'}))['error'],

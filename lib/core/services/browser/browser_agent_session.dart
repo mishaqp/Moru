@@ -973,6 +973,18 @@ class BrowserAgentSession {
     'max_tabs': maxTabs,
   };
 
+  /// Lays pages out at their own width (a desktop page's 1000+ px, shown
+  /// zoomed out like Chrome's desktop site) instead of the phone's; the
+  /// plugin turns it off. Replaced in tests.
+  @visibleForTesting
+  Future<void> Function(WebViewController controller, bool wide)
+  setWideViewport = (controller, wide) async {
+    final platform = controller.platform;
+    if (platform is AndroidWebViewController) {
+      await platform.setUseWideViewPort(wide);
+    }
+  };
+
   /// Shows the active tab's sites as on a computer or as on a phone, and
   /// reloads it.
   Future<Map<String, dynamic>> setDesktopMode(bool desktop) async {
@@ -990,6 +1002,7 @@ class BrowserAgentSession {
       await controller.setUserAgent(
         desktop ? desktopUserAgent(tab.mobileUserAgent) : null,
       );
+      await setWideViewport(controller, desktop);
       tab.desktop = desktop;
       _publishTabs();
       if (tab.url != null && tab.url != 'about:blank') {
