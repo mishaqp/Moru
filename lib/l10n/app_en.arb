@@ -4958,6 +4958,8 @@
   "browserMinimize": "Minimize",
   "browserMiniExpand": "Expand",
   "browserMiniTitle": "Browser",
+  "browserDownloadDone": "Downloaded {file}",
+  "@browserDownloadDone": {"placeholders": {"file": {"type": "String"}}},
   "browserNoAppForLink": "No app on the phone opens this link.",
   "browserDownloadStarted": "Downloading {file} to Downloads",
   "@browserDownloadStarted": {"placeholders": {"file": {"type": "String"}}},

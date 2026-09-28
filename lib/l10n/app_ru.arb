@@ -4893,6 +4893,7 @@
   "browserMinimize": "Свернуть",
   "browserMiniExpand": "Развернуть",
   "browserMiniTitle": "Браузер",
+  "browserDownloadDone": "Скачано: {file}",
   "browserNoAppForLink": "На телефоне нет приложения для этой ссылки.",
   "browserDownloadStarted": "Скачивается {file} в «Загрузки»",
   "browserDownloadFailed": "Не удалось скачать {file}",

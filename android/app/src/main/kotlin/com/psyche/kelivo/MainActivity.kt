@@ -163,6 +163,9 @@ class MainActivity : FlutterActivity() {
         // the page's cookies, and links that belong to other apps.
         val browserChannel =
             MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "app.browser")
+        BrowserDownloads.onFinished = { event ->
+            runOnUiThread { browserChannel.invokeMethod("downloadFinished", event) }
+        }
         browserChannel.setMethodCallHandler { call, result ->
             fun webView(): android.webkit.WebView? {
                 val id = (call.argument<Number>("id"))?.toLong() ?: return null

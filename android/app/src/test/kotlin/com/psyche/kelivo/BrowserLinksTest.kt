@@ -69,4 +69,28 @@ class BrowserLinksTest {
             BrowserDownloads.fileName("https://example.com/a/photo.jpg", null, "image/jpeg"),
         )
     }
+
+    @Test fun finishedDownloadsReportTheRealPath() {
+        val done = BrowserDownloads.finishedEvent(
+            7,
+            "report.pdf",
+            android.app.DownloadManager.STATUS_SUCCESSFUL,
+            "file:///storage/emulated/0/Download/report-1.pdf",
+            0,
+        )
+        assertEquals("done", done["status"])
+        assertEquals("report-1.pdf", done["file"])
+        assertEquals("/storage/emulated/0/Download/report-1.pdf", done["path"])
+
+        val failed = BrowserDownloads.finishedEvent(
+            8,
+            "report.pdf",
+            android.app.DownloadManager.STATUS_FAILED,
+            null,
+            android.app.DownloadManager.ERROR_HTTP_DATA_ERROR,
+        )
+        assertEquals("failed", failed["status"])
+        assertEquals("report.pdf", failed["file"])
+        assertNull(failed["path"])
+    }
 }

@@ -270,12 +270,18 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     final l10n = AppLocalizations.of(context)!;
     showAppSnackBar(
       context,
-      message: download.error == null
+      message: download.error == null && download.status == 'done'
+          ? l10n.browserDownloadDone(download.file)
+          : download.error == null && download.status == 'failed'
+          ? l10n.browserDownloadFailed(download.file)
+          : download.error == null
           ? l10n.browserDownloadStarted(download.file)
           : download.error == 'unsupported_scheme'
           ? l10n.browserDownloadUnsupported
           : l10n.browserDownloadFailed(download.file),
-      type: download.error == null
+      type: download.status == 'done'
+          ? NotificationType.success
+          : download.error == null && download.status != 'failed'
           ? NotificationType.info
           : NotificationType.warning,
     );

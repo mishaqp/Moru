@@ -10499,6 +10499,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserMiniTitle => '浏览器';
 
   @override
+  String browserDownloadDone(String file) {
+    return '已下载 $file';
+  }
+
+  @override
   String get browserNoAppForLink => '手机上没有可打开此链接的应用。';
 
   @override
@@ -21611,6 +21616,11 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '浏览器';
+
+  @override
+  String browserDownloadDone(String file) {
+    return '已下载 $file';
+  }
 
   @override
   String get browserNoAppForLink => '手机上没有可打开此链接的应用。';
@@ -32799,6 +32809,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '瀏覽器';
+
+  @override
+  String browserDownloadDone(String file) {
+    return '已下載 $file';
+  }
 
   @override
   String get browserNoAppForLink => '手機上沒有可開啟此連結的應用程式。';

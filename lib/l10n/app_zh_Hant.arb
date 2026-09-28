@@ -4000,6 +4000,7 @@
   "browserMinimize": "最小化",
   "browserMiniExpand": "展開",
   "browserMiniTitle": "瀏覽器",
+  "browserDownloadDone": "已下載 {file}",
   "browserNoAppForLink": "手機上沒有可開啟此連結的應用程式。",
   "browserDownloadStarted": "正在下載 {file} 到「下載」",
   "browserDownloadFailed": "無法下載 {file}",

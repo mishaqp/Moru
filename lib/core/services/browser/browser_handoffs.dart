@@ -11,6 +11,7 @@ class BrowserDownload {
     required this.url,
     this.path,
     this.error,
+    this.status = 'downloading',
   });
 
   factory BrowserDownload.fromMap(Map<Object?, Object?> map) => BrowserDownload(
@@ -18,23 +19,28 @@ class BrowserDownload {
     url: map['url'] as String? ?? '',
     path: map['path'] as String?,
     error: map['error'] as String?,
+    status: map['status'] as String? ?? 'downloading',
   );
 
   final String file;
   final String url;
 
-  /// Where the system download manager saves it (in Downloads).
+  /// Where the file ended up in Downloads, once it is `done`: the download
+  /// manager adds `-1` to a name that is taken.
   final String? path;
 
   /// Why it did not start: `unsupported_scheme` for files a page makes
   /// itself (`blob:`, `data:`), otherwise the system's message.
   final String? error;
 
+  /// `downloading`, `done` or `failed`.
+  final String status;
+
   Map<String, Object?> toJson() => {
     'file': file,
     if (path != null) 'path': path,
     if (error != null) 'error': error,
-    if (error == null) 'status': 'downloading',
+    if (error == null) 'status': status,
   };
 }
 
@@ -110,7 +116,9 @@ class BrowserHandoffs {
 
   @visibleForTesting
   Future<void> handleNativeCall(MethodCall call) async {
-    if (call.method != 'download') return;
+    if (call.method != 'download' && call.method != 'downloadFinished') {
+      return;
+    }
     final args = call.arguments;
     if (args is! Map) return;
     final download = BrowserDownload.fromMap(args);

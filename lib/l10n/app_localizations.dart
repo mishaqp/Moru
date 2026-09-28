@@ -19655,6 +19655,12 @@ abstract class AppLocalizations {
   /// **'Browser'**
   String get browserMiniTitle;
 
+  /// No description provided for @browserDownloadDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded {file}'**
+  String browserDownloadDone(String file);
+
   /// No description provided for @browserNoAppForLink.
   ///
   /// In en, this message translates to:

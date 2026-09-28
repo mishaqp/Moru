@@ -68,20 +68,33 @@ void main() {
     await BrowserHandoffs.instance.handleNativeCall(
       const MethodCall('download', {
         'file': 'report.pdf',
-        'path': '/storage/emulated/0/Download/report.pdf',
         'url': 'https://example.com/report',
       }),
     );
     expect(BrowserHandoffs.instance.latestDownload.value?.file, 'report.pdf');
     expect(BrowserHandoffs.instance.drainForModel(), [
-      {
-        'kind': 'download',
-        'file': 'report.pdf',
-        'path': '/storage/emulated/0/Download/report.pdf',
-        'status': 'downloading',
-      },
+      {'kind': 'download', 'file': 'report.pdf', 'status': 'downloading'},
     ]);
     expect(BrowserHandoffs.instance.drainForModel(), isEmpty);
+
+    // When it ends, the real path: a taken name got a suffix.
+    await BrowserHandoffs.instance.handleNativeCall(
+      const MethodCall('downloadFinished', {
+        'id': 3,
+        'file': 'report-1.pdf',
+        'status': 'done',
+        'path': '/storage/emulated/0/Download/report-1.pdf',
+      }),
+    );
+    expect(BrowserHandoffs.instance.latestDownload.value?.status, 'done');
+    expect(BrowserHandoffs.instance.drainForModel(), [
+      {
+        'kind': 'download',
+        'file': 'report-1.pdf',
+        'path': '/storage/emulated/0/Download/report-1.pdf',
+        'status': 'done',
+      },
+    ]);
   });
 
   testWidgets('an app link the user taps opens its app instead of an error '

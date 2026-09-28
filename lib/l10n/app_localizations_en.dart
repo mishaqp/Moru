@@ -10981,6 +10981,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserMiniTitle => 'Browser';
 
   @override
+  String browserDownloadDone(String file) {
+    return 'Downloaded $file';
+  }
+
+  @override
   String get browserNoAppForLink => 'No app on the phone opens this link.';
 
   @override

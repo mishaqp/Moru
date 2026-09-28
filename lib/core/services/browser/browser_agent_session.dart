@@ -1416,7 +1416,37 @@ class BrowserAgentSession {
       });
     }
   }
-  const base = {bubbles: true, cancelable: true, view: window, clientX: x, clientY: y};
+  // A point over a frame of the same site goes on to the element inside
+  // it, in the frame's own coordinates; another site's frame is closed to
+  // scripts, so the model is told to open it instead.
+  let view = window;
+  let fx = x;
+  let fy = y;
+  let framed = false;
+  while (element && (element.tagName === 'IFRAME' || element.tagName === 'FRAME')) {
+    let inner = null;
+    try {
+      inner = element.contentDocument;
+    } catch (e) {}
+    if (!inner) {
+      return JSON.stringify({
+        ok: false,
+        error: 'cross_origin_frame',
+        message: 'The point is inside a frame of another site, which the ' +
+            'browser cannot reach. Open its address instead.',
+        frame_src: String(element.src || '').slice(0, 300)
+      });
+    }
+    const box = element.getBoundingClientRect();
+    fx -= box.left + element.clientLeft;
+    fy -= box.top + element.clientTop;
+    const target = inner.elementFromPoint(fx, fy);
+    if (!target) break;
+    view = inner.defaultView || view;
+    element = target;
+    framed = true;
+  }
+  const base = {bubbles: true, cancelable: true, view, clientX: fx, clientY: fy};
   const pointer = (type) => {
     try {
       element.dispatchEvent(new PointerEvent(type, Object.assign({pointerType: 'touch', isPrimary: true}, base)));
@@ -1440,6 +1470,7 @@ class BrowserAgentSession {
   const label = String(element.innerText || element.getAttribute('aria-label') ||
       element.getAttribute('title') || '').replace(/\s+/g, ' ').trim().slice(0, 80);
   const result = {ok: true, x: Math.round(x), y: Math.round(y), tag};
+  if (framed) result.in_frame = true;
   if (label) result.text = label;
   return JSON.stringify(result);
 })();
