@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Platform-specific application data directory utilities.
@@ -56,6 +57,28 @@ class AppDirectories {
   static Future<Directory> getCacheDirectory() async {
     final root = await getAppDataDirectory();
     return Directory('${root.path}/cache');
+  }
+
+  static String? _phoneDownloads;
+
+  /// The phone's public Downloads folder (where the browser saves files),
+  /// mounted at `/downloads` in the Linux environment; null off Android or
+  /// when the system does not name one.
+  static Future<String?> phoneDownloadsPath() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return null;
+    final known = _phoneDownloads;
+    if (known != null) return known;
+    try {
+      final path = await const MethodChannel(
+        'app.browser',
+      ).invokeMethod<String>('downloadsDir');
+      if (path == null || path.isEmpty) return null;
+      return _phoneDownloads = path;
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
   }
 
   /// Managed workspace roots: `<appData>/workspaces`.

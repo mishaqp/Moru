@@ -36,7 +36,15 @@ class WorkspacePaths {
     required String skillsHostDir,
     List<Mount> externalMounts = const [],
     this.loadExternalMounts,
-  }) : _externalMounts = List.unmodifiable(externalMounts),
+    String? downloadsHostDir,
+  }) : _downloads = downloadsHostDir == null
+           ? null
+           : Mount(host: _canonHost(downloadsHostDir), guest: guestDownloads),
+       _externalMounts = List.unmodifiable([
+         ...externalMounts,
+         if (downloadsHostDir != null)
+           Mount(host: _canonHost(downloadsHostDir), guest: guestDownloads),
+       ]),
        sandboxed = true,
        workspaceHostRoot = _canonHost(workspaceHostRoot),
        sessionHostDir = _canonHost(sessionHostDir),
@@ -48,6 +56,7 @@ class WorkspacePaths {
     required String sessionHostDir,
     required String skillsHostDir,
   }) : _externalMounts = const [],
+       _downloads = null,
        loadExternalMounts = null,
        sandboxed = false,
        workspaceHostRoot = _canonHost(workspaceHostRoot),
@@ -61,12 +70,19 @@ class WorkspacePaths {
   final String skillsHostDir;
   final String tmpHostRoot;
   List<Mount> _externalMounts;
+
+  /// The phone's Downloads folder, where the browser saves files, at
+  /// [guestDownloads]; null where it is not available.
+  final Mount? _downloads;
   final Future<List<Mount>> Function()? loadExternalMounts;
   List<Mount> get externalMounts => List.unmodifiable(_externalMounts);
 
   Future<void> refreshExternalMounts() async {
     if (loadExternalMounts != null) {
-      _externalMounts = await loadExternalMounts!();
+      _externalMounts = [
+        ...await loadExternalMounts!(),
+        if (_downloads != null) _downloads,
+      ];
     }
   }
 
@@ -78,6 +94,7 @@ class WorkspacePaths {
   static const String guestChat = '/chat';
   static const String guestSkills = '/skills';
   static const String guestTmp = '/tmp';
+  static const String guestDownloads = '/downloads';
 
   String get modelRoot => sandboxed ? guestWorkspace : workspaceHostRoot;
 

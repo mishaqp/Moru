@@ -172,6 +172,7 @@ class WorkspaceToolsService {
             skillsHostDir: skillsDir.path,
             externalMounts: await externalMounts?.resolveMounts() ?? const [],
             loadExternalMounts: externalMounts?.resolveMounts,
+            downloadsHostDir: await AppDirectories.phoneDownloadsPath(),
           )
         : WorkspacePaths.native(
             workspaceHostRoot: hostRoot,
@@ -1910,6 +1911,8 @@ class WorkspaceToolsService {
         WorkspacePaths.guestSkills,
         WorkspacePaths.guestTmp,
         ExternalMount.root,
+        if (paths.mounts.any((m) => m.guest == WorkspacePaths.guestDownloads))
+          '${WorkspacePaths.guestDownloads} (phone Downloads, where the browser saves files)',
       ];
     }
     return [

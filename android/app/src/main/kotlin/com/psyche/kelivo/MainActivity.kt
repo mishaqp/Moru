@@ -209,6 +209,13 @@ class MainActivity : FlutterActivity() {
                     }
                     result.success(true)
                 }
+                "downloadsDir" -> {
+                    val dir = android.os.Environment.getExternalStoragePublicDirectory(
+                        android.os.Environment.DIRECTORY_DOWNLOADS,
+                    )
+                    dir.mkdirs()
+                    result.success(dir.absolutePath)
+                }
                 "cookies" -> {
                     val url = call.argument<String>("url").orEmpty()
                     result.success(android.webkit.CookieManager.getInstance().getCookie(url))

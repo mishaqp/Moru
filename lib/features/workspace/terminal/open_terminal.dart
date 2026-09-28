@@ -128,6 +128,7 @@ Future<void> openTerminal(
       sessionHostDir: scratch.path,
       skillsHostDir: skillsDir.path,
       externalMounts: await externalMounts?.resolveMounts() ?? const [],
+      downloadsHostDir: await AppDirectories.phoneDownloadsPath(),
     );
     mounts = paths.mounts;
     cwd = paths.modelRoot;

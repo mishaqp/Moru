@@ -38,7 +38,11 @@ class BrowserDownload {
 
   Map<String, Object?> toJson() => {
     'file': file,
-    if (path != null) 'path': path,
+    if (path case final String saved) ...{
+      'path': saved,
+      // The Linux terminal sees the Downloads folder at /downloads.
+      'terminal_path': '/downloads/${saved.split('/').last}',
+    },
     if (error != null) 'error': error,
     if (error == null) 'status': status,
   };

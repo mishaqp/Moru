@@ -92,6 +92,7 @@ void main() {
         'kind': 'download',
         'file': 'report-1.pdf',
         'path': '/storage/emulated/0/Download/report-1.pdf',
+        'terminal_path': '/downloads/report-1.pdf',
         'status': 'done',
       },
     ]);
