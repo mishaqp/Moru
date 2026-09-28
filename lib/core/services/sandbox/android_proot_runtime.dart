@@ -129,6 +129,7 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
       rows: rows,
       prootArguments: this.env.prootArguments,
       shell: this.env.prootShell,
+      chroot: this.env.rootChroot,
     );
     return session;
   }
@@ -165,6 +166,7 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
       binds: _binds(request.mounts),
       prootArguments: env.prootArguments,
       shell: env.prootShell,
+      chroot: env.rootChroot,
     );
   }
 

@@ -57,6 +57,23 @@ class WorkspaceChannel {
     }
   }
 
+  /// Whether the fast mode works here: su grants root, the helper can make
+  /// a private mount namespace, the rootfs has a shell. [output] says why
+  /// not.
+  Future<({bool ok, String output})> probeChroot(String rootfsDir) async {
+    final raw = await _invoke('probeChroot', {'rootfsDir': rootfsDir});
+    final map = _asStringKeyedMap(raw, 'probeChroot');
+    return (ok: map['ok'] == true, output: '${map['output'] ?? ''}');
+  }
+
+  /// Gives root-owned files the fast mode left under [dirs] (folders of the
+  /// app) back to the app.
+  Future<({bool ok, String output})> chrootFixOwner(List<String> dirs) async {
+    final raw = await _invoke('chrootFixOwner', {'dirs': dirs});
+    final map = _asStringKeyedMap(raw, 'chrootFixOwner');
+    return (ok: map['ok'] == true, output: '${map['output'] ?? ''}');
+  }
+
   Future<void> exec(ExecArgs args) async {
     await _invoke('exec', args.toMap());
   }
@@ -79,6 +96,7 @@ class WorkspaceChannel {
     List<BindMount> binds = const <BindMount>[],
     List<String> prootArguments = const [],
     String? shell,
+    bool chroot = false,
     required int cols,
     required int rows,
   }) async {
@@ -91,6 +109,7 @@ class WorkspaceChannel {
       'binds': [for (final bind in binds) bind.toMap()],
       if (prootArguments.isNotEmpty) 'prootArguments': prootArguments,
       if (shell != null && shell.isNotEmpty) 'shell': shell,
+      if (chroot) 'chroot': true,
       'cols': cols,
       'rows': rows,
     });
@@ -381,6 +400,7 @@ class ExecArgs {
     this.binds = const <BindMount>[],
     this.prootArguments = const [],
     this.shell,
+    this.chroot = false,
   });
 
   final String runId;
@@ -395,6 +415,9 @@ class ExecArgs {
   final List<String> prootArguments;
   final String? shell;
 
+  /// Runs in the fast mode's chroot (as root, through su) instead of PRoot.
+  final bool chroot;
+
   Map<String, Object?> toMap() => {
     'runId': runId,
     if (rootfsDir != null) 'rootfsDir': rootfsDir,
@@ -407,6 +430,7 @@ class ExecArgs {
     'binds': [for (final bind in binds) bind.toMap()],
     if (prootArguments.isNotEmpty) 'prootArguments': prootArguments,
     if (shell != null && shell!.isNotEmpty) 'shell': shell,
+    if (chroot) 'chroot': true,
   };
 }
 

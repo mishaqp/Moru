@@ -45,10 +45,6 @@ object ProotCommand {
     ): ProotLaunch {
         val guestCwd = validateGuestCwd(cwd)
         require(extraArgs.none { it.contains('\u0000') }) { "PRoot argument contains a NUL byte" }
-        val guestShell = shell?.takeIf { it.isNotBlank() } ?: if (
-            RootfsInfo.guestFile(rootfsDir, "/bin/bash").let { it.isFile && it.canExecute() }
-        ) "/bin/bash" else "/bin/sh"
-        validateGuestCwd(guestShell)
         val argv = mutableListOf(
             File(nativeLibDir, EXEC_LIB).absolutePath,
             "--root-id",
@@ -68,26 +64,7 @@ object ProotCommand {
         // PRoot bindings are writable. The app and file tools enforce the
         // user's read-only preference; arbitrary shell programs are not isolated.
         argv += listOf("-b", "/dev", "-b", "/proc", "-b", "/sys")
-        argv += listOf("/usr/bin/env", "-i")
-
-        val guestEnv = LinkedHashMap(env)
-        // env -i discards the host environment. Export guest defaults so child
-        // processes (including dpkg) receive PATH, not only bash's shell default.
-        guestEnv.putIfAbsent("HOME", "/root")
-        guestEnv.putIfAbsent("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
-        guestEnv.putIfAbsent("LANG", "C.UTF-8")
-        if (command == null) {
-            guestEnv.putIfAbsent("TERM", "xterm-256color")
-        }
-        for ((key, value) in guestEnv) {
-            argv += "$key=$value"
-        }
-
-        if (command == null) {
-            argv += listOf(guestShell, "-l")
-        } else {
-            argv += listOf(guestShell, "-lc", BASH_EVAL, "kelivo", guestCwd, command)
-        }
+        argv += guestCommand(rootfsDir, guestCwd, command, env, shell)
 
         val processEnv = linkedMapOf(
             "PROOT_LOADER" to File(nativeLibDir, LOADER_LIB).absolutePath,
@@ -104,6 +81,44 @@ object ProotCommand {
             processEnv = processEnv,
             workingDirectory = rootfsDir.parentFile ?: rootfsDir,
         )
+    }
+
+    /**
+     * The program run inside the rootfs: the guest's shell in [cwd] with only
+     * [env] (plus defaults), a login shell for a terminal ([command] null) or
+     * `bash -lc` for one command. Shared by PRoot and the chroot helper.
+     */
+    fun guestCommand(
+        rootfsDir: File,
+        cwd: String,
+        command: String?,
+        env: Map<String, String>,
+        shell: String?,
+    ): List<String> {
+        val guestCwd = validateGuestCwd(cwd)
+        val guestShell = shell?.takeIf { it.isNotBlank() } ?: if (
+            RootfsInfo.guestFile(rootfsDir, "/bin/bash").let { it.isFile && it.canExecute() }
+        ) "/bin/bash" else "/bin/sh"
+        validateGuestCwd(guestShell)
+        val argv = mutableListOf("/usr/bin/env", "-i")
+        val guestEnv = LinkedHashMap(env)
+        // env -i discards the host environment. Export guest defaults so child
+        // processes (including dpkg) receive PATH, not only bash's shell default.
+        guestEnv.putIfAbsent("HOME", "/root")
+        guestEnv.putIfAbsent("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
+        guestEnv.putIfAbsent("LANG", "C.UTF-8")
+        if (command == null) {
+            guestEnv.putIfAbsent("TERM", "xterm-256color")
+        }
+        for ((key, value) in guestEnv) {
+            argv += "$key=$value"
+        }
+        if (command == null) {
+            argv += listOf(guestShell, "-l")
+        } else {
+            argv += listOf(guestShell, "-lc", BASH_EVAL, "kelivo", guestCwd, command)
+        }
+        return argv
     }
 
     /** Copy libtalloc.so to the SONAME proot actually DT_NEEDs. */

@@ -24,23 +24,40 @@ class PtySessions(
         rows: Int,
         prootArguments: List<String> = emptyList(),
         shell: String? = null,
+        chroot: ChrootOptions? = null,
     ): Int {
         close(sessionId)
         tmpDir.mkdirs()
-        ProotCommand.stageTalloc(nativeLibDir, tmpDir)
         RootfsCertificates.ensureInstalled(rootfsDir)
-        val launch = ProotCommand.build(
-            nativeLibDir = nativeLibDir,
-            rootfsDir = rootfsDir,
-            tmpDir = tmpDir,
-            binds = binds,
-            cwd = cwd,
-            command = null,
-            env = env,
-            extraArgs = prootArguments,
-            shell = shell,
-        )
-        val session = PtySession(sessionId, events)
+        val launch = if (chroot != null) {
+            ChrootCommand.build(
+                nativeLibDir = nativeLibDir,
+                rootfsDir = rootfsDir,
+                binds = binds,
+                cwd = cwd,
+                command = null,
+                env = env,
+                shell = shell,
+                tag = sessionId,
+                uid = chroot.uid,
+                gid = chroot.gid,
+                appDataDir = chroot.appDataDir,
+            )
+        } else {
+            ProotCommand.stageTalloc(nativeLibDir, tmpDir)
+            ProotCommand.build(
+                nativeLibDir = nativeLibDir,
+                rootfsDir = rootfsDir,
+                tmpDir = tmpDir,
+                binds = binds,
+                cwd = cwd,
+                command = null,
+                env = env,
+                extraArgs = prootArguments,
+                shell = shell,
+            )
+        }
+        val session = PtySession(sessionId, events, nativeLibDir.takeIf { chroot != null })
         val pid = session.start(launch, rows = rows, cols = cols)
         sessions[sessionId] = session
         return pid
@@ -66,6 +83,8 @@ class PtySessions(
 class PtySession(
     private val sessionId: String,
     private val events: WorkspaceEvents,
+    /** The native library dir with the chroot helper, for a chroot session. */
+    private val chrootHelperDir: File? = null,
 ) {
     private var masterFd: Int = -1
     private var masterPfd: ParcelFileDescriptor? = null
@@ -126,6 +145,14 @@ class PtySession(
                 PtyJni.close(fd)
             } catch (_: Exception) {
             }
+        }
+        // Closing the terminal hangs up the shell; root processes it left
+        // running (nohup, &) only the helper can stop.
+        val helperDir = chrootHelperDir
+        if (helperDir != null) {
+            Thread({
+                ChrootCommand.runRoot(ChrootCommand.killArgv(helperDir, sessionId), 15)
+            }, "ws-pty-kill-$sessionId").apply { isDaemon = true; start() }
         }
     }
 

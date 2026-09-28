@@ -45,6 +45,7 @@ jobs:
           python3 -m unittest discover -s tool -p 'test_verify_release_keep_rules.py' -v
           python3 -m unittest discover -s tool -p 'test_prepare_release.py' -v
           python3 -m unittest discover -s tool -p 'test_promote_prerelease.py' -v
+          python3 -m unittest discover -s tool -p 'test_moru_chroot.py' -v
           bash -n tool/fetch_proot.sh
       - uses: actions/setup-java@v6
         with:
