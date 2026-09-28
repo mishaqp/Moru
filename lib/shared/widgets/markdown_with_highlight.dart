@@ -426,7 +426,8 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
         preprocessBlocks: _sourceScan.hasHtml ? detailsRegistry.rewrite : null,
         newlinesNormalized: !_sourceScan.hasCarriageReturns,
         generation: themeSignature,
-        textBuilder: (text) => StreamingRichText(text: text),
+        textBuilder: (text) =>
+            StreamingRichText(text: text, animateAppends: widget.streaming),
         streaming: widget.streaming,
         spanBuilder: fence == null
             ? null

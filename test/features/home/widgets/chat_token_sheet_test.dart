@@ -33,22 +33,19 @@ void main() {
   );
 
   test('the summary adds up every reply with usage and prices it', () {
-    final summary = ChatTokenSummary.of(
-      [
-        ChatMessage(
-          id: 'u',
-          role: 'user',
-          content: 'hi',
-          conversationId: 'c',
-          promptTokens: 999,
-        ),
-        _reply('a', prompt: 1000000, completion: 100000, cached: 500000),
-        // An older version of the same answer was paid for too.
-        _reply('b', prompt: 1000, completion: 10),
-        _reply('no-usage'),
-      ],
-      priceFor: (providerId, modelId) => modelId == 'priced' ? priced : null,
-    );
+    final summary = ChatTokenSummary.of([
+      ChatMessage(
+        id: 'u',
+        role: 'user',
+        content: 'hi',
+        conversationId: 'c',
+        promptTokens: 999,
+      ),
+      _reply('a', prompt: 1000000, completion: 100000, cached: 500000),
+      // An older version of the same answer was paid for too.
+      _reply('b', prompt: 1000, completion: 10),
+      _reply('no-usage'),
+    ], priceFor: (providerId, modelId) => modelId == 'priced' ? priced : null);
     expect(summary.input, 1001000);
     expect(summary.output, 100010);
     expect(summary.cached, 500000);
@@ -57,13 +54,10 @@ void main() {
     expect(summary.cost, closeTo(2.2521, 1e-9));
     expect(summary.costComplete, isTrue);
 
-    final partial = ChatTokenSummary.of(
-      [
-        _reply('a', prompt: 1000, completion: 10),
-        _reply('b', modelId: 'unknown', prompt: 1000, completion: 10),
-      ],
-      priceFor: (providerId, modelId) => modelId == 'priced' ? priced : null,
-    );
+    final partial = ChatTokenSummary.of([
+      _reply('a', prompt: 1000, completion: 10),
+      _reply('b', modelId: 'unknown', prompt: 1000, completion: 10),
+    ], priceFor: (providerId, modelId) => modelId == 'priced' ? priced : null);
     expect(partial.costComplete, isFalse);
     expect(partial.cost, closeTo(0.0021, 1e-9));
     expect(ChatTokenSummary.of(const []).cost, isNull);

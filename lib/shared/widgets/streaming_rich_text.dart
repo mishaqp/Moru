@@ -6,20 +6,29 @@ import 'package:flutter/material.dart';
 
 import 'incremental_markdown_document.dart';
 import 'markdown_block_list.dart';
+import 'streaming_text_fade.dart';
 
 /// Shapes long text in bounded windows, committing only complete visual lines.
 /// Markdown still supplies the styled spans; embedded widgets and bidi text
 /// keep Flutter's single-paragraph layout, where their context is significant.
 class StreamingRichText extends StatefulWidget {
-  const StreamingRichText({super.key, required this.text});
+  const StreamingRichText({
+    super.key,
+    required this.text,
+    this.animateAppends = false,
+  });
 
   final Text text;
+
+  /// Fade text in word by word as it is appended (while a reply streams).
+  final bool animateAppends;
 
   @override
   State<StreamingRichText> createState() => _StreamingRichTextState();
 }
 
-class _StreamingRichTextState extends State<StreamingRichText> {
+class _StreamingRichTextState extends State<StreamingRichText>
+    with SingleTickerProviderStateMixin {
   static final _contextualText = RegExp(
     '[\u0590-\u08ff\u200e\u200f\u202a-\u202e\u2066-\u2069]',
   );
@@ -29,6 +38,32 @@ class _StreamingRichTextState extends State<StreamingRichText> {
   Object? _layout;
   TextStyle? _baseStyle;
   int _runsVersion = 0;
+  StreamingTextFade? _fade;
+
+  /// Text length already shown (faded in or fading).
+  int _shown = 0;
+
+  @override
+  void dispose() {
+    _fade?.dispose();
+    super.dispose();
+  }
+
+  /// Starts fading what was appended since the last build.
+  void _trackAppends(int length, bool supported) {
+    final animate =
+        widget.animateAppends &&
+        supported &&
+        !MediaQuery.disableAnimationsOf(context);
+    if (!animate || length < _shown) {
+      _fade?.clear();
+    } else if (length > _shown) {
+      // The paragraph's first text fades in too, unless the reply already
+      // finished and only the layout is rebuilt.
+      (_fade ??= StreamingTextFade(this)).appended(_shown, length);
+    }
+    _shown = length;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,6 +164,8 @@ class _StreamingRichTextState extends State<StreamingRichText> {
         text.semanticsIdentifier == null &&
         heightBehavior == null &&
         flatten(rootSpan, style);
+    _trackAppends(length, supported);
+    final fade = _fade;
     return LayoutBuilder(
       builder: (context, constraints) {
         final layout = (
@@ -310,7 +347,15 @@ class _StreamingRichTextState extends State<StreamingRichText> {
             key: ValueKey(_chunks[i].block.start),
             // Scrolling or a changing sibling must not redraw every unchanged
             // paragraph. Retain its display list, including custom-font glyphs.
-            child: RepaintBoundary(child: _chunks[i].widget),
+            child: RepaintBoundary(
+              child: fade == null
+                  ? _chunks[i].widget
+                  : StreamingFadeText(
+                      fade: fade,
+                      start: _chunks[i].block.start,
+                      child: _chunks[i].widget,
+                    ),
+            ),
           ),
         );
       },
