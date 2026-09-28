@@ -10981,6 +10981,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserMiniTitle => 'Browser';
 
   @override
+  String browserPermissionQuestion(String what) {
+    return 'Allow this site to use: $what?';
+  }
+
+  @override
+  String get browserPermissionCamera => 'camera';
+
+  @override
+  String get browserPermissionMicrophone => 'microphone';
+
+  @override
+  String get browserPermissionLocation => 'location';
+
+  @override
+  String get browserPermissionProtectedMedia => 'protected video';
+
+  @override
+  String get browserPermissionAllow => 'Allow';
+
+  @override
+  String get browserPermissionBlock => 'Block';
+
+  @override
   String get browserChallengeVerify =>
       'The site asks to confirm you are a person. Complete the check yourself; the assistant waits.';
 

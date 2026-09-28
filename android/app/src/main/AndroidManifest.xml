@@ -10,6 +10,10 @@
     <uses-permission android:name="android.permission.VIBRATE"/>
     <!-- Microphone access for voice input waveform -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Camera for web pages in the browser (video calls, QR scanners) after
+         the user allows the site; the phone may have none. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- Foreground service + notifications for background execution (Android only) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />

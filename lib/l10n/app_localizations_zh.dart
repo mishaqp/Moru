@@ -10499,6 +10499,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserMiniTitle => '浏览器';
 
   @override
+  String browserPermissionQuestion(String what) {
+    return '允许此网站使用：$what？';
+  }
+
+  @override
+  String get browserPermissionCamera => '相机';
+
+  @override
+  String get browserPermissionMicrophone => '麦克风';
+
+  @override
+  String get browserPermissionLocation => '位置';
+
+  @override
+  String get browserPermissionProtectedMedia => '受保护的视频';
+
+  @override
+  String get browserPermissionAllow => '允许';
+
+  @override
+  String get browserPermissionBlock => '阻止';
+
+  @override
   String get browserChallengeVerify => '网站要求验证你是真人。请自行完成验证，助手会等待。';
 
   @override
@@ -21572,6 +21595,29 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '浏览器';
+
+  @override
+  String browserPermissionQuestion(String what) {
+    return '允许此网站使用：$what？';
+  }
+
+  @override
+  String get browserPermissionCamera => '相机';
+
+  @override
+  String get browserPermissionMicrophone => '麦克风';
+
+  @override
+  String get browserPermissionLocation => '位置';
+
+  @override
+  String get browserPermissionProtectedMedia => '受保护的视频';
+
+  @override
+  String get browserPermissionAllow => '允许';
+
+  @override
+  String get browserPermissionBlock => '阻止';
 
   @override
   String get browserChallengeVerify => '网站要求验证你是真人。请自行完成验证，助手会等待。';
@@ -32721,6 +32767,29 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '瀏覽器';
+
+  @override
+  String browserPermissionQuestion(String what) {
+    return '允許此網站使用：$what？';
+  }
+
+  @override
+  String get browserPermissionCamera => '相機';
+
+  @override
+  String get browserPermissionMicrophone => '麥克風';
+
+  @override
+  String get browserPermissionLocation => '位置';
+
+  @override
+  String get browserPermissionProtectedMedia => '受保護的影片';
+
+  @override
+  String get browserPermissionAllow => '允許';
+
+  @override
+  String get browserPermissionBlock => '封鎖';
 
   @override
   String get browserChallengeVerify => '網站要求驗證你是真人。請自行完成驗證，助手會等待。';

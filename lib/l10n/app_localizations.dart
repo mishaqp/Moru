@@ -19655,6 +19655,48 @@ abstract class AppLocalizations {
   /// **'Browser'**
   String get browserMiniTitle;
 
+  /// No description provided for @browserPermissionQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow this site to use: {what}?'**
+  String browserPermissionQuestion(String what);
+
+  /// No description provided for @browserPermissionCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'camera'**
+  String get browserPermissionCamera;
+
+  /// No description provided for @browserPermissionMicrophone.
+  ///
+  /// In en, this message translates to:
+  /// **'microphone'**
+  String get browserPermissionMicrophone;
+
+  /// No description provided for @browserPermissionLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'location'**
+  String get browserPermissionLocation;
+
+  /// No description provided for @browserPermissionProtectedMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'protected video'**
+  String get browserPermissionProtectedMedia;
+
+  /// No description provided for @browserPermissionAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get browserPermissionAllow;
+
+  /// No description provided for @browserPermissionBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Block'**
+  String get browserPermissionBlock;
+
   /// No description provided for @browserChallengeVerify.
   ///
   /// In en, this message translates to:

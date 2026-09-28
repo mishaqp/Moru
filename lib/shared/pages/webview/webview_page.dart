@@ -7,6 +7,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/services/browser/browser_agent_session.dart';
+import '../../../core/services/browser/browser_site_permissions.dart';
 import '../../../features/home/services/browser_ask_ai_bridge.dart';
 import '../../../features/home/services/tool_approval_service.dart';
 import '../../../features/settings/pages/browser_settings_page.dart';
@@ -22,6 +23,7 @@ import 'webview_bottom_panel.dart';
 import 'webview_console.dart';
 import 'webview_error_view.dart';
 import 'webview_result_card.dart';
+import 'webview_site_handlers.dart';
 import 'webview_status_banner.dart';
 import 'webview_top_bar.dart';
 
@@ -105,7 +107,13 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     if (widget.agentSession) _agentConsoleSink = _onConsoleMessage;
     _controller =
         adopted ??
-        (WebViewController()
+        (createSiteAwareController(
+            visible: widget.agentSession
+                ? () =>
+                      BrowserAgentSession.instance.isRouteCurrent &&
+                      !BrowserAgentSession.instance.minimized.value
+                : () => mounted,
+          )
           ..setJavaScriptMode(JavaScriptMode.unrestricted)
           ..addJavaScriptChannel(
             'Console',
@@ -116,6 +124,7 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     if (widget.agentSession && adopted == null) {
       BrowserAgentSession.instance.installDialogHandlers(_controller);
     }
+    BrowserSitePermissions.instance.presenter = _askSitePermission;
     _controller.setNavigationDelegate(
       NavigationDelegate(
         onProgress: (p) {
@@ -211,6 +220,40 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     if (route != null) routeObserver.subscribe(this, route);
   }
 
+  /// Chrome-style question: may this site use the camera, microphone,
+  /// location or protected video?
+  Future<bool> _askSitePermission(String host, Set<String> kinds) async {
+    if (!mounted) return false;
+    final l10n = AppLocalizations.of(context)!;
+    final names = [
+      for (final kind in kinds)
+        switch (kind) {
+          'camera' => l10n.browserPermissionCamera,
+          'microphone' => l10n.browserPermissionMicrophone,
+          'location' => l10n.browserPermissionLocation,
+          _ => l10n.browserPermissionProtectedMedia,
+        },
+    ];
+    final allowed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(host),
+        content: Text(l10n.browserPermissionQuestion(names.join(', '))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.browserPermissionBlock),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.browserPermissionAllow),
+          ),
+        ],
+      ),
+    );
+    return allowed ?? false;
+  }
+
   @override
   void didPushNext() {
     // Covered by another route (Settings, the trust-settings link from an
@@ -222,10 +265,17 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
   @override
   void didPopNext() {
     BrowserAgentSession.instance.isRouteCurrent = true;
+    BrowserSitePermissions.instance.presenter = _askSitePermission;
   }
 
   @override
   void dispose() {
+    if (identical(
+      BrowserSitePermissions.instance.presenter,
+      _askSitePermission,
+    )) {
+      BrowserSitePermissions.instance.presenter = null;
+    }
     if (widget.agentSession) {
       routeObserver.unsubscribe(this);
       if (identical(_agentConsoleSink, _onConsoleMessage)) {

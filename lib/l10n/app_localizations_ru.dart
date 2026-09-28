@@ -11106,6 +11106,29 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserMiniTitle => 'Браузер';
 
   @override
+  String browserPermissionQuestion(String what) {
+    return 'Разрешить сайту доступ: $what?';
+  }
+
+  @override
+  String get browserPermissionCamera => 'камера';
+
+  @override
+  String get browserPermissionMicrophone => 'микрофон';
+
+  @override
+  String get browserPermissionLocation => 'местоположение';
+
+  @override
+  String get browserPermissionProtectedMedia => 'защищённое видео';
+
+  @override
+  String get browserPermissionAllow => 'Разрешить';
+
+  @override
+  String get browserPermissionBlock => 'Запретить';
+
+  @override
   String get browserChallengeVerify =>
       'Сайт просит подтвердить, что вы человек. Пройдите проверку сами — ассистент подождёт.';
 

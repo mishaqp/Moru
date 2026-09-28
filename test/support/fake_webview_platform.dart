@@ -274,6 +274,15 @@ class FakeWebViewController extends PlatformWebViewController {
   Future<String> Function(JavaScriptTextInputDialogRequest)? onPrompt;
 
   @override
+  Future<void> setOnPlatformPermissionRequest(
+    void Function(PlatformWebViewPermissionRequest request) onPermissionRequest,
+  ) async {
+    onPermission = onPermissionRequest;
+  }
+
+  void Function(PlatformWebViewPermissionRequest request)? onPermission;
+
+  @override
   Future<void> setOnJavaScriptAlertDialog(
     Future<void> Function(JavaScriptAlertDialogRequest request)
     onJavaScriptAlertDialog,
