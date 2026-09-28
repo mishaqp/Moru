@@ -76,7 +76,13 @@ class BrowserAgentTool {
   static String? _activityDetail(String action, Map<String, dynamic> args) {
     switch (action) {
       case 'open':
+      case 'new_tab':
         return _stringArg(args, 'url');
+      case 'switch_tab':
+      case 'close_tab':
+        return _stringArg(args, 'tab_id');
+      case 'set_mode':
+        return _stringArg(args, 'mode');
       case 'press_key':
         return _stringArg(args, 'key');
       case 'scroll':
@@ -93,6 +99,9 @@ class BrowserAgentTool {
   /// Actions after which the page may be a different one.
   static const Set<String> _navigating = {
     'open',
+    'new_tab',
+    'switch_tab',
+    'set_mode',
     'back',
     'forward',
     'reload',
@@ -126,7 +135,9 @@ class BrowserAgentTool {
       if (session.isAttached || action == 'open') {
         await session.pace(
           action,
-          url: action == 'open' ? _stringArg(args, 'url') : null,
+          url: action == 'open' || action == 'new_tab'
+              ? _stringArg(args, 'url')
+              : null,
         );
       }
       final raw = await _dispatch(action, args, session);
@@ -241,6 +252,58 @@ class BrowserAgentTool {
           return jsonEncode(await session.screenshot());
         case 'eval_js':
           return jsonEncode(await _evalJs(args));
+        case 'tabs':
+          return jsonEncode(session.listTabs());
+        case 'new_tab':
+          final url = _stringArg(args, 'url');
+          if (url != null) {
+            final uri = Uri.tryParse(url);
+            if (uri == null ||
+                !(uri.isScheme('http') || uri.isScheme('https'))) {
+              return jsonEncode({
+                'ok': false,
+                'error': 'invalid_url',
+                'message': 'new_tab only opens http or https URLs.',
+              });
+            }
+          }
+          return jsonEncode(await session.newTab(url: url, byAgent: true));
+        case 'switch_tab':
+        case 'close_tab':
+          final tabId = _stringArg(args, 'tab_id');
+          if (tabId == null && action == 'switch_tab') {
+            return jsonEncode({
+              'ok': false,
+              'error': 'missing_tab_id',
+              'message': 'switch_tab needs tab_id from action=tabs.',
+            });
+          }
+          if (action == 'switch_tab') {
+            return jsonEncode(await session.switchTab(tabId!));
+          }
+          final active = [
+            for (final tab in session.tabs.value)
+              if (tab.active) tab.id,
+          ];
+          final target = tabId ?? (active.isEmpty ? null : active.first);
+          if (target == null) {
+            return jsonEncode({
+              'ok': false,
+              'error': 'browser_not_open',
+              'message': 'Shared browser is not open.',
+            });
+          }
+          return jsonEncode(await session.closeTab(target));
+        case 'set_mode':
+          final mode = _stringArg(args, 'mode');
+          if (mode != 'desktop' && mode != 'mobile') {
+            return jsonEncode({
+              'ok': false,
+              'error': 'invalid_mode',
+              'message': 'mode is desktop or mobile.',
+            });
+          }
+          return jsonEncode(await session.setDesktopMode(mode == 'desktop'));
         case 'fetch':
           final url = _stringArg(args, 'url');
           if (url == null) {
@@ -278,7 +341,7 @@ class BrowserAgentTool {
             'ok': false,
             'error': 'invalid_action',
             'message':
-                'Use action open, observe, screenshot, click, hover, type, submit, press_key, scroll, back, forward, reload, read, wait_for, eval_js, fetch, export_cookies, done, or close.',
+                'Use action open, observe, screenshot, click, hover, type, submit, press_key, scroll, back, forward, reload, read, wait_for, eval_js, fetch, export_cookies, tabs, new_tab, switch_tab, close_tab, set_mode, done, or close.',
           });
       }
     } on TimeoutException {

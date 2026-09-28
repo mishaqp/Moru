@@ -55,8 +55,26 @@ class WebViewPage extends StatefulWidget {
 /// now; its JavaScript channel is registered once and outlives the page.
 void Function(JavaScriptMessage message)? _agentConsoleSink;
 
+/// A WebView for the shared agent browser: its first page and every tab.
+/// Nothing here belongs to a page, so tabs opened while the browser is
+/// minimized work the same.
+WebViewController createAgentBrowserController() {
+  final session = BrowserAgentSession.instance;
+  final controller =
+      createSiteAwareController(
+          visible: () => session.isRouteCurrent && !session.minimized.value,
+        )
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..addJavaScriptChannel(
+          'Console',
+          onMessageReceived: (message) => _agentConsoleSink?.call(message),
+        );
+  return controller;
+}
+
 class _WebViewPageState extends State<WebViewPage> with RouteAware {
-  late final WebViewController _controller;
+  /// The WebView on screen; for the agent browser, the active tab's.
+  late WebViewController _controller;
 
   /// True when this page took over a browser from the mini window, so the
   /// page is already loaded and must not load again.
@@ -106,22 +124,20 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
         : null;
     _adopted = adopted != null;
     if (widget.agentSession) _agentConsoleSink = _onConsoleMessage;
+    if (widget.agentSession) {
+      BrowserAgentSession.instance.controllerFactory =
+          createAgentBrowserController;
+    }
     _controller =
         adopted ??
-        (createSiteAwareController(
-            visible: widget.agentSession
-                ? () =>
-                      BrowserAgentSession.instance.isRouteCurrent &&
-                      !BrowserAgentSession.instance.minimized.value
-                : () => mounted,
-          )
-          ..setJavaScriptMode(JavaScriptMode.unrestricted)
-          ..addJavaScriptChannel(
-            'Console',
-            onMessageReceived: (message) => widget.agentSession
-                ? _agentConsoleSink?.call(message)
-                : _onConsoleMessage(message),
-          ));
+        (widget.agentSession
+            ? createAgentBrowserController()
+            : (createSiteAwareController(visible: () => mounted)
+                ..setJavaScriptMode(JavaScriptMode.unrestricted)
+                ..addJavaScriptChannel(
+                  'Console',
+                  onMessageReceived: _onConsoleMessage,
+                )));
     if (widget.agentSession && adopted == null) {
       BrowserAgentSession.instance.installDialogHandlers(_controller);
     }
@@ -130,70 +146,7 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     unawaited(
       BrowserHandoffs.instance.setNavigationDelegate(
         _controller,
-        NavigationDelegate(
-          onProgress: (p) {
-            if (!mounted) return;
-            setState(() {
-              _isLoading = p < 100;
-              _progress = p;
-            });
-          },
-          onPageStarted: (url) {
-            _navGeneration++;
-            if (!mounted) return;
-            setState(() {
-              _isLoading = true;
-              _currentUrl = url;
-              _mainFrameError = null;
-            });
-            if (widget.agentSession) {
-              BrowserAgentSession.instance.pageStarted(url);
-            }
-          },
-          onPageFinished: (url) async {
-            final generation = _navGeneration;
-            if (!mounted) return;
-            setState(() {
-              _isLoading = false;
-              _progress = 100;
-              _currentUrl = url;
-            });
-            if (widget.agentSession) {
-              BrowserAgentSession.instance.pageFinished(url);
-            }
-            await _refreshCanGoStates(generation);
-            await _updateTitle(generation);
-          },
-          onHttpError: (error) {
-            if (widget.agentSession) {
-              BrowserAgentSession.instance.noteHttpError(
-                error.request?.uri,
-                error.response?.statusCode,
-              );
-            }
-          },
-          onWebResourceError: (err) {
-            // Only a main-frame failure replaces the page with an error
-            // screen. A subresource error (isForMainFrame == false), and
-            // conservatively a `null` value too (Android's implementation
-            // should always populate this; an unexpected null is treated as
-            // "not main frame" rather than guessed at), stays exactly as
-            // before: logged to the diagnostics console only.
-            if (err.isForMainFrame == true &&
-                BrowserHandoffs.isAppLink(err.url)) {
-              unawaited(_openAppLink(err.url!));
-              return;
-            }
-            if (err.isForMainFrame == true) {
-              if (mounted) setState(() => _mainFrameError = err);
-            }
-            _pushConsole(
-              level: 'error',
-              message: 'Web error ${err.errorCode}: ${err.description}',
-              source: _currentUrl,
-            );
-          },
-        ),
+        _pageDelegate(),
       ),
     );
     if (widget.agentSession) {
@@ -201,6 +154,7 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
         _controller,
         onClose: () => _closeAgentSession(WebViewCloseReason.agentClose),
       );
+      BrowserAgentSession.instance.tabs.addListener(_onTabsChanged);
       // Just pushed, so this route is current from the start -- didPushNext/
       // didPopNext (via routeObserver, subscribed in didChangeDependencies)
       // keep this accurate as later routes cover and uncover it.
@@ -221,6 +175,95 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
       scheduleMicrotask(_initialLoad);
     }
   }
+
+  /// Another tab went on screen (from the tab list or the model): show its
+  /// WebView and drive it from here.
+  void _onTabsChanged() {
+    final active = BrowserAgentSession.instance.controller;
+    if (!mounted || _minimizing || active == null) return;
+    if (identical(active, _controller)) return;
+    _navGeneration++;
+    setState(() {
+      _controller = active;
+      _currentUrl = null;
+      _title = null;
+      _mainFrameError = null;
+      _isLoading = false;
+      _progress = 100;
+      _canGoBack = false;
+      _canGoForward = false;
+    });
+    unawaited(
+      BrowserHandoffs.instance.setNavigationDelegate(active, _pageDelegate()),
+    );
+    unawaited(_restoreAdoptedState());
+  }
+
+  /// The page's own navigation handling: progress, address, title, errors,
+  /// and the agent session's bookkeeping.
+  NavigationDelegate _pageDelegate() => NavigationDelegate(
+    onProgress: (p) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = p < 100;
+        _progress = p;
+      });
+    },
+    onPageStarted: (url) {
+      _navGeneration++;
+      if (!mounted) return;
+      setState(() {
+        _isLoading = true;
+        _currentUrl = url;
+        _mainFrameError = null;
+      });
+      if (widget.agentSession) {
+        BrowserAgentSession.instance.pageStarted(url);
+      }
+    },
+    onPageFinished: (url) async {
+      final generation = _navGeneration;
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _progress = 100;
+        _currentUrl = url;
+      });
+      if (widget.agentSession) {
+        BrowserAgentSession.instance.pageFinished(url);
+      }
+      await _refreshCanGoStates(generation);
+      await _updateTitle(generation);
+    },
+    onHttpError: (error) {
+      if (widget.agentSession) {
+        BrowserAgentSession.instance.noteHttpError(
+          error.request?.uri,
+          error.response?.statusCode,
+        );
+      }
+    },
+    onWebResourceError: (err) {
+      // Only a main-frame failure replaces the page with an error
+      // screen. A subresource error (isForMainFrame == false), and
+      // conservatively a `null` value too (Android's implementation
+      // should always populate this; an unexpected null is treated as
+      // "not main frame" rather than guessed at), stays exactly as
+      // before: logged to the diagnostics console only.
+      if (err.isForMainFrame == true && BrowserHandoffs.isAppLink(err.url)) {
+        unawaited(_openAppLink(err.url!));
+        return;
+      }
+      if (err.isForMainFrame == true) {
+        if (mounted) setState(() => _mainFrameError = err);
+      }
+      _pushConsole(
+        level: 'error',
+        message: 'Web error ${err.errorCode}: ${err.description}',
+        source: _currentUrl,
+      );
+    },
+  );
 
   @override
   void didChangeDependencies() {
@@ -345,6 +388,7 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
       BrowserSitePermissions.instance.presenter = null;
     }
     if (widget.agentSession) {
+      BrowserAgentSession.instance.tabs.removeListener(_onTabsChanged);
       routeObserver.unsubscribe(this);
       if (identical(_agentConsoleSink, _onConsoleMessage)) {
         _agentConsoleSink = null;
@@ -743,7 +787,11 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
                       error: _mainFrameError!,
                       onRetry: _retryMainFrameError,
                     )
-                  : WebViewWidget(controller: _controller),
+                  : WebViewWidget(
+                      // A tab switch shows another native WebView.
+                      key: ObjectKey(_controller),
+                      controller: _controller,
+                    ),
             ),
             if (_resultOutcome != null)
               Padding(

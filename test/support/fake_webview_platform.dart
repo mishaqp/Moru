@@ -147,7 +147,20 @@ class FakeWebViewController extends PlatformWebViewController {
   Future<void> setBackgroundColor(Color color) async {}
 
   @override
-  Future<void> setUserAgent(String? userAgent) async {}
+  Future<void> setUserAgent(String? userAgent) async {
+    this.userAgent = userAgent;
+  }
+
+  /// The user agent set on this WebView; null is the WebView's own.
+  String? userAgent;
+
+  static const String defaultUserAgent =
+      'Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/AP1A; wv) '
+      'AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 '
+      'Chrome/131.0.6778.39 Mobile Safari/537.36';
+
+  @override
+  Future<String?> getUserAgent() async => userAgent ?? defaultUserAgent;
 
   @override
   Future<void> addJavaScriptChannel(

@@ -173,6 +173,11 @@ void main() {
         'eval_js',
         'fetch',
         'export_cookies',
+        'tabs',
+        'new_tab',
+        'switch_tab',
+        'close_tab',
+        'set_mode',
         'done',
         'close',
       ]);

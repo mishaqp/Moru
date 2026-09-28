@@ -14,6 +14,7 @@ import '../../../utils/app_directories.dart';
 import '../../../utils/utf16_safe_cut.dart';
 import 'browser_guard.dart';
 import 'browser_handoffs.dart';
+import 'browser_tabs.dart';
 import 'browser_research.dart';
 
 /// Lifecycle state of a [BrowserActivity]: [running] the moment it is
@@ -195,13 +196,45 @@ class BrowserAgentSession {
 
   static final BrowserAgentSession instance = BrowserAgentSession._();
 
-  WebViewController? _controller;
+  // ---------------------------------------------------------------------------
+  // Tabs
+  // ---------------------------------------------------------------------------
+
+  /// At most this many pages are open at once.
+  static const int maxTabs = 5;
+
+  /// A tab the model opened and has not used for this long is closed, unless
+  /// it is the one on screen.
+  static const Duration agentTabIdle = Duration(minutes: 15);
+
+  final List<BrowserTab> _tabs = <BrowserTab>[];
+  BrowserTab? _active;
+  int _nextTabId = 0;
+  Timer? _idleTimer;
+
+  /// The open tabs, for the tab list, the mini window and the page, which
+  /// shows the active one.
+  final ValueNotifier<List<BrowserTabInfo>> tabs =
+      ValueNotifier<List<BrowserTabInfo>>(const <BrowserTabInfo>[]);
+
+  /// Makes the WebView of a new tab, set up like the browser page's own;
+  /// set by the page, which knows how.
+  WebViewController Function()? controllerFactory;
+
+  /// Replaced in tests.
+  @visibleForTesting
+  DateTime Function() clock = DateTime.now;
+
+  WebViewController? get _controller => _active?.controller;
+
+  static final BrowserNavigationHistory _noHistory = BrowserNavigationHistory();
+  BrowserNavigationHistory get _history => _active?.history ?? _noHistory;
+
   Completer<void>? _attachedCompleter;
   Completer<void>? _readyCompleter;
   bool _loading = false;
   int _navigationSequence = 0;
   Future<void> Function()? _closeHandler;
-  final BrowserNavigationHistory _history = BrowserNavigationHistory();
 
   /// The conversation currently driving `browser_use` calls against this
   /// session, refreshed on every dispatch by [BrowserAgentTool.execute].
@@ -528,6 +561,7 @@ class BrowserAgentSession {
 
   /// A `browser_use` action starts; [requestStop] ends its waits.
   void beginAction() {
+    _active?.lastUsed = clock();
     _stopSignal = Completer<void>()..future.ignore();
   }
 
@@ -581,12 +615,7 @@ class BrowserAgentSession {
     unawaited(
       BrowserHandoffs.instance.setNavigationDelegate(
         controller,
-        NavigationDelegate(
-          onPageStarted: pageStarted,
-          onPageFinished: pageFinished,
-          onHttpError: (error) =>
-              noteHttpError(error.request?.uri, error.response?.statusCode),
-        ),
+        _tabDelegate(_active!),
       ),
     );
     _parked = true;
@@ -638,7 +667,18 @@ class BrowserAgentSession {
     WebViewController controller, {
     Future<void> Function()? onClose,
   }) {
-    _controller = controller;
+    var tab = _tabFor(controller);
+    if (tab == null) {
+      tab = BrowserTab(
+        id: 'tab${++_nextTabId}',
+        controller: controller,
+        byAgent: false,
+        lastUsed: clock(),
+      );
+      _tabs.add(tab);
+    }
+    _active = tab;
+    _publishTabsSoon();
     _closeHandler = onClose;
     final attached = _attachedCompleter;
     if (attached != null && !attached.isCompleted) attached.complete();
@@ -647,7 +687,17 @@ class BrowserAgentSession {
 
   void unregister(WebViewController controller) {
     if (!identical(_controller, controller)) return;
-    _controller = null;
+    for (final tab in _tabs) {
+      if (!identical(tab.controller, controller)) {
+        // Stop the background pages: their scripts and media keep running.
+        unawaited(tab.controller.loadRequest(Uri.parse('about:blank')));
+      }
+    }
+    _tabs.clear();
+    _active = null;
+    _idleTimer?.cancel();
+    _idleTimer = null;
+    _publishTabsSoon();
     _closeHandler = null;
     _attachedCompleter = null;
     _parked = false;
@@ -669,6 +719,292 @@ class BrowserAgentSession {
     _readyCompleter = null;
   }
 
+  BrowserTab? _tabFor(WebViewController controller) {
+    for (final tab in _tabs) {
+      if (identical(tab.controller, controller)) return tab;
+    }
+    return null;
+  }
+
+  BrowserTab? _tabById(String id) {
+    for (final tab in _tabs) {
+      if (tab.id == id) return tab;
+    }
+    return null;
+  }
+
+  bool _tabsPublishScheduled = false;
+
+  List<BrowserTabInfo> _tabInfos() => List<BrowserTabInfo>.unmodifiable([
+    for (final tab in _tabs) tab.info(active: identical(tab, _active)),
+  ]);
+
+  void _publishTabs() {
+    tabs.value = _tabInfos();
+  }
+
+  /// [_publishTabs] for [register] and [unregister]: a page calls them
+  /// while widgets build, when listeners (the mini window) must not
+  /// rebuild, so the update waits until that synchronous build is over.
+  void _publishTabsSoon() {
+    if (_tabsPublishScheduled) return;
+    _tabsPublishScheduled = true;
+    scheduleMicrotask(() {
+      _tabsPublishScheduled = false;
+      _publishTabs();
+    });
+  }
+
+  List<Map<String, Object?>> _tabsJson() => [
+    for (final info in _tabInfos()) info.toJson(),
+  ];
+
+  Future<void> _refreshTitle(BrowserTab tab) async {
+    try {
+      final title = await tab.controller.getTitle();
+      if (!_tabs.contains(tab) || title == tab.title) return;
+      tab.title = title;
+      _publishTabs();
+    } catch (_) {
+      // The page went away meanwhile.
+    }
+  }
+
+  /// Navigation of a tab while the browser page does not drive it (it is in
+  /// the background, or the browser is minimized): the tab keeps its own
+  /// address, title and history, and the active one feeds the session.
+  NavigationDelegate _tabDelegate(BrowserTab tab) => NavigationDelegate(
+    onPageStarted: (url) {
+      if (identical(tab, _active)) {
+        pageStarted(url);
+        return;
+      }
+      tab
+        ..url = url
+        ..loading = true;
+      _publishTabs();
+    },
+    onPageFinished: (url) {
+      if (identical(tab, _active)) {
+        pageFinished(url);
+        return;
+      }
+      tab
+        ..url = url
+        ..loading = false;
+      tab.history.reconcileCommitted(url);
+      _publishTabs();
+      unawaited(_refreshTitle(tab));
+    },
+    onHttpError: (error) {
+      if (identical(tab, _active)) {
+        noteHttpError(error.request?.uri, error.response?.statusCode);
+      }
+    },
+  );
+
+  /// Puts [tab] on screen: the session's page state becomes the tab's.
+  void _activate(BrowserTab tab) {
+    _active = tab;
+    tab.lastUsed = clock();
+    _navigationSequence++;
+    _loading = tab.loading;
+    final ready = _readyCompleter;
+    if (ready != null && !ready.isCompleted) {
+      ready.completeError(StateError('The tab changed.'));
+      ready.future.ignore();
+    }
+    _readyCompleter = tab.loading ? Completer<void>() : null;
+    _pageUrl = tab.url;
+    _mainFrameStatus = null;
+    challenge.value = null;
+    pageUrl.value = tab.url;
+    pageLoading.value = tab.loading;
+    _publishTabs();
+  }
+
+  /// Opens a new tab and puts it on screen, loading [url] when given.
+  Future<Map<String, dynamic>> newTab({String? url, bool byAgent = false}) {
+    return _newTab(
+      url: url == null ? null : Uri.tryParse(url),
+      byAgent: byAgent,
+    );
+  }
+
+  Future<Map<String, dynamic>> _newTab({
+    Uri? url,
+    required bool byAgent,
+  }) async {
+    final factory = controllerFactory;
+    if (!isAttached || factory == null) {
+      return {
+        'ok': false,
+        'error': 'browser_not_open',
+        'message': 'Open the browser first (action=open).',
+      };
+    }
+    if (_tabs.length >= maxTabs) {
+      return {
+        'ok': false,
+        'error': 'too_many_tabs',
+        'message': 'At most $maxTabs tabs are open. Close one first.',
+        'tabs': _tabsJson(),
+      };
+    }
+    final controller = factory();
+    final tab = BrowserTab(
+      id: 'tab${++_nextTabId}',
+      controller: controller,
+      byAgent: byAgent,
+      lastUsed: clock(),
+    );
+    _tabs.add(tab);
+    await BrowserHandoffs.instance.setNavigationDelegate(
+      controller,
+      _tabDelegate(tab),
+    );
+    installDialogHandlers(controller);
+    await _switchAway();
+    _activate(tab);
+    if (byAgent) _ensureIdleTimer();
+    if (url != null) {
+      await load(url);
+    } else {
+      expectNavigation();
+      await controller.loadRequest(Uri.parse('about:blank'));
+    }
+    return {'ok': true, 'tab_id': tab.id, 'tabs': _tabsJson()};
+  }
+
+  /// The active tab stops being driven by the page before another one
+  /// takes the screen.
+  Future<void> _switchAway() async {
+    final previous = _active;
+    if (previous == null) return;
+    await BrowserHandoffs.instance.setNavigationDelegate(
+      previous.controller,
+      _tabDelegate(previous),
+    );
+  }
+
+  /// Puts the tab [id] on screen.
+  Future<Map<String, dynamic>> switchTab(String id) async {
+    final tab = _tabById(id);
+    if (tab == null) {
+      return {
+        'ok': false,
+        'error': 'no_such_tab',
+        'message': 'There is no tab $id.',
+        'tabs': _tabsJson(),
+      };
+    }
+    if (!identical(tab, _active)) {
+      await _switchAway();
+      _activate(tab);
+    }
+    return {
+      'ok': true,
+      'tab_id': tab.id,
+      if (tab.url != null) 'url': tab.url,
+      'tabs': _tabsJson(),
+    };
+  }
+
+  /// Closes the tab [id]; closing the last one closes the browser.
+  Future<Map<String, dynamic>> closeTab(String id) async {
+    final tab = _tabById(id);
+    if (tab == null) {
+      return {
+        'ok': false,
+        'error': 'no_such_tab',
+        'message': 'There is no tab $id.',
+        'tabs': _tabsJson(),
+      };
+    }
+    if (_tabs.length == 1) return close();
+    if (identical(tab, _active)) {
+      final index = _tabs.indexOf(tab);
+      final next = _tabs[index + 1 < _tabs.length ? index + 1 : index - 1];
+      await _switchAway();
+      _activate(next);
+    }
+    _removeTab(tab);
+    return {'ok': true, 'closed': id, 'tabs': _tabsJson()};
+  }
+
+  void _removeTab(BrowserTab tab) {
+    _tabs.remove(tab);
+    unawaited(tab.controller.loadRequest(Uri.parse('about:blank')));
+    if (!_tabs.any((t) => t.byAgent)) {
+      _idleTimer?.cancel();
+      _idleTimer = null;
+    }
+    _publishTabs();
+  }
+
+  void _ensureIdleTimer() {
+    _idleTimer ??= Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => closeIdleAgentTabs(),
+    );
+  }
+
+  /// Closes the tabs the model opened and left unused for [agentTabIdle],
+  /// except the one on screen; returns their ids.
+  List<String> closeIdleAgentTabs() {
+    final now = clock();
+    final idle = [
+      for (final tab in _tabs)
+        if (tab.byAgent &&
+            !identical(tab, _active) &&
+            now.difference(tab.lastUsed) >= agentTabIdle)
+          tab,
+    ];
+    for (final tab in idle) {
+      _removeTab(tab);
+    }
+    return [for (final tab in idle) tab.id];
+  }
+
+  /// The open tabs for the model.
+  Map<String, dynamic> listTabs() => {
+    'ok': true,
+    'tabs': _tabsJson(),
+    'max_tabs': maxTabs,
+  };
+
+  /// Shows the active tab's sites as on a computer or as on a phone, and
+  /// reloads it.
+  Future<Map<String, dynamic>> setDesktopMode(bool desktop) async {
+    final tab = _active;
+    if (tab == null) {
+      return {
+        'ok': false,
+        'error': 'browser_not_open',
+        'message': 'Shared browser is not open.',
+      };
+    }
+    if (tab.desktop != desktop) {
+      final controller = tab.controller;
+      tab.mobileUserAgent ??= await controller.getUserAgent();
+      await controller.setUserAgent(
+        desktop ? desktopUserAgent(tab.mobileUserAgent) : null,
+      );
+      tab.desktop = desktop;
+      _publishTabs();
+      if (tab.url != null && tab.url != 'about:blank') {
+        expectNavigation();
+        await controller.reload();
+        await waitUntilReady();
+      }
+    }
+    return {
+      'ok': true,
+      'mode': desktop ? 'desktop' : 'mobile',
+      if (tab.url != null) 'url': tab.url,
+    };
+  }
+
   /// The page the shared browser shows, for the mini window.
   final ValueNotifier<String?> pageUrl = ValueNotifier<String?>(null);
 
@@ -676,6 +1012,13 @@ class BrowserAgentSession {
   final ValueNotifier<bool> pageLoading = ValueNotifier<bool>(false);
 
   void pageStarted(String url) {
+    final tab = _active;
+    if (tab != null) {
+      tab
+        ..url = url
+        ..loading = true;
+      _publishTabs();
+    }
     _navigationSequence++;
     _loading = true;
     pageLoading.value = true;
@@ -690,6 +1033,13 @@ class BrowserAgentSession {
   }
 
   void pageFinished(String url) {
+    final tab = _active;
+    if (tab != null) {
+      tab
+        ..url = url
+        ..loading = false;
+      unawaited(_refreshTitle(tab));
+    }
     _loading = false;
     pageLoading.value = false;
     pageUrl.value = url;

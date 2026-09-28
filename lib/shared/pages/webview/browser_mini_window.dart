@@ -65,9 +65,11 @@ class _BrowserMiniWindowState extends State<BrowserMiniWindow> {
   @override
   Widget build(BuildContext context) {
     final session = BrowserAgentSession.instance;
-    return ValueListenableBuilder<bool>(
-      valueListenable: session.minimized,
-      builder: (context, minimized, _) {
+    return ListenableBuilder(
+      // The tab list too: the model may switch tabs while minimized.
+      listenable: Listenable.merge([session.minimized, session.tabs]),
+      builder: (context, _) {
+        final minimized = session.minimized.value;
         final controller = session.controller;
         if (!minimized || controller == null) return const SizedBox.shrink();
         final media = MediaQuery.of(context);
@@ -222,7 +224,10 @@ class _MiniWindowCard extends StatelessWidget {
                     // The small preview is watch-only; interacting happens
                     // in the expanded page.
                     child: IgnorePointer(
-                      child: WebViewWidget(controller: controller),
+                      child: WebViewWidget(
+                        key: ObjectKey(controller),
+                        controller: controller,
+                      ),
                     ),
                   ),
                 ),
