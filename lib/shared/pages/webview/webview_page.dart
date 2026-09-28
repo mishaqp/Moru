@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/services/browser/browser_agent_session.dart';
 import '../../../core/services/browser/browser_handoffs.dart';
+import '../../../core/services/browser/browser_library.dart';
 import '../../../core/services/browser/browser_site_permissions.dart';
 import '../../../core/services/browser/browser_tabs.dart';
 import '../../../features/home/services/browser_ask_ai_bridge.dart';
@@ -26,6 +27,7 @@ import 'webview_console.dart';
 import 'webview_error_view.dart';
 import 'webview_result_card.dart';
 import 'webview_site_handlers.dart';
+import 'webview_library_sheet.dart';
 import 'webview_status_banner.dart';
 import 'webview_tabs_sheet.dart';
 import 'webview_top_bar.dart';
@@ -145,6 +147,14 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     }
     BrowserSitePermissions.instance.presenter = _askSitePermission;
     BrowserHandoffs.instance.latestDownload.addListener(_onDownload);
+    if (widget.agentSession) {
+      BrowserLibrary.instance.bookmarks.addListener(_onLibraryChanged);
+      unawaited(
+        BrowserLibrary.instance.load().catchError(
+          (Object error) => debugPrint('Browser library: $error'),
+        ),
+      );
+    }
     unawaited(
       BrowserHandoffs.instance.setNavigationDelegate(
         _controller,
@@ -203,6 +213,28 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
       BrowserHandoffs.instance.setNavigationDelegate(active, _pageDelegate()),
     );
     unawaited(_restoreAdoptedState());
+  }
+
+  Future<void> _toggleBookmark() async {
+    final url = _currentUrl;
+    if (url == null) return;
+    final added = await BrowserLibrary.instance.toggleBookmark(url, _title);
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    showAppSnackBar(
+      context,
+      message: added ? l10n.browserBookmarkAdded : l10n.browserBookmarkRemoved,
+      type: NotificationType.success,
+    );
+  }
+
+  void _openFromLibrary(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri != null) unawaited(_controller.loadRequest(uri));
+  }
+
+  void _onLibraryChanged() {
+    if (mounted) setState(() {});
   }
 
   BrowserTabInfo? get _activeTabInfo {
@@ -424,6 +456,7 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
   @override
   void dispose() {
     BrowserHandoffs.instance.latestDownload.removeListener(_onDownload);
+    BrowserLibrary.instance.bookmarks.removeListener(_onLibraryChanged);
     if (identical(
       BrowserSitePermissions.instance.presenter,
       _askSitePermission,
@@ -820,6 +853,24 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
               : null,
           onClearSiteData: widget.agentSession && !contentMode
               ? _clearSiteData
+              : null,
+          bookmarked: BrowserLibrary.instance.isBookmarked(_currentUrl),
+          onToggleBookmark: widget.agentSession && !contentMode
+              ? _toggleBookmark
+              : null,
+          onShowBookmarks: widget.agentSession && !contentMode
+              ? () => showBrowserLibrarySheet(
+                  context,
+                  history: false,
+                  onOpen: _openFromLibrary,
+                )
+              : null,
+          onShowHistory: widget.agentSession && !contentMode
+              ? () => showBrowserLibrarySheet(
+                  context,
+                  history: true,
+                  onOpen: _openFromLibrary,
+                )
               : null,
         ),
         body: Column(

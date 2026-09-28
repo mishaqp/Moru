@@ -19655,6 +19655,60 @@ abstract class AppLocalizations {
   /// **'Browser'**
   String get browserMiniTitle;
 
+  /// No description provided for @browserBookmarks.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmarks'**
+  String get browserBookmarks;
+
+  /// No description provided for @browserHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get browserHistory;
+
+  /// No description provided for @browserClearHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get browserClearHistory;
+
+  /// No description provided for @browserLibrarySearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get browserLibrarySearch;
+
+  /// No description provided for @browserHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No pages visited in the last 7 days'**
+  String get browserHistoryEmpty;
+
+  /// No description provided for @browserBookmarksEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No bookmarks yet. Tap the star in the address bar.'**
+  String get browserBookmarksEmpty;
+
+  /// No description provided for @browserLibraryRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get browserLibraryRemove;
+
+  /// No description provided for @browserBookmarkAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmarked'**
+  String get browserBookmarkAdded;
+
+  /// No description provided for @browserBookmarkRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmark removed'**
+  String get browserBookmarkRemoved;
+
   /// No description provided for @browserTabsTooltip.
   ///
   /// In en, this message translates to:

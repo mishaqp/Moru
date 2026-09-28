@@ -33,7 +33,18 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.desktopMode,
     this.onDesktopModeChanged,
     this.onClearSiteData,
+    this.bookmarked,
+    this.onToggleBookmark,
+    this.onShowBookmarks,
+    this.onShowHistory,
   });
+
+  /// Whether the page is bookmarked; with [onToggleBookmark], the address
+  /// shows a star that adds or removes it.
+  final bool? bookmarked;
+  final VoidCallback? onToggleBookmark;
+  final VoidCallback? onShowBookmarks;
+  final VoidCallback? onShowHistory;
 
   /// Open tabs, shown on the tabs button; agent browser only.
   final int? tabCount;
@@ -136,19 +147,46 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
           Positioned.fill(
             child: Material(
               type: MaterialType.transparency,
-              child: onTapAddress == null
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: addressContent,
-                    )
-                  : InkWell(
-                      key: const ValueKey('browser_address_tap_target'),
-                      onTap: onTapAddress,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: onTapAddress == null
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: addressContent,
+                          )
+                        : InkWell(
+                            key: const ValueKey('browser_address_tap_target'),
+                            onTap: onTapAddress,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                              ),
+                              child: addressContent,
+                            ),
+                          ),
+                  ),
+                  // Beside the address, not on it: a tap on the address
+                  // edits it.
+                  if (onToggleBookmark != null)
+                    InkWell(
+                      key: const ValueKey('browser_bookmark_star'),
+                      customBorder: const CircleBorder(),
+                      onTap: onToggleBookmark,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        child: addressContent,
+                        padding: const EdgeInsets.fromLTRB(6, 8, 12, 8),
+                        child: Icon(
+                          Lucide.Star,
+                          size: 18,
+                          semanticLabel: l10n.browserBookmarks,
+                          color: bookmarked == true
+                              ? cs.primary
+                              : cs.onSurface.withValues(alpha: 0.45),
+                        ),
                       ),
                     ),
+                ],
+              ),
             ),
           ),
           if (progress != null)
@@ -242,6 +280,12 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
               case 'clear':
                 onClearSiteData?.call();
                 break;
+              case 'bookmarks':
+                onShowBookmarks?.call();
+                break;
+              case 'history':
+                onShowHistory?.call();
+                break;
             }
           },
           itemBuilder: (ctx) => [
@@ -259,6 +303,22 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
                 child: _MenuRow(
                   icon: Lucide.ExternalLink,
                   label: l10n.messageWebViewOpenInBrowser,
+                ),
+              ),
+            if (onShowBookmarks != null)
+              PopupMenuItem<String>(
+                value: 'bookmarks',
+                child: _MenuRow(
+                  icon: Lucide.Star,
+                  label: l10n.browserBookmarks,
+                ),
+              ),
+            if (onShowHistory != null)
+              PopupMenuItem<String>(
+                value: 'history',
+                child: _MenuRow(
+                  icon: Lucide.History,
+                  label: l10n.browserHistory,
                 ),
               ),
             if (onDesktopModeChanged != null)

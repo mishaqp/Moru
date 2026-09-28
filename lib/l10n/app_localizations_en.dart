@@ -10981,6 +10981,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserMiniTitle => 'Browser';
 
   @override
+  String get browserBookmarks => 'Bookmarks';
+
+  @override
+  String get browserHistory => 'History';
+
+  @override
+  String get browserClearHistory => 'Clear';
+
+  @override
+  String get browserLibrarySearch => 'Search';
+
+  @override
+  String get browserHistoryEmpty => 'No pages visited in the last 7 days';
+
+  @override
+  String get browserBookmarksEmpty =>
+      'No bookmarks yet. Tap the star in the address bar.';
+
+  @override
+  String get browserLibraryRemove => 'Remove';
+
+  @override
+  String get browserBookmarkAdded => 'Bookmarked';
+
+  @override
+  String get browserBookmarkRemoved => 'Bookmark removed';
+
+  @override
   String get browserTabsTooltip => 'Tabs';
 
   @override

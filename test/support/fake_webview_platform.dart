@@ -159,6 +159,13 @@ class FakeWebViewController extends PlatformWebViewController {
       'AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 '
       'Chrome/131.0.6778.39 Mobile Safari/537.36';
 
+  /// The page title; the host of the current address by default.
+  String? title;
+
+  @override
+  Future<String?> getTitle() async =>
+      title ?? Uri.tryParse(currentUrlSync ?? '')?.host;
+
   @override
   Future<String?> getUserAgent() async => userAgent ?? defaultUserAgent;
 

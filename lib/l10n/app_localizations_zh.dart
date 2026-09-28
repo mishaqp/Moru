@@ -10499,6 +10499,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserMiniTitle => '浏览器';
 
   @override
+  String get browserBookmarks => '书签';
+
+  @override
+  String get browserHistory => '历史记录';
+
+  @override
+  String get browserClearHistory => '清除';
+
+  @override
+  String get browserLibrarySearch => '搜索';
+
+  @override
+  String get browserHistoryEmpty => '最近 7 天没有访问记录';
+
+  @override
+  String get browserBookmarksEmpty => '还没有书签。点按地址栏中的星标。';
+
+  @override
+  String get browserLibraryRemove => '删除';
+
+  @override
+  String get browserBookmarkAdded => '已添加书签';
+
+  @override
+  String get browserBookmarkRemoved => '已删除书签';
+
+  @override
   String get browserTabsTooltip => '标签页';
 
   @override
@@ -21649,6 +21676,33 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '浏览器';
+
+  @override
+  String get browserBookmarks => '书签';
+
+  @override
+  String get browserHistory => '历史记录';
+
+  @override
+  String get browserClearHistory => '清除';
+
+  @override
+  String get browserLibrarySearch => '搜索';
+
+  @override
+  String get browserHistoryEmpty => '最近 7 天没有访问记录';
+
+  @override
+  String get browserBookmarksEmpty => '还没有书签。点按地址栏中的星标。';
+
+  @override
+  String get browserLibraryRemove => '删除';
+
+  @override
+  String get browserBookmarkAdded => '已添加书签';
+
+  @override
+  String get browserBookmarkRemoved => '已删除书签';
 
   @override
   String get browserTabsTooltip => '标签页';
@@ -32875,6 +32929,33 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '瀏覽器';
+
+  @override
+  String get browserBookmarks => '書籤';
+
+  @override
+  String get browserHistory => '歷史記錄';
+
+  @override
+  String get browserClearHistory => '清除';
+
+  @override
+  String get browserLibrarySearch => '搜尋';
+
+  @override
+  String get browserHistoryEmpty => '最近 7 天沒有瀏覽記錄';
+
+  @override
+  String get browserBookmarksEmpty => '還沒有書籤。點按網址列中的星號。';
+
+  @override
+  String get browserLibraryRemove => '刪除';
+
+  @override
+  String get browserBookmarkAdded => '已加入書籤';
+
+  @override
+  String get browserBookmarkRemoved => '已移除書籤';
 
   @override
   String get browserTabsTooltip => '分頁';

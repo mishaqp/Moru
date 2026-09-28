@@ -14,6 +14,7 @@ import '../../../utils/app_directories.dart';
 import '../../../utils/utf16_safe_cut.dart';
 import 'browser_guard.dart';
 import 'browser_handoffs.dart';
+import 'browser_library.dart';
 import 'browser_page_scripts.dart';
 import 'browser_tabs.dart';
 import 'browser_research.dart';
@@ -779,15 +780,28 @@ class BrowserAgentSession {
   ];
 
   Future<void> _refreshTitle(BrowserTab tab) async {
+    String? title;
     try {
-      final title = await tab.controller.getTitle();
-      if (!_tabs.contains(tab) || title == tab.title) return;
-      tab.title = title;
-      _publishTabs();
+      title = await tab.controller.getTitle();
     } catch (_) {
-      // The page went away meanwhile.
+      // No title (the page went away meanwhile); the visit still counts.
     }
+    if (!_tabs.contains(tab)) return;
+    final url = tab.url;
+    if (url != null) onVisit(url, title);
+    if (title == null || title == tab.title) return;
+    tab.title = title;
+    _publishTabs();
   }
+
+  /// A page finished loading in a tab: it goes into the history.
+  /// Replaced in tests.
+  @visibleForTesting
+  void Function(String url, String? title) onVisit = (url, title) => unawaited(
+    BrowserLibrary.instance
+        .recordVisit(url, title)
+        .catchError((Object error) => debugPrint('Browser history: $error')),
+  );
 
   /// Navigation of a tab while the browser page does not drive it (it is in
   /// the background, or the browser is minimized): the tab keeps its own

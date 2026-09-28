@@ -11106,6 +11106,34 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserMiniTitle => 'Браузер';
 
   @override
+  String get browserBookmarks => 'Закладки';
+
+  @override
+  String get browserHistory => 'История';
+
+  @override
+  String get browserClearHistory => 'Очистить';
+
+  @override
+  String get browserLibrarySearch => 'Поиск';
+
+  @override
+  String get browserHistoryEmpty => 'За последние 7 дней страниц нет';
+
+  @override
+  String get browserBookmarksEmpty =>
+      'Закладок пока нет. Нажмите звёздочку в адресной строке.';
+
+  @override
+  String get browserLibraryRemove => 'Удалить';
+
+  @override
+  String get browserBookmarkAdded => 'Добавлено в закладки';
+
+  @override
+  String get browserBookmarkRemoved => 'Закладка удалена';
+
+  @override
   String get browserTabsTooltip => 'Вкладки';
 
   @override
