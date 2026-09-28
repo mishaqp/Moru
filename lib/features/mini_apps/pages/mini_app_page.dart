@@ -177,6 +177,12 @@ class _MiniAppPageState extends State<MiniAppPage> {
           icon: Lucide.History,
           label: l10n.miniAppsVersions,
         ),
+        if (_app.serverCommand != null)
+          OptionSheetItem(
+            value: 'server',
+            icon: Lucide.Server,
+            label: l10n.miniAppsServer,
+          ),
         OptionSheetItem(
           value: 'jobs',
           icon: Lucide.CalendarClock,
@@ -215,6 +221,12 @@ class _MiniAppPageState extends State<MiniAppPage> {
           _loading = true;
         });
         await _controller.loadFile(restored.entryPath);
+      case 'server':
+        await showMiniAppServer(
+          context,
+          servers: MiniAppLauncher.servers,
+          app: _app,
+        );
       case 'jobs':
         await showMiniAppJobs(context, jobs: MiniAppLauncher.jobs, app: _app);
       case 'errors':

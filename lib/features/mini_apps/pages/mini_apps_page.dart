@@ -58,6 +58,12 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
           icon: Lucide.History,
           label: l10n.miniAppsVersions,
         ),
+        if (app.serverCommand != null)
+          OptionSheetItem(
+            value: 'server',
+            icon: Lucide.Server,
+            label: l10n.miniAppsServer,
+          ),
         OptionSheetItem(
           value: 'jobs',
           icon: Lucide.CalendarClock,
@@ -94,6 +100,12 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
         );
       case 'versions':
         await showMiniAppVersions(context, store: _store, app: app);
+      case 'server':
+        await showMiniAppServer(
+          context,
+          servers: MiniAppLauncher.servers,
+          app: app,
+        );
       case 'jobs':
         await showMiniAppJobs(context, jobs: _jobs, app: app);
       case 'errors':

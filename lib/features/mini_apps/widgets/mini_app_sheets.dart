@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/services/mini_apps/mini_app_jobs.dart';
+import '../../../core/services/mini_apps/mini_app_servers.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
@@ -329,6 +330,156 @@ class _JobsSheetState extends State<_JobsSheet> {
           ),
         const SizedBox(height: 8),
         IosSectionFooter(text: l10n.miniAppsJobsFooter),
+      ],
+    );
+  }
+}
+
+/// The app's server: whether it runs, its command and latest output, and
+/// restart.
+Future<void> showMiniAppServer(
+  BuildContext context, {
+  required MiniAppServers servers,
+  required MiniApp app,
+}) => showFormSheet<void>(
+  context,
+  builder: (_) => _ServerSheet(servers: servers, app: app),
+);
+
+class _ServerSheet extends StatefulWidget {
+  const _ServerSheet({required this.servers, required this.app});
+
+  final MiniAppServers servers;
+  final MiniApp app;
+
+  @override
+  State<_ServerSheet> createState() => _ServerSheetState();
+}
+
+class _ServerSheetState extends State<_ServerSheet> {
+  late Map<String, Object?> _status = widget.servers.status(widget.app.id);
+  late final Timer _refresh;
+
+  @override
+  void initState() {
+    super.initState();
+    // The output grows while the sheet is open.
+    _refresh = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() => _status = widget.servers.status(widget.app.id));
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refresh.cancel();
+    super.dispose();
+  }
+
+  Future<void> _copy(String text, String copied) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    showAppSnackBar(context, message: copied);
+  }
+
+  Future<void> _restart() async {
+    await widget.servers.restart(widget.app.id);
+    if (mounted) {
+      setState(() => _status = widget.servers.status(widget.app.id));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final running = _status['running'] == true;
+    final ready = _status['ready'] == true;
+    final exitCode = _status['exit_code'];
+    final output = '${_status['output'] ?? ''}'.trimRight();
+    final (label, color) = ready
+        ? (l10n.miniAppsServerRunning('${_status['port']}'), Colors.green)
+        : running
+        ? (l10n.miniAppsServerStarting, Colors.orange)
+        : exitCode != null
+        ? (l10n.miniAppsServerExited('$exitCode'), cs.error)
+        : (l10n.miniAppsServerIdle, cs.onSurface.withValues(alpha: 0.4));
+    return FormSheet(
+      title: l10n.miniAppsServer,
+      actions: FormSheetActions(
+        cancelLabel: l10n.miniAppsErrorsCopy,
+        confirmLabel: l10n.miniAppsServerRestart,
+        onCancel: () => unawaited(_copy(output, l10n.miniAppsErrorsCopied)),
+        // Restarting is for a server something uses right now.
+        onConfirm: running || exitCode != null
+            ? () => unawaited(_restart())
+            : null,
+      ),
+      children: [
+        SectionCard(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          label,
+                          key: const ValueKey('mini-app-server-status'),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  SelectableText(
+                    '\$ ${widget.app.serverCommand ?? ''}',
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12.5,
+                      color: cs.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(maxHeight: 320),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: cs.onSurface.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: SingleChildScrollView(
+            // Newest output at the bottom, in view.
+            reverse: true,
+            child: SelectableText(
+              output.isEmpty ? l10n.miniAppsServerNoOutput : output,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

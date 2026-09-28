@@ -5171,6 +5171,23 @@
   "miniAppsWebPortInUse": "Port {port} is already in use: choose another one.",
   "miniAppsWebAutostart": "Start with Moru",
   "miniAppsWebAutostartSubtitle": "Start the server whenever Moru starts.",
+  "miniAppsServer": "Server",
+  "miniAppsServerStarting": "Starting…",
+  "miniAppsServerIdle": "Not running. It starts while the app is open.",
+  "miniAppsServerRestart": "Restart",
+  "miniAppsServerNoOutput": "No output yet.",
+  "@miniAppsServerRunning": {
+    "placeholders": {
+      "port": {"type": "String"}
+    }
+  },
+  "miniAppsServerRunning": "Running on port {port}",
+  "@miniAppsServerExited": {
+    "placeholders": {
+      "code": {"type": "String"}
+    }
+  },
+  "miniAppsServerExited": "Stopped with code {code}",
   "miniAppsMore": "More",
   "miniAppsErrors": "Error log",
   "miniAppsErrorsEmpty": "No errors recorded.",

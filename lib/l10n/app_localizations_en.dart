@@ -11430,6 +11430,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'Start the server whenever Moru starts.';
 
   @override
+  String get miniAppsServer => 'Server';
+
+  @override
+  String get miniAppsServerStarting => 'Starting…';
+
+  @override
+  String get miniAppsServerIdle =>
+      'Not running. It starts while the app is open.';
+
+  @override
+  String get miniAppsServerRestart => 'Restart';
+
+  @override
+  String get miniAppsServerNoOutput => 'No output yet.';
+
+  @override
+  String miniAppsServerRunning(String port) {
+    return 'Running on port $port';
+  }
+
+  @override
+  String miniAppsServerExited(String code) {
+    return 'Stopped with code $code';
+  }
+
+  @override
   String get miniAppsMore => 'More';
 
   @override

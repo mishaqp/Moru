@@ -11556,6 +11556,32 @@ class AppLocalizationsRu extends AppLocalizations {
       'Сервер включается сам при каждом запуске Moru.';
 
   @override
+  String get miniAppsServer => 'Сервер';
+
+  @override
+  String get miniAppsServerStarting => 'Запускается…';
+
+  @override
+  String get miniAppsServerIdle =>
+      'Не запущен. Работает, пока приложение открыто.';
+
+  @override
+  String get miniAppsServerRestart => 'Перезапустить';
+
+  @override
+  String get miniAppsServerNoOutput => 'Вывода пока нет.';
+
+  @override
+  String miniAppsServerRunning(String port) {
+    return 'Работает, порт $port';
+  }
+
+  @override
+  String miniAppsServerExited(String code) {
+    return 'Остановлен, код $code';
+  }
+
+  @override
   String get miniAppsMore => 'Ещё';
 
   @override

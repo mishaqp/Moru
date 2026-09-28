@@ -49,6 +49,7 @@ class Lucide {
   static const IconData Terminal = lucide.LucideIcons.terminal;
   static const IconData Database = lucide.LucideIcons.database;
   static const IconData HardDrive = lucide.LucideIcons.hardDrive;
+  static const IconData Server = lucide.LucideIcons.server;
   static const IconData BadgeInfo = lucide.LucideIcons.badgeInfo;
   static const IconData Library = lucide.LucideIcons.library;
   static const IconData Share2 = lucide.LucideIcons.share2;

@@ -10929,6 +10929,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get miniAppsWebAutostartSubtitle => '每次启动 Moru 时自动开启服务器。';
 
   @override
+  String get miniAppsServer => '服务器';
+
+  @override
+  String get miniAppsServerStarting => '启动中…';
+
+  @override
+  String get miniAppsServerIdle => '未运行。应用打开时运行。';
+
+  @override
+  String get miniAppsServerRestart => '重启';
+
+  @override
+  String get miniAppsServerNoOutput => '暂无输出。';
+
+  @override
+  String miniAppsServerRunning(String port) {
+    return '运行中，端口 $port';
+  }
+
+  @override
+  String miniAppsServerExited(String code) {
+    return '已停止，代码 $code';
+  }
+
+  @override
   String get miniAppsMore => '更多';
 
   @override
@@ -21895,6 +21920,31 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get miniAppsWebAutostartSubtitle => '每次启动 Moru 时自动开启服务器。';
+
+  @override
+  String get miniAppsServer => '服务器';
+
+  @override
+  String get miniAppsServerStarting => '启动中…';
+
+  @override
+  String get miniAppsServerIdle => '未运行。应用打开时运行。';
+
+  @override
+  String get miniAppsServerRestart => '重启';
+
+  @override
+  String get miniAppsServerNoOutput => '暂无输出。';
+
+  @override
+  String miniAppsServerRunning(String port) {
+    return '运行中，端口 $port';
+  }
+
+  @override
+  String miniAppsServerExited(String code) {
+    return '已停止，代码 $code';
+  }
 
   @override
   String get miniAppsMore => '更多';
@@ -32937,6 +32987,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get miniAppsWebAutostartSubtitle => '每次啟動 Moru 時自動開啟伺服器。';
+
+  @override
+  String get miniAppsServer => '伺服器';
+
+  @override
+  String get miniAppsServerStarting => '啟動中…';
+
+  @override
+  String get miniAppsServerIdle => '未執行。應用開啟時執行。';
+
+  @override
+  String get miniAppsServerRestart => '重新啟動';
+
+  @override
+  String get miniAppsServerNoOutput => '尚無輸出。';
+
+  @override
+  String miniAppsServerRunning(String port) {
+    return '執行中，連接埠 $port';
+  }
+
+  @override
+  String miniAppsServerExited(String code) {
+    return '已停止，代碼 $code';
+  }
 
   @override
   String get miniAppsMore => '更多';

@@ -77,6 +77,7 @@ class MiniAppServers {
     server
       ..runId = 'mini-app-server-${const Uuid().v4()}'
       ..startedAt = _now()
+      ..ready = false
       ..exitCode = null
       ..killed = false;
     final started = server.started = _start(server);
@@ -91,6 +92,7 @@ class MiniAppServers {
     if (server == null) return {'running': false};
     return {
       'running': server.exitCode == null && !server.stopping,
+      'ready': server.ready && server.exitCode == null && !server.stopping,
       'port': ?server.port,
       'exit_code': ?server.exitCode,
       'output': utf8.decode(server.log, allowMalformed: true),
@@ -165,7 +167,10 @@ class MiniAppServers {
     if (server.stopping) await runtime.cancel(server.runId);
     final deadline = DateTime.now().add(startTimeout);
     while (!exited.isCompleted && !server.stopping) {
-      if (await _probe(port)) return port;
+      if (await _probe(port)) {
+        server.ready = true;
+        return port;
+      }
       if (DateTime.now().isAfter(deadline)) {
         _log(
           app.id,
@@ -232,6 +237,18 @@ class MiniAppServers {
     return _fetch.fetchLocal(port, args);
   }
 
+  /// Stops the app's running server and starts it again, e.g. after its
+  /// code changed. Only while something uses it.
+  Future<void> restart(String appId) async {
+    final server = _servers[appId];
+    if (server == null || server.stopping) return;
+    server
+      ..killed = true
+      ..record(utf8.encode('\n--- restarted ---\n'));
+    await server.runtime?.cancel(server.runId);
+    _run(server);
+  }
+
   Future<void> _release(_Server server) async {
     if (--server.leases > 0) return;
     // Stays in the map so [status] still shows its last output.
@@ -275,6 +292,9 @@ class _Server {
 
   /// Moru stopped this run itself, e.g. after a start timeout.
   bool killed = false;
+
+  /// The port answered.
+  bool ready = false;
   int? port;
   int? exitCode;
   WorkspaceRuntime? runtime;

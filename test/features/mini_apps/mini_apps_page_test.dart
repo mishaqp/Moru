@@ -59,11 +59,17 @@ void main() {
     String name,
     String description, {
     String html = '<p>x</p>',
+    Map<String, Object?> manifest = const {},
   }) async {
     final dir = Directory(p.join(temp.path, 'src', id))
       ..createSync(recursive: true);
     File(p.join(dir.path, 'moru-app.json')).writeAsStringSync(
-      jsonEncode({'id': id, 'name': name, 'description': description}),
+      jsonEncode({
+        'id': id,
+        'name': name,
+        'description': description,
+        ...manifest,
+      }),
     );
     File(p.join(dir.path, 'index.html')).writeAsStringSync(html);
     await store.install(dir);
@@ -239,6 +245,41 @@ void main() {
     expect(ran, ['miniapp:water:morning']);
     // Let the confirmation snack bar time out.
     await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('apps with a server show its state in the menu', (tester) async {
+    await tester.runAsync(() async {
+      await install(
+        'notes',
+        'Notes',
+        '',
+        manifest: {
+          'server': {'command': 'python3 server.py'},
+        },
+      );
+      await install('plain', 'Plain', '');
+    });
+    await pump(tester);
+
+    await tester.longPress(find.byKey(const ValueKey('mini-app-plain')));
+    await tester.pumpAndSettle();
+    expect(find.text('Server'), findsNothing);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const ValueKey('mini-app-notes')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Server'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Not running. It starts while the app is open.'),
+      findsOneWidget,
+    );
+    expect(find.text(r'$ python3 server.py'), findsOneWidget);
+    expect(find.text('No output yet.'), findsOneWidget);
+    // Closing the sheet stops its refresh timer.
+    await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
   });
 }

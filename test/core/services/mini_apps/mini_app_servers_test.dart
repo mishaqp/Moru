@@ -360,10 +360,34 @@ void main() {
       'ok': true,
       'command': 'python3 server.py',
       'running': true,
+      'ready': true,
       'port': http.port,
       'output': 'started\n',
     });
     await lease.release();
+  });
+
+  test('restart stops the running server and starts it again', () async {
+    final app = await install();
+    listening = true;
+    final lease = servers.lease(app, environment);
+    await lease.fetch({'path': '/'});
+    final first = runtime.requests.single.runId;
+    expect(servers.status('notes')['ready'], isTrue);
+
+    await servers.restart('notes');
+    expect(runtime.cancelled, [first]);
+    // The new run answers requests.
+    await lease.fetch({'path': '/'});
+    expect(runtime.requests, hasLength(2));
+    expect(servers.status('notes'), containsPair('ready', true));
+    expect(servers.status('notes')['output'], contains('--- restarted ---'));
+    // A deliberate restart is not a crash.
+    expect(await store.readErrors('notes'), isEmpty);
+    await lease.release();
+    // Nothing to restart once nobody uses it.
+    await servers.restart('notes');
+    expect(runtime.requests, hasLength(2));
   });
 
   test('moru.server.fetch goes through the bridge; the publish check skips '

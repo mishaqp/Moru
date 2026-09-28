@@ -20447,6 +20447,48 @@ abstract class AppLocalizations {
   /// **'Start the server whenever Moru starts.'**
   String get miniAppsWebAutostartSubtitle;
 
+  /// No description provided for @miniAppsServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get miniAppsServer;
+
+  /// No description provided for @miniAppsServerStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting…'**
+  String get miniAppsServerStarting;
+
+  /// No description provided for @miniAppsServerIdle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not running. It starts while the app is open.'**
+  String get miniAppsServerIdle;
+
+  /// No description provided for @miniAppsServerRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart'**
+  String get miniAppsServerRestart;
+
+  /// No description provided for @miniAppsServerNoOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'No output yet.'**
+  String get miniAppsServerNoOutput;
+
+  /// No description provided for @miniAppsServerRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running on port {port}'**
+  String miniAppsServerRunning(String port);
+
+  /// No description provided for @miniAppsServerExited.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped with code {code}'**
+  String miniAppsServerExited(String code);
+
   /// No description provided for @miniAppsMore.
   ///
   /// In en, this message translates to:
