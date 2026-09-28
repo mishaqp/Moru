@@ -4195,5 +4195,10 @@
   "chatTokensOutput": "输出",
   "chatTokensCached": "缓存命中",
   "chatTokensReplies": "回复数",
-  "chatTokensCost": "费用"
+  "chatTokensCost": "费用",
+  "chatInputHintQueue": "AI 回复时也可输入：消息会排队发送",
+  "chatInputHintMiniApp": "让 AI 做个小程序：记录、游戏、工具",
+  "chatInputHintPaste": "粘贴长文本：会变成文件",
+  "chatInputHintTokens": "点发送旁的圆环查看令牌用量",
+  "chatInputHintToolMenu": "长按工具步骤可复制或重新运行"
 }

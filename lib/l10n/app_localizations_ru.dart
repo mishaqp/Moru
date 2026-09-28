@@ -11758,4 +11758,23 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get chatTokensCost => 'Стоимость';
+
+  @override
+  String get chatInputHintQueue =>
+      'Пишите, пока ИИ отвечает: сообщение встанет в очередь';
+
+  @override
+  String get chatInputHintMiniApp =>
+      'Попросите мини-приложение: трекер, игру, инструмент';
+
+  @override
+  String get chatInputHintPaste => 'Вставьте длинный текст: он станет файлом';
+
+  @override
+  String get chatInputHintTokens =>
+      'Нажмите на кольцо у кнопки: расход токенов';
+
+  @override
+  String get chatInputHintToolMenu =>
+      'Долгое нажатие на шаг инструмента: копировать или перезапустить';
 }

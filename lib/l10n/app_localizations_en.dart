@@ -11628,4 +11628,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatTokensCost => 'Cost';
+
+  @override
+  String get chatInputHintQueue =>
+      'Type while AI answers: your message waits in line';
+
+  @override
+  String get chatInputHintMiniApp =>
+      'Ask for a mini app: a tracker, a game, a tool';
+
+  @override
+  String get chatInputHintPaste => 'Paste long text: it becomes a file';
+
+  @override
+  String get chatInputHintTokens => 'Tap the ring by Send to see the tokens';
+
+  @override
+  String get chatInputHintToolMenu =>
+      'Long-press a tool step to copy or rerun it';
 }

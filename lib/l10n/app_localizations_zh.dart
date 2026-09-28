@@ -11121,6 +11121,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatTokensCost => '费用';
+
+  @override
+  String get chatInputHintQueue => 'AI 回复时也可输入：消息会排队发送';
+
+  @override
+  String get chatInputHintMiniApp => '让 AI 做个小程序：记录、游戏、工具';
+
+  @override
+  String get chatInputHintPaste => '粘贴长文本：会变成文件';
+
+  @override
+  String get chatInputHintTokens => '点发送旁的圆环查看令牌用量';
+
+  @override
+  String get chatInputHintToolMenu => '长按工具步骤可复制或重新运行';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -22169,6 +22184,21 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get chatTokensCost => '费用';
+
+  @override
+  String get chatInputHintQueue => 'AI 回复时也可输入：消息会排队发送';
+
+  @override
+  String get chatInputHintMiniApp => '让 AI 做个小程序：记录、游戏、工具';
+
+  @override
+  String get chatInputHintPaste => '粘贴长文本：会变成文件';
+
+  @override
+  String get chatInputHintTokens => '点发送旁的圆环查看令牌用量';
+
+  @override
+  String get chatInputHintToolMenu => '长按工具步骤可复制或重新运行';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -33291,4 +33321,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatTokensCost => '費用';
+
+  @override
+  String get chatInputHintQueue => 'AI 回覆時也可輸入：訊息會排隊傳送';
+
+  @override
+  String get chatInputHintMiniApp => '讓 AI 做個小程式：記錄、遊戲、工具';
+
+  @override
+  String get chatInputHintPaste => '貼上長文字：會變成檔案';
+
+  @override
+  String get chatInputHintTokens => '點傳送旁的圓環查看權杖用量';
+
+  @override
+  String get chatInputHintToolMenu => '長按工具步驟可複製或重新執行';
 }

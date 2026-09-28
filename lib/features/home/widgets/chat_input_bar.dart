@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'composer_hint_rotation.dart';
 import '../../../core/services/incoming_share_service.dart';
 import 'composer_attachment_card.dart';
 import 'dart:collection';
@@ -568,7 +569,19 @@ class _ChatInputBarState extends State<ChatInputBar>
     _controller = widget.controller ?? TextEditingController();
     widget.mediaController?._bind(this);
     widget.asrProvider?.addListener(_handleAsrChanged);
+    widget.focusNode?.addListener(_handleFocusChanged);
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  final ComposerHintRotation _hints = ComposerHintRotation(6);
+
+  void _handleFocusChanged() {
+    if (!(widget.focusNode?.hasFocus ?? false) || !mounted) return;
+    final screenReader = MediaQuery.maybeAccessibleNavigationOf(context);
+    if (_hints.focused(screenReader: screenReader ?? false) &&
+        _controller.text.isEmpty) {
+      setState(() {});
+    }
   }
 
   @override
@@ -618,14 +631,20 @@ class _ChatInputBarState extends State<ChatInputBar>
       _controller.dispose();
     }
     _voiceLevelsVersion.dispose();
+    widget.focusNode?.removeListener(_handleFocusChanged);
     super.dispose();
   }
 
   @override
   void didUpdateWidget(covariant ChatInputBar oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.focusNode, widget.focusNode)) {
+      oldWidget.focusNode?.removeListener(_handleFocusChanged);
+      widget.focusNode?.addListener(_handleFocusChanged);
+    }
     final previousConversationId = oldWidget.conversationId;
     final nextConversationId = widget.conversationId;
+    if (previousConversationId != nextConversationId) _hints.reset();
     if (previousConversationId != null &&
         nextConversationId != null &&
         previousConversationId != nextConversationId) {
@@ -653,7 +672,14 @@ class _ChatInputBarState extends State<ChatInputBar>
 
   String _hint(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return l10n.chatInputBarHint;
+    return switch (_hints.index) {
+      1 => l10n.chatInputHintQueue,
+      2 => l10n.chatInputHintMiniApp,
+      3 => l10n.chatInputHintPaste,
+      4 => l10n.chatInputHintTokens,
+      5 => l10n.chatInputHintToolMenu,
+      _ => l10n.chatInputBarHint,
+    };
   }
 
   /// Returns the number of lines in the input text (minimum 1).

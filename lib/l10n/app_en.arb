@@ -5270,5 +5270,11 @@
   "chatTokensCached": "From cache",
   "chatTokensReplies": "Replies",
   "chatTokensCost": "Cost",
-  "@chatTokensTitle": {"description": "Sheet opened from the context ring by the send button."}
+  "@chatTokensTitle": {"description": "Sheet opened from the context ring by the send button."},
+  "chatInputHintQueue": "Type while AI answers: your message waits in line",
+  "chatInputHintMiniApp": "Ask for a mini app: a tracker, a game, a tool",
+  "chatInputHintPaste": "Paste long text: it becomes a file",
+  "chatInputHintTokens": "Tap the ring by Send to see the tokens",
+  "chatInputHintToolMenu": "Long-press a tool step to copy or rerun it",
+  "@chatInputHintQueue": {"description": "Composer placeholders shown in turn, one more each time the field is focused."}
 }

@@ -20794,6 +20794,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cost'**
   String get chatTokensCost;
+
+  /// Composer placeholders shown in turn, one more each time the field is focused.
+  ///
+  /// In en, this message translates to:
+  /// **'Type while AI answers: your message waits in line'**
+  String get chatInputHintQueue;
+
+  /// No description provided for @chatInputHintMiniApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask for a mini app: a tracker, a game, a tool'**
+  String get chatInputHintMiniApp;
+
+  /// No description provided for @chatInputHintPaste.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste long text: it becomes a file'**
+  String get chatInputHintPaste;
+
+  /// No description provided for @chatInputHintTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the ring by Send to see the tokens'**
+  String get chatInputHintTokens;
+
+  /// No description provided for @chatInputHintToolMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press a tool step to copy or rerun it'**
+  String get chatInputHintToolMenu;
 }
 
 class _AppLocalizationsDelegate

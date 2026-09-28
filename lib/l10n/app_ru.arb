@@ -5112,5 +5112,10 @@
   "chatTokensOutput": "Выход",
   "chatTokensCached": "Из кэша",
   "chatTokensReplies": "Ответов",
-  "chatTokensCost": "Стоимость"
+  "chatTokensCost": "Стоимость",
+  "chatInputHintQueue": "Пишите, пока ИИ отвечает: сообщение встанет в очередь",
+  "chatInputHintMiniApp": "Попросите мини-приложение: трекер, игру, инструмент",
+  "chatInputHintPaste": "Вставьте длинный текст: он станет файлом",
+  "chatInputHintTokens": "Нажмите на кольцо у кнопки: расход токенов",
+  "chatInputHintToolMenu": "Долгое нажатие на шаг инструмента: копировать или перезапустить"
 }
