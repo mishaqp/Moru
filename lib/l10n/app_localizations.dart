@@ -19655,6 +19655,30 @@ abstract class AppLocalizations {
   /// **'Browser'**
   String get browserMiniTitle;
 
+  /// No description provided for @browserNoAppForLink.
+  ///
+  /// In en, this message translates to:
+  /// **'No app on the phone opens this link.'**
+  String get browserNoAppForLink;
+
+  /// No description provided for @browserDownloadStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading {file} to Downloads'**
+  String browserDownloadStarted(String file);
+
+  /// No description provided for @browserDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not download {file}'**
+  String browserDownloadFailed(String file);
+
+  /// No description provided for @browserDownloadUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This file is made by the page itself and cannot be downloaded yet.'**
+  String get browserDownloadUnsupported;
+
   /// No description provided for @browserPermissionQuestion.
   ///
   /// In en, this message translates to:

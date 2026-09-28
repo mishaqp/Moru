@@ -11106,6 +11106,24 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserMiniTitle => 'Браузер';
 
   @override
+  String get browserNoAppForLink =>
+      'На телефоне нет приложения для этой ссылки.';
+
+  @override
+  String browserDownloadStarted(String file) {
+    return 'Скачивается $file в «Загрузки»';
+  }
+
+  @override
+  String browserDownloadFailed(String file) {
+    return 'Не удалось скачать $file';
+  }
+
+  @override
+  String get browserDownloadUnsupported =>
+      'Этот файл создаёт сама страница, скачать его пока нельзя.';
+
+  @override
   String browserPermissionQuestion(String what) {
     return 'Разрешить сайту доступ: $what?';
   }

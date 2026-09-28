@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 
 import '../../../core/services/browser/browser_agent_session.dart';
+import '../../../core/services/browser/browser_handoffs.dart';
 import '../../../core/services/browser/browser_guard.dart';
 import '../../../core/services/browser/browser_research.dart';
 import 'browser_agent_actions.dart';
@@ -137,6 +138,10 @@ class BrowserAgentTool {
       }
       final dialogs = session.drainDialogs();
       if (dialogs.isNotEmpty) result['dialogs'] = dialogs;
+      // Downloads and app links arrive after the click that started them,
+      // so they ride on this result or the next one.
+      final handoffs = BrowserHandoffs.instance.drainForModel();
+      if (handoffs.isNotEmpty) result['handoffs'] = handoffs;
       // `screenshot: true` on any action: the page as it looks afterwards.
       if (action != 'screenshot' &&
           _boolArg(args, 'screenshot', false) &&

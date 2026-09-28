@@ -10499,6 +10499,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserMiniTitle => '浏览器';
 
   @override
+  String get browserNoAppForLink => '手机上没有可打开此链接的应用。';
+
+  @override
+  String browserDownloadStarted(String file) {
+    return '正在下载 $file 到“下载”';
+  }
+
+  @override
+  String browserDownloadFailed(String file) {
+    return '无法下载 $file';
+  }
+
+  @override
+  String get browserDownloadUnsupported => '此文件由页面自行生成，暂时无法下载。';
+
+  @override
   String browserPermissionQuestion(String what) {
     return '允许此网站使用：$what？';
   }
@@ -21595,6 +21611,22 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '浏览器';
+
+  @override
+  String get browserNoAppForLink => '手机上没有可打开此链接的应用。';
+
+  @override
+  String browserDownloadStarted(String file) {
+    return '正在下载 $file 到“下载”';
+  }
+
+  @override
+  String browserDownloadFailed(String file) {
+    return '无法下载 $file';
+  }
+
+  @override
+  String get browserDownloadUnsupported => '此文件由页面自行生成，暂时无法下载。';
 
   @override
   String browserPermissionQuestion(String what) {
@@ -32767,6 +32799,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '瀏覽器';
+
+  @override
+  String get browserNoAppForLink => '手機上沒有可開啟此連結的應用程式。';
+
+  @override
+  String browserDownloadStarted(String file) {
+    return '正在下載 $file 到「下載」';
+  }
+
+  @override
+  String browserDownloadFailed(String file) {
+    return '無法下載 $file';
+  }
+
+  @override
+  String get browserDownloadUnsupported => '此檔案由頁面自行產生，暫時無法下載。';
 
   @override
   String browserPermissionQuestion(String what) {

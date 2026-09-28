@@ -7,6 +7,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/services/browser/browser_agent_session.dart';
+import '../../../core/services/browser/browser_handoffs.dart';
 import '../../../core/services/browser/browser_site_permissions.dart';
 import '../../../features/home/services/browser_ask_ai_bridge.dart';
 import '../../../features/home/services/tool_approval_service.dart';
@@ -125,6 +126,10 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
       BrowserAgentSession.instance.installDialogHandlers(_controller);
     }
     BrowserSitePermissions.instance.presenter = _askSitePermission;
+    if (!_adopted) {
+      unawaited(BrowserHandoffs.instance.watchDownloads(_controller));
+    }
+    BrowserHandoffs.instance.latestDownload.addListener(_onDownload);
     _controller.setNavigationDelegate(
       NavigationDelegate(
         onProgress: (p) {
@@ -175,6 +180,11 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
           // should always populate this; an unexpected null is treated as
           // "not main frame" rather than guessed at), stays exactly as
           // before: logged to the diagnostics console only.
+          if (err.isForMainFrame == true &&
+              BrowserHandoffs.isAppLink(err.url)) {
+            unawaited(_openAppLink(err.url!));
+            return;
+          }
           if (err.isForMainFrame == true) {
             if (mounted) setState(() => _mainFrameError = err);
           }
@@ -218,6 +228,57 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     if (!widget.agentSession) return;
     final route = ModalRoute.of(context);
     if (route != null) routeObserver.subscribe(this, route);
+  }
+
+  /// A page link for another app (`intent:`, `tel:`, `mailto:` ...): the
+  /// WebView cannot load it, so it goes to its app, or the link's web
+  /// fallback loads. Not while the model drives the page: an app popping up
+  /// on its own would surprise the user, so the model is told instead.
+  Future<void> _openAppLink(String url) async {
+    final session = BrowserAgentSession.instance;
+    final agentWorking =
+        widget.agentSession &&
+        session.currentActivity.value?.outcome ==
+            BrowserActivityOutcome.running;
+    final visible = widget.agentSession
+        ? session.isRouteCurrent && !session.minimized.value
+        : mounted;
+    if (agentWorking || !visible) {
+      BrowserHandoffs.instance.noteBlockedAppLink(url);
+      if (await _controller.canGoBack()) await _controller.goBack();
+      return;
+    }
+    final result = await BrowserHandoffs.instance.openAppLink(url);
+    if (!result.opened && result.fallback != null) {
+      await _controller.loadRequest(Uri.parse(result.fallback!));
+      return;
+    }
+    if (await _controller.canGoBack()) await _controller.goBack();
+    if (!result.opened && mounted) {
+      showAppSnackBar(
+        context,
+        message: AppLocalizations.of(context)!.browserNoAppForLink,
+        type: NotificationType.warning,
+      );
+    }
+  }
+
+  void _onDownload() {
+    final download = BrowserHandoffs.instance.latestDownload.value;
+    if (download == null || !mounted) return;
+    if (ModalRoute.of(context)?.isCurrent != true) return;
+    final l10n = AppLocalizations.of(context)!;
+    showAppSnackBar(
+      context,
+      message: download.error == null
+          ? l10n.browserDownloadStarted(download.file)
+          : download.error == 'unsupported_scheme'
+          ? l10n.browserDownloadUnsupported
+          : l10n.browserDownloadFailed(download.file),
+      type: download.error == null
+          ? NotificationType.info
+          : NotificationType.warning,
+    );
   }
 
   /// Chrome-style question: may this site use the camera, microphone,
@@ -270,6 +331,7 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
 
   @override
   void dispose() {
+    BrowserHandoffs.instance.latestDownload.removeListener(_onDownload);
     if (identical(
       BrowserSitePermissions.instance.presenter,
       _askSitePermission,
