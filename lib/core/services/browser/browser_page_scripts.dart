@@ -44,7 +44,12 @@ class BrowserPageScripts {
   nodes.forEach((el) => {
     const text = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 400);
     if (!text) return;
-    const link = el.tagName === 'A' ? el : el.querySelector('a[href]');
+    // The item's own link is the one with the most text (its title), not
+    // the first (often a vote arrow, an avatar or a menu).
+    const links = (el.tagName === 'A' ? [el] : Array.from(el.querySelectorAll('a[href]')))
+        .filter((a) => a.href && !a.href.startsWith('javascript:'));
+    const words = (a) => (a.innerText || a.textContent || '').trim().length;
+    const link = links.sort((a, b) => words(b) - words(a))[0];
     const item = {text};
     if (link && link.href) item.href = link.href;
     items.push(item);
@@ -202,6 +207,21 @@ class BrowserPageScripts {
   if (element && element.isConnected) element.dispatchEvent(new Event('change', {bubbles: true}));
   delete window.__moruTypingTarget;
   return JSON.stringify({ok: true});
+})()
+''';
+
+  /// The center of element [__ELEMENT_ID__] of the latest observe, scrolled
+  /// into the middle of the view, for a real tap on it.
+  static const String elementCenter = r'''
+(() => {
+  const elements = window.__moruBrowserElementRegistry;
+  const element = elements instanceof Map ? elements.get(__ELEMENT_ID__) : null;
+  if (!element || !element.isConnected) {
+    return JSON.stringify({ok: false, error: 'stale_element', message: 'Observe the page again before clicking.'});
+  }
+  element.scrollIntoView({block: 'center', inline: 'center'});
+  const rect = element.getBoundingClientRect();
+  return JSON.stringify({ok: true, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2});
 })()
 ''';
 }

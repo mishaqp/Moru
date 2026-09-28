@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
+import 'browser_agent_session.dart';
+
 /// A file a page downloaded (or failed to).
 @immutable
 class BrowserDownload {
@@ -127,6 +129,9 @@ class BrowserHandoffs {
     if (args is! Map) return;
     final download = BrowserDownload.fromMap(args);
     latestDownload.value = download;
+    if (call.method == 'download') {
+      BrowserAgentSession.instance.downloadStarted(download.url);
+    }
     _forModel.add({'kind': 'download', ...download.toJson()});
   }
 

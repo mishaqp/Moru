@@ -103,7 +103,13 @@ void main() {
           'text_length': 40,
         });
       }
-      return jsonEncode({'ok': true, 'url': 'https://example.com/a'});
+      // A point probe says where the point is on the visible page.
+      return jsonEncode({
+        'ok': true,
+        'url': 'https://example.com/a',
+        'fx': 0.1,
+        'fy': 0.1,
+      });
     };
     final observed =
         jsonDecode(await BrowserAgentTool.execute({'action': 'observe'}))
@@ -255,4 +261,98 @@ void main() {
       expect(bad['error'], 'invalid_url');
     },
   );
+
+  test('a click at a point is a real tap at its place on the visible page; '
+      'without the Android WebView it falls back to a script click', () async {
+    final fake = await attach();
+    final scripts = <String>[];
+    fake.jsHandler = (script) {
+      scripts.add(script);
+      if (script.contains('captcha_frames')) {
+        return jsonEncode({'cloudflare': false, 'captcha_frames': 0});
+      }
+      return jsonEncode({
+        'ok': true,
+        'x': 100,
+        'y': 200,
+        'fx': 0.25,
+        'fy': 0.5,
+        'tag': 'a',
+        'text': 'Search',
+      });
+    };
+    final taps = <(double, double)>[];
+    final originalTap = session.nativeTap;
+    addTearDown(() => session.nativeTap = originalTap);
+    session.nativeTap = (_, fx, fy) async {
+      taps.add((fx, fy));
+      return true;
+    };
+
+    final tapped =
+        jsonDecode(
+              await BrowserAgentTool.execute({
+                'action': 'click',
+                'x': 100,
+                'y': 200,
+              }),
+            )
+            as Map<String, dynamic>;
+    expect(taps, [(0.25, 0.5)]);
+    expect(tapped['trusted'], isTrue);
+    expect(tapped['tag'], 'a');
+    expect(tapped.containsKey('fx'), isFalse);
+    // Only the probe ran in the page: no script click on top of the tap.
+    expect(scripts.any((s) => s.contains('const mode = "click"')), isFalse);
+
+    session.nativeTap = (_, _, _) async => false;
+    scripts.clear();
+    final scripted =
+        jsonDecode(
+              await BrowserAgentTool.execute({
+                'action': 'click',
+                'x': 100,
+                'y': 200,
+              }),
+            )
+            as Map<String, dynamic>;
+    expect(scripted['ok'], isTrue);
+    expect(scripted.containsKey('trusted'), isFalse);
+    expect(scripts.any((s) => s.contains('const mode = "click"')), isTrue);
+  });
+
+  test('press_key is a real key press when the WebView takes it', () async {
+    final fake = await attach();
+    fake.jsHandler = (_) => jsonEncode({'ok': true, 'url': 'x'});
+    final keys = <String>[];
+    final originalKey = session.nativeKey;
+    addTearDown(() => session.nativeKey = originalKey);
+    session.nativeKey = (_, key) async {
+      keys.add(key);
+      return true;
+    };
+    final pressed =
+        jsonDecode(
+              await BrowserAgentTool.execute({
+                'action': 'press_key',
+                'key': 'Enter',
+              }),
+            )
+            as Map<String, dynamic>;
+    expect(keys, ['Enter']);
+    expect(pressed['trusted'], isTrue);
+  });
+
+  test('opening a link that turns into a download ends the wait', () async {
+    await attach();
+    final fake = FakeWebViewPlatform.lastCreated!;
+    // The download: no page starts or finishes.
+    fake.autoFinish = false;
+    final opening = session.load(Uri.parse('https://example.com/file.pdf'));
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    session.downloadStarted('https://example.com/file.pdf');
+    await opening.timeout(const Duration(seconds: 2));
+    fake.pending.clear();
+    fake.autoFinish = true;
+  });
 }

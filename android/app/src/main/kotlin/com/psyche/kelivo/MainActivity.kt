@@ -209,6 +209,28 @@ class MainActivity : FlutterActivity() {
                     }
                     result.success(true)
                 }
+                "tap" -> {
+                    val view = webView()
+                    val fx = call.argument<Number>("fx")?.toDouble()
+                    val fy = call.argument<Number>("fy")?.toDouble()
+                    if (view == null || fx == null || fy == null) {
+                        result.success(false)
+                        return@setMethodCallHandler
+                    }
+                    view.post { BrowserInput.tap(view, fx, fy) { result.success(true) } }
+                }
+                "key" -> {
+                    val view = webView()
+                    val code = BrowserInput.keyCode(call.argument<String>("key").orEmpty())
+                    if (view == null || code == null) {
+                        result.success(false)
+                        return@setMethodCallHandler
+                    }
+                    view.post {
+                        BrowserInput.key(view, code)
+                        result.success(true)
+                    }
+                }
                 "clearCookies" -> {
                     val url = call.argument<String>("url").orEmpty()
                     result.success(BrowserCookies.clear(url))

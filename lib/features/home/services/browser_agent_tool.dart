@@ -195,7 +195,19 @@ class BrowserAgentTool {
           if (point != null && _nullableIntArg(args, 'element_id') == null) {
             return jsonEncode(await session.clickAt(point.x, point.y));
           }
-          return jsonEncode(await session.click(_elementId(args)));
+          final elementId = _elementId(args);
+          if (_boolArg(args, 'trusted', false)) {
+            // A real tap on the element's center, for pages that ignore
+            // script clicks.
+            final center = await session.elementCenter(elementId);
+            if (center['ok'] != true) return jsonEncode(center);
+            final tapped = await session.clickAt(
+              center['x'] as num,
+              center['y'] as num,
+            );
+            return jsonEncode({...tapped, 'element_id': elementId});
+          }
+          return jsonEncode(await session.click(elementId));
         case 'hover':
           final at = _point(args);
           final id = _nullableIntArg(args, 'element_id');

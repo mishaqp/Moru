@@ -662,6 +662,24 @@ class BrowserAgentSession {
   void expectNavigation() {
     _loading = true;
     _readyCompleter = Completer<void>();
+    _expectedSequence = _navigationSequence;
+  }
+
+  int _expectedSequence = -1;
+  String? _expectedUrl;
+
+  /// A download started. When the navigation the session waits for turned
+  /// into it (a link to a PDF or an archive), no page will load: the wait
+  /// ends here instead of timing out.
+  void downloadStarted(String? url) {
+    if (!_loading) return;
+    final same = url != null && (url == _expectedUrl || url == _pageUrl);
+    if (_navigationSequence != _expectedSequence && !same) return;
+    _loading = false;
+    _active?.loading = false;
+    pageLoading.value = false;
+    final ready = _readyCompleter;
+    if (ready != null && !ready.isCompleted) ready.complete();
   }
 
   void register(
@@ -1006,10 +1024,11 @@ class BrowserAgentSession {
       await setWideViewport(controller, desktop);
       tab.desktop = desktop;
       _publishTabs();
-      if (tab.url != null && tab.url != 'about:blank') {
-        expectNavigation();
-        await controller.reload();
-        await waitUntilReady();
+      final url = tab.url;
+      if (url != null && url != 'about:blank') {
+        // A fresh load, not reload(): a reload keeps the request's old
+        // user agent, so the site kept sending its phone version.
+        await load(Uri.parse(url));
       }
     }
     return {
@@ -1138,6 +1157,7 @@ class BrowserAgentSession {
   Future<void> load(Uri uri) async {
     final controller = _requireController();
     expectNavigation();
+    _expectedUrl = uri.toString();
     await controller.loadRequest(uri);
     // waitUntilReady() only returns once pageFinished() has already run,
     // which is where `_history` is reconciled centrally — no separate push
@@ -1226,12 +1246,72 @@ class BrowserAgentSession {
 
   /// Clicks the page at viewport point ([x], [y]) in CSS pixels, for what
   /// observe lists no element for: canvases, maps, custom widgets.
+  /// Taps the WebView at fractions of the visible page like a finger: the
+  /// page gets trusted events. False where there is no Android WebView.
+  /// Replaced in tests.
+  @visibleForTesting
+  Future<bool> Function(WebViewController controller, double fx, double fy)
+  nativeTap = (controller, fx, fy) =>
+      _nativeInput(controller, 'tap', {'fx': fx, 'fy': fy});
+
+  /// Presses [key] on the WebView like a keyboard; false where there is no
+  /// Android WebView or the key has no Android equivalent. Replaced in
+  /// tests.
+  @visibleForTesting
+  Future<bool> Function(WebViewController controller, String key) nativeKey =
+      (controller, key) => _nativeInput(controller, 'key', {'key': key});
+
+  static Future<bool> _nativeInput(
+    WebViewController controller,
+    String method,
+    Map<String, Object?> args,
+  ) async {
+    final platform = controller.platform;
+    if (platform is! AndroidWebViewController) return false;
+    try {
+      return await _browserChannel.invokeMethod<bool>(method, {
+            'id': platform.webViewIdentifier,
+            ...args,
+          }) ??
+          false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  /// The center of element [elementId] of the latest observe, scrolled into
+  /// view, for a real tap on it.
+  Future<Map<String, dynamic>> elementCenter(int elementId) async {
+    await waitUntilReady();
+    return _runJson(
+      BrowserPageScripts.elementCenter.replaceAll(
+        '__ELEMENT_ID__',
+        '$elementId',
+      ),
+    );
+  }
+
   Future<Map<String, dynamic>> clickAt(num x, num y) async {
     await waitUntilReady();
     final controller = _requireController();
     final beforeUrl = await controller.currentUrl();
     final beforeSequence = _navigationSequence;
-    final result = await _runJson(_pointerScript('click', x: x, y: y));
+    // What is there, and where it is on the visible page.
+    final probe = await _runJson(_pointerScript('probe', x: x, y: y));
+    if (probe['ok'] != true) return _withCurrentUrl(probe);
+    final fx = (probe['fx'] as num).toDouble();
+    final fy = (probe['fy'] as num).toDouble();
+    final Map<String, dynamic> result;
+    if (await nativeTap(controller, fx, fy)) {
+      result = Map<String, dynamic>.of(probe)
+        ..remove('fx')
+        ..remove('fy')
+        ..['trusted'] = true;
+    } else {
+      result = await _runJson(_pointerScript('click', x: x, y: y));
+    }
     if (result['ok'] == true) {
       await _settleAfterInteraction(
         navigationSequence: beforeSequence,
@@ -1305,9 +1385,11 @@ class BrowserAgentSession {
     final controller = _requireController();
     final beforeUrl = await controller.currentUrl();
     final beforeSequence = _navigationSequence;
-    final result = await _runJson(
-      _pressKeyScript.replaceAll('__KEY__', jsonEncode(key)),
-    );
+    final result = await nativeKey(controller, key)
+        ? <String, dynamic>{'ok': true, 'key': key, 'trusted': true}
+        : await _runJson(
+            _pressKeyScript.replaceAll('__KEY__', jsonEncode(key)),
+          );
     if (result['ok'] == true) {
       await _settleAfterInteraction(
         navigationSequence: beforeSequence,
@@ -1376,7 +1458,7 @@ class BrowserAgentSession {
         url: result['url']?.toString(),
         title: result['title']?.toString(),
         text: text,
-        extractMode: 'raw',
+        extractMode: request.mode == 'readability' ? 'readability' : 'raw',
         scope: scope,
         readTruncated: truncated,
         researchText: scope == RenderedScope.fullPage ? text : null,
@@ -1992,6 +2074,8 @@ class BrowserAgentSession {
       inner = element.contentDocument;
     } catch (e) {}
     if (!inner) {
+      // A real tap reaches another site's frame too; a script cannot.
+      if (mode === 'probe') break;
       return JSON.stringify({
         ok: false,
         error: 'cross_origin_frame',
@@ -2008,6 +2092,27 @@ class BrowserAgentSession {
     view = inner.defaultView || view;
     element = target;
     framed = true;
+  }
+  if (mode === 'probe') {
+    const vv = window.visualViewport;
+    const vw = vv ? vv.width : window.innerWidth;
+    const vh = vv ? vv.height : window.innerHeight;
+    const px = (x - (vv ? vv.offsetLeft : 0)) / vw;
+    const py = (y - (vv ? vv.offsetTop : 0)) / vh;
+    if (px < 0 || px > 1 || py < 0 || py > 1) {
+      return JSON.stringify({
+        ok: false,
+        error: 'point_outside_view',
+        message: 'The point is not on the visible part of the page. Scroll first.'
+      });
+    }
+    const probeLabel = String(element.innerText || element.getAttribute('aria-label') ||
+        element.getAttribute('title') || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    const found = {ok: true, x: Math.round(x), y: Math.round(y), fx: px, fy: py,
+        tag: element.tagName.toLowerCase()};
+    if (framed) found.in_frame = true;
+    if (probeLabel) found.text = probeLabel;
+    return JSON.stringify(found);
   }
   const base = {bubbles: true, cancelable: true, view, clientX: fx, clientY: fy};
   const pointer = (type) => {
@@ -2254,7 +2359,14 @@ class BrowserAgentSession {
       el.dispatchEvent(new KeyboardEvent('keypress', init));
     }
     el.dispatchEvent(new KeyboardEvent('keyup', init));
-    return JSON.stringify({ok: true, key, default_prevented: down.defaultPrevented});
+    // A script's Enter does not submit a form the way a keyboard's does.
+    let submitted = false;
+    if (key === 'Enter' && !down.defaultPrevented && el.form &&
+        el.tagName === 'INPUT' && typeof el.form.requestSubmit === 'function') {
+      el.form.requestSubmit();
+      submitted = true;
+    }
+    return JSON.stringify({ok: true, key, default_prevented: down.defaultPrevented, submitted});
   } catch (e) {
     return JSON.stringify({ok: false, error: 'js_failed', message: String(e)});
   }

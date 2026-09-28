@@ -105,4 +105,14 @@ class BrowserLinksTest {
             BrowserCookies.expiring("sid", "www.shop.example"),
         )
     }
+
+    @Test fun realInputMapsPointsAndKeys() {
+        assertEquals(0f to 0f, BrowserInput.point(0.0, 0.0, 1080, 1800))
+        assertEquals(539.5f to 1799f, BrowserInput.point(0.5, 1.0, 1080, 1800))
+        // Outside the page is kept on its edge.
+        assertEquals(1079f to 0f, BrowserInput.point(1.5, -0.2, 1080, 1800))
+        assertEquals(android.view.KeyEvent.KEYCODE_ENTER, BrowserInput.keyCode("Enter"))
+        assertEquals(android.view.KeyEvent.KEYCODE_DEL, BrowserInput.keyCode("Backspace"))
+        assertNull(BrowserInput.keyCode("a"))
+    }
 }
