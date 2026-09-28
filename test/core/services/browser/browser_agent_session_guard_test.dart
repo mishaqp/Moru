@@ -198,4 +198,61 @@ void main() {
       BrowserAgentSession.keptScreenshots,
     );
   });
+
+  test(
+    'fetch runs inside the page with its login and returns the text',
+    () async {
+      final fake = await attach();
+      final started = <String>[];
+      var polls = 0;
+      fake.jsHandler = (script) {
+        if (script.contains('credentials')) {
+          started.add(script);
+          return jsonEncode({'started': true});
+        }
+        if (script.contains('__moruFetch') && script.contains('slot.done')) {
+          polls++;
+          if (polls < 2) return jsonEncode({'done': false});
+          return jsonEncode({
+            'done': true,
+            'ok': true,
+            'status': 200,
+            'url': 'https://example.com/api/items',
+            'content_type': 'application/json',
+            'text': '[1,2]',
+            'total_chars': 5,
+            'truncated': false,
+          });
+        }
+        return jsonEncode({'ok': true, 'url': 'https://example.com/a'});
+      };
+
+      final result =
+          jsonDecode(
+                await BrowserAgentTool.execute({
+                  'action': 'fetch',
+                  'url': '/api/items',
+                  'headers': {'Accept': 'application/json'},
+                }),
+              )
+              as Map<String, dynamic>;
+      expect(result['ok'], isTrue);
+      expect(result['text'], '[1,2]');
+      expect(result.containsKey('done'), isFalse);
+      // A path resolves against the open page; the login goes along.
+      expect(started.single, contains('"https://example.com/api/items"'));
+      expect(started.single, contains('"GET"'));
+      expect(started.single, contains('"Accept":"application/json"'));
+
+      final bad =
+          jsonDecode(
+                await BrowserAgentTool.execute({
+                  'action': 'fetch',
+                  'url': 'ftp://example.com/x',
+                }),
+              )
+              as Map<String, dynamic>;
+      expect(bad['error'], 'invalid_url');
+    },
+  );
 }

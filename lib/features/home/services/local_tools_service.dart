@@ -89,11 +89,18 @@ class LocalToolNames {
     }
     if (name != browserUse) return false;
     final action = (arguments['action'] ?? '').toString().trim().toLowerCase();
+    if (action == 'fetch') {
+      // Reading is like opening a page; sending with the user's login is
+      // like submitting a form.
+      final method = (arguments['method'] ?? 'GET').toString().toUpperCase();
+      return method != 'GET' && method != 'HEAD';
+    }
     return action == 'click' ||
         action == 'type' ||
         action == 'submit' ||
         action == 'press_key' ||
-        action == 'eval_js';
+        action == 'eval_js' ||
+        action == 'export_cookies';
   }
 }
 
@@ -675,7 +682,7 @@ class LocalToolsService {
     'function': {
       'name': LocalToolNames.browserUse,
       'description':
-          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, submit a form (action=submit) or synthesize a key press on the focused element (action=press_key, e.g. Enter), scroll, use browser history, read the full page text with action=read, wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again), or run arbitrary JavaScript with action=eval_js when nothing else covers the task. click, type, submit, press_key, and eval_js each require explicit user approval unless full tool trust is on; open, observe, read, scroll, back/forward/reload, wait_for, and done never do. click also takes x and y (CSS pixels in the viewport; observe reports its size) for things observe lists no element for, such as canvases and maps; hover moves the pointer over an element_id or x/y to open hover menus and needs no approval. screenshot attaches a picture of the viewport for models that read images (charts, captchas to describe, canvas pages, visual layout); screenshot: true on any other action attaches one taken after it. Actions are paced per site like a person would act, so do not add your own waits between them. A result may carry "challenge" (a captcha, Cloudflare check, rate limit or refusal): then follow its "next" advice - ask the user to complete a verification themselves and never try to solve it; while a blocking check is shown, click/hover/type/submit/press_key/eval_js are refused. A result may carry "dialogs": alert/confirm/prompt boxes the page opened, already answered with the default (OK / accept / suggested text). A result may carry "handoffs": files the page downloaded (saved to the phone Downloads folder, with path) and links for other apps that were not opened while you worked. A result with error "stopped_by_user" means the user pressed Stop: do not repeat the action unless asked. Call action=done with a short summary once the browser task is complete, so the app can show that clearly instead of leaving the last action as the visible status. Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
+          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, submit a form (action=submit) or synthesize a key press on the focused element (action=press_key, e.g. Enter), scroll, use browser history, read the full page text with action=read, wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again), or run arbitrary JavaScript with action=eval_js when nothing else covers the task. click, type, submit, press_key, and eval_js each require explicit user approval unless full tool trust is on; open, observe, read, scroll, back/forward/reload, wait_for, and done never do. click also takes x and y (CSS pixels in the viewport; observe reports its size) for things observe lists no element for, such as canvases and maps; hover moves the pointer over an element_id or x/y to open hover menus and needs no approval. screenshot attaches a picture of the viewport for models that read images (charts, captchas to describe, canvas pages, visual layout); screenshot: true on any other action attaches one taken after it. Actions are paced per site like a person would act, so do not add your own waits between them. A result may carry "challenge" (a captcha, Cloudflare check, rate limit or refusal): then follow its "next" advice - ask the user to complete a verification themselves and never try to solve it; while a blocking check is shown, click/hover/type/submit/press_key/eval_js are refused. A result may carry "dialogs": alert/confirm/prompt boxes the page opened, already answered with the default (OK / accept / suggested text). fetch requests a URL or path from inside the page with its login (JSON APIs of the site, feeds) and returns the text; other sites answer only if they allow it (CORS); GET/HEAD need no approval, other methods do. export_cookies (needs approval and a workspace) writes the cookies of the open site to a file in /chat for curl -b or wget in the terminal and returns its path, never the values. A result may carry "handoffs": files the page downloaded (saved to the phone Downloads folder, with path) and links for other apps that were not opened while you worked. A result with error "stopped_by_user" means the user pressed Stop: do not repeat the action unless asked. Call action=done with a short summary once the browser task is complete, so the app can show that clearly instead of leaving the last action as the visible status. Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -697,6 +704,8 @@ class LocalToolsService {
               'read',
               'wait_for',
               'eval_js',
+              'fetch',
+              'export_cookies',
               'done',
               'close',
             ],
@@ -755,6 +764,21 @@ class LocalToolsService {
             'default': true,
             'description':
                 'Set false when only interactive elements are needed to save tokens.',
+          },
+          'method': {
+            'type': 'string',
+            'enum': ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
+            'description': 'fetch: HTTP method, GET by default.',
+          },
+          'body': {
+            'type': 'string',
+            'description': 'fetch: request body for POST/PUT/PATCH.',
+          },
+          'headers': {
+            'type': 'object',
+            'additionalProperties': {'type': 'string'},
+            'description':
+                'fetch: extra request headers, e.g. {"Content-Type": "application/json"}.',
           },
           'screenshot': {
             'type': 'boolean',

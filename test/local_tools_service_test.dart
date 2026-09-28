@@ -171,6 +171,8 @@ void main() {
         'read',
         'wait_for',
         'eval_js',
+        'fetch',
+        'export_cookies',
         'done',
         'close',
       ]);
@@ -187,6 +189,18 @@ void main() {
         36,
       );
       expect(parameters['required'], const ['action']);
+    });
+
+    test('browser fetch needs approval only to send data', () {
+      bool gated(Map<String, dynamic> args) =>
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, {
+            'action': 'fetch',
+            ...args,
+          });
+      expect(gated({}), isFalse);
+      expect(gated({'method': 'head'}), isFalse);
+      expect(gated({'method': 'POST'}), isTrue);
+      expect(gated({'method': 'delete'}), isTrue);
     });
 
     test(

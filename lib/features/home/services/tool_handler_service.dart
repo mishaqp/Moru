@@ -30,6 +30,7 @@ import '../../../core/services/workspace/workspace_runtime.dart';
 import '../../../core/services/workspace/workspace_tools_service.dart';
 import '../../../core/providers/workspace_provider.dart';
 import '../../../core/services/browser/browser_agent_session.dart';
+import '../../../core/services/browser/browser_cookie_export.dart';
 import '../../mini_apps/mini_app_checker.dart';
 import '../../mini_apps/mini_app_launcher.dart';
 import 'ask_user_interaction_service.dart';
@@ -704,6 +705,11 @@ class ToolHandlerService {
           ).execute(args);
         }
 
+        if (name == LocalToolNames.browserUse &&
+            '${args['action']}'.trim().toLowerCase() == 'export_cookies') {
+          return _exportBrowserCookies(conversationId, approvalService);
+        }
+
         // Local tools
         final localResult = await LocalToolsService.tryHandleToolCall(
           name,
@@ -841,6 +847,53 @@ class ToolHandlerService {
               id != LocalToolNames.browserUse)
             id,
       ],
+    );
+  }
+
+  /// browser_use export_cookies: the open site's cookies as a file in the
+  /// chat folder of the conversation's workspace, for the terminal. Only
+  /// after the user's approval, which [handleToolCall] asked for already.
+  Future<String> _exportBrowserCookies(
+    String? conversationId,
+    ToolApprovalService? approvalService,
+  ) async {
+    if (approvalService == null) {
+      return _toolError(
+        error: 'approval_unavailable',
+        message:
+            'Exporting cookies needs the user\'s confirmation, which is not '
+            'available here.',
+        tool: LocalToolNames.browserUse,
+      );
+    }
+    final session = BrowserAgentSession.instance;
+    if (!session.isAttached) {
+      return _toolError(
+        error: 'browser_not_open',
+        message: 'Open the site in the browser first.',
+        tool: LocalToolNames.browserUse,
+      );
+    }
+    final ctx = await WorkspaceToolsService.resolve(
+      conversationId: conversationId,
+      workspaceProvider: contextProvider.read<WorkspaceProvider>(),
+      runtimeProvider: contextProvider.read<WorkspaceRuntimeProvider>(),
+      chatService: contextProvider.read<ChatService>(),
+    );
+    if (ctx == null) {
+      return _toolError(
+        error: 'workspace_required',
+        message:
+            'Cookies go to the terminal of a workspace; this chat has none.',
+        tool: LocalToolNames.browserUse,
+      );
+    }
+    return jsonEncode(
+      await BrowserCookieExport.export(
+        pageUrl: await session.controller?.currentUrl(),
+        hostDir: ctx.sessionDir,
+        modelDir: ctx.paths.modelSessionDir,
+      ),
     );
   }
 

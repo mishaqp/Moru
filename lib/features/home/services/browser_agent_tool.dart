@@ -241,6 +241,29 @@ class BrowserAgentTool {
           return jsonEncode(await session.screenshot());
         case 'eval_js':
           return jsonEncode(await _evalJs(args));
+        case 'fetch':
+          final url = _stringArg(args, 'url');
+          if (url == null) {
+            return jsonEncode({
+              'ok': false,
+              'error': 'missing_url',
+              'message': 'fetch needs url.',
+            });
+          }
+          final rawHeaders = args['headers'];
+          return jsonEncode(
+            await session.fetchInPage(
+              url: url,
+              method: _stringArg(args, 'method') ?? 'GET',
+              body: _stringArg(args, 'body'),
+              headers: {
+                if (rawHeaders is Map)
+                  for (final entry in rawHeaders.entries)
+                    '${entry.key}': '${entry.value}',
+              },
+              maxChars: _intArg(args, 'max_chars', 20000),
+            ),
+          );
         case 'close':
           return jsonEncode(await _close());
         case 'done':
@@ -255,7 +278,7 @@ class BrowserAgentTool {
             'ok': false,
             'error': 'invalid_action',
             'message':
-                'Use action open, observe, screenshot, click, hover, type, submit, press_key, scroll, back, forward, reload, read, wait_for, eval_js, done, or close.',
+                'Use action open, observe, screenshot, click, hover, type, submit, press_key, scroll, back, forward, reload, read, wait_for, eval_js, fetch, export_cookies, done, or close.',
           });
       }
     } on TimeoutException {

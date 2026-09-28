@@ -206,6 +206,10 @@ class MainActivity : FlutterActivity() {
                     }
                     result.success(true)
                 }
+                "cookies" -> {
+                    val url = call.argument<String>("url").orEmpty()
+                    result.success(android.webkit.CookieManager.getInstance().getCookie(url))
+                }
                 "openExternal" -> {
                     val url = call.argument<String>("url").orEmpty()
                     val intent = BrowserLinks.intentFor(url, packageName)

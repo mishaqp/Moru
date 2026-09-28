@@ -165,6 +165,29 @@ class BrowserAgentActions {
           'Может прочитать или изменить что угодно на открытой странице.',
       descriptionEn: 'Can read or change anything on the currently open page.',
     ),
+    BrowserAgentAction(
+      id: 'fetch',
+      requiresApproval: false,
+      labelRu: 'Запрос со входом сайта',
+      labelEn: 'Request with the site login',
+      descriptionRu:
+          'Запрос изнутри страницы с её куки. Чтение без подтверждения, '
+          'отправка данных — с подтверждением.',
+      descriptionEn:
+          'A request from inside the page with its cookies. Reading needs '
+          'no approval, sending data does.',
+    ),
+    BrowserAgentAction(
+      id: 'export_cookies',
+      requiresApproval: true,
+      labelRu: 'Куки для терминала',
+      labelEn: 'Cookies for the terminal',
+      descriptionRu:
+          'Файл с куки открытого сайта в папке чата для curl и wget.',
+      descriptionEn:
+          "A file with the open site's cookies in the chat folder for curl "
+          'and wget.',
+    ),
   ];
 
   static bool isKnown(String id) => all.any((a) => a.id == id);

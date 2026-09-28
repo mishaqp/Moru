@@ -1028,6 +1028,134 @@ class BrowserAgentSession {
     }
   }
 
+  static int _fetchSequence = 0;
+
+  /// Requests [url] from inside the page with its cookies and login, like
+  /// the page's own scripts: an API the site calls, a JSON feed, a page of
+  /// the same site without opening it. Other sites answer only when they
+  /// allow it (CORS). Text answers come back cut to [maxChars]; binary ones
+  /// only with their type and size.
+  Future<Map<String, dynamic>> fetchInPage({
+    required String url,
+    String method = 'GET',
+    String? body,
+    Map<String, String> headers = const {},
+    int maxChars = 20000,
+    int timeoutMs = 20000,
+  }) async {
+    await waitUntilReady();
+    final controller = _requireController();
+    final base = Uri.tryParse(await controller.currentUrl() ?? '');
+    final target = base == null ? Uri.tryParse(url) : base.resolve(url);
+    if (target == null ||
+        !(target.isScheme('http') || target.isScheme('https'))) {
+      return {
+        'ok': false,
+        'error': 'invalid_url',
+        'message': 'fetch needs an http(s) URL or a path of the open page.',
+      };
+    }
+    final verb = method.toUpperCase();
+    const verbs = {'GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'};
+    if (!verbs.contains(verb)) {
+      return {
+        'ok': false,
+        'error': 'invalid_method',
+        'message': 'method must be one of ${verbs.join(', ')}.',
+      };
+    }
+    final id = 'f${++_fetchSequence}';
+    final start = _fetchStartScript
+        .replaceAll('__ID__', jsonEncode(id))
+        .replaceAll('__URL__', jsonEncode(target.toString()))
+        .replaceAll('__METHOD__', jsonEncode(verb))
+        .replaceAll('__HEADERS__', jsonEncode(headers))
+        .replaceAll(
+          '__BODY__',
+          body == null || verb == 'GET' || verb == 'HEAD'
+              ? 'null'
+              : jsonEncode(body),
+        )
+        .replaceAll('__MAX__', '${maxChars.clamp(100, 200000)}');
+    await _runJson(start);
+    final poll = _fetchPollScript.replaceAll('__ID__', jsonEncode(id));
+    final deadline = DateTime.now().add(
+      Duration(milliseconds: timeoutMs.clamp(1000, 60000)),
+    );
+    while (true) {
+      final result = await _runJson(poll);
+      if (result['done'] == true) {
+        result.remove('done');
+        if (result['ok'] != true) {
+          result['error'] ??= 'fetch_failed';
+          result['message'] =
+              '${result['message'] ?? 'The request failed.'} Requests to '
+              'other sites need them to allow it (CORS): open that site first.';
+        }
+        return result;
+      }
+      if (DateTime.now().isAfter(deadline)) {
+        await _runJson(_fetchForgetScript.replaceAll('__ID__', jsonEncode(id)));
+        return {
+          'ok': false,
+          'error': 'timeout',
+          'message': 'No answer in time.',
+        };
+      }
+      await _interruptible(
+        Future<void>.delayed(const Duration(milliseconds: 150)),
+      );
+    }
+  }
+
+  static const String _fetchStartScript = r'''
+(() => {
+  const store = window.__moruFetch = window.__moruFetch || {};
+  const slot = store[__ID__] = {done: false};
+  const init = {method: __METHOD__, credentials: 'include', headers: __HEADERS__};
+  const body = __BODY__;
+  if (body !== null) init.body = body;
+  const textual = /^(text\/|application\/(json|xml|javascript|x-www-form-urlencoded|ld\+json|rss\+xml|atom\+xml))|\+(json|xml)(;|$)/i;
+  fetch(__URL__, init).then(async (response) => {
+    const type = response.headers.get('content-type') || '';
+    const answer = {
+      done: true, ok: true, status: response.status, url: response.url,
+      content_type: type
+    };
+    if (init.method !== 'HEAD' && (type === '' || textual.test(type))) {
+      const text = await response.text();
+      answer.text = text.slice(0, __MAX__);
+      answer.total_chars = text.length;
+      answer.truncated = text.length > __MAX__;
+    } else if (init.method !== 'HEAD') {
+      const size = response.headers.get('content-length');
+      answer.binary = true;
+      if (size) answer.bytes = Number(size);
+      answer.note = 'Binary answer: open or click it in the browser to download it.';
+    }
+    Object.assign(slot, answer);
+  }).catch((error) => {
+    Object.assign(slot, {done: true, ok: false, message: String(error && error.message || error)});
+  });
+  return JSON.stringify({started: true});
+})()
+''';
+
+  static const String _fetchPollScript = r'''
+(() => {
+  const store = window.__moruFetch || {};
+  const slot = store[__ID__];
+  if (!slot) return JSON.stringify({done: true, ok: false, error: 'page_changed', message: 'The page changed during the request.'});
+  if (!slot.done) return JSON.stringify({done: false});
+  delete store[__ID__];
+  return JSON.stringify(slot);
+})()
+''';
+
+  static const String _fetchForgetScript = r'''
+(() => { if (window.__moruFetch) delete window.__moruFetch[__ID__]; return JSON.stringify({ok: true}); })()
+''';
+
   /// Runs [code] as the page's own script and returns its last expression, JSON-encoded.
   /// Caller (the `eval_js` tool) is responsible for pattern-blocking and approval.
   ///
