@@ -92,6 +92,7 @@ class ToolHandlerService {
                     .read<EnvironmentProvider?>();
                 return MiniAppChecker.run(
                   app,
+                  jobs: MiniAppLauncher.jobs,
                   serverEnvironment: environment == null
                       ? null
                       : MiniAppLauncher.serverEnvironment(
@@ -683,6 +684,18 @@ class ToolHandlerService {
         if (name == LocalToolNames.miniApps &&
             assistant != null &&
             LocalToolsService.isEnabledForAssistant(name, assistant)) {
+          // Deleting is only done after the approval prompt above; a caller
+          // without one (e.g. a background run) may not delete.
+          if (approvalService == null &&
+              MiniAppDataTool.requiresApproval(args)) {
+            return _toolError(
+              error: 'approval_unavailable',
+              message:
+                  'Deleting mini apps or jobs needs the user\'s confirmation, '
+                  'which is not available here.',
+              tool: name,
+            );
+          }
           return MiniAppDataTool(
             store: MiniAppStore.instance,
             jobs: MiniAppLauncher.jobs,

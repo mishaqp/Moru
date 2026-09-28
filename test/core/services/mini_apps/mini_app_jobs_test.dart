@@ -6,9 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:Kelivo/core/services/mini_apps/mini_app_bridge.dart';
+import 'package:Kelivo/core/services/mini_apps/mini_app_check.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_jobs.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
 import 'package:Kelivo/features/home/services/mini_app_data_tool.dart';
+import 'package:Kelivo/features/home/services/local_tools_service.dart';
 
 /// The native planner, in memory.
 class _Planner {
@@ -282,5 +284,93 @@ void main() {
       ).execute({'action': 'jobs', 'app_id': 'weather'}),
     );
     expect(unavailable['error'], 'unavailable');
+  });
+
+  test('jobs the page set in the publish check are scheduled for the '
+      'installed app', () async {
+    final sandbox = await MiniAppSandbox.create(store.byId('weather')!);
+    addTearDown(sandbox.dispose);
+    // What the page does on start inside the check.
+    for (final id in ['morning', 'alert']) {
+      final reply = await sandbox.bridge.handle(
+        jsonEncode({
+          'id': 1,
+          'method': 'jobs.set',
+          'args': {
+            'id': id,
+            'job': {'time': '07:30', 'run': 'check'},
+          },
+        }),
+      );
+      expect(reply, startsWith('window.__moruReply(1, true, '));
+    }
+    expect(await store.readJobs('weather'), isEmpty);
+    expect(planner.saved, isEmpty);
+
+    expect(await sandbox.adoptJobs(jobs), ['alert', 'morning']);
+    expect((await store.readJobs('weather')).keys, {'alert', 'morning'});
+    expect(planner.saved.keys, {
+      'miniapp:weather:alert',
+      'miniapp:weather:morning',
+    });
+    // So the agent can run one right after publishing.
+    await jobs.runNow('weather', 'morning');
+    expect(planner.ran, ['miniapp:weather:morning']);
+    expect(
+      const MiniAppCheckReport(
+        loaded: true,
+        scheduledJobs: ['alert', 'morning'],
+      ).toJson()['jobs_scheduled'],
+      ['alert', 'morning'],
+    );
+  });
+
+  test('the mini_apps tool deletes a job and an app, after approval', () async {
+    Future<Map<String, dynamic>> tool(Map<String, dynamic> args) async =>
+        jsonDecode(
+              await MiniAppDataTool(store: store, jobs: jobs).execute(args),
+            )
+            as Map<String, dynamic>;
+    await jobs.set('weather', 'morning', {'time': '08:00', 'run': 'check'});
+
+    for (final action in ['delete', 'delete_job']) {
+      expect(
+        LocalToolNames.requiresApprovalFor('mini_apps', {'action': action}),
+        isTrue,
+      );
+    }
+    for (final action in ['list', 'jobs', 'run_job', 'write', 'rollback']) {
+      expect(
+        LocalToolNames.requiresApprovalFor('mini_apps', {'action': action}),
+        isFalse,
+        reason: action,
+      );
+    }
+
+    final missing = await tool({
+      'action': 'delete_job',
+      'app_id': 'weather',
+      'job': 'nope',
+    });
+    expect(missing['error'], 'not_found');
+
+    final job = await tool({
+      'action': 'delete_job',
+      'app_id': 'weather',
+      'job': 'morning',
+    });
+    expect(job, {'ok': true, 'deleted_job': 'morning'});
+    expect(await store.readJobs('weather'), isEmpty);
+    expect(planner.saved, isEmpty);
+
+    await jobs.set('weather', 'evening', {'time': '20:00', 'run': 'check'});
+    final app = await tool({'action': 'delete', 'app_id': 'weather'});
+    expect(app, {'ok': true, 'deleted': 'weather'});
+    expect(store.byId('weather'), isNull);
+    expect(planner.saved, isEmpty);
+    expect(
+      Directory(p.join(temp.path, 'installed', 'weather')).existsSync(),
+      isFalse,
+    );
   });
 }

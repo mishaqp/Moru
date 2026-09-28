@@ -27,6 +27,8 @@ class MiniAppDataTool {
   static const String actionJobs = 'jobs';
   static const String actionRunJob = 'run_job';
   static const String actionServer = 'server';
+  static const String actionDeleteJob = 'delete_job';
+  static const String actionDelete = 'delete';
 
   static const List<String> actions = [
     actionList,
@@ -39,7 +41,15 @@ class MiniAppDataTool {
     actionJobs,
     actionRunJob,
     actionServer,
+    actionDeleteJob,
+    actionDelete,
   ];
+
+  /// Deleting an app or a job goes through the user's approval.
+  static bool requiresApproval(Map<String, dynamic> args) {
+    final action = actionOf(args);
+    return action == actionDelete || action == actionDeleteJob;
+  }
 
   /// Larger reads return only the keys, so one app cannot flood the context.
   static const int maxReadChars = 20000;
@@ -73,7 +83,9 @@ class MiniAppDataTool {
           'data. "jobs" lists the app\'s background jobs (moru.jobs) with '
           'their next and last runs; "run_job" starts one now to test it, '
           'then read "jobs" and "errors" about 30 s later. "server" shows '
-          'whether the app\'s server runs and its latest output.',
+          'whether the app\'s server runs and its latest output. "delete_job" '
+          'removes a background job and "delete" removes a whole app with its '
+          'data, versions and jobs; both ask the user first.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -88,7 +100,8 @@ class MiniAppDataTool {
                 'versions: earlier versions of app_id. rollback: restore '
                 'version of app_id. jobs: background jobs of app_id. '
                 'run_job: run job of app_id now. server: state and output '
-                'of the server of app_id.',
+                'of the server of app_id. delete_job: remove job of app_id. '
+                'delete: remove app_id with all its data.',
           },
           'app_id': {'type': 'string', 'description': 'App id from "list".'},
           'key': {'type': 'string', 'description': 'Storage key.'},
@@ -103,7 +116,7 @@ class MiniAppDataTool {
           },
           'job': {
             'type': 'string',
-            'description': 'run_job: a job id from "jobs".',
+            'description': 'run_job, delete_job: a job id from "jobs".',
           },
         },
         'required': ['action'],
@@ -207,6 +220,22 @@ class MiniAppDataTool {
                 'The job runs in the background for up to 30 s. Read "jobs" '
                 'for its result and "errors" for what went wrong.',
           };
+        case actionDeleteJob:
+          final app = _app(args);
+          final job = '${args['job'] ?? ''}'.trim();
+          final jobs = _jobs();
+          if (!(await store.readJobs(app.id)).containsKey(job)) {
+            throw _ToolFailure(
+              'not_found',
+              'No job "$job". Call "jobs" to get the ids.',
+            );
+          }
+          await jobs.remove(app.id, job);
+          result = {'deleted_job': job};
+        case actionDelete:
+          final app = _app(args);
+          await store.delete(app.id);
+          result = {'deleted': app.id};
         default:
           throw _ToolFailure(
             'invalid_action',

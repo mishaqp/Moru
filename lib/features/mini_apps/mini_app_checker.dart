@@ -4,6 +4,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/services/mini_apps/mini_app_bridge.dart';
 import '../../core/services/mini_apps/mini_app_check.dart';
+import '../../core/services/mini_apps/mini_app_jobs.dart';
 import '../../core/services/mini_apps/mini_app_servers.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
 import 'mini_app_launcher.dart';
@@ -23,6 +24,7 @@ class MiniAppChecker {
   static Future<MiniAppCheckReport> run(
     MiniApp app, {
     MiniAppServerEnvironment? serverEnvironment,
+    MiniAppJobs? jobs,
   }) async {
     final sandbox = await MiniAppSandbox.create(
       app,
@@ -75,13 +77,27 @@ class MiniAppChecker {
         );
         visible = result is num ? result.toInt() : int.tryParse('$result');
       }
+      final failedCalls = List.of(bridge.failedCalls);
+      var scheduled = const <String>[];
+      // Jobs of an app that works are scheduled for the installed app.
+      if (jobs != null &&
+          didLoad &&
+          bridge.pageErrors.isEmpty &&
+          failedCalls.isEmpty) {
+        try {
+          scheduled = await sandbox.adoptJobs(jobs);
+        } on MiniAppException catch (e) {
+          failedCalls.add('jobs.set: ${e.message}');
+        }
+      }
       return MiniAppCheckReport(
         loaded: didLoad,
         pageErrors: List.of(bridge.pageErrors),
         console: console,
-        failedCalls: List.of(bridge.failedCalls),
+        failedCalls: failedCalls,
         visibleContent: visible,
         server: await sandbox.serverStatus(),
+        scheduledJobs: scheduled,
       );
     } finally {
       // Stop the app's timers before its sandbox goes away.

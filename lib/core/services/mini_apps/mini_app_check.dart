@@ -19,7 +19,12 @@ class MiniAppCheckReport {
     this.failedCalls = const [],
     this.visibleContent,
     this.server,
+    this.scheduledJobs = const [],
   });
+
+  /// Jobs the page set during the check that were scheduled for the
+  /// installed app (see [MiniAppSandbox.adoptJobs]).
+  final List<String> scheduledJobs;
 
   /// Whether the entry page finished loading in time.
   final bool loaded;
@@ -69,6 +74,7 @@ class MiniAppCheckReport {
     if (console.isNotEmpty) 'console': console,
     if (visibleContent == 0) 'blank_page': true,
     'server': ?server,
+    if (scheduledJobs.isNotEmpty) 'jobs_scheduled': scheduledJobs,
   };
 }
 
@@ -104,6 +110,18 @@ class MiniAppSandbox {
           ? output
           : output.substring(output.length - 3000),
     };
+  }
+
+  /// Sets the jobs the page set during the check on the installed app, as
+  /// its first real opening would, so they can be run right away. Returns
+  /// their ids.
+  Future<List<String>> adoptJobs(MiniAppJobs installed) async {
+    final set = await store.readJobs(bridge.appId);
+    final ids = set.keys.toList()..sort();
+    for (final id in ids) {
+      await installed.set(bridge.appId, id, set[id]);
+    }
+    return ids;
   }
 
   /// How long the check's server may take to open its port.

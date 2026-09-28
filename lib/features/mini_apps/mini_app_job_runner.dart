@@ -61,6 +61,9 @@ class MiniAppJobRunner {
     final loaded = Completer<void>();
     final finished = Completer<String?>();
     final controller = WebViewController();
+    // Set once the job is over: replies and console output that arrive
+    // while the page is being cleared belong to no page and are dropped.
+    var closed = false;
     cancellation?.onCancel = () async {
       if (!finished.isCompleted) finished.complete('cancelled');
     };
@@ -82,11 +85,12 @@ class MiniAppJobRunner {
             return;
           }
           final script = await bridge.handle(message.message);
-          if (script != null) await controller.runJavaScript(script);
+          if (script != null && !closed) await controller.runJavaScript(script);
         },
       );
       await controller.setOnConsoleMessage((message) {
-        if (message.level == JavaScriptLogLevel.error &&
+        if (!closed &&
+            message.level == JavaScriptLogLevel.error &&
             !message.message.startsWith('Failed to load resource')) {
           log('console: ${message.message}');
         }
@@ -122,6 +126,7 @@ class MiniAppJobRunner {
       if (error != null) throw _fail(log, error);
     } finally {
       // Stop the app's timers and requests.
+      closed = true;
       await controller.loadHtmlString('');
     }
   }

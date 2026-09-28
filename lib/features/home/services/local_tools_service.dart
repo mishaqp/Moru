@@ -82,6 +82,7 @@ class LocalToolNames {
     if (name == scheduledTasks) {
       return ScheduledTaskTool.requiresApproval(arguments);
     }
+    if (name == miniApps) return MiniAppDataTool.requiresApproval(arguments);
     if (name == rootShell) {
       final command = arguments['command'];
       return command is! String || !RootShellTool.isReadOnly(command);
