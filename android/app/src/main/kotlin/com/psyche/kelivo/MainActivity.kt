@@ -157,6 +157,25 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        // Copy with formatting: plain text plus HTML, which Notes, Gmail and
+        // Docs paste as rich text. Flutter's Clipboard only writes plain text.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "app.clipboard")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "setHtml" -> {
+                        val text = call.argument<String>("text")
+                        val html = call.argument<String>("html")
+                        val clipboard = getSystemService(android.content.ClipboardManager::class.java)
+                        if (text == null || html == null || clipboard == null) {
+                            result.success(false)
+                        } else {
+                            clipboard.setPrimaryClip(android.content.ClipData.newHtmlText("Moru", text, html))
+                            result.success(true)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         fileSaveChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, fileSaveChannelName)
         fileSaveChannel?.setMethodCallHandler { call, result ->
             when (call.method) {

@@ -11646,4 +11646,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get chatInputHintToolMenu =>
       'Long-press a tool step to copy or rerun it';
+
+  @override
+  String get messageMoreSheetCopyFormatted => 'Copy with formatting';
 }

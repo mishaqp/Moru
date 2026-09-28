@@ -4200,5 +4200,6 @@
   "chatInputHintMiniApp": "讓 AI 做個小程式：記錄、遊戲、工具",
   "chatInputHintPaste": "貼上長文字：會變成檔案",
   "chatInputHintTokens": "點傳送旁的圓環查看權杖用量",
-  "chatInputHintToolMenu": "長按工具步驟可複製或重新執行"
+  "chatInputHintToolMenu": "長按工具步驟可複製或重新執行",
+  "messageMoreSheetCopyFormatted": "帶格式複製"
 }

@@ -11777,4 +11777,7 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get chatInputHintToolMenu =>
       'Долгое нажатие на шаг инструмента: копировать или перезапустить';
+
+  @override
+  String get messageMoreSheetCopyFormatted => 'Копировать с форматированием';
 }

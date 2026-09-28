@@ -11136,6 +11136,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatInputHintToolMenu => '长按工具步骤可复制或重新运行';
+
+  @override
+  String get messageMoreSheetCopyFormatted => '带格式复制';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -22199,6 +22202,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get chatInputHintToolMenu => '长按工具步骤可复制或重新运行';
+
+  @override
+  String get messageMoreSheetCopyFormatted => '带格式复制';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -33336,4 +33342,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatInputHintToolMenu => '長按工具步驟可複製或重新執行';
+
+  @override
+  String get messageMoreSheetCopyFormatted => '帶格式複製';
 }

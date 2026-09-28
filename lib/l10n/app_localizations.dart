@@ -20824,6 +20824,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Long-press a tool step to copy or rerun it'**
   String get chatInputHintToolMenu;
+
+  /// Copies the message as rich text (HTML) that keeps headings, lists and tables when pasted.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy with formatting'**
+  String get messageMoreSheetCopyFormatted;
 }
 
 class _AppLocalizationsDelegate

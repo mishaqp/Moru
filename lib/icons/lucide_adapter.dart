@@ -245,6 +245,7 @@ class Lucide {
   static const IconData ArrowUpFromLine = lucide.LucideIcons.arrowUpFromLine;
   static const IconData DatabaseZap = lucide.LucideIcons.databaseZap;
   static const IconData DollarSign = lucide.LucideIcons.dollarSign;
+  static const IconData ClipboardType = lucide.LucideIcons.clipboardType;
   static const IconData Package = lucide.LucideIcons.package;
   static const IconData FileCode = lucide.LucideIcons.fileCode;
   static const IconData FileSpreadsheet = lucide.LucideIcons.fileSpreadsheet;
