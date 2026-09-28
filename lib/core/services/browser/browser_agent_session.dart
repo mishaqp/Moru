@@ -13,6 +13,7 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import '../../../utils/app_directories.dart';
 import '../../../utils/utf16_safe_cut.dart';
 import 'browser_guard.dart';
+import 'browser_handoffs.dart';
 import 'browser_research.dart';
 
 /// Lifecycle state of a [BrowserActivity]: [running] the moment it is
@@ -577,12 +578,15 @@ class BrowserAgentSession {
     if (!identical(_controller, controller)) return;
     isRouteCurrent = false;
     _closeHandler = closeMinimized;
-    controller.setNavigationDelegate(
-      NavigationDelegate(
-        onPageStarted: pageStarted,
-        onPageFinished: pageFinished,
-        onHttpError: (error) =>
-            noteHttpError(error.request?.uri, error.response?.statusCode),
+    unawaited(
+      BrowserHandoffs.instance.setNavigationDelegate(
+        controller,
+        NavigationDelegate(
+          onPageStarted: pageStarted,
+          onPageFinished: pageFinished,
+          onHttpError: (error) =>
+              noteHttpError(error.request?.uri, error.response?.statusCode),
+        ),
       ),
     );
     _parked = true;

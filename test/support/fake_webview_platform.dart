@@ -133,7 +133,12 @@ class FakeWebViewController extends PlatformWebViewController {
     PlatformNavigationDelegate handler,
   ) async {
     _delegate = handler as FakeNavigationDelegate;
+    delegatesSet++;
   }
+
+  /// How many navigation delegates were set; the real plugin resets its
+  /// download listener with each one.
+  int delegatesSet = 0;
 
   @override
   Future<void> setJavaScriptMode(JavaScriptMode javaScriptMode) async {}

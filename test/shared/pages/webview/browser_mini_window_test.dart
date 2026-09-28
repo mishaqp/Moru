@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:Kelivo/core/services/browser/browser_agent_session.dart';
+import 'package:Kelivo/core/services/browser/browser_handoffs.dart';
 import 'package:Kelivo/features/home/services/browser_ask_ai_bridge.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
 import 'package:Kelivo/features/home/widgets/chat_header_switcher.dart';
@@ -172,5 +174,45 @@ void main() {
     await tester.drag(find.text('example.org'), Offset(-screenWidth * 0.6, 0));
     await tester.pumpAndSettle();
     expect(tester.getRect(window).left, closeTo(8, 1));
+  });
+
+  testWidgets('downloads are watched after every navigation delegate, so the '
+      'plugin cannot replace the listener (page and mini window)', (
+    tester,
+  ) async {
+    final handoffs = BrowserHandoffs.instance;
+    final originalId = handoffs.webViewId;
+    addTearDown(() => handoffs.webViewId = originalId);
+    handoffs.webViewId = (_) => 7;
+    final delegatesAtWatch = <int>[];
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(const MethodChannel('app.browser'), (
+      call,
+    ) async {
+      if (call.method == 'watchDownloads') {
+        expect((call.arguments as Map)['id'], 7);
+        delegatesAtWatch.add(FakeWebViewPlatform.lastCreated!.delegatesSet);
+      }
+      return true;
+    });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(
+        const MethodChannel('app.browser'),
+        null,
+      ),
+    );
+
+    await tester.pumpWidget(app());
+    await openBrowser(tester);
+    expect(delegatesAtWatch, [1]);
+
+    await tester.tap(find.byKey(_minimize));
+    await tester.pumpAndSettle();
+    expect(delegatesAtWatch, [1, 2]);
+
+    await tester.tap(find.byKey(BrowserMiniWindow.expandKey));
+    await tester.pumpAndSettle();
+    expect(delegatesAtWatch, [1, 2, 3]);
   });
 }

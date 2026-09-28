@@ -72,18 +72,37 @@ class BrowserHandoffs {
     return scheme != null && scheme.isNotEmpty && !_webSchemes.contains(scheme);
   }
 
-  /// Sends the downloads of [controller]'s pages to the download manager.
-  Future<void> watchDownloads(WebViewController controller) async {
+  /// The native WebView id of [controller], null off Android. Replaced in
+  /// tests.
+  @visibleForTesting
+  int? Function(WebViewController controller) webViewId = (controller) {
     final platform = controller.platform;
-    if (platform is! AndroidWebViewController) return;
+    return platform is AndroidWebViewController
+        ? platform.webViewIdentifier
+        : null;
+  };
+
+  /// Sets [delegate] on [controller] and then sends its pages' downloads to
+  /// the download manager. Always use this instead of
+  /// `setNavigationDelegate`: the plugin installs its own download listener
+  /// with every delegate, which would silently replace ours.
+  Future<void> setNavigationDelegate(
+    WebViewController controller,
+    NavigationDelegate delegate,
+  ) async {
+    await controller.setNavigationDelegate(delegate);
+    await _watchDownloads(controller);
+  }
+
+  Future<void> _watchDownloads(WebViewController controller) async {
+    final id = webViewId(controller);
+    if (id == null) return;
     if (!_handling) {
       _handling = true;
       _channel.setMethodCallHandler(handleNativeCall);
     }
     try {
-      await _channel.invokeMethod<bool>('watchDownloads', {
-        'id': platform.webViewIdentifier,
-      });
+      await _channel.invokeMethod<bool>('watchDownloads', {'id': id});
     } on MissingPluginException {
       // Not on the phone (tests).
     }

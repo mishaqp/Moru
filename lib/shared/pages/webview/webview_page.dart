@@ -126,74 +126,74 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
       BrowserAgentSession.instance.installDialogHandlers(_controller);
     }
     BrowserSitePermissions.instance.presenter = _askSitePermission;
-    if (!_adopted) {
-      unawaited(BrowserHandoffs.instance.watchDownloads(_controller));
-    }
     BrowserHandoffs.instance.latestDownload.addListener(_onDownload);
-    _controller.setNavigationDelegate(
-      NavigationDelegate(
-        onProgress: (p) {
-          if (!mounted) return;
-          setState(() {
-            _isLoading = p < 100;
-            _progress = p;
-          });
-        },
-        onPageStarted: (url) {
-          _navGeneration++;
-          if (!mounted) return;
-          setState(() {
-            _isLoading = true;
-            _currentUrl = url;
-            _mainFrameError = null;
-          });
-          if (widget.agentSession) {
-            BrowserAgentSession.instance.pageStarted(url);
-          }
-        },
-        onPageFinished: (url) async {
-          final generation = _navGeneration;
-          if (!mounted) return;
-          setState(() {
-            _isLoading = false;
-            _progress = 100;
-            _currentUrl = url;
-          });
-          if (widget.agentSession) {
-            BrowserAgentSession.instance.pageFinished(url);
-          }
-          await _refreshCanGoStates(generation);
-          await _updateTitle(generation);
-        },
-        onHttpError: (error) {
-          if (widget.agentSession) {
-            BrowserAgentSession.instance.noteHttpError(
-              error.request?.uri,
-              error.response?.statusCode,
+    unawaited(
+      BrowserHandoffs.instance.setNavigationDelegate(
+        _controller,
+        NavigationDelegate(
+          onProgress: (p) {
+            if (!mounted) return;
+            setState(() {
+              _isLoading = p < 100;
+              _progress = p;
+            });
+          },
+          onPageStarted: (url) {
+            _navGeneration++;
+            if (!mounted) return;
+            setState(() {
+              _isLoading = true;
+              _currentUrl = url;
+              _mainFrameError = null;
+            });
+            if (widget.agentSession) {
+              BrowserAgentSession.instance.pageStarted(url);
+            }
+          },
+          onPageFinished: (url) async {
+            final generation = _navGeneration;
+            if (!mounted) return;
+            setState(() {
+              _isLoading = false;
+              _progress = 100;
+              _currentUrl = url;
+            });
+            if (widget.agentSession) {
+              BrowserAgentSession.instance.pageFinished(url);
+            }
+            await _refreshCanGoStates(generation);
+            await _updateTitle(generation);
+          },
+          onHttpError: (error) {
+            if (widget.agentSession) {
+              BrowserAgentSession.instance.noteHttpError(
+                error.request?.uri,
+                error.response?.statusCode,
+              );
+            }
+          },
+          onWebResourceError: (err) {
+            // Only a main-frame failure replaces the page with an error
+            // screen. A subresource error (isForMainFrame == false), and
+            // conservatively a `null` value too (Android's implementation
+            // should always populate this; an unexpected null is treated as
+            // "not main frame" rather than guessed at), stays exactly as
+            // before: logged to the diagnostics console only.
+            if (err.isForMainFrame == true &&
+                BrowserHandoffs.isAppLink(err.url)) {
+              unawaited(_openAppLink(err.url!));
+              return;
+            }
+            if (err.isForMainFrame == true) {
+              if (mounted) setState(() => _mainFrameError = err);
+            }
+            _pushConsole(
+              level: 'error',
+              message: 'Web error ${err.errorCode}: ${err.description}',
+              source: _currentUrl,
             );
-          }
-        },
-        onWebResourceError: (err) {
-          // Only a main-frame failure replaces the page with an error
-          // screen. A subresource error (isForMainFrame == false), and
-          // conservatively a `null` value too (Android's implementation
-          // should always populate this; an unexpected null is treated as
-          // "not main frame" rather than guessed at), stays exactly as
-          // before: logged to the diagnostics console only.
-          if (err.isForMainFrame == true &&
-              BrowserHandoffs.isAppLink(err.url)) {
-            unawaited(_openAppLink(err.url!));
-            return;
-          }
-          if (err.isForMainFrame == true) {
-            if (mounted) setState(() => _mainFrameError = err);
-          }
-          _pushConsole(
-            level: 'error',
-            message: 'Web error ${err.errorCode}: ${err.description}',
-            source: _currentUrl,
-          );
-        },
+          },
+        ),
       ),
     );
     if (widget.agentSession) {
