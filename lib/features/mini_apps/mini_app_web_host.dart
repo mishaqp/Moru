@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/providers/assistant_provider.dart';
+import '../../core/providers/environment_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/keep_alive.dart';
 import '../../core/services/mdns_responder.dart';
@@ -11,6 +13,8 @@ import '../../core/services/mini_apps/mini_app_bridge.dart';
 import '../../core/services/mini_apps/mini_app_servers.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
 import '../../core/services/mini_apps/mini_app_web_server.dart';
+import '../../core/services/workspace/workspace_runtime.dart';
+import '../../l10n/app_localizations.dart';
 import 'mini_app_launcher.dart';
 
 /// The "Web server" of My Apps: serves the mini apps to browsers in the
@@ -114,12 +118,15 @@ class MiniAppWebHost extends ChangeNotifier {
           try {
             await _keepAlive.multicast(true);
             final mdns = MdnsResponder(
-              hostName: mdnsName,
-              address: addresses.first,
+              MdnsZone(
+                hostName: mdnsName,
+                address: addresses.first,
+                httpPort: port,
+              ),
             );
             await mdns.start();
             _mdns = mdns;
-            urls.add('http://${mdns.fqdn}:$port');
+            urls.add('http://${mdns.zone.host}:$port');
           } catch (e) {
             // The addresses below still work without the name.
             debugPrint('[MiniAppWeb] mDNS unavailable: $e');
@@ -145,6 +152,20 @@ class MiniAppWebHost extends ChangeNotifier {
       _busy = false;
       notifyListeners();
     }
+  }
+
+  /// [start] with the providers and texts of [context].
+  Future<void> startFrom(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return start(
+      settings: context.read<SettingsProvider>(),
+      assistants: context.read<AssistantProvider>(),
+      environment: MiniAppLauncher.serverEnvironment(
+        context.read<WorkspaceRuntimeProvider>(),
+        context.read<EnvironmentProvider>(),
+      ),
+      notificationText: l10n.miniAppsWebNotification,
+    );
   }
 
   Future<void> stop() async {

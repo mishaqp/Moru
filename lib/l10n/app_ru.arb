@@ -5029,6 +5029,8 @@
   "miniAppsWebFooter": "Мини-приложения открываются в браузере с теми же данными, что и в Moru. moru.local и Wi-Fi-адрес работают на устройствах в той же Wi-Fi-сети, не через мобильный интернет; 127.0.0.1 — в браузере на этом телефоне. Пока сервер работает, Moru держит уведомление; остановка там останавливает и сервер.",
   "miniAppsWebNotification": "Веб-сервер: {url}",
   "miniAppsWebPortInUse": "Порт {port} уже занят: выберите другой.",
+  "miniAppsWebAutostart": "Запускать вместе с Moru",
+  "miniAppsWebAutostartSubtitle": "Сервер включается сам при каждом запуске Moru.",
   "miniAppsMore": "Ещё",
   "miniAppsErrors": "Журнал ошибок",
   "miniAppsErrorsEmpty": "Ошибок нет.",

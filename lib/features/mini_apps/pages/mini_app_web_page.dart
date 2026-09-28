@@ -6,17 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/providers/assistant_provider.dart';
-import '../../../core/providers/environment_provider.dart';
 import '../../../core/providers/settings_provider.dart';
-import '../../../core/services/workspace/workspace_runtime.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_settings_rows.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/section_card.dart';
 import '../../../shared/widgets/snackbar.dart';
-import '../mini_app_launcher.dart';
 import '../mini_app_web_host.dart';
 
 /// "Web server" of My Apps: opens the mini apps in a browser on another
@@ -80,16 +76,7 @@ class _MiniAppWebPageState extends State<MiniAppWebPage> {
     if (invalid) return;
     await settings.setMiniAppWeb(port: port, password: _password.text.trim());
     if (!mounted) return;
-    final l10n = AppLocalizations.of(context)!;
-    await _host.start(
-      settings: settings,
-      assistants: context.read<AssistantProvider>(),
-      environment: MiniAppLauncher.serverEnvironment(
-        context.read<WorkspaceRuntimeProvider>(),
-        context.read<EnvironmentProvider>(),
-      ),
-      notificationText: l10n.miniAppsWebNotification,
-    );
+    await _host.startFrom(context);
   }
 
   Future<void> _copy(String url) async {
@@ -191,6 +178,15 @@ class _MiniAppWebPageState extends State<MiniAppWebPage> {
                         );
                       },
                     ),
+                  ),
+                  const IosRowDivider(),
+                  IosSwitchRow(
+                    icon: Lucide.Power,
+                    label: l10n.miniAppsWebAutostart,
+                    subtitle: l10n.miniAppsWebAutostartSubtitle,
+                    value: settings.miniAppWebAutostart,
+                    onChanged: (value) =>
+                        unawaited(settings.setMiniAppWeb(autostart: value)),
                   ),
                   if (settings.miniAppWebPasswordEnabled) ...[
                     const IosRowDivider(),

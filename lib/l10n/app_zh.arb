@@ -4136,6 +4136,8 @@
   "miniAppsWebFooter": "小应用会在浏览器中打开，数据与 Moru 中相同。moru.local 和 Wi-Fi 地址可在同一 Wi-Fi 的设备上使用，移动数据下不可用；127.0.0.1 可在本机浏览器中使用。服务器运行时 Moru 会保留一条通知，在通知中停止也会停止服务器。",
   "miniAppsWebNotification": "网页服务器：{url}",
   "miniAppsWebPortInUse": "端口 {port} 已被占用：请换一个。",
+  "miniAppsWebAutostart": "随 Moru 启动",
+  "miniAppsWebAutostartSubtitle": "每次启动 Moru 时自动开启服务器。",
   "miniAppsMore": "更多",
   "miniAppsErrors": "错误日志",
   "miniAppsErrorsEmpty": "没有记录到错误。",

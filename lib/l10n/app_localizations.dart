@@ -20435,6 +20435,18 @@ abstract class AppLocalizations {
   /// **'Port {port} is already in use: choose another one.'**
   String miniAppsWebPortInUse(String port);
 
+  /// No description provided for @miniAppsWebAutostart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with Moru'**
+  String get miniAppsWebAutostart;
+
+  /// No description provided for @miniAppsWebAutostartSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start the server whenever Moru starts.'**
+  String get miniAppsWebAutostartSubtitle;
+
   /// No description provided for @miniAppsMore.
   ///
   /// In en, this message translates to:

@@ -381,6 +381,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _miniAppWebPasswordEnabledKey =
       'mini_app_web_password_enabled_v1';
   static const String _miniAppWebPasswordKey = 'mini_app_web_password_v1';
+  static const String _miniAppWebAutostartKey = 'mini_app_web_autostart_v1';
   // Global network proxy
   static const String _globalProxyEnabledKey = 'global_proxy_enabled_v1';
   static const String _globalProxyTypeKey =
@@ -727,19 +728,25 @@ class SettingsProvider extends ChangeNotifier {
   bool _miniAppWebLocalhostOnly = false;
   bool _miniAppWebPasswordEnabled = true;
   String _miniAppWebPassword = '';
+  bool _miniAppWebAutostart = false;
 
   int get miniAppWebPort => _miniAppWebPort;
   bool get miniAppWebLocalhostOnly => _miniAppWebLocalhostOnly;
   bool get miniAppWebPasswordEnabled => _miniAppWebPasswordEnabled;
   String get miniAppWebPassword => _miniAppWebPassword;
 
+  /// Start the web server when Moru starts.
+  bool get miniAppWebAutostart => _miniAppWebAutostart;
+
   Future<void> setMiniAppWeb({
     int? port,
     bool? localhostOnly,
     bool? passwordEnabled,
     String? password,
+    bool? autostart,
   }) async {
     if (port != null) _miniAppWebPort = port;
+    if (autostart != null) _miniAppWebAutostart = autostart;
     if (localhostOnly != null) _miniAppWebLocalhostOnly = localhostOnly;
     if (passwordEnabled != null) _miniAppWebPasswordEnabled = passwordEnabled;
     if (password != null) _miniAppWebPassword = password;
@@ -752,6 +759,7 @@ class SettingsProvider extends ChangeNotifier {
       _miniAppWebPasswordEnabled,
     );
     await prefs.setString(_miniAppWebPasswordKey, _miniAppWebPassword);
+    await prefs.setBool(_miniAppWebAutostartKey, _miniAppWebAutostart);
   }
 
   // ===== Global Proxy Settings =====
@@ -1405,6 +1413,7 @@ class SettingsProvider extends ChangeNotifier {
     _miniAppWebPasswordEnabled =
         prefs.getBool(_miniAppWebPasswordEnabledKey) ?? true;
     _miniAppWebPassword = prefs.getString(_miniAppWebPasswordKey) ?? '';
+    _miniAppWebAutostart = prefs.getBool(_miniAppWebAutostartKey) ?? false;
 
     // load global proxy
     _globalProxyEnabled = prefs.getBool(_globalProxyEnabledKey) ?? false;

@@ -5169,6 +5169,8 @@
     }
   },
   "miniAppsWebPortInUse": "Port {port} is already in use: choose another one.",
+  "miniAppsWebAutostart": "Start with Moru",
+  "miniAppsWebAutostartSubtitle": "Start the server whenever Moru starts.",
   "miniAppsMore": "More",
   "miniAppsErrors": "Error log",
   "miniAppsErrorsEmpty": "No errors recorded.",

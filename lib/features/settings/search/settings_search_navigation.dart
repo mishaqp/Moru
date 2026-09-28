@@ -32,6 +32,7 @@ import '../pages/tts_services_page.dart';
 import '../widgets/settings_search_target.dart';
 import 'settings_search_index.dart';
 import '../../mini_apps/pages/mini_apps_page.dart';
+import '../../mini_apps/pages/mini_app_web_page.dart';
 
 Future<void> openMobileSettingsSearchResult(
   BuildContext context,
@@ -71,6 +72,7 @@ Future<void> openMobileSettingsSearchResult(
     SettingsSearchDestination.storage => const StorageSpacePage(),
     SettingsSearchDestination.scheduledTasks => const ScheduledTasksPage(),
     SettingsSearchDestination.miniApps => const MiniAppsPage(),
+    SettingsSearchDestination.miniAppWeb => const MiniAppWebPage(),
     SettingsSearchDestination.stats => const StatsPage(),
     SettingsSearchDestination.toolSchemas => const ToolSchemaSettingsPage(),
     SettingsSearchDestination.logs => const LogViewerPage(),

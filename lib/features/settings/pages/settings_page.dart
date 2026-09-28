@@ -35,6 +35,7 @@ import '../../stats/pages/stats_page.dart';
 import '../../../core/services/storage/storage_usage_service.dart';
 import '../../../core/services/haptics.dart';
 import '../../mini_apps/pages/mini_apps_page.dart';
+import '../../mini_apps/pages/mini_app_web_page.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
@@ -324,6 +325,15 @@ class SettingsPage extends StatelessWidget {
                   label: l10n.miniAppsTitle,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const MiniAppsPage()),
+                  ),
+                ),
+                _iosDivider(context),
+                _iosNavRow(
+                  context,
+                  icon: Lucide.Globe,
+                  label: l10n.miniAppsWebTitle,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const MiniAppWebPage()),
                   ),
                 ),
                 _iosDivider(context),

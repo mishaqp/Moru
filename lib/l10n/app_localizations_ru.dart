@@ -11549,6 +11549,13 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get miniAppsWebAutostart => 'Запускать вместе с Moru';
+
+  @override
+  String get miniAppsWebAutostartSubtitle =>
+      'Сервер включается сам при каждом запуске Moru.';
+
+  @override
   String get miniAppsMore => 'Ещё';
 
   @override

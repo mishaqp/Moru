@@ -10923,6 +10923,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get miniAppsWebAutostart => '随 Moru 启动';
+
+  @override
+  String get miniAppsWebAutostartSubtitle => '每次启动 Moru 时自动开启服务器。';
+
+  @override
   String get miniAppsMore => '更多';
 
   @override
@@ -21883,6 +21889,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String miniAppsWebPortInUse(String port) {
     return '端口 $port 已被占用：请换一个。';
   }
+
+  @override
+  String get miniAppsWebAutostart => '随 Moru 启动';
+
+  @override
+  String get miniAppsWebAutostartSubtitle => '每次启动 Moru 时自动开启服务器。';
 
   @override
   String get miniAppsMore => '更多';
@@ -32919,6 +32931,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String miniAppsWebPortInUse(String port) {
     return '連接埠 $port 已被佔用：請換一個。';
   }
+
+  @override
+  String get miniAppsWebAutostart => '隨 Moru 啟動';
+
+  @override
+  String get miniAppsWebAutostartSubtitle => '每次啟動 Moru 時自動開啟伺服器。';
 
   @override
   String get miniAppsMore => '更多';

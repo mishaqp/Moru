@@ -25,6 +25,7 @@ import '../../../core/models/compress_context_options.dart';
 import '../../../core/services/android_process_text.dart';
 import '../../../core/services/notification_service.dart';
 import '../../mini_apps/mini_app_launcher.dart';
+import '../../mini_apps/mini_app_web_host.dart';
 import '../../../core/services/incoming_share_service.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../utils/platform_utils.dart';
@@ -867,6 +868,18 @@ class _HomePageState extends State<HomePage>
     );
     final pending = NotificationService.takePendingMiniAppId();
     if (pending != null) _openMiniApp(pending);
+    unawaited(_autostartMiniAppWeb());
+  }
+
+  Future<void> _autostartMiniAppWeb() async {
+    final settings = context.read<SettingsProvider>();
+    await settings.loaded;
+    if (!mounted ||
+        !settings.miniAppWebAutostart ||
+        MiniAppWebHost.instance.running) {
+      return;
+    }
+    await MiniAppWebHost.instance.startFrom(context);
   }
 
   void _openMiniApp(String id) {

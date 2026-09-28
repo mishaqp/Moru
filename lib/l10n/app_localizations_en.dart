@@ -11423,6 +11423,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get miniAppsWebAutostart => 'Start with Moru';
+
+  @override
+  String get miniAppsWebAutostartSubtitle =>
+      'Start the server whenever Moru starts.';
+
+  @override
   String get miniAppsMore => 'More';
 
   @override

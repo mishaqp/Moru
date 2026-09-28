@@ -36,6 +36,7 @@ enum SettingsSearchDestination {
   storage,
   scheduledTasks,
   miniApps,
+  miniAppWeb,
   hotkeys,
   stats,
   toolSchemas,
@@ -81,6 +82,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.storage => l.settingsPageChatStorage,
     SettingsSearchDestination.scheduledTasks => l.scheduledTasksTitle,
     SettingsSearchDestination.miniApps => l.miniAppsTitle,
+    SettingsSearchDestination.miniAppWeb => l.miniAppsWebTitle,
     SettingsSearchDestination.hotkeys => l.settingsPageHotkeys,
     SettingsSearchDestination.stats => l.settingsPageStatistics,
     SettingsSearchDestination.toolSchemas => l.toolSchemaSettingsPageTitle,
@@ -120,6 +122,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.storage => LucideIcons.hardDrive,
     SettingsSearchDestination.scheduledTasks => LucideIcons.clock,
     SettingsSearchDestination.miniApps => LucideIcons.layoutGrid,
+    SettingsSearchDestination.miniAppWeb => LucideIcons.earth,
     SettingsSearchDestination.hotkeys => LucideIcons.keyboard,
     SettingsSearchDestination.stats => LucideIcons.chartColumnBig,
     SettingsSearchDestination.toolSchemas => LucideIcons.wrench,
@@ -461,6 +464,16 @@ class SettingsSearchIndex {
       (l) => l.miniAppsTitle,
       page: true,
       keywords: 'mini apps applets widgets приложения мини 小应用 小應用 应用',
+    );
+
+    add(
+      'miniAppWeb',
+      SettingsSearchDestination.miniAppWeb,
+      (l) => l.miniAppsWebTitle,
+      page: true,
+      keywords:
+          'web server lan wifi browser localhost mdns веб сервер сеть браузер '
+          '网页 服务器 局域网 網頁 伺服器',
     );
 
     add(

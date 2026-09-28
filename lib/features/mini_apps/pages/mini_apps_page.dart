@@ -15,7 +15,6 @@ import '../../../shared/widgets/section_card.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../mini_app_launcher.dart';
 import '../widgets/mini_app_sheets.dart';
-import 'mini_app_web_page.dart';
 
 /// "My apps": the mini apps the agent published.
 class MiniAppsPage extends StatefulWidget {
@@ -134,17 +133,6 @@ class _MiniAppsPageState extends State<MiniAppsPage> {
         ),
         title: Text(l10n.miniAppsTitle),
         actions: [
-          Tooltip(
-            message: l10n.miniAppsWebTitle,
-            child: IosIconButton(
-              icon: Lucide.Globe,
-              minSize: 44,
-              size: 20,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const MiniAppWebPage()),
-              ),
-            ),
-          ),
           Tooltip(
             message: l10n.miniAppsImport,
             child: IosIconButton(
