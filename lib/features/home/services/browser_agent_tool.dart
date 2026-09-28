@@ -206,10 +206,27 @@ class BrowserAgentTool {
             await session.hover(elementId: id, x: at?.x, y: at?.y),
           );
         case 'type':
+          final text = (args['text'] ?? '').toString();
           return jsonEncode(
-            await session.type(
-              _elementId(args),
-              (args['text'] ?? '').toString(),
+            _boolArg(args, 'human', false)
+                ? await session.typeLikeHuman(_elementId(args), text)
+                : await session.type(_elementId(args), text),
+          );
+        case 'collect':
+          return jsonEncode(
+            await session.collect(
+              selector: _stringArg(args, 'selector'),
+              maxItems: _intArg(args, 'max_items', 50),
+              maxScrolls: _intArg(args, 'max_scrolls', 10),
+            ),
+          );
+        case 'outline':
+          return jsonEncode(await session.outline());
+        case 'wait_stable':
+          return jsonEncode(
+            await session.waitStable(
+              quietMs: _intArg(args, 'quiet_ms', 600),
+              timeoutMs: _intArg(args, 'timeout_ms', 10000),
             ),
           );
         case 'submit':
@@ -341,7 +358,7 @@ class BrowserAgentTool {
             'ok': false,
             'error': 'invalid_action',
             'message':
-                'Use action open, observe, screenshot, click, hover, type, submit, press_key, scroll, back, forward, reload, read, wait_for, eval_js, fetch, export_cookies, tabs, new_tab, switch_tab, close_tab, set_mode, done, or close.',
+                'Use action open, observe, screenshot, click, hover, type, submit, press_key, scroll, back, forward, reload, read, collect, outline, wait_for, wait_stable, eval_js, fetch, export_cookies, tabs, new_tab, switch_tab, close_tab, set_mode, done, or close.',
           });
       }
     } on TimeoutException {

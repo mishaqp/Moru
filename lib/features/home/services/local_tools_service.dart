@@ -682,7 +682,7 @@ class LocalToolsService {
     'function': {
       'name': LocalToolNames.browserUse,
       'description':
-          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, submit a form (action=submit) or synthesize a key press on the focused element (action=press_key, e.g. Enter), scroll, use browser history, read the full page text with action=read, wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again), or run arbitrary JavaScript with action=eval_js when nothing else covers the task. click, type, submit, press_key, and eval_js each require explicit user approval unless full tool trust is on; open, observe, read, scroll, back/forward/reload, wait_for, and done never do. click also takes x and y (CSS pixels in the viewport; observe reports its size) for things observe lists no element for, such as canvases and maps; hover moves the pointer over an element_id or x/y to open hover menus and needs no approval. screenshot attaches a picture of the viewport for models that read images (charts, captchas to describe, canvas pages, visual layout); screenshot: true on any other action attaches one taken after it. Actions are paced per site like a person would act, so do not add your own waits between them. A result may carry "challenge" (a captcha, Cloudflare check, rate limit or refusal): then follow its "next" advice - ask the user to complete a verification themselves and never try to solve it; while a blocking check is shown, click/hover/type/submit/press_key/eval_js are refused. A result may carry "dialogs": alert/confirm/prompt boxes the page opened, already answered with the default (OK / accept / suggested text). fetch requests a URL or path from inside the page with its login (JSON APIs of the site, feeds) and returns the text; other sites answer only if they allow it (CORS); GET/HEAD need no approval, other methods do. export_cookies (needs approval and a workspace) writes the cookies of the open site to a file in /chat for curl -b or wget in the terminal and returns its path, never the values. Tabs: up to 5 pages stay open; new_tab opens one alongside (optionally with url) and makes it active, tabs lists them with tab_id, switch_tab and close_tab take tab_id (close_tab without it closes the active one); every other action works on the active tab. Tabs you open and leave unused for 15 minutes are closed. set_mode with mode=desktop shows sites as on a computer, mode=mobile as on a phone. A result may carry "handoffs": files the page downloaded (to the phone Downloads folder; status downloading, then done with the real path, or failed) and links for other apps that were not opened while you worked. A result with error "stopped_by_user" means the user pressed Stop: do not repeat the action unless asked. Call action=done with a short summary once the browser task is complete, so the app can show that clearly instead of leaving the last action as the visible status. Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
+          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, submit a form (action=submit) or synthesize a key press on the focused element (action=press_key, e.g. Enter), scroll, use browser history, read the full page text with action=read, wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again), or run arbitrary JavaScript with action=eval_js when nothing else covers the task. click, type, submit, press_key, and eval_js each require explicit user approval unless full tool trust is on; open, observe, read, scroll, back/forward/reload, wait_for, and done never do. click also takes x and y (CSS pixels in the viewport; observe reports its size) for things observe lists no element for, such as canvases and maps; hover moves the pointer over an element_id or x/y to open hover menus and needs no approval. screenshot attaches a picture of the viewport for models that read images (charts, captchas to describe, canvas pages, visual layout); screenshot: true on any other action attaches one taken after it. Actions are paced per site like a person would act, so do not add your own waits between them. A result may carry "challenge" (a captcha, Cloudflare check, rate limit or refusal): then follow its "next" advice - ask the user to complete a verification themselves and never try to solve it; while a blocking check is shown, click/hover/type/submit/press_key/eval_js are refused. A result may carry "dialogs": alert/confirm/prompt boxes the page opened, already answered with the default (OK / accept / suggested text). fetch requests a URL or path from inside the page with its login (JSON APIs of the site, feeds) and returns the text; other sites answer only if they allow it (CORS); GET/HEAD need no approval, other methods do. export_cookies (needs approval and a workspace) writes the cookies of the open site to a file in /chat for curl -b or wget in the terminal and returns its path, never the values. collect scrolls a feed or result list and returns its items (text, href) in one call: pass selector for the item element, or leave it out to use the largest group of alike elements; max_items and max_scrolls bound it. outline returns a compact map of the page (landmarks, headings, forms, lists, tables), cheaper than observe with scope=document. wait_stable waits until the page stops changing (single-page apps after a click). read with extract_mode=readability returns only the article text. type with human=true types key by key with pauses, for fields that ignore pasted text. Tabs: up to 5 pages stay open; new_tab opens one alongside (optionally with url) and makes it active, tabs lists them with tab_id, switch_tab and close_tab take tab_id (close_tab without it closes the active one); every other action works on the active tab. Tabs you open and leave unused for 15 minutes are closed. set_mode with mode=desktop shows sites as on a computer, mode=mobile as on a phone. A result may carry "handoffs": files the page downloaded (to the phone Downloads folder; status downloading, then done with the real path, or failed) and links for other apps that were not opened while you worked. A result with error "stopped_by_user" means the user pressed Stop: do not repeat the action unless asked. Call action=done with a short summary once the browser task is complete, so the app can show that clearly instead of leaving the last action as the visible status. Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -702,7 +702,10 @@ class LocalToolsService {
               'forward',
               'reload',
               'read',
+              'collect',
+              'outline',
               'wait_for',
+              'wait_stable',
               'eval_js',
               'fetch',
               'export_cookies',
@@ -814,7 +817,7 @@ class LocalToolsService {
           'selector': {
             'type': 'string',
             'description':
-                'CSS selector. For action=read: optional, reads one element instead of the whole page (cannot combine with focus). Required for action=wait_for.',
+                'CSS selector. For action=read: optional, reads one element instead of the whole page (cannot combine with focus). Required for action=wait_for. For action=collect: the item element (optional).',
           },
           'source_id': {
             'type': 'string',
@@ -827,6 +830,38 @@ class LocalToolsService {
             'maximum': 65536,
             'default': 8000,
             'description': 'Maximum characters returned by action=read.',
+          },
+          'max_items': {
+            'type': 'integer',
+            'minimum': 1,
+            'maximum': 200,
+            'default': 50,
+            'description': 'collect: stop after this many items.',
+          },
+          'max_scrolls': {
+            'type': 'integer',
+            'minimum': 0,
+            'maximum': 30,
+            'default': 10,
+            'description': 'collect: scroll at most this many screens.',
+          },
+          'quiet_ms': {
+            'type': 'integer',
+            'minimum': 100,
+            'maximum': 5000,
+            'default': 600,
+            'description': 'wait_stable: how long the page must not change.',
+          },
+          'human': {
+            'type': 'boolean',
+            'description':
+                'type: key by key with pauses like a person (max 500 characters).',
+          },
+          'extract_mode': {
+            'type': 'string',
+            'enum': ['auto', 'readability'],
+            'description':
+                'For action=read: readability returns only the article text, without menus, headers, footers, sidebars and ads (reader mode). auto reads the whole page.',
           },
           'focus': {
             'type': 'string',

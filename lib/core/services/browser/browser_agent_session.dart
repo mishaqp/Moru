@@ -14,6 +14,7 @@ import '../../../utils/app_directories.dart';
 import '../../../utils/utf16_safe_cut.dart';
 import 'browser_guard.dart';
 import 'browser_handoffs.dart';
+import 'browser_page_scripts.dart';
 import 'browser_tabs.dart';
 import 'browser_research.dart';
 
@@ -1350,6 +1351,7 @@ class BrowserAgentSession {
       result = await _runJson(
         _readScript
             .replaceAll('__SELECTOR__', jsonEncode(selector ?? ''))
+            .replaceAll('__MODE__', jsonEncode(request.mode))
             .replaceAll('__MAX_CHARS__', '$browserResearchMaxChars'),
       );
     } on BrowserAgentProtocolException catch (error) {
@@ -1443,6 +1445,157 @@ class BrowserAgentSession {
   }
 
   static int _fetchSequence = 0;
+
+  // ---------------------------------------------------------------------------
+  // Collecting data
+  // ---------------------------------------------------------------------------
+
+  /// Scrolls down and collects the items of a list or feed (search
+  /// results, posts, products) until [maxItems] are found, the page ends or
+  /// scrolling brings nothing new. [selector] picks the items; without it
+  /// the largest group of alike elements is used.
+  Future<Map<String, dynamic>> collect({
+    String? selector,
+    int maxItems = 50,
+    int maxScrolls = 10,
+  }) async {
+    await waitUntilReady();
+    final limit = maxItems.clamp(1, 200);
+    final scrolls = maxScrolls.clamp(0, 30);
+    final script = BrowserPageScripts.collect.replaceAll(
+      '__SELECTOR__',
+      jsonEncode(selector ?? ''),
+    );
+    final items = <Map<String, dynamic>>[];
+    final seen = <String>{};
+    String? used;
+    var scrolled = 0;
+    var stale = 0;
+    var atBottom = false;
+    while (true) {
+      final result = await _runJson(script);
+      if (result['ok'] != true) return result;
+      used ??= result['selector'] as String?;
+      var added = 0;
+      for (final raw in (result['items'] as List? ?? const [])) {
+        if (raw is! Map || items.length >= limit) continue;
+        final item = Map<String, dynamic>.from(raw);
+        if (seen.add('${item['text']}|${item['href']}')) {
+          items.add(item);
+          added++;
+        }
+      }
+      atBottom = result['at_bottom'] == true;
+      stale = added == 0 ? stale + 1 : 0;
+      if (items.length >= limit || scrolled >= scrolls || stale >= 2) break;
+      if (atBottom && added == 0) break;
+      await _runJson(
+        'JSON.stringify((window.scrollBy(0, Math.round(window.innerHeight * 0.85)), {ok: true}))',
+      );
+      scrolled++;
+      // Feeds load the next items after a scroll.
+      await waitStable(quietMs: 400, timeoutMs: 3000);
+    }
+    return {
+      'ok': true,
+      if (used != null) 'selector': used,
+      'count': items.length,
+      'items': items,
+      'scrolls': scrolled,
+      'reached_end': atBottom,
+      if (items.isEmpty)
+        'hint':
+            'No repeated items found; pass selector (e.g. "article" or ".result").',
+    };
+  }
+
+  /// A compact map of the page's structure, cheaper than observe with
+  /// scope=document for learning how a site is built.
+  Future<Map<String, dynamic>> outline({int maxLines = 120}) async {
+    await waitUntilReady();
+    return _runJson(
+      BrowserPageScripts.outline.replaceAll(
+        '__MAX_LINES__',
+        '${maxLines.clamp(10, 300)}',
+      ),
+    );
+  }
+
+  /// Waits until the page has loaded and nothing in it changed for
+  /// [quietMs] (a single-page app finished rendering), or [timeoutMs].
+  Future<Map<String, dynamic>> waitStable({
+    int quietMs = 600,
+    int timeoutMs = 10000,
+  }) async {
+    await waitUntilReady();
+    final quiet = quietMs.clamp(100, 5000);
+    final start = DateTime.now();
+    final deadline = start.add(
+      Duration(milliseconds: timeoutMs.clamp(500, 30000)),
+    );
+    while (true) {
+      final state = await _runJson(BrowserPageScripts.quietFor);
+      final elapsed = DateTime.now().difference(start).inMilliseconds;
+      final quietFor = (state['quiet_ms'] as num?)?.toInt() ?? 0;
+      if (state['ready'] == true && quietFor >= quiet) {
+        return {'ok': true, 'stable': true, 'elapsed_ms': elapsed};
+      }
+      if (DateTime.now().isAfter(deadline)) {
+        return {
+          'ok': true,
+          'stable': false,
+          'elapsed_ms': elapsed,
+          'message': 'The page kept changing (animations, live updates).',
+        };
+      }
+      await _interruptible(
+        Future<void>.delayed(const Duration(milliseconds: 150)),
+      );
+    }
+  }
+
+  /// Longest text [typeLikeHuman] types key by key.
+  static const int humanTypingMaxChars = 500;
+
+  /// Pause between keys of [typeLikeHuman]; replaced in tests.
+  @visibleForTesting
+  Duration Function() keyPause = () =>
+      Duration(milliseconds: 45 + math.Random().nextInt(90));
+
+  /// Types [text] into element [elementId] a few keys at a time with
+  /// keyboard events and pauses, for fields that ignore pasted text.
+  Future<Map<String, dynamic>> typeLikeHuman(int elementId, String text) async {
+    if (text.length > humanTypingMaxChars) {
+      return {
+        'ok': false,
+        'error': 'text_too_long',
+        'message':
+            'Human typing takes at most $humanTypingMaxChars characters; '
+            'type longer text without human.',
+      };
+    }
+    await waitUntilReady();
+    final started = await _runJson(
+      BrowserPageScripts.typingStart.replaceAll('__ELEMENT_ID__', '$elementId'),
+    );
+    if (started['ok'] != true) return started;
+    final chars = text.runes.map(String.fromCharCode).toList();
+    for (var i = 0; i < chars.length; i += 2) {
+      final chunk = chars.skip(i).take(2).join();
+      final step = await _runJson(
+        BrowserPageScripts.typingKeys.replaceAll('__TEXT__', jsonEncode(chunk)),
+      );
+      if (step['ok'] != true) return step;
+      await _interruptible(Future<void>.delayed(keyPause()));
+    }
+    await _runJson(BrowserPageScripts.typingEnd);
+    return {
+      'ok': true,
+      'element_id': elementId,
+      'typed_length': text.length,
+      'human': true,
+    };
+  }
 
   /// Requests [url] from inside the page with its cookies and login, like
   /// the page's own scripts: an API the site calls, a JSON feed, a page of
@@ -2164,8 +2317,36 @@ class BrowserAgentSession {
 (() => {
   const selector = __SELECTOR__;
   const maxChars = __MAX_CHARS__;
+  const mode = __MODE__;
+  // Reader mode: the element holding most of the paragraph text (the
+  // article), without menus, headers, footers, sidebars, forms and ads.
+  const article = () => {
+    const direct = document.querySelector('article, main, [role=main], [itemprop=articleBody]');
+    let best = null;
+    let bestScore = 0;
+    document.querySelectorAll('p').forEach((p) => {
+      const length = (p.textContent || '').trim().length;
+      if (length < 40) return;
+      for (let node = p.parentElement, depth = 0; node && depth < 3; node = node.parentElement, depth++) {
+        node.__moruScore = (node.__moruScore || 0) + length / (depth + 1);
+        if (node.__moruScore > bestScore) {
+          bestScore = node.__moruScore;
+          best = node;
+        }
+      }
+    });
+    document.querySelectorAll('*').forEach((node) => { delete node.__moruScore; });
+    if (direct && (!best || direct.contains(best))) return direct;
+    return best || direct || document.body;
+  };
+  const boilerplate = 'nav, header, footer, aside, form, button, iframe, svg, ' +
+      '[role=navigation], [role=banner], [role=contentinfo], [role=complementary], ' +
+      '[aria-hidden=true], .ad, .ads, .advert, .advertisement, .cookie, .newsletter, ' +
+      '.share, .social, .related, .comments, #comments, .sidebar';
   let root;
-  if (selector) {
+  if (!selector && mode === 'readability') {
+    root = article();
+  } else if (selector) {
     root = document.querySelector(selector);
     if (!root) {
       return JSON.stringify({
@@ -2192,6 +2373,9 @@ class BrowserAgentSession {
   // leaks into the "page text" the way textContent normally would.
   const clone = root.cloneNode(true);
   clone.querySelectorAll('script, style, noscript, template').forEach((el) => el.remove());
+  if (mode === 'readability') {
+    clone.querySelectorAll(boilerplate).forEach((el) => el.remove());
+  }
   const raw = (clone.textContent || '').toString();
   const truncated = raw.length > maxChars;
   const text = truncated ? raw.slice(0, maxChars) : raw;
