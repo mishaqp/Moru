@@ -11725,4 +11725,37 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get chatToolRerunFromHere => 'Перезапустить отсюда';
+
+  @override
+  String get chatTokensTitle => 'Токены чата';
+
+  @override
+  String get chatTokensContext => 'Контекст';
+
+  @override
+  String get chatTokensContextUsed => 'Занято';
+
+  @override
+  String get chatTokensContextWindow => 'Окно контекста';
+
+  @override
+  String get chatTokensMaxOutput => 'Максимум ответа';
+
+  @override
+  String get chatTokensSpent => 'Потрачено в чате';
+
+  @override
+  String get chatTokensInput => 'Вход';
+
+  @override
+  String get chatTokensOutput => 'Выход';
+
+  @override
+  String get chatTokensCached => 'Из кэша';
+
+  @override
+  String get chatTokensReplies => 'Ответов';
+
+  @override
+  String get chatTokensCost => 'Стоимость';
 }

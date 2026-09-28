@@ -11088,6 +11088,39 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatToolRerunFromHere => '从这里重新运行';
+
+  @override
+  String get chatTokensTitle => '对话令牌';
+
+  @override
+  String get chatTokensContext => '上下文';
+
+  @override
+  String get chatTokensContextUsed => '已使用';
+
+  @override
+  String get chatTokensContextWindow => '上下文窗口';
+
+  @override
+  String get chatTokensMaxOutput => '最大回复';
+
+  @override
+  String get chatTokensSpent => '本对话消耗';
+
+  @override
+  String get chatTokensInput => '输入';
+
+  @override
+  String get chatTokensOutput => '输出';
+
+  @override
+  String get chatTokensCached => '缓存命中';
+
+  @override
+  String get chatTokensReplies => '回复数';
+
+  @override
+  String get chatTokensCost => '费用';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -22103,6 +22136,39 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get chatToolRerunFromHere => '从这里重新运行';
+
+  @override
+  String get chatTokensTitle => '对话令牌';
+
+  @override
+  String get chatTokensContext => '上下文';
+
+  @override
+  String get chatTokensContextUsed => '已使用';
+
+  @override
+  String get chatTokensContextWindow => '上下文窗口';
+
+  @override
+  String get chatTokensMaxOutput => '最大回复';
+
+  @override
+  String get chatTokensSpent => '本对话消耗';
+
+  @override
+  String get chatTokensInput => '输入';
+
+  @override
+  String get chatTokensOutput => '输出';
+
+  @override
+  String get chatTokensCached => '缓存命中';
+
+  @override
+  String get chatTokensReplies => '回复数';
+
+  @override
+  String get chatTokensCost => '费用';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -33192,4 +33258,37 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatToolRerunFromHere => '從這裡重新執行';
+
+  @override
+  String get chatTokensTitle => '對話權杖';
+
+  @override
+  String get chatTokensContext => '上下文';
+
+  @override
+  String get chatTokensContextUsed => '已使用';
+
+  @override
+  String get chatTokensContextWindow => '上下文視窗';
+
+  @override
+  String get chatTokensMaxOutput => '最大回覆';
+
+  @override
+  String get chatTokensSpent => '本對話消耗';
+
+  @override
+  String get chatTokensInput => '輸入';
+
+  @override
+  String get chatTokensOutput => '輸出';
+
+  @override
+  String get chatTokensCached => '快取命中';
+
+  @override
+  String get chatTokensReplies => '回覆數';
+
+  @override
+  String get chatTokensCost => '費用';
 }

@@ -5101,5 +5101,16 @@
   "toolApprovalsFullTrustDescription": "Не спрашивать подтверждение перед действиями ИИ. Действует для браузера, MCP, shell, записи файлов и других инструментов, которые обычно требуют подтверждения.",
   "chatReasoningTailHint": "Показаны последние {shown} из {total} символов",
   "chatToolCopyDetails": "Копировать подробности",
-  "chatToolRerunFromHere": "Перезапустить отсюда"
+  "chatToolRerunFromHere": "Перезапустить отсюда",
+  "chatTokensTitle": "Токены чата",
+  "chatTokensContext": "Контекст",
+  "chatTokensContextUsed": "Занято",
+  "chatTokensContextWindow": "Окно контекста",
+  "chatTokensMaxOutput": "Максимум ответа",
+  "chatTokensSpent": "Потрачено в чате",
+  "chatTokensInput": "Вход",
+  "chatTokensOutput": "Выход",
+  "chatTokensCached": "Из кэша",
+  "chatTokensReplies": "Ответов",
+  "chatTokensCost": "Стоимость"
 }

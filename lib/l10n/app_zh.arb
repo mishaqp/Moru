@@ -4184,5 +4184,16 @@
   "toolApprovalsFullTrustDescription": "跳过浏览器、MCP、Shell、文件写入等通常需要确认的工具的逐次确认。",
   "chatReasoningTailHint": "仅显示最后 {shown} / 共 {total} 字符",
   "chatToolCopyDetails": "复制详情",
-  "chatToolRerunFromHere": "从这里重新运行"
+  "chatToolRerunFromHere": "从这里重新运行",
+  "chatTokensTitle": "对话令牌",
+  "chatTokensContext": "上下文",
+  "chatTokensContextUsed": "已使用",
+  "chatTokensContextWindow": "上下文窗口",
+  "chatTokensMaxOutput": "最大回复",
+  "chatTokensSpent": "本对话消耗",
+  "chatTokensInput": "输入",
+  "chatTokensOutput": "输出",
+  "chatTokensCached": "缓存命中",
+  "chatTokensReplies": "回复数",
+  "chatTokensCost": "费用"
 }

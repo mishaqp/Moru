@@ -240,6 +240,11 @@ class Lucide {
   static const IconData TextSearch = lucide.LucideIcons.textSearch;
   static const IconData SquareTerminal = lucide.LucideIcons.squareTerminal;
   static const IconData Gauge = lucide.LucideIcons.gauge;
+  static const IconData ArrowUpToLine = lucide.LucideIcons.arrowUpToLine;
+  static const IconData ArrowDownToLine = lucide.LucideIcons.arrowDownToLine;
+  static const IconData ArrowUpFromLine = lucide.LucideIcons.arrowUpFromLine;
+  static const IconData DatabaseZap = lucide.LucideIcons.databaseZap;
+  static const IconData DollarSign = lucide.LucideIcons.dollarSign;
   static const IconData Package = lucide.LucideIcons.package;
   static const IconData FileCode = lucide.LucideIcons.fileCode;
   static const IconData FileSpreadsheet = lucide.LucideIcons.fileSpreadsheet;

@@ -20728,6 +20728,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rerun from here'**
   String get chatToolRerunFromHere;
+
+  /// Sheet opened from the context ring by the send button.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat tokens'**
+  String get chatTokensTitle;
+
+  /// No description provided for @chatTokensContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Context'**
+  String get chatTokensContext;
+
+  /// No description provided for @chatTokensContextUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'In use'**
+  String get chatTokensContextUsed;
+
+  /// No description provided for @chatTokensContextWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Context window'**
+  String get chatTokensContextWindow;
+
+  /// No description provided for @chatTokensMaxOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'Max reply'**
+  String get chatTokensMaxOutput;
+
+  /// No description provided for @chatTokensSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'Spent in this chat'**
+  String get chatTokensSpent;
+
+  /// No description provided for @chatTokensInput.
+  ///
+  /// In en, this message translates to:
+  /// **'Input'**
+  String get chatTokensInput;
+
+  /// No description provided for @chatTokensOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'Output'**
+  String get chatTokensOutput;
+
+  /// No description provided for @chatTokensCached.
+  ///
+  /// In en, this message translates to:
+  /// **'From cache'**
+  String get chatTokensCached;
+
+  /// No description provided for @chatTokensReplies.
+  ///
+  /// In en, this message translates to:
+  /// **'Replies'**
+  String get chatTokensReplies;
+
+  /// No description provided for @chatTokensCost.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost'**
+  String get chatTokensCost;
 }
 
 class _AppLocalizationsDelegate

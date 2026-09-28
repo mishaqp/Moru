@@ -4184,5 +4184,16 @@
   "toolApprovalsFullTrustDescription": "略過瀏覽器、MCP、Shell、檔案寫入等通常需要確認的工具的逐次確認。",
   "chatReasoningTailHint": "僅顯示最後 {shown} / 共 {total} 字元",
   "chatToolCopyDetails": "複製詳情",
-  "chatToolRerunFromHere": "從這裡重新執行"
+  "chatToolRerunFromHere": "從這裡重新執行",
+  "chatTokensTitle": "對話權杖",
+  "chatTokensContext": "上下文",
+  "chatTokensContextUsed": "已使用",
+  "chatTokensContextWindow": "上下文視窗",
+  "chatTokensMaxOutput": "最大回覆",
+  "chatTokensSpent": "本對話消耗",
+  "chatTokensInput": "輸入",
+  "chatTokensOutput": "輸出",
+  "chatTokensCached": "快取命中",
+  "chatTokensReplies": "回覆數",
+  "chatTokensCost": "費用"
 }

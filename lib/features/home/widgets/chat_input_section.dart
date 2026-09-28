@@ -21,6 +21,9 @@ import '../../../theme/design_tokens.dart';
 import 'chat_input_bar.dart';
 import 'model_icon.dart';
 import 'composer_status_strip.dart';
+import '../../../core/models/chat_message.dart';
+import '../../../core/services/api/chat_api_helpers.dart';
+import 'chat_token_sheet.dart';
 import 'context_usage_ring.dart';
 import '../../../core/models/model_context_window.dart';
 import '../../../core/services/model_catalog/model_catalog.dart';
@@ -82,6 +85,7 @@ class ChatInputSection extends StatelessWidget {
     this.onCompressContext,
     this.conversationId,
     this.contextTokensUsed,
+    this.chatMessages,
     this.sendButtonTooltip,
     this.backgroundImageActive = false,
   });
@@ -146,6 +150,9 @@ class ChatInputSection extends StatelessWidget {
 
   /// Tokens the next request starts from; null hides the context ring.
   final int? contextTokensUsed;
+
+  /// Every message of the chat, versions included, for the token sheet.
+  final List<ChatMessage> Function()? chatMessages;
 
   @override
   Widget build(BuildContext context) {
@@ -260,10 +267,40 @@ class ChatInputSection extends StatelessWidget {
           // The window can arrive later, when the model catalog loads.
           ? ListenableBuilder(
               listenable: ModelCatalog.instance,
-              builder: (context, _) => ContextUsageRing(
-                usedTokens: contextTokensUsed!,
-                windowTokens: resolveContextWindowTokens(settings, pk, mid),
-              ),
+              builder: (context, _) {
+                final window = resolveContextWindowTokens(settings, pk, mid);
+                final messages = chatMessages;
+                return ContextUsageRing(
+                  usedTokens: contextTokensUsed!,
+                  windowTokens: window,
+                  onTap: messages == null
+                      ? null
+                      : () => showChatTokenSheet(
+                          context,
+                          usedTokens: contextTokensUsed,
+                          windowTokens: window,
+                          maxOutputTokens: ModelCatalog.instance
+                              .lookup(
+                                apiModelId(settings.getProviderConfig(pk), mid),
+                              )
+                              ?.outputTokens,
+                          summary: ChatTokenSummary.of(
+                            messages(),
+                            priceFor: (providerId, modelId) =>
+                                ModelCatalog.instance.lookup(
+                                  providerId == null
+                                      ? modelId
+                                      : apiModelId(
+                                          settings.getProviderConfig(
+                                            providerId,
+                                          ),
+                                          modelId,
+                                        ),
+                                ),
+                          ),
+                        ),
+                );
+              },
             )
           : null,
       inputBackgroundOpacityLight: settings.chatInputBackgroundOpacityLight,

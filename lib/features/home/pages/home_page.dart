@@ -1555,6 +1555,7 @@ class _HomePageState extends State<HomePage>
       isReasoningEnabled: _controller.isReasoningEnabled,
       conversationId: _controller.currentConversation?.id,
       contextTokensUsed: _controller.contextTokensUsed(),
+      chatMessages: () => _controller.messages,
       sendButtonTooltip:
           (_controller.isUserMessageEditActive ||
               _controller.isQueuedMessageEditActive)

@@ -5258,5 +5258,17 @@
   "chatToolCopyDetails": "Copy details",
   "chatToolRerunFromHere": "Rerun from here",
   "@chatToolCopyDetails": {"description": "Long-press menu of a tool call: copies the call, its arguments and result."},
-  "@chatToolRerunFromHere": {"description": "Long-press menu of a tool call: regenerates the reply it belongs to."}
+  "@chatToolRerunFromHere": {"description": "Long-press menu of a tool call: regenerates the reply it belongs to."},
+  "chatTokensTitle": "Chat tokens",
+  "chatTokensContext": "Context",
+  "chatTokensContextUsed": "In use",
+  "chatTokensContextWindow": "Context window",
+  "chatTokensMaxOutput": "Max reply",
+  "chatTokensSpent": "Spent in this chat",
+  "chatTokensInput": "Input",
+  "chatTokensOutput": "Output",
+  "chatTokensCached": "From cache",
+  "chatTokensReplies": "Replies",
+  "chatTokensCost": "Cost",
+  "@chatTokensTitle": {"description": "Sheet opened from the context ring by the send button."}
 }

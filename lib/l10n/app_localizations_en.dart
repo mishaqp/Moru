@@ -11595,4 +11595,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatToolRerunFromHere => 'Rerun from here';
+
+  @override
+  String get chatTokensTitle => 'Chat tokens';
+
+  @override
+  String get chatTokensContext => 'Context';
+
+  @override
+  String get chatTokensContextUsed => 'In use';
+
+  @override
+  String get chatTokensContextWindow => 'Context window';
+
+  @override
+  String get chatTokensMaxOutput => 'Max reply';
+
+  @override
+  String get chatTokensSpent => 'Spent in this chat';
+
+  @override
+  String get chatTokensInput => 'Input';
+
+  @override
+  String get chatTokensOutput => 'Output';
+
+  @override
+  String get chatTokensCached => 'From cache';
+
+  @override
+  String get chatTokensReplies => 'Replies';
+
+  @override
+  String get chatTokensCost => 'Cost';
 }
