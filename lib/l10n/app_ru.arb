@@ -5040,6 +5040,7 @@
   "miniAppsServerExited": "Остановлен, код {code}",
   "miniAppsSearch": "Поиск приложений",
   "miniAppsBadgeGame": "Игра",
+  "miniAppsJobFailed": "Фоновая задача «{job}» не выполнилась. Откройте приложение, чтобы узнать почему.",
   "miniAppsMore": "Ещё",
   "miniAppsErrors": "Журнал ошибок",
   "miniAppsErrorsEmpty": "Ошибок нет.",

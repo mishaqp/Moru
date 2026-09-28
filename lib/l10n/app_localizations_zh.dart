@@ -10960,6 +10960,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get miniAppsBadgeGame => '游戏';
 
   @override
+  String miniAppsJobFailed(String job) {
+    return '后台任务“$job”未能完成。打开应用查看原因。';
+  }
+
+  @override
   String get miniAppsMore => '更多';
 
   @override
@@ -21957,6 +21962,11 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get miniAppsBadgeGame => '游戏';
+
+  @override
+  String miniAppsJobFailed(String job) {
+    return '后台任务“$job”未能完成。打开应用查看原因。';
+  }
 
   @override
   String get miniAppsMore => '更多';
@@ -33030,6 +33040,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get miniAppsBadgeGame => '遊戲';
+
+  @override
+  String miniAppsJobFailed(String job) {
+    return '後台任務「$job」未能完成。開啟應用查看原因。';
+  }
 
   @override
   String get miniAppsMore => '更多';

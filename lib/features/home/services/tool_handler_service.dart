@@ -87,7 +87,19 @@ class ToolHandlerService {
             workspaces.byId(id)?.isToolEnabled(name) ?? false,
         plans: _optional<TaskPlanRegistry>(),
         checkMiniApp: defaultTargetPlatform == TargetPlatform.android
-            ? MiniAppChecker.run
+            ? (app) {
+                final environment = contextProvider
+                    .read<EnvironmentProvider?>();
+                return MiniAppChecker.run(
+                  app,
+                  serverEnvironment: environment == null
+                      ? null
+                      : MiniAppLauncher.serverEnvironment(
+                          contextProvider.read<WorkspaceRuntimeProvider>(),
+                          environment,
+                        ),
+                );
+              }
             : null,
       );
     } catch (_) {

@@ -11588,6 +11588,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get miniAppsBadgeGame => 'Игра';
 
   @override
+  String miniAppsJobFailed(String job) {
+    return 'Фоновая задача «$job» не выполнилась. Откройте приложение, чтобы узнать почему.';
+  }
+
+  @override
   String get miniAppsMore => 'Ещё';
 
   @override

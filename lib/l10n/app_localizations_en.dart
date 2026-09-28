@@ -11462,6 +11462,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get miniAppsBadgeGame => 'Game';
 
   @override
+  String miniAppsJobFailed(String job) {
+    return 'Background job \"$job\" failed. Open the app to see why.';
+  }
+
+  @override
   String get miniAppsMore => 'More';
 
   @override

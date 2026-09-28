@@ -4,6 +4,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/services/mini_apps/mini_app_bridge.dart';
 import '../../core/services/mini_apps/mini_app_check.dart';
+import '../../core/services/mini_apps/mini_app_servers.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
 import 'mini_app_launcher.dart';
 
@@ -19,10 +20,14 @@ class MiniAppChecker {
   /// after the load event.
   static const Duration settle = Duration(seconds: 2);
 
-  static Future<MiniAppCheckReport> run(MiniApp app) async {
+  static Future<MiniAppCheckReport> run(
+    MiniApp app, {
+    MiniAppServerEnvironment? serverEnvironment,
+  }) async {
     final sandbox = await MiniAppSandbox.create(
       app,
       fetch: MiniAppLauncher.fetcher,
+      serverEnvironment: serverEnvironment,
     );
     final bridge = sandbox.bridge;
     final console = <String>[];
@@ -76,6 +81,7 @@ class MiniAppChecker {
         console: console,
         failedCalls: List.of(bridge.failedCalls),
         visibleContent: visible,
+        server: await sandbox.serverStatus(),
       );
     } finally {
       // Stop the app's timers before its sandbox goes away.

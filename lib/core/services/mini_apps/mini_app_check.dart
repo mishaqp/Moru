@@ -6,6 +6,7 @@ import 'mini_app_bridge.dart';
 import 'mini_app_fetch.dart';
 import 'mini_app_jobs.dart';
 import 'mini_app_reminders.dart';
+import 'mini_app_servers.dart';
 import 'mini_app_store.dart';
 
 /// What opening a mini app out of sight found, for the agent that just
@@ -17,10 +18,15 @@ class MiniAppCheckReport {
     this.console = const [],
     this.failedCalls = const [],
     this.visibleContent,
+    this.server,
   });
 
   /// Whether the entry page finished loading in time.
   final bool loaded;
+
+  /// The app's server in the check (see [MiniAppServers.status]), when it
+  /// has one and a Linux environment was available.
+  final Map<String, Object?>? server;
 
   /// Script errors, rejected promises and files that failed to load.
   final List<String> pageErrors;
@@ -62,6 +68,7 @@ class MiniAppCheckReport {
     if (failedCalls.isNotEmpty) 'failed_moru_calls': failedCalls,
     if (console.isNotEmpty) 'console': console,
     if (visibleContent == 0) 'blank_page': true,
+    'server': ?server,
   };
 }
 
@@ -69,7 +76,7 @@ class MiniAppCheckReport {
 /// data and reminders, and its host sends nothing: no notifications, no
 /// model requests, no calendar changes. Network reads go out as usual.
 class MiniAppSandbox {
-  MiniAppSandbox._(this._root, this.store, this.bridge);
+  MiniAppSandbox._(this._root, this.store, this.bridge, this._server);
 
   static const String testAnswer = 'Test answer from Moru.';
 
@@ -77,11 +84,35 @@ class MiniAppSandbox {
   final MiniAppStore store;
   final MiniAppBridge bridge;
 
+  /// Its own copy of the app's server, with an empty `/data`.
+  final ({MiniAppServers servers, MiniAppServerLease lease})? _server;
+
   MiniApp get app => store.byId(bridge.appId)!;
+
+  /// State and output of the check's server once it listens or failed to
+  /// start, or null without one.
+  Future<Map<String, Object?>?> serverStatus() async {
+    final server = _server;
+    if (server == null) return null;
+    await server.lease.settled();
+    final status = server.servers.status(bridge.appId);
+    final output = '${status['output'] ?? ''}';
+    return {
+      ...status,
+      // The tail is what explains a failure.
+      'output': output.length <= 3000
+          ? output
+          : output.substring(output.length - 3000),
+    };
+  }
+
+  /// How long the check's server may take to open its port.
+  static const Duration serverStartTimeout = Duration(seconds: 20);
 
   static Future<MiniAppSandbox> create(
     MiniApp app, {
     MiniAppFetch? fetch,
+    MiniAppServerEnvironment? serverEnvironment,
   }) async {
     final root = await Directory.systemTemp.createTemp('mini-app-check-');
     try {
@@ -91,8 +122,21 @@ class MiniAppSandbox {
       );
       final store = MiniAppStore(root: () async => root);
       await store.load();
-      if (store.byId(app.id) == null) {
+      final copy = store.byId(app.id);
+      if (copy == null) {
         throw const MiniAppException('not_found', 'The app was not installed.');
+      }
+      ({MiniAppServers servers, MiniAppServerLease lease})? server;
+      if (copy.serverCommand != null && serverEnvironment != null) {
+        final servers = MiniAppServers(
+          store: store,
+          fetch: fetch,
+          startTimeout: serverStartTimeout,
+        );
+        server = (
+          servers: servers,
+          lease: servers.lease(copy, serverEnvironment),
+        );
       }
       final bridge = MiniAppBridge(
         store: store,
@@ -121,25 +165,36 @@ class MiniAppSandbox {
           haptic: (kind) async {},
           close: () async {},
           jobs: MiniAppJobs(store: store, scheduler: MiniAppJobScheduler.none),
-          server: (_) async => throw const MiniAppException(
-            MiniAppBridge.notInCheck,
-            'The server does not run in the publish check.',
-          ),
+          server:
+              server?.lease.fetch ??
+              (_) async => throw const MiniAppException(
+                MiniAppBridge.notInCheck,
+                'The server does not run in the publish check.',
+              ),
         ),
       );
-      return MiniAppSandbox._(root, store, bridge);
+      return MiniAppSandbox._(root, store, bridge, server);
     } catch (_) {
       await root.delete(recursive: true);
       rethrow;
     }
   }
 
-  Future<void> dispose() => _root.delete(recursive: true);
+  Future<void> dispose() async {
+    await _server?.lease.release();
+    await _root.delete(recursive: true);
+  }
+
+  /// Not copied: old versions, and the server's data (dependencies can be
+  /// large; the check's server starts with an empty `/data`).
+  static const Set<String> _skipped = {'versions', 'server-data'};
 
   static Future<void> _copy(Directory from, Directory to) async {
     await to.create(recursive: true);
     await for (final entity in from.list(recursive: true)) {
-      final target = p.join(to.path, p.relative(entity.path, from: from.path));
+      final relative = p.relative(entity.path, from: from.path);
+      if (_skipped.contains(p.split(relative).first)) continue;
+      final target = p.join(to.path, relative);
       if (entity is Directory) {
         await Directory(target).create(recursive: true);
       } else if (entity is File) {

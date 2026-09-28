@@ -423,4 +423,96 @@ void main() {
     expect(checked, startsWith('window.__moruReply(2, false, '));
     expect(sandbox.bridge.failedCalls, isEmpty);
   });
+
+  test('the publish check runs a copy of the server with an empty /data and '
+      'reports it', () async {
+    final app = await install();
+    final kept = File(p.join(app.directory, 'server-data', 'db.sqlite'));
+    await kept.parent.create(recursive: true);
+    await kept.writeAsString('real data');
+    // The copy's server really opens its port, as the check probes it.
+    final listeners = <HttpServer>[];
+    addTearDown(() async {
+      for (final l in listeners) {
+        await l.close(force: true);
+      }
+    });
+    final check = _ListeningRuntime(listeners);
+
+    final sandbox = await MiniAppSandbox.create(
+      app,
+      serverEnvironment: MiniAppServerEnvironment(
+        runtime: () async => check,
+        variables: () async => {},
+      ),
+    );
+    final copy = sandbox.app;
+    expect(copy.directory, isNot(app.directory));
+    final status = (await sandbox.serverStatus())!;
+    expect(
+      Directory(p.join(copy.directory, 'server-data')).listSync(),
+      isEmpty,
+    );
+    expect(status['running'], isTrue);
+    expect(status['ready'], isTrue);
+    expect(status['output'], contains('listening'));
+    expect(check.requests.single.keepStdinOpen, isTrue);
+
+    await sandbox.dispose();
+    expect(check.cancelled, [check.requests.single.runId]);
+    expect(await kept.readAsString(), 'real data');
+  });
+
+  test('a check server that exits reports its code and output', () async {
+    final app = await install();
+    final check = _ListeningRuntime([], exitCode: 1);
+    final sandbox = await MiniAppSandbox.create(
+      app,
+      serverEnvironment: MiniAppServerEnvironment(
+        runtime: () async => check,
+        variables: () async => {},
+      ),
+    );
+    addTearDown(sandbox.dispose);
+    final status = (await sandbox.serverStatus())!;
+    expect(status['running'], isFalse);
+    expect(status['exit_code'], 1);
+    expect(status['output'], contains('ModuleNotFoundError'));
+    // Without the Linux environment the check runs no server.
+    final plain = await MiniAppSandbox.create(app);
+    addTearDown(plain.dispose);
+    expect(await plain.serverStatus(), isNull);
+  });
+}
+
+/// Starts each server for real: it listens on `$PORT`, or with [exitCode]
+/// prints an error and exits.
+class _ListeningRuntime extends _Runtime {
+  _ListeningRuntime(this.listeners, {this.exitCode});
+
+  final List<HttpServer> listeners;
+  final int? exitCode;
+
+  @override
+  Stream<CommandEvent> run(CommandRequest request) {
+    final events = super.run(request);
+    final runId = request.runId;
+    final code = exitCode;
+    if (code != null) {
+      output(runId, 'ModuleNotFoundError: flask\n');
+      this.exit(runId, code);
+    } else {
+      unawaited(
+        HttpServer.bind(
+          InternetAddress.loopbackIPv4,
+          int.parse(request.env['PORT']!),
+        ).then((server) {
+          listeners.add(server);
+          server.listen((r) => r.response.close());
+          output(runId, 'listening\n');
+        }),
+      );
+    }
+    return events;
+  }
 }

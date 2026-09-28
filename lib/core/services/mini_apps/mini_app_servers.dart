@@ -333,6 +333,14 @@ class MiniAppServerLease {
     return _servers._request(server, args);
   }
 
+  /// Completes once the server listens or its start failed; the reason of a
+  /// failure is in [MiniAppServers.status].
+  Future<void> settled() async {
+    try {
+      await _server?.started;
+    } catch (_) {}
+  }
+
   Future<void> release() async {
     final server = _server;
     if (_released || server == null) return;

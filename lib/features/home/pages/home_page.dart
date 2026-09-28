@@ -765,6 +765,10 @@ class _HomePageState extends State<HomePage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // A failed mini app job notifies in the user's language.
+    MiniAppLauncher.jobFailedBody = AppLocalizations.of(
+      context,
+    )!.miniAppsJobFailed;
     // Modal routes disable tickers only after an opaque route covers us.
     // Keep streaming visible behind translucent dialogs and bottom sheets.
     _controller.onHomeVisibilityChanged(TickerMode.valuesOf(context).enabled);

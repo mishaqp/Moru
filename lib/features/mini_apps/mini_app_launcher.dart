@@ -129,10 +129,31 @@ class MiniAppLauncher {
         ),
         cancellation: cancellation,
       );
+    } catch (e) {
+      // A silent journal entry is easy to miss; tell the user the job that
+      // was meant to run in the background did not, unless they cancelled it.
+      if (!cancellation.cancelled) {
+        unawaited(_notifyJobFailed(app, jobId).catchError((_) {}));
+      }
+      rethrow;
     } finally {
       await server.release();
     }
   }
+
+  static Future<void> _notifyJobFailed(MiniApp app, String jobId) async {
+    await NotificationService.ensureAndroidNotificationsPermission();
+    await NotificationService.showMiniApp(
+      id: MiniAppReminders.notificationIds(app.id, '_job_$jobId', null).first,
+      appId: app.id,
+      title: app.name,
+      body: jobFailedBody(jobId),
+    );
+  }
+
+  /// Text of that notification; the home page sets the user's language.
+  static String Function(String jobId) jobFailedBody = (jobId) =>
+      'Background job "$jobId" failed. Open the app to see why.';
 
   /// The model `moru.ai.ask` uses: the current assistant's chat model, else
   /// the default model, the same order the chat uses.

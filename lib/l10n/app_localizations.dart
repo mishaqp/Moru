@@ -20501,6 +20501,12 @@ abstract class AppLocalizations {
   /// **'Game'**
   String get miniAppsBadgeGame;
 
+  /// No description provided for @miniAppsJobFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Background job \"{job}\" failed. Open the app to see why.'**
+  String miniAppsJobFailed(String job);
+
   /// No description provided for @miniAppsMore.
   ///
   /// In en, this message translates to:
