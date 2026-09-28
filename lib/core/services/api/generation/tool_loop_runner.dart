@@ -3,6 +3,7 @@ import '../../../models/token_usage.dart';
 import '../chat_api_helpers.dart';
 import '../stream/stream_chunk.dart';
 import '../stream/stream_chunk_emit.dart';
+import 'tool_result_images.dart';
 
 typedef StreamRoundRunner =
     Stream<StreamChunk> Function(Stream<StreamChunk> Function() sendRound);
@@ -12,6 +13,7 @@ final class ExecutedClientTool {
     required this.call,
     required this.content,
     this.metadata,
+    this.images = const [],
   });
 
   final EmitToolCall call;
@@ -21,6 +23,12 @@ final class ExecutedClientTool {
 
   /// Result metadata (e.g. `mcpResult`). Merged with [call.metadata] on emit.
   final Map<String, dynamic>? metadata;
+
+  /// Images the tool returned, loaded for models that take image input.
+  final List<ToolResultImage> images;
+
+  ({String name, List<ToolResultImage> images}) get imagesForModel =>
+      (name: call.name, images: images);
 }
 
 EmitToolResult _emitExecuted(ExecutedClientTool item) {
@@ -155,5 +163,6 @@ Future<ExecutedClientTool> _executeClientTool(
     call: call,
     content: parsed.content,
     metadata: parsed.metadata,
+    images: await loadToolResultImages(parsed.metadata),
   );
 }

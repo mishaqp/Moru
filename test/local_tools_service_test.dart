@@ -158,7 +158,9 @@ void main() {
       expect((properties['action'] as Map<String, dynamic>)['enum'], const [
         'open',
         'observe',
+        'screenshot',
         'click',
+        'hover',
         'type',
         'submit',
         'press_key',

@@ -11,6 +11,7 @@ import '../../../../../utils/app_directories.dart';
 import '../../../../../utils/sandbox_path_resolver.dart';
 import '../../chat_api_helpers.dart';
 import '../../generation/tool_loop_runner.dart';
+import '../../generation/tool_result_images.dart';
 import '../../stream/sse_decode_loop.dart';
 import '../../stream/sse_framing.dart';
 import '../../stream/stream_chunk.dart';
@@ -216,6 +217,8 @@ Stream<StreamChunk> runOpenAIResponsesToolFollowUps({
   String? lastToolSignature;
   var consecutiveDupeCount = 0;
 
+  final takesImages = modelTakesImages(config, modelId);
+
   yield* runClientToolFollowUps(
     initialCalls: initialCalls,
     onToolCall: onToolCall,
@@ -231,6 +234,11 @@ Stream<StreamChunk> runOpenAIResponsesToolFollowUps({
             'call_id': openaiTranscriptCallId(item.call),
             'output': item.content,
           },
+        // Function outputs hold only text; a screenshot follows them.
+        if (takesImages)
+          ?responsesToolImagesItem([
+            for (final item in executed) item.imagesForModel,
+          ]),
       ];
     },
     sendFollowUp: () async* {

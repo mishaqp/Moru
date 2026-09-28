@@ -11,6 +11,7 @@ import '../../../../utils/multimodal_input_utils.dart';
 import '../../../../../utils/sandbox_path_resolver.dart';
 import '../../chat_api_helpers.dart';
 import '../../generation/tool_loop_runner.dart';
+import '../../generation/tool_result_images.dart';
 import '../../stream/sse_decode_loop.dart';
 import '../../stream/sse_framing.dart';
 import '../../stream/stream_chunk.dart';
@@ -784,6 +785,11 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
           reasoningDetails: reasoningDetails(),
         ),
         ...openaiToolResultMessages(executed),
+        // Tool messages hold only text; a screenshot follows them.
+        if (canImageInput)
+          ?openaiToolImagesMessage([
+            for (final item in executed) item.imagesForModel,
+          ]),
       ];
     },
     sendFollowUp: () async* {
@@ -978,6 +984,11 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
           reasoningDetails: msg['reasoning_details'],
         ),
         ...openaiToolResultMessages(executed),
+        // Tool messages hold only text; a screenshot follows them.
+        if (canImageInput)
+          ?openaiToolImagesMessage([
+            for (final item in executed) item.imagesForModel,
+          ]),
       ];
     },
     sendFollowUp: () async* {

@@ -1,11 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show WidgetsBinding;
+import 'package:path/path.dart' as p;
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
+import '../../../utils/app_directories.dart';
 import '../../../utils/utf16_safe_cut.dart';
 import 'browser_guard.dart';
 import 'browser_research.dart';
@@ -311,6 +316,94 @@ class BrowserAgentSession {
   }
 
   bool get isAttached => _controller != null;
+
+  // ---------------------------------------------------------------------------
+  // Screenshots
+  // ---------------------------------------------------------------------------
+
+  static const MethodChannel _browserChannel = MethodChannel('app.browser');
+
+  /// Screenshots kept on disk; older ones are deleted.
+  static const int keptScreenshots = 40;
+
+  /// A JPEG of what the WebView shows now. Replaced in tests.
+  @visibleForTesting
+  Future<Uint8List> Function(WebViewController controller) captureBytes =
+      _nativeCapture;
+
+  /// Where screenshots are saved. Replaced in tests.
+  @visibleForTesting
+  Future<Directory> Function() screenshotDirectory = () async => Directory(
+    p.join((await AppDirectories.getImagesDirectory()).path, 'browser'),
+  );
+
+  static Future<Uint8List> _nativeCapture(WebViewController controller) async {
+    final platform = controller.platform;
+    if (platform is! AndroidWebViewController) {
+      throw PlatformException(
+        code: 'unsupported',
+        message: 'Screenshots need the Android browser.',
+      );
+    }
+    final bytes = await _browserChannel.invokeMethod<Uint8List>('capture', {
+      'id': platform.webViewIdentifier,
+    });
+    if (bytes == null || bytes.isEmpty) {
+      throw PlatformException(code: 'empty', message: 'The picture is empty.');
+    }
+    return bytes;
+  }
+
+  /// Saves a picture of the page as it shows now and returns its path with
+  /// the viewport size in CSS pixels, so points in it map to click x/y.
+  Future<Map<String, dynamic>> screenshot() async {
+    await waitUntilReady();
+    final controller = _requireController();
+    final Uint8List bytes;
+    try {
+      bytes = await _interruptible(captureBytes(controller));
+    } on PlatformException catch (error) {
+      return {
+        'ok': false,
+        'error': 'screenshot_failed',
+        'message': error.message ?? error.code,
+      };
+    }
+    final dir = await screenshotDirectory();
+    await dir.create(recursive: true);
+    final file = File(
+      p.join(dir.path, 'shot-${DateTime.now().microsecondsSinceEpoch}.jpg'),
+    );
+    await file.writeAsBytes(bytes, flush: true);
+    await _pruneScreenshots(dir);
+    Map<String, dynamic> viewport = const {};
+    try {
+      viewport = await _runJson(
+        'JSON.stringify({width: window.innerWidth, height: window.innerHeight})',
+      );
+    } catch (_) {}
+    return {
+      'ok': true,
+      'screenshot': file.path,
+      'url': await controller.currentUrl(),
+      if (viewport.isNotEmpty) 'viewport': viewport,
+    };
+  }
+
+  static Future<void> _pruneScreenshots(Directory dir) async {
+    final shots = <File>[
+      await for (final entity in dir.list())
+        if (entity is File && p.basename(entity.path).startsWith('shot-'))
+          entity,
+    ]..sort((a, b) => b.path.compareTo(a.path));
+    for (final old in shots.skip(keptScreenshots)) {
+      try {
+        await old.delete();
+      } on FileSystemException {
+        // Gone already.
+      }
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // Guard: challenge pages, JavaScript dialogs, pacing, Stop

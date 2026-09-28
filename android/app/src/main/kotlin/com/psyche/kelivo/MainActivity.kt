@@ -157,6 +157,33 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        // A picture of the shared browser's page for the model: the WebView
+        // draws itself into a bitmap, scaled so its longer side is at most
+        // 1280 px, as JPEG.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "app.browser")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "capture") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+                val id = (call.argument<Number>("id"))?.toLong()
+                @Suppress("DEPRECATION")
+                val webView = id?.let {
+                    io.flutter.plugins.webviewflutter.WebViewFlutterAndroidExternalApi
+                        .getWebView(flutterEngine, it)
+                }
+                if (webView == null) {
+                    result.error("no_webview", "The browser view is not available.", null)
+                    return@setMethodCallHandler
+                }
+                webView.post {
+                    try {
+                        result.success(BrowserCapture.jpeg(webView))
+                    } catch (e: Exception) {
+                        result.error("capture_failed", e.message, null)
+                    }
+                }
+            }
         // Copy with formatting: plain text plus HTML, which Notes, Gmail and
         // Docs paste as rich text. Flutter's Clipboard only writes plain text.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "app.clipboard")

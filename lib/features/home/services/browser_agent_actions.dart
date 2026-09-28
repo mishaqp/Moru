@@ -44,6 +44,14 @@ class BrowserAgentActions {
       descriptionEn: 'List visible elements and text.',
     ),
     BrowserAgentAction(
+      id: 'screenshot',
+      requiresApproval: false,
+      labelRu: 'Снимок экрана',
+      labelEn: 'Screenshot',
+      descriptionRu: 'Картинка страницы для модели: капчи, графики, вёрстка.',
+      descriptionEn: 'A picture of the page for the model: captchas, charts.',
+    ),
+    BrowserAgentAction(
       id: 'read',
       requiresApproval: false,
       labelRu: 'Прочитать текст',

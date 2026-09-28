@@ -14,6 +14,7 @@ import '../../../../utils/mcp_structured_image.dart';
 import '../builtin_tools.dart';
 import '../chat_api_helpers.dart';
 import '../generation/tool_loop_runner.dart';
+import '../generation/tool_result_images.dart';
 import '../stream/sse_framing.dart';
 import '../stream/stream_chunk.dart';
 import '../stream/stream_chunk_emit.dart';
@@ -60,6 +61,7 @@ Stream<StreamChunk> sendClaudeStream(
   StreamRoundRunner? retryRound,
 }) async* {
   final upstreamModelId = apiModelId(config, modelId);
+  final takesImages = modelTakesImages(config, modelId);
   // Endpoint and headers (constant across rounds)
   final base = config.baseUrl.endsWith('/')
       ? config.baseUrl.substring(0, config.baseUrl.length - 1)
@@ -588,6 +590,8 @@ Stream<StreamChunk> sendClaudeStream(
                     tool.id,
                     (resultChunk.output ?? '').toString(),
                   );
+                  decoder.toolResultImages[tool.id] =
+                      await loadToolResultImages(resultChunk.metadata);
                 }
                 yield resultChunk;
               }
@@ -642,19 +646,25 @@ Stream<StreamChunk> sendClaudeStream(
       ];
       for (final tool in decoder.clientTools.values) {
         var res = toolResultsContent[tool.id] ?? '';
+        var images = decoder.toolResultImages[tool.id] ?? const [];
         if (res.isEmpty && onToolCall != null) {
-          res = ClientToolResult.fromHandler(
+          final parsed = ClientToolResult.fromHandler(
             await onToolCall(
               tool.name,
               tool.decodedArguments,
               toolCallId: tool.id,
             ),
-          ).content;
+          );
+          res = parsed.content;
+          images = await loadToolResultImages(parsed.metadata);
         }
         lastStreamResults.add({
           'type': 'tool_result',
           'tool_use_id': tool.id,
-          'content': claudeToolResultContent(res),
+          'content': claudeToolResultWithImages(
+            res,
+            takesImages ? images : const [],
+          ),
         });
       }
     },
@@ -678,7 +688,10 @@ Stream<StreamChunk> sendClaudeStream(
                 <String, dynamic>{
                   'type': 'tool_result',
                   'tool_use_id': item.call.id,
-                  'content': claudeToolResultContent(item.content),
+                  'content': claudeToolResultWithImages(
+                    item.content,
+                    takesImages ? item.images : const [],
+                  ),
                 },
             ];
       convo = [

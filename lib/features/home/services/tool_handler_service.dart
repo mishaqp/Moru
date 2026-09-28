@@ -34,6 +34,7 @@ import '../../mini_apps/mini_app_checker.dart';
 import '../../mini_apps/mini_app_launcher.dart';
 import 'ask_user_interaction_service.dart';
 import 'assistant_manager_tool.dart';
+import 'browser_agent_tool.dart';
 import 'built_in_tool_names.dart';
 import 'local_tools_service.dart';
 import 'mini_app_data_tool.dart';
@@ -743,6 +744,9 @@ class ToolHandlerService {
               setClipboard: (text) =>
                   Clipboard.setData(ClipboardData(text: text)),
             ).execute(args);
+          }
+          if (name == LocalToolNames.browserUse) {
+            return BrowserAgentTool.forModel(localResult);
           }
           return localResult;
         }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../../models/token_usage.dart';
+import '../../generation/tool_result_images.dart';
 import '../../stream/sse_event.dart';
 import '../../stream/stream_chunk.dart';
 import '../../stream/stream_chunk_decoder.dart';
@@ -24,6 +25,9 @@ class GoogleFunctionCall {
   final String name;
   final Map<String, dynamic> args;
   String result;
+
+  /// Images the tool returned, for a model that reads images.
+  List<ToolResultImage> images = const [];
   final String? thoughtSigKey;
   final dynamic thoughtSigVal;
   final Map<String, dynamic> part;

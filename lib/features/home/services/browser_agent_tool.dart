@@ -12,6 +12,7 @@ import 'browser_agent_actions.dart';
 import '../../../core/services/browser/web_source.dart';
 import '../../../shared/pages/webview/webview_page.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../../../utils/mcp_structured_image.dart';
 
 /// Local-tool adapter for the visible shared browser.
 class BrowserAgentTool {
@@ -136,6 +137,14 @@ class BrowserAgentTool {
       }
       final dialogs = session.drainDialogs();
       if (dialogs.isNotEmpty) result['dialogs'] = dialogs;
+      // `screenshot: true` on any action: the page as it looks afterwards.
+      if (action != 'screenshot' &&
+          _boolArg(args, 'screenshot', false) &&
+          result['ok'] == true) {
+        final shot = await session.screenshot();
+        if (shot['ok'] == true) result['screenshot'] = shot['screenshot'];
+        if (shot['viewport'] != null) result['viewport'] = shot['viewport'];
+      }
       return jsonEncode(result);
     } on BrowserStoppedException {
       return jsonEncode({
@@ -223,6 +232,8 @@ class BrowserAgentTool {
               timeoutMs: _intArg(args, 'timeout_ms', 10000),
             ),
           );
+        case 'screenshot':
+          return jsonEncode(await session.screenshot());
         case 'eval_js':
           return jsonEncode(await _evalJs(args));
         case 'close':
@@ -239,7 +250,7 @@ class BrowserAgentTool {
             'ok': false,
             'error': 'invalid_action',
             'message':
-                'Use action open, observe, click, hover, type, submit, press_key, scroll, back, forward, reload, read, wait_for, eval_js, done, or close.',
+                'Use action open, observe, screenshot, click, hover, type, submit, press_key, scroll, back, forward, reload, read, wait_for, eval_js, done, or close.',
           });
       }
     } on TimeoutException {
@@ -267,6 +278,33 @@ class BrowserAgentTool {
         'message': error.message,
       });
     }
+  }
+
+  /// The result as the model gets it: a screenshot path becomes an image
+  /// attached to the tool result (shown in the chat, and sent to models
+  /// that read images) instead of a path the model cannot open.
+  static Object forModel(String raw) {
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } on FormatException {
+      return raw;
+    }
+    if (decoded is! Map<String, dynamic>) return raw;
+    final path = decoded['screenshot'];
+    if (path is! String || path.isEmpty) return raw;
+    decoded
+      ..['screenshot'] = 'attached'
+      ..['screenshot_note'] =
+          'The picture of the viewport is attached as an image. Points in it '
+          'map to click/hover x and y after scaling to the viewport size. If '
+          'you see no image, your model cannot read images: use observe.';
+    return ClientToolResult(
+      jsonEncode(decoded),
+      metadata: {
+        kMcpResultMetadataKey: mcpResultMetadata([path]),
+      },
+    );
   }
 
   static Future<Map<String, dynamic>> _close() {

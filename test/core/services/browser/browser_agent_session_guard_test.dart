@@ -1,6 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:Kelivo/core/services/browser/browser_agent_session.dart';
+import 'package:Kelivo/core/services/api/generation/tool_result_images.dart';
+import 'package:Kelivo/utils/mcp_structured_image.dart';
 import 'package:Kelivo/features/home/services/browser_agent_tool.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -132,5 +136,66 @@ void main() {
     expect(clicked['ok'], isTrue);
     expect(clicked.containsKey('challenge'), isFalse);
     expect(session.challenge.value, isNull);
+  });
+
+  test('screenshot saves the viewport and reaches the model as an image, '
+      'keeping only the newest pictures', () async {
+    final fake = await attach();
+    fake.jsHandler = (script) => script.contains('innerWidth')
+        ? jsonEncode({'width': 412, 'height': 800})
+        : jsonEncode({'ok': true, 'url': 'https://example.com/a'});
+    final dir = await Directory.systemTemp.createTemp('browser-shots');
+    addTearDown(() => dir.delete(recursive: true));
+    final originalCapture = session.captureBytes;
+    final originalDirectory = session.screenshotDirectory;
+    addTearDown(() {
+      session
+        ..captureBytes = originalCapture
+        ..screenshotDirectory = originalDirectory;
+    });
+    session
+      ..captureBytes = ((_) async => Uint8List.fromList([0xff, 0xd8, 1, 2]))
+      ..screenshotDirectory = (() async => dir);
+
+    final raw = await BrowserAgentTool.execute({'action': 'screenshot'});
+    final shot = jsonDecode(raw) as Map<String, dynamic>;
+    expect(shot['ok'], isTrue);
+    expect(shot['viewport'], {'width': 412, 'height': 800});
+    expect(File(shot['screenshot'] as String).readAsBytesSync(), [
+      0xff,
+      0xd8,
+      1,
+      2,
+    ]);
+
+    final forModel = BrowserAgentTool.forModel(raw) as ClientToolResult;
+    final text = jsonDecode(forModel.content) as Map<String, dynamic>;
+    expect(text['screenshot'], 'attached');
+    final images = await loadToolResultImages(forModel.metadata);
+    expect(images.single.mime, 'image/jpeg');
+    expect(base64Decode(images.single.base64), [0xff, 0xd8, 1, 2]);
+
+    // A flag on another action attaches a picture taken after it.
+    final scrolled =
+        jsonDecode(
+              await BrowserAgentTool.execute({
+                'action': 'scroll',
+                'direction': 'down',
+                'screenshot': true,
+              }),
+            )
+            as Map<String, dynamic>;
+    expect(scrolled['screenshot'], isA<String>());
+
+    // Results without a picture stay plain text.
+    expect(BrowserAgentTool.forModel('{"ok":true}'), '{"ok":true}');
+
+    for (var i = 0; i < BrowserAgentSession.keptScreenshots + 3; i++) {
+      await session.screenshot();
+    }
+    expect(
+      dir.listSync().whereType<File>().length,
+      BrowserAgentSession.keptScreenshots,
+    );
   });
 }
