@@ -43,7 +43,8 @@ class MiniAppWebServer {
       localhostOnly ? InternetAddress.loopbackIPv4 : InternetAddress.anyIPv4,
       port,
     );
-    server.autoCompress = true;
+    // Off: byte ranges of compressed bodies would not match the file.
+    server.autoCompress = false;
     _server = server;
     server.listen((request) => unawaited(_handle(request)));
   }
@@ -178,10 +179,74 @@ class MiniAppWebServer {
     if (!p.isWithin(code, file.path) || !await file.exists()) {
       return _notFound(response);
     }
+    await _file(request, file);
+  }
+
+  /// A file with revalidation (ETag) and byte ranges, so the browser keeps
+  /// it cached and can seek in audio and video.
+  static Future<void> _file(HttpRequest request, File file) async {
+    final response = request.response;
+    final stat = await file.stat();
+    final size = stat.size;
+    final etag = '"$size-${stat.modified.millisecondsSinceEpoch}"';
     response.headers
       ..contentType = contentTypeFor(file.path)
-      ..set(HttpHeaders.cacheControlHeader, 'no-cache');
-    await response.addStream(file.openRead());
+      ..set(HttpHeaders.cacheControlHeader, 'no-cache')
+      ..set(HttpHeaders.etagHeader, etag)
+      ..set(HttpHeaders.acceptRangesHeader, 'bytes');
+    response.headers.set(HttpHeaders.lastModifiedHeader, stat.modified);
+    final ifNoneMatch = request.headers.value(HttpHeaders.ifNoneMatchHeader);
+    if (ifNoneMatch != null &&
+        ifNoneMatch.split(',').any((tag) => tag.trim() == etag)) {
+      response.statusCode = HttpStatus.notModified;
+      return;
+    }
+    var start = 0;
+    var end = size - 1;
+    final range = request.headers.value(HttpHeaders.rangeHeader);
+    if (range != null) {
+      final parsed = parseRange(range, size);
+      if (parsed == null) {
+        response
+          ..statusCode = HttpStatus.requestedRangeNotSatisfiable
+          ..headers.set(HttpHeaders.contentRangeHeader, 'bytes */$size');
+        return;
+      }
+      (start, end) = parsed;
+      response
+        ..statusCode = HttpStatus.partialContent
+        ..headers.set(
+          HttpHeaders.contentRangeHeader,
+          'bytes $start-$end/$size',
+        );
+    }
+    response.contentLength = size == 0 ? 0 : end - start + 1;
+    if (request.method == 'HEAD' || size == 0) return;
+    await response.addStream(file.openRead(start, end + 1));
+  }
+
+  /// The first range of a `Range: bytes=...` header as inclusive
+  /// `(start, end)`, or null when it cannot be served.
+  static (int, int)? parseRange(String header, int size) {
+    final match = RegExp(r'^bytes=(\d*)-(\d*)').firstMatch(header.trim());
+    if (match == null || size == 0) return null;
+    final first = match[1]!;
+    final last = match[2]!;
+    int start;
+    int end;
+    if (first.isEmpty) {
+      // "bytes=-500": the last 500 bytes.
+      final suffix = int.tryParse(last);
+      if (suffix == null || suffix == 0) return null;
+      start = suffix >= size ? 0 : size - suffix;
+      end = size - 1;
+    } else {
+      start = int.parse(first);
+      end = last.isEmpty ? size - 1 : int.parse(last);
+      if (end >= size) end = size - 1;
+    }
+    if (start > end || start >= size) return null;
+    return (start, end);
   }
 
   Future<void> _bridge(HttpRequest request, MiniApp app) async {

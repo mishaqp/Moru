@@ -66,6 +66,7 @@ void main() {
     String? password,
     String method = 'GET',
     String? body,
+    Map<String, String> headers = const {},
   }) async {
     final request = await client.openUrl(
       method,
@@ -78,6 +79,7 @@ void main() {
         'Basic ${base64.encode(utf8.encode('any:$password'))}',
       );
     }
+    headers.forEach(request.headers.set);
     if (body != null) request.write(body);
     final response = await request.close();
     return (
@@ -166,5 +168,62 @@ void main() {
       Socket.connect(InternetAddress.loopbackIPv4, port),
       throwsA(isA<SocketException>()),
     );
+  });
+
+  test('files revalidate by ETag and serve byte ranges for seeking', () async {
+    await server.start(port: 0, localhostOnly: true);
+    final full = await get('/app/notes/style.css');
+    expect(full.headers.value('accept-ranges'), 'bytes');
+    expect(full.headers.contentLength, 6);
+    final etag = full.headers.value('etag')!;
+
+    final cached = await get(
+      '/app/notes/style.css',
+      headers: {'if-none-match': etag},
+    );
+    expect(cached.status, 304);
+    expect(cached.body, isEmpty);
+
+    final part = await get(
+      '/app/notes/style.css',
+      headers: {'range': 'bytes=1-3'},
+    );
+    expect(part.status, 206);
+    expect(part.body, 'ody');
+    expect(part.headers.value('content-range'), 'bytes 1-3/6');
+
+    final tail = await get(
+      '/app/notes/style.css',
+      headers: {'range': 'bytes=-2'},
+    );
+    expect(tail.body, '{}');
+    final open = await get(
+      '/app/notes/style.css',
+      headers: {'range': 'bytes=4-'},
+    );
+    expect(open.body, '{}');
+
+    final outside = await get(
+      '/app/notes/style.css',
+      headers: {'range': 'bytes=10-20'},
+    );
+    expect(outside.status, 416);
+    expect(outside.headers.value('content-range'), 'bytes */6');
+
+    final head = await get('/app/notes/style.css', method: 'HEAD');
+    expect(head.status, 200);
+    expect(head.headers.contentLength, 6);
+    expect(head.body, isEmpty);
+  });
+
+  test('range headers are parsed like browsers send them', () {
+    expect(MiniAppWebServer.parseRange('bytes=0-', 10), (0, 9));
+    expect(MiniAppWebServer.parseRange('bytes=5-100', 10), (5, 9));
+    expect(MiniAppWebServer.parseRange('bytes=-20', 10), (0, 9));
+    expect(MiniAppWebServer.parseRange('bytes=0-1, 4-5', 10), (0, 1));
+    for (final bad in ['bytes=9-2', 'bytes=10-', 'items=0-1', 'bytes=-0']) {
+      expect(MiniAppWebServer.parseRange(bad, 10), isNull, reason: bad);
+    }
+    expect(MiniAppWebServer.parseRange('bytes=0-', 0), isNull);
   });
 }
