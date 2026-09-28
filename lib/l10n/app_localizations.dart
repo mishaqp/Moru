@@ -19655,6 +19655,42 @@ abstract class AppLocalizations {
   /// **'Browser'**
   String get browserMiniTitle;
 
+  /// No description provided for @browserGoogleSignInBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Google does not allow signing in inside this browser. Sign in another way or open the site in Chrome.'**
+  String get browserGoogleSignInBlocked;
+
+  /// No description provided for @browserOpenInChrome.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Chrome'**
+  String get browserOpenInChrome;
+
+  /// No description provided for @browserSslTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection is not secure'**
+  String get browserSslTitle;
+
+  /// No description provided for @browserSslMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The certificate of {site} is not valid ({problem}). Someone may be trying to steal your data.'**
+  String browserSslMessage(String site, String problem);
+
+  /// No description provided for @browserSslProceed.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue anyway'**
+  String get browserSslProceed;
+
+  /// No description provided for @browserSslBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Go back'**
+  String get browserSslBack;
+
   /// No description provided for @browserBookmarks.
   ///
   /// In en, this message translates to:

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
@@ -56,6 +57,12 @@ class FakeNavigationDelegate extends PlatformNavigationDelegate {
   ProgressCallback? onProgress;
   NavigationRequestCallback? onNavigationRequest;
   HttpResponseErrorCallback? onHttpError;
+  SslAuthErrorCallback? onSslAuthError;
+
+  @override
+  Future<void> setOnSSlAuthError(SslAuthErrorCallback onSslAuthError) async {
+    this.onSslAuthError = onSslAuthError;
+  }
 
   @override
   Future<void> setOnHttpError(HttpResponseErrorCallback onHttpError) async {
@@ -259,6 +266,10 @@ class FakeWebViewController extends PlatformWebViewController {
     _delegate?.onPageFinished?.call(url);
   }
 
+  void simulateSslError(PlatformSslAuthError error) {
+    _delegate?.onSslAuthError?.call(error);
+  }
+
   void simulateWebResourceError(WebResourceError error) {
     _delegate?.onWebResourceError?.call(error);
   }
@@ -348,4 +359,17 @@ class FakeWebViewWidget extends PlatformWebViewWidget {
 
   @override
   Widget build(BuildContext context) => const SizedBox.expand();
+}
+
+/// A certificate error the test answers; [answer] says what the page did.
+class FakeSslAuthError extends PlatformSslAuthError {
+  FakeSslAuthError() : super(certificate: null, description: 'expired');
+
+  final Completer<String> answer = Completer<String>();
+
+  @override
+  Future<void> proceed() async => answer.complete('proceed');
+
+  @override
+  Future<void> cancel() async => answer.complete('cancel');
 }

@@ -1119,7 +1119,10 @@ class BrowserAgentSession {
     pageUrl.value = url;
     _pageUrl = url;
     _mainFrameStatus = null;
-    challenge.value = null;
+    // Known from the address alone; other checks need the page.
+    challenge.value = BrowserGuard.isGoogleSignIn(url)
+        ? const BrowserChallenge(kind: 'google_sign_in', blocking: false)
+        : null;
     final previous = _readyCompleter;
     if (previous == null || previous.isCompleted) {
       _readyCompleter = Completer<void>();

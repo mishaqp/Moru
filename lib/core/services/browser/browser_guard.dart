@@ -4,8 +4,9 @@ import 'dart:math' as math;
 class BrowserChallenge {
   const BrowserChallenge({required this.kind, required this.blocking});
 
-  /// `cloudflare`, `search_engine`, `captcha`, `rate_limited` or
-  /// `access_denied`.
+  /// `cloudflare`, `search_engine`, `captcha`, `rate_limited`,
+  /// `access_denied` or `google_sign_in` (Google refuses sign-in inside an
+  /// embedded browser).
   final String kind;
 
   /// The whole page is the check (an interstitial): clicking or typing
@@ -20,6 +21,10 @@ class BrowserChallenge {
       'rate_limited' => 'Wait a minute before trying again, and do less.',
       'access_denied' =>
         'The site refuses automated access. Stop retrying and tell the user.',
+      'google_sign_in' =>
+        'Google does not allow signing in inside this browser. Ask the user '
+            'to sign in to the site another way (email and password), or to '
+            'open it in Chrome. Do not try to get past it.',
       _ =>
         'Ask the user to complete the check in the browser themselves, then '
             'observe again. Do not try to solve it.',
@@ -60,6 +65,20 @@ class BrowserGuard {
     return host.startsWith('www.') ? host.substring(4) : host;
   }
 
+  /// Google's sign-in pages, which refuse embedded browsers
+  /// (`disallowed_useragent`).
+  static bool isGoogleSignIn(String? url) {
+    final parsed = url == null ? null : Uri.tryParse(url.trim());
+    if (parsed == null || parsed.host.toLowerCase() != 'accounts.google.com') {
+      return false;
+    }
+    final path = parsed.path.toLowerCase();
+    return path.contains('signin') ||
+        path.contains('servicelogin') ||
+        path.contains('/o/oauth2') ||
+        path.contains('/v3/signin');
+  }
+
   static bool isSearchHost(String? url) {
     final name = host(url);
     return name != null && _searchHosts.any((p) => p.hasMatch(name));
@@ -73,6 +92,9 @@ class BrowserGuard {
     String? url,
     Map<String, dynamic>? signals,
   }) {
+    if (isGoogleSignIn(url)) {
+      return const BrowserChallenge(kind: 'google_sign_in', blocking: false);
+    }
     final s = signals ?? const <String, dynamic>{};
     if (s['cloudflare'] == true) {
       return const BrowserChallenge(kind: 'cloudflare', blocking: true);

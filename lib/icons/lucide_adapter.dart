@@ -57,6 +57,7 @@ class Lucide {
   static const IconData Share = lucide.LucideIcons.share;
   static const IconData Bookmark = lucide.LucideIcons.bookmark;
   static const IconData Star = lucide.LucideIcons.star;
+  static const IconData LogIn = lucide.LucideIcons.logIn;
   static const IconData MessageCircleWarning =
       lucide.LucideIcons.messageCircleWarning;
   static const IconData MessageCircleQuestionMark =

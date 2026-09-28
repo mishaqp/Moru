@@ -11106,6 +11106,27 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserMiniTitle => 'Браузер';
 
   @override
+  String get browserGoogleSignInBlocked =>
+      'Google не пускает вход во встроенном браузере. Войдите другим способом или откройте сайт в Chrome.';
+
+  @override
+  String get browserOpenInChrome => 'Открыть в Chrome';
+
+  @override
+  String get browserSslTitle => 'Соединение не защищено';
+
+  @override
+  String browserSslMessage(String site, String problem) {
+    return 'Сертификат $site недействителен ($problem). Возможно, кто-то пытается перехватить ваши данные.';
+  }
+
+  @override
+  String get browserSslProceed => 'Всё равно продолжить';
+
+  @override
+  String get browserSslBack => 'Назад';
+
+  @override
   String get browserBookmarks => 'Закладки';
 
   @override

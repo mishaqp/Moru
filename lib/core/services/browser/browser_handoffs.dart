@@ -165,6 +165,20 @@ class BrowserHandoffs {
     });
   }
 
+  /// A page whose certificate is not valid was not opened; the model is
+  /// told why.
+  void noteSslError(String host, String problem) {
+    _forModel.add({
+      'kind': 'ssl_error',
+      'site': host,
+      'problem': problem,
+      'status': 'not_opened',
+      'next':
+          'The connection is not secure. Do not work around it; tell the '
+          'user, who can open the site themselves and decide.',
+    });
+  }
+
   /// Downloads and app links since the last call, once each, for the next
   /// tool result.
   List<Map<String, Object?>> drainForModel() {

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/services/browser/browser_agent_session.dart';
@@ -15,6 +16,7 @@ import '../../../features/home/services/browser_ask_ai_bridge.dart';
 import '../../../features/home/services/tool_approval_service.dart';
 import '../../../features/settings/pages/browser_settings_page.dart';
 import '../../../features/settings/pages/tool_schema_settings_page.dart';
+import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../main.dart' show routeObserver;
 import '../../widgets/snackbar.dart';
@@ -58,6 +60,10 @@ class WebViewPage extends StatefulWidget {
 /// Console messages of the shared agent WebView go to whichever page shows it
 /// now; its JavaScript channel is registered once and outlives the page.
 void Function(JavaScriptMessage message)? _agentConsoleSink;
+
+/// Sites whose invalid certificate the user chose to accept, until the app
+/// restarts (like Chrome's "Proceed").
+final Set<String> _sslAcceptedHosts = <String>{};
 
 /// A WebView for the shared agent browser: its first page and every tab.
 /// Nothing here belongs to a page, so tabs opened while the browser is
@@ -310,6 +316,7 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
       await _refreshCanGoStates(generation);
       await _updateTitle(generation);
     },
+    onSslAuthError: (error) => unawaited(_onSslError(error)),
     onHttpError: (error) {
       if (widget.agentSession) {
         BrowserAgentSession.instance.noteHttpError(
@@ -403,6 +410,59 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
           ? NotificationType.info
           : NotificationType.warning,
     );
+  }
+
+  /// A page whose certificate is not valid: the user decides while looking
+  /// at the browser; otherwise (the model drives it, or nobody looks) it is
+  /// not opened and the model is told.
+  Future<void> _onSslError(SslAuthError error) async {
+    final platform = error.platform;
+    final url = platform is AndroidSslAuthError ? platform.url : _currentUrl;
+    final host = Uri.tryParse(url ?? '')?.host ?? '';
+    if (host.isNotEmpty && _sslAcceptedHosts.contains(host)) {
+      await error.proceed();
+      return;
+    }
+    final session = BrowserAgentSession.instance;
+    final agentWorking =
+        widget.agentSession &&
+        session.currentActivity.value?.outcome ==
+            BrowserActivityOutcome.running;
+    final visible = widget.agentSession
+        ? session.isRouteCurrent && !session.minimized.value
+        : true;
+    if (!mounted || agentWorking || !visible) {
+      await error.cancel();
+      if (widget.agentSession) {
+        BrowserHandoffs.instance.noteSslError(host, platform.description);
+      }
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Lucide.ShieldAlert),
+        title: Text(l10n.browserSslTitle),
+        content: Text(l10n.browserSslMessage(host, platform.description)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.browserSslProceed),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.browserSslBack),
+          ),
+        ],
+      ),
+    );
+    if (proceed == true) {
+      if (host.isNotEmpty) _sslAcceptedHosts.add(host);
+      await error.proceed();
+    } else {
+      await error.cancel();
+    }
   }
 
   /// Chrome-style question: may this site use the camera, microphone,
@@ -877,10 +937,14 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
           children: [
             if (widget.agentSession && !contentMode)
               _askAiController == null
-                  ? const WebViewStatusBanner(showActivity: true)
+                  ? WebViewStatusBanner(
+                      showActivity: true,
+                      onOpenInChrome: _openExternally,
+                    )
                   : ListenableBuilder(
                       listenable: _askAiController!,
                       builder: (context, _) => WebViewStatusBanner(
+                        onOpenInChrome: _openExternally,
                         showActivity: switch (_askAiController!.state) {
                           AskAiPanelState.starting ||
                           AskAiPanelState.running ||

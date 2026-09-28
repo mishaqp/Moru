@@ -10981,6 +10981,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserMiniTitle => 'Browser';
 
   @override
+  String get browserGoogleSignInBlocked =>
+      'Google does not allow signing in inside this browser. Sign in another way or open the site in Chrome.';
+
+  @override
+  String get browserOpenInChrome => 'Open in Chrome';
+
+  @override
+  String get browserSslTitle => 'Connection is not secure';
+
+  @override
+  String browserSslMessage(String site, String problem) {
+    return 'The certificate of $site is not valid ($problem). Someone may be trying to steal your data.';
+  }
+
+  @override
+  String get browserSslProceed => 'Continue anyway';
+
+  @override
+  String get browserSslBack => 'Go back';
+
+  @override
   String get browserBookmarks => 'Bookmarks';
 
   @override

@@ -12,11 +12,20 @@ import '../../../theme/app_font_weights.dart';
 /// page with a Stop button. [showActivity] is false while the page's own
 /// Ask-AI panel shows its status, so one run is not shown twice.
 class WebViewStatusBanner extends StatelessWidget {
-  const WebViewStatusBanner({super.key, required this.showActivity});
+  const WebViewStatusBanner({
+    super.key,
+    required this.showActivity,
+    this.onOpenInChrome,
+  });
+
+  /// Opens the page in Chrome, offered where this browser cannot go on
+  /// (Google sign-in).
+  final VoidCallback? onOpenInChrome;
 
   static const Key challengeKey = ValueKey<String>('browser-challenge-banner');
   static const Key activityKey = ValueKey<String>('browser-agent-activity');
   static const Key stopKey = ValueKey<String>('browser-agent-stop');
+  static const Key openInChromeKey = ValueKey<String>('browser-open-chrome');
 
   final bool showActivity;
 
@@ -39,7 +48,11 @@ class WebViewStatusBanner extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (challenge != null) _ChallengeStrip(challenge),
+                    if (challenge != null)
+                      _ChallengeStrip(
+                        challenge,
+                        onOpenInChrome: onOpenInChrome,
+                      ),
                     if (running) BrowserActivityStrip(activity: activity!),
                   ],
                 ),
@@ -51,9 +64,10 @@ class WebViewStatusBanner extends StatelessWidget {
 }
 
 class _ChallengeStrip extends StatelessWidget {
-  const _ChallengeStrip(this.challenge);
+  const _ChallengeStrip(this.challenge, {this.onOpenInChrome});
 
   final BrowserChallenge challenge;
+  final VoidCallback? onOpenInChrome;
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +76,7 @@ class _ChallengeStrip extends StatelessWidget {
     final (icon, text) = switch (challenge.kind) {
       'rate_limited' => (Lucide.Timer, l10n.browserChallengeRateLimited),
       'access_denied' => (Lucide.Ban, l10n.browserChallengeDenied),
+      'google_sign_in' => (Lucide.LogIn, l10n.browserGoogleSignInBlocked),
       _ => (Lucide.ShieldAlert, l10n.browserChallengeVerify),
     };
     return Container(
@@ -87,6 +102,12 @@ class _ChallengeStrip extends StatelessWidget {
               ),
             ),
           ),
+          if (challenge.kind == 'google_sign_in' && onOpenInChrome != null)
+            TextButton(
+              key: WebViewStatusBanner.openInChromeKey,
+              onPressed: onOpenInChrome,
+              child: Text(l10n.browserOpenInChrome),
+            ),
         ],
       ),
     );

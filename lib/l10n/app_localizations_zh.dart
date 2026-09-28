@@ -10499,6 +10499,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserMiniTitle => '浏览器';
 
   @override
+  String get browserGoogleSignInBlocked =>
+      'Google 不允许在此内置浏览器中登录。请换一种方式登录，或在 Chrome 中打开该网站。';
+
+  @override
+  String get browserOpenInChrome => '在 Chrome 中打开';
+
+  @override
+  String get browserSslTitle => '连接不安全';
+
+  @override
+  String browserSslMessage(String site, String problem) {
+    return '$site 的证书无效（$problem）。可能有人试图窃取你的数据。';
+  }
+
+  @override
+  String get browserSslProceed => '仍然继续';
+
+  @override
+  String get browserSslBack => '返回';
+
+  @override
   String get browserBookmarks => '书签';
 
   @override
@@ -21676,6 +21697,27 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '浏览器';
+
+  @override
+  String get browserGoogleSignInBlocked =>
+      'Google 不允许在此内置浏览器中登录。请换一种方式登录，或在 Chrome 中打开该网站。';
+
+  @override
+  String get browserOpenInChrome => '在 Chrome 中打开';
+
+  @override
+  String get browserSslTitle => '连接不安全';
+
+  @override
+  String browserSslMessage(String site, String problem) {
+    return '$site 的证书无效（$problem）。可能有人试图窃取你的数据。';
+  }
+
+  @override
+  String get browserSslProceed => '仍然继续';
+
+  @override
+  String get browserSslBack => '返回';
 
   @override
   String get browserBookmarks => '书签';
@@ -32929,6 +32971,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '瀏覽器';
+
+  @override
+  String get browserGoogleSignInBlocked =>
+      'Google 不允許在此內建瀏覽器中登入。請改用其他方式登入，或在 Chrome 中開啟該網站。';
+
+  @override
+  String get browserOpenInChrome => '在 Chrome 中開啟';
+
+  @override
+  String get browserSslTitle => '連線不安全';
+
+  @override
+  String browserSslMessage(String site, String problem) {
+    return '$site 的憑證無效（$problem）。可能有人試圖竊取你的資料。';
+  }
+
+  @override
+  String get browserSslProceed => '仍要繼續';
+
+  @override
+  String get browserSslBack => '返回';
 
   @override
   String get browserBookmarks => '書籤';
