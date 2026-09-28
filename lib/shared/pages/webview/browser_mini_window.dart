@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/services/browser/browser_agent_session.dart';
-import '../../../features/home/services/browser_agent_actions.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../widgets/snackbar.dart' show rootNavigatorKey;
 import '../../../theme/app_font_weights.dart';
 import 'webview_page.dart';
+import 'webview_status_banner.dart';
 
 /// Opens the shared agent browser: expands the mini window when the browser
 /// is minimized, otherwise starts a new session at [startUrl].
@@ -58,6 +58,10 @@ class _BrowserMiniWindowState extends State<BrowserMiniWindow> {
   /// Distance of the window from the bottom-right corner of the safe area.
   Offset _fromBottomRight = const Offset(12, 150);
 
+  /// While a finger drags the window it follows at once; on release it
+  /// glides to the nearer side of the screen.
+  bool _dragging = false;
+
   @override
   Widget build(BuildContext context) {
     final session = BrowserAgentSession.instance;
@@ -71,27 +75,56 @@ class _BrowserMiniWindowState extends State<BrowserMiniWindow> {
         final height = width * 1.4;
         final maxRight = media.size.width - width - 8;
         final maxBottom = media.size.height - height - media.padding.top - 8;
-        final offset = Offset(
-          _fromBottomRight.dx.clamp(8.0, maxRight < 8 ? 8.0 : maxRight),
-          _fromBottomRight.dy.clamp(
-            media.padding.bottom + 8,
-            maxBottom < 8 ? 8.0 : maxBottom,
-          ),
+        Offset clamped(Offset o) => Offset(
+          o.dx.clamp(8.0, maxRight < 8 ? 8.0 : maxRight),
+          o.dy.clamp(media.padding.bottom + 8, maxBottom < 8 ? 8.0 : maxBottom),
         );
-        return Positioned(
+        final offset = clamped(_fromBottomRight);
+        return AnimatedPositioned(
+          duration: _dragging
+              ? Duration.zero
+              : const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
           right: offset.dx,
           bottom: offset.dy,
           width: width,
           height: height,
-          child: _MiniWindowCard(
-            key: BrowserMiniWindow.windowKey,
-            controller: controller,
-            onDrag: (delta) => setState(() {
-              _fromBottomRight = Offset(
-                offset.dx - delta.dx,
-                offset.dy - delta.dy,
-              );
-            }),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.85, end: 1),
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutBack,
+            builder: (context, scale, child) => Transform.scale(
+              scale: scale,
+              alignment: Alignment.bottomRight,
+              child: Opacity(
+                opacity: ((scale - 0.85) / 0.15).clamp(0.0, 1.0),
+                child: child,
+              ),
+            ),
+            child: _MiniWindowCard(
+              key: BrowserMiniWindow.windowKey,
+              controller: controller,
+              // From the state, not from this build's offset: several moves
+              // (and the lift) may arrive before the next build.
+              onDrag: (delta) => setState(() {
+                _dragging = true;
+                _fromBottomRight = clamped(
+                  Offset(
+                    _fromBottomRight.dx - delta.dx,
+                    _fromBottomRight.dy - delta.dy,
+                  ),
+                );
+              }),
+              onDragEnd: () => setState(() {
+                _dragging = false;
+                final right = clamped(_fromBottomRight).dx;
+                final centre = media.size.width - right - width / 2;
+                _fromBottomRight = Offset(
+                  centre < media.size.width / 2 ? maxRight : 12,
+                  _fromBottomRight.dy,
+                );
+              }),
+            ),
           ),
         );
       },
@@ -104,93 +137,151 @@ class _MiniWindowCard extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onDrag,
+    required this.onDragEnd,
   });
 
   final WebViewController controller;
   final ValueChanged<Offset> onDrag;
+  final VoidCallback onDragEnd;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final session = BrowserAgentSession.instance;
-    return Material(
-      elevation: 10,
-      color: cs.surface,
-      shadowColor: Colors.black54,
-      borderRadius: BorderRadius.circular(18),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onPanUpdate: (details) => onDrag(details.delta),
-            onTap: () => unawaited(openSharedBrowser()),
-            child: Container(
-              height: 36,
-              color: cs.surfaceContainerHigh,
-              padding: const EdgeInsets.only(left: 10),
-              child: Row(
-                children: [
-                  Icon(Lucide.Globe, size: 14, color: cs.primary),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: ValueListenableBuilder<BrowserActivity?>(
-                      valueListenable: session.currentActivity,
-                      builder: (context, activity, _) {
-                        final running =
-                            activity?.outcome == BrowserActivityOutcome.running;
-                        return Text(
-                          running
-                              ? browserActivityLabel(
-                                  activity!,
-                                  ru:
-                                      Localizations.localeOf(
-                                        context,
-                                      ).languageCode ==
-                                      'ru',
-                                )
-                              : l10n.browserMiniTitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: AppFontWeights.semibold,
-                            color: running ? cs.primary : cs.onSurface,
-                          ),
-                        );
-                      },
+    return ValueListenableBuilder<BrowserActivity?>(
+      valueListenable: session.currentActivity,
+      builder: (context, activity, _) {
+        final running = activity?.outcome == BrowserActivityOutcome.running;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: running
+                  ? cs.primary.withValues(alpha: 0.8)
+                  : cs.outlineVariant.withValues(alpha: 0.6),
+              width: running ? 1.6 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: (running ? cs.primary : Colors.black).withValues(
+                  alpha: running ? 0.28 : 0.22,
+                ),
+                blurRadius: 22,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(19),
+            child: Column(
+              children: [
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onPanUpdate: (details) => onDrag(details.delta),
+                  onPanEnd: (_) => onDragEnd(),
+                  onTap: () => unawaited(openSharedBrowser()),
+                  child: Container(
+                    height: 38,
+                    color: cs.surfaceContainerHigh,
+                    padding: const EdgeInsets.only(left: 10),
+                    child: Row(
+                      children: [
+                        Expanded(child: _MiniAddress(session: session)),
+                        _HeaderButton(
+                          key: BrowserMiniWindow.expandKey,
+                          icon: Lucide.Maximize2,
+                          tooltip: l10n.browserMiniExpand,
+                          onTap: () => unawaited(openSharedBrowser()),
+                        ),
+                        _HeaderButton(
+                          key: BrowserMiniWindow.closeKey,
+                          icon: Lucide.X,
+                          tooltip: l10n.commonClose,
+                          onTap: () => unawaited(session.closeMinimized()),
+                        ),
+                      ],
                     ),
                   ),
-                  _HeaderButton(
-                    key: BrowserMiniWindow.expandKey,
-                    icon: Lucide.Maximize2,
-                    tooltip: l10n.browserMiniExpand,
+                ),
+                ValueListenableBuilder<bool>(
+                  valueListenable: session.pageLoading,
+                  builder: (context, loading, _) => SizedBox(
+                    height: 2,
+                    child: loading
+                        ? const LinearProgressIndicator(minHeight: 2)
+                        : null,
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () => unawaited(openSharedBrowser()),
+                    // The small preview is watch-only; interacting happens
+                    // in the expanded page.
+                    child: IgnorePointer(
+                      child: WebViewWidget(controller: controller),
+                    ),
                   ),
-                  _HeaderButton(
-                    key: BrowserMiniWindow.closeKey,
-                    icon: Lucide.X,
-                    tooltip: l10n.commonClose,
-                    onTap: () => unawaited(session.closeMinimized()),
-                  ),
-                ],
-              ),
+                ),
+                if (running)
+                  BrowserActivityStrip(activity: activity!, compact: true),
+              ],
             ),
           ),
-          Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => unawaited(openSharedBrowser()),
-              // The small preview is watch-only; interacting happens in the
-              // expanded page.
-              child: IgnorePointer(
-                child: WebViewWidget(controller: controller),
+        );
+      },
+    );
+  }
+}
+
+/// Lock and domain of the page the mini window shows.
+class _MiniAddress extends StatelessWidget {
+  const _MiniAddress({required this.session});
+
+  final BrowserAgentSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    return ValueListenableBuilder<String?>(
+      valueListenable: session.pageUrl,
+      builder: (context, url, _) {
+        final uri = url == null ? null : Uri.tryParse(url);
+        final host = uri?.host ?? '';
+        final secure = uri?.scheme == 'https';
+        return Row(
+          children: [
+            Icon(
+              host.isEmpty
+                  ? Lucide.Globe
+                  : (secure ? Lucide.Lock : Lucide.LockOpen),
+              size: 13,
+              color: host.isEmpty || secure
+                  ? cs.onSurface.withValues(alpha: 0.6)
+                  : cs.error,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                host.isEmpty
+                    ? l10n.browserMiniTitle
+                    : (host.startsWith('www.') ? host.substring(4) : host),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: AppFontWeights.semibold,
+                  color: cs.onSurface,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 }

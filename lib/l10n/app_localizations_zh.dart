@@ -10499,6 +10499,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserMiniTitle => '浏览器';
 
   @override
+  String get browserChallengeVerify => '网站要求验证你是真人。请自行完成验证，助手会等待。';
+
+  @override
+  String get browserChallengeRateLimited => '网站限制了请求频率。助手会放慢速度。';
+
+  @override
+  String get browserChallengeDenied => '网站拒绝自动访问。';
+
+  @override
   String get chatHeaderFiles => '文件';
 
   @override
@@ -21563,6 +21572,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '浏览器';
+
+  @override
+  String get browserChallengeVerify => '网站要求验证你是真人。请自行完成验证，助手会等待。';
+
+  @override
+  String get browserChallengeRateLimited => '网站限制了请求频率。助手会放慢速度。';
+
+  @override
+  String get browserChallengeDenied => '网站拒绝自动访问。';
 
   @override
   String get chatHeaderFiles => '文件';
@@ -32703,6 +32721,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '瀏覽器';
+
+  @override
+  String get browserChallengeVerify => '網站要求驗證你是真人。請自行完成驗證，助手會等待。';
+
+  @override
+  String get browserChallengeRateLimited => '網站限制了請求頻率。助手會放慢速度。';
+
+  @override
+  String get browserChallengeDenied => '網站拒絕自動存取。';
 
   @override
   String get chatHeaderFiles => '檔案';

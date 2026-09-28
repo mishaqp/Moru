@@ -27,7 +27,12 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.onShowActivityLog,
     this.onOpenSettings,
     required this.onShowConsole,
+    this.progress,
   });
+
+  /// Page load progress from 0 to 1 while loading (0: not known yet), null
+  /// when the page has loaded.
+  final double? progress;
 
   final String? currentUrl;
   final String? title;
@@ -56,45 +61,93 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
     final showSubtitle = trimmedTitle.isNotEmpty && trimmedTitle != domain;
     final secure = uri?.scheme == 'https';
 
-    final addressContent = Column(
-      mainAxisSize: MainAxisSize.min,
+    final addressContent = Row(
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (domain.isNotEmpty) ...[
-              Icon(
-                secure ? Lucide.Lock : Lucide.LockOpen,
-                size: 13,
-                color: cs.onSurface.withValues(alpha: 0.5),
-              ),
-              const SizedBox(width: 5),
-            ],
-            Flexible(
-              child: Text(
+        if (domain.isNotEmpty) ...[
+          Icon(
+            secure ? Lucide.Lock : Lucide.LockOpen,
+            key: const ValueKey('browser_address_lock'),
+            size: 14,
+            color: secure ? cs.onSurface.withValues(alpha: 0.55) : cs.error,
+          ),
+          const SizedBox(width: 7),
+        ],
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
                 domain,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 14,
+                  height: 1.2,
                   fontWeight: AppFontWeights.semibold,
                   color: cs.onSurface,
                 ),
               ),
-            ),
-          ],
+              if (showSubtitle)
+                Text(
+                  trimmedTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.2,
+                    color: cs.onSurface.withValues(alpha: 0.55),
+                  ),
+                ),
+            ],
+          ),
         ),
-        if (showSubtitle)
-          Text(
-            trimmedTitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11.5,
-              color: cs.onSurface.withValues(alpha: 0.55),
+      ],
+    );
+
+    // The address pill: lock, domain and title, with the load progress as a
+    // thin line along its bottom edge.
+    final pill = Container(
+      height: 42,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(21),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Material(
+              type: MaterialType.transparency,
+              child: onTapAddress == null
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: addressContent,
+                    )
+                  : InkWell(
+                      key: const ValueKey('browser_address_tap_target'),
+                      onTap: onTapAddress,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: addressContent,
+                      ),
+                    ),
             ),
           ),
-      ],
+          if (progress != null)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: LinearProgressIndicator(
+                key: const ValueKey('browser_address_progress'),
+                minHeight: 2.5,
+                value: progress! > 0 ? progress : null,
+                backgroundColor: Colors.transparent,
+              ),
+            ),
+        ],
+      ),
     );
 
     return AppBar(
@@ -110,17 +163,7 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
           onTap: onClose,
         ),
       ),
-      title: onTapAddress == null
-          ? addressContent
-          : InkWell(
-              key: const ValueKey('browser_address_tap_target'),
-              borderRadius: BorderRadius.circular(10),
-              onTap: onTapAddress,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                child: addressContent,
-              ),
-            ),
+      title: pill,
       actions: [
         if (onMinimize != null)
           IosIconButton(

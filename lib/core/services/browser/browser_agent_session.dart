@@ -542,6 +542,9 @@ class BrowserAgentSession {
     }
   }
 
+  @visibleForTesting
+  bool get stopRequested => _stopSignal?.isCompleted ?? false;
+
   Future<T> _interruptible<T>(Future<T> future) {
     final signal = _stopSignal;
     if (signal == null) return future;
@@ -662,9 +665,17 @@ class BrowserAgentSession {
     _readyCompleter = null;
   }
 
+  /// The page the shared browser shows, for the mini window.
+  final ValueNotifier<String?> pageUrl = ValueNotifier<String?>(null);
+
+  /// Whether that page is still loading.
+  final ValueNotifier<bool> pageLoading = ValueNotifier<bool>(false);
+
   void pageStarted(String url) {
     _navigationSequence++;
     _loading = true;
+    pageLoading.value = true;
+    pageUrl.value = url;
     _pageUrl = url;
     _mainFrameStatus = null;
     challenge.value = null;
@@ -676,6 +687,8 @@ class BrowserAgentSession {
 
   void pageFinished(String url) {
     _loading = false;
+    pageLoading.value = false;
+    pageUrl.value = url;
     // The single, central reconciliation point for every committed
     // navigation on the shared controller — see
     // BrowserNavigationHistory's doc comment for the full contract. This

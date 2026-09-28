@@ -10981,6 +10981,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserMiniTitle => 'Browser';
 
   @override
+  String get browserChallengeVerify =>
+      'The site asks to confirm you are a person. Complete the check yourself; the assistant waits.';
+
+  @override
+  String get browserChallengeRateLimited =>
+      'The site limits requests. The assistant slows down.';
+
+  @override
+  String get browserChallengeDenied => 'The site refuses automated access.';
+
+  @override
   String get chatHeaderFiles => 'Files';
 
   @override

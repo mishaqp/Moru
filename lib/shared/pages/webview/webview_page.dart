@@ -22,6 +22,7 @@ import 'webview_bottom_panel.dart';
 import 'webview_console.dart';
 import 'webview_error_view.dart';
 import 'webview_result_card.dart';
+import 'webview_status_banner.dart';
 import 'webview_top_bar.dart';
 
 /// Why the browser page is being closed -- used only to keep the three
@@ -599,18 +600,25 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
               : null,
           onOpenSettings: widget.agentSession ? _openBrowserSettings : null,
           onShowConsole: _showConsole,
+          progress: _isLoading ? _progress / 100 : null,
         ),
         body: Column(
           children: [
-            SizedBox(
-              height: 3,
-              child: _isLoading
-                  ? LinearProgressIndicator(
-                      minHeight: 3,
-                      value: _progress > 0 ? _progress / 100 : null,
-                    )
-                  : null,
-            ),
+            if (widget.agentSession && !contentMode)
+              _askAiController == null
+                  ? const WebViewStatusBanner(showActivity: true)
+                  : ListenableBuilder(
+                      listenable: _askAiController!,
+                      builder: (context, _) => WebViewStatusBanner(
+                        showActivity: switch (_askAiController!.state) {
+                          AskAiPanelState.starting ||
+                          AskAiPanelState.running ||
+                          AskAiPanelState.awaitingApproval ||
+                          AskAiPanelState.stopping => false,
+                          _ => true,
+                        },
+                      ),
+                    ),
             Expanded(
               child: _mainFrameError != null
                   ? WebViewErrorView(

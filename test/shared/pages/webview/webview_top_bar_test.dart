@@ -168,4 +168,44 @@ void main() {
     // Only one place shows the domain text.
     expect(find.text('example.com'), findsOneWidget);
   });
+
+  testWidgets('the address pill marks plain http and shows load progress', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      wrap(
+        WebViewTopBar(
+          currentUrl: 'http://example.com',
+          title: null,
+          onClose: () {},
+          onShowConsole: () {},
+          progress: 0.4,
+        ),
+      ),
+    );
+    final lock = tester.widget<Icon>(
+      find.byKey(const ValueKey('browser_address_lock')),
+    );
+    final theme = Theme.of(tester.element(find.byType(AppBar)));
+    expect(lock.color, theme.colorScheme.error);
+    final bar = tester.widget<LinearProgressIndicator>(
+      find.byKey(const ValueKey('browser_address_progress')),
+    );
+    expect(bar.value, 0.4);
+
+    await tester.pumpWidget(
+      wrap(
+        WebViewTopBar(
+          currentUrl: 'https://example.com',
+          title: null,
+          onClose: () {},
+          onShowConsole: () {},
+        ),
+      ),
+    );
+    expect(
+      find.byKey(const ValueKey('browser_address_progress')),
+      findsNothing,
+    );
+  });
 }

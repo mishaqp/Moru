@@ -19655,6 +19655,24 @@ abstract class AppLocalizations {
   /// **'Browser'**
   String get browserMiniTitle;
 
+  /// No description provided for @browserChallengeVerify.
+  ///
+  /// In en, this message translates to:
+  /// **'The site asks to confirm you are a person. Complete the check yourself; the assistant waits.'**
+  String get browserChallengeVerify;
+
+  /// No description provided for @browserChallengeRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'The site limits requests. The assistant slows down.'**
+  String get browserChallengeRateLimited;
+
+  /// No description provided for @browserChallengeDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'The site refuses automated access.'**
+  String get browserChallengeDenied;
+
   /// No description provided for @chatHeaderFiles.
   ///
   /// In en, this message translates to:

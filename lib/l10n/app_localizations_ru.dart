@@ -11106,6 +11106,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserMiniTitle => 'Браузер';
 
   @override
+  String get browserChallengeVerify =>
+      'Сайт просит подтвердить, что вы человек. Пройдите проверку сами — ассистент подождёт.';
+
+  @override
+  String get browserChallengeRateLimited =>
+      'Сайт ограничивает запросы. Ассистент сбавит темп.';
+
+  @override
+  String get browserChallengeDenied => 'Сайт не пускает автоматический доступ.';
+
+  @override
   String get chatHeaderFiles => 'Файлы';
 
   @override

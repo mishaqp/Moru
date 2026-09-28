@@ -9,6 +9,7 @@ import 'package:Kelivo/features/home/widgets/chat_header_switcher.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/pages/webview/browser_mini_window.dart';
 import 'package:Kelivo/shared/pages/webview/webview_page.dart';
+import 'package:Kelivo/shared/pages/webview/webview_status_banner.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart' show rootNavigatorKey;
 
 import '../../../support/fake_webview_platform.dart';
@@ -135,5 +136,41 @@ void main() {
     expect(find.byKey(ChatHeaderSwitcher.filesKey), findsNothing);
     expect(find.byKey(ChatHeaderSwitcher.terminalKey), findsNothing);
     expect(find.byKey(ChatHeaderSwitcher.browserKey), findsOneWidget);
+  });
+
+  testWidgets('the mini window shows the site, the running action with '
+      'Stop, and glides to the nearer edge after a drag', (tester) async {
+    await tester.pumpWidget(app());
+    await openBrowser(tester);
+    final session = BrowserAgentSession.instance;
+    session.pageFinished('https://www.example.org/page');
+    await tester.tap(find.byKey(_minimize));
+    await tester.pumpAndSettle();
+
+    expect(find.text('example.org'), findsOneWidget);
+
+    session.currentActivity.value = BrowserActivity(
+      id: 'a',
+      action: 'scroll',
+      startedAt: DateTime(2026),
+    );
+    await tester.pump();
+    expect(find.byKey(WebViewStatusBanner.stopKey), findsOneWidget);
+    session.currentActivity.value = null;
+    await tester.pumpAndSettle();
+    expect(find.byKey(WebViewStatusBanner.stopKey), findsNothing);
+
+    final window = find.byKey(BrowserMiniWindow.windowKey);
+    final screenWidth =
+        tester.view.physicalSize.width / tester.view.devicePixelRatio;
+    expect(tester.getCenter(window).dx, greaterThan(screenWidth / 2));
+    // Dragged a little to the left it returns to the right edge ...
+    await tester.drag(find.text('example.org'), const Offset(-40, 0));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(window).right, closeTo(screenWidth - 12, 1));
+    // ... dragged past the middle it settles on the left.
+    await tester.drag(find.text('example.org'), Offset(-screenWidth * 0.6, 0));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(window).left, closeTo(8, 1));
   });
 }
