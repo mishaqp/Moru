@@ -2,7 +2,9 @@ import "../../../support/business_test_harness.dart";
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/providers/tts_provider.dart';
+import 'package:Kelivo/features/chat/widgets/bounded_large_text_view.dart';
 import 'package:Kelivo/features/chat/widgets/chat_message_widget.dart';
+import 'package:Kelivo/features/chat/widgets/reasoning_window.dart';
 import 'package:Kelivo/features/home/services/ask_user_interaction_service.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
@@ -84,6 +86,60 @@ void main() {
       same(position),
     );
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('long reasoning streams only its end and finishes as plain '
+      'text', (tester) async {
+    // 30 000 characters: line i starts with "L<i> ".
+    final text = List.generate(
+      1000,
+      (i) => 'L${i.toString().padLeft(4, '0')} ${'x' * 23}',
+    ).join('\n');
+    // In a scrolling list, as in the chat.
+    Widget message({required bool loading}) => _buildHarness(
+      child: SingleChildScrollView(
+        child: ChatMessageWidget(
+          message: ChatMessage(
+            id: 'long-reasoning',
+            role: 'assistant',
+            content: '',
+            conversationId: 'conversation-1',
+            isStreaming: loading,
+          ),
+          reasoningText: text,
+          reasoningLoading: loading,
+          reasoningExpanded: true,
+          showModelIcon: false,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(message(loading: true));
+    await tester.pump();
+    final streamed = _allRichTextPlainText(tester);
+    expect(streamed, contains('L0999'));
+    expect(streamed, isNot(contains('L0000')));
+    expect(find.text('29K'), findsOneWidget);
+    expect(find.textContaining('of 29K characters'), findsOneWidget);
+
+    await tester.pumpWidget(message(loading: false));
+    await tester.pump();
+    expect(find.byType(BoundedLargeTextView), findsOneWidget);
+    expect(find.byType(MarkdownWithCodeHighlight), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  test('the reasoning tail starts at a whole line', () {
+    expect(ReasoningWindow.tail('short'), (text: 'short', hidden: 0));
+    final text = '${'a' * 50}\nsecond line\n${'b' * 20}';
+    final tail = ReasoningWindow.tail(text, max: 33);
+    expect(tail.text, 'second line\n${'b' * 20}');
+    expect(tail.hidden, 51);
+    // Without a line break nearby the cut is exact.
+    final flat = 'c' * 1000;
+    expect(ReasoningWindow.tail(flat, max: 100).text, 'c' * 100);
+    expect(ReasoningWindow.sizeLabel(950), '950');
+    expect(ReasoningWindow.sizeLabel(12345), '12K');
   });
 
   testWidgets('ChatMessageWidget preserves table scroll when streaming ends', (

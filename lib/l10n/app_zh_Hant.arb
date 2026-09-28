@@ -4181,5 +4181,6 @@
   "chatEmptyAssistantReply": "模型 {model} 傳回了空回應。請重試，或檢查供應商與模型設定。",
   "toolApprovalsSectionTitle": "工具確認",
   "toolApprovalsFullTrustTitle": "完全信任模式（危險）",
-  "toolApprovalsFullTrustDescription": "略過瀏覽器、MCP、Shell、檔案寫入等通常需要確認的工具的逐次確認。"
+  "toolApprovalsFullTrustDescription": "略過瀏覽器、MCP、Shell、檔案寫入等通常需要確認的工具的逐次確認。",
+  "chatReasoningTailHint": "僅顯示最後 {shown} / 共 {total} 字元"
 }

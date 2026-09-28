@@ -13,6 +13,8 @@ import 'package:open_filex/open_filex.dart';
 import 'dart:convert';
 import '../../home/widgets/file_processing_indicator.dart';
 import '../pages/image_viewer_page.dart';
+import 'bounded_large_text_view.dart';
+import 'reasoning_window.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/message_part.dart';
 import '../../../icons/lucide_adapter.dart';
@@ -4869,6 +4871,17 @@ class _ChainOfThoughtReasoningStepState
               ),
             ),
           ],
+          if (display.isNotEmpty) ...[
+            const SizedBox(width: 6),
+            Text(
+              ReasoningWindow.sizeLabel(display.length),
+              style: TextStyle(
+                fontSize: 11.5,
+                color: fg.muted,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -4894,6 +4907,31 @@ class _ChainOfThoughtReasoningStepState
       return Text(
         text.isNotEmpty ? text : '…',
         style: TextStyle(fontSize: 12.5, height: 1.32),
+      );
+    }
+
+    // While streaming only the end is laid out; the rest is still in the
+    // message and shows once the reasoning is done.
+    final window = widget.step.loading
+        ? ReasoningWindow.tail(display)
+        : (text: display, hidden: 0);
+    Widget windowed() {
+      final body = reasoningContent(window.text);
+      if (window.hidden == 0) return body;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            l10n.chatReasoningTailHint(
+              ReasoningWindow.sizeLabel(window.text.length),
+              ReasoningWindow.sizeLabel(display.length),
+            ),
+            style: TextStyle(fontSize: 11.5, color: fg.muted),
+          ),
+          const SizedBox(height: 4),
+          body,
+        ],
       );
     }
 
@@ -4927,12 +4965,21 @@ class _ChainOfThoughtReasoningStepState
             // Bouncing physics already declines drags when content fits.
             // Keeping it stable also retains ScrollPosition on overflow.
             physics: const BouncingScrollPhysics(),
-            child: SelectionArea(child: reasoningContent(display)),
+            child: SelectionArea(child: windowed()),
           ),
         ),
       );
     } else if (state == _ReasoningStepState.expanded) {
-      content = SelectionArea(child: reasoningContent(display));
+      content =
+          !widget.step.loading &&
+              display.length > ReasoningWindow.plainAboveChars
+          // Markdown for this much text stalls the list; plain text is
+          // laid out in chunks and only when scrolled to.
+          ? BoundedLargeTextView(
+              display,
+              style: const TextStyle(fontSize: 12.5, height: 1.32),
+            )
+          : SelectionArea(child: windowed());
     }
 
     return _TimelineStepShell(
@@ -6729,281 +6776,6 @@ class _SourceFaviconFallback extends StatelessWidget {
         Lucide.Globe,
         size: size * 0.72,
         color: cs.onSurface.withValues(alpha: 0.52),
-      ),
-    );
-  }
-}
-
-class _ReasoningSection extends StatefulWidget {
-  const _ReasoningSection({
-    required this.text,
-    required this.expanded,
-    required this.loading,
-    required this.startAt,
-    required this.finishedAt,
-    // ignore: unused_element_parameter
-    this.onToggle,
-  });
-
-  final String text;
-  final bool expanded;
-  final bool loading;
-  final DateTime? startAt;
-  final DateTime? finishedAt;
-  final VoidCallback? onToggle;
-
-  @override
-  State<_ReasoningSection> createState() => _ReasoningSectionState();
-}
-
-class _ReasoningSectionState extends State<_ReasoningSection> {
-  // Use ValueNotifier to only update elapsed time display, not rebuild entire widget
-  final ValueNotifier<int> _elapsedTick = ValueNotifier<int>(0);
-  Timer? _elapsedTimer;
-  final ScrollController _scroll = ScrollController();
-  bool _hasOverflow = false;
-
-  String _sanitize(String s) {
-    return s.replaceAll('\r', '').trim();
-  }
-
-  String _elapsed() {
-    final start = widget.startAt;
-    if (start == null) return '';
-    final end = widget.finishedAt ?? (widget.loading ? DateTime.now() : start);
-    final ms = end.difference(start).inMilliseconds;
-    return '(${(ms / 1000).toStringAsFixed(1)}s)';
-  }
-
-  void _syncElapsedTimer() {
-    if (widget.loading && widget.finishedAt == null) {
-      _elapsedTimer ??= Timer.periodic(const Duration(milliseconds: 100), (_) {
-        if (mounted) _elapsedTick.value++;
-      });
-    } else {
-      _elapsedTimer?.cancel();
-      _elapsedTimer = null;
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.loading) _syncElapsedTimer();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkOverflow();
-      if (widget.loading && _scroll.hasClients) {
-        _scroll.jumpTo(_scroll.position.maxScrollExtent);
-      }
-    });
-  }
-
-  @override
-  void didUpdateWidget(covariant _ReasoningSection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _syncElapsedTimer();
-    if (widget.loading) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scroll.hasClients) {
-          _scroll.jumpTo(_scroll.position.maxScrollExtent);
-        }
-      });
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkOverflow());
-  }
-
-  @override
-  void dispose() {
-    _elapsedTimer?.cancel();
-    _elapsedTick.dispose();
-    _scroll.dispose();
-    super.dispose();
-  }
-
-  void _checkOverflow() {
-    if (!_scroll.hasClients) return;
-    final over = _scroll.position.maxScrollExtent > 0.5;
-    if (over != _hasOverflow && mounted) setState(() => _hasOverflow = over);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fg = chatSurfaceForegroundPalette(context);
-    final l10n = AppLocalizations.of(context)!;
-    final enableReasoningMarkdown = context.select<SettingsProvider, bool>(
-      (s) => s.enableReasoningMarkdown,
-    );
-    final loading = widget.loading;
-
-    // Android-like surface style
-    final curve = const Cubic(0.2, 0.8, 0.2, 1);
-
-    // Build a compact header with optional scrolling preview when loading
-    Widget header = IosCardPress(
-      borderRadius: BorderRadius.circular(12),
-      baseColor: Colors.transparent,
-      pressedScale: 1.0,
-      duration: const Duration(milliseconds: 220),
-      onTap: widget.onToggle,
-      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Row(
-          children: [
-            ReasoningIcons.thinkingCardIcon(size: 18, color: fg.strong),
-            const SizedBox(width: 8),
-            ThinkingSheen(
-              enabled: loading,
-              color: fg.strong,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    l10n.chatMessageWidgetDeepThinking,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: AppFontWeights.emphasis,
-                      color: fg.strong,
-                    ),
-                  ),
-                  if (widget.startAt != null) ...[
-                    const SizedBox(width: 8),
-                    ValueListenableBuilder<int>(
-                      valueListenable: _elapsedTick,
-                      builder: (context, _, __) => Text(
-                        _elapsed(),
-                        style: TextStyle(fontSize: 13, color: fg.medium),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            // No header marquee; content area handles scrolling when loading
-            const Spacer(),
-            AnimatedRotation(
-              turns: widget.expanded ? 0.25 : 0.0, // right -> down
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeInOutCubic,
-              child: Icon(Lucide.ChevronRight, size: 18, color: fg.strong),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    // 抽公共样式，继承当前 DefaultTextStyle（从而继承正确的颜色）
-    final TextStyle baseStyle = DefaultTextStyle.of(
-      context,
-    ).style.copyWith(fontSize: 12.5, height: 1.32);
-
-    const StrutStyle baseStrut = StrutStyle(
-      forceStrutHeight: true,
-      fontSize: 12.5,
-      height: 1.32,
-      leading: 0,
-    );
-
-    const TextHeightBehavior baseTHB = TextHeightBehavior(
-      applyHeightToFirstAscent: false,
-      applyHeightToLastDescent: false,
-      leadingDistribution: TextLeadingDistribution.proportional,
-    );
-
-    final bool isLoading = loading;
-    final display = _sanitize(widget.text);
-
-    // 未加载：不要再指定 color: fg，让它继承和"加载中"相同的颜色
-    Widget reasoningContent(String text) {
-      if (enableReasoningMarkdown) {
-        return RepaintBoundary(
-          child: MarkdownWithCodeHighlight(
-            text: text.isNotEmpty ? text : '…',
-            baseStyle: baseStyle,
-            streaming: isLoading,
-          ),
-        );
-      }
-      return Text(
-        text.isNotEmpty ? text : '…',
-        style: baseStyle,
-        strutStyle: baseStrut,
-        textHeightBehavior: baseTHB,
-      );
-    }
-
-    Widget body = Padding(
-      padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
-      child: reasoningContent(display),
-    );
-
-    if (isLoading && !widget.expanded) {
-      body = Padding(
-        padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 80),
-          child: OptionalShaderMask(
-            enabled: _hasOverflow,
-            shaderCallback: (rect) {
-              final h = rect.height;
-              const double topFade = 12.0;
-              const double bottomFade = 28.0;
-              final double sTop = (topFade / h).clamp(0.0, 1.0);
-              final double sBot = (1.0 - bottomFade / h).clamp(0.0, 1.0);
-              return LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: const [
-                  Color(0x00FFFFFF), // color-gate: ignore (dstIn alpha mask)
-                  Color(0xFFFFFFFF), // color-gate: ignore (dstIn alpha mask)
-                  Color(0xFFFFFFFF), // color-gate: ignore (dstIn alpha mask)
-                  Color(0x00FFFFFF), // color-gate: ignore (dstIn alpha mask)
-                ],
-                stops: [0.0, sTop, sBot, 1.0],
-              ).createShader(rect);
-            },
-            blendMode: BlendMode.dstIn,
-            child: NotificationListener<ScrollUpdateNotification>(
-              onNotification: (_) {
-                WidgetsBinding.instance.addPostFrameCallback(
-                  (_) => _checkOverflow(),
-                );
-                return false;
-              },
-              child: SingleChildScrollView(
-                controller: _scroll,
-                physics: const BouncingScrollPhysics(),
-                child: reasoningContent(display),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    // Enable long-press text selection in reasoning body
-    body = SelectionArea(child: body);
-
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 300),
-      curve: curve,
-      alignment: Alignment.topLeft,
-      child: SizedBox(
-        width: double.infinity,
-        child: buildSharedChatSurface(
-          context,
-          borderRadius: BorderRadius.circular(16),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          defaultColor: cs.primaryContainer.withValues(
-            alpha: isDark ? 0.25 : 0.30,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [header, if (widget.expanded || isLoading) body],
-          ),
-        ),
       ),
     );
   }

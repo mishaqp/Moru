@@ -11077,6 +11077,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get toolApprovalsFullTrustDescription =>
       '跳过浏览器、MCP、Shell、文件写入等通常需要确认的工具的逐次确认。';
+
+  @override
+  String chatReasoningTailHint(String shown, String total) {
+    return '仅显示最后 $shown / 共 $total 字符';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -22081,6 +22086,11 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get toolApprovalsFullTrustDescription =>
       '跳过浏览器、MCP、Shell、文件写入等通常需要确认的工具的逐次确认。';
+
+  @override
+  String chatReasoningTailHint(String shown, String total) {
+    return '仅显示最后 $shown / 共 $total 字符';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -33159,4 +33169,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get toolApprovalsFullTrustDescription =>
       '略過瀏覽器、MCP、Shell、檔案寫入等通常需要確認的工具的逐次確認。';
+
+  @override
+  String chatReasoningTailHint(String shown, String total) {
+    return '僅顯示最後 $shown / 共 $total 字元';
+  }
 }

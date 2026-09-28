@@ -20710,6 +20710,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skip per-action confirmations for browser, MCP, shell, file writes, and other tools that normally require approval.'**
   String get toolApprovalsFullTrustDescription;
+
+  /// Above a streaming reasoning that shows only its end; shown and total are sizes like 8K.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing the last {shown} of {total} characters'**
+  String chatReasoningTailHint(String shown, String total);
 }
 
 class _AppLocalizationsDelegate

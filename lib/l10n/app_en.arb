@@ -5246,5 +5246,13 @@
   },
   "toolApprovalsSectionTitle": "Tool approvals",
   "toolApprovalsFullTrustTitle": "Full trust mode (dangerous)",
-  "toolApprovalsFullTrustDescription": "Skip per-action confirmations for browser, MCP, shell, file writes, and other tools that normally require approval."
+  "toolApprovalsFullTrustDescription": "Skip per-action confirmations for browser, MCP, shell, file writes, and other tools that normally require approval.",
+  "chatReasoningTailHint": "Showing the last {shown} of {total} characters",
+  "@chatReasoningTailHint": {
+    "description": "Above a streaming reasoning that shows only its end; shown and total are sizes like 8K.",
+    "placeholders": {
+      "shown": {"type": "String"},
+      "total": {"type": "String"}
+    }
+  }
 }

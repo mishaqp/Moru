@@ -11714,4 +11714,9 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get toolApprovalsFullTrustDescription =>
       'Не спрашивать подтверждение перед действиями ИИ. Действует для браузера, MCP, shell, записи файлов и других инструментов, которые обычно требуют подтверждения.';
+
+  @override
+  String chatReasoningTailHint(String shown, String total) {
+    return 'Показаны последние $shown из $total символов';
+  }
 }

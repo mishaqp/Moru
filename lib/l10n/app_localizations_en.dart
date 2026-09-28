@@ -11584,4 +11584,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get toolApprovalsFullTrustDescription =>
       'Skip per-action confirmations for browser, MCP, shell, file writes, and other tools that normally require approval.';
+
+  @override
+  String chatReasoningTailHint(String shown, String total) {
+    return 'Showing the last $shown of $total characters';
+  }
 }
