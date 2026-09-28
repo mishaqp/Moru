@@ -435,6 +435,9 @@ class MiniAppStore extends ChangeNotifier {
     }
     await _writes[id];
     await _writes[_journal(id)]?.catchError((_) {});
+    for (final name in ['jobs.json', 'reminders.json']) {
+      await _writes[_mapKey(id, name)]?.catchError((_) {});
+    }
     final directory = Directory(app.directory);
     if (await directory.exists()) await directory.delete(recursive: true);
     _apps = [
@@ -631,14 +634,36 @@ class MiniAppStore extends ChangeNotifier {
   Future<Map<String, dynamic>> readReminders(String id) =>
       _readMap(id, 'reminders.json');
 
-  Future<void> writeReminders(String id, Map<String, dynamic> reminders) =>
-      _writeMap(id, 'reminders.json', reminders);
+  /// Reads, changes and writes the reminders as one step (see [updateJobs]).
+  Future<T> updateReminders<T>(
+    String id,
+    FutureOr<T> Function(Map<String, dynamic> reminders) change,
+  ) => _updateMap(id, 'reminders.json', change);
 
   /// Background jobs set with `moru.jobs` (scheduled by MiniAppJobs).
   Future<Map<String, dynamic>> readJobs(String id) => _readMap(id, 'jobs.json');
 
-  Future<void> writeJobs(String id, Map<String, dynamic> jobs) =>
-      _writeMap(id, 'jobs.json', jobs);
+  /// Reads, changes and writes the jobs as one step, one call after
+  /// another: a page that does not await each `moru.jobs.set` must not have
+  /// one call overwrite another or both write the same temporary file. A
+  /// [change] that throws writes nothing.
+  Future<T> updateJobs<T>(
+    String id,
+    FutureOr<T> Function(Map<String, dynamic> jobs) change,
+  ) => _updateMap(id, 'jobs.json', change);
+
+  Future<T> _updateMap<T>(
+    String id,
+    String name,
+    FutureOr<T> Function(Map<String, dynamic> map) change,
+  ) => _queued(_mapKey(id, name), () async {
+    final map = await _readMap(id, name);
+    final result = await change(map);
+    await _writeMap(id, name, map);
+    return result;
+  });
+
+  static String _mapKey(String id, String name) => '$id\u0000$name';
 
   Future<Map<String, dynamic>> _readMap(String id, String name) async {
     final file = File(p.join(_require(id).directory, name));
@@ -851,10 +876,11 @@ class MiniAppStore extends ChangeNotifier {
     });
   }
 
-  Future<void> _queued(String key, Future<void> Function() action) {
+  Future<T> _queued<T>(String key, Future<T> Function() action) {
     final previous = _writes[key] ?? Future<void>.value();
     final next = previous.catchError((_) {}).then((_) => action());
-    _writes[key] = next;
+    // What waits on the queue only needs it done; the caller gets the error.
+    _writes[key] = next.then<void>((_) {}, onError: (Object _) {});
     return next;
   }
 

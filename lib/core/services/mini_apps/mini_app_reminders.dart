@@ -44,25 +44,24 @@ class MiniAppReminders {
       );
     }
     final reminder = normalize(raw, fallbackTitle: store.byId(appId)?.name);
-    final all = await store.readReminders(appId);
-    if (!all.containsKey(id) && all.length >= maxReminders) {
-      throw const MiniAppException(
-        'too_many_reminders',
-        'An app may keep at most $maxReminders reminders.',
-      );
-    }
-    await _cancel(appId, id, all[id]);
-    all[id] = reminder;
-    await store.writeReminders(appId, all);
+    await store.updateReminders(appId, (all) async {
+      if (!all.containsKey(id) && all.length >= maxReminders) {
+        throw const MiniAppException(
+          'too_many_reminders',
+          'An app may keep at most $maxReminders reminders.',
+        );
+      }
+      await _cancel(appId, id, all[id]);
+      all[id] = reminder;
+    });
     await _schedule(appId, id, reminder);
   }
 
   Future<void> remove(String appId, String id) async {
-    final all = await store.readReminders(appId);
-    final previous = all.remove(id);
-    if (previous == null) return;
-    await _cancel(appId, id, previous);
-    await store.writeReminders(appId, all);
+    await store.updateReminders(appId, (all) async {
+      final previous = all.remove(id);
+      if (previous != null) await _cancel(appId, id, previous);
+    });
   }
 
   /// Schedules every stored reminder again. Notification ids are derived from

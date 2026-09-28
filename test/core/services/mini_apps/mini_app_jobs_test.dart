@@ -152,13 +152,36 @@ void main() {
     });
   });
 
+  test(
+    'jobs set at once, as a page does without await, are all kept',
+    () async {
+      await Future.wait([
+        for (var i = 0; i < 8; i++)
+          jobs.set('weather', 'job$i', {'time': '0$i:00', 'run': 'check'}),
+        jobs.remove('weather', 'job3'),
+      ]);
+      final kept = (await store.readJobs('weather')).keys.toSet();
+      // job3's removal may run before or after its set, but nothing else is
+      // lost and no write fails.
+      expect(kept.difference({'job3'}), {
+        for (var i = 0; i < 8; i++)
+          if (i != 3) 'job$i',
+      });
+      await Future.wait([
+        for (var i = 0; i < 8; i++) jobs.remove('weather', 'job$i'),
+      ]);
+      expect(await store.readJobs('weather'), isEmpty);
+    },
+  );
+
   test('stored jobs are scheduled again, e.g. after a restore', () async {
     await jobs.set('weather', 'morning', {'time': '08:00', 'run': 'check'});
     planner.saved.clear();
     // A damaged definition does not stop the others.
-    final all = await store.readJobs('weather');
-    all['broken'] = {'time': 'soon'};
-    await store.writeJobs('weather', all);
+    await store.updateJobs(
+      'weather',
+      (all) => all['broken'] = {'time': 'soon'},
+    );
 
     await jobs.rescheduleAll();
     expect(planner.saved.keys, ['miniapp:weather:morning']);

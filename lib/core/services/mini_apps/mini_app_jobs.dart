@@ -145,23 +145,24 @@ class MiniAppJobs {
       );
     }
     final job = normalize(raw);
-    final all = await store.readJobs(appId);
-    if (!all.containsKey(id) && all.length >= maxJobs) {
-      throw const MiniAppException(
-        'too_many_jobs',
-        'An app may keep at most $maxJobs jobs.',
-      );
-    }
-    all[id] = job;
-    await store.writeJobs(appId, all);
+    await store.updateJobs(appId, (all) {
+      if (!all.containsKey(id) && all.length >= maxJobs) {
+        throw const MiniAppException(
+          'too_many_jobs',
+          'An app may keep at most $maxJobs jobs.',
+        );
+      }
+      all[id] = job;
+    });
     await _schedule(appId, id, job);
   }
 
   Future<void> remove(String appId, String id) async {
-    final all = await store.readJobs(appId);
-    if (all.remove(id) == null) return;
-    await store.writeJobs(appId, all);
-    await scheduler.delete(scheduledId(appId, id));
+    final removed = await store.updateJobs(
+      appId,
+      (all) => all.remove(id) != null,
+    );
+    if (removed) await scheduler.delete(scheduledId(appId, id));
   }
 
   /// Runs job [id] now, in the background like a scheduled run.
