@@ -20716,6 +20716,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Showing the last {shown} of {total} characters'**
   String chatReasoningTailHint(String shown, String total);
+
+  /// Long-press menu of a tool call: copies the call, its arguments and result.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy details'**
+  String get chatToolCopyDetails;
+
+  /// Long-press menu of a tool call: regenerates the reply it belongs to.
+  ///
+  /// In en, this message translates to:
+  /// **'Rerun from here'**
+  String get chatToolRerunFromHere;
 }
 
 class _AppLocalizationsDelegate

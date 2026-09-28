@@ -11082,6 +11082,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String chatReasoningTailHint(String shown, String total) {
     return '仅显示最后 $shown / 共 $total 字符';
   }
+
+  @override
+  String get chatToolCopyDetails => '复制详情';
+
+  @override
+  String get chatToolRerunFromHere => '从这里重新运行';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -22091,6 +22097,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String chatReasoningTailHint(String shown, String total) {
     return '仅显示最后 $shown / 共 $total 字符';
   }
+
+  @override
+  String get chatToolCopyDetails => '复制详情';
+
+  @override
+  String get chatToolRerunFromHere => '从这里重新运行';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -33174,4 +33186,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String chatReasoningTailHint(String shown, String total) {
     return '僅顯示最後 $shown / 共 $total 字元';
   }
+
+  @override
+  String get chatToolCopyDetails => '複製詳情';
+
+  @override
+  String get chatToolRerunFromHere => '從這裡重新執行';
 }

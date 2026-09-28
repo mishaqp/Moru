@@ -14,6 +14,7 @@ import 'dart:convert';
 import '../../home/widgets/file_processing_indicator.dart';
 import '../pages/image_viewer_page.dart';
 import 'bounded_large_text_view.dart';
+import '../../../shared/widgets/action_sheet.dart';
 import 'reasoning_window.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/message_part.dart';
@@ -2838,6 +2839,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                     showToolCards: showToolCards,
                     settled: !widget.message.isStreaming,
                     onRecoveredAnswer: widget.onRecoveredAskUserAnswer,
+                    onRerun: widget.onRegenerate,
                   ),
                 );
               }
@@ -3907,6 +3909,31 @@ List<WorkspaceToolPart> _producedWorkspaceParts(List<ToolUIPart>? parts) {
   ];
 }
 
+/// A tool call and its result as one text, for pasting into a chat or a bug
+/// report.
+String toolDetailsForClipboard(ToolUIPart part) {
+  final arguments = part.arguments.isEmpty
+      ? '{}'
+      : const JsonEncoder.withIndent('  ').convert(part.arguments);
+  final result = part.content;
+  final buffer = StringBuffer()
+    ..writeln('## Tool call')
+    ..writeln('name: ${part.toolName}')
+    ..writeln('id: ${part.id}')
+    ..writeln('arguments:')
+    ..writeln(arguments)
+    ..writeln()
+    ..writeln('## Result');
+  if (part.loading || result == null) {
+    buffer.write('(running)');
+  } else {
+    buffer
+      ..writeln('(${result.length} chars)')
+      ..write(result);
+  }
+  return buffer.toString();
+}
+
 // Data for a reasoning segment (for mixed display)
 class ReasoningSegment {
   final String text;
@@ -4085,9 +4112,19 @@ const double _timelineLineX = (_timelineIconColumnWidth - 1) / 2;
 /// Holds the latest reasoning-toggle callbacks so memoized step widgets can
 /// look them up on tap without baking a new closure into the cache key.
 class _ChainOfThoughtActions extends InheritedWidget {
-  const _ChainOfThoughtActions({required this.toggles, required super.child});
+  const _ChainOfThoughtActions({
+    required this.toggles,
+    this.onRerun,
+    required super.child,
+  });
 
   final List<VoidCallback?> toggles;
+
+  /// Regenerates the reply the steps belong to; null while it streams.
+  final VoidCallback? onRerun;
+
+  static VoidCallback? rerunOf(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<_ChainOfThoughtActions>()?.onRerun;
 
   static VoidCallback? toggleOf(BuildContext context, int index) {
     final scope = context
@@ -4161,7 +4198,11 @@ class _ChainOfThoughtCard extends StatefulWidget {
     required this.showToolCards,
     this.settled = false,
     this.onRecoveredAnswer,
+    this.onRerun,
   });
+
+  /// Regenerates this reply, from a step's long-press menu.
+  final VoidCallback? onRerun;
 
   static const Key summaryKey = ValueKey<String>('chain-of-thought-summary');
 
@@ -4401,6 +4442,7 @@ class _ChainOfThoughtCardState extends State<_ChainOfThoughtCard> {
           conversationId: widget.conversationId,
           onSubmit: widget.onRecoveredAnswer,
           child: _ChainOfThoughtActions(
+            onRerun: widget.settled ? widget.onRerun : null,
             toggles: [
               for (final step in filteredSteps) step.reasoning?.onToggle,
             ],
@@ -4539,6 +4581,7 @@ class _TimelineStepShell extends StatelessWidget {
     required this.isFirst,
     required this.isLast,
     this.onTap,
+    this.onLongPress,
     this.extra,
     this.indicator,
     this.content,
@@ -4551,6 +4594,7 @@ class _TimelineStepShell extends StatelessWidget {
   final bool isFirst;
   final bool isLast;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final Widget? extra;
   final Widget? indicator;
   final Widget? content;
@@ -4600,6 +4644,7 @@ class _TimelineStepShell extends StatelessWidget {
 
     final pressableHeader = IosCardPress(
       onTap: onTap,
+      onLongPress: onLongPress,
       borderRadius: BorderRadius.circular(12),
       baseColor: Colors.transparent,
       pressedScale: 1,
@@ -5119,6 +5164,49 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
     _showToolDetail(context, widget.part);
   }
 
+  void _showMenu(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final rerun = widget.part.loading
+        ? null
+        : _ChainOfThoughtActions.rerunOf(context);
+    Haptics.light();
+    unawaited(
+      showMobileActionSheet(
+        context,
+        title: _titleFor(
+          context,
+          widget.part.toolName,
+          widget.part.arguments,
+          isResult: !widget.part.loading,
+        ),
+        items: [
+          ActionSheetItem(
+            icon: Lucide.Copy,
+            label: l10n.chatToolCopyDetails,
+            onTap: () {
+              unawaited(
+                Clipboard.setData(
+                  ClipboardData(text: toolDetailsForClipboard(widget.part)),
+                ),
+              );
+              showAppSnackBar(
+                context,
+                message: l10n.chatMessageWidgetCopiedToClipboard,
+                type: NotificationType.success,
+              );
+            },
+          ),
+          if (rerun != null)
+            ActionSheetItem(
+              icon: Lucide.RefreshCw,
+              label: l10n.chatToolRerunFromHere,
+              onTap: rerun,
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -5348,6 +5436,9 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
       onTap: _isAskUser
           ? () => setState(() => _askUserExpanded = !askUserExpanded)
           : () => _showDetail(context),
+      onLongPress: _isAskUser || isPendingApproval
+          ? null
+          : () => _showMenu(context),
       extra: extra,
       indicator: _isAskUser
           ? Icon(

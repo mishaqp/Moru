@@ -5099,5 +5099,7 @@
   "toolApprovalsSectionTitle": "Подтверждения инструментов",
   "toolApprovalsFullTrustTitle": "Я понимаю риск — разрешать всё",
   "toolApprovalsFullTrustDescription": "Не спрашивать подтверждение перед действиями ИИ. Действует для браузера, MCP, shell, записи файлов и других инструментов, которые обычно требуют подтверждения.",
-  "chatReasoningTailHint": "Показаны последние {shown} из {total} символов"
+  "chatReasoningTailHint": "Показаны последние {shown} из {total} символов",
+  "chatToolCopyDetails": "Копировать подробности",
+  "chatToolRerunFromHere": "Перезапустить отсюда"
 }

@@ -11719,4 +11719,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String chatReasoningTailHint(String shown, String total) {
     return 'Показаны последние $shown из $total символов';
   }
+
+  @override
+  String get chatToolCopyDetails => 'Копировать подробности';
+
+  @override
+  String get chatToolRerunFromHere => 'Перезапустить отсюда';
 }

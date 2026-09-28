@@ -11589,4 +11589,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String chatReasoningTailHint(String shown, String total) {
     return 'Showing the last $shown of $total characters';
   }
+
+  @override
+  String get chatToolCopyDetails => 'Copy details';
+
+  @override
+  String get chatToolRerunFromHere => 'Rerun from here';
 }

@@ -5254,5 +5254,9 @@
       "shown": {"type": "String"},
       "total": {"type": "String"}
     }
-  }
+  },
+  "chatToolCopyDetails": "Copy details",
+  "chatToolRerunFromHere": "Rerun from here",
+  "@chatToolCopyDetails": {"description": "Long-press menu of a tool call: copies the call, its arguments and result."},
+  "@chatToolRerunFromHere": {"description": "Long-press menu of a tool call: regenerates the reply it belongs to."}
 }

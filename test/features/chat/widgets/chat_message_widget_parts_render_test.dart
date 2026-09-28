@@ -354,6 +354,82 @@ void main() {
     },
   );
 
+  testWidgets('long-pressing a tool step offers copy and rerun', (
+    tester,
+  ) async {
+    var reruns = 0;
+    Widget message({required bool streaming}) => _buildHarness(
+      child: ChatMessageWidget(
+        message: ChatMessage(
+          id: 'tool-menu',
+          role: 'assistant',
+          conversationId: 'c1',
+          isStreaming: streaming,
+          parts: const [
+            ToolCallPart(
+              '{"id":"c1","name":"lookup","arguments":{"q":"x"},"content":"ok"}',
+            ),
+            TextPart('done'),
+          ],
+        ),
+        onRegenerate: () => reruns++,
+        showModelIcon: false,
+      ),
+    );
+
+    await tester.pumpWidget(message(streaming: false));
+    await tester.pump();
+    await tester.longPress(find.textContaining('lookup').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Copy details'), findsOneWidget);
+    await tester.tap(find.text('Rerun from here'));
+    await tester.pumpAndSettle();
+    expect(reruns, 1);
+
+    // Not while the reply is still being written.
+    await tester.pumpWidget(message(streaming: true));
+    await tester.pump();
+    await tester.longPress(find.textContaining('lookup').first);
+    // The streaming reply keeps animating; the sheet is open after this.
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Copy details'), findsOneWidget);
+    expect(find.text('Rerun from here'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  test('tool details for the clipboard hold the call and its result', () {
+    expect(
+      toolDetailsForClipboard(
+        const ToolUIPart(
+          id: 'call-1',
+          toolName: 'shell',
+          arguments: {'command': 'ls'},
+          content: 'a\nb',
+        ),
+      ),
+      '## Tool call\n'
+      'name: shell\n'
+      'id: call-1\n'
+      'arguments:\n'
+      '{\n  "command": "ls"\n}\n'
+      '\n'
+      '## Result\n'
+      '(3 chars)\n'
+      'a\nb',
+    );
+    expect(
+      toolDetailsForClipboard(
+        const ToolUIPart(
+          id: 'call-2',
+          toolName: 'shell',
+          arguments: {},
+          loading: true,
+        ),
+      ),
+      endsWith('## Result\n(running)'),
+    );
+  });
+
   testWidgets('empty contentSplits keep reasoning above body', (tester) async {
     await tester.pumpWidget(
       _buildHarness(
