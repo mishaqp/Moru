@@ -93,4 +93,16 @@ class BrowserLinksTest {
         assertEquals("report.pdf", failed["file"])
         assertNull(failed["path"])
     }
+
+    @Test fun signingOutExpiresTheSiteCookiesOnEveryDomainLevel() {
+        assertEquals(listOf("sid", "theme"), BrowserCookies.names("sid=a=1; theme=dark; "))
+        assertEquals(
+            listOf(
+                "sid=; Max-Age=0; Path=/",
+                "sid=; Max-Age=0; Path=/; Domain=.www.shop.example",
+                "sid=; Max-Age=0; Path=/; Domain=.shop.example",
+            ),
+            BrowserCookies.expiring("sid", "www.shop.example"),
+        )
+    }
 }

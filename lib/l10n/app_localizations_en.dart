@@ -10981,6 +10981,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserMiniTitle => 'Browser';
 
   @override
+  String get browserTabsTooltip => 'Tabs';
+
+  @override
+  String get browserNewTab => 'New tab';
+
+  @override
+  String get browserCloseAllTabs => 'Close all';
+
+  @override
+  String get browserTabByAssistant => 'assistant';
+
+  @override
+  String get browserDesktopSite => 'Desktop site';
+
+  @override
+  String get browserClearSiteData => 'Clear site data';
+
+  @override
+  String browserClearSiteDataConfirm(String site) {
+    return 'Sign out of $site and delete its data in this browser?';
+  }
+
+  @override
+  String browserClearSiteDataDone(String site) {
+    return 'Data of $site deleted';
+  }
+
+  @override
+  String browserTabsTitle(int count) {
+    return 'Tabs: $count';
+  }
+
+  @override
   String browserDownloadDone(String file) {
     return 'Downloaded $file';
   }

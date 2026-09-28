@@ -10499,6 +10499,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserMiniTitle => '浏览器';
 
   @override
+  String get browserTabsTooltip => '标签页';
+
+  @override
+  String get browserNewTab => '新标签页';
+
+  @override
+  String get browserCloseAllTabs => '全部关闭';
+
+  @override
+  String get browserTabByAssistant => '助手';
+
+  @override
+  String get browserDesktopSite => '桌面版网站';
+
+  @override
+  String get browserClearSiteData => '清除网站数据';
+
+  @override
+  String browserClearSiteDataConfirm(String site) {
+    return '退出 $site 并删除其在此浏览器中的数据？';
+  }
+
+  @override
+  String browserClearSiteDataDone(String site) {
+    return '已删除 $site 的数据';
+  }
+
+  @override
+  String browserTabsTitle(int count) {
+    return '标签页：$count';
+  }
+
+  @override
   String browserDownloadDone(String file) {
     return '已下载 $file';
   }
@@ -21616,6 +21649,39 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '浏览器';
+
+  @override
+  String get browserTabsTooltip => '标签页';
+
+  @override
+  String get browserNewTab => '新标签页';
+
+  @override
+  String get browserCloseAllTabs => '全部关闭';
+
+  @override
+  String get browserTabByAssistant => '助手';
+
+  @override
+  String get browserDesktopSite => '桌面版网站';
+
+  @override
+  String get browserClearSiteData => '清除网站数据';
+
+  @override
+  String browserClearSiteDataConfirm(String site) {
+    return '退出 $site 并删除其在此浏览器中的数据？';
+  }
+
+  @override
+  String browserClearSiteDataDone(String site) {
+    return '已删除 $site 的数据';
+  }
+
+  @override
+  String browserTabsTitle(int count) {
+    return '标签页：$count';
+  }
 
   @override
   String browserDownloadDone(String file) {
@@ -32809,6 +32875,39 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get browserMiniTitle => '瀏覽器';
+
+  @override
+  String get browserTabsTooltip => '分頁';
+
+  @override
+  String get browserNewTab => '新分頁';
+
+  @override
+  String get browserCloseAllTabs => '全部關閉';
+
+  @override
+  String get browserTabByAssistant => '助手';
+
+  @override
+  String get browserDesktopSite => '電腦版網站';
+
+  @override
+  String get browserClearSiteData => '清除網站資料';
+
+  @override
+  String browserClearSiteDataConfirm(String site) {
+    return '登出 $site 並刪除其在此瀏覽器中的資料？';
+  }
+
+  @override
+  String browserClearSiteDataDone(String site) {
+    return '已刪除 $site 的資料';
+  }
+
+  @override
+  String browserTabsTitle(int count) {
+    return '分頁：$count';
+  }
 
   @override
   String browserDownloadDone(String file) {

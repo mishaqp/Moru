@@ -28,7 +28,24 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.onOpenSettings,
     required this.onShowConsole,
     this.progress,
+    this.tabCount,
+    this.onShowTabs,
+    this.desktopMode,
+    this.onDesktopModeChanged,
+    this.onClearSiteData,
   });
+
+  /// Open tabs, shown on the tabs button; agent browser only.
+  final int? tabCount;
+  final VoidCallback? onShowTabs;
+
+  /// Whether the active tab shows the desktop version of sites; with
+  /// [onDesktopModeChanged], the menu offers to switch.
+  final bool? desktopMode;
+  final ValueChanged<bool>? onDesktopModeChanged;
+
+  /// Signs the open site out of this browser (after a confirmation).
+  final VoidCallback? onClearSiteData;
 
   /// Page load progress from 0 to 1 while loading (0: not known yet), null
   /// when the page has loaded.
@@ -175,6 +192,30 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
             semanticLabel: l10n.browserMinimize,
             onTap: onMinimize,
           ),
+        if (onShowTabs != null)
+          IconButton(
+            key: const ValueKey('browser_tabs_button'),
+            tooltip: l10n.browserTabsTooltip,
+            onPressed: onShowTabs,
+            icon: Container(
+              width: 22,
+              height: 22,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                border: Border.all(color: cs.onSurface, width: 1.6),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '${tabCount ?? 1}',
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1,
+                  fontWeight: AppFontWeights.semibold,
+                  color: cs.onSurface,
+                ),
+              ),
+            ),
+          ),
         PopupMenuButton<String>(
           tooltip: l10n.browserMenuTooltip,
           icon: Icon(Lucide.MoreVertical, color: cs.onSurface),
@@ -195,6 +236,12 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
               case 'console':
                 onShowConsole();
                 break;
+              case 'desktop':
+                onDesktopModeChanged?.call(!(desktopMode ?? false));
+                break;
+              case 'clear':
+                onClearSiteData?.call();
+                break;
             }
           },
           itemBuilder: (ctx) => [
@@ -212,6 +259,20 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
                 child: _MenuRow(
                   icon: Lucide.ExternalLink,
                   label: l10n.messageWebViewOpenInBrowser,
+                ),
+              ),
+            if (onDesktopModeChanged != null)
+              CheckedPopupMenuItem<String>(
+                value: 'desktop',
+                checked: desktopMode ?? false,
+                child: Text(l10n.browserDesktopSite),
+              ),
+            if (onClearSiteData != null)
+              PopupMenuItem<String>(
+                value: 'clear',
+                child: _MenuRow(
+                  icon: Lucide.Eraser,
+                  label: l10n.browserClearSiteData,
                 ),
               ),
             if (onShowActivityLog != null)

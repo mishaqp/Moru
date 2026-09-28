@@ -209,6 +209,10 @@ class MainActivity : FlutterActivity() {
                     }
                     result.success(true)
                 }
+                "clearCookies" -> {
+                    val url = call.argument<String>("url").orEmpty()
+                    result.success(BrowserCookies.clear(url))
+                }
                 "downloadsDir" -> {
                     val dir = android.os.Environment.getExternalStoragePublicDirectory(
                         android.os.Environment.DIRECTORY_DOWNLOADS,

@@ -1005,6 +1005,53 @@ class BrowserAgentSession {
     };
   }
 
+  /// Signs the active tab's site out: deletes its cookies and the page's
+  /// storage in this browser, then reloads. Other sites keep theirs.
+  Future<Map<String, dynamic>> clearSiteData() async {
+    final tab = _active;
+    final url = tab?.url;
+    final host = BrowserGuard.host(url);
+    if (tab == null || url == null || host == null) {
+      return {'ok': false, 'error': 'no_site', 'message': 'No site is open.'};
+    }
+    try {
+      await tab.controller.runJavaScript(_clearStorageScript);
+    } catch (_) {
+      // A page without storage access (an error page) has nothing to clear.
+    }
+    try {
+      await _browserChannel.invokeMethod<int>('clearCookies', {'url': url});
+    } on MissingPluginException {
+      // Not on the phone (tests).
+    }
+    expectNavigation();
+    await tab.controller.reload();
+    await waitUntilReady();
+    return {'ok': true, 'site': host};
+  }
+
+  static const String _clearStorageScript = r'''
+(() => {
+  try { localStorage.clear(); } catch (e) {}
+  try { sessionStorage.clear(); } catch (e) {}
+  try {
+    if (indexedDB.databases) {
+      indexedDB.databases().then((dbs) => dbs.forEach((db) => {
+        if (db.name) indexedDB.deleteDatabase(db.name);
+      }));
+    }
+  } catch (e) {}
+  try {
+    if (window.caches) caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+  } catch (e) {}
+  try {
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()));
+    }
+  } catch (e) {}
+})();
+''';
+
   /// The page the shared browser shows, for the mini window.
   final ValueNotifier<String?> pageUrl = ValueNotifier<String?>(null);
 

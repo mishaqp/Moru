@@ -19655,6 +19655,60 @@ abstract class AppLocalizations {
   /// **'Browser'**
   String get browserMiniTitle;
 
+  /// No description provided for @browserTabsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Tabs'**
+  String get browserTabsTooltip;
+
+  /// No description provided for @browserNewTab.
+  ///
+  /// In en, this message translates to:
+  /// **'New tab'**
+  String get browserNewTab;
+
+  /// No description provided for @browserCloseAllTabs.
+  ///
+  /// In en, this message translates to:
+  /// **'Close all'**
+  String get browserCloseAllTabs;
+
+  /// No description provided for @browserTabByAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'assistant'**
+  String get browserTabByAssistant;
+
+  /// No description provided for @browserDesktopSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Desktop site'**
+  String get browserDesktopSite;
+
+  /// No description provided for @browserClearSiteData.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear site data'**
+  String get browserClearSiteData;
+
+  /// No description provided for @browserClearSiteDataConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out of {site} and delete its data in this browser?'**
+  String browserClearSiteDataConfirm(String site);
+
+  /// No description provided for @browserClearSiteDataDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Data of {site} deleted'**
+  String browserClearSiteDataDone(String site);
+
+  /// No description provided for @browserTabsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tabs: {count}'**
+  String browserTabsTitle(int count);
+
   /// No description provided for @browserDownloadDone.
   ///
   /// In en, this message translates to:

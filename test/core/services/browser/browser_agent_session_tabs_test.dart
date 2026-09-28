@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:Kelivo/core/services/browser/browser_agent_session.dart';
 import 'package:Kelivo/core/services/browser/browser_tabs.dart';
 import 'package:Kelivo/features/home/services/browser_agent_tool.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -157,5 +158,37 @@ void main() {
   test('desktopUserAgent falls back to a current Chrome', () {
     expect(desktopUserAgent(null), contains('Chrome/'));
     expect(desktopUserAgent('x'), isNot(contains('Mobile')));
+  });
+
+  test('clearing site data empties the page storage, expires the site '
+      'cookies and reloads', () async {
+    final scripts = <String>[];
+    first.jsHandler = (script) {
+      scripts.add(script);
+      return 'null';
+    };
+    final cleared = <String>[];
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(const MethodChannel('app.browser'), (
+      call,
+    ) async {
+      if (call.method == 'clearCookies') {
+        cleared.add((call.arguments as Map)['url'] as String);
+        return 2;
+      }
+      return null;
+    });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(
+        const MethodChannel('app.browser'),
+        null,
+      ),
+    );
+
+    final result = await session.clearSiteData();
+    expect(result, {'ok': true, 'site': 'first.example'});
+    expect(scripts.single, contains('localStorage.clear()'));
+    expect(cleared, ['https://first.example/']);
   });
 }

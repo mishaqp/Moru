@@ -11106,6 +11106,39 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserMiniTitle => 'Браузер';
 
   @override
+  String get browserTabsTooltip => 'Вкладки';
+
+  @override
+  String get browserNewTab => 'Новая вкладка';
+
+  @override
+  String get browserCloseAllTabs => 'Закрыть все';
+
+  @override
+  String get browserTabByAssistant => 'ассистент';
+
+  @override
+  String get browserDesktopSite => 'Версия для ПК';
+
+  @override
+  String get browserClearSiteData => 'Очистить данные сайта';
+
+  @override
+  String browserClearSiteDataConfirm(String site) {
+    return 'Выйти из $site и удалить его данные в этом браузере?';
+  }
+
+  @override
+  String browserClearSiteDataDone(String site) {
+    return 'Данные $site удалены';
+  }
+
+  @override
+  String browserTabsTitle(int count) {
+    return 'Вкладки: $count';
+  }
+
+  @override
   String browserDownloadDone(String file) {
     return 'Скачано: $file';
   }

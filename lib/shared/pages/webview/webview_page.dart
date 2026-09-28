@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/services/browser/browser_agent_session.dart';
 import '../../../core/services/browser/browser_handoffs.dart';
 import '../../../core/services/browser/browser_site_permissions.dart';
+import '../../../core/services/browser/browser_tabs.dart';
 import '../../../features/home/services/browser_ask_ai_bridge.dart';
 import '../../../features/home/services/tool_approval_service.dart';
 import '../../../features/settings/pages/browser_settings_page.dart';
@@ -26,6 +27,7 @@ import 'webview_error_view.dart';
 import 'webview_result_card.dart';
 import 'webview_site_handlers.dart';
 import 'webview_status_banner.dart';
+import 'webview_tabs_sheet.dart';
 import 'webview_top_bar.dart';
 
 /// Why the browser page is being closed -- used only to keep the three
@@ -181,7 +183,11 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
   void _onTabsChanged() {
     final active = BrowserAgentSession.instance.controller;
     if (!mounted || _minimizing || active == null) return;
-    if (identical(active, _controller)) return;
+    if (identical(active, _controller)) {
+      // The count or the active tab's mode changed.
+      setState(() {});
+      return;
+    }
     _navGeneration++;
     setState(() {
       _controller = active;
@@ -197,6 +203,43 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
       BrowserHandoffs.instance.setNavigationDelegate(active, _pageDelegate()),
     );
     unawaited(_restoreAdoptedState());
+  }
+
+  BrowserTabInfo? get _activeTabInfo {
+    for (final tab in BrowserAgentSession.instance.tabs.value) {
+      if (tab.active) return tab;
+    }
+    return null;
+  }
+
+  Future<void> _clearSiteData() async {
+    final l10n = AppLocalizations.of(context)!;
+    final site = Uri.tryParse(_currentUrl ?? '')?.host ?? '';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.browserClearSiteData),
+        content: Text(l10n.browserClearSiteDataConfirm(site)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.homePageCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.browserClearSiteData),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final result = await BrowserAgentSession.instance.clearSiteData();
+    if (!mounted || result['ok'] != true) return;
+    showAppSnackBar(
+      context,
+      message: l10n.browserClearSiteDataDone(site),
+      type: NotificationType.success,
+    );
   }
 
   /// The page's own navigation handling: progress, address, title, errors,
@@ -763,6 +806,21 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
           onOpenSettings: widget.agentSession ? _openBrowserSettings : null,
           onShowConsole: _showConsole,
           progress: _isLoading ? _progress / 100 : null,
+          tabCount: widget.agentSession
+              ? BrowserAgentSession.instance.tabs.value.length
+              : null,
+          onShowTabs: widget.agentSession
+              ? () => showBrowserTabsSheet(context)
+              : null,
+          desktopMode: _activeTabInfo?.desktop,
+          onDesktopModeChanged: widget.agentSession && !contentMode
+              ? (desktop) => unawaited(
+                  BrowserAgentSession.instance.setDesktopMode(desktop),
+                )
+              : null,
+          onClearSiteData: widget.agentSession && !contentMode
+              ? _clearSiteData
+              : null,
         ),
         body: Column(
           children: [

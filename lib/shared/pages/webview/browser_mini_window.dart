@@ -284,6 +284,22 @@ class _MiniAddress extends StatelessWidget {
                 ),
               ),
             ),
+            if (session.tabs.value.length > 1)
+              Container(
+                key: const ValueKey('browser-mini-tab-count'),
+                margin: const EdgeInsets.only(left: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: cs.onSurface.withValues(alpha: 0.6),
+                  ),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Text(
+                  '${session.tabs.value.length}',
+                  style: TextStyle(fontSize: 10, color: cs.onSurface),
+                ),
+              ),
           ],
         );
       },
