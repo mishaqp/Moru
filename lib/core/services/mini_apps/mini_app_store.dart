@@ -1134,7 +1134,8 @@ class MiniAppStore extends ChangeNotifier {
           response.text = function () { return response.body; };
           return response;
         });
-      }
+      },
+      url: function (path) { return call('server.url', { path: path || '/' }); }
     },
     calendar: {
       list: function (query) { return call('calendar.list', query); },

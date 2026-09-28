@@ -34,11 +34,13 @@ class MiniAppFetch {
   ) async => _send(args, _uri(app, args['url']), (uri) => _uri(app, '$uri'));
 
   /// `moru.server.fetch`: a request to the app's own server on [port] of
-  /// this device; `path` is relative to it and redirects stay on it.
+  /// this device; `path` is relative to it and redirects stay on it. It
+  /// carries the server's [token] in [tokenHeader].
   Future<Map<String, Object?>> fetchLocal(
     int port,
-    Map<String, dynamic> args,
-  ) async {
+    Map<String, dynamic> args, {
+    String? token,
+  }) async {
     final path = args['path'];
     final origin = Uri(scheme: 'http', host: '127.0.0.1', port: port);
     if (path is! String || !path.startsWith('/') || path.startsWith('//')) {
@@ -57,14 +59,23 @@ class MiniAppFetch {
       return uri;
     }
 
-    return _send(args, local(origin.resolve(path)), local);
+    return _send(
+      args,
+      local(origin.resolve(path)),
+      local,
+      extraHeaders: {tokenHeader: ?token},
+    );
   }
+
+  /// The header [fetchLocal] sends the server's token in.
+  static const String tokenHeader = 'X-Moru-Token';
 
   Future<Map<String, Object?>> _send(
     Map<String, dynamic> args,
     Uri start,
-    Uri Function(Uri) checkRedirect,
-  ) async {
+    Uri Function(Uri) checkRedirect, {
+    Map<String, String> extraHeaders = const {},
+  }) async {
     var uri = start;
     var method = '${args['method'] ?? 'GET'}'.toUpperCase();
     if (!methods.contains(method)) {
@@ -97,6 +108,7 @@ class MiniAppFetch {
       );
     }
 
+    headers.addAll(extraHeaders);
     for (var redirects = 0; ; redirects++) {
       final request = http.Request(method, uri)
         ..followRedirects = false

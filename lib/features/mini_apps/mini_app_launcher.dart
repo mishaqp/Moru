@@ -126,6 +126,7 @@ class MiniAppLauncher {
           assistants,
           background: true,
           server: server.fetch,
+          serverUrl: server.url,
         ),
         cancellation: cancellation,
       );
@@ -178,6 +179,7 @@ class MiniAppLauncher {
     Future<void> Function()? close,
     bool background = false,
     Future<Map<String, Object?>> Function(Map<String, dynamic> args)? server,
+    Future<String> Function(String path)? serverUrl,
   }) => MiniAppHost(
     ask: (prompt, system) async {
       final target = askModelFor(settings, assistants.currentAssistant);
@@ -224,6 +226,7 @@ class MiniAppLauncher {
     jobs: jobs,
     background: background,
     server: server,
+    serverUrl: serverUrl,
   );
 
   /// Shared by every open app, so connections are reused.

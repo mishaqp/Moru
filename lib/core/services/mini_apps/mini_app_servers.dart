@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
@@ -27,7 +28,9 @@ class MiniAppServerEnvironment {
 /// in the Linux environment while something uses the app, the open page or a
 /// background job, and stops with the last of them. It gets a free port in
 /// `$PORT`, the app's files read-only at [appMount] and a writable folder
-/// kept with the app at [dataMount].
+/// kept with the app at [dataMount], and a secret in `$MORU_SERVER_TOKEN`:
+/// the page's requests carry it (see [MiniAppServerLease.url]), so the
+/// server can refuse other apps of the phone that find its port.
 class MiniAppServers {
   MiniAppServers({
     required this.store,
@@ -45,6 +48,10 @@ class MiniAppServers {
   static const String appMount = '/app';
   static const String dataMount = '/data';
   static const int maxLogBytes = 16 * 1024;
+
+  /// The query parameter [MiniAppServerLease.url] adds; `moru.server.fetch`
+  /// sends the token in [MiniAppFetch.tokenHeader] instead.
+  static const String tokenParameter = 'moru_token';
 
   final MiniAppStore store;
   final MiniAppFetch _fetch;
@@ -134,6 +141,7 @@ class MiniAppServers {
               'HOST': '127.0.0.1',
               'MORU_APP_ID': app.id,
               'MORU_DATA': dataMount,
+              'MORU_SERVER_TOKEN': server.token,
             },
           ),
         )
@@ -218,10 +226,8 @@ class MiniAppServers {
     return text.length <= 1500 ? text : text.substring(text.length - 1500);
   }
 
-  Future<Map<String, Object?>> _request(
-    _Server server,
-    Map<String, dynamic> args,
-  ) async {
+  /// The port of [server] once it listens.
+  Future<int> _port(_Server server) async {
     // A server that crashed while the app is open starts again, but not
     // right after its last start.
     if (server.exitCode != null && !server.stopping) {
@@ -233,8 +239,31 @@ class MiniAppServers {
       }
       _run(server);
     }
-    final port = await server.started!;
-    return _fetch.fetchLocal(port, args);
+    return server.started!;
+  }
+
+  Future<Map<String, Object?>> _request(
+    _Server server,
+    Map<String, dynamic> args,
+  ) async => _fetch.fetchLocal(await _port(server), args, token: server.token);
+
+  Future<String> _url(_Server server, String path) async {
+    if (!path.startsWith('/') || path.startsWith('//')) {
+      throw const MiniAppException(
+        'invalid_path',
+        'path must start with "/", e.g. "/stream".',
+      );
+    }
+    final port = await _port(server);
+    final uri = Uri.parse('http://127.0.0.1:$port$path');
+    return uri
+        .replace(
+          queryParameters: {
+            ...uri.queryParametersAll,
+            tokenParameter: server.token,
+          },
+        )
+        .toString();
   }
 
   /// Stops the app's running server and starts it again, e.g. after its
@@ -285,6 +314,9 @@ class _Server {
   final MiniApp app;
   final String command;
   final MiniAppServerEnvironment environment;
+
+  /// Kept across restarts, so a page's URLs only change with the port.
+  final String token = _newToken();
   String runId = '';
   DateTime startedAt = DateTime.fromMillisecondsSinceEpoch(0);
   int leases = 0;
@@ -301,6 +333,14 @@ class _Server {
   Future<int>? started;
   StreamSubscription<CommandEvent>? events;
   List<int> log = const [];
+
+  static String _newToken() {
+    final random = Random.secure();
+    return [
+      for (var i = 0; i < 16; i++)
+        random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ].join();
+  }
 
   void record(List<int> bytes) {
     final joined = [...log, ...bytes];
@@ -319,7 +359,15 @@ class MiniAppServerLease {
   bool _released = false;
 
   /// `moru.server.fetch`.
-  Future<Map<String, Object?>> fetch(Map<String, dynamic> args) async {
+  Future<Map<String, Object?>> fetch(Map<String, dynamic> args) async =>
+      _servers._request(_use(), args);
+
+  /// `moru.server.url`: the address of [path] on the server with its token,
+  /// for the page to use directly (an `<img>` stream, a WebSocket, fetch),
+  /// once the server listens.
+  Future<String> url(String path) async => _servers._url(_use(), path);
+
+  _Server _use() {
     final server = _server;
     if (server == null) {
       throw const MiniAppException(
@@ -330,7 +378,7 @@ class MiniAppServerLease {
     if (_released) {
       throw const MiniAppException('server_stopped', 'The app was closed.');
     }
-    return _servers._request(server, args);
+    return server;
   }
 
   /// Completes once the server listens or its start failed; the reason of a

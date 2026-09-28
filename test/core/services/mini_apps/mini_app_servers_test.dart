@@ -86,6 +86,7 @@ void main() {
             jsonEncode({
               'method': request.method,
               'path': request.uri.toString(),
+              'token': request.headers.value('x-moru-token'),
               'body': await utf8.decodeStream(request),
             }),
           );
@@ -180,12 +181,15 @@ void main() {
       Directory(p.join(app.directory, 'server-data')).existsSync(),
       isTrue,
     );
+    final token = request.env['MORU_SERVER_TOKEN']!;
+    expect(token, matches(RegExp(r'^[0-9a-f]{32}$')));
     expect(request.env, {
       'LANG': 'ru_RU.UTF-8',
       'PORT': '${http.port}',
       'HOST': '127.0.0.1',
       'MORU_APP_ID': 'notes',
       'MORU_DATA': '/data',
+      'MORU_SERVER_TOKEN': token,
     });
 
     // Requests wait until the port answers.
@@ -201,8 +205,22 @@ void main() {
     expect(jsonDecode(response['body'] as String), {
       'method': 'POST',
       'path': '/api/items?x=1',
+      'token': token,
       'body': '{"a":1}',
     });
+    // The page reaches the server directly with the token in the address.
+    expect(
+      await page.url('/stream?fps=15'),
+      'http://127.0.0.1:${http.port}/stream?fps=15&moru_token=$token',
+    );
+    expect(
+      await job.url('/'),
+      'http://127.0.0.1:${http.port}/?moru_token=$token',
+    );
+    await expectLater(
+      page.url('//evil.example/'),
+      throwsA(isA<MiniAppException>()),
+    );
     expect(servers.status('notes'), containsPair('running', true));
 
     await page.release();
@@ -217,6 +235,7 @@ void main() {
       page.fetch({'path': '/'}),
       throwsA(isA<MiniAppException>()),
     );
+    await expectLater(page.url('/'), throwsA(isA<MiniAppException>()));
     // No journal entry for a server Moru stopped itself.
     expect(await store.readErrors('notes'), isEmpty);
   });
@@ -398,8 +417,17 @@ void main() {
     final bridge = MiniAppBridge(
       store: store,
       appId: 'notes',
-      host: MiniAppHost(server: lease.fetch),
+      host: MiniAppHost(server: lease.fetch, serverUrl: lease.url),
     );
+    final url = await bridge.handle(
+      jsonEncode({
+        'id': 3,
+        'method': 'server.url',
+        'args': {'path': '/stream'},
+      }),
+    );
+    expect(url, startsWith('window.__moruReply(3, true, '));
+    expect(url, contains('http://127.0.0.1:${http.port}/stream?moru_token='));
     final script = await bridge.handle(
       jsonEncode({
         'id': 1,
@@ -421,6 +449,14 @@ void main() {
       }),
     );
     expect(checked, startsWith('window.__moruReply(2, false, '));
+    final checkedUrl = await sandbox.bridge.handle(
+      jsonEncode({
+        'id': 4,
+        'method': 'server.url',
+        'args': {'path': '/'},
+      }),
+    );
+    expect(checkedUrl, startsWith('window.__moruReply(4, false, '));
     expect(sandbox.bridge.failedCalls, isEmpty);
   });
 

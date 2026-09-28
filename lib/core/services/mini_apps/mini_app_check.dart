@@ -189,6 +189,12 @@ class MiniAppSandbox {
                 MiniAppBridge.notInCheck,
                 'The server does not run in the publish check.',
               ),
+          serverUrl:
+              server?.lease.url ??
+              (_) async => throw const MiniAppException(
+                MiniAppBridge.notInCheck,
+                'The server does not run in the publish check.',
+              ),
         ),
       );
       return MiniAppSandbox._(root, store, bridge, server);

@@ -73,6 +73,7 @@ class _MiniAppPageState extends State<MiniAppPage> {
         },
         // The current lease, also after a rollback.
         server: (args) => _server.fetch(args),
+        serverUrl: (path) => _server.url(path),
       ),
       onProblem: (kind, problem) {
         // The console reports script errors and rejected promises with

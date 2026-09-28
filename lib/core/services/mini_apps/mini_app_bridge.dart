@@ -19,6 +19,7 @@ class MiniAppHost {
     this.jobs,
     this.background = false,
     this.server,
+    this.serverUrl,
   });
 
   /// Asks the default model; returns its text.
@@ -53,6 +54,10 @@ class MiniAppHost {
   /// `moru.server.fetch`: a request to the app's own server.
   final Future<Map<String, Object?>> Function(Map<String, dynamic> args)?
   server;
+
+  /// `moru.server.url`: the address of a path on the app's own server, for
+  /// the page to reach it directly.
+  final Future<String> Function(String path)? serverUrl;
 }
 
 /// Answers `window.moru` calls from one mini app page. Each message is
@@ -246,6 +251,8 @@ class MiniAppBridge {
         return _need(host.fetch).fetch(_app(), args);
       case 'server.fetch':
         return _need(host.server)(args);
+      case 'server.url':
+        return _need(host.serverUrl)(text('path', max: 2000));
       case 'calendar.list':
         return _calendar('queryCalendar', args, _calendarListKeys);
       case 'calendar.add':
