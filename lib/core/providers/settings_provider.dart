@@ -1280,7 +1280,9 @@ class SettingsProvider extends ChangeNotifier {
     _enableAssistantMarkdown =
         prefs.getBool(_displayEnableAssistantMarkdownKey) ?? true;
     _sidebarThumbnails = prefs.getBool(_sidebarThumbnailsKey) ?? true;
-    _sidebarFolders = ChatFolder.decodeList(prefs.getString(_sidebarFoldersKey));
+    _sidebarFolders = ChatFolder.decodeList(
+      prefs.getString(_sidebarFoldersKey),
+    );
     _sidebarCollapsedSections = Set.unmodifiable(
       prefs.getStringList(_sidebarCollapsedSectionsKey) ?? const <String>[],
     );
