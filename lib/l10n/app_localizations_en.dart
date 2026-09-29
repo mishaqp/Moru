@@ -12071,4 +12071,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get messageMoreSheetCopyFormatted => 'Copy with formatting';
+
+  @override
+  String get agentsMode => 'Agent mode';
 }

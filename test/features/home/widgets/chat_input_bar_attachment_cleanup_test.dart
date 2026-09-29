@@ -55,6 +55,34 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
   Future<String?> getTemporaryPath() async => '$path/tmp';
 }
 
+final class _DeleteFailureOverrides extends IOOverrides {
+  _DeleteFailureOverrides(this.source);
+  final File source;
+
+  @override
+  File createFile(String path) =>
+      path == source.path ? _DeleteFailureFile(source) : super.createFile(path);
+}
+
+class _DeleteFailureFile implements File {
+  _DeleteFailureFile(this.source);
+  final File source;
+
+  @override
+  String get path => source.path;
+
+  @override
+  Future<Uint8List> readAsBytes() => source.readAsBytes();
+
+  @override
+  Future<File> delete({bool recursive = false}) async {
+    throw FileSystemException('injected deletion failure', path);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 const _config = ImageCompressConfig(
   enabled: true,
   quality: 80,
@@ -1001,20 +1029,18 @@ void main() {
 
       late File source;
       await tester.runAsync(() async {
-        final readOnlyDir = Directory('${userDir.path}/readonly');
-        await readOnlyDir.create(recursive: true);
-        source = await writeUserImage('locked_temp.png', parent: readOnlyDir);
-        await Process.run('chmod', ['0555', readOnlyDir.path]);
+        source = await writeUserImage('locked_temp.png');
+        // Model the deletion failure directly: chmod does not deny root and
+        // differs across platforms. The source bytes still come from disk.
+        IOOverrides.runWithIOOverrides(() {
+          mediaController.enqueueImages(
+            [source.path],
+            _config,
+            deleteSourcesAfterProcessing: true,
+          );
+        }, _DeleteFailureOverrides(source));
+      });
 
-        mediaController.enqueueImages(
-          [source.path],
-          _config,
-          deleteSourcesAfterProcessing: true,
-        );
-      });
-      addTearDown(() async {
-        await Process.run('chmod', ['-R', '0755', userDir.path]);
-      });
       expect(
         await pumpUntil(tester, () => !mediaController.hasUnreadyImages),
         isTrue,
@@ -1032,7 +1058,7 @@ void main() {
 
     controller.dispose();
     focusNode.dispose();
-  }, skip: !(Platform.isMacOS || Platform.isLinux));
+  });
 
   testWidgets('压缩失败会记录日志且保留用户源文件', (tester) async {
     final logs = <String>[];

@@ -5237,5 +5237,6 @@
   "chatInputHintPaste": "Вставьте длинный текст: он станет файлом",
   "chatInputHintTokens": "Нажмите на кольцо у кнопки: расход токенов",
   "chatInputHintToolMenu": "Долгое нажатие на шаг инструмента: копировать или перезапустить",
-  "messageMoreSheetCopyFormatted": "Копировать с форматированием"
+  "messageMoreSheetCopyFormatted": "Копировать с форматированием",
+  "agentsMode": "Режим агента"
 }

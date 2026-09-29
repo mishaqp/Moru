@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import '../api/stream/stream_chunk.dart';
 import '../workspace/task_plan.dart';
 import '../workspace/workspace_runtime.dart';
@@ -26,6 +28,7 @@ class AcpChatTurn {
     required this.prompt,
     this.history = '',
     this.savedSessionId,
+    this.savedModeId,
     this.onSession,
     this.onPermission,
     this.onPlan,
@@ -46,6 +49,7 @@ class AcpChatTurn {
 
   /// The chat's session from an earlier run, reopened when the agent can.
   final String? savedSessionId;
+  final String? savedModeId;
   final void Function(String sessionId)? onSession;
   final AcpPermissionHandler? onPermission;
   final void Function(TaskPlan plan)? onPlan;
@@ -55,7 +59,7 @@ class AcpChatTurn {
 /// session live across turns, so the agent keeps its own context. A chat
 /// whose agent, model or folder changed gets a fresh process; one left idle
 /// is stopped to free memory.
-class AcpChatSessions {
+class AcpChatSessions extends ChangeNotifier {
   AcpChatSessions({
     required this.start,
     this.idleTimeout = const Duration(minutes: 20),
@@ -67,6 +71,9 @@ class AcpChatSessions {
 
   bool hasAgent(String conversationId) =>
       _chats[conversationId]?.agent.isAlive == true;
+
+  AcpSession? sessionFor(String? conversationId) =>
+      _chats[conversationId]?.session;
 
   /// Streams the agent's answer to [turn] as chat chunks.
   Stream<StreamChunk> send(AcpChatTurn turn) async* {
@@ -85,14 +92,27 @@ class AcpChatSessions {
         ...prompt,
       ];
     }
-    chat.needsHistory = false;
     try {
+      final mode = turn.savedModeId;
+      if (mode != null &&
+          mode != chat.session.currentModeId &&
+          chat.session.modes.any((m) => m.id == mode)) {
+        await chat.agent.setMode(chat.sessionId, mode);
+        chat.session = AcpSession(
+          id: chat.sessionId,
+          modes: chat.session.modes,
+          currentModeId: mode,
+        );
+        notifyListeners();
+      }
+      chat.needsHistory = false;
       yield* chat.agent.prompt(chat.sessionId, prompt, onPlan: turn.onPlan);
     } finally {
       if (chat.agent.isAlive) {
         chat.idle = Timer(idleTimeout, () => close(turn.conversationId));
       } else {
         _chats.remove(turn.conversationId);
+        notifyListeners();
       }
     }
   }
@@ -107,6 +127,7 @@ class AcpChatSessions {
     final chat = _chats.remove(conversationId);
     chat?.idle?.cancel();
     chat?.agent.close();
+    if (chat != null) notifyListeners();
   }
 
   void closeAll() {
@@ -129,30 +150,31 @@ class AcpChatSessions {
       mounts: turn.mounts,
     );
     try {
-      String? sessionId;
+      AcpSession? session;
       var needsHistory = true;
       final saved = turn.savedSessionId;
       if (saved != null && agent.info.loadSession) {
         try {
-          await agent.loadSession(sessionId: saved, cwd: turn.cwd);
-          sessionId = saved;
+          session = await agent.loadSession(sessionId: saved, cwd: turn.cwd);
           needsHistory = false;
         } on AcpError {
           // The agent lost it (updated, cleaned up): start over with the
           // chat's history instead.
         }
       }
-      if (sessionId == null) {
-        sessionId = (await agent.newSession(cwd: turn.cwd)).id;
-        turn.onSession?.call(sessionId);
+      if (session == null) {
+        session = await agent.newSession(cwd: turn.cwd);
+        turn.onSession?.call(session.id);
       }
-      final chat = _ChatAgent(key, agent, sessionId)
-        ..needsHistory = needsHistory;
+      final chat = _ChatAgent(key, agent, session)..needsHistory = needsHistory;
       _chats[turn.conversationId] = chat;
+      notifyListeners();
       unawaited(
         agent.done.then((_) {
           if (identical(_chats[turn.conversationId], chat)) {
             _chats.remove(turn.conversationId);
+            chat.idle?.cancel();
+            notifyListeners();
           }
         }),
       );
@@ -161,6 +183,12 @@ class AcpChatSessions {
       agent.close();
       rethrow;
     }
+  }
+
+  @override
+  void dispose() {
+    closeAll();
+    super.dispose();
   }
 
   static String _launchKey(AcpChatTurn turn) => [
@@ -176,11 +204,12 @@ class AcpChatSessions {
 }
 
 class _ChatAgent {
-  _ChatAgent(this.key, this.agent, this.sessionId);
+  _ChatAgent(this.key, this.agent, this.session);
 
   final String key;
   final AcpAgent agent;
-  final String sessionId;
+  AcpSession session;
+  String get sessionId => session.id;
   bool needsHistory = true;
   Timer? idle;
 }

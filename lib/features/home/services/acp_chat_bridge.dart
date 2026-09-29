@@ -24,6 +24,7 @@ import 'tool_approval_service.dart';
 
 /// Extras key of a chat's agent session: `{agent, id}`.
 const String acpSessionKey = 'acp.session';
+const String acpModeKey = 'acp.mode';
 
 /// Sends a chat turn to the assistant's agent instead of the model.
 ///
@@ -106,6 +107,9 @@ class AcpChatBridge {
         cwd: workspace?.cwd ?? '/root',
         mounts: workspace?.paths.mounts ?? const [],
         prompt: message.prompt,
+        savedModeId:
+            chats.getConversation(conversationId)?.extras[acpModeKey]
+                as String?,
         history: message.history,
         savedSessionId: saved is Map && saved['agent'] == spec.id
             ? saved['id'] as String?

@@ -5439,5 +5439,6 @@
   "chatInputHintToolMenu": "Long-press a tool step to copy or rerun it",
   "@chatInputHintQueue": {"description": "Composer placeholders shown in turn, one more each time the field is focused."},
   "messageMoreSheetCopyFormatted": "Copy with formatting",
-  "@messageMoreSheetCopyFormatted": {"description": "Copies the message as rich text (HTML) that keeps headings, lists and tables when pasted."}
+  "@messageMoreSheetCopyFormatted": {"description": "Copies the message as rich text (HTML) that keeps headings, lists and tables when pasted."},
+  "agentsMode": "Agent mode"
 }

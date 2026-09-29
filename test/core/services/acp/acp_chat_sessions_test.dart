@@ -50,7 +50,16 @@ class _ScriptedAgent extends AcpChannel {
           'agentCapabilities': {'loadSession': loadSession},
         });
       case 'session/new':
-        reply({'sessionId': 'new-${++sessions}'});
+        reply({
+          'sessionId': 'new-${++sessions}',
+          'modes': {
+            'currentModeId': 'ask',
+            'availableModes': [
+              {'id': 'ask', 'name': 'Ask'},
+              {'id': 'code', 'name': 'Code'},
+            ],
+          },
+        });
       case 'session/load':
         if (loadFails) {
           scheduleMicrotask(
@@ -61,8 +70,18 @@ class _ScriptedAgent extends AcpChannel {
             }),
           );
         } else {
-          reply(<String, Object?>{});
+          reply({
+            'modes': {
+              'currentModeId': 'ask',
+              'availableModes': [
+                {'id': 'ask', 'name': 'Ask'},
+                {'id': 'code', 'name': 'Code'},
+              ],
+            },
+          });
         }
+      case 'session/set_mode':
+        reply(<String, Object?>{});
       case 'session/prompt':
         final session = params['sessionId'];
         final text = [
@@ -131,6 +150,7 @@ void main() {
     String text, {
     String conversation = 'c1',
     String? saved,
+    String? mode,
     String history = '',
     String cwd = '/workspace',
     AcpProviderInput? using,
@@ -145,6 +165,7 @@ void main() {
     ],
     history: history,
     savedSessionId: saved,
+    savedModeId: mode,
     onSession: onSession,
   );
 
@@ -153,6 +174,57 @@ void main() {
     expect(chunks.last, isA<Finish>());
     return chunks.whereType<TextDelta>().map((c) => c.text).join();
   }
+
+  test(
+    'keeps modes and applies the saved mode before the next prompt',
+    () async {
+      final sessions = sessionsWith();
+      addTearDown(sessions.closeAll);
+      await answer(sessions, turn('hi'));
+      expect(sessions.sessionFor('c1')!.modes.map((m) => m.id), [
+        'ask',
+        'code',
+      ]);
+      expect(sessions.sessionFor('c1')!.currentModeId, 'ask');
+      await answer(sessions, turn('write', mode: 'code'));
+      expect(sessions.sessionFor('c1')!.currentModeId, 'code');
+      final sent = started.single.sent;
+      final modeIndex = sent.indexWhere(
+        (m) => m['method'] == 'session/set_mode',
+      );
+      expect(sent[modeIndex]['params'], {
+        'sessionId': 'new-1',
+        'modeId': 'code',
+      });
+      expect(sent[modeIndex + 1]['method'], 'session/prompt');
+      await answer(sessions, turn('more', mode: 'code'));
+      expect(
+        sent.where((m) => m['method'] == 'session/set_mode'),
+        hasLength(1),
+      );
+    },
+  );
+
+  test(
+    'restores mode after loading or restarting and ignores unavailable modes',
+    () async {
+      final sessions = sessionsWith(loadSession: true);
+      addTearDown(sessions.closeAll);
+      await answer(sessions, turn('hi', saved: 'saved', mode: 'code'));
+      expect(sessions.sessionFor('c1')!.id, 'saved');
+      expect(sessions.sessionFor('c1')!.currentModeId, 'code');
+      sessions.close('c1');
+      expect(sessions.sessionFor('c1'), isNull);
+      await answer(sessions, turn('again', mode: 'code'));
+      expect(sessions.sessionFor('c1')!.currentModeId, 'code');
+      await answer(sessions, turn('unknown', mode: 'removed'));
+      expect(sessions.sessionFor('c1')!.currentModeId, 'code');
+      expect(
+        started.last.sent.where((m) => m['method'] == 'session/set_mode'),
+        hasLength(1),
+      );
+    },
+  );
 
   test('a chat keeps one agent and one session across turns', () async {
     final sessions = sessionsWith();

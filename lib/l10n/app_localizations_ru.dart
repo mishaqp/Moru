@@ -12203,4 +12203,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get messageMoreSheetCopyFormatted => 'Копировать с форматированием';
+
+  @override
+  String get agentsMode => 'Режим агента';
 }

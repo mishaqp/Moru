@@ -21,6 +21,7 @@ import '../../../theme/design_tokens.dart';
 import 'chat_input_bar.dart';
 import 'model_icon.dart';
 import 'composer_status_strip.dart';
+import 'acp_mode_chip.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/services/api/chat_api_helpers.dart';
 import 'chat_token_sheet.dart';
@@ -307,11 +308,13 @@ class ChatInputSection extends StatelessWidget {
       inputBackgroundOpacityDark: settings.chatInputBackgroundOpacityDark,
     );
 
-    if (!workspaceBound) return bar;
+    final agentChat = a?.agentId?.isNotEmpty == true;
+    if (!workspaceBound && !agentChat) return bar;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (agentChat) AcpModeChip(conversationId: conversationId),
         ComposerStatusStrip(
           conversationId: conversationId,
           generating: isLoading,

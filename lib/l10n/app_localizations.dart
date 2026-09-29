@@ -21544,6 +21544,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Copy with formatting'**
   String get messageMoreSheetCopyFormatted;
+
+  /// No description provided for @agentsMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent mode'**
+  String get agentsMode;
 }
 
 class _AppLocalizationsDelegate

@@ -4320,5 +4320,6 @@
   "chatInputHintPaste": "貼上長文字：會變成檔案",
   "chatInputHintTokens": "點傳送旁的圓環查看權杖用量",
   "chatInputHintToolMenu": "長按工具步驟可複製或重新執行",
-  "messageMoreSheetCopyFormatted": "帶格式複製"
+  "messageMoreSheetCopyFormatted": "帶格式複製",
+  "agentsMode": "代理模式"
 }

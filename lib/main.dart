@@ -715,7 +715,7 @@ class MyApp extends StatelessWidget {
                   manager.start(spec, provider, cwd: cwd, mounts: mounts),
             );
           },
-          dispose: (_, sessions) => sessions.closeAll(),
+          dispose: (_, sessions) => sessions.dispose(),
         ),
         ProxyProvider<_WorkspaceStackHolder, EnvironmentManager?>(
           update: (_, extras, __) => extras.environmentManager,
