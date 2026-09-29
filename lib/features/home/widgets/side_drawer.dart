@@ -1232,7 +1232,13 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     final pattern = sameYear
         ? l10n.sideDrawerDateShortPattern
         : l10n.sideDrawerDateFullPattern;
-    final fmt = DateFormat(pattern);
+    // In the app's language ("25 сент."), not the default English.
+    final locale = Localizations.localeOf(context);
+    final tag = locale.toLanguageTag();
+    final fmt = DateFormat(
+      pattern,
+      DateFormat.localeExists(tag) ? tag : locale.languageCode,
+    );
     return fmt.format(date);
   }
 

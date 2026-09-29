@@ -23,6 +23,7 @@ import 'package:Kelivo/shared/widgets/ios_tactile.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 // ignore: depend_on_referenced_packages
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -820,5 +821,26 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Today one'), findsOneWidget);
     expect(settings.sidebarCollapsedSections, isEmpty);
+  });
+
+  testWidgets('older days are headed in the app language', (tester) async {
+    final service = createService();
+    await tester.runAsync(service.init);
+    // A day before yesterday, so the header shows a date, not a word.
+    final day = DateTime.now().subtract(const Duration(days: 5));
+    service.seedConversationsForTest([
+      Conversation(title: 'Old chat', createdAt: day, updatedAt: day),
+    ]);
+    await pumpDrawer(
+      tester,
+      service,
+      embedded: false,
+      locale: const Locale('ru'),
+    );
+    final pattern = day.year == DateTime.now().year ? 'd MMM' : 'd MMM yyyy';
+    final label = DateFormat(pattern, 'ru').format(day);
+    expect(find.text(label), findsOneWidget);
+    // Russian month, not "Sep".
+    expect(label, isNot(contains(DateFormat('MMM', 'en').format(day))));
   });
 }

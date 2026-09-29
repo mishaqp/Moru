@@ -152,8 +152,11 @@ class _ChatArchivePageState extends State<ChatArchivePage> {
     if (_sort == _ArchiveSort.activity) {
       archived.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     }
+    final locale = Localizations.localeOf(context);
     final dateFormat = DateFormat.yMMMd(
-      Localizations.localeOf(context).toLanguageTag(),
+      DateFormat.localeExists(locale.toLanguageTag())
+          ? locale.toLanguageTag()
+          : locale.languageCode,
     );
 
     return Scaffold(
