@@ -5239,5 +5239,8 @@
   "chatInputHintToolMenu": "Долгое нажатие на шаг инструмента: копировать или перезапустить",
   "messageMoreSheetCopyFormatted": "Копировать с форматированием",
   "agentsMode": "Режим агента",
-  "agentsImageNotSent": "Картинка не передана агенту."
+  "agentsImageNotSent": "Картинка не передана агенту.",
+  "agentsErrorApiKey": "Неверный API-ключ у провайдера.",
+  "agentsErrorModel": "Модель не найдена. Проверьте модель в настройках провайдера.",
+  "agentsErrorNetwork": "Нет сети. Проверьте подключение и попробуйте снова."
 }

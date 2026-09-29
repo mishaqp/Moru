@@ -12209,4 +12209,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get agentsImageNotSent => 'Картинка не передана агенту.';
+
+  @override
+  String get agentsErrorApiKey => 'Неверный API-ключ у провайдера.';
+
+  @override
+  String get agentsErrorModel =>
+      'Модель не найдена. Проверьте модель в настройках провайдера.';
+
+  @override
+  String get agentsErrorNetwork =>
+      'Нет сети. Проверьте подключение и попробуйте снова.';
 }

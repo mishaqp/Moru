@@ -707,7 +707,7 @@ class MyApp extends StatelessWidget {
             return manager;
           },
         ),
-        Provider<AcpChatSessions>(
+        ChangeNotifierProvider<AcpChatSessions>(
           create: (ctx) {
             final manager = ctx.read<AcpAgentManager>();
             return AcpChatSessions(
@@ -715,7 +715,6 @@ class MyApp extends StatelessWidget {
                   manager.start(spec, provider, cwd: cwd, mounts: mounts),
             );
           },
-          dispose: (_, sessions) => sessions.dispose(),
         ),
         ProxyProvider<_WorkspaceStackHolder, EnvironmentManager?>(
           update: (_, extras, __) => extras.environmentManager,

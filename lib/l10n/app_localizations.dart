@@ -21556,6 +21556,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'An image was not sent to the agent.'**
   String get agentsImageNotSent;
+
+  /// No description provided for @agentsErrorApiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid API key for the provider.'**
+  String get agentsErrorApiKey;
+
+  /// No description provided for @agentsErrorModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model not found. Check the provider model settings.'**
+  String get agentsErrorModel;
+
+  /// No description provided for @agentsErrorNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'No network connection. Check your connection and try again.'**
+  String get agentsErrorNetwork;
 }
 
 class _AppLocalizationsDelegate

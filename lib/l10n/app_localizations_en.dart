@@ -12077,4 +12077,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get agentsImageNotSent => 'An image was not sent to the agent.';
+
+  @override
+  String get agentsErrorApiKey => 'Invalid API key for the provider.';
+
+  @override
+  String get agentsErrorModel =>
+      'Model not found. Check the provider model settings.';
+
+  @override
+  String get agentsErrorNetwork =>
+      'No network connection. Check your connection and try again.';
 }

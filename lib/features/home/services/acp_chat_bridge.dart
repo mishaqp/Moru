@@ -11,6 +11,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/workspace_provider.dart';
 import '../../../core/services/acp/acp_agent.dart';
 import '../../../core/services/acp/acp_agent_manager.dart';
+import '../../../core/services/acp/acp_error_messages.dart';
 import '../../../core/services/acp/acp_chat_prompt.dart';
 import '../../../core/services/acp/acp_chat_sessions.dart';
 import '../../../core/services/acp/acp_provider_input.dart';
@@ -36,8 +37,45 @@ class AcpChatBridge {
 
   final BuildContext context;
 
-  /// The agent's answer, or null when [assistant] has no agent.
+  /// Translate both setup failures and errors arriving after streaming starts.
   Future<Stream<StreamChunk>?> streamFor({
+    required Object? assistant,
+    required String conversationId,
+    required SettingsProvider settings,
+    required String providerKey,
+    required String modelId,
+    required List<Map<String, dynamic>> apiMessages,
+    List<String> userImagePaths = const [],
+  }) async {
+    if (assistant is! Assistant || assistant.agentId?.isNotEmpty != true) {
+      return null;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final stream = await _streamFor(
+        assistant: assistant,
+        conversationId: conversationId,
+        settings: settings,
+        providerKey: providerKey,
+        modelId: modelId,
+        apiMessages: apiMessages,
+        userImagePaths: userImagePaths,
+      );
+      return stream == null ? null : localizeStreamErrors(stream, l10n);
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(localizeAcpError(error, l10n), stackTrace);
+    }
+  }
+
+  static Stream<StreamChunk> localizeStreamErrors(
+    Stream<StreamChunk> source,
+    AppLocalizations l10n,
+  ) => source.handleError((Object error, StackTrace stackTrace) {
+    Error.throwWithStackTrace(localizeAcpError(error, l10n), stackTrace);
+  });
+
+  /// The agent's answer, or null when [assistant] has no agent.
+  Future<Stream<StreamChunk>?> _streamFor({
     required Object? assistant,
     required String conversationId,
     required SettingsProvider settings,

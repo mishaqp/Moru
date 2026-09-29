@@ -4322,5 +4322,8 @@
   "chatInputHintToolMenu": "长按工具步骤可复制或重新运行",
   "messageMoreSheetCopyFormatted": "带格式复制",
   "agentsMode": "代理模式",
-  "agentsImageNotSent": "图片未发送给代理。"
+  "agentsImageNotSent": "图片未发送给代理。",
+  "agentsErrorApiKey": "提供商的 API 密钥无效。",
+  "agentsErrorModel": "未找到模型。请检查提供商的模型设置。",
+  "agentsErrorNetwork": "无法连接网络。请检查网络连接后重试。"
 }

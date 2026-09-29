@@ -11546,6 +11546,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentsImageNotSent => '图片未发送给代理。';
+
+  @override
+  String get agentsErrorApiKey => '提供商的 API 密钥无效。';
+
+  @override
+  String get agentsErrorModel => '未找到模型。请检查提供商的模型设置。';
+
+  @override
+  String get agentsErrorNetwork => '无法连接网络。请检查网络连接后重试。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -23019,6 +23028,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get agentsImageNotSent => '图片未发送给代理。';
+
+  @override
+  String get agentsErrorApiKey => '提供商的 API 密钥无效。';
+
+  @override
+  String get agentsErrorModel => '未找到模型。请检查提供商的模型设置。';
+
+  @override
+  String get agentsErrorNetwork => '无法连接网络。请检查网络连接后重试。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -34566,4 +34584,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentsImageNotSent => '圖片未傳送給代理。';
+
+  @override
+  String get agentsErrorApiKey => '供應商的 API 金鑰無效。';
+
+  @override
+  String get agentsErrorModel => '找不到模型。請檢查供應商的模型設定。';
+
+  @override
+  String get agentsErrorNetwork => '無法連線網路。請檢查網路連線後重試。';
 }

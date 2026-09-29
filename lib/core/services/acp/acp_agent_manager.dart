@@ -12,6 +12,8 @@ import '../workspace/workspace_runtime.dart';
 import 'acp_agent.dart';
 import 'acp_agent_catalog.dart';
 import 'acp_stdio_channel.dart';
+import 'acp_error_messages.dart';
+import '../../../l10n/app_localizations.dart';
 
 enum AcpInstallState { unknown, missing, installed }
 
@@ -31,10 +33,13 @@ enum AcpAgentFailure {
 
 /// The result of starting an agent and greeting it.
 class AcpCheckResult {
-  const AcpCheckResult({this.info, this.error});
+  const AcpCheckResult({this.info, this.error, this.failureKind});
 
   final AcpAgentInfo? info;
   final String? error;
+  final AcpFailureKind? failureKind;
+  String? errorMessage(AppLocalizations l10n) =>
+      acpFailureMessage(failureKind, l10n) ?? error;
   bool get ok => info != null;
 }
 
@@ -69,6 +74,7 @@ class AcpAgentManager extends ChangeNotifier {
   String? busyAgentId;
   bool probing = false;
   AcpAgentFailure? failure;
+  AcpFailureKind? failureKind;
   String? failedAgentId;
 
   List<AcpAgentSpec> get agents => [...AcpAgentSpec.builtIn, ..._custom];
@@ -211,11 +217,13 @@ class AcpAgentManager extends ChangeNotifier {
     failedAgentId = spec.id;
     if (runtime == null) {
       failure = AcpAgentFailure.noEnvironment;
+      failureKind = null;
       notifyListeners();
       return;
     }
     busyAgentId = spec.id;
     failure = null;
+    failureKind = null;
     _log.clear();
     notifyListeners();
     try {
@@ -233,6 +241,7 @@ class AcpAgentManager extends ChangeNotifier {
           if (deps.status(EnvironmentDependency.node) !=
               DependencyStatus.installed) {
             failure = AcpAgentFailure.node;
+            failureKind = classifyAcpFailure(deps.log);
             return;
           }
         }
@@ -244,6 +253,7 @@ class AcpAgentManager extends ChangeNotifier {
       );
       if (code != 0) {
         failure = AcpAgentFailure.install;
+        failureKind = classifyAcpFailure(log);
         return;
       }
       _states[spec.id] = AcpInstallState.installed;
@@ -252,6 +262,7 @@ class AcpAgentManager extends ChangeNotifier {
     } catch (error) {
       _append('\n$error\n');
       failure = AcpAgentFailure.install;
+      failureKind = classifyAcpFailure(error);
     } finally {
       busyAgentId = null;
       _runId = null;
@@ -270,6 +281,7 @@ class AcpAgentManager extends ChangeNotifier {
         .join(' ');
     busyAgentId = spec.id;
     failure = null;
+    failureKind = null;
     failedAgentId = spec.id;
     _log.clear();
     notifyListeners();
@@ -282,6 +294,7 @@ class AcpAgentManager extends ChangeNotifier {
       );
       if (code != 0) {
         failure = AcpAgentFailure.remove;
+        failureKind = classifyAcpFailure(log);
         return;
       }
       _states[spec.id] = AcpInstallState.missing;
@@ -309,6 +322,7 @@ class AcpAgentManager extends ChangeNotifier {
     if (busy) return const AcpCheckResult(error: 'busy');
     busyAgentId = spec.id;
     failure = null;
+    failureKind = null;
     failedAgentId = null;
     notifyListeners();
     AcpAgent? agent;
@@ -320,8 +334,10 @@ class AcpAgentManager extends ChangeNotifier {
     } catch (error) {
       result = AcpCheckResult(
         error: error is AcpError ? error.message : error.toString(),
+        failureKind: classifyAcpFailure(error),
       );
       failure = AcpAgentFailure.check;
+      failureKind = result.failureKind;
       failedAgentId = spec.id;
     } finally {
       agent?.close();

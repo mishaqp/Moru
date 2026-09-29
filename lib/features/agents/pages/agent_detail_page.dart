@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/acp/acp_agent_manager.dart';
+import '../../../core/services/acp/acp_error_messages.dart';
 import '../../../core/services/acp/acp_provider_input.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
@@ -89,7 +90,11 @@ class AgentDetailPage extends StatelessWidget {
           IosSectionFooter(text: agentModelHint(l10n, spec)),
           if (!manager.environmentAvailable)
             _Notice(text: l10n.agentsNeedEnvironment, error: true),
-          if (agentFailureLabel(l10n, failure) case final text?)
+          if ((failure == null || failure == AcpAgentFailure.check
+                  ? null
+                  : acpFailureMessage(manager.failureKind, l10n) ??
+                        agentFailureLabel(l10n, failure))
+              case final text?)
             _Notice(text: text, error: true),
           if (check != null)
             _Notice(
@@ -98,7 +103,7 @@ class AgentDetailPage extends StatelessWidget {
                       check.info!.name ?? spec.name,
                       check.info!.version ?? '',
                     )
-                  : l10n.agentsCheckFailed(check.error ?? ''),
+                  : l10n.agentsCheckFailed(check.errorMessage(l10n) ?? ''),
               error: !check.ok,
             ),
           const SizedBox(height: 4),
