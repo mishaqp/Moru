@@ -66,6 +66,12 @@ class SidebarGlassBackdrop extends StatelessWidget {
   }
 }
 
+/// Whether sidebar rows and bars go without their own fill: in the tablet
+/// side panel, and on the glass theme, where a solid fill would cover the
+/// frosted backdrop with dark slabs.
+bool sidebarSurfacesClear(BuildContext context, {required bool embedded}) =>
+    embedded || context.select<SettingsProvider, bool>((s) => s.glassTheme);
+
 /// A light glass tile on the sidebar glass (search, buttons): a brighter
 /// veil and a hairline edge. Plain surfaces without the glass theme.
 BoxDecoration sidebarGlassTile(

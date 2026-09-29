@@ -7,6 +7,7 @@ import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/providers/update_provider.dart';
 import 'package:Kelivo/core/providers/backup_reminder_provider.dart';
 import 'package:Kelivo/core/providers/tag_provider.dart';
+import 'package:Kelivo/core/providers/user_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/features/chat/widgets/chat_gradient_background.dart';
@@ -15,6 +16,7 @@ import 'package:Kelivo/features/home/widgets/side_drawer.dart';
 import 'package:Kelivo/features/home/widgets/sidebar_selection_bars.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart';
+import 'package:Kelivo/shared/widgets/ios_tactile.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -179,6 +181,7 @@ void main() {
     final assistantPrefs = createBusinessTestPreferences();
     final backupPrefs = createBusinessTestPreferences();
     final tagPrefs = createBusinessTestPreferences();
+    final userPrefs = createBusinessTestPreferences();
     final settings = SettingsProvider(settingsPrefs);
     Widget materialFor(Locale currentLocale) {
       return MaterialApp(
@@ -215,6 +218,9 @@ void main() {
             create: (_) => TagProvider(preferences: tagPrefs),
           ),
           ChangeNotifierProvider(create: (_) => UpdateProvider()),
+          ChangeNotifierProvider(
+            create: (_) => UserProvider(preferences: userPrefs),
+          ),
         ],
         child: localeListenable == null
             ? materialFor(locale)
@@ -463,6 +469,55 @@ void main() {
     await settings.setGlassTheme(false);
     await tester.pump();
     expect(find.byType(ChatGradientBackground), findsNothing);
+  });
+
+  testWidgets('on glass the chat rows and the bottom bar have no solid fill', (
+    tester,
+  ) async {
+    final service = createService();
+    await tester.runAsync(() async {
+      await service.init();
+      await service.createConversation(title: 'Alpha');
+      await service.createConversation(title: 'Beta');
+    });
+    await pumpDrawer(tester, service, embedded: false, showBottomBar: true);
+
+    Color rowFill(String title) => tester
+        .widget<IosCardPress>(
+          find
+              .ancestor(
+                of: find.text(title),
+                matching: find.byType(IosCardPress),
+              )
+              .first,
+        )
+        .baseColor!;
+    Color? barFill() =>
+        (tester
+                    .widget<Container>(
+                      find.byKey(const ValueKey<String>('sidebar-user-bar')),
+                    )
+                    .decoration
+                as BoxDecoration?)
+            ?.color;
+
+    final surface = Theme.of(
+      tester.element(find.byType(SideDrawer)),
+    ).colorScheme.surface;
+    expect(rowFill('Alpha'), surface);
+    expect(barFill(), surface);
+
+    final settings = Provider.of<SettingsProvider>(
+      tester.element(find.byType(SideDrawer)),
+      listen: false,
+    );
+    await settings.loaded;
+    await settings.setGlassTheme(true);
+    // The rebuilt rows replay their entrance animation; let it finish.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(rowFill('Alpha'), Colors.transparent);
+    expect(barFill(), Colors.transparent);
   });
 
   testWidgets('the round + next to the search starts a new chat and closes '

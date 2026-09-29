@@ -136,6 +136,11 @@ class SideDrawer extends StatefulWidget {
 }
 
 class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
+  /// Rows and bars without their own fill: the tablet side panel, and the
+  /// glass theme, where a solid fill would cover the frosted backdrop.
+  bool _clearSurfaces(BuildContext context) =>
+      sidebarSurfacesClear(context, embedded: widget.embedded);
+
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   final GlobalKey _assistantTileKey = GlobalKey();
@@ -1998,13 +2003,9 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         child: KeyedSubtree(
                           key: _assistantTileKey,
                           child: IosCardPress(
-                            baseColor: (() {
-                              final embedded = widget.embedded;
-                              final base = embedded
-                                  ? Colors.transparent
-                                  : cs.surface;
-                              return base;
-                            })(),
+                            baseColor: _clearSurfaces(context)
+                                ? Colors.transparent
+                                : cs.surface,
                             borderRadius: BorderRadius.circular(16),
                             onTap: _toggleAssistantPicker,
                             onLongPress: (() {
@@ -2166,7 +2167,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                 12,
                               ),
                               decoration: BoxDecoration(
-                                color: widget.embedded
+                                color: _clearSurfaces(context)
                                     ? Colors.transparent
                                     : cs.surface,
                               ),
@@ -2278,7 +2279,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
           // The selection action bar is shorter and owns its own top shadow;
           // keeping this fade would expose a thin strip of list content between
           // the fade and the action bar.
-          if (!widget.embedded && !_selectionMode)
+          // Glass has no solid bar to fade into.
+          if (!_clearSurfaces(context) && !_selectionMode)
             Positioned(
               left: 0,
               right: 0,
@@ -3630,13 +3632,14 @@ class _ChatTileState extends State<_ChatTile> {
     );
     final embedded =
         context.findAncestorWidgetOfExactType<SideDrawer>()?.embedded ?? false;
+    final clear = sidebarSurfacesClear(context, embedded: embedded);
     final Color tileColor;
     if (widget.selectionMode) {
       tileColor = widget.selected
-          ? cs.primary.withValues(alpha: embedded ? 0.20 : 0.16)
-          : (embedded ? Colors.transparent : cs.surface);
-    } else if (embedded) {
-      // In tablet embedded mode, keep current highlight, others transparent
+          ? cs.primary.withValues(alpha: clear ? 0.20 : 0.16)
+          : (clear ? Colors.transparent : cs.surface);
+    } else if (clear) {
+      // Side panel and glass: only the open chat is highlighted.
       tileColor = isCurrent
           ? cs.primary.withValues(alpha: 0.16)
           : Colors.transparent;
@@ -3919,9 +3922,9 @@ class _AssistantInlineTileState extends State<_AssistantInlineTile> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final embedded = widget.embedded;
-    final Color tileColor = (embedded ? Colors.transparent : cs.surface);
-    final Color bg = tileColor;
+    final Color bg = sidebarSurfacesClear(context, embedded: widget.embedded)
+        ? Colors.transparent
+        : cs.surface;
     final content = IosCardPress(
       baseColor: bg,
       borderRadius: BorderRadius.circular(16),
