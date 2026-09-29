@@ -868,7 +868,10 @@ class HomePageController extends ChangeNotifier {
       if (prefs.newChatOnLaunch) {
         await _createNewConversation();
       } else {
-        final conversations = _chatService.getAllConversations();
+        // The newest chat still in the list; archived ones stay put away.
+        final conversations = _chatService.getAllConversations().where(
+          (c) => !ChatService.isArchived(c),
+        );
         if (conversations.isNotEmpty) {
           final recent = conversations.first;
           _chatService.setCurrentConversation(recent.id);
@@ -942,6 +945,7 @@ class HomePageController extends ChangeNotifier {
     final currentId = _chatService.currentConversationId;
     final ids = _chatService
         .getAllConversations()
+        .where((c) => !ChatService.isArchived(c))
         .take(startupWarmupConversationCount)
         .map((c) => c.id)
         .where(
@@ -2609,7 +2613,11 @@ class HomePageController extends ChangeNotifier {
       conversations: _context
           .read<ChatService>()
           .getAllConversations()
-          .where((conversation) => conversation.id != sourceId)
+          .where(
+            (conversation) =>
+                conversation.id != sourceId &&
+                !ChatService.isArchived(conversation),
+          )
           .toList(),
     );
     if (destination == null ||

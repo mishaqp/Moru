@@ -4216,10 +4216,13 @@ class ChatDatabaseRepository {
 
   /// Reads [conversationId]'s extras, applies [update], and writes the result
   /// in one transaction. [updatedAt] is bumped only when the map changes.
+  /// [touch] moves the conversation's updatedAt to now; flags that are not
+  /// activity (such as archiving) keep the time of the last message.
   Future<void> updateConversationExtras(
     String conversationId,
-    Map<String, dynamic> Function(Map<String, dynamic> current) update,
-  ) {
+    Map<String, dynamic> Function(Map<String, dynamic> current) update, {
+    bool touch = true,
+  }) {
     return _db.transaction(() async {
       final row = await (_db.select(
         _db.conversationRows,
@@ -4237,7 +4240,7 @@ class ChatDatabaseRepository {
       )..where((t) => t.id.equals(conversationId))).write(
         ConversationRowsCompanion(
           extrasJson: Value(jsonEncode(next)),
-          updatedAt: Value(DateTime.now()),
+          updatedAt: touch ? Value(DateTime.now()) : const Value.absent(),
         ),
       );
     });

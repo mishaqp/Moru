@@ -4710,6 +4710,72 @@ abstract class AppLocalizations {
   /// **'New chat'**
   String get sideDrawerNewChat;
 
+  /// No description provided for @sideDrawerArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get sideDrawerArchive;
+
+  /// No description provided for @sideDrawerArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat archived'**
+  String get sideDrawerArchived;
+
+  /// No description provided for @sideDrawerUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get sideDrawerUndo;
+
+  /// No description provided for @archivePageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get archivePageTitle;
+
+  /// No description provided for @archivePageEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing archived. Swipe a chat to the right to put it here.'**
+  String get archivePageEmpty;
+
+  /// No description provided for @archivePageRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get archivePageRestore;
+
+  /// No description provided for @archivePageRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat restored'**
+  String get archivePageRestored;
+
+  /// No description provided for @archivePageSortArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'By date archived'**
+  String get archivePageSortArchived;
+
+  /// No description provided for @archivePageSortActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'By last message'**
+  String get archivePageSortActivity;
+
+  /// No description provided for @archivePageDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{title}\"?'**
+  String archivePageDeleteTitle(String title);
+
+  /// No description provided for @archivePageDeleteContent.
+  ///
+  /// In en, this message translates to:
+  /// **'The chat and all its messages will be deleted.'**
+  String get archivePageDeleteContent;
+
   /// No description provided for @sideDrawerShortcutsTitle.
   ///
   /// In en, this message translates to:

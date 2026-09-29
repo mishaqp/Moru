@@ -2812,6 +2812,64 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Extras key of an archived conversation: when it was archived, in ms
+  /// since the epoch.
+  static const String archivedAtKey = 'archive.at';
+
+  /// Whether [conversation] is in the archive: hidden from the sidebar list
+  /// and from picks of the latest chat, kept with all its messages.
+  static bool isArchived(Conversation conversation) =>
+      conversation.extras[archivedAtKey] is num;
+
+  /// When [conversation] was archived, or null when it is not.
+  static DateTime? archivedAt(Conversation conversation) {
+    final at = conversation.extras[archivedAtKey];
+    return at is num ? DateTime.fromMillisecondsSinceEpoch(at.toInt()) : null;
+  }
+
+  /// Archived conversations, most recently archived first.
+  List<Conversation> getArchivedConversations() {
+    final archived = getAllConversations().where(isArchived).toList()
+      ..sort((a, b) => archivedAt(b)!.compareTo(archivedAt(a)!));
+    return archived;
+  }
+
+  /// Moves each id into the archive, or back out with [archived] false.
+  /// Unsaved drafts and unchanged items are skipped; the last-message time
+  /// stays, so a restored chat returns to its old place. Returns how many
+  /// changed; notifies and bumps at most once.
+  Future<int> setConversationsArchived(
+    Iterable<String> ids,
+    bool archived, {
+    DateTime? now,
+  }) async {
+    if (!_initialized) await init();
+    final at = (now ?? DateTime.now()).millisecondsSinceEpoch;
+    var changed = 0;
+    final seen = <String>{};
+    for (final id in ids) {
+      if (id.isEmpty || !seen.add(id)) continue;
+      final conversation = _conversationsCache[id];
+      if (conversation == null || isArchived(conversation) == archived) {
+        continue;
+      }
+      await _repo.updateConversationExtras(id, (extras) {
+        if (archived) {
+          extras[archivedAtKey] = at;
+        } else {
+          extras.remove(archivedAtKey);
+        }
+        return extras;
+      }, touch: false);
+      await _refreshConversation(id);
+      changed++;
+    }
+    if (changed == 0) return 0;
+    _bumpConversationListRevision();
+    notifyListeners();
+    return changed;
+  }
+
   /// Sets pin state to [pinned] for each id. Unchanged items are skipped.
   /// Returns how many conversations changed. Notifies and bumps at most once.
   Future<int> setConversationsPinned(Iterable<String> ids, bool pinned) async {

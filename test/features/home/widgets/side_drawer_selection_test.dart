@@ -10,6 +10,7 @@ import 'package:Kelivo/core/providers/tag_provider.dart';
 import 'package:Kelivo/core/providers/user_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/models/conversation.dart';
+import 'package:Kelivo/features/chat/pages/chat_archive_page.dart';
 import 'package:Kelivo/features/chat/widgets/chat_gradient_background.dart';
 import 'package:Kelivo/features/home/widgets/sidebar_glass.dart';
 import 'package:Kelivo/features/home/widgets/side_drawer.dart';
@@ -159,6 +160,20 @@ void main() {
     }
   }
 
+  /// Lets the database finish a write the UI started, pumping until
+  /// [done] holds.
+  Future<void> settleUntil(WidgetTester tester, bool Function() done) async {
+    for (var i = 0; i < 40 && !done(); i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      // Advances the test clock too, for timers the write sets.
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(done(), isTrue);
+    await tester.pump(const Duration(milliseconds: 400));
+  }
+
   Future<void> pumpDrawer(
     WidgetTester tester,
     ChatService service, {
@@ -188,6 +203,8 @@ void main() {
         locale: currentLocale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        // Draws app notifications, as the app's root does.
+        builder: (context, child) => AppSnackBarOverlay(child: child!),
         home: Scaffold(
           body: SideDrawer(
             userName: 'User',
@@ -552,5 +569,121 @@ void main() {
       find.byKey(const ValueKey<String>('sidebar-new-chat')),
       findsNothing,
     );
+  });
+
+  testWidgets('archiving hides a chat from the list and restoring puts it '
+      'back in its old place', (tester) async {
+    final service = createService();
+    late String alphaId;
+    await tester.runAsync(() async {
+      await service.init();
+      alphaId = (await service.createConversation(title: 'Alpha')).id;
+      await service.createConversation(title: 'Beta');
+    });
+    await pumpDrawer(tester, service, embedded: false);
+    expect(find.text('Alpha'), findsOneWidget);
+    final updated = service.getConversation(alphaId)!.updatedAt;
+    final revision = service.conversationListRevision;
+
+    await tester.runAsync(
+      () => service.setConversationsArchived([alphaId], true),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Alpha'), findsNothing);
+    expect(find.text('Beta'), findsOneWidget);
+    expect(service.conversationListRevision, greaterThan(revision));
+    expect(service.getArchivedConversations().map((c) => c.id), [alphaId]);
+    // Archiving is not activity: the chat keeps its place in time.
+    expect(service.getConversation(alphaId)!.updatedAt, updated);
+
+    await tester.runAsync(
+      () => service.setConversationsArchived([alphaId], false),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Alpha'), findsOneWidget);
+    expect(service.getArchivedConversations(), isEmpty);
+  });
+
+  testWidgets('a swipe to the right archives a chat and Undo brings it back', (
+    tester,
+  ) async {
+    final service = createService();
+    await tester.runAsync(() async {
+      await service.init();
+      await service.createConversation(title: 'Alpha');
+      await service.createConversation(title: 'Beta');
+    });
+    await pumpDrawer(tester, service, embedded: false);
+
+    // The test window is 1200 wide; a third of the row is 400.
+    await tester.drag(find.text('Beta'), const Offset(600, 0));
+    await tester.pump();
+    await settleUntil(
+      tester,
+      () => service.getArchivedConversations().isNotEmpty,
+    );
+    expect(find.text('Beta'), findsNothing);
+    expect(find.text('Alpha'), findsOneWidget);
+    expect(service.getArchivedConversations().map((c) => c.title), ['Beta']);
+
+    expect(find.text('Chat archived'), findsOneWidget);
+    await tester.tap(find.text('Undo'));
+    await settleUntil(tester, () => service.getArchivedConversations().isEmpty);
+    expect(find.text('Beta'), findsOneWidget);
+    expect(service.getArchivedConversations(), isEmpty);
+    // Let the notifications time out and slide away.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('the archive button lists archived chats; restore and open '
+      'work from there', (tester) async {
+    final service = createService();
+    late String alphaId;
+    final opened = <String>[];
+    await tester.runAsync(() async {
+      await service.init();
+      alphaId = (await service.createConversation(title: 'Alpha')).id;
+      await service.createConversation(title: 'Beta');
+      await service.setConversationsArchived([alphaId], true);
+    });
+    await pumpDrawer(
+      tester,
+      service,
+      embedded: false,
+      onSelectConversation: (id, {closeDrawer = false}) => opened.add(id),
+    );
+    expect(find.text('Alpha'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey<String>('sidebar-archive')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ChatArchivePage), findsOneWidget);
+    expect(find.byKey(ChatArchivePage.rowKey(alphaId)), findsOneWidget);
+
+    await tester.tap(find.byKey(ChatArchivePage.restoreKey(alphaId)));
+    await settleUntil(tester, () => service.getArchivedConversations().isEmpty);
+    expect(find.byKey(ChatArchivePage.rowKey(alphaId)), findsNothing);
+    expect(
+      find.text(
+        'Nothing archived. Swipe a chat to the right to put '
+        'it here.',
+      ),
+      findsOneWidget,
+    );
+
+    // Archive it again and open it from the archive.
+    await tester.runAsync(
+      () => service.setConversationsArchived([alphaId], true),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(ChatArchivePage.rowKey(alphaId)));
+    await tester.pumpAndSettle();
+    expect(find.byType(ChatArchivePage), findsNothing);
+    expect(opened, [alphaId]);
+    // Let the notifications time out and slide away.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(seconds: 1));
   });
 }

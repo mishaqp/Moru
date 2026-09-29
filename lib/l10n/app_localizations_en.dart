@@ -2534,6 +2534,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sideDrawerNewChat => 'New chat';
 
   @override
+  String get sideDrawerArchive => 'Archive';
+
+  @override
+  String get sideDrawerArchived => 'Chat archived';
+
+  @override
+  String get sideDrawerUndo => 'Undo';
+
+  @override
+  String get archivePageTitle => 'Archive';
+
+  @override
+  String get archivePageEmpty =>
+      'Nothing archived. Swipe a chat to the right to put it here.';
+
+  @override
+  String get archivePageRestore => 'Restore';
+
+  @override
+  String get archivePageRestored => 'Chat restored';
+
+  @override
+  String get archivePageSortArchived => 'By date archived';
+
+  @override
+  String get archivePageSortActivity => 'By last message';
+
+  @override
+  String archivePageDeleteTitle(String title) {
+    return 'Delete \"$title\"?';
+  }
+
+  @override
+  String get archivePageDeleteContent =>
+      'The chat and all its messages will be deleted.';
+
+  @override
   String get sideDrawerShortcutsTitle => 'Sidebar shortcuts';
 
   @override

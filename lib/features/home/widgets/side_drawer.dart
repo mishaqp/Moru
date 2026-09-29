@@ -14,7 +14,6 @@ import '../../backup/pages/backup_page.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/update_provider.dart';
 import '../../../core/models/assistant.dart';
-import '../../chat/pages/chat_history_page.dart';
 import 'package:flutter/services.dart';
 import 'dart:io' show File;
 import 'dart:math' as math;
@@ -43,6 +42,8 @@ import '../utils/model_display_helper.dart';
 import 'assistant_avatar.dart';
 import 'assistant_entry_actions.dart';
 import 'sidebar_bottom_bar.dart';
+import 'swipe_row_action.dart';
+import '../../chat/pages/chat_archive_page.dart';
 import 'sidebar_glass.dart';
 import 'sidebar_selection_bars.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
@@ -212,6 +213,21 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     // Update check moved to app startup (main.dart)
   }
 
+  /// Puts [id] into the archive; the snackbar offers to take it back.
+  Future<void> _archiveChat(String id) async {
+    final l10n = AppLocalizations.of(context)!;
+    final chatService = context.read<ChatService>();
+    final changed = await chatService.setConversationsArchived([id], true);
+    if (changed == 0 || !mounted) return;
+    showAppSnackBar(
+      context,
+      message: l10n.sideDrawerArchived,
+      actionLabel: l10n.sideDrawerUndo,
+      onAction: () =>
+          unawaited(chatService.setConversationsArchived([id], false)),
+    );
+  }
+
   void _showChatMenu(
     BuildContext context,
     ChatItem chat, {
@@ -324,6 +340,11 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         await chatService.togglePinConversation(chat.id);
                       },
                     ),
+                    row(
+                      icon: Lucide.Archive,
+                      label: l10n.sideDrawerArchive,
+                      action: () => _archiveChat(chat.id),
+                    ),
                     if (titleGenerationEnabled)
                       row(
                         icon: Lucide.RefreshCw,
@@ -361,7 +382,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                     .where(
                                       (c) =>
                                           c.assistantId == currentAid &&
-                                          c.id != chat.id,
+                                          c.id != chat.id &&
+                                          !ChatService.isArchived(c),
                                     )
                                     .toList()
                                   ..sort(
@@ -656,7 +678,9 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
               .getAllConversations()
               .where(
                 (c) =>
-                    c.assistantId == currentAid && !excludeIds.contains(c.id),
+                    c.assistantId == currentAid &&
+                    !excludeIds.contains(c.id) &&
+                    !ChatService.isArchived(c),
               )
               .toList()
             ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
@@ -1256,6 +1280,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     // Single pass: filter assistant + query, split pinned/rest via ChatItem.isPinned.
     for (final c in chatService.getAllConversations()) {
       if (c.assistantId != assistantId && c.assistantId != null) continue;
+      if (ChatService.isArchived(c)) continue;
       final title = c.title;
       if (q.isNotEmpty && !title.toLowerCase().contains(q)) continue;
       final item = ChatItem(
@@ -1904,7 +1929,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                         ),
                                       ),
                                       const SizedBox(width: 4),
-                                      // 历史按钮（圆形，无水波纹）
+                                      // Archive button (round, no ripple)
                                       SizedBox(
                                         width: 44,
                                         height: 44,
@@ -1912,16 +1937,22 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                           child: IosIconButton(
                                             size: 20,
                                             color: textBase,
-                                            icon: Lucide.History,
+                                            key: const ValueKey<String>(
+                                              'sidebar-archive',
+                                            ),
+                                            icon: Lucide.Archive,
                                             padding: const EdgeInsets.all(8),
                                             onTap: () async {
+                                              // The archive; the full
+                                              // history is one tap further,
+                                              // in its app bar.
                                               final selectedId =
                                                   await Navigator.of(
                                                     context,
                                                   ).push<String>(
                                                     MaterialPageRoute(
                                                       builder: (_) =>
-                                                          ChatHistoryPage(
+                                                          ChatArchivePage(
                                                             assistantId:
                                                                 currentAssistantId,
                                                           ),
@@ -2315,7 +2346,12 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         final chatService = context.read<ChatService>();
         final all = chatService.getAllConversations();
         // Filter conversations owned by this assistant and pick the newest
-        final recent = all.where((c) => c.assistantId == assistant.id).toList();
+        final recent = all
+            .where(
+              (c) =>
+                  c.assistantId == assistant.id && !ChatService.isArchived(c),
+            )
+            .toList();
         if (recent.isNotEmpty) {
           // getAllConversations is already sorted by updatedAt desc
           widget.onSelectConversation?.call(
@@ -3399,29 +3435,36 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             pinnedSection: isPinnedSection,
           );
           final chatTile =
-              _ChatTile(
-                    chat: tile.chat,
-                    textColor: textBase,
-                    loading: widget.loadingConversationIds.contains(
-                      tile.chat.id,
-                    ),
-                    selectionMode: _selectionMode,
-                    selected: _selectedConversationIds.contains(tile.chat.id),
-                    onToggleSelect: () =>
-                        _toggleConversationSelected(tile.chat.id),
-                    onTap: () {
-                      final keepOpen = context
-                          .read<SettingsProvider>()
-                          .keepSidebarOpenOnTopicTap;
-                      final closeDrawer = keepOpen == false;
-                      widget.onSelectConversation?.call(
+              SwipeRowAction(
+                    key: ValueKey<String>('sidebar-swipe-${tile.chat.id}'),
+                    enabled: !_selectionMode,
+                    icon: Lucide.Archive,
+                    label: AppLocalizations.of(context)!.sideDrawerArchive,
+                    onSwiped: () => unawaited(_archiveChat(tile.chat.id)),
+                    child: _ChatTile(
+                      chat: tile.chat,
+                      textColor: textBase,
+                      loading: widget.loadingConversationIds.contains(
                         tile.chat.id,
-                        closeDrawer: closeDrawer,
-                      );
-                    },
-                    onLongPress: () => _showChatMenu(context, tile.chat),
-                    onSecondaryTap: (pos) =>
-                        _showChatMenu(context, tile.chat, anchor: pos),
+                      ),
+                      selectionMode: _selectionMode,
+                      selected: _selectedConversationIds.contains(tile.chat.id),
+                      onToggleSelect: () =>
+                          _toggleConversationSelected(tile.chat.id),
+                      onTap: () {
+                        final keepOpen = context
+                            .read<SettingsProvider>()
+                            .keepSidebarOpenOnTopicTap;
+                        final closeDrawer = keepOpen == false;
+                        widget.onSelectConversation?.call(
+                          tile.chat.id,
+                          closeDrawer: closeDrawer,
+                        );
+                      },
+                      onLongPress: () => _showChatMenu(context, tile.chat),
+                      onSecondaryTap: (pos) =>
+                          _showChatMenu(context, tile.chat, anchor: pos),
+                    ),
                   )
                   .animate(
                     key: ValueKey(

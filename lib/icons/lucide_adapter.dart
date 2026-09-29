@@ -31,6 +31,9 @@ class Lucide {
   static const IconData Upload = lucide.LucideIcons.upload;
   static const IconData Bot = lucide.LucideIcons.bot;
   static const IconData History = lucide.LucideIcons.history;
+  static const IconData Archive = lucide.LucideIcons.archive;
+  static const IconData ArchiveRestore = lucide.LucideIcons.archiveRestore;
+  static const IconData ArrowUpDown = lucide.LucideIcons.arrowUpDown;
   static const IconData Settings = lucide.LucideIcons.settings;
   static const IconData Search = lucide.LucideIcons.search;
   static const IconData Gamepad = lucide.LucideIcons.gamepad2;

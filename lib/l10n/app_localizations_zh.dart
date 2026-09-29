@@ -2446,6 +2446,41 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sideDrawerNewChat => '新对话';
 
   @override
+  String get sideDrawerArchive => '归档';
+
+  @override
+  String get sideDrawerArchived => '已归档';
+
+  @override
+  String get sideDrawerUndo => '撤销';
+
+  @override
+  String get archivePageTitle => '归档';
+
+  @override
+  String get archivePageEmpty => '归档为空。向右滑动对话即可归档。';
+
+  @override
+  String get archivePageRestore => '恢复';
+
+  @override
+  String get archivePageRestored => '已恢复';
+
+  @override
+  String get archivePageSortArchived => '按归档时间';
+
+  @override
+  String get archivePageSortActivity => '按最后消息';
+
+  @override
+  String archivePageDeleteTitle(String title) {
+    return '删除“$title”？';
+  }
+
+  @override
+  String get archivePageDeleteContent => '该对话及其所有消息将被删除。';
+
+  @override
   String get sideDrawerShortcutsTitle => '侧边栏快捷方式';
 
   @override
@@ -13785,6 +13820,41 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get sideDrawerNewChat => '新对话';
 
   @override
+  String get sideDrawerArchive => '归档';
+
+  @override
+  String get sideDrawerArchived => '已归档';
+
+  @override
+  String get sideDrawerUndo => '撤销';
+
+  @override
+  String get archivePageTitle => '归档';
+
+  @override
+  String get archivePageEmpty => '归档为空。向右滑动对话即可归档。';
+
+  @override
+  String get archivePageRestore => '恢复';
+
+  @override
+  String get archivePageRestored => '已恢复';
+
+  @override
+  String get archivePageSortArchived => '按归档时间';
+
+  @override
+  String get archivePageSortActivity => '按最后消息';
+
+  @override
+  String archivePageDeleteTitle(String title) {
+    return '删除“$title”？';
+  }
+
+  @override
+  String get archivePageDeleteContent => '该对话及其所有消息将被删除。';
+
+  @override
   String get sideDrawerShortcutsTitle => '侧边栏快捷方式';
 
   @override
@@ -25051,6 +25121,41 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sideDrawerNewChat => '新對話';
+
+  @override
+  String get sideDrawerArchive => '封存';
+
+  @override
+  String get sideDrawerArchived => '已封存';
+
+  @override
+  String get sideDrawerUndo => '復原';
+
+  @override
+  String get archivePageTitle => '封存';
+
+  @override
+  String get archivePageEmpty => '封存為空。向右滑動對話即可封存。';
+
+  @override
+  String get archivePageRestore => '還原';
+
+  @override
+  String get archivePageRestored => '已還原';
+
+  @override
+  String get archivePageSortArchived => '按封存時間';
+
+  @override
+  String get archivePageSortActivity => '按最後訊息';
+
+  @override
+  String archivePageDeleteTitle(String title) {
+    return '刪除「$title」？';
+  }
+
+  @override
+  String get archivePageDeleteContent => '該對話及其所有訊息將被刪除。';
 
   @override
   String get sideDrawerShortcutsTitle => '側邊欄捷徑';

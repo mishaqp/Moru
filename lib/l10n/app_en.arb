@@ -1119,6 +1119,22 @@
   "sideDrawerMenuDelete": "Delete",
   "sideDrawerMenuSelect": "Select",
   "sideDrawerNewChat": "New chat",
+  "sideDrawerArchive": "Archive",
+  "sideDrawerArchived": "Chat archived",
+  "sideDrawerUndo": "Undo",
+  "archivePageTitle": "Archive",
+  "archivePageEmpty": "Nothing archived. Swipe a chat to the right to put it here.",
+  "archivePageRestore": "Restore",
+  "archivePageRestored": "Chat restored",
+  "archivePageSortArchived": "By date archived",
+  "archivePageSortActivity": "By last message",
+  "archivePageDeleteTitle": "Delete \"{title}\"?",
+  "@archivePageDeleteTitle": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "archivePageDeleteContent": "The chat and all its messages will be deleted.",
   "sideDrawerShortcutsTitle": "Sidebar shortcuts",
   "sideDrawerShortcutsEmpty": "No mini apps or browser bookmarks yet",
   "sideDrawerShortcutRemove": "Remove from sidebar",

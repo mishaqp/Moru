@@ -2561,6 +2561,43 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sideDrawerNewChat => 'Новый чат';
 
   @override
+  String get sideDrawerArchive => 'В архив';
+
+  @override
+  String get sideDrawerArchived => 'Чат в архиве';
+
+  @override
+  String get sideDrawerUndo => 'Отменить';
+
+  @override
+  String get archivePageTitle => 'Архив';
+
+  @override
+  String get archivePageEmpty =>
+      'В архиве пусто. Смахните чат вправо, чтобы убрать его сюда.';
+
+  @override
+  String get archivePageRestore => 'Вернуть';
+
+  @override
+  String get archivePageRestored => 'Чат возвращён';
+
+  @override
+  String get archivePageSortArchived => 'По дате архивации';
+
+  @override
+  String get archivePageSortActivity => 'По последнему сообщению';
+
+  @override
+  String archivePageDeleteTitle(String title) {
+    return 'Удалить «$title»?';
+  }
+
+  @override
+  String get archivePageDeleteContent =>
+      'Чат и все его сообщения будут удалены.';
+
+  @override
   String get sideDrawerShortcutsTitle => 'Ярлыки в боковой панели';
 
   @override
