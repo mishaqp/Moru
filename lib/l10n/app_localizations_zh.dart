@@ -2469,6 +2469,123 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get agentsTitle => '智能体';
+
+  @override
+  String get agentsIntro =>
+      'Claude Code 等编程智能体可以直接在你的对话中回答。它们运行在这台手机的 Linux 环境中，处理对话的文件，并使用你已在 Moru 中设置的模型和密钥，无需重复配置。';
+
+  @override
+  String get agentsSection => '智能体';
+
+  @override
+  String get agentsFooter => '安装需要几分钟并需要联网。如果缺少 Node.js，会先安装它。';
+
+  @override
+  String get agentsNeedEnvironment => '请先安装并启动 Linux 环境（设置 → 工作区与环境）。';
+
+  @override
+  String get agentsStatusInstalled => '已安装';
+
+  @override
+  String get agentsStatusMissing => '未安装';
+
+  @override
+  String get agentsStatusChecking => '检查中…';
+
+  @override
+  String get agentsStatusWorking => '处理中…';
+
+  @override
+  String get agentsInstall => '安装';
+
+  @override
+  String get agentsUpdate => '更新';
+
+  @override
+  String get agentsRemove => '移除';
+
+  @override
+  String get agentsCheck => '检查连接';
+
+  @override
+  String get agentsCancel => '取消';
+
+  @override
+  String get agentsSave => '保存';
+
+  @override
+  String get agentsLog => '日志';
+
+  @override
+  String agentsCheckOk(String name, String version) {
+    return '正常：$name $version 已响应。';
+  }
+
+  @override
+  String agentsCheckFailed(String error) {
+    return '智能体未能启动：$error';
+  }
+
+  @override
+  String agentsCheckModel(String model) {
+    return '检查使用默认对话模型：$model。';
+  }
+
+  @override
+  String get agentsNoModel => '请先选择带 API 密钥的默认对话模型（设置 → 默认模型）。';
+
+  @override
+  String get agentsDescClaudeCode =>
+      'Anthropic 的编程智能体：读取和编辑文件、运行命令和测试、规划较大的任务。';
+
+  @override
+  String get agentsDescCodex => 'OpenAI 的编程智能体：编写和修复代码、运行命令、讲解项目。';
+
+  @override
+  String get agentsDescOpenCode => '开源编程智能体，几乎支持所有服务商。适合作为第一个选择。';
+
+  @override
+  String get agentsApiAnthropic =>
+      '需要兼容 Anthropic API 的服务商：Anthropic、DeepSeek、Kimi、GLM、MiniMax 或 OpenRouter。';
+
+  @override
+  String get agentsApiCodex =>
+      '与 OpenAI 配合最佳。其他服务商需要兼容 OpenAI 的 API；如服务商支持 Responses API，请在服务商设置中开启。';
+
+  @override
+  String get agentsApiOpenai => '支持任何兼容 OpenAI 的服务商以及 Anthropic。';
+
+  @override
+  String get agentsApiCustom =>
+      'Moru 通过 MORU_AGENT_BASE_URL、MORU_AGENT_API_KEY 和 MORU_AGENT_MODEL（以及 OPENAI_* 变量）传递模型地址、密钥和名称。';
+
+  @override
+  String get agentsCustomAdd => '添加自定义智能体';
+
+  @override
+  String get agentsCustomName => '名称';
+
+  @override
+  String get agentsCustomCommand => '命令';
+
+  @override
+  String get agentsCustomHint =>
+      'Linux 环境中任何通过 stdin/stdout 使用 ACP（Agent Client Protocol）的程序。';
+
+  @override
+  String get agentsCustomDelete => '删除智能体';
+
+  @override
+  String get agentsFailureNode => '无法安装 Node.js，请查看日志。';
+
+  @override
+  String get agentsFailureInstall => '安装失败，请查看下方日志。';
+
+  @override
+  String get agentsFailureRemove => '无法移除智能体，请查看日志。';
+
+  @override
   String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的图片预览';
 
   @override
@@ -13866,6 +13983,123 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String get agentsTitle => '智能体';
+
+  @override
+  String get agentsIntro =>
+      'Claude Code 等编程智能体可以直接在你的对话中回答。它们运行在这台手机的 Linux 环境中，处理对话的文件，并使用你已在 Moru 中设置的模型和密钥，无需重复配置。';
+
+  @override
+  String get agentsSection => '智能体';
+
+  @override
+  String get agentsFooter => '安装需要几分钟并需要联网。如果缺少 Node.js，会先安装它。';
+
+  @override
+  String get agentsNeedEnvironment => '请先安装并启动 Linux 环境（设置 → 工作区与环境）。';
+
+  @override
+  String get agentsStatusInstalled => '已安装';
+
+  @override
+  String get agentsStatusMissing => '未安装';
+
+  @override
+  String get agentsStatusChecking => '检查中…';
+
+  @override
+  String get agentsStatusWorking => '处理中…';
+
+  @override
+  String get agentsInstall => '安装';
+
+  @override
+  String get agentsUpdate => '更新';
+
+  @override
+  String get agentsRemove => '移除';
+
+  @override
+  String get agentsCheck => '检查连接';
+
+  @override
+  String get agentsCancel => '取消';
+
+  @override
+  String get agentsSave => '保存';
+
+  @override
+  String get agentsLog => '日志';
+
+  @override
+  String agentsCheckOk(String name, String version) {
+    return '正常：$name $version 已响应。';
+  }
+
+  @override
+  String agentsCheckFailed(String error) {
+    return '智能体未能启动：$error';
+  }
+
+  @override
+  String agentsCheckModel(String model) {
+    return '检查使用默认对话模型：$model。';
+  }
+
+  @override
+  String get agentsNoModel => '请先选择带 API 密钥的默认对话模型（设置 → 默认模型）。';
+
+  @override
+  String get agentsDescClaudeCode =>
+      'Anthropic 的编程智能体：读取和编辑文件、运行命令和测试、规划较大的任务。';
+
+  @override
+  String get agentsDescCodex => 'OpenAI 的编程智能体：编写和修复代码、运行命令、讲解项目。';
+
+  @override
+  String get agentsDescOpenCode => '开源编程智能体，几乎支持所有服务商。适合作为第一个选择。';
+
+  @override
+  String get agentsApiAnthropic =>
+      '需要兼容 Anthropic API 的服务商：Anthropic、DeepSeek、Kimi、GLM、MiniMax 或 OpenRouter。';
+
+  @override
+  String get agentsApiCodex =>
+      '与 OpenAI 配合最佳。其他服务商需要兼容 OpenAI 的 API；如服务商支持 Responses API，请在服务商设置中开启。';
+
+  @override
+  String get agentsApiOpenai => '支持任何兼容 OpenAI 的服务商以及 Anthropic。';
+
+  @override
+  String get agentsApiCustom =>
+      'Moru 通过 MORU_AGENT_BASE_URL、MORU_AGENT_API_KEY 和 MORU_AGENT_MODEL（以及 OPENAI_* 变量）传递模型地址、密钥和名称。';
+
+  @override
+  String get agentsCustomAdd => '添加自定义智能体';
+
+  @override
+  String get agentsCustomName => '名称';
+
+  @override
+  String get agentsCustomCommand => '命令';
+
+  @override
+  String get agentsCustomHint =>
+      'Linux 环境中任何通过 stdin/stdout 使用 ACP（Agent Client Protocol）的程序。';
+
+  @override
+  String get agentsCustomDelete => '删除智能体';
+
+  @override
+  String get agentsFailureNode => '无法安装 Node.js，请查看日志。';
+
+  @override
+  String get agentsFailureInstall => '安装失败，请查看下方日志。';
+
+  @override
+  String get agentsFailureRemove => '无法移除智能体，请查看日志。';
+
+  @override
   String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的图片预览';
 
   @override
@@ -25190,6 +25424,123 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String sideDrawerFolderDeleteContent(String name) {
     return '「$name」中的對話會保留在列表中。';
   }
+
+  @override
+  String get agentsTitle => '智慧代理';
+
+  @override
+  String get agentsIntro =>
+      'Claude Code 等程式設計代理可以直接在你的對話中回答。它們執行在這支手機的 Linux 環境中，處理對話的檔案，並使用你已在 Moru 中設定的模型與金鑰，無需重複設定。';
+
+  @override
+  String get agentsSection => '智慧代理';
+
+  @override
+  String get agentsFooter => '安裝需要幾分鐘並需要連網。如果缺少 Node.js，會先安裝它。';
+
+  @override
+  String get agentsNeedEnvironment => '請先安裝並啟動 Linux 環境（設定 → 工作區與環境）。';
+
+  @override
+  String get agentsStatusInstalled => '已安裝';
+
+  @override
+  String get agentsStatusMissing => '未安裝';
+
+  @override
+  String get agentsStatusChecking => '檢查中…';
+
+  @override
+  String get agentsStatusWorking => '處理中…';
+
+  @override
+  String get agentsInstall => '安裝';
+
+  @override
+  String get agentsUpdate => '更新';
+
+  @override
+  String get agentsRemove => '移除';
+
+  @override
+  String get agentsCheck => '檢查連線';
+
+  @override
+  String get agentsCancel => '取消';
+
+  @override
+  String get agentsSave => '儲存';
+
+  @override
+  String get agentsLog => '記錄';
+
+  @override
+  String agentsCheckOk(String name, String version) {
+    return '正常：$name $version 已回應。';
+  }
+
+  @override
+  String agentsCheckFailed(String error) {
+    return '代理未能啟動：$error';
+  }
+
+  @override
+  String agentsCheckModel(String model) {
+    return '檢查使用預設對話模型：$model。';
+  }
+
+  @override
+  String get agentsNoModel => '請先選擇帶 API 金鑰的預設對話模型（設定 → 預設模型）。';
+
+  @override
+  String get agentsDescClaudeCode =>
+      'Anthropic 的程式設計代理：讀取與編輯檔案、執行指令與測試、規劃較大的任務。';
+
+  @override
+  String get agentsDescCodex => 'OpenAI 的程式設計代理：撰寫與修正程式碼、執行指令、講解專案。';
+
+  @override
+  String get agentsDescOpenCode => '開源程式設計代理，幾乎支援所有服務商。適合作為第一個選擇。';
+
+  @override
+  String get agentsApiAnthropic =>
+      '需要相容 Anthropic API 的服務商：Anthropic、DeepSeek、Kimi、GLM、MiniMax 或 OpenRouter。';
+
+  @override
+  String get agentsApiCodex =>
+      '與 OpenAI 搭配最佳。其他服務商需要相容 OpenAI 的 API；如服務商支援 Responses API，請在服務商設定中開啟。';
+
+  @override
+  String get agentsApiOpenai => '支援任何相容 OpenAI 的服務商以及 Anthropic。';
+
+  @override
+  String get agentsApiCustom =>
+      'Moru 透過 MORU_AGENT_BASE_URL、MORU_AGENT_API_KEY 和 MORU_AGENT_MODEL（以及 OPENAI_* 變數）傳遞模型位址、金鑰與名稱。';
+
+  @override
+  String get agentsCustomAdd => '新增自訂代理';
+
+  @override
+  String get agentsCustomName => '名稱';
+
+  @override
+  String get agentsCustomCommand => '指令';
+
+  @override
+  String get agentsCustomHint =>
+      'Linux 環境中任何透過 stdin/stdout 使用 ACP（Agent Client Protocol）的程式。';
+
+  @override
+  String get agentsCustomDelete => '刪除代理';
+
+  @override
+  String get agentsFailureNode => '無法安裝 Node.js，請查看記錄。';
+
+  @override
+  String get agentsFailureInstall => '安裝失敗，請查看下方記錄。';
+
+  @override
+  String get agentsFailureRemove => '無法移除代理，請查看記錄。';
 
   @override
   String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的圖片預覽';

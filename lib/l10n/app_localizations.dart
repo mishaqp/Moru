@@ -4752,6 +4752,216 @@ abstract class AppLocalizations {
   /// **'Chats in \"{name}\" stay in the list.'**
   String sideDrawerFolderDeleteContent(String name);
 
+  /// No description provided for @agentsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Agents'**
+  String get agentsTitle;
+
+  /// No description provided for @agentsIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Coding agents such as Claude Code can answer in your chats. They run in the Linux environment on this phone, work with the chat\'s files and use the model and key you already set up in Moru — nothing to configure twice.'**
+  String get agentsIntro;
+
+  /// No description provided for @agentsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Agents'**
+  String get agentsSection;
+
+  /// No description provided for @agentsFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Installing takes a few minutes and needs the internet. Node.js is installed first if it is missing.'**
+  String get agentsFooter;
+
+  /// No description provided for @agentsNeedEnvironment.
+  ///
+  /// In en, this message translates to:
+  /// **'Install and start the Linux environment first (Settings → Workspace & environment).'**
+  String get agentsNeedEnvironment;
+
+  /// No description provided for @agentsStatusInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed'**
+  String get agentsStatusInstalled;
+
+  /// No description provided for @agentsStatusMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Not installed'**
+  String get agentsStatusMissing;
+
+  /// No description provided for @agentsStatusChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get agentsStatusChecking;
+
+  /// No description provided for @agentsStatusWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'Working…'**
+  String get agentsStatusWorking;
+
+  /// No description provided for @agentsInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Install'**
+  String get agentsInstall;
+
+  /// No description provided for @agentsUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get agentsUpdate;
+
+  /// No description provided for @agentsRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get agentsRemove;
+
+  /// No description provided for @agentsCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check connection'**
+  String get agentsCheck;
+
+  /// No description provided for @agentsCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get agentsCancel;
+
+  /// No description provided for @agentsSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get agentsSave;
+
+  /// No description provided for @agentsLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Log'**
+  String get agentsLog;
+
+  /// No description provided for @agentsCheckOk.
+  ///
+  /// In en, this message translates to:
+  /// **'It works: {name} {version} answered.'**
+  String agentsCheckOk(String name, String version);
+
+  /// No description provided for @agentsCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The agent did not start: {error}'**
+  String agentsCheckFailed(String error);
+
+  /// No description provided for @agentsCheckModel.
+  ///
+  /// In en, this message translates to:
+  /// **'The check uses your default chat model: {model}.'**
+  String agentsCheckModel(String model);
+
+  /// No description provided for @agentsNoModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a default chat model with an API key first (Settings → Default Model).'**
+  String get agentsNoModel;
+
+  /// No description provided for @agentsDescClaudeCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Anthropic\'s coding agent: reads and edits files, runs commands and tests, plans larger tasks.'**
+  String get agentsDescClaudeCode;
+
+  /// No description provided for @agentsDescCodex.
+  ///
+  /// In en, this message translates to:
+  /// **'OpenAI\'s coding agent: writes and fixes code, runs commands, explains projects.'**
+  String get agentsDescCodex;
+
+  /// No description provided for @agentsDescOpenCode.
+  ///
+  /// In en, this message translates to:
+  /// **'An open-source coding agent that works with almost any provider. A good first choice.'**
+  String get agentsDescOpenCode;
+
+  /// No description provided for @agentsApiAnthropic.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs a provider with an Anthropic-compatible API: Anthropic, DeepSeek, Kimi, GLM, MiniMax or OpenRouter.'**
+  String get agentsApiAnthropic;
+
+  /// No description provided for @agentsApiCodex.
+  ///
+  /// In en, this message translates to:
+  /// **'Best with OpenAI. Other providers need an OpenAI-compatible API; turn on the Responses API in the provider if it supports it.'**
+  String get agentsApiCodex;
+
+  /// No description provided for @agentsApiOpenai.
+  ///
+  /// In en, this message translates to:
+  /// **'Works with any OpenAI-compatible provider and with Anthropic.'**
+  String get agentsApiOpenai;
+
+  /// No description provided for @agentsApiCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Moru passes the model\'s address, key and name as MORU_AGENT_BASE_URL, MORU_AGENT_API_KEY and MORU_AGENT_MODEL (and as OPENAI_* variables).'**
+  String get agentsApiCustom;
+
+  /// No description provided for @agentsCustomAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your own agent'**
+  String get agentsCustomAdd;
+
+  /// No description provided for @agentsCustomName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get agentsCustomName;
+
+  /// No description provided for @agentsCustomCommand.
+  ///
+  /// In en, this message translates to:
+  /// **'Command'**
+  String get agentsCustomCommand;
+
+  /// No description provided for @agentsCustomHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Any program in the Linux environment that speaks ACP (Agent Client Protocol) over stdin/stdout.'**
+  String get agentsCustomHint;
+
+  /// No description provided for @agentsCustomDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete agent'**
+  String get agentsCustomDelete;
+
+  /// No description provided for @agentsFailureNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Node.js could not be installed. See the log.'**
+  String get agentsFailureNode;
+
+  /// No description provided for @agentsFailureInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Installation failed. See the log below.'**
+  String get agentsFailureInstall;
+
+  /// No description provided for @agentsFailureRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'The agent could not be removed. See the log.'**
+  String get agentsFailureRemove;
+
   /// No description provided for @displaySettingsPageSidebarThumbnailsTitle.
   ///
   /// In en, this message translates to:

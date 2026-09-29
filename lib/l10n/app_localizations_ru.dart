@@ -2584,6 +2584,132 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get agentsTitle => 'Агенты';
+
+  @override
+  String get agentsIntro =>
+      'Агенты-программисты вроде Claude Code могут отвечать прямо в ваших чатах. Они работают в Linux-среде на этом телефоне, с файлами чата, и берут модель и ключ, которые уже настроены в Moru, — ничего не нужно настраивать дважды.';
+
+  @override
+  String get agentsSection => 'Агенты';
+
+  @override
+  String get agentsFooter =>
+      'Установка занимает несколько минут и нужен интернет. Если Node.js нет, он поставится первым.';
+
+  @override
+  String get agentsNeedEnvironment =>
+      'Сначала установите и запустите Linux-среду (Настройки → Рабочее пространство и среда).';
+
+  @override
+  String get agentsStatusInstalled => 'Установлен';
+
+  @override
+  String get agentsStatusMissing => 'Не установлен';
+
+  @override
+  String get agentsStatusChecking => 'Проверяю…';
+
+  @override
+  String get agentsStatusWorking => 'Работаю…';
+
+  @override
+  String get agentsInstall => 'Установить';
+
+  @override
+  String get agentsUpdate => 'Обновить';
+
+  @override
+  String get agentsRemove => 'Удалить';
+
+  @override
+  String get agentsCheck => 'Проверить связь';
+
+  @override
+  String get agentsCancel => 'Отмена';
+
+  @override
+  String get agentsSave => 'Сохранить';
+
+  @override
+  String get agentsLog => 'Журнал';
+
+  @override
+  String agentsCheckOk(String name, String version) {
+    return 'Работает: ответил $name $version.';
+  }
+
+  @override
+  String agentsCheckFailed(String error) {
+    return 'Агент не запустился: $error';
+  }
+
+  @override
+  String agentsCheckModel(String model) {
+    return 'Для проверки берётся модель чата по умолчанию: $model.';
+  }
+
+  @override
+  String get agentsNoModel =>
+      'Сначала выберите модель чата по умолчанию с API-ключом (Настройки → Модель по умолчанию).';
+
+  @override
+  String get agentsDescClaudeCode =>
+      'Агент от Anthropic: читает и правит файлы, запускает команды и тесты, планирует большие задачи.';
+
+  @override
+  String get agentsDescCodex =>
+      'Агент от OpenAI: пишет и чинит код, запускает команды, объясняет проекты.';
+
+  @override
+  String get agentsDescOpenCode =>
+      'Открытый агент-программист, работает почти с любым провайдером. Хороший первый выбор.';
+
+  @override
+  String get agentsApiAnthropic =>
+      'Нужен провайдер с API, совместимым с Anthropic: Anthropic, DeepSeek, Kimi, GLM, MiniMax или OpenRouter.';
+
+  @override
+  String get agentsApiCodex =>
+      'Лучше всего с OpenAI. Другим провайдерам нужен API, совместимый с OpenAI; если провайдер умеет Responses API, включите его в настройках провайдера.';
+
+  @override
+  String get agentsApiOpenai =>
+      'Работает с любым провайдером, совместимым с OpenAI, и с Anthropic.';
+
+  @override
+  String get agentsApiCustom =>
+      'Moru передаёт адрес, ключ и имя модели в переменных MORU_AGENT_BASE_URL, MORU_AGENT_API_KEY и MORU_AGENT_MODEL (и в OPENAI_*).';
+
+  @override
+  String get agentsCustomAdd => 'Добавить своего агента';
+
+  @override
+  String get agentsCustomName => 'Название';
+
+  @override
+  String get agentsCustomCommand => 'Команда';
+
+  @override
+  String get agentsCustomHint =>
+      'Любая программа в Linux-среде, которая говорит по ACP (Agent Client Protocol) через stdin/stdout.';
+
+  @override
+  String get agentsCustomDelete => 'Удалить агента';
+
+  @override
+  String get agentsFailureNode =>
+      'Не удалось установить Node.js. Подробности в журнале.';
+
+  @override
+  String get agentsFailureInstall =>
+      'Установка не удалась. Подробности в журнале ниже.';
+
+  @override
+  String get agentsFailureRemove =>
+      'Не удалось удалить агента. Подробности в журнале.';
+
+  @override
   String get displaySettingsPageSidebarThumbnailsTitle =>
       'Миниатюры картинок в списке чатов';
 

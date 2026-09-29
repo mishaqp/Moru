@@ -1131,6 +1131,57 @@
       "name": {"type": "String"}
     }
   },
+  "agentsTitle": "Agents",
+  "agentsIntro": "Coding agents such as Claude Code can answer in your chats. They run in the Linux environment on this phone, work with the chat's files and use the model and key you already set up in Moru — nothing to configure twice.",
+  "agentsSection": "Agents",
+  "agentsFooter": "Installing takes a few minutes and needs the internet. Node.js is installed first if it is missing.",
+  "agentsNeedEnvironment": "Install and start the Linux environment first (Settings → Workspace & environment).",
+  "agentsStatusInstalled": "Installed",
+  "agentsStatusMissing": "Not installed",
+  "agentsStatusChecking": "Checking…",
+  "agentsStatusWorking": "Working…",
+  "agentsInstall": "Install",
+  "agentsUpdate": "Update",
+  "agentsRemove": "Remove",
+  "agentsCheck": "Check connection",
+  "agentsCancel": "Cancel",
+  "agentsSave": "Save",
+  "agentsLog": "Log",
+  "agentsCheckOk": "It works: {name} {version} answered.",
+  "@agentsCheckOk": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "version": {"type": "String"}
+    }
+  },
+  "agentsCheckFailed": "The agent did not start: {error}",
+  "@agentsCheckFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "agentsCheckModel": "The check uses your default chat model: {model}.",
+  "@agentsCheckModel": {
+    "placeholders": {
+      "model": {"type": "String"}
+    }
+  },
+  "agentsNoModel": "Choose a default chat model with an API key first (Settings → Default Model).",
+  "agentsDescClaudeCode": "Anthropic's coding agent: reads and edits files, runs commands and tests, plans larger tasks.",
+  "agentsDescCodex": "OpenAI's coding agent: writes and fixes code, runs commands, explains projects.",
+  "agentsDescOpenCode": "An open-source coding agent that works with almost any provider. A good first choice.",
+  "agentsApiAnthropic": "Needs a provider with an Anthropic-compatible API: Anthropic, DeepSeek, Kimi, GLM, MiniMax or OpenRouter.",
+  "agentsApiCodex": "Best with OpenAI. Other providers need an OpenAI-compatible API; turn on the Responses API in the provider if it supports it.",
+  "agentsApiOpenai": "Works with any OpenAI-compatible provider and with Anthropic.",
+  "agentsApiCustom": "Moru passes the model's address, key and name as MORU_AGENT_BASE_URL, MORU_AGENT_API_KEY and MORU_AGENT_MODEL (and as OPENAI_* variables).",
+  "agentsCustomAdd": "Add your own agent",
+  "agentsCustomName": "Name",
+  "agentsCustomCommand": "Command",
+  "agentsCustomHint": "Any program in the Linux environment that speaks ACP (Agent Client Protocol) over stdin/stdout.",
+  "agentsCustomDelete": "Delete agent",
+  "agentsFailureNode": "Node.js could not be installed. See the log.",
+  "agentsFailureInstall": "Installation failed. See the log below.",
+  "agentsFailureRemove": "The agent could not be removed. See the log.",
   "displaySettingsPageSidebarThumbnailsTitle": "Image previews in the chat list",
   "sideDrawerArchive": "Archive",
   "sideDrawerArchived": "Chat archived",

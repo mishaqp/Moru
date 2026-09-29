@@ -70,6 +70,7 @@ import 'core/services/backup/restore_business_lease.dart';
 import 'core/services/backup/restore_startup_gate.dart';
 import 'core/services/backup/restore_receipt.dart';
 import 'core/services/mcp/mcp_tool_service.dart';
+import 'core/services/acp/acp_agent_manager.dart';
 import 'core/services/logging/flutter_logger.dart';
 import 'core/services/storage/storage_usage_service.dart';
 import 'features/home/services/ask_user_interaction_service.dart';
@@ -688,6 +689,22 @@ class MyApp extends StatelessWidget {
             environment: ctx.read<EnvironmentProvider>(),
             workspaces: ctx.read<WorkspaceProvider>(),
           ),
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) {
+            final extras = ctx.read<_WorkspaceStackHolder>();
+            final manager = AcpAgentManager(
+              preferences: businessPreferences,
+              runtimeProvider: ctx.read<WorkspaceRuntimeProvider>(),
+              environment: ctx.read<EnvironmentProvider>(),
+              dependencies: extras.dependencies,
+            );
+            // The Node.js installer arrives with the workspace stack.
+            extras.addListener(
+              () => manager.dependencies = extras.dependencies,
+            );
+            return manager;
+          },
         ),
         ProxyProvider<_WorkspaceStackHolder, EnvironmentManager?>(
           update: (_, extras, __) => extras.environmentManager,

@@ -25,6 +25,7 @@ enum SettingsSearchDestination {
   search,
   tts,
   mcp,
+  agents,
   workspace,
   skills,
   quickPhrases,
@@ -70,6 +71,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.search => l.settingsPageSearch,
     SettingsSearchDestination.tts => l.settingsPageTts,
     SettingsSearchDestination.mcp => l.settingsPageMcp,
+    SettingsSearchDestination.agents => l.agentsTitle,
     SettingsSearchDestination.workspace => l.settingsPageWorkspace,
     SettingsSearchDestination.skills => l.settingsPageSkills,
     SettingsSearchDestination.quickPhrases => l.settingsPageQuickPhrase,
@@ -111,6 +113,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.search => LucideIcons.globe,
     SettingsSearchDestination.tts => LucideIcons.volume2,
     SettingsSearchDestination.mcp => LucideIcons.terminal,
+    SettingsSearchDestination.agents => LucideIcons.bot,
     SettingsSearchDestination.workspace => LucideIcons.folderCode,
     SettingsSearchDestination.skills => LucideIcons.wandSparkles,
     SettingsSearchDestination.quickPhrases => LucideIcons.zap,
@@ -383,6 +386,13 @@ class SettingsSearchIndex {
       (l) => l.settingsPageMcp,
       page: true,
       keywords: 'mcp server tools sse stdio streamable 工具 服务器 伺服器',
+    );
+    add(
+      'agents',
+      SettingsSearchDestination.agents,
+      (l) => l.agentsTitle,
+      page: true,
+      keywords: 'agents acp claude code codex opencode агенты агент 智能体 代理',
     );
     add(
       'workspace',

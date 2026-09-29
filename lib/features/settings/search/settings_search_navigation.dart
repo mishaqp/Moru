@@ -1,3 +1,4 @@
+import '../../agents/pages/agents_page.dart';
 import 'package:flutter/material.dart';
 
 import '../../assistant/pages/assistant_settings_page.dart';
@@ -60,6 +61,7 @@ Future<void> openMobileSettingsSearchResult(
     SettingsSearchDestination.search => const SearchServicesPage(),
     SettingsSearchDestination.tts => const TtsServicesPage(),
     SettingsSearchDestination.mcp => const McpPage(),
+    SettingsSearchDestination.agents => const AgentsPage(),
     SettingsSearchDestination.workspace => const WorkspaceSettingsPage(),
     SettingsSearchDestination.skills => const SkillsPage(),
     SettingsSearchDestination.quickPhrases => const QuickPhrasesPage(),
