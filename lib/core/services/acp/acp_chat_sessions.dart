@@ -7,6 +7,7 @@ import '../workspace/task_plan.dart';
 import '../workspace/workspace_runtime.dart';
 import 'acp_agent.dart';
 import 'acp_agent_catalog.dart';
+import 'acp_chat_prompt.dart';
 
 /// Starts an agent process for a chat.
 typedef AcpAgentStarter =
@@ -26,6 +27,8 @@ class AcpChatTurn {
     required this.cwd,
     this.mounts = const [],
     required this.prompt,
+    this.userImagePaths = const [],
+    this.imageNotSentMessage = "An image was not sent to the agent.",
     this.history = '',
     this.savedSessionId,
     this.savedModeId,
@@ -42,6 +45,8 @@ class AcpChatTurn {
 
   /// ACP content blocks of the new message.
   final List<Map<String, Object?>> prompt;
+  final List<String> userImagePaths;
+  final String imageNotSentMessage;
 
   /// The chat so far as text, given to a session that starts fresh in the
   /// middle of a chat so the agent knows what was said.
@@ -93,6 +98,14 @@ class AcpChatSessions extends ChangeNotifier {
       ];
     }
     try {
+      prompt = [
+        ...prompt,
+        ...await acpImagePromptBlocks(
+          turn.userImagePaths,
+          supported: chat.agent.info.imagePrompts,
+          notSentMessage: turn.imageNotSentMessage,
+        ),
+      ];
       final mode = turn.savedModeId;
       if (mode != null &&
           mode != chat.session.currentModeId &&
@@ -167,6 +180,18 @@ class AcpChatSessions extends ChangeNotifier {
         turn.onSession?.call(session.id);
       }
       final chat = _ChatAgent(key, agent, session)..needsHistory = needsHistory;
+      agent.onModeChanged = (sessionId, modeId) {
+        if (sessionId != chat.sessionId ||
+            !identical(_chats[turn.conversationId], chat)) {
+          return;
+        }
+        chat.session = AcpSession(
+          id: sessionId,
+          modes: chat.session.modes,
+          currentModeId: modeId,
+        );
+        notifyListeners();
+      };
       _chats[turn.conversationId] = chat;
       notifyListeners();
       unawaited(

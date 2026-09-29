@@ -4321,5 +4321,6 @@
   "chatInputHintTokens": "点发送旁的圆环查看令牌用量",
   "chatInputHintToolMenu": "长按工具步骤可复制或重新运行",
   "messageMoreSheetCopyFormatted": "带格式复制",
-  "agentsMode": "代理模式"
+  "agentsMode": "代理模式",
+  "agentsImageNotSent": "图片未发送给代理。"
 }

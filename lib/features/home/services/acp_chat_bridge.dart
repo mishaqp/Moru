@@ -44,6 +44,7 @@ class AcpChatBridge {
     required String providerKey,
     required String modelId,
     required List<Map<String, dynamic>> apiMessages,
+    List<String> userImagePaths = const [],
   }) async {
     if (assistant is! Assistant) return null;
     final agentId = assistant.agentId;
@@ -107,6 +108,8 @@ class AcpChatBridge {
         cwd: workspace?.cwd ?? '/root',
         mounts: workspace?.paths.mounts ?? const [],
         prompt: message.prompt,
+        userImagePaths: userImagePaths,
+        imageNotSentMessage: l10n.agentsImageNotSent,
         savedModeId:
             chats.getConversation(conversationId)?.extras[acpModeKey]
                 as String?,

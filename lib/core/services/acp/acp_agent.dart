@@ -166,6 +166,9 @@ class AcpAgent {
   /// "reject" option is chosen so nothing runs unasked.
   AcpPermissionHandler? onPermission;
 
+  /// Session mode updates also arrive while no prompt is running.
+  void Function(String sessionId, String modeId)? onModeChanged;
+
   /// Completes when the process is gone.
   Future<void> get done => _connection.done;
   bool get isAlive => _connection.isOpen;
@@ -341,9 +344,17 @@ class AcpAgent {
 
   void _onNotification(String method, Map<String, Object?> params) {
     if (method != 'session/update') return;
-    final turn = _turns[params['sessionId']];
     final update = params['update'];
-    if (turn == null || update is! Map) return;
+    if (update is! Map) return;
+    final sessionId = params['sessionId'];
+    final modeId = update['currentModeId'];
+    if (update['sessionUpdate'] == 'current_mode_update' &&
+        sessionId is String &&
+        modeId is String) {
+      onModeChanged?.call(sessionId, modeId);
+    }
+    final turn = _turns[sessionId];
+    if (turn == null) return;
     turn.add(turn.translator.translate(Map<String, Object?>.from(update)));
   }
 

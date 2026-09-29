@@ -1,3 +1,6 @@
+import '../api/chat_api_helpers.dart'
+    show tryEncodeBase64File, mimeFromDataUrl, mimeFromPath;
+
 /// The newest user message as ACP text blocks, and the chat before it as
 /// plain text, taken from the chat's request messages.
 ///
@@ -47,4 +50,35 @@ String _text(Object? content) {
     ].join('\n');
   }
   return '';
+}
+
+/// Attach only this turn's images, after initialize has advertised support.
+/// Reuse Moru's local-path resolver; never fetch a remote URL here.
+Future<List<Map<String, Object?>>> acpImagePromptBlocks(
+  List<String> paths, {
+  required bool supported,
+  required String notSentMessage,
+}) async {
+  final images = paths
+      .where((path) => mimeFromPath(path).startsWith('image/'))
+      .toList();
+  if (images.isEmpty) return const [];
+  final blocks = <Map<String, Object?>>[];
+  var missing = !supported;
+  if (supported) {
+    for (final path in images) {
+      final encoded = await tryEncodeBase64File(path, withPrefix: true);
+      if (encoded == null) {
+        missing = true;
+        continue;
+      }
+      blocks.add({
+        'type': 'image',
+        'mimeType': mimeFromDataUrl(encoded),
+        'data': encoded.substring(encoded.indexOf(',') + 1),
+      });
+    }
+  }
+  if (missing) blocks.add({'type': 'text', 'text': notSentMessage});
+  return blocks;
 }

@@ -21550,6 +21550,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Agent mode'**
   String get agentsMode;
+
+  /// No description provided for @agentsImageNotSent.
+  ///
+  /// In en, this message translates to:
+  /// **'An image was not sent to the agent.'**
+  String get agentsImageNotSent;
 }
 
 class _AppLocalizationsDelegate

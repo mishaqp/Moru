@@ -5238,5 +5238,6 @@
   "chatInputHintTokens": "Нажмите на кольцо у кнопки: расход токенов",
   "chatInputHintToolMenu": "Долгое нажатие на шаг инструмента: копировать или перезапустить",
   "messageMoreSheetCopyFormatted": "Копировать с форматированием",
-  "agentsMode": "Режим агента"
+  "agentsMode": "Режим агента",
+  "agentsImageNotSent": "Картинка не передана агенту."
 }

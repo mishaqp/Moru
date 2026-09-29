@@ -1,5 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:Kelivo/utils/sandbox_path_resolver.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -15,10 +19,15 @@ import 'package:Kelivo/features/home/services/tool_approval_service.dart';
 /// A scripted agent: answers initialize, session/new|load and every prompt
 /// with one text chunk naming the session and the prompt text.
 class _ScriptedAgent extends AcpChannel {
-  _ScriptedAgent({this.loadSession = false, this.loadFails = false});
+  _ScriptedAgent({
+    this.loadSession = false,
+    this.loadFails = false,
+    this.images = false,
+  });
 
   final bool loadSession;
   final bool loadFails;
+  final bool images;
   final _incoming = StreamController<dynamic>();
   final _closed = Completer<void>();
   final sent = <Map<String, Object?>>[];
@@ -47,7 +56,10 @@ class _ScriptedAgent extends AcpChannel {
       case 'initialize':
         reply({
           'protocolVersion': 1,
-          'agentCapabilities': {'loadSession': loadSession},
+          'agentCapabilities': {
+            'loadSession': loadSession,
+            'promptCapabilities': {'image': images},
+          },
         });
       case 'session/new':
         reply({
@@ -116,6 +128,28 @@ class _ScriptedAgent extends AcpChannel {
   }
 }
 
+final class _ReadFailureOverrides extends IOOverrides {
+  _ReadFailureOverrides(this.file);
+  final File file;
+  @override
+  File createFile(String path) =>
+      path == file.path ? _ReadFailureFile(file) : super.createFile(path);
+}
+
+class _ReadFailureFile implements File {
+  _ReadFailureFile(this.file);
+  final File file;
+  @override
+  String get path => file.path;
+  @override
+  Future<bool> exists() => file.exists();
+  @override
+  Future<Uint8List> readAsBytes() async =>
+      throw FileSystemException('injected read failure', path);
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
   const provider = AcpProviderInput(
     baseUrl: 'https://api.deepseek.com/v1',
@@ -130,6 +164,7 @@ void main() {
   AcpChatSessions sessionsWith({
     bool loadSession = false,
     bool loadFails = false,
+    bool images = false,
   }) {
     started = [];
     launches = [];
@@ -139,6 +174,7 @@ void main() {
         final channel = _ScriptedAgent(
           loadSession: loadSession,
           loadFails: loadFails,
+          images: images,
         );
         started.add(channel);
         return AcpAgent.start(channel, clientVersion: '1');
@@ -151,6 +187,7 @@ void main() {
     String conversation = 'c1',
     String? saved,
     String? mode,
+    List<String> images = const [],
     String history = '',
     String cwd = '/workspace',
     AcpProviderInput? using,
@@ -161,11 +198,13 @@ void main() {
     provider: using ?? provider,
     cwd: cwd,
     prompt: [
-      {'type': 'text', 'text': text},
+      if (text.isNotEmpty) {'type': 'text', 'text': text},
     ],
     history: history,
     savedSessionId: saved,
     savedModeId: mode,
+    userImagePaths: images,
+    imageNotSentMessage: "Image was not sent.",
     onSession: onSession,
   );
 
@@ -174,6 +213,160 @@ void main() {
     expect(chunks.last, isA<Finish>());
     return chunks.whereType<TextDelta>().map((c) => c.text).join();
   }
+
+  test('audio and video are never wrapped in image blocks', () async {
+    final dir = Directory.systemTemp.createTempSync('acp-media-');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final paths = ['${dir.path}/video.mp4', '${dir.path}/audio.mp3'];
+    for (final path in paths) {
+      File(path).writeAsBytesSync([1, 2, 3]);
+    }
+    final sessions = sessionsWith(images: true);
+    addTearDown(sessions.closeAll);
+    await answer(sessions, turn('look', images: paths));
+    final request = started.single.sent.lastWhere(
+      (m) => m['method'] == 'session/prompt',
+    );
+    expect((request['params'] as Map)['prompt'], [
+      {'type': 'text', 'text': 'look'},
+    ]);
+  });
+
+  test(
+    'an asynchronous file read failure leaves a note and still sends the prompt',
+    () async {
+      final dir = Directory.systemTemp.createTempSync('acp-read-');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final file = File('${dir.path}/photo.png')..writeAsBytesSync([1]);
+      final sessions = sessionsWith(images: true);
+      addTearDown(sessions.closeAll);
+      await IOOverrides.runWithIOOverrides(
+        () => answer(sessions, turn('look', images: [file.path])),
+        _ReadFailureOverrides(file),
+      );
+      final request = started.single.sent.lastWhere(
+        (m) => m['method'] == 'session/prompt',
+      );
+      expect((request['params'] as Map)['prompt'], [
+        {'type': 'text', 'text': 'look'},
+        {'type': 'text', 'text': 'Image was not sent.'},
+      ]);
+    },
+  );
+
+  test(
+    'a mode update refreshes state and reapplies the saved mode next turn',
+    () async {
+      final sessions = sessionsWith();
+      addTearDown(sessions.closeAll);
+      await answer(sessions, turn('hi', mode: 'code'));
+      final changed = Completer<void>();
+      sessions.addListener(() {
+        if (sessions.sessionFor('c1')?.currentModeId == 'ask' &&
+            !changed.isCompleted) {
+          changed.complete();
+        }
+      });
+      started.single._incoming.add({
+        'jsonrpc': '2.0',
+        'method': 'session/update',
+        'params': {
+          'sessionId': 'new-1',
+          'update': {
+            'sessionUpdate': 'current_mode_update',
+            'currentModeId': 'ask',
+          },
+        },
+      });
+      await changed.future.timeout(const Duration(seconds: 2));
+      expect(sessions.sessionFor('c1')!.currentModeId, 'ask');
+      await answer(sessions, turn('more', mode: 'code'));
+      expect(
+        started.single.sent.where((m) => m['method'] == 'session/set_mode'),
+        hasLength(2),
+      );
+      expect(sessions.sessionFor('c1')!.currentModeId, 'code');
+    },
+  );
+
+  test(
+    'image capable agent receives the latest attachments as base64 blocks',
+    () async {
+      final dir = Directory.systemTemp.createTempSync('acp-images-');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final png = File('${dir.path}/upload/photo.png');
+      png.parent.createSync();
+      png.writeAsBytesSync([137, 80, 78, 71]);
+      final jpg = File('${dir.path}/upload/photo.jpg')
+        ..writeAsBytesSync([255, 216, 255]);
+      SandboxPathResolver.debugSetDirs(docsDir: dir.path);
+      addTearDown(SandboxPathResolver.debugSetDirs);
+      final sessions = sessionsWith(images: true);
+      addTearDown(sessions.closeAll);
+      await answer(
+        sessions,
+        turn(
+          'look',
+          images: ['kelivo-file:///upload/photo.png', jpg.uri.toString()],
+        ),
+      );
+      final request = started.single.sent.lastWhere(
+        (m) => m['method'] == 'session/prompt',
+      );
+      expect((request['params'] as Map)['prompt'], [
+        {'type': 'text', 'text': 'look'},
+        {
+          'type': 'image',
+          'mimeType': 'image/png',
+          'data': base64Encode(png.readAsBytesSync()),
+        },
+        {
+          'type': 'image',
+          'mimeType': 'image/jpeg',
+          'data': base64Encode(jpg.readAsBytesSync()),
+        },
+      ]);
+      await answer(sessions, turn('no images'));
+      final next = started.single.sent.lastWhere(
+        (m) => m['method'] == 'session/prompt',
+      );
+      expect((next['params'] as Map)['prompt'], [
+        {'type': 'text', 'text': 'no images'},
+      ]);
+    },
+  );
+
+  test(
+    'unsupported and unavailable images leave an explicit text note',
+    () async {
+      final sessions = sessionsWith();
+      addTearDown(sessions.closeAll);
+      await answer(sessions, turn('', images: ['/missing.png']));
+      final request = started.single.sent.lastWhere(
+        (m) => m['method'] == 'session/prompt',
+      );
+      expect((request['params'] as Map)['prompt'], [
+        {'type': 'text', 'text': 'Image was not sent.'},
+      ]);
+      sessions.closeAll();
+      final capable = sessionsWith(images: true);
+      addTearDown(capable.closeAll);
+      await answer(
+        capable,
+        turn(
+          'look',
+          images: ['/missing.png', 'https://example.com/private.png'],
+        ),
+      );
+      final unavailable = started.single.sent.lastWhere(
+        (m) => m['method'] == 'session/prompt',
+      );
+      expect((unavailable['params'] as Map)['prompt'], [
+        {'type': 'text', 'text': 'look'},
+        {'type': 'text', 'text': 'Image was not sent.'},
+      ]);
+    },
+  );
 
   test(
     'keeps modes and applies the saved mode before the next prompt',

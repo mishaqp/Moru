@@ -12074,4 +12074,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get agentsMode => 'Agent mode';
+
+  @override
+  String get agentsImageNotSent => 'An image was not sent to the agent.';
 }

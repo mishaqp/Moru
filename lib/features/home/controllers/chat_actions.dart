@@ -2361,6 +2361,7 @@ class ChatActions {
         providerKey: ctx.providerKey,
         modelId: ctx.modelId,
         apiMessages: ctx.apiMessages,
+        userImagePaths: ctx.userImagePaths,
       );
       if (agentStream != null) {
         _agentMessageIds.add(state.messageId);
