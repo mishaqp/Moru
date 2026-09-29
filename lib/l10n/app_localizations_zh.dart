@@ -2446,6 +2446,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sideDrawerNewChat => '新对话';
 
   @override
+  String get sideDrawerMoveToFolder => '移到文件夹';
+
+  @override
+  String get sideDrawerNoFolder => '不放入文件夹';
+
+  @override
+  String get sideDrawerNewFolder => '新建文件夹';
+
+  @override
+  String get sideDrawerFolderNameHint => '文件夹名称';
+
+  @override
+  String get sideDrawerFolderIcon => '图标';
+
+  @override
+  String get sideDrawerFolderDelete => '删除文件夹';
+
+  @override
+  String sideDrawerFolderDeleteContent(String name) {
+    return '“$name”中的对话会保留在列表中。';
+  }
+
+  @override
   String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的图片预览';
 
   @override
@@ -13820,6 +13843,29 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get sideDrawerNewChat => '新对话';
 
   @override
+  String get sideDrawerMoveToFolder => '移到文件夹';
+
+  @override
+  String get sideDrawerNoFolder => '不放入文件夹';
+
+  @override
+  String get sideDrawerNewFolder => '新建文件夹';
+
+  @override
+  String get sideDrawerFolderNameHint => '文件夹名称';
+
+  @override
+  String get sideDrawerFolderIcon => '图标';
+
+  @override
+  String get sideDrawerFolderDelete => '删除文件夹';
+
+  @override
+  String sideDrawerFolderDeleteContent(String name) {
+    return '“$name”中的对话会保留在列表中。';
+  }
+
+  @override
   String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的图片预览';
 
   @override
@@ -25121,6 +25167,29 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sideDrawerNewChat => '新對話';
+
+  @override
+  String get sideDrawerMoveToFolder => '移到資料夾';
+
+  @override
+  String get sideDrawerNoFolder => '不放入資料夾';
+
+  @override
+  String get sideDrawerNewFolder => '新增資料夾';
+
+  @override
+  String get sideDrawerFolderNameHint => '資料夾名稱';
+
+  @override
+  String get sideDrawerFolderIcon => '圖示';
+
+  @override
+  String get sideDrawerFolderDelete => '刪除資料夾';
+
+  @override
+  String sideDrawerFolderDeleteContent(String name) {
+    return '「$name」中的對話會保留在列表中。';
+  }
 
   @override
   String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的圖片預覽';

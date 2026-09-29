@@ -2534,6 +2534,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sideDrawerNewChat => 'New chat';
 
   @override
+  String get sideDrawerMoveToFolder => 'Move to folder';
+
+  @override
+  String get sideDrawerNoFolder => 'No folder';
+
+  @override
+  String get sideDrawerNewFolder => 'New folder';
+
+  @override
+  String get sideDrawerFolderNameHint => 'Folder name';
+
+  @override
+  String get sideDrawerFolderIcon => 'Icon';
+
+  @override
+  String get sideDrawerFolderDelete => 'Delete folder';
+
+  @override
+  String sideDrawerFolderDeleteContent(String name) {
+    return 'Chats in \"$name\" stay in the list.';
+  }
+
+  @override
   String get displaySettingsPageSidebarThumbnailsTitle =>
       'Image previews in the chat list';
 

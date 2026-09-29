@@ -4710,6 +4710,48 @@ abstract class AppLocalizations {
   /// **'New chat'**
   String get sideDrawerNewChat;
 
+  /// No description provided for @sideDrawerMoveToFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to folder'**
+  String get sideDrawerMoveToFolder;
+
+  /// No description provided for @sideDrawerNoFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'No folder'**
+  String get sideDrawerNoFolder;
+
+  /// No description provided for @sideDrawerNewFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'New folder'**
+  String get sideDrawerNewFolder;
+
+  /// No description provided for @sideDrawerFolderNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder name'**
+  String get sideDrawerFolderNameHint;
+
+  /// No description provided for @sideDrawerFolderIcon.
+  ///
+  /// In en, this message translates to:
+  /// **'Icon'**
+  String get sideDrawerFolderIcon;
+
+  /// No description provided for @sideDrawerFolderDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete folder'**
+  String get sideDrawerFolderDelete;
+
+  /// No description provided for @sideDrawerFolderDeleteContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Chats in \"{name}\" stay in the list.'**
+  String sideDrawerFolderDeleteContent(String name);
+
   /// No description provided for @displaySettingsPageSidebarThumbnailsTitle.
   ///
   /// In en, this message translates to:

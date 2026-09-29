@@ -208,6 +208,7 @@ class SidebarSectionHeader extends StatelessWidget {
     required this.count,
     required this.expanded,
     required this.onTap,
+    this.onLongPress,
   });
 
   final IconData icon;
@@ -215,6 +216,9 @@ class SidebarSectionHeader extends StatelessWidget {
   final int count;
   final bool expanded;
   final VoidCallback onTap;
+
+  /// For a folder: its menu.
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -226,6 +230,7 @@ class SidebarSectionHeader extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
+          onLongPress: onLongPress,
           borderRadius: BorderRadius.circular(12),
           splashColor: cs.primary.withValues(alpha: 0.06),
           highlightColor: Colors.transparent,

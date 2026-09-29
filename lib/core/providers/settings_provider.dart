@@ -24,6 +24,7 @@ import '../models/backup.dart';
 import '../models/compress_context_options.dart';
 import '../models/auto_retry_options.dart';
 import '../models/provider_group.dart';
+import '../models/chat_folder.dart';
 import '../models/sidebar_shortcut.dart';
 import '../services/haptics.dart';
 import '../services/api/retry_policy.dart';
@@ -283,6 +284,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayEnableAssistantMarkdownKey =
       'display_enable_assistant_markdown_v1';
   static const String _sidebarThumbnailsKey = 'sidebar_thumbnails_v1';
+  static const String _sidebarFoldersKey = 'sidebar_folders_v1';
   static const String _sidebarCollapsedSectionsKey =
       'sidebar_collapsed_sections_v1';
   static const String _imageCropperEnabledKey = 'image_cropper_enabled_v1';
@@ -1278,6 +1280,7 @@ class SettingsProvider extends ChangeNotifier {
     _enableAssistantMarkdown =
         prefs.getBool(_displayEnableAssistantMarkdownKey) ?? true;
     _sidebarThumbnails = prefs.getBool(_sidebarThumbnailsKey) ?? true;
+    _sidebarFolders = ChatFolder.decodeList(prefs.getString(_sidebarFoldersKey));
     _sidebarCollapsedSections = Set.unmodifiable(
       prefs.getStringList(_sidebarCollapsedSectionsKey) ?? const <String>[],
     );
@@ -5258,6 +5261,20 @@ Requirements:
     _sidebarThumbnails = v;
     notifyListeners();
     await _preferences.setBool(_sidebarThumbnailsKey, v);
+  }
+
+  // Sidebar: the user's folders, in their order.
+  List<ChatFolder> _sidebarFolders = const <ChatFolder>[];
+  List<ChatFolder> get sidebarFolders => _sidebarFolders;
+  Future<void> setSidebarFolders(List<ChatFolder> folders) async {
+    final next = List<ChatFolder>.unmodifiable(folders);
+    if (listEquals(next, _sidebarFolders)) return;
+    _sidebarFolders = next;
+    notifyListeners();
+    await _preferences.setString(
+      _sidebarFoldersKey,
+      ChatFolder.encodeList(next),
+    );
   }
 
   // Sidebar: sections (pinned, a day) the user folded.

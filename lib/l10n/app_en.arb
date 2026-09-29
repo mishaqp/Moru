@@ -1119,6 +1119,18 @@
   "sideDrawerMenuDelete": "Delete",
   "sideDrawerMenuSelect": "Select",
   "sideDrawerNewChat": "New chat",
+  "sideDrawerMoveToFolder": "Move to folder",
+  "sideDrawerNoFolder": "No folder",
+  "sideDrawerNewFolder": "New folder",
+  "sideDrawerFolderNameHint": "Folder name",
+  "sideDrawerFolderIcon": "Icon",
+  "sideDrawerFolderDelete": "Delete folder",
+  "sideDrawerFolderDeleteContent": "Chats in \"{name}\" stay in the list.",
+  "@sideDrawerFolderDeleteContent": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
   "displaySettingsPageSidebarThumbnailsTitle": "Image previews in the chat list",
   "sideDrawerArchive": "Archive",
   "sideDrawerArchived": "Chat archived",

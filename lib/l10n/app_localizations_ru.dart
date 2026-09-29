@@ -2561,6 +2561,29 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sideDrawerNewChat => 'Новый чат';
 
   @override
+  String get sideDrawerMoveToFolder => 'В папку';
+
+  @override
+  String get sideDrawerNoFolder => 'Без папки';
+
+  @override
+  String get sideDrawerNewFolder => 'Новая папка';
+
+  @override
+  String get sideDrawerFolderNameHint => 'Название папки';
+
+  @override
+  String get sideDrawerFolderIcon => 'Значок';
+
+  @override
+  String get sideDrawerFolderDelete => 'Удалить папку';
+
+  @override
+  String sideDrawerFolderDeleteContent(String name) {
+    return 'Чаты из папки «$name» останутся в списке.';
+  }
+
+  @override
   String get displaySettingsPageSidebarThumbnailsTitle =>
       'Миниатюры картинок в списке чатов';
 

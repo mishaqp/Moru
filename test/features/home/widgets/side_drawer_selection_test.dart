@@ -9,6 +9,7 @@ import 'package:Kelivo/core/providers/backup_reminder_provider.dart';
 import 'package:Kelivo/core/providers/tag_provider.dart';
 import 'package:Kelivo/core/providers/user_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
+import 'package:Kelivo/core/models/chat_folder.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/features/chat/pages/chat_archive_page.dart';
@@ -842,5 +843,220 @@ void main() {
     expect(find.text(label), findsOneWidget);
     // Russian month, not "Sep".
     expect(label, isNot(contains(DateFormat('MMM', 'en').format(day))));
+  });
+
+  group('folders', () {
+    test('the list survives a round trip and skips damaged entries', () async {
+      const work = ChatFolder(id: 'w', name: 'Work', icon: 'briefcase');
+      const games = ChatFolder(id: 'g', name: 'Games', icon: 'gamepad');
+      expect(ChatFolder.decodeList(ChatFolder.encodeList([work, games])), [
+        work,
+        games,
+      ]);
+      expect(ChatFolder.decodeList('{'), isEmpty);
+      expect(ChatFolder.decodeList('{"id":"x"}'), isEmpty);
+      expect(
+        ChatFolder.decodeList(
+          '[{"id":"","name":"a"},{"id":"a","name":"A","icon":"nope"}]',
+        ),
+        [const ChatFolder(id: 'a', name: 'A', icon: 'folder')],
+      );
+
+      final prefs = createBusinessTestPreferences();
+      final first = SettingsProvider(prefs);
+      await first.loaded;
+      expect(first.sidebarFolders, isEmpty);
+      await first.setSidebarFolders([games, work]);
+      final second = SettingsProvider(prefs);
+      await second.loaded;
+      expect(second.sidebarFolders, [games, work]);
+      first.dispose();
+      second.dispose();
+    });
+
+    // The sidebar has its own search field; this is the dialog's.
+    final dialogField = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextField),
+    );
+
+    Future<SettingsProvider> addFolders(
+      WidgetTester tester,
+      List<ChatFolder> folders,
+    ) async {
+      final settings = Provider.of<SettingsProvider>(
+        tester.element(find.byType(SideDrawer)),
+        listen: false,
+      );
+      await settings.setSidebarFolders(folders);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      return settings;
+    }
+
+    testWidgets('a folder gathers its chats after the pinned ones, keeps '
+        'their time and folds like any section', (tester) async {
+      final service = createService();
+      late String pinnedId;
+      late String alphaId;
+      await tester.runAsync(() async {
+        await service.init();
+        pinnedId = (await service.createConversation(title: 'Pinned one')).id;
+        alphaId = (await service.createConversation(title: 'Alpha')).id;
+        await service.createConversation(title: 'Beta');
+        await service.createConversation(title: 'Gamma');
+        await service.setConversationsPinned([pinnedId], true);
+      });
+      await pumpDrawer(tester, service, embedded: false);
+      final settings = await addFolders(tester, const [
+        ChatFolder(id: 'work', name: 'Work', icon: 'briefcase'),
+      ]);
+      // An empty folder still shows, so chats can be put in it.
+      expect(find.text('Work'), findsOneWidget);
+      expect(find.text('0'), findsOneWidget);
+
+      final updated = service.getConversation(alphaId)!.updatedAt;
+      await tester.runAsync(
+        () => service.setConversationsFolder([alphaId], 'work'),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(ChatService.folderOf(service.getConversation(alphaId)!), 'work');
+      // Putting a chat in a folder is not activity.
+      expect(service.getConversation(alphaId)!.updatedAt, updated);
+
+      // Pinned 1, Work 1, Today 2 — in that order.
+      expect(find.text('1'), findsNWidgets(2));
+      expect(find.text('2'), findsOneWidget);
+      double top(String text) => tester.getTopLeft(find.text(text)).dy;
+      expect(top('Pinned'), lessThan(top('Work')));
+      expect(top('Work'), lessThan(top('Alpha')));
+      expect(top('Alpha'), lessThan(top('Today')));
+      expect(top('Today'), lessThan(top('Beta')));
+      expect(find.byIcon(LucideIcons.briefcase), findsOneWidget);
+
+      await tester.tap(find.text('Work'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Alpha'), findsNothing);
+      expect(find.text('Beta'), findsOneWidget);
+      expect(settings.sidebarCollapsedSections, {'folder:work'});
+
+      // A folder that is gone lets its chats back into the date groups.
+      await settings.setSidebarFolders(const []);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Work'), findsNothing);
+      expect(find.text('Alpha'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+    });
+
+    testWidgets('the chat menu moves a chat into a new folder and back out', (
+      tester,
+    ) async {
+      final service = createService();
+      late String alphaId;
+      await tester.runAsync(() async {
+        await service.init();
+        alphaId = (await service.createConversation(title: 'Alpha')).id;
+        await service.createConversation(title: 'Beta');
+      });
+      await pumpDrawer(tester, service, embedded: false);
+      final settings = Provider.of<SettingsProvider>(
+        tester.element(find.byType(SideDrawer)),
+        listen: false,
+      );
+
+      Future<void> openMove() async {
+        await tester.longPress(find.text('Alpha'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Move to folder'));
+        await tester.pump(const Duration(milliseconds: 20));
+        await tester.pumpAndSettle();
+      }
+
+      await openMove();
+      // No folders yet: only "New folder".
+      expect(find.text('No folder'), findsNothing);
+      await tester.tap(find.text('New folder'));
+      await tester.pumpAndSettle();
+      await tester.enterText(dialogField, '  Work  ');
+      await tester.tap(find.text('Save'));
+      await settleUntil(
+        tester,
+        () => ChatService.folderOf(service.getConversation(alphaId)!) != null,
+      );
+      expect(settings.sidebarFolders, hasLength(1));
+      final folder = settings.sidebarFolders.single;
+      expect(folder.name, 'Work');
+      expect(folder.icon, 'folder');
+      expect(
+        ChatService.folderOf(service.getConversation(alphaId)!),
+        folder.id,
+      );
+      expect(find.text('Work'), findsOneWidget);
+
+      await openMove();
+      await tester.tap(find.text('No folder'));
+      await settleUntil(
+        tester,
+        () => ChatService.folderOf(service.getConversation(alphaId)!) == null,
+      );
+      // The folder stays, now empty.
+      expect(find.text('Work'), findsOneWidget);
+      expect(find.text('0'), findsOneWidget);
+    });
+
+    testWidgets('a long press on a folder renames it, changes its icon and '
+        'deletes it without deleting its chats', (tester) async {
+      final service = createService();
+      late String alphaId;
+      await tester.runAsync(() async {
+        await service.init();
+        alphaId = (await service.createConversation(title: 'Alpha')).id;
+        await service.createConversation(title: 'Beta');
+        await service.setConversationsFolder([alphaId], 'work');
+      });
+      await pumpDrawer(tester, service, embedded: false);
+      final settings = await addFolders(tester, const [
+        ChatFolder(id: 'work', name: 'Work', icon: 'folder'),
+      ]);
+
+      await tester.longPress(find.text('Work'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Rename'));
+      await tester.pumpAndSettle();
+      await tester.enterText(dialogField, 'Games');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(settings.sidebarFolders.single.name, 'Games');
+      expect(find.text('Games'), findsOneWidget);
+
+      await tester.longPress(find.text('Games'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Icon'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('folder-icon-gamepad')),
+      );
+      await tester.pumpAndSettle();
+      expect(settings.sidebarFolders.single.icon, 'gamepad');
+      expect(find.byIcon(LucideIcons.gamepad2), findsOneWidget);
+
+      await tester.longPress(find.text('Games'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete folder'));
+      await tester.pumpAndSettle();
+      expect(find.text('Chats in "Games" stay in the list.'), findsOneWidget);
+      await tester.tap(find.text('Delete folder').last);
+      await settleUntil(
+        tester,
+        () => ChatService.folderOf(service.getConversation(alphaId)!) == null,
+      );
+      expect(settings.sidebarFolders, isEmpty);
+      expect(find.text('Games'), findsNothing);
+      expect(find.text('Alpha'), findsOneWidget);
+      expect(service.getConversation(alphaId), isNotNull);
+    });
   });
 }

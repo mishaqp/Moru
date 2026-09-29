@@ -8,6 +8,7 @@ import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/backup_reminder_provider.dart';
+import '../../../core/models/chat_folder.dart';
 import '../../../core/models/chat_item.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../backup/pages/backup_page.dart';
@@ -43,6 +44,7 @@ import '../utils/model_display_helper.dart';
 import 'assistant_avatar.dart';
 import 'assistant_entry_actions.dart';
 import 'sidebar_bottom_bar.dart';
+import 'chat_folders.dart';
 import 'chat_thumbnails.dart';
 import '../../chat/pages/chat_archive_page.dart';
 import 'sidebar_glass.dart';
@@ -171,6 +173,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   bool? _cachedSidebarRowsInitialized;
   String? _cachedSidebarRowsQuery;
   String? _cachedSidebarRowsAssistantId;
+  List<ChatFolder>? _cachedSidebarRowsFolders;
   List<_SidebarRow>? _cachedSidebarRows;
 
   bool _selectionMode = false;
@@ -386,6 +389,15 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       icon: Lucide.Archive,
                       label: l10n.sideDrawerArchive,
                       action: () => _archiveChat(chat.id),
+                    ),
+                    row(
+                      icon: Lucide.FolderInput,
+                      label: l10n.sideDrawerMoveToFolder,
+                      action: () => moveChatToFolder(
+                        context,
+                        chatId: chat.id,
+                        currentFolderId: chat.folderId,
+                      ),
                     ),
                     if (titleGenerationEnabled)
                       row(
@@ -1273,11 +1285,15 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     required String? assistantId,
     required ChatService chatService,
   }) {
+    // The folder list is replaced, never changed in place, so a new list
+    // means new folders.
+    final folders = context.read<SettingsProvider>().sidebarFolders;
     if (_cachedSidebarRows != null &&
         _cachedSidebarRowsRevision == revision &&
         _cachedSidebarRowsInitialized == initialized &&
         _cachedSidebarRowsQuery == query &&
-        _cachedSidebarRowsAssistantId == assistantId) {
+        _cachedSidebarRowsAssistantId == assistantId &&
+        identical(_cachedSidebarRowsFolders, folders)) {
       return _cachedSidebarRows!;
     }
     SideDrawer.debugSidebarRowsComputeCount++;
@@ -1285,7 +1301,9 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       chatService: chatService,
       assistantId: assistantId,
       query: query,
+      folders: folders,
     );
+    _cachedSidebarRowsFolders = folders;
     _cachedSidebarRows = rows;
     _cachedSidebarRowsRevision = revision;
     _cachedSidebarRowsInitialized = initialized;
@@ -1298,24 +1316,34 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     required ChatService chatService,
     required String? assistantId,
     required String query,
+    required List<ChatFolder> folders,
   }) {
     final q = query.trim().toLowerCase();
     final pinned = <ChatItem>[];
     final rest = <ChatItem>[];
+    final folderIds = {for (final f in folders) f.id};
+    final inFolders = <String, List<ChatItem>>{
+      for (final f in folders) f.id: <ChatItem>[],
+    };
     // Single pass: filter assistant + query, split pinned/rest via ChatItem.isPinned.
     for (final c in chatService.getAllConversations()) {
       if (c.assistantId != assistantId && c.assistantId != null) continue;
       if (ChatService.isArchived(c)) continue;
       final title = c.title;
       if (q.isNotEmpty && !title.toLowerCase().contains(q)) continue;
+      // A folder that no longer exists does not hold its chats.
+      final folderId = ChatService.folderOf(c);
       final item = ChatItem(
         id: c.id,
         title: title,
         created: c.updatedAt,
         isPinned: c.isPinned,
+        folderId: folderIds.contains(folderId) ? folderId : null,
       );
       if (item.isPinned) {
         pinned.add(item);
+      } else if (item.folderId != null) {
+        inFolders[item.folderId]!.add(item);
       } else {
         rest.add(item);
       }
@@ -1337,6 +1365,30 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             chat: pinned[i],
             indexInSection: i,
             kind: _SidebarHeaderKind.pinned,
+          ),
+        );
+      }
+    }
+    // Folders follow the pinned chats, in the user's order. While searching,
+    // a folder without a match is left out.
+    for (final folder in folders) {
+      final items = inFolders[folder.id]!
+        ..sort((a, b) => b.created.compareTo(a.created));
+      if (items.isEmpty && q.isNotEmpty) continue;
+      rows.add(
+        _SidebarHeaderRow(
+          kind: _SidebarHeaderKind.folder,
+          count: items.length,
+          folder: folder,
+        ),
+      );
+      for (var i = 0; i < items.length; i++) {
+        rows.add(
+          _SidebarTileRow(
+            chat: items[i],
+            indexInSection: i,
+            kind: _SidebarHeaderKind.folder,
+            folderId: folder.id,
           ),
         );
       }
@@ -3208,7 +3260,9 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     final visibleRows = <_SidebarRow>[
       for (final row in rows)
         if (row is! _SidebarTileRow ||
-            !collapsed.contains(_sidebarSectionKey(row.kind, row.dateBucket)))
+            !collapsed.contains(
+              _sidebarSectionKey(row.kind, row.dateBucket, row.folderId),
+            ))
           row,
     ];
     // Each day gets its own icon, stable across rebuilds and restarts.
@@ -3251,11 +3305,16 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             final rowIndex = index - prefixCount;
             final row = visibleRows[rowIndex];
             if (row is _SidebarHeaderRow) {
-              final key = _sidebarSectionKey(row.kind, row.dateBucket);
+              final key = _sidebarSectionKey(
+                row.kind,
+                row.dateBucket,
+                row.folder?.id,
+              );
               final headerLabel = switch (row.kind) {
                 _SidebarHeaderKind.pinned => AppLocalizations.of(
                   context,
                 )!.sideDrawerPinnedLabel,
+                _SidebarHeaderKind.folder => row.folder!.name,
                 _SidebarHeaderKind.date => _dateLabel(context, row.dateBucket!),
               };
               return Padding(
@@ -3263,9 +3322,17 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                 padding: EdgeInsets.only(top: rowIndex == 0 ? 0 : 14),
                 child: SidebarSectionHeader(
                   key: ValueKey<String>('sidebar-section-$key'),
-                  icon: row.kind == _SidebarHeaderKind.pinned
-                      ? Lucide.Pin
-                      : headerIcons[key]!,
+                  icon: switch (row.kind) {
+                    _SidebarHeaderKind.pinned => Lucide.Pin,
+                    _SidebarHeaderKind.folder => chatFolderIcon(
+                      row.folder!.icon,
+                    ),
+                    _SidebarHeaderKind.date => headerIcons[key]!,
+                  },
+                  onLongPress: row.folder == null
+                      ? null
+                      : () =>
+                            unawaited(showChatFolderMenu(context, row.folder!)),
                   label: headerLabel,
                   count: row.count,
                   expanded: !collapsed.contains(key),
@@ -3355,10 +3422,15 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
 }
 
 /// The key a folded section is remembered by: `pinned`, or the day.
-String _sidebarSectionKey(_SidebarHeaderKind kind, DateTime? day) =>
-    kind == _SidebarHeaderKind.pinned
-    ? 'pinned'
-    : 'date:${_sidebarDateBucketKey(day)}';
+String _sidebarSectionKey(
+  _SidebarHeaderKind kind,
+  DateTime? day, [
+  String? folderId,
+]) => switch (kind) {
+  _SidebarHeaderKind.pinned => 'pinned',
+  _SidebarHeaderKind.folder => 'folder:$folderId',
+  _SidebarHeaderKind.date => 'date:${_sidebarDateBucketKey(day)}',
+};
 
 /// Max absolute index that still contributes to tile enter stagger.
 /// Indices beyond this share the same delay (~112–140ms).
@@ -3378,7 +3450,7 @@ class _ChatGroup {
   _ChatGroup({required this.date, required this.items});
 }
 
-enum _SidebarHeaderKind { pinned, date }
+enum _SidebarHeaderKind { pinned, folder, date }
 
 sealed class _SidebarRow {
   const _SidebarRow();
@@ -3389,13 +3461,16 @@ class _SidebarHeaderRow extends _SidebarRow {
     required this.kind,
     required this.count,
     this.dateBucket,
+    this.folder,
   }) : assert(
-         kind == _SidebarHeaderKind.pinned
-             ? dateBucket == null
-             : dateBucket != null,
+         (kind == _SidebarHeaderKind.date) == (dateBucket != null) &&
+             (kind == _SidebarHeaderKind.folder) == (folder != null),
        );
 
   final _SidebarHeaderKind kind;
+
+  /// The folder of a folder header.
+  final ChatFolder? folder;
 
   /// Chats in the section.
   final int count;
@@ -3411,6 +3486,7 @@ class _SidebarTileRow extends _SidebarRow {
     required this.indexInSection,
     required this.kind,
     this.dateBucket,
+    this.folderId,
   });
   final ChatItem chat;
   final int indexInSection;
@@ -3418,6 +3494,9 @@ class _SidebarTileRow extends _SidebarRow {
 
   /// Stable local-day bucket for date-section animation keys; null when pinned.
   final DateTime? dateBucket;
+
+  /// The folder section the row is in; null outside folders.
+  final String? folderId;
 }
 
 class _ChatTile extends StatefulWidget {

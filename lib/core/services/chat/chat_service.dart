@@ -2834,6 +2834,46 @@ class ChatService extends ChangeNotifier {
     return uris;
   }
 
+  /// Extras key of the folder a conversation is in (a ChatFolder id).
+  static const String folderKey = 'folder.id';
+
+  /// The folder [conversation] is in, or null.
+  static String? folderOf(Conversation conversation) {
+    final id = conversation.extras[folderKey];
+    return id is String && id.isNotEmpty ? id : null;
+  }
+
+  /// Puts each id into folder [folderId], or out of any folder with null.
+  /// Like archiving, this is not activity: the last-message time stays.
+  /// Returns how many changed; notifies and bumps at most once.
+  Future<int> setConversationsFolder(
+    Iterable<String> ids,
+    String? folderId,
+  ) async {
+    if (!_initialized) await init();
+    var changed = 0;
+    final seen = <String>{};
+    for (final id in ids) {
+      if (id.isEmpty || !seen.add(id)) continue;
+      final conversation = _conversationsCache[id];
+      if (conversation == null || folderOf(conversation) == folderId) continue;
+      await _repo.updateConversationExtras(id, (extras) {
+        if (folderId == null) {
+          extras.remove(folderKey);
+        } else {
+          extras[folderKey] = folderId;
+        }
+        return extras;
+      }, touch: false);
+      await _refreshConversation(id);
+      changed++;
+    }
+    if (changed == 0) return 0;
+    _bumpConversationListRevision();
+    notifyListeners();
+    return changed;
+  }
+
   /// Extras key of an archived conversation: when it was archived, in ms
   /// since the epoch.
   static const String archivedAtKey = 'archive.at';
