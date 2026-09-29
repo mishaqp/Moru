@@ -114,6 +114,47 @@ void main() {
     expect(launch.files.single.content, isNot(contains('sk-ds')));
   });
 
+  test('OpenCode explicitly configures text-only model modalities', () {
+    final config = jsonDecode(AcpAgentSpec.openCodeConfig(deepseek)) as Map;
+    expect(config['provider']['moru']['models'], {
+      'deepseek-chat': {
+        'name': 'deepseek-chat',
+        'modalities': {
+          'input': ['text'],
+          'output': ['text'],
+        },
+      },
+    });
+  });
+
+  test(
+    'OpenCode configures attachments and image input for a capable model',
+    () {
+      final config =
+          jsonDecode(
+                AcpAgentSpec.openCodeConfig(
+                  const AcpProviderInput(
+                    baseUrl: 'https://api.example.com/v1',
+                    apiKey: 'key',
+                    model: 'custom-vision',
+                    imageInput: true,
+                  ),
+                ),
+              )
+              as Map;
+      expect(config['provider']['moru']['models'], {
+        'custom-vision': {
+          'name': 'custom-vision',
+          'attachment': true,
+          'modalities': {
+            'input': ['text', 'image'],
+            'output': ['text'],
+          },
+        },
+      });
+    },
+  );
+
   test('base URLs lose endpoint paths and gain /v1 only when missing', () {
     expect(
       AcpAgentSpec.openAiBaseUrl('https://api.example.com/v1/chat/completions'),

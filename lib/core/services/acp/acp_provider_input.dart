@@ -1,3 +1,4 @@
+import '../../providers/model_provider.dart' show Modality;
 import '../../providers/settings_provider.dart';
 import '../api/chat_api_helpers.dart';
 import '../../utils/openai_model_compat.dart';
@@ -29,6 +30,10 @@ AcpProviderInput? acpProviderInputFor(
     ),
     anthropicProvider: kind == ProviderKind.claude,
     responsesApi: kind == ProviderKind.openai && config.useResponseApi == true,
+    imageInput: effectiveModelInfo(
+      config,
+      modelId,
+    ).input.contains(Modality.image),
     headers: {
       for (final header in config.customHeaders)
         if ((header['name'] ?? '').trim().isNotEmpty)

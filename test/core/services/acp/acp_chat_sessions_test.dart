@@ -156,6 +156,12 @@ void main() {
     apiKey: 'k',
     model: 'deepseek-chat',
   );
+  const imageProvider = AcpProviderInput(
+    baseUrl: 'https://api.deepseek.com/v1',
+    apiKey: 'k',
+    model: 'deepseek-chat',
+    imageInput: true,
+  );
   final spec = AcpAgentSpec.byId('opencode')!;
 
   late List<_ScriptedAgent> started;
@@ -223,7 +229,7 @@ void main() {
     }
     final sessions = sessionsWith(images: true);
     addTearDown(sessions.closeAll);
-    await answer(sessions, turn('look', images: paths));
+    await answer(sessions, turn('look', images: paths, using: imageProvider));
     final request = started.single.sent.lastWhere(
       (m) => m['method'] == 'session/prompt',
     );
@@ -241,7 +247,10 @@ void main() {
       final sessions = sessionsWith(images: true);
       addTearDown(sessions.closeAll);
       await IOOverrides.runWithIOOverrides(
-        () => answer(sessions, turn('look', images: [file.path])),
+        () => answer(
+          sessions,
+          turn('look', images: [file.path], using: imageProvider),
+        ),
         _ReadFailureOverrides(file),
       );
       final request = started.single.sent.lastWhere(
@@ -308,6 +317,7 @@ void main() {
         turn(
           'look',
           images: ['kelivo-file:///upload/photo.png', jpg.uri.toString()],
+          using: imageProvider,
         ),
       );
       final request = started.single.sent.lastWhere(
@@ -326,7 +336,7 @@ void main() {
           'data': base64Encode(jpg.readAsBytesSync()),
         },
       ]);
-      await answer(sessions, turn('no images'));
+      await answer(sessions, turn('no images', using: imageProvider));
       final next = started.single.sent.lastWhere(
         (m) => m['method'] == 'session/prompt',
       );
@@ -339,9 +349,16 @@ void main() {
   test(
     'unsupported and unavailable images leave an explicit text note',
     () async {
+      final dir = Directory.systemTemp.createTempSync('acp-unsupported-');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final image = File('${dir.path}/photo.png')
+        ..writeAsBytesSync([137, 80, 78, 71]);
       final sessions = sessionsWith();
       addTearDown(sessions.closeAll);
-      await answer(sessions, turn('', images: ['/missing.png']));
+      await answer(
+        sessions,
+        turn('', images: [image.path], using: imageProvider),
+      );
       final request = started.single.sent.lastWhere(
         (m) => m['method'] == 'session/prompt',
       );
@@ -356,12 +373,33 @@ void main() {
         turn(
           'look',
           images: ['/missing.png', 'https://example.com/private.png'],
+          using: imageProvider,
         ),
       );
       final unavailable = started.single.sent.lastWhere(
         (m) => m['method'] == 'session/prompt',
       );
       expect((unavailable['params'] as Map)['prompt'], [
+        {'type': 'text', 'text': 'look'},
+        {'type': 'text', 'text': 'Image was not sent.'},
+      ]);
+    },
+  );
+
+  test(
+    'a text-only model receives a note even when the agent supports images',
+    () async {
+      final dir = Directory.systemTemp.createTempSync('acp-text-model-');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final image = File('${dir.path}/photo.png')
+        ..writeAsBytesSync([137, 80, 78, 71]);
+      final sessions = sessionsWith(images: true);
+      addTearDown(sessions.closeAll);
+      await answer(sessions, turn('look', images: [image.path]));
+      final request = started.single.sent.lastWhere(
+        (m) => m['method'] == 'session/prompt',
+      );
+      expect((request['params'] as Map)['prompt'], [
         {'type': 'text', 'text': 'look'},
         {'type': 'text', 'text': 'Image was not sent.'},
       ]);
@@ -467,6 +505,26 @@ void main() {
     expect(started, hasLength(3));
     sessions.closeAll();
   });
+
+  test(
+    'changing model image input restarts the agent with its new capabilities',
+    () async {
+      final sessions = sessionsWith(images: true);
+      addTearDown(sessions.closeAll);
+      await answer(sessions, turn('text only'));
+      await answer(sessions, turn('images enabled', using: imageProvider));
+      expect(started, hasLength(2));
+      expect(started.first.isClosed, isTrue);
+      await answer(
+        sessions,
+        turn('images still enabled', using: imageProvider),
+      );
+      expect(started, hasLength(2));
+      await answer(sessions, turn('images disabled'));
+      expect(started, hasLength(3));
+      expect(started[1].isClosed, isTrue);
+    },
+  );
 
   test('a saved session is reopened when the agent can, with no history '
       'sent again', () async {

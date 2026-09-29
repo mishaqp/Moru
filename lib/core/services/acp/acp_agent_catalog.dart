@@ -27,6 +27,7 @@ class AcpProviderInput {
     required this.model,
     this.anthropicProvider = false,
     this.responsesApi = false,
+    this.imageInput = false,
     this.headers = const {},
   });
 
@@ -41,6 +42,9 @@ class AcpProviderInput {
 
   /// The Moru provider uses OpenAI's Responses API.
   final bool responsesApi;
+
+  /// The selected Moru model accepts images, including model overrides.
+  final bool imageInput;
   final Map<String, String> headers;
 }
 
@@ -350,7 +354,14 @@ class AcpAgentSpec {
             if (provider.headers.isNotEmpty) 'headers': provider.headers,
           },
           'models': {
-            provider.model: {'name': provider.model},
+            provider.model: {
+              'name': provider.model,
+              if (provider.imageInput) 'attachment': true,
+              'modalities': {
+                'input': ['text', if (provider.imageInput) 'image'],
+                'output': ['text'],
+              },
+            },
           },
         },
       },

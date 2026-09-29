@@ -102,7 +102,7 @@ class AcpChatSessions extends ChangeNotifier {
         ...prompt,
         ...await acpImagePromptBlocks(
           turn.userImagePaths,
-          supported: chat.agent.info.imagePrompts,
+          supported: chat.agent.info.imagePrompts && turn.provider.imageInput,
           notSentMessage: turn.imageNotSentMessage,
         ),
       ];
@@ -222,6 +222,7 @@ class AcpChatSessions extends ChangeNotifier {
     ...turn.spec.arguments,
     turn.provider.baseUrl,
     turn.provider.model,
+    turn.provider.imageInput,
     turn.provider.apiKey.hashCode,
     turn.cwd,
     for (final mount in turn.mounts) '${mount.host}>${mount.guest}',
