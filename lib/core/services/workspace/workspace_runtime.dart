@@ -106,6 +106,7 @@ class RuntimeStatus {
     this.reason,
     required this.engine,
     required this.sandboxed,
+    this.rootChroot = false,
   });
 
   final bool ready;
@@ -114,6 +115,9 @@ class RuntimeStatus {
   /// One of `proot`, `ish`, `process`, `fake`.
   final String engine;
   final bool sandboxed;
+
+  /// The fast mode: the PRoot rootfs runs in a real chroot as root.
+  final bool rootChroot;
 }
 
 abstract class PtySession {

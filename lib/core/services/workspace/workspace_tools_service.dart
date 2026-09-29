@@ -1945,6 +1945,12 @@ class WorkspaceToolsService {
     }
     switch (status.engine) {
       case 'proot':
+        if (status.rootChroot) {
+          return 'Engine: Linux in a real chroot, fast mode: commands run as '
+              'real root with full access to the phone (Android is outside '
+              'the chroot but reachable, e.g. /proc, /dev, /sys); be careful '
+              'with destructive commands. Check /etc/os-release for distro';
+        }
         return 'Engine: Linux (PRoot); check /etc/os-release for distro';
       case 'ish':
         return 'Engine: Alpine (iSH)';

@@ -81,7 +81,12 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
         sandboxed: true,
       );
     }
-    return const RuntimeStatus(ready: true, engine: 'proot', sandboxed: true);
+    return RuntimeStatus(
+      ready: true,
+      engine: 'proot',
+      sandboxed: true,
+      rootChroot: env.rootChroot,
+    );
   }
 
   @override

@@ -9850,6 +9850,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceEnvProotOptions => 'PRoot options';
 
   @override
+  String get workspaceEnvRootChroot => 'Fast mode (root)';
+
+  @override
+  String get workspaceEnvRootChrootHint =>
+      'Runs the Linux environment in a real chroot through su instead of PRoot: programs start and work many times faster. Commands run as real root with full access to the phone. Turning it off gives the files back to Moru.';
+
+  @override
+  String get workspaceEnvRootChrootChecking => 'Checking root…';
+
+  @override
+  String get workspaceEnvRootChrootRestoring => 'Giving files back to Moru…';
+
+  @override
+  String get workspaceEnvRootChrootOn => 'Fast mode is on';
+
+  @override
+  String get workspaceEnvRootChrootOff => 'Fast mode is off, PRoot is back';
+
+  @override
+  String workspaceEnvRootChrootFailed(String reason) {
+    return 'Fast mode is unavailable: $reason';
+  }
+
+  @override
   String get workspaceEnvShellPath => 'Shell path';
 
   @override

@@ -45,6 +45,7 @@ class EnvironmentPane extends StatefulWidget {
   static const retryKey = EnvironmentPaneKeys.retry;
   static const repairKey = EnvironmentPaneKeys.repair;
   static const resetKey = EnvironmentPaneKeys.reset;
+  static const rootChrootKey = EnvironmentPaneKeys.rootChroot;
   static const checkUpdateKey = EnvironmentPaneKeys.checkUpdate;
   static const updateKey = EnvironmentPaneKeys.update;
   static const downloadProgressKey = EnvironmentPaneKeys.downloadProgress;
@@ -340,6 +341,38 @@ class _EnvironmentPaneState extends State<EnvironmentPane> {
     }
   }
 
+  /// Checks su before turning the fast mode on; turning it off gives the
+  /// files its root commands left back to the app.
+  Future<void> _setRootChroot(EnvironmentInstaller installer, bool on) async {
+    if (_busy) return;
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _busy = true);
+    showAppSnackBar(
+      context,
+      message: on
+          ? l10n.workspaceEnvRootChrootChecking
+          : l10n.workspaceEnvRootChrootRestoring,
+      type: NotificationType.info,
+    );
+    String? error;
+    try {
+      error = await installer.setRootChroot(on);
+    } catch (e) {
+      error = '$e';
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
+    showAppSnackBar(
+      context,
+      message: error != null
+          ? l10n.workspaceEnvRootChrootFailed(error)
+          : on
+          ? l10n.workspaceEnvRootChrootOn
+          : l10n.workspaceEnvRootChrootOff,
+      type: error != null ? NotificationType.error : NotificationType.success,
+    );
+  }
+
   Future<void> _copyPath(String path) async {
     await Clipboard.setData(ClipboardData(text: path));
     if (!mounted) return;
@@ -538,8 +571,20 @@ class _EnvironmentPaneState extends State<EnvironmentPane> {
                       ),
                     ),
             ),
+            const IosRowDivider(),
+            IosSwitchRow(
+              key: EnvironmentPane.rootChrootKey,
+              icon: Lucide.Zap,
+              label: l10n.workspaceEnvRootChroot,
+              value: context.watch<EnvironmentProvider>().rootChroot,
+              onChanged: (on) {
+                if (busy || !ready) return;
+                unawaited(_setRootChroot(manager, on));
+              },
+            ),
           ],
         ),
+        IosSectionFooter(text: l10n.workspaceEnvRootChrootHint),
       ],
       IosSectionFooter(text: l10n.workspaceEnvInfoBody),
     ];

@@ -8,6 +8,7 @@ abstract final class EnvironmentPaneKeys {
   static const retry = ValueKey<String>('workspace-env-retry');
   static const repair = ValueKey<String>('workspace-env-repair');
   static const reset = ValueKey<String>('workspace-env-reset');
+  static const rootChroot = ValueKey<String>('workspace-env-root-chroot');
   static const checkUpdate = ValueKey<String>('workspace-env-check-update');
   static const update = ValueKey<String>('workspace-env-update');
   static const downloadProgress = ValueKey<String>(

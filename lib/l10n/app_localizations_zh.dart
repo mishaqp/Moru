@@ -9427,6 +9427,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get workspaceEnvProotOptions => 'PRoot 配置';
 
   @override
+  String get workspaceEnvRootChroot => '快速模式（root）';
+
+  @override
+  String get workspaceEnvRootChrootHint =>
+      '通过 su 在真正的 chroot 中运行 Linux 环境，而不是 PRoot：程序启动和运行快很多倍。命令以真正的 root 身份运行，可完全访问手机。关闭时文件会归还给 Moru。';
+
+  @override
+  String get workspaceEnvRootChrootChecking => '正在检查 root…';
+
+  @override
+  String get workspaceEnvRootChrootRestoring => '正在把文件归还给 Moru…';
+
+  @override
+  String get workspaceEnvRootChrootOn => '快速模式已开启';
+
+  @override
+  String get workspaceEnvRootChrootOff => '快速模式已关闭，恢复使用 PRoot';
+
+  @override
+  String workspaceEnvRootChrootFailed(String reason) {
+    return '快速模式不可用：$reason';
+  }
+
+  @override
   String get workspaceEnvShellPath => 'Shell 路径';
 
   @override
@@ -20657,6 +20681,30 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get workspaceEnvProotOptions => 'PRoot 配置';
+
+  @override
+  String get workspaceEnvRootChroot => '快速模式（root）';
+
+  @override
+  String get workspaceEnvRootChrootHint =>
+      '通过 su 在真正的 chroot 中运行 Linux 环境，而不是 PRoot：程序启动和运行快很多倍。命令以真正的 root 身份运行，可完全访问手机。关闭时文件会归还给 Moru。';
+
+  @override
+  String get workspaceEnvRootChrootChecking => '正在检查 root…';
+
+  @override
+  String get workspaceEnvRootChrootRestoring => '正在把文件归还给 Moru…';
+
+  @override
+  String get workspaceEnvRootChrootOn => '快速模式已开启';
+
+  @override
+  String get workspaceEnvRootChrootOff => '快速模式已关闭，恢复使用 PRoot';
+
+  @override
+  String workspaceEnvRootChrootFailed(String reason) {
+    return '快速模式不可用：$reason';
+  }
 
   @override
   String get workspaceEnvShellPath => 'Shell 路径';
@@ -31962,6 +32010,30 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get workspaceEnvProotOptions => 'PRoot 設定';
+
+  @override
+  String get workspaceEnvRootChroot => '快速模式（root）';
+
+  @override
+  String get workspaceEnvRootChrootHint =>
+      '透過 su 在真正的 chroot 中執行 Linux 環境，而不是 PRoot：程式啟動和執行快很多倍。指令以真正的 root 身分執行，可完全存取手機。關閉時檔案會歸還給 Moru。';
+
+  @override
+  String get workspaceEnvRootChrootChecking => '正在檢查 root…';
+
+  @override
+  String get workspaceEnvRootChrootRestoring => '正在把檔案歸還給 Moru…';
+
+  @override
+  String get workspaceEnvRootChrootOn => '快速模式已開啟';
+
+  @override
+  String get workspaceEnvRootChrootOff => '快速模式已關閉，恢復使用 PRoot';
+
+  @override
+  String workspaceEnvRootChrootFailed(String reason) {
+    return '快速模式無法使用：$reason';
+  }
 
   @override
   String get workspaceEnvShellPath => 'Shell 路徑';

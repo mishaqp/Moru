@@ -17627,6 +17627,48 @@ abstract class AppLocalizations {
   /// **'PRoot options'**
   String get workspaceEnvProotOptions;
 
+  /// No description provided for @workspaceEnvRootChroot.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast mode (root)'**
+  String get workspaceEnvRootChroot;
+
+  /// No description provided for @workspaceEnvRootChrootHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Runs the Linux environment in a real chroot through su instead of PRoot: programs start and work many times faster. Commands run as real root with full access to the phone. Turning it off gives the files back to Moru.'**
+  String get workspaceEnvRootChrootHint;
+
+  /// No description provided for @workspaceEnvRootChrootChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking root…'**
+  String get workspaceEnvRootChrootChecking;
+
+  /// No description provided for @workspaceEnvRootChrootRestoring.
+  ///
+  /// In en, this message translates to:
+  /// **'Giving files back to Moru…'**
+  String get workspaceEnvRootChrootRestoring;
+
+  /// No description provided for @workspaceEnvRootChrootOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast mode is on'**
+  String get workspaceEnvRootChrootOn;
+
+  /// No description provided for @workspaceEnvRootChrootOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast mode is off, PRoot is back'**
+  String get workspaceEnvRootChrootOff;
+
+  /// No description provided for @workspaceEnvRootChrootFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast mode is unavailable: {reason}'**
+  String workspaceEnvRootChrootFailed(String reason);
+
   /// No description provided for @workspaceEnvShellPath.
   ///
   /// In en, this message translates to:

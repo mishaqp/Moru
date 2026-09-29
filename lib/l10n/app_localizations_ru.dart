@@ -9970,6 +9970,30 @@ class AppLocalizationsRu extends AppLocalizations {
   String get workspaceEnvProotOptions => 'Параметры PRoot';
 
   @override
+  String get workspaceEnvRootChroot => 'Быстрый режим (root)';
+
+  @override
+  String get workspaceEnvRootChrootHint =>
+      'Linux-среда работает в настоящем chroot через su вместо PRoot: программы запускаются и работают во много раз быстрее. Команды выполняются от настоящего root с полным доступом к телефону. При выключении файлы возвращаются Moru.';
+
+  @override
+  String get workspaceEnvRootChrootChecking => 'Проверяю root…';
+
+  @override
+  String get workspaceEnvRootChrootRestoring => 'Возвращаю файлы Moru…';
+
+  @override
+  String get workspaceEnvRootChrootOn => 'Быстрый режим включён';
+
+  @override
+  String get workspaceEnvRootChrootOff => 'Быстрый режим выключен, снова PRoot';
+
+  @override
+  String workspaceEnvRootChrootFailed(String reason) {
+    return 'Быстрый режим недоступен: $reason';
+  }
+
+  @override
   String get workspaceEnvShellPath => 'Путь к оболочке';
 
   @override

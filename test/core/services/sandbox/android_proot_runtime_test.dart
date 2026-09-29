@@ -323,6 +323,61 @@ void main() {
     );
   });
 
+  test('the fast mode sends commands and terminals to the chroot', () async {
+    await env.setState(
+      EnvironmentState(
+        phase: EnvironmentPhase.ready,
+        distro: 'ubuntu',
+        version: '24.04',
+        arch: 'arm64',
+        rootfsDir: rootfsDir.path,
+      ),
+    );
+    workspace.handler = (call) {
+      if (call.method == 'probe') return workspace.probeResult;
+      if (call.method == 'exec') {
+        final runId = (call.arguments as Map)['runId'];
+        workspace.emit(<String, Object?>{
+          'type': 'exit',
+          'runId': runId,
+          'exitCode': 0,
+          'timedOut': false,
+          'durationMs': 1,
+        });
+        return <String, Object?>{'started': true};
+      }
+      if (call.method == 'ptyOpen') return <String, Object?>{'pid': 7};
+      return null;
+    };
+    Future<Map<String, Object?>> execArgs() async {
+      workspace.calls.clear();
+      await runtime
+          .run(
+            CommandRequest(
+              runId: 'r',
+              command: 'true',
+              cwd: '/root',
+              timeout: const Duration(seconds: 5),
+            ),
+          )
+          .drain<void>();
+      return workspace.argsOf('exec')!;
+    }
+
+    expect((await execArgs()).containsKey('chroot'), isFalse);
+    await env.setRootChroot(true);
+    expect((await execArgs())['chroot'], isTrue);
+    final session = await runtime.openPty(
+      mounts: const [],
+      cwd: '/root',
+      env: const {},
+      cols: 80,
+      rows: 24,
+    );
+    expect(workspace.argsOf('ptyOpen')!['chroot'], isTrue);
+    await session.close();
+  });
+
   test('openPty writes, resizes, closes, and maps exit', () async {
     await env.setProotOptions(shell: '/bin/sh', arguments: '-k\n5.10.0');
     expect(runtime.supportsPty, isTrue);
