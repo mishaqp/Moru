@@ -272,16 +272,28 @@ void main() {
     expect(mediaController.hasUnreadyImages, isTrue);
 
     await tester.pumpWidget(const SizedBox.shrink());
-    await tester.runAsync(() async {
-      disposeGate.complete();
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
+    await tester.runAsync(() async => disposeGate.complete());
+    // The abandoned write reserves, writes and then deletes its file. Its
+    // file I/O finishes in real time while its continuations run on the
+    // test clock, so both are driven until the directory is as before
+    // instead of trusting a fixed delay.
+    Set<String>? remainingPaths;
+    for (var i = 0; i < 200; i++) {
+      await tester.pump();
+      remainingPaths = await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        return uploadDir.list().map((entry) => entry.path).toSet();
+      });
+      if (fakePathProvider.completedAppDataRequests >
+              completedRequestsBeforeDispose &&
+          remainingPaths!.length == existingPaths!.length &&
+          remainingPaths.containsAll(existingPaths)) {
+        break;
+      }
+    }
     expect(
       fakePathProvider.completedAppDataRequests,
       greaterThan(completedRequestsBeforeDispose),
-    );
-    final remainingPaths = await tester.runAsync(
-      () => uploadDir.list().map((entry) => entry.path).toSet(),
     );
     expect(remainingPaths, existingPaths);
 
