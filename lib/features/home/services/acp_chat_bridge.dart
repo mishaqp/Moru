@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/models/assistant.dart';
+import '../../../core/models/workspace_binding.dart';
+import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/external_mounts_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/workspace_provider.dart';
@@ -54,6 +56,7 @@ class AcpChatBridge {
     final runtime = context.read<WorkspaceRuntimeProvider>();
     final externalMounts = context.read<ExternalMountsProvider?>();
     final approvals = context.read<ToolApprovalService?>();
+    final assistants = context.read<AssistantProvider>();
     TaskPlanRegistry? plans;
     try {
       plans = context.read<TaskPlanRegistry>();
@@ -77,6 +80,14 @@ class AcpChatBridge {
       throw AcpError(AcpError.internalError, l10n.agentsChatNoKey);
     }
 
+    await ensureWorkspace(
+      chats: chats,
+      workspaces: workspaces,
+      assistants: assistants,
+      assistant: assistant,
+      conversationId: conversationId,
+      name: spec.name,
+    );
     final workspace = await WorkspaceToolsService.resolve(
       conversationId: conversationId,
       workspaceProvider: workspaces,
@@ -117,6 +128,45 @@ class AcpChatBridge {
             ? null
             : (plan) => plans!.set(conversationId, plan),
       ),
+    );
+  }
+
+  /// An agent works on files, so its chat always has a workspace: the
+  /// assistant's default one, made on first use and named after the agent.
+  /// Its files then show in the chat's Files panel and terminal.
+  @visibleForTesting
+  static Future<void> ensureWorkspace({
+    required ChatService chats,
+    required WorkspaceProvider workspaces,
+    required AssistantProvider assistants,
+    required Assistant assistant,
+    required String conversationId,
+    required String name,
+  }) async {
+    final conversation = chats.getConversation(conversationId);
+    if (conversation == null ||
+        chats.isTemporaryConversation(conversationId) ||
+        WorkspaceBinding.fromExtras(conversation.extras).isBound) {
+      return;
+    }
+    await workspaces.loaded;
+    final defaultId = assistants.getById(assistant.id)?.defaultWorkspaceId;
+    var workspace = defaultId == null ? null : workspaces.byId(defaultId);
+    if (workspace == null) {
+      workspace = await workspaces.create(name: name);
+      final current = assistants.getById(assistant.id);
+      if (current != null) {
+        await assistants.updateAssistant(
+          current.copyWith(defaultWorkspaceId: workspace.id),
+        );
+      }
+    }
+    await chats.updateConversationExtras(
+      conversationId,
+      WorkspaceBinding(
+        workspaceId: workspace.id,
+        cwd: workspace.defaultCwd,
+      ).applyTo,
     );
   }
 
