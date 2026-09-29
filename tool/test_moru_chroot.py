@@ -53,15 +53,21 @@ int main(void) { if (fork() == 0) sleep(100); sleep(100); return 0; }
 }
 
 
-def tagged(tag: str) -> int:
-    count = 0
-    for environ in Path('/proc').glob('[0-9]*/environ'):
-        try:
-            if f'MORU_RUN={tag}'.encode() in environ.read_bytes().split(b'\0'):
-                count += 1
-        except OSError:
-            pass
-    return count
+# Counts processes with MORU_RUN=<argv[1]>. The run's processes are root's:
+# their environment is readable only by root, so this runs like the helper.
+COUNT_TAGGED = r'''
+import sys
+from pathlib import Path
+wanted = f"MORU_RUN={sys.argv[1]}".encode()
+count = 0
+for environ in Path("/proc").glob("[0-9]*/environ"):
+    try:
+        if wanted in environ.read_bytes().split(b"\0"):
+            count += 1
+    except OSError:
+        pass
+print(count)
+'''
 
 
 class MoruChrootTest(unittest.TestCase):
@@ -124,6 +130,10 @@ class MoruChrootTest(unittest.TestCase):
         # cannot be counted.
         self.tag = uuid.uuid4().hex
 
+    def tagged(self, tag):
+        result = self.sudo('python3', '-c', COUNT_TAGGED, tag)
+        return int(result.stdout)
+
     def tagged_command(self, tag, program):
         return [*self.root, str(self.helper), 'run', '--rootfs', str(self.rootfs),
                 '--uid', str(APP_UID), '--gid', str(APP_UID), '--tag', tag, '--', program]
@@ -132,7 +142,7 @@ class MoruChrootTest(unittest.TestCase):
         result = subprocess.run(self.tagged_command(self.tag, '/bin/orphan'),
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 5, result.stderr)
-        self.assertEqual(tagged(self.tag), 0)
+        self.assertEqual(self.tagged(self.tag), 0)
 
     def test_kill_stops_every_process_of_the_run(self):
         # The program and its child carry the tag; the helper does not, so it
@@ -140,14 +150,14 @@ class MoruChrootTest(unittest.TestCase):
         with subprocess.Popen(self.tagged_command(self.tag, '/bin/wait'),
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as process:
             for _ in range(200):
-                if tagged(self.tag) == 2:
+                if self.tagged(self.tag) == 2:
                     break
                 time.sleep(0.05)
-            self.assertEqual(tagged(self.tag), 2)
+            self.assertEqual(self.tagged(self.tag), 2)
             killed = self.sudo(self.helper, 'kill', '--tag', self.tag)
             self.assertEqual(int(killed.stdout), 2)
             self.assertEqual(process.wait(timeout=10), 128 + 9)
-        self.assertEqual(tagged(self.tag), 0)
+        self.assertEqual(self.tagged(self.tag), 0)
 
     def test_fixown_returns_root_files_under_a_folder(self):
         folder = self.temp / 'fix'
