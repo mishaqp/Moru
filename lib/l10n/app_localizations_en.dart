@@ -2531,6 +2531,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sideDrawerMenuSelect => 'Select';
 
   @override
+  String get sideDrawerNewChat => 'New chat';
+
+  @override
   String sideDrawerSelectionTitle(int count) {
     return 'Selected $count items';
   }

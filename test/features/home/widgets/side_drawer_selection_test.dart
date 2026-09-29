@@ -10,6 +10,7 @@ import 'package:Kelivo/core/providers/tag_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/features/chat/widgets/chat_gradient_background.dart';
+import 'package:Kelivo/features/home/widgets/sidebar_glass.dart';
 import 'package:Kelivo/features/home/widgets/side_drawer.dart';
 import 'package:Kelivo/features/home/widgets/sidebar_selection_bars.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
@@ -168,6 +169,7 @@ void main() {
     bool showBottomBar = false,
     FutureOr<void> Function(String id, {bool closeDrawer})?
     onSelectConversation,
+    FutureOr<void> Function({bool closeDrawer})? onNewConversation,
   }) async {
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1.0;
@@ -192,6 +194,7 @@ void main() {
             globalSearchQuery: globalSearchQuery,
             showBottomBar: showBottomBar,
             onSelectConversation: onSelectConversation,
+            onNewConversation: onNewConversation,
           ),
         ),
       );
@@ -445,9 +448,47 @@ void main() {
       tester.widget<Drawer>(find.byType(Drawer)).backgroundColor,
       Colors.transparent,
     );
+    // Frosted: the backdrop is blurred behind the veil.
+    final blur = find.descendant(
+      of: find.byType(SidebarGlassBackdrop),
+      matching: find.byType(ImageFiltered),
+    );
+    expect(blur, findsOneWidget);
+    // Economy mode keeps the veil without the blur.
+    await settings.setGlassEconomy(true);
+    await tester.pump();
+    expect(find.byType(SidebarGlassBackdrop), findsOneWidget);
+    expect(blur, findsNothing);
 
     await settings.setGlassTheme(false);
     await tester.pump();
     expect(find.byType(ChatGradientBackground), findsNothing);
+  });
+
+  testWidgets('the round + next to the search starts a new chat and closes '
+      'the panel', (tester) async {
+    final service = createService();
+    await tester.runAsync(service.init);
+    final calls = <bool>[];
+    await pumpDrawer(
+      tester,
+      service,
+      embedded: false,
+      onNewConversation: ({closeDrawer = false}) => calls.add(closeDrawer),
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('sidebar-new-chat')));
+    await tester.pump();
+    expect(calls, [true]);
+    expect(find.bySemanticsLabel('New chat'), findsOneWidget);
+  });
+
+  testWidgets('without a new-chat action there is no + button', (tester) async {
+    final service = createService();
+    await tester.runAsync(service.init);
+    await pumpDrawer(tester, service, embedded: false);
+    expect(
+      find.byKey(const ValueKey<String>('sidebar-new-chat')),
+      findsNothing,
+    );
   });
 }

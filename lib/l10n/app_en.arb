@@ -1118,6 +1118,7 @@
   "sideDrawerMenuMoveTo": "Move to",
   "sideDrawerMenuDelete": "Delete",
   "sideDrawerMenuSelect": "Select",
+  "sideDrawerNewChat": "New chat",
   "sideDrawerSelectionTitle": "Selected {count} items",
   "@sideDrawerSelectionTitle": {
     "placeholders": {

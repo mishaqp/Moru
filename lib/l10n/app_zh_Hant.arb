@@ -854,6 +854,7 @@
   "sideDrawerMenuMoveTo": "移動到",
   "sideDrawerMenuDelete": "刪除",
   "sideDrawerMenuSelect": "多選",
+  "sideDrawerNewChat": "新對話",
   "sideDrawerSelectionTitle": "已選 {count} 項",
   "@sideDrawerSelectionTitle": {
     "placeholders": {

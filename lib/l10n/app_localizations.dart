@@ -4704,6 +4704,12 @@ abstract class AppLocalizations {
   /// **'Select'**
   String get sideDrawerMenuSelect;
 
+  /// No description provided for @sideDrawerNewChat.
+  ///
+  /// In en, this message translates to:
+  /// **'New chat'**
+  String get sideDrawerNewChat;
+
   /// No description provided for @sideDrawerSelectionTitle.
   ///
   /// In en, this message translates to:

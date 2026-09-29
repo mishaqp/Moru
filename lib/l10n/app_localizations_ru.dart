@@ -2558,6 +2558,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sideDrawerMenuSelect => 'Выбрать';
 
   @override
+  String get sideDrawerNewChat => 'Новый чат';
+
+  @override
   String sideDrawerSelectionTitle(int count) {
     return 'Выбрано объектов: $count';
   }

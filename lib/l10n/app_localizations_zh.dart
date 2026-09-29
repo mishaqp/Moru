@@ -2443,6 +2443,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sideDrawerMenuSelect => '多选';
 
   @override
+  String get sideDrawerNewChat => '新对话';
+
+  @override
   String sideDrawerSelectionTitle(int count) {
     return '已选 $count 项';
   }
@@ -13770,6 +13773,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get sideDrawerMenuSelect => '多选';
 
   @override
+  String get sideDrawerNewChat => '新对话';
+
+  @override
   String sideDrawerSelectionTitle(int count) {
     return '已选 $count 项';
   }
@@ -25024,6 +25030,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sideDrawerMenuSelect => '多選';
+
+  @override
+  String get sideDrawerNewChat => '新對話';
 
   @override
   String sideDrawerSelectionTitle(int count) {

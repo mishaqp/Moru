@@ -7,7 +7,6 @@ import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../core/providers/settings_provider.dart';
-import '../../chat/widgets/chat_gradient_background.dart';
 import '../../../core/providers/backup_reminder_provider.dart';
 import '../../../core/models/chat_item.dart';
 import '../../../core/providers/user_provider.dart';
@@ -45,6 +44,7 @@ import '../controllers/chat_actions.dart';
 import '../utils/model_display_helper.dart';
 import 'assistant_avatar.dart';
 import 'assistant_entry_actions.dart';
+import 'sidebar_glass.dart';
 import 'sidebar_selection_bars.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 import '../../../shared/widgets/section_card.dart';
@@ -1641,6 +1641,38 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                                 _searchController.text
                                                     .trim()
                                                     .isEmpty;
+                                            // A rounded pill: a light glass
+                                            // tile on the glass theme.
+                                            final glassTile = context
+                                                .select<SettingsProvider, bool>(
+                                                  (s) => s.glassTheme,
+                                                );
+                                            final pill = sidebarGlassTile(
+                                              context,
+                                              glass: glassTile,
+                                              radius: BorderRadius.circular(22),
+                                              fill: glassTile
+                                                  ? null
+                                                  : context
+                                                        .appColors
+                                                        .surfaceFill
+                                                        .withValues(
+                                                          alpha: 0.80,
+                                                        ),
+                                            );
+                                            final pillBorder =
+                                                OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(22),
+                                                  borderSide:
+                                                      pill.border == null
+                                                      ? const BorderSide(
+                                                          color: Colors
+                                                              .transparent,
+                                                        )
+                                                      : (pill.border! as Border)
+                                                            .top,
+                                                );
                                             return GestureDetector(
                                               behavior:
                                                   HitTestBehavior.translucent,
@@ -1702,12 +1734,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                                           ? ''
                                                           : _mobileSearchHint(),
                                                       filled: true,
-                                                      fillColor: context
-                                                          .appColors
-                                                          .surfaceFill
-                                                          .withValues(
-                                                            alpha: 0.80,
-                                                          ),
+                                                      fillColor: pill.color,
                                                       isDense: true,
                                                       isCollapsed: true,
                                                       prefixIcon: Padding(
@@ -1830,39 +1857,9 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                                             horizontal: 14,
                                                             vertical: 10,
                                                           ),
-                                                      border: OutlineInputBorder(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              16,
-                                                            ),
-                                                        borderSide:
-                                                            const BorderSide(
-                                                              color: Colors
-                                                                  .transparent,
-                                                            ),
-                                                      ),
-                                                      enabledBorder: OutlineInputBorder(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              16,
-                                                            ),
-                                                        borderSide:
-                                                            const BorderSide(
-                                                              color: Colors
-                                                                  .transparent,
-                                                            ),
-                                                      ),
-                                                      focusedBorder: OutlineInputBorder(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              16,
-                                                            ),
-                                                        borderSide:
-                                                            const BorderSide(
-                                                              color: Colors
-                                                                  .transparent,
-                                                            ),
-                                                      ),
+                                                      border: pillBorder,
+                                                      enabledBorder: pillBorder,
+                                                      focusedBorder: pillBorder,
                                                     ),
                                                     textAlignVertical:
                                                         TextAlignVertical
@@ -1944,6 +1941,17 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                           ),
                                         ),
                                       ),
+                                      if (widget.onNewConversation != null) ...[
+                                        const SizedBox(width: 4),
+                                        _NewChatButton(
+                                          onTap: () {
+                                            Haptics.light();
+                                            widget.onNewConversation!(
+                                              closeDrawer: true,
+                                            );
+                                          },
+                                        ),
+                                      ],
                                     ],
                                   ),
                                   const SizedBox(height: 6),
@@ -2333,22 +2341,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         width: MediaQuery.sizeOf(context).width,
         child: Stack(
           fit: StackFit.expand,
-          children: [
-            ChatGradientBackgroundHost(
-              enabled: false,
-              phase: 7,
-              accent: cs.primary,
-              child: const ChatGradientBackground(),
-            ),
-            ColoredBox(
-              color: cs.surface.withValues(
-                alpha: Theme.of(context).brightness == Brightness.dark
-                    ? 0.58
-                    : 0.5,
-              ),
-            ),
-            inner,
-          ],
+          children: [const SidebarGlassBackdrop(), inner],
         ),
       );
     }
@@ -3759,6 +3752,40 @@ class _LoadingDotState extends State<_LoadingDot>
         width: 9,
         height: 9,
         decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
+      ),
+    );
+  }
+}
+
+/// The round accent button next to the search pill that starts a new chat.
+class _NewChatButton extends StatelessWidget {
+  const _NewChatButton({required this.onTap});
+
+  static const Key buttonKey = ValueKey<String>('sidebar-new-chat');
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final label = AppLocalizations.of(context)!.sideDrawerNewChat;
+    return Semantics(
+      button: true,
+      label: label,
+      child: Tooltip(
+        message: label,
+        child: IosCardPress(
+          key: buttonKey,
+          baseColor: cs.primaryContainer,
+          borderRadius: BorderRadius.circular(22),
+          onTap: onTap,
+          padding: EdgeInsets.zero,
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Icon(Lucide.Plus, size: 22, color: cs.onPrimaryContainer),
+          ),
+        ),
       ),
     );
   }

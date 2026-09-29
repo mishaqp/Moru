@@ -1119,6 +1119,7 @@
   "sideDrawerMenuMoveTo": "Переместить в",
   "sideDrawerMenuDelete": "Удалить",
   "sideDrawerMenuSelect": "Выбрать",
+  "sideDrawerNewChat": "Новый чат",
   "sideDrawerSelectionTitle": "Выбрано объектов: {count}",
   "@sideDrawerSelectionTitle": {
     "placeholders": {

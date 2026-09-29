@@ -890,6 +890,7 @@
   "sideDrawerMenuMoveTo": "移动到",
   "sideDrawerMenuDelete": "删除",
   "sideDrawerMenuSelect": "多选",
+  "sideDrawerNewChat": "新对话",
   "sideDrawerSelectionTitle": "已选 {count} 项",
   "@sideDrawerSelectionTitle": {
     "placeholders": {
