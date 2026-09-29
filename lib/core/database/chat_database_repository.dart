@@ -1929,6 +1929,35 @@ class ChatDatabaseRepository {
         .toString();
   }
 
+  /// Addresses of the newest [limit] images in [conversationId], newest
+  /// first. Reads only the image parts of that chat, not its messages.
+  Future<List<String>> recentImageUris(
+    String conversationId, {
+    int limit = 3,
+  }) async {
+    final rows = await _db
+        .customSelect(
+          '''
+          SELECT payload FROM message_part_rows
+          WHERE conversation_id = ? AND kind = 'image'
+          ORDER BY part_id DESC LIMIT ?;
+          ''',
+          variables: [Variable<String>(conversationId), Variable<int>(limit)],
+          readsFrom: {_db.messagePartRows},
+        )
+        .get();
+    final uris = <String>[];
+    for (final row in rows) {
+      try {
+        final part = ImagePart.fromPayload(row.read<String>('payload'));
+        if (!part.unavailable) uris.add(part.uri);
+      } catch (_) {
+        // A damaged part simply has no thumbnail.
+      }
+    }
+    return uris;
+  }
+
   Future<Conversation?> getConversation(String id) async {
     return _observer.measure(
       ChatDatabaseOperation.queryConversation,

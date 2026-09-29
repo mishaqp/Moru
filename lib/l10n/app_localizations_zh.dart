@@ -2446,6 +2446,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sideDrawerNewChat => '新对话';
 
   @override
+  String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的图片预览';
+
+  @override
   String get sideDrawerArchive => '归档';
 
   @override
@@ -13820,6 +13823,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get sideDrawerNewChat => '新对话';
 
   @override
+  String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的图片预览';
+
+  @override
   String get sideDrawerArchive => '归档';
 
   @override
@@ -25121,6 +25127,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sideDrawerNewChat => '新對話';
+
+  @override
+  String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的圖片預覽';
 
   @override
   String get sideDrawerArchive => '封存';

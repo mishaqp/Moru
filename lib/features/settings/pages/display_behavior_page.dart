@@ -33,6 +33,7 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
         s.regenerateDeleteTrailingMessages,
         s.showAppUpdates,
         s.showChatListDate,
+        s.sidebarThumbnails,
         s.showRegenerateConfirmDialog,
         s.showToolResultSummary,
       ),
@@ -219,6 +220,15 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
                 value: sp.showChatListDate,
                 onChanged: (v) =>
                     context.read<SettingsProvider>().setShowChatListDate(v),
+              ),
+              _iosDivider(context),
+              _iosSwitchRow(
+                context,
+                icon: Lucide.Image,
+                label: l10n.displaySettingsPageSidebarThumbnailsTitle,
+                value: sp.sidebarThumbnails,
+                onChanged: (v) =>
+                    context.read<SettingsProvider>().setSidebarThumbnails(v),
               ),
               _iosDivider(context),
               _iosSwitchRow(

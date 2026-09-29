@@ -861,6 +861,7 @@
   "sideDrawerMenuDelete": "删除",
   "sideDrawerMenuSelect": "多选",
   "sideDrawerNewChat": "新对话",
+  "displaySettingsPageSidebarThumbnailsTitle": "聊天列表中的图片预览",
   "sideDrawerArchive": "归档",
   "sideDrawerArchived": "已归档",
   "sideDrawerUndo": "撤销",

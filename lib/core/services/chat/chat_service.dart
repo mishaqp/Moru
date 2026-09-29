@@ -2812,6 +2812,28 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
   }
 
+  final Map<String, ({int stamp, Future<List<String>> uris})>
+  _recentImagesCache = {};
+
+  /// Addresses of the newest [limit] images in a chat, for the sidebar's
+  /// thumbnails. The answer is remembered until the chat changes (its
+  /// updatedAt moves on every new message), and one lookup serves every
+  /// tile that asks meanwhile.
+  Future<List<String>> recentImageUris(String conversationId, {int limit = 3}) {
+    final conversation = _conversationsCache[conversationId];
+    if (!_initialized || conversation == null) {
+      return Future<List<String>>.value(const <String>[]);
+    }
+    final stamp = conversation.updatedAt.microsecondsSinceEpoch;
+    final cached = _recentImagesCache[conversationId];
+    if (cached != null && cached.stamp == stamp) return cached.uris;
+    final uris = _repo
+        .recentImageUris(conversationId, limit: limit)
+        .catchError((Object _) => const <String>[]);
+    _recentImagesCache[conversationId] = (stamp: stamp, uris: uris);
+    return uris;
+  }
+
   /// Extras key of an archived conversation: when it was archived, in ms
   /// since the epoch.
   static const String archivedAtKey = 'archive.at';

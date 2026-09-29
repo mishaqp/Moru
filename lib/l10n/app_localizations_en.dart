@@ -2534,6 +2534,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sideDrawerNewChat => 'New chat';
 
   @override
+  String get displaySettingsPageSidebarThumbnailsTitle =>
+      'Image previews in the chat list';
+
+  @override
   String get sideDrawerArchive => 'Archive';
 
   @override

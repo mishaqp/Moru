@@ -2561,6 +2561,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sideDrawerNewChat => 'Новый чат';
 
   @override
+  String get displaySettingsPageSidebarThumbnailsTitle =>
+      'Миниатюры картинок в списке чатов';
+
+  @override
   String get sideDrawerArchive => 'В архив';
 
   @override

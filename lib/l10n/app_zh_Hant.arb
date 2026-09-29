@@ -855,6 +855,7 @@
   "sideDrawerMenuDelete": "刪除",
   "sideDrawerMenuSelect": "多選",
   "sideDrawerNewChat": "新對話",
+  "displaySettingsPageSidebarThumbnailsTitle": "聊天列表中的圖片預覽",
   "sideDrawerArchive": "封存",
   "sideDrawerArchived": "已封存",
   "sideDrawerUndo": "復原",

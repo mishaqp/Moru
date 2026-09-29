@@ -42,6 +42,7 @@ import '../utils/model_display_helper.dart';
 import 'assistant_avatar.dart';
 import 'assistant_entry_actions.dart';
 import 'sidebar_bottom_bar.dart';
+import 'chat_thumbnails.dart';
 import 'swipe_row_action.dart';
 import '../../chat/pages/chat_archive_page.dart';
 import 'sidebar_glass.dart';
@@ -1300,7 +1301,12 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
 
     final rows = <_SidebarRow>[];
     if (pinned.isNotEmpty) {
-      rows.add(const _SidebarHeaderRow(kind: _SidebarHeaderKind.pinned));
+      rows.add(
+        _SidebarHeaderRow(
+          kind: _SidebarHeaderKind.pinned,
+          count: pinned.length,
+        ),
+      );
       for (var i = 0; i < pinned.length; i++) {
         rows.add(
           _SidebarTileRow(
@@ -1315,6 +1321,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       rows.add(
         _SidebarHeaderRow(
           kind: _SidebarHeaderKind.date,
+          count: group.items.length,
           dateBucket: group.date,
         ),
       );
@@ -3406,14 +3413,26 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             return Padding(
               padding: const EdgeInsets.fromLTRB(14, 6, 0, 6),
               child:
-                  Text(
-                        headerLabel,
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: AppFontWeights.semibold,
-                          color: cs.primary,
-                        ),
+                  Row(
+                        children: [
+                          Text(
+                            headerLabel,
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: AppFontWeights.semibold,
+                              color: cs.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${row.count}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cs.onSurface.withValues(alpha: 0.45),
+                            ),
+                          ),
+                        ],
                       )
                       .animate()
                       .fadeIn(duration: 180.ms)
@@ -3523,14 +3542,20 @@ sealed class _SidebarRow {
 }
 
 class _SidebarHeaderRow extends _SidebarRow {
-  const _SidebarHeaderRow({required this.kind, this.dateBucket})
-    : assert(
-        kind == _SidebarHeaderKind.pinned
-            ? dateBucket == null
-            : dateBucket != null,
-      );
+  const _SidebarHeaderRow({
+    required this.kind,
+    required this.count,
+    this.dateBucket,
+  }) : assert(
+         kind == _SidebarHeaderKind.pinned
+             ? dateBucket == null
+             : dateBucket != null,
+       );
 
   final _SidebarHeaderKind kind;
+
+  /// Chats in the section.
+  final int count;
 
   /// Stable local calendar day for date headers; null when [kind] is pinned.
   /// Localized label is resolved at render time from [AppLocalizations].
@@ -3605,6 +3630,9 @@ class _ChatTileState extends State<_ChatTile> {
       tileColor = isCurrent ? cs.primary.withValues(alpha: 0.12) : cs.surface;
     }
     final base = tileColor;
+    final showThumbs = context.select<SettingsProvider, bool>(
+      (s) => s.sidebarThumbnails,
+    );
     final double vGap = 4;
     return Padding(
       padding: EdgeInsets.only(bottom: vGap),
@@ -3653,15 +3681,21 @@ class _ChatTileState extends State<_ChatTile> {
                     ),
                   ),
                   Expanded(
-                    child: Text(
-                      widget.chat.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: widget.textColor,
-                        fontWeight: AppFontWeights.regular,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.chat.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: widget.textColor,
+                            fontWeight: AppFontWeights.regular,
+                          ),
+                        ),
+                        if (showThumbs) ChatThumbnails(chatId: widget.chat.id),
+                      ],
                     ),
                   ),
                   if (widget.loading) ...[

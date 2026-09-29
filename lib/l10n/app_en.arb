@@ -1119,6 +1119,7 @@
   "sideDrawerMenuDelete": "Delete",
   "sideDrawerMenuSelect": "Select",
   "sideDrawerNewChat": "New chat",
+  "displaySettingsPageSidebarThumbnailsTitle": "Image previews in the chat list",
   "sideDrawerArchive": "Archive",
   "sideDrawerArchived": "Chat archived",
   "sideDrawerUndo": "Undo",

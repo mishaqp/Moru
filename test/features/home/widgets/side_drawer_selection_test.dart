@@ -10,7 +10,9 @@ import 'package:Kelivo/core/providers/tag_provider.dart';
 import 'package:Kelivo/core/providers/user_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/models/conversation.dart';
+import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/features/chat/pages/chat_archive_page.dart';
+import 'package:Kelivo/features/home/widgets/chat_thumbnails.dart';
 import 'package:Kelivo/features/chat/widgets/chat_gradient_background.dart';
 import 'package:Kelivo/features/home/widgets/sidebar_glass.dart';
 import 'package:Kelivo/features/home/widgets/side_drawer.dart';
@@ -181,7 +183,6 @@ void main() {
     String globalSearchQuery = '',
     Locale locale = const Locale('en'),
     ValueNotifier<Locale>? localeListenable,
-    bool showChatListDate = false,
     bool embedded = true,
     bool showBottomBar = false,
     FutureOr<void> Function(String id, {bool closeDrawer})?
@@ -251,13 +252,6 @@ void main() {
       () => Future<void>.delayed(const Duration(milliseconds: 300)),
     );
     await tester.pump();
-    if (showChatListDate) {
-      await tester.runAsync(() async {
-        await settings.loaded;
-        await settings.setShowChatListDate(true);
-      });
-      await tester.pump();
-    }
     await tester.pump(const Duration(milliseconds: 400));
   }
 
@@ -685,5 +679,80 @@ void main() {
     // Let the notifications time out and slide away.
     await tester.pump(const Duration(seconds: 4));
     await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('a chat shows previews of its latest images, and the setting '
+      'turns them off', (tester) async {
+    final service = createService();
+    late String withImages;
+    await tester.runAsync(() async {
+      await service.init();
+      withImages = (await service.createConversation(title: 'Photos')).id;
+      await service.createConversation(title: 'Plain');
+      final dir = Directory('${tempDir.path}/upload');
+      await dir.create(recursive: true);
+      for (final name in ['a.png', 'b.png']) {
+        final file = File('${dir.path}/$name');
+        await file.writeAsBytes(const [1, 2, 3]);
+        await service.addMessage(
+          conversationId: withImages,
+          role: 'user',
+          parts: [ImagePart(uri: file.path, mime: 'image/png')],
+        );
+      }
+    });
+    await pumpDrawer(tester, service, embedded: false);
+    // The lookup runs on the database.
+    await settleUntil(tester, () => find.byType(Image).evaluate().isNotEmpty);
+    expect(find.byType(ChatThumbnails), findsNWidgets(2));
+    expect(find.byType(Image), findsNWidgets(2));
+
+    final settings = Provider.of<SettingsProvider>(
+      tester.element(find.byType(SideDrawer)),
+      listen: false,
+    );
+    await settings.setSidebarThumbnails(false);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(ChatThumbnails), findsNothing);
+    expect(find.byType(Image), findsNothing);
+  });
+
+  test('the thumbnails setting is on by default and kept', () async {
+    final prefs = createBusinessTestPreferences();
+    final first = SettingsProvider(prefs);
+    await first.loaded;
+    expect(first.sidebarThumbnails, isTrue);
+    await first.setSidebarThumbnails(false);
+    final second = SettingsProvider(prefs);
+    await second.loaded;
+    expect(second.sidebarThumbnails, isFalse);
+    first.dispose();
+    second.dispose();
+  });
+
+  testWidgets('section headers show how many chats they hold', (tester) async {
+    final service = createService();
+    late String pinnedId;
+    await tester.runAsync(() async {
+      await service.init();
+      pinnedId = (await service.createConversation(title: 'Pinned one')).id;
+      await service.createConversation(title: 'Today one');
+      await service.createConversation(title: 'Today two');
+      await service.setConversationsPinned([pinnedId], true);
+    });
+    await pumpDrawer(tester, service, embedded: false);
+    final settings = Provider.of<SettingsProvider>(
+      tester.element(find.byType(SideDrawer)),
+      listen: false,
+    );
+    await settings.loaded;
+    await settings.setShowChatListDate(true);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    // "Pinned 1" and "Today 2".
+    expect(find.text('Pinned'), findsOneWidget);
+    expect(find.text('Today'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
   });
 }

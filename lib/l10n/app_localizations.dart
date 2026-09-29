@@ -4710,6 +4710,12 @@ abstract class AppLocalizations {
   /// **'New chat'**
   String get sideDrawerNewChat;
 
+  /// No description provided for @displaySettingsPageSidebarThumbnailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Image previews in the chat list'**
+  String get displaySettingsPageSidebarThumbnailsTitle;
+
   /// No description provided for @sideDrawerArchive.
   ///
   /// In en, this message translates to:

@@ -282,6 +282,7 @@ class SettingsProvider extends ChangeNotifier {
       'display_enable_reasoning_markdown_v1';
   static const String _displayEnableAssistantMarkdownKey =
       'display_enable_assistant_markdown_v1';
+  static const String _sidebarThumbnailsKey = 'sidebar_thumbnails_v1';
   static const String _displayShowChatListDateKey =
       'display_show_chat_list_date_v1';
   static const String _imageCropperEnabledKey = 'image_cropper_enabled_v1';
@@ -1277,6 +1278,7 @@ class SettingsProvider extends ChangeNotifier {
     _enableAssistantMarkdown =
         prefs.getBool(_displayEnableAssistantMarkdownKey) ?? true;
     _showChatListDate = prefs.getBool(_displayShowChatListDateKey) ?? false;
+    _sidebarThumbnails = prefs.getBool(_sidebarThumbnailsKey) ?? true;
     _imageCropperEnabled = prefs.getBool(_imageCropperEnabledKey) ?? false;
     _imageUploadQuality = switch (prefs.getString(_imageUploadQualityKey)) {
       'original' => ImageUploadQuality.original,
@@ -5257,6 +5259,16 @@ Requirements:
     await prefs.setBool(_displayShowChatListDateKey, v);
   }
 
+  // Sidebar: small previews of a chat's latest images under its title.
+  bool _sidebarThumbnails = true;
+  bool get sidebarThumbnails => _sidebarThumbnails;
+  Future<void> setSidebarThumbnails(bool v) async {
+    if (_sidebarThumbnails == v) return;
+    _sidebarThumbnails = v;
+    notifyListeners();
+    await _preferences.setBool(_sidebarThumbnailsKey, v);
+  }
+
   // Display: crop images after selecting from gallery or camera
   bool _imageCropperEnabled = false;
   bool get imageCropperEnabled => _imageCropperEnabled;
@@ -5898,6 +5910,7 @@ Requirements:
     copy._enableReasoningMarkdown = _enableReasoningMarkdown;
     copy._enableAssistantMarkdown = _enableAssistantMarkdown;
     copy._showChatListDate = _showChatListDate;
+    copy._sidebarThumbnails = _sidebarThumbnails;
     copy._autoCollapseCodeBlock = _autoCollapseCodeBlock;
     copy._autoCollapseCodeBlockLines = _autoCollapseCodeBlockLines;
     copy._collapseLongUserMessages = _collapseLongUserMessages;
