@@ -4202,10 +4202,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get displaySettingsPageShowChatListDateTitle =>
-      'Показывать даты в списке чатов';
-
-  @override
   String get displaySettingsPageEnableImageCropperTitle =>
       'Обрезка изображений';
 

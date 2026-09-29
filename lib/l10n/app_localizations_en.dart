@@ -4146,9 +4146,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get displaySettingsPageShowChatListDateTitle => 'Show Chat List Dates';
-
-  @override
   String get displaySettingsPageEnableImageCropperTitle =>
       'Enable Image Cropping';
 

@@ -1852,7 +1852,6 @@
   "chainOfThoughtCollapse": "Свернуть",
   "chainOfThoughtProcessedIn": "Обработано · {seconds} с",
   "chainOfThoughtProcessedSteps": "Обработано · шагов: {count}",
-  "displaySettingsPageShowChatListDateTitle": "Показывать даты в списке чатов",
   "displaySettingsPageEnableImageCropperTitle": "Обрезка изображений",
   "displaySettingsPageEnableImageCropperSubtitle": "Обрезать изображения после выбора из галереи или съёмки",
   "displaySettingsPageKeepSidebarOpenOnAssistantTapTitle": "Не закрывать боковую панель при выборе ассистента",

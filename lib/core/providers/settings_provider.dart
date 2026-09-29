@@ -283,8 +283,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayEnableAssistantMarkdownKey =
       'display_enable_assistant_markdown_v1';
   static const String _sidebarThumbnailsKey = 'sidebar_thumbnails_v1';
-  static const String _displayShowChatListDateKey =
-      'display_show_chat_list_date_v1';
+  static const String _sidebarCollapsedSectionsKey =
+      'sidebar_collapsed_sections_v1';
   static const String _imageCropperEnabledKey = 'image_cropper_enabled_v1';
   static const String _imageUploadQualityKey = 'image_upload_quality_v1';
   static const String _imageCompressCustomQualityKey =
@@ -1277,8 +1277,10 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getBool(_displayEnableReasoningMarkdownKey) ?? true;
     _enableAssistantMarkdown =
         prefs.getBool(_displayEnableAssistantMarkdownKey) ?? true;
-    _showChatListDate = prefs.getBool(_displayShowChatListDateKey) ?? false;
     _sidebarThumbnails = prefs.getBool(_sidebarThumbnailsKey) ?? true;
+    _sidebarCollapsedSections = Set.unmodifiable(
+      prefs.getStringList(_sidebarCollapsedSectionsKey) ?? const <String>[],
+    );
     _imageCropperEnabled = prefs.getBool(_imageCropperEnabledKey) ?? false;
     _imageUploadQuality = switch (prefs.getString(_imageUploadQualityKey)) {
       'original' => ImageUploadQuality.original,
@@ -5248,17 +5250,6 @@ Requirements:
     await prefs.setBool(_displayEnableAssistantMarkdownKey, v);
   }
 
-  // Display: show chat list date
-  bool _showChatListDate = false;
-  bool get showChatListDate => _showChatListDate;
-  Future<void> setShowChatListDate(bool v) async {
-    if (_showChatListDate == v) return;
-    _showChatListDate = v;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setBool(_displayShowChatListDateKey, v);
-  }
-
   // Sidebar: small previews of a chat's latest images under its title.
   bool _sidebarThumbnails = true;
   bool get sidebarThumbnails => _sidebarThumbnails;
@@ -5267,6 +5258,20 @@ Requirements:
     _sidebarThumbnails = v;
     notifyListeners();
     await _preferences.setBool(_sidebarThumbnailsKey, v);
+  }
+
+  // Sidebar: sections (pinned, a day) the user folded.
+  Set<String> _sidebarCollapsedSections = const <String>{};
+  Set<String> get sidebarCollapsedSections => _sidebarCollapsedSections;
+  Future<void> toggleSidebarSection(String key) async {
+    final next = Set<String>.from(_sidebarCollapsedSections);
+    if (!next.remove(key)) next.add(key);
+    _sidebarCollapsedSections = Set.unmodifiable(next);
+    notifyListeners();
+    await _preferences.setStringList(
+      _sidebarCollapsedSectionsKey,
+      next.toList()..sort(),
+    );
   }
 
   // Display: crop images after selecting from gallery or camera
@@ -5909,7 +5914,6 @@ Requirements:
     copy._enableUserMarkdown = _enableUserMarkdown;
     copy._enableReasoningMarkdown = _enableReasoningMarkdown;
     copy._enableAssistantMarkdown = _enableAssistantMarkdown;
-    copy._showChatListDate = _showChatListDate;
     copy._sidebarThumbnails = _sidebarThumbnails;
     copy._autoCollapseCodeBlock = _autoCollapseCodeBlock;
     copy._autoCollapseCodeBlockLines = _autoCollapseCodeBlockLines;

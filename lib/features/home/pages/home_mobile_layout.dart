@@ -97,7 +97,7 @@ class HomeMobileScaffold extends StatelessWidget {
       side: DrawerSide.left,
       // Most of the screen, with the chat dimmed at the edge so it still shows
       // where the panel came from.
-      drawerWidth: MediaQuery.sizeOf(context).width * 0.82,
+      drawerWidth: MediaQuery.sizeOf(context).width * 0.8,
       scrimColor: Colors.black,
       maxScrimOpacity: 0.32,
       barrierDismissible: true,

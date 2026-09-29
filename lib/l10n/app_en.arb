@@ -1856,7 +1856,6 @@
   "chainOfThoughtCollapse": "Collapse",
   "chainOfThoughtProcessedIn": "Processed · {seconds} s",
   "chainOfThoughtProcessedSteps": "Processed · {count} steps",
-  "displaySettingsPageShowChatListDateTitle": "Show Chat List Dates",
   "displaySettingsPageEnableImageCropperTitle": "Enable Image Cropping",
   "@displaySettingsPageEnableImageCropperTitle": {},
   "displaySettingsPageEnableImageCropperSubtitle": "Crop images after selecting from gallery or camera",

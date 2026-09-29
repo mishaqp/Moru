@@ -15,8 +15,10 @@ class ChatThumbnails extends StatefulWidget {
 
   final String chatId;
 
-  static const int maxCount = 3;
-  static const double size = 44;
+  /// How many are looked up; the row shows as many as fit, like OmniBot.
+  static const int maxCount = 8;
+  static const double size = 34;
+  static const double spacing = 6;
 
   @override
   State<ChatThumbnails> createState() => _ChatThumbnailsState();
@@ -58,15 +60,26 @@ class _ChatThumbnailsState extends State<ChatThumbnails> {
         final paths = _local(snapshot.data ?? const <String>[]);
         if (paths.isEmpty) return const SizedBox.shrink();
         return Padding(
-          padding: const EdgeInsets.only(top: 8, bottom: 2),
-          child: Row(
-            children: [
-              for (final path in paths)
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: _Thumb(path: path),
+          padding: const EdgeInsets.only(top: 7),
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final fit =
+                  ((box.maxWidth + ChatThumbnails.spacing) /
+                          (ChatThumbnails.size + ChatThumbnails.spacing))
+                      .floor()
+                      .clamp(1, paths.length);
+              return SizedBox(
+                height: ChatThumbnails.size,
+                child: Row(
+                  children: [
+                    for (final (i, path) in paths.take(fit).indexed) ...[
+                      if (i > 0) const SizedBox(width: ChatThumbnails.spacing),
+                      _Thumb(path: path),
+                    ],
+                  ],
                 ),
-            ],
+              );
+            },
           ),
         );
       },
@@ -85,7 +98,7 @@ class _Thumb extends StatelessWidget {
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final pixels = (ChatThumbnails.size * dpr).round();
     return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(7),
       child: SizedBox.square(
         dimension: ChatThumbnails.size,
         child: Image.file(

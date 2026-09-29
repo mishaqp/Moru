@@ -26,6 +26,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 // ignore: depend_on_referenced_packages
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
@@ -522,7 +524,9 @@ void main() {
     final surface = Theme.of(
       tester.element(find.byType(SideDrawer)),
     ).colorScheme.surface;
-    expect(rowFill('Alpha'), surface);
+    // Rows never have a fill, as in OmniBot; the bottom bar is solid
+    // without glass.
+    expect(rowFill('Alpha'), Colors.transparent);
     expect(barFill(), surface);
 
     final settings = Provider.of<SettingsProvider>(
@@ -600,9 +604,8 @@ void main() {
     expect(service.getArchivedConversations(), isEmpty);
   });
 
-  testWidgets('a swipe to the right archives a chat and Undo brings it back', (
-    tester,
-  ) async {
+  testWidgets('a full swipe to the left archives a chat and Undo brings it '
+      'back', (tester) async {
     final service = createService();
     await tester.runAsync(() async {
       await service.init();
@@ -611,8 +614,12 @@ void main() {
     });
     await pumpDrawer(tester, service, embedded: false);
 
-    // The test window is 1200 wide; a third of the row is 400.
-    await tester.drag(find.text('Beta'), const Offset(600, 0));
+    // As in OmniBot, pulling the row all the way archives it.
+    await tester.timedDrag(
+      find.text('Beta'),
+      const Offset(-1180, 0),
+      const Duration(milliseconds: 600),
+    );
     await tester.pump();
     await settleUntil(
       tester,
@@ -626,10 +633,55 @@ void main() {
     await tester.tap(find.text('Undo'));
     await settleUntil(tester, () => service.getArchivedConversations().isEmpty);
     expect(find.text('Beta'), findsOneWidget);
-    expect(service.getArchivedConversations(), isEmpty);
     // Let the notifications time out and slide away.
     await tester.pump(const Duration(seconds: 4));
     await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('a short swipe to the left shows delete, pin, copy and '
+      'archive', (tester) async {
+    final service = createService();
+    late String betaId;
+    await tester.runAsync(() async {
+      await service.init();
+      await service.createConversation(title: 'Alpha');
+      betaId = (await service.createConversation(title: 'Beta')).id;
+    });
+    await pumpDrawer(tester, service, embedded: false);
+
+    // Past half of the buttons' width (the test window is 1200 wide).
+    await tester.timedDrag(
+      find.text('Beta'),
+      const Offset(-800, 0),
+      const Duration(milliseconds: 500),
+    );
+    await tester.pumpAndSettle();
+    final row = find.ancestor(
+      of: find.text('Beta'),
+      matching: find.byType(Slidable),
+    );
+    Finder button(IconData icon) =>
+        find.descendant(of: row, matching: find.byIcon(icon));
+    for (final icon in [
+      LucideIcons.trash2,
+      LucideIcons.pin,
+      LucideIcons.copy,
+      LucideIcons.archive,
+    ]) {
+      expect(button(icon), findsOneWidget, reason: '$icon');
+    }
+
+    final revision = service.conversationListRevision;
+    await tester.tap(button(LucideIcons.pin));
+    // The flag flips at once; the list hears of it after the database write.
+    await settleUntil(
+      tester,
+      () => service.conversationListRevision > revision,
+    );
+    expect(service.getConversation(betaId)?.isPinned, isTrue);
+    expect(find.text('Pinned'), findsOneWidget);
+    // A swipe leftward on a row belongs to the row: nothing else happened.
+    expect(find.text('Alpha'), findsOneWidget);
   });
 
   testWidgets('the archive button lists archived chats; restore and open '
@@ -745,14 +797,28 @@ void main() {
       tester.element(find.byType(SideDrawer)),
       listen: false,
     );
-    await settings.loaded;
-    await settings.setShowChatListDate(true);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    // Date headers are always shown now, as in OmniBot.
     // "Pinned 1" and "Today 2".
     expect(find.text('Pinned'), findsOneWidget);
     expect(find.text('Today'), findsOneWidget);
     expect(find.text('1'), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
+
+    // A tap folds the section: its chats hide, the header and count stay,
+    // and the choice is remembered.
+    expect(find.text('Today one'), findsOneWidget);
+    await tester.tap(find.text('Today'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Today one'), findsNothing);
+    expect(find.text('Today two'), findsNothing);
+    expect(find.text('2'), findsOneWidget);
+    expect(find.text('Pinned one'), findsOneWidget);
+    expect(settings.sidebarCollapsedSections, hasLength(1));
+    await tester.tap(find.text('Today'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Today one'), findsOneWidget);
+    expect(settings.sidebarCollapsedSections, isEmpty);
   });
 }

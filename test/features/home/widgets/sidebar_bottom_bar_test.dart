@@ -198,7 +198,7 @@ void main() {
       );
       expect(first.top, second.top);
       expect(first.width, second.width);
-      expect(first.height, greaterThanOrEqualTo(56));
+      expect(first.height, 48);
 
       await tester.longPress(find.byKey(SidebarBottomBar.shortcutKey(app)));
       await tester.pumpAndSettle();

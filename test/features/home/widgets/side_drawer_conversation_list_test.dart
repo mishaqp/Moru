@@ -163,7 +163,6 @@ void main() {
     String globalSearchQuery = '',
     Locale locale = const Locale('en'),
     ValueNotifier<Locale>? localeListenable,
-    bool showChatListDate = false,
     FutureOr<void> Function(String id, {bool closeDrawer})?
     onSelectConversation,
   }) async {
@@ -224,13 +223,6 @@ void main() {
       () => Future<void>.delayed(const Duration(milliseconds: 300)),
     );
     await tester.pump();
-    if (showChatListDate) {
-      await tester.runAsync(() async {
-        await settings.loaded;
-        await settings.setShowChatListDate(true);
-      });
-      await tester.pump();
-    }
     await tester.pump(const Duration(milliseconds: 400));
   }
 
@@ -610,7 +602,7 @@ void main() {
         final localeListenable = ValueNotifier<Locale>(const Locale('en'));
         addTearDown(localeListenable.dispose);
         // Pinned header is enough to prove locale is resolved at render time
-        // (not memoized into row labels). Avoid showChatListDate prefs I/O.
+        // (not memoized into row labels).
         await pumpDrawer(tester, service, localeListenable: localeListenable);
 
         final en = await AppLocalizations.delegate.load(const Locale('en'));

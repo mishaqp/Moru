@@ -13,10 +13,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/pages/webview/browser_mini_window.dart';
 import '../../../shared/widgets/form_sheet.dart';
 import '../../../shared/widgets/ios_settings_rows.dart';
-import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/option_sheet.dart';
 import '../../../shared/widgets/section_card.dart';
-import '../../../theme/app_font_weights.dart';
 import '../../mini_apps/mini_app_launcher.dart';
 import '../../mini_apps/pages/mini_apps_page.dart';
 import '../../scheduled_tasks/pages/scheduled_tasks_page.dart';
@@ -24,7 +22,7 @@ import '../../settings/pages/memory_settings_page.dart';
 import '../../settings/pages/settings_page.dart';
 import '../../translate/pages/translate_page.dart';
 import '../../workspace/workspace_navigation.dart';
-import 'sidebar_glass.dart';
+import 'sidebar_omni_parts.dart';
 
 /// The bottom of the sidebar: cards for the mini apps and web pages the user
 /// pinned, then a dock with the avatar and the app's main screens.
@@ -50,6 +48,7 @@ class SidebarBottomBar extends StatefulWidget {
 
   static const Key shortcutsKey = ValueKey<String>('sidebar-shortcuts');
   static const Key dockKey = ValueKey<String>('sidebar-dock');
+  static const Key avatarKey = ValueKey<String>('sidebar-dock-avatar');
 
   static Key shortcutKey(SidebarShortcut shortcut) => ValueKey<String>(
     'sidebar-shortcut-${shortcut.web ? 'web' : 'app'}:${shortcut.target}',
@@ -132,8 +131,8 @@ class _SidebarBottomBarState extends State<SidebarBottomBar> {
                   key: SidebarBottomBar.shortcutKey(item.shortcut),
                   glass: widget.glass,
                   leading: item.app == null
-                      ? const _WebIcon(size: 28)
-                      : MiniAppIcon(app: item.app!, size: 28),
+                      ? const _WebIcon(size: 20)
+                      : MiniAppIcon(app: item.app!, size: 20),
                   label: item.app?.name ?? _pageName(item.shortcut),
                   onTap: () => unawaited(_open(item.shortcut)),
                   onLongPress: () => unawaited(
@@ -147,7 +146,7 @@ class _SidebarBottomBarState extends State<SidebarBottomBar> {
             // Two big cards to a row; more than two rows scroll.
             return Padding(
               key: SidebarBottomBar.shortcutsKey,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
               child: LayoutBuilder(
                 builder: (context, box) {
                   final cell = (box.maxWidth - _gridGap) / 2;
@@ -188,8 +187,10 @@ String _pageName(SidebarShortcut shortcut) {
   return host.isEmpty ? shortcut.target : host;
 }
 
-const double _cardHeight = 56;
-const double _gridGap = 10;
+// OmniBot's quick-launch chips and footer capsule.
+const double _cardHeight = 48;
+const double _gridGap = 8;
+const double _dockHeight = 44;
 
 class _ShortcutCard extends StatelessWidget {
   const _ShortcutCard({
@@ -209,36 +210,40 @@ class _ShortcutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(22);
+    final radius = BorderRadius.circular(16);
     final card = GestureDetector(
       onLongPress: onLongPress,
-      child: IosCardPress(
+      child: Material(
+        color: sidebarSecondarySurface(context, glass: glass),
         borderRadius: radius,
-        baseColor: Colors.transparent,
-        haptics: false,
-        onTap: onTap,
-        padding: EdgeInsets.zero,
-        child: Container(
-          height: _cardHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: sidebarGlassTile(context, glass: glass, radius: radius),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              leading,
-              const SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: AppFontWeights.emphasis,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: SizedBox(
+            height: _cardHeight,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  leading,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -397,85 +402,77 @@ class _Dock extends StatelessWidget {
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => page));
 
-    // Each icon takes an equal share, so six fit next to the avatar even on
-    // a narrow phone.
-    Widget item(IconData icon, String label, VoidCallback onTap) => Expanded(
-      child: Center(
-        child: Tooltip(
-          message: label,
-          child: Semantics(
-            button: true,
-            label: label,
-            child: IosIconButton(
-              size: 22,
-              color: color,
-              icon: icon,
-              padding: const EdgeInsets.all(7),
-              onTap: onTap,
+    // OmniBot's footer: one capsule, every icon an equal share of it. The
+    // avatar (profile) leads, as Moru keeps the name and picture here.
+    Widget slot(String label, VoidCallback onTap, Widget icon) => Expanded(
+      child: Tooltip(
+        message: label,
+        child: Semantics(
+          button: true,
+          label: label,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(_dockHeight / 2),
+            child: SizedBox(
+              height: _dockHeight,
+              child: Center(child: icon),
             ),
           ),
         ),
       ),
     );
+    Widget item(IconData icon, String label, VoidCallback onTap) =>
+        slot(label, onTap, Icon(icon, size: 17, color: color));
 
     return Padding(
       key: SidebarBottomBar.dockKey,
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-      child: Row(
-        children: [
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onAvatarTap,
-            child: avatar,
-          ),
-          const SizedBox(width: 10),
-          // One rounded pill holds the icons.
-          Expanded(
-            child: Container(
-              height: 52,
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              decoration: sidebarGlassTile(
-                context,
-                glass: glass,
-                radius: BorderRadius.circular(26),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Material(
+        color: sidebarSecondarySurface(context, glass: glass),
+        borderRadius: BorderRadius.circular(_dockHeight / 2),
+        clipBehavior: Clip.antiAlias,
+        child: SizedBox(
+          height: _dockHeight,
+          child: Row(
+            children: [
+              slot(
+                l10n.sideDrawerSetNicknameTitle,
+                onAvatarTap,
+                KeyedSubtree(key: SidebarBottomBar.avatarKey, child: avatar),
               ),
-              child: Row(
-                children: [
-                  item(
-                    Lucide.LayoutGrid,
-                    l10n.miniAppsTitle,
-                    () => push(const MiniAppsPage()),
-                  ),
-                  item(
-                    Lucide.SquareTerminal,
-                    l10n.workspaceEnvTitle,
-                    () => WorkspaceNavigation.openEnvironmentPage(context),
-                  ),
-                  item(
-                    Lucide.CalendarClock,
-                    l10n.scheduledTasksTitle,
-                    () => push(const ScheduledTasksPage()),
-                  ),
-                  item(
-                    Lucide.Brain,
-                    l10n.memorySettingsPageTitle,
-                    () => push(const MemorySettingsPage()),
-                  ),
-                  item(
-                    Lucide.Languages,
-                    l10n.desktopNavTranslateTooltip,
-                    () => push(const TranslatePage()),
-                  ),
-                  item(
-                    Lucide.Settings,
-                    l10n.settingsPageTitle,
-                    () => push(const SettingsPage()),
-                  ),
-                ],
+              item(
+                Lucide.Settings,
+                l10n.settingsPageTitle,
+                () => push(const SettingsPage()),
               ),
-            ),
+              item(
+                Lucide.Brain,
+                l10n.memorySettingsPageTitle,
+                () => push(const MemorySettingsPage()),
+              ),
+              item(
+                Lucide.LayoutGrid,
+                l10n.miniAppsTitle,
+                () => push(const MiniAppsPage()),
+              ),
+              item(
+                Lucide.SquareTerminal,
+                l10n.workspaceEnvTitle,
+                () => WorkspaceNavigation.openEnvironmentPage(context),
+              ),
+              item(
+                Lucide.Languages,
+                l10n.desktopNavTranslateTooltip,
+                () => push(const TranslatePage()),
+              ),
+              item(
+                Lucide.CalendarClock,
+                l10n.scheduledTasksTitle,
+                () => push(const ScheduledTasksPage()),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

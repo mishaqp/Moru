@@ -3997,9 +3997,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get displaySettingsPageShowChatListDateTitle => '显示对话列表日期';
-
-  @override
   String get displaySettingsPageEnableImageCropperTitle => '启用图片裁剪';
 
   @override
@@ -15374,9 +15371,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
-  String get displaySettingsPageShowChatListDateTitle => '显示对话列表日期';
-
-  @override
   String get displaySettingsPageEnableImageCropperTitle => '启用图片裁剪';
 
   @override
@@ -26677,9 +26671,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String chainOfThoughtProcessedSteps(Object count) {
     return '已處理 · $count 個步驟';
   }
-
-  @override
-  String get displaySettingsPageShowChatListDateTitle => '顯示對話列表日期';
 
   @override
   String get displaySettingsPageEnableImageCropperTitle => '啟用圖片裁剪';

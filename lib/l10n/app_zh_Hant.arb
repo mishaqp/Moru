@@ -1448,7 +1448,6 @@
   "chainOfThoughtCollapse": "收起",
   "chainOfThoughtProcessedIn": "已處理 · {seconds} 秒",
   "chainOfThoughtProcessedSteps": "已處理 · {count} 個步驟",
-  "displaySettingsPageShowChatListDateTitle": "顯示對話列表日期",
   "displaySettingsPageKeepSidebarOpenOnAssistantTapTitle": "點選助手時不自動關閉側邊欄",
   "displaySettingsPageKeepSidebarOpenOnTopicTapTitle": "點選話題時不自動關閉側邊欄",
   "displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle": "關閉側邊欄時不折疊助手列表",

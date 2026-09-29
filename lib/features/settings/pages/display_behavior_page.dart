@@ -32,7 +32,6 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
         s.newChatOnLaunch,
         s.regenerateDeleteTrailingMessages,
         s.showAppUpdates,
-        s.showChatListDate,
         s.sidebarThumbnails,
         s.showRegenerateConfirmDialog,
         s.showToolResultSummary,
@@ -211,15 +210,6 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
                         l10n.displaySettingsPageMessageNavButtonsModeNever,
                     }),
                 onTap: () => _showMobileMessageNavModeSheet(context),
-              ),
-              _iosDivider(context),
-              _iosSwitchRow(
-                context,
-                icon: Lucide.Calendar,
-                label: l10n.displaySettingsPageShowChatListDateTitle,
-                value: sp.showChatListDate,
-                onChanged: (v) =>
-                    context.read<SettingsProvider>().setShowChatListDate(v),
               ),
               _iosDivider(context),
               _iosSwitchRow(

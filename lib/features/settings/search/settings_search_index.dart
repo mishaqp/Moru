@@ -717,9 +717,14 @@ class SettingsSearchIndex {
       (l) => l.displaySettingsPageMessageNavButtonsTitle,
     );
     add(
-      'displaySettingsPageShowChatListDateTitle',
+      'displaySettingsPageSidebarThumbnailsTitle',
       SettingsSearchDestination.behavior,
-      (l) => l.displaySettingsPageShowChatListDateTitle,
+      (l) => l.displaySettingsPageSidebarThumbnailsTitle,
+    );
+    add(
+      'sideDrawerShortcutsTitle',
+      SettingsSearchDestination.behavior,
+      (l) => l.sideDrawerShortcutsTitle,
     );
     add(
       'displaySettingsPageKeepSidebarOpenOnAssistantTapTitle',

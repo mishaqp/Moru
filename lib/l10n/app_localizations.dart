@@ -7617,12 +7617,6 @@ abstract class AppLocalizations {
   /// **'Processed · {count} steps'**
   String chainOfThoughtProcessedSteps(Object count);
 
-  /// No description provided for @displaySettingsPageShowChatListDateTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show Chat List Dates'**
-  String get displaySettingsPageShowChatListDateTitle;
-
   /// No description provided for @displaySettingsPageEnableImageCropperTitle.
   ///
   /// In en, this message translates to:
