@@ -10,8 +10,6 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/backup_reminder_provider.dart';
 import '../../../core/models/chat_item.dart';
 import '../../../core/providers/user_provider.dart';
-import '../../settings/pages/settings_page.dart';
-import '../../translate/pages/translate_page.dart';
 import '../../backup/pages/backup_page.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/update_provider.dart';
@@ -44,6 +42,7 @@ import '../controllers/chat_actions.dart';
 import '../utils/model_display_helper.dart';
 import 'assistant_avatar.dart';
 import 'assistant_entry_actions.dart';
+import 'sidebar_bottom_bar.dart';
 import 'sidebar_glass.dart';
 import 'sidebar_selection_bars.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
@@ -2158,114 +2157,56 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         },
                       )
                     : (widget.showBottomBar
-                          ? Container(
+                          ? Stack(
                               key: const ValueKey<String>('sidebar-user-bar'),
-                              padding: const EdgeInsets.fromLTRB(
-                                16,
-                                10,
-                                16,
-                                12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _clearSurfaces(context)
-                                    ? Colors.transparent
-                                    : cs.surface,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const SizedBox(width: 6),
-                                      // 用户头像（可点击更换）—移除水波纹
-                                      GestureDetector(
-                                        behavior: HitTestBehavior.opaque,
-                                        onTap: () => _editAvatar(context),
-                                        child: avatarWidget(
-                                          widget.userName,
-                                          context.watch<UserProvider>(),
-                                          size: 40,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 20),
-                                      // 用户名称（可点击编辑，垂直居中）
-                                      Expanded(
-                                        child: IosCardPress(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          baseColor: Colors.transparent,
-                                          onTap: () => _editUserName(context),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 0,
-                                          ),
-                                          child: SizedBox(
-                                            height: 45,
-                                            child: Align(
-                                              alignment: Alignment.centerLeft,
-                                              child: Text(
-                                                widget.userName,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight:
-                                                      AppFontWeights.emphasis,
-                                                  color: textBase,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      // 翻译按钮（圆形，无水波纹）
-                                      SizedBox(
-                                        width: 45,
-                                        height: 45,
-                                        child: Center(
-                                          child: IosIconButton(
-                                            size: 22,
-                                            color: textBase,
-                                            icon: Lucide.Languages,
-                                            padding: const EdgeInsets.all(10),
-                                            onTap: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      const TranslatePage(),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      // 设置按钮（圆形，无水波纹）
-                                      SizedBox(
-                                        width: 45,
-                                        height: 45,
-                                        child: Center(
-                                          child: IosIconButton(
-                                            size: 22,
-                                            color: textBase,
-                                            icon: Lucide.Settings,
-                                            padding: const EdgeInsets.all(10),
-                                            onTap: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      const SettingsPage(),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                              clipBehavior: Clip.none,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  decoration: BoxDecoration(
+                                    color: _clearSurfaces(context)
+                                        ? Colors.transparent
+                                        : cs.surface,
                                   ),
-                                ],
-                              ),
+                                  child: SidebarBottomBar(
+                                    glass: context
+                                        .select<SettingsProvider, bool>(
+                                          (s) => s.glassTheme,
+                                        ),
+                                    avatar: avatarWidget(
+                                      widget.userName,
+                                      context.watch<UserProvider>(),
+                                      size: 36,
+                                    ),
+                                    onAvatarTap: () => _editAvatar(context),
+                                  ),
+                                ),
+                                // Solid bars fade the list into them; glass
+                                // has no solid bar to fade into.
+                                if (!_clearSurfaces(context))
+                                  Positioned(
+                                    left: 0,
+                                    right: 0,
+                                    top: -20,
+                                    child: IgnorePointer(
+                                      child: Container(
+                                        height: 20,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [
+                                              cs.surface.withValues(alpha: 0.0),
+                                              cs.surface.withValues(alpha: 0.8),
+                                              cs.surface.withValues(alpha: 1.0),
+                                            ],
+                                            stops: const [0.0, 0.6, 1.0],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             )
                           : const SizedBox.shrink(
                               key: ValueKey<String>('sidebar-no-bar'),
@@ -2273,36 +2214,6 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
               ),
             ],
           ),
-
-          // iOS-style blur/fade effect above user area
-          // The legacy user-bar fade is positioned for its fixed 62px height.
-          // The selection action bar is shorter and owns its own top shadow;
-          // keeping this fade would expose a thin strip of list content between
-          // the fade and the action bar.
-          // Glass has no solid bar to fade into.
-          if (!_clearSurfaces(context) && !_selectionMode)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 62, // Approximate height of user area
-              child: IgnorePointer(
-                child: Container(
-                  height: 20,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        cs.surface.withValues(alpha: 0.0),
-                        cs.surface.withValues(alpha: 0.8),
-                        cs.surface.withValues(alpha: 1.0),
-                      ],
-                      stops: const [0.0, 0.6, 1.0],
-                    ),
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -2506,6 +2417,10 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       ),
                     ),
                     const SizedBox(height: 10),
+                    // The dock has no room for the name; it is edited here.
+                    row(l10n.sideDrawerSetNicknameTitle, () async {
+                      await _editUserName(context);
+                    }),
                     row(l10n.sideDrawerChooseImage, () async {
                       await _pickLocalImage(context);
                     }),

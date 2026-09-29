@@ -861,6 +861,10 @@
   "sideDrawerMenuDelete": "删除",
   "sideDrawerMenuSelect": "多选",
   "sideDrawerNewChat": "新对话",
+  "sideDrawerShortcutAdd": "快捷方式",
+  "sideDrawerShortcutsTitle": "侧边栏快捷方式",
+  "sideDrawerShortcutsEmpty": "暂无小程序或浏览器书签",
+  "sideDrawerShortcutRemove": "从侧边栏移除",
   "sideDrawerSelectionTitle": "已选 {count} 项",
   "@sideDrawerSelectionTitle": {
     "placeholders": {

@@ -2446,6 +2446,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sideDrawerNewChat => '新对话';
 
   @override
+  String get sideDrawerShortcutAdd => '快捷方式';
+
+  @override
+  String get sideDrawerShortcutsTitle => '侧边栏快捷方式';
+
+  @override
+  String get sideDrawerShortcutsEmpty => '暂无小程序或浏览器书签';
+
+  @override
+  String get sideDrawerShortcutRemove => '从侧边栏移除';
+
+  @override
   String sideDrawerSelectionTitle(int count) {
     return '已选 $count 项';
   }
@@ -13776,6 +13788,18 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get sideDrawerNewChat => '新对话';
 
   @override
+  String get sideDrawerShortcutAdd => '快捷方式';
+
+  @override
+  String get sideDrawerShortcutsTitle => '侧边栏快捷方式';
+
+  @override
+  String get sideDrawerShortcutsEmpty => '暂无小程序或浏览器书签';
+
+  @override
+  String get sideDrawerShortcutRemove => '从侧边栏移除';
+
+  @override
   String sideDrawerSelectionTitle(int count) {
     return '已选 $count 项';
   }
@@ -25033,6 +25057,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sideDrawerNewChat => '新對話';
+
+  @override
+  String get sideDrawerShortcutAdd => '捷徑';
+
+  @override
+  String get sideDrawerShortcutsTitle => '側邊欄捷徑';
+
+  @override
+  String get sideDrawerShortcutsEmpty => '暫無小程式或瀏覽器書籤';
+
+  @override
+  String get sideDrawerShortcutRemove => '從側邊欄移除';
 
   @override
   String sideDrawerSelectionTitle(int count) {

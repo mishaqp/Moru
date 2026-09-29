@@ -4710,6 +4710,30 @@ abstract class AppLocalizations {
   /// **'New chat'**
   String get sideDrawerNewChat;
 
+  /// No description provided for @sideDrawerShortcutAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortcut'**
+  String get sideDrawerShortcutAdd;
+
+  /// No description provided for @sideDrawerShortcutsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar shortcuts'**
+  String get sideDrawerShortcutsTitle;
+
+  /// No description provided for @sideDrawerShortcutsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No mini apps or browser bookmarks yet'**
+  String get sideDrawerShortcutsEmpty;
+
+  /// No description provided for @sideDrawerShortcutRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from sidebar'**
+  String get sideDrawerShortcutRemove;
+
   /// No description provided for @sideDrawerSelectionTitle.
   ///
   /// In en, this message translates to:

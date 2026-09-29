@@ -1119,6 +1119,10 @@
   "sideDrawerMenuDelete": "Delete",
   "sideDrawerMenuSelect": "Select",
   "sideDrawerNewChat": "New chat",
+  "sideDrawerShortcutAdd": "Shortcut",
+  "sideDrawerShortcutsTitle": "Sidebar shortcuts",
+  "sideDrawerShortcutsEmpty": "No mini apps or browser bookmarks yet",
+  "sideDrawerShortcutRemove": "Remove from sidebar",
   "sideDrawerSelectionTitle": "Selected {count} items",
   "@sideDrawerSelectionTitle": {
     "placeholders": {

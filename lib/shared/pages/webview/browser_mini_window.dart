@@ -12,9 +12,11 @@ import 'webview_page.dart';
 import 'webview_status_banner.dart';
 
 /// Opens the shared agent browser: expands the mini window when the browser
-/// is minimized, otherwise starts a new session at [startUrl].
+/// is minimized, otherwise starts a new session at [startUrl]. With
+/// [newTab], a browser that is already open shows [startUrl] in a new tab.
 Future<void> openSharedBrowser({
   String startUrl = 'https://www.google.com',
+  bool newTab = false,
 }) async {
   final session = BrowserAgentSession.instance;
   final navigator = rootNavigatorKey.currentState;
@@ -28,9 +30,17 @@ Future<void> openSharedBrowser({
         ),
       ),
     );
+    if (newTab) {
+      // The page takes the parked browser back in its first frame.
+      await WidgetsBinding.instance.endOfFrame;
+      await session.newTab(url: startUrl);
+    }
     return;
   }
-  if (session.isAttached) return;
+  if (session.isAttached) {
+    if (newTab) await session.newTab(url: startUrl);
+    return;
+  }
   unawaited(
     navigator.push<void>(
       MaterialPageRoute<void>(

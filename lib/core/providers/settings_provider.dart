@@ -24,6 +24,7 @@ import '../models/backup.dart';
 import '../models/compress_context_options.dart';
 import '../models/auto_retry_options.dart';
 import '../models/provider_group.dart';
+import '../models/sidebar_shortcut.dart';
 import '../services/haptics.dart';
 import '../services/api/retry_policy.dart';
 import '../services/screen_wakelock.dart';
@@ -324,6 +325,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _toolAutoApproveAllKey = 'tool_auto_approve_all_v1';
   static const String _disabledBrowserActionsKey =
       'browser_disabled_actions_v1';
+  static const String _sidebarShortcutsKey = 'sidebar_shortcuts_v1';
   static const String _mobileAssistantEditTabOrderKey =
       'mobile_assistant_edit_tab_order_v1';
   static const String _mobileAssistantEditTabHiddenKey =
@@ -1183,6 +1185,11 @@ class SettingsProvider extends ChangeNotifier {
     _disabledBrowserActions = Set.unmodifiable(
       prefs.getStringList(_disabledBrowserActionsKey) ?? const <String>[],
     );
+    _sidebarShortcuts = List.unmodifiable({
+      for (final raw
+          in prefs.getStringList(_sidebarShortcutsKey) ?? const <String>[])
+        ?SidebarShortcut.decode(raw),
+    });
     _requestLogEnabled = prefs.getBool(_requestLogEnabledKey) ?? true;
     await RequestLogger.setEnabled(_requestLogEnabled);
     _contextLogEnabled = prefs.getBool(_contextLogEnabledKey) ?? true;
@@ -5550,6 +5557,21 @@ Requirements:
       _disabledBrowserActionsKey,
       _disabledBrowserActions.toList()..sort(),
     );
+  }
+
+  // Sidebar: mini apps and web pages pinned as cards above the dock, in the
+  // user's order.
+  List<SidebarShortcut> _sidebarShortcuts = const <SidebarShortcut>[];
+  List<SidebarShortcut> get sidebarShortcuts => _sidebarShortcuts;
+
+  Future<void> setSidebarShortcuts(List<SidebarShortcut> shortcuts) async {
+    final next = List<SidebarShortcut>.unmodifiable(shortcuts.toSet());
+    if (listEquals(next, _sidebarShortcuts)) return;
+    _sidebarShortcuts = next;
+    notifyListeners();
+    await _preferences.setStringList(_sidebarShortcutsKey, [
+      for (final shortcut in next) shortcut.encode(),
+    ]);
   }
 
   // Network: request logging (debug)

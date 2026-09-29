@@ -495,7 +495,14 @@ void main() {
     Color? barFill() =>
         (tester
                     .widget<Container>(
-                      find.byKey(const ValueKey<String>('sidebar-user-bar')),
+                      find
+                          .descendant(
+                            of: find.byKey(
+                              const ValueKey<String>('sidebar-user-bar'),
+                            ),
+                            matching: find.byType(Container),
+                          )
+                          .first,
                     )
                     .decoration
                 as BoxDecoration?)

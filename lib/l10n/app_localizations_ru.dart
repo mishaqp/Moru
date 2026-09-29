@@ -2561,6 +2561,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sideDrawerNewChat => 'Новый чат';
 
   @override
+  String get sideDrawerShortcutAdd => 'Ярлык';
+
+  @override
+  String get sideDrawerShortcutsTitle => 'Ярлыки в боковой панели';
+
+  @override
+  String get sideDrawerShortcutsEmpty =>
+      'Пока нет мини-приложений и закладок браузера';
+
+  @override
+  String get sideDrawerShortcutRemove => 'Убрать из панели';
+
+  @override
   String sideDrawerSelectionTitle(int count) {
     return 'Выбрано объектов: $count';
   }

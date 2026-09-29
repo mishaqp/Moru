@@ -2534,6 +2534,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sideDrawerNewChat => 'New chat';
 
   @override
+  String get sideDrawerShortcutAdd => 'Shortcut';
+
+  @override
+  String get sideDrawerShortcutsTitle => 'Sidebar shortcuts';
+
+  @override
+  String get sideDrawerShortcutsEmpty =>
+      'No mini apps or browser bookmarks yet';
+
+  @override
+  String get sideDrawerShortcutRemove => 'Remove from sidebar';
+
+  @override
   String sideDrawerSelectionTitle(int count) {
     return 'Selected $count items';
   }
