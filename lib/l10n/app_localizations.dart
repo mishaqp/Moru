@@ -4962,6 +4962,48 @@ abstract class AppLocalizations {
   /// **'The agent could not be removed. See the log.'**
   String get agentsFailureRemove;
 
+  /// No description provided for @agentsStartChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a chat'**
+  String get agentsStartChat;
+
+  /// No description provided for @agentsChatMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This assistant\'s agent is not in the list any more. Pick another in the assistant\'s settings.'**
+  String get agentsChatMissing;
+
+  /// No description provided for @agentsChatNoKey.
+  ///
+  /// In en, this message translates to:
+  /// **'The agent needs a model with an API key. Choose one with a key for this assistant or as the default model.'**
+  String get agentsChatNoKey;
+
+  /// No description provided for @agentsChatNotInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is not installed yet. Install it in Settings → Agents.'**
+  String agentsChatNotInstalled(String name);
+
+  /// No description provided for @assistantAgentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent'**
+  String get assistantAgentTitle;
+
+  /// No description provided for @assistantAgentNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None — the model answers'**
+  String get assistantAgentNone;
+
+  /// No description provided for @assistantAgentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'With an agent, it answers in this assistant\'s chats and works with the chat\'s files. It uses the chat model above for its own requests.'**
+  String get assistantAgentHint;
+
   /// No description provided for @displaySettingsPageSidebarThumbnailsTitle.
   ///
   /// In en, this message translates to:

@@ -34,8 +34,9 @@ class AcpError implements Exception {
   /// Not a JSON-RPC code: the process died or the pipe closed.
   static const int disconnected = -1;
 
+  /// Shown in the chat as it is, so only the agent's own words.
   @override
-  String toString() => 'AcpError($code): $message';
+  String toString() => message;
 }
 
 /// Answers a request the agent sends to Moru (permission, file access).

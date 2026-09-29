@@ -25,6 +25,7 @@ import '../../../core/services/logging/flutter_logger.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../core/models/assistant_regex.dart';
+import '../services/acp_chat_bridge.dart';
 import '../services/ask_user_interaction_service.dart';
 import '../../chat/utils/thinking_tag_parser.dart';
 import '../services/message_generation_service.dart';
@@ -2266,7 +2267,11 @@ class ChatActions {
   // ============================================================================
 
   /// Execute generation with the given context.
+  /// Assistant messages an ACP agent is answering.
+  final Set<String> _agentMessageIds = <String>{};
+
   Future<void> _executeGeneration(stream_ctrl.GenerationContext ctx) async {
+    final agentBridge = AcpChatBridge(contextProvider);
     final state = stream_ctrl.StreamingState(ctx);
     _streamingStates[state.messageId] = state;
     final assistant = ctx.assistant;
@@ -2345,6 +2350,28 @@ class ChatActions {
       if (previousSub != null) {
         ChatApiService.cancelRequest(conversationId);
         await _cancelSubscriptionWithTimeout(previousSub);
+      }
+
+      // An assistant with an ACP agent: the agent answers, and its chunks go
+      // through the same handling as a model's.
+      final agentStream = await agentBridge.streamFor(
+        assistant: assistant,
+        conversationId: conversationId,
+        settings: ctx.settings,
+        providerKey: ctx.providerKey,
+        modelId: ctx.modelId,
+        apiMessages: ctx.apiMessages,
+      );
+      if (agentStream != null) {
+        _agentMessageIds.add(state.messageId);
+        _conversationStreams[conversationId] =
+            listenSequentiallyToStream<StreamChunk>(
+              stream: agentStream,
+              onData: (chunk) => _handleStreamChunk(chunk, state),
+              onError: (error, stackTrace) => _handleStreamError(error, state),
+              onDone: () => _handleStreamDone(state),
+            );
+        return;
       }
 
       if (!ctx.streamOutput) {
@@ -2465,7 +2492,10 @@ class ChatActions {
         if (details != null) {
           streamController.setReasoningDetails(state.messageId, details);
         }
-        if (text.isNotEmpty && state.ctx.supportsReasoning) {
+        // An agent's thoughts show whatever the chat model is marked as.
+        if (text.isNotEmpty &&
+            (state.ctx.supportsReasoning ||
+                _agentMessageIds.contains(state.messageId))) {
           await _handleReasoningChunk(text, state);
         }
         _scheduleStreamingCheckpoint(state);

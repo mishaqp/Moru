@@ -13,6 +13,7 @@ import '../../../shared/widgets/ios_settings_rows.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../shared/widgets/section_card.dart';
+import '../agent_chat_start.dart';
 import '../widgets/agent_labels.dart';
 import '../widgets/agent_log_view.dart';
 import 'agents_page.dart';
@@ -26,6 +27,7 @@ class AgentDetailPage extends StatelessWidget {
 
   static const Key installKey = ValueKey('agent-install');
   static const Key checkKey = ValueKey('agent-check');
+  static const Key chatKey = ValueKey('agent-start-chat');
   static const Key removeKey = ValueKey('agent-remove');
 
   @override
@@ -127,13 +129,19 @@ class AgentDetailPage extends StatelessWidget {
             if (state == AcpInstallState.installed || spec.isCustom) ...[
               const SizedBox(height: 10),
               IosTileButton(
+                key: chatKey,
+                icon: LucideIcons.messageCirclePlus,
+                label: l10n.agentsStartChat,
+                enabled: provider != null,
+                backgroundColor: cs.primary,
+                onTap: () => unawaited(startAgentChat(context, spec)),
+              ),
+              const SizedBox(height: 10),
+              IosTileButton(
                 key: checkKey,
                 icon: LucideIcons.plugZap,
                 label: l10n.agentsCheck,
                 enabled: idle && provider != null,
-                backgroundColor: state == AcpInstallState.installed
-                    ? cs.primary
-                    : null,
                 onTap: () => unawaited(manager.check(spec, provider!)),
               ),
               IosSectionFooter(

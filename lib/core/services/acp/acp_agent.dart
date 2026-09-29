@@ -120,6 +120,7 @@ class AcpPermissionOption {
 class AcpPermissionRequest {
   const AcpPermissionRequest({
     required this.sessionId,
+    required this.toolCallId,
     required this.title,
     required this.kind,
     required this.input,
@@ -127,6 +128,10 @@ class AcpPermissionRequest {
   });
 
   final String sessionId;
+
+  /// The id of the tool card the request is about
+  /// ([AcpTurnTranslator.cardId]); empty when the agent sent none.
+  final String toolCallId;
   final String title;
 
   /// ACP tool kind: `execute`, `edit`, `read`, `fetch`…
@@ -383,6 +388,9 @@ class AcpAgent {
         handler(
           AcpPermissionRequest(
             sessionId: sessionId,
+            toolCallId: toolCall['toolCallId'] is String
+                ? AcpTurnTranslator.cardId(toolCall['toolCallId'] as String)
+                : '',
             title: (toolCall['title'] ?? '').toString(),
             kind: (toolCall['kind'] ?? 'other').toString(),
             input: toolCall['rawInput'],

@@ -43,6 +43,7 @@ import 'root_phone_control.dart';
 import 'root_shell_tool.dart';
 import 'scheduled_task_tool.dart';
 import 'tool_approval_service.dart';
+import '../../../core/services/acp/acp_agent_manager.dart';
 
 /// 工具调用处理服务
 ///
@@ -800,6 +801,14 @@ class ToolHandlerService {
     };
   }
 
+  AcpAgentManager? _agentManager() {
+    try {
+      return contextProvider.read<AcpAgentManager>();
+    } on ProviderNotFoundException {
+      return null;
+    }
+  }
+
   AssistantManagerCatalog _assistantManagerCatalog(
     SettingsProvider settings,
     McpProvider mcp,
@@ -840,6 +849,15 @@ class ToolHandlerService {
         for (final workspace
             in contextProvider.read<WorkspaceProvider>().workspaces)
           AssistantManagerOption(id: workspace.id, name: workspace.name),
+      ],
+      agents: [
+        if (_agentManager() case final agents?)
+          for (final spec in agents.agents)
+            AssistantManagerOption(
+              id: spec.id,
+              name: spec.name,
+              enabled: agents.state(spec.id) == AcpInstallState.installed,
+            ),
       ],
       localToolIds: [
         for (final id in LocalToolNames.all)

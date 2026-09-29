@@ -28,6 +28,7 @@ const _catalog = AssistantManagerCatalog(
   mcpServers: [AssistantManagerOption(id: 'mcp-1', name: 'Files')],
   skills: [AssistantManagerOption(id: 'skill-1', name: 'Writer')],
   workspaces: [AssistantManagerOption(id: 'ws-1', name: 'Project')],
+  agents: [AssistantManagerOption(id: 'opencode', name: 'OpenCode')],
   localToolIds: [LocalToolNames.timeInfo, LocalToolNames.calculate],
 );
 
@@ -347,5 +348,38 @@ void main() {
       'not_found',
     );
     expect((await _run(tool, {'action': 'fly'}))['error'], 'invalid_action');
+  });
+
+  test('an agent is set from the options, checked and cleared', () async {
+    final options = await _run(tool, {'action': 'options'});
+    expect(options['agents'], [
+      {'id': 'opencode', 'name': 'OpenCode', 'installed': true},
+    ]);
+
+    final bad = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {'agentId': 'nope'},
+    });
+    expect(bad['ok'], isFalse);
+    expect(assistants.getById(mainId)!.agentId, isNull);
+
+    final set = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {'agentId': 'opencode'},
+    });
+    expect(set['ok'], isTrue, reason: '$set');
+    expect(assistants.getById(mainId)!.agentId, 'opencode');
+    final got = await _run(tool, {'action': 'get', 'assistant_id': mainId});
+    expect(got['settings']['agentId'], 'opencode');
+
+    final cleared = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'clear': ['agentId'],
+    });
+    expect(cleared['ok'], isTrue, reason: '$cleared');
+    expect(assistants.getById(mainId)!.agentId, isNull);
   });
 }

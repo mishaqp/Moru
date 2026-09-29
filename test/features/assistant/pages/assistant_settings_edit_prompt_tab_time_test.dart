@@ -28,6 +28,7 @@ import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/ios_switch.dart';
 import 'package:Kelivo/shared/widgets/ios_tactile.dart';
 import 'package:Kelivo/shared/widgets/section_card.dart';
+import '../../../support/acp_test_manager.dart';
 
 class _FakeTtsProvider extends ChangeNotifier implements TtsProvider {
   @override
@@ -151,6 +152,7 @@ Widget _buildHarness({
 }) {
   return MultiProvider(
     providers: [
+      ChangeNotifierProvider(create: (_) => createTestAcpAgentManager()),
       ChangeNotifierProvider(
         create: (_) => SettingsProvider(assistantProvider.preferences),
       ),

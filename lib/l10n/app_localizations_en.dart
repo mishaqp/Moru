@@ -2682,6 +2682,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'The agent could not be removed. See the log.';
 
   @override
+  String get agentsStartChat => 'Start a chat';
+
+  @override
+  String get agentsChatMissing =>
+      'This assistant\'s agent is not in the list any more. Pick another in the assistant\'s settings.';
+
+  @override
+  String get agentsChatNoKey =>
+      'The agent needs a model with an API key. Choose one with a key for this assistant or as the default model.';
+
+  @override
+  String agentsChatNotInstalled(String name) {
+    return '$name is not installed yet. Install it in Settings → Agents.';
+  }
+
+  @override
+  String get assistantAgentTitle => 'Agent';
+
+  @override
+  String get assistantAgentNone => 'None — the model answers';
+
+  @override
+  String get assistantAgentHint =>
+      'With an agent, it answers in this assistant\'s chats and works with the chat\'s files. It uses the chat model above for its own requests.';
+
+  @override
   String get displaySettingsPageSidebarThumbnailsTitle =>
       'Image previews in the chat list';
 

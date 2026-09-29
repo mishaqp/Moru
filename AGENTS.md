@@ -68,6 +68,16 @@ package name does not require building other platforms.
   `ComposerStatusStrip` shows the open plan (`TaskPlanChip`) and the running
   command (`RunningToolChip`) side by side above the composer.
 
+- **ACP agents**: coding agents (Claude Code, Codex, OpenCode, custom) speak
+  the Agent Client Protocol over the Linux environment's STDIO pipes
+  (`lib/core/services/acp/`). `AcpAgentManager` installs them with npm and
+  checks them (Settings → Agents); `AcpAgentSpec.launch` maps a Moru provider
+  to each agent's variables/config (keys only in env). An assistant with
+  `agentId` answers through its agent: `AcpChatBridge` swaps the chunk
+  source in `_executeGeneration`, `AcpTurnTranslator` turns `session/update`
+  into `StreamChunk`s (workspace cards, plan strip), permission requests go
+  to `ToolApprovalService` on the tool card, and `AcpChatSessions` keeps one
+  process and session per chat (`acp.session` in conversation extras).
 - **Mini apps**: published web apps (`MiniAppStore`, bridge `moru.*` in
   `MiniAppBridge`). They keep an error journal, the last 5 versions, and
   manifest game settings (`MiniAppDisplay`). Background jobs (`moru.jobs`,

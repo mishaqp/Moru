@@ -16,6 +16,9 @@ import '../workspace/workspace_tool_metadata.dart';
 class AcpTurnTranslator {
   AcpTurnTranslator({this.onPlan});
 
+  /// The chat's id for the card of the agent's tool call [toolCallId].
+  static String cardId(String toolCallId) => 'acp-tool-$toolCallId';
+
   /// The agent's checklist, for the plan strip above the composer.
   final void Function(TaskPlan plan)? onPlan;
 
@@ -152,7 +155,7 @@ class AcpTurnTranslator {
       chunks
         ..addAll(_closeText())
         ..addAll(_closeReasoning());
-      tool = _tools[id] = _AcpTool('acp-tool-$id');
+      tool = _tools[id] = _AcpTool(cardId(id));
       tool.merge(update);
       tool.announcedName = tool.name;
       chunks.add(

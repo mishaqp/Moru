@@ -12,6 +12,8 @@ import 'package:Kelivo/core/services/acp/acp_agent_manager.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/features/agents/pages/agent_detail_page.dart';
 import 'package:Kelivo/features/agents/pages/agents_page.dart';
+import 'package:Kelivo/features/agents/widgets/assistant_agent_card.dart';
+import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 
 import '../../support/business_test_harness.dart';
@@ -149,5 +151,68 @@ void main() {
     // It opens right away, ready to check.
     expect(find.byType(AgentDetailPage), findsOneWidget);
     expect(find.text('goose acp --with-builtin developer'), findsWidgets);
+  });
+
+  testWidgets('an assistant is given an agent and set back to the model', (
+    tester,
+  ) async {
+    // Created outside the fake clock, where its loading can finish.
+    late AssistantProvider assistants;
+    late String id;
+    await tester.runAsync(() async {
+      assistants = AssistantProvider(
+        preferences: createBusinessTestPreferences(),
+      );
+      await assistants.loaded;
+      id = await assistants.addAssistant(name: 'Coder');
+      await manager.loaded;
+    });
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: manager),
+          ChangeNotifierProvider.value(value: assistants),
+          ChangeNotifierProvider.value(value: settings),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Consumer<AssistantProvider>(
+              builder: (_, provider, _) =>
+                  AssistantAgentCard(assistant: provider.getById(id)!),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('None — the model answers'), findsOneWidget);
+
+    // Loading and saving finish outside the fake clock.
+    Future<void> settle() async {
+      for (var i = 0; i < 20; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> choose(String label) async {
+      await tester.tap(find.byKey(AssistantAgentCard.rowKey));
+      await settle();
+      await tester.tap(find.text(label).last);
+      await settle();
+    }
+
+    await choose('OpenCode');
+    expect(assistants.getById(id)!.agentId, 'opencode');
+    expect(find.text('OpenCode'), findsOneWidget);
+
+    await choose('None — the model answers');
+    expect(assistants.getById(id)!.agentId, isNull);
   });
 }

@@ -2586,6 +2586,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentsFailureRemove => '无法移除智能体，请查看日志。';
 
   @override
+  String get agentsStartChat => '开始对话';
+
+  @override
+  String get agentsChatMissing => '此助手的智能体已不在列表中，请在助手设置中另选一个。';
+
+  @override
+  String get agentsChatNoKey => '智能体需要带 API 密钥的模型，请为此助手或默认模型选择一个带密钥的模型。';
+
+  @override
+  String agentsChatNotInstalled(String name) {
+    return '$name 尚未安装，请在 设置 → 智能体 中安装。';
+  }
+
+  @override
+  String get assistantAgentTitle => '智能体';
+
+  @override
+  String get assistantAgentNone => '无 — 由模型回答';
+
+  @override
+  String get assistantAgentHint =>
+      '选择智能体后，由它在此助手的对话中回答并处理对话文件。它使用上面的对话模型发送自己的请求。';
+
+  @override
   String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的图片预览';
 
   @override
@@ -14100,6 +14124,30 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get agentsFailureRemove => '无法移除智能体，请查看日志。';
 
   @override
+  String get agentsStartChat => '开始对话';
+
+  @override
+  String get agentsChatMissing => '此助手的智能体已不在列表中，请在助手设置中另选一个。';
+
+  @override
+  String get agentsChatNoKey => '智能体需要带 API 密钥的模型，请为此助手或默认模型选择一个带密钥的模型。';
+
+  @override
+  String agentsChatNotInstalled(String name) {
+    return '$name 尚未安装，请在 设置 → 智能体 中安装。';
+  }
+
+  @override
+  String get assistantAgentTitle => '智能体';
+
+  @override
+  String get assistantAgentNone => '无 — 由模型回答';
+
+  @override
+  String get assistantAgentHint =>
+      '选择智能体后，由它在此助手的对话中回答并处理对话文件。它使用上面的对话模型发送自己的请求。';
+
+  @override
   String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的图片预览';
 
   @override
@@ -25541,6 +25589,30 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentsFailureRemove => '無法移除代理，請查看記錄。';
+
+  @override
+  String get agentsStartChat => '開始對話';
+
+  @override
+  String get agentsChatMissing => '此助手的代理已不在列表中，請在助手設定中另選一個。';
+
+  @override
+  String get agentsChatNoKey => '代理需要帶 API 金鑰的模型，請為此助手或預設模型選擇一個帶金鑰的模型。';
+
+  @override
+  String agentsChatNotInstalled(String name) {
+    return '$name 尚未安裝，請在 設定 → 智慧代理 中安裝。';
+  }
+
+  @override
+  String get assistantAgentTitle => '智慧代理';
+
+  @override
+  String get assistantAgentNone => '無 — 由模型回答';
+
+  @override
+  String get assistantAgentHint =>
+      '選擇代理後，由它在此助手的對話中回答並處理對話檔案。它使用上面的對話模型傳送自己的請求。';
 
   @override
   String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的圖片預覽';

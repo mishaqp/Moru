@@ -1182,6 +1182,18 @@
   "agentsFailureNode": "Node.js could not be installed. See the log.",
   "agentsFailureInstall": "Installation failed. See the log below.",
   "agentsFailureRemove": "The agent could not be removed. See the log.",
+  "agentsStartChat": "Start a chat",
+  "agentsChatMissing": "This assistant's agent is not in the list any more. Pick another in the assistant's settings.",
+  "agentsChatNoKey": "The agent needs a model with an API key. Choose one with a key for this assistant or as the default model.",
+  "agentsChatNotInstalled": "{name} is not installed yet. Install it in Settings → Agents.",
+  "@agentsChatNotInstalled": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "assistantAgentTitle": "Agent",
+  "assistantAgentNone": "None — the model answers",
+  "assistantAgentHint": "With an agent, it answers in this assistant's chats and works with the chat's files. It uses the chat model above for its own requests.",
   "displaySettingsPageSidebarThumbnailsTitle": "Image previews in the chat list",
   "sideDrawerArchive": "Archive",
   "sideDrawerArchived": "Chat archived",

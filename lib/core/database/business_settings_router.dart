@@ -491,6 +491,7 @@ final class BusinessSettingsRouter {
             'avatar',
             'chatModelProvider',
             'chatModelId',
+            'agentId',
             'systemPrompt',
             'messageTemplate',
             'background',

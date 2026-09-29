@@ -45,6 +45,7 @@ class AssistantManagerCatalog {
     this.mcpServers = const [],
     this.skills = const [],
     this.workspaces = const [],
+    this.agents = const [],
     this.localToolIds = const [],
   });
 
@@ -52,6 +53,9 @@ class AssistantManagerCatalog {
   final List<AssistantManagerOption> mcpServers;
   final List<AssistantManagerOption> skills;
   final List<AssistantManagerOption> workspaces;
+
+  /// ACP agents (Settings → Agents); `enabled` means installed.
+  final List<AssistantManagerOption> agents;
   final List<String> localToolIds;
 }
 
@@ -113,6 +117,7 @@ class AssistantManagerTool {
     'defaultWorkspaceId',
     'skillIds',
     'avatar',
+    'agentId',
   ];
 
   static const Map<String, String> _memorySmartAddModes = {
@@ -217,6 +222,13 @@ class AssistantManagerTool {
     'chatModelId': {
       'type': 'string',
       'description': 'Model id of that provider from "options".',
+    },
+    'agentId': {
+      'type': 'string',
+      'description':
+          'A coding agent from "options" (agents) that answers in this '
+          "assistant's chats instead of the model, using the chat model for "
+          'its own requests. Clear it to let the model answer again.',
     },
     'systemPrompt': {'type': 'string'},
     'messageTemplate': {
@@ -464,6 +476,10 @@ class AssistantManagerTool {
     'workspaces': [
       for (final w in catalog.workspaces) {'id': w.id, 'name': w.name},
     ],
+    'agents': [
+      for (final a in catalog.agents)
+        {'id': a.id, 'name': a.name, 'installed': a.enabled},
+    ],
     'localToolIds': catalog.localToolIds,
     'memorySmartAddMode': _memorySmartAddModes,
     'memoryWriteScope': _memoryWriteScopes,
@@ -652,6 +668,7 @@ class AssistantManagerTool {
       clearDefaultWorkspaceId: clear.contains('defaultWorkspaceId'),
       clearSkillIds: clear.contains('skillIds'),
       clearAvatar: clear.contains('avatar'),
+      clearAgent: clear.contains('agentId'),
     );
 
     final name = s.string('name');
@@ -722,6 +739,11 @@ class AssistantManagerTool {
       );
     }
 
+    final agentId = s.string('agentId');
+    if (agentId != null) {
+      _checkIds('agentId', [agentId], {for (final o in catalog.agents) o.id});
+    }
+
     final smartAdd = s.oneOf('memorySmartAddMode', _memorySmartAddModes.keys);
     final writeScope = s.oneOf('memoryWriteScope', _memoryWriteScopes.keys);
 
@@ -732,6 +754,7 @@ class AssistantManagerTool {
       useAssistantName: s.boolean('useAssistantName'),
       chatModelProvider: providerKey,
       chatModelId: modelId,
+      agentId: agentId,
       systemPrompt: s.string('systemPrompt'),
       messageTemplate: s.string('messageTemplate'),
       temperature: s.number('temperature', min: 0, max: 2),

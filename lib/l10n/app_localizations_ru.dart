@@ -2710,6 +2710,32 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось удалить агента. Подробности в журнале.';
 
   @override
+  String get agentsStartChat => 'Начать чат';
+
+  @override
+  String get agentsChatMissing =>
+      'Агента этого ассистента больше нет в списке. Выберите другого в настройках ассистента.';
+
+  @override
+  String get agentsChatNoKey =>
+      'Агенту нужна модель с API-ключом. Выберите модель с ключом для этого ассистента или как модель по умолчанию.';
+
+  @override
+  String agentsChatNotInstalled(String name) {
+    return '$name ещё не установлен. Установите его в Настройки → Агенты.';
+  }
+
+  @override
+  String get assistantAgentTitle => 'Агент';
+
+  @override
+  String get assistantAgentNone => 'Нет — отвечает модель';
+
+  @override
+  String get assistantAgentHint =>
+      'Если выбран агент, в чатах этого ассистента отвечает он и работает с файлами чата. Для своих запросов он использует модель чата, выбранную выше.';
+
+  @override
   String get displaySettingsPageSidebarThumbnailsTitle =>
       'Миниатюры картинок в списке чатов';
 

@@ -71,6 +71,7 @@ import 'core/services/backup/restore_startup_gate.dart';
 import 'core/services/backup/restore_receipt.dart';
 import 'core/services/mcp/mcp_tool_service.dart';
 import 'core/services/acp/acp_agent_manager.dart';
+import 'core/services/acp/acp_chat_sessions.dart';
 import 'core/services/logging/flutter_logger.dart';
 import 'core/services/storage/storage_usage_service.dart';
 import 'features/home/services/ask_user_interaction_service.dart';
@@ -705,6 +706,16 @@ class MyApp extends StatelessWidget {
             );
             return manager;
           },
+        ),
+        Provider<AcpChatSessions>(
+          create: (ctx) {
+            final manager = ctx.read<AcpAgentManager>();
+            return AcpChatSessions(
+              start: (spec, provider, {required cwd, required mounts}) =>
+                  manager.start(spec, provider, cwd: cwd, mounts: mounts),
+            );
+          },
+          dispose: (_, sessions) => sessions.closeAll(),
         ),
         ProxyProvider<_WorkspaceStackHolder, EnvironmentManager?>(
           update: (_, extras, __) => extras.environmentManager,

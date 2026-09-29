@@ -27,6 +27,7 @@ import 'package:Kelivo/features/settings/widgets/memory_ui.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 
 import '../../../support/business_test_harness.dart';
+import '../../../support/acp_test_manager.dart';
 
 class _FakeTtsProvider extends ChangeNotifier implements TtsProvider {
   @override
@@ -127,6 +128,7 @@ Widget _buildHarness({
 }) {
   return MultiProvider(
     providers: [
+      ChangeNotifierProvider(create: (_) => createTestAcpAgentManager()),
       ChangeNotifierProvider(
         create: (_) => SettingsProvider(assistantProvider.preferences),
       ),
