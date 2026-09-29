@@ -2561,9 +2561,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sideDrawerNewChat => 'Новый чат';
 
   @override
-  String get sideDrawerShortcutAdd => 'Ярлык';
-
-  @override
   String get sideDrawerShortcutsTitle => 'Ярлыки в боковой панели';
 
   @override

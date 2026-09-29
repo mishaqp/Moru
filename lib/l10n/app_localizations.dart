@@ -4710,12 +4710,6 @@ abstract class AppLocalizations {
   /// **'New chat'**
   String get sideDrawerNewChat;
 
-  /// No description provided for @sideDrawerShortcutAdd.
-  ///
-  /// In en, this message translates to:
-  /// **'Shortcut'**
-  String get sideDrawerShortcutAdd;
-
   /// No description provided for @sideDrawerShortcutsTitle.
   ///
   /// In en, this message translates to:

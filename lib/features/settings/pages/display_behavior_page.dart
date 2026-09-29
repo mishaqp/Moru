@@ -22,6 +22,7 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
         s.keepScreenOnDuringGeneration,
         s.keepSidebarOpenOnAssistantTap,
         s.keepSidebarOpenOnTopicTap,
+        s.sidebarShortcuts.length,
         s.keepThinkingAndToolCardsWhenEditingAssistant,
         s.longPasteAsFile,
         s.longPasteAsFileThreshold,
@@ -250,6 +251,14 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
                 onChanged: (v) => context
                     .read<SettingsProvider>()
                     .setKeepAssistantListExpandedOnSidebarClose(v),
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.LayoutGrid,
+                label: l10n.sideDrawerShortcutsTitle,
+                detailText: '${sp.sidebarShortcuts.length}',
+                onTap: () => showSidebarShortcutPicker(context),
               ),
               _iosDivider(context),
               _iosSwitchRow(

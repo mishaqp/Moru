@@ -49,7 +49,6 @@ class SidebarBottomBar extends StatefulWidget {
   final BrowserLibrary? browserLibrary;
 
   static const Key shortcutsKey = ValueKey<String>('sidebar-shortcuts');
-  static const Key addShortcutKey = ValueKey<String>('sidebar-shortcut-add');
   static const Key dockKey = ValueKey<String>('sidebar-dock');
 
   static Key shortcutKey(SidebarShortcut shortcut) => ValueKey<String>(
@@ -84,14 +83,6 @@ class _SidebarBottomBarState extends State<SidebarBottomBar> {
         (shortcut: shortcut, app: app),
   ];
 
-  bool _hasCandidates(Set<SidebarShortcut> pinned) =>
-      _apps.apps.any(
-        (app) => !pinned.contains(SidebarShortcut.miniApp(app.id)),
-      ) ||
-      _library.bookmarks.value.any(
-        (page) => !pinned.contains(SidebarShortcut.webPage(page.url, '')),
-      );
-
   Future<void> _open(SidebarShortcut shortcut) async {
     Haptics.light();
     if (shortcut.web) {
@@ -122,14 +113,6 @@ class _SidebarBottomBarState extends State<SidebarBottomBar> {
     ]);
   }
 
-  Future<void> _pick() async {
-    Haptics.light();
-    await showFormSheet<void>(
-      context,
-      builder: (_) => _ShortcutPicker(apps: _apps, library: _library),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final pinned = context.select<SettingsProvider, List<SidebarShortcut>>(
@@ -142,9 +125,7 @@ class _SidebarBottomBarState extends State<SidebarBottomBar> {
           listenable: Listenable.merge([_apps, _library.bookmarks]),
           builder: (context, _) {
             final visible = _visible(pinned);
-            final canAdd = _hasCandidates(pinned.toSet());
-            if (visible.isEmpty && !canAdd) return const SizedBox.shrink();
-            final add = AppLocalizations.of(context)!;
+            if (visible.isEmpty) return const SizedBox.shrink();
             final cards = <Widget>[
               for (final item in visible)
                 _ShortcutCard(
@@ -161,19 +142,6 @@ class _SidebarBottomBarState extends State<SidebarBottomBar> {
                       item.app?.name ?? _pageName(item.shortcut),
                     ),
                   ),
-                ),
-              if (canAdd)
-                _ShortcutCard(
-                  key: SidebarBottomBar.addShortcutKey,
-                  glass: widget.glass,
-                  leading: Icon(
-                    Lucide.Plus,
-                    size: 22,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  label: visible.isEmpty ? add.sideDrawerShortcutAdd : null,
-                  tooltip: add.sideDrawerShortcutsTitle,
-                  onTap: () => unawaited(_pick()),
                 ),
             ];
             // Two big cards to a row; more than two rows scroll.
@@ -231,21 +199,18 @@ class _ShortcutCard extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.onLongPress,
-    this.tooltip,
   });
 
   final bool glass;
   final Widget leading;
-  final String? label;
+  final String label;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
-  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(22);
-    final text = label;
-    Widget card = GestureDetector(
+    final card = GestureDetector(
       onLongPress: onLongPress,
       child: IosCardPress(
         borderRadius: radius,
@@ -261,27 +226,24 @@ class _ShortcutCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               leading,
-              if (text != null) ...[
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: AppFontWeights.emphasis,
-                    ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: AppFontWeights.emphasis,
                   ),
                 ),
-              ],
+              ),
             ],
           ),
         ),
       ),
     );
-    if (tooltip != null) card = Tooltip(message: tooltip, child: card);
-    return Semantics(button: true, label: tooltip, child: card);
+    return Semantics(button: true, child: card);
   }
 }
 
@@ -303,6 +265,23 @@ class _WebIcon extends StatelessWidget {
       child: Icon(Lucide.Globe, size: size * 0.6, color: cs.primary),
     );
   }
+}
+
+/// Opens the list of mini apps and bookmarks that can get a card in the
+/// sidebar; settings use it.
+Future<void> showSidebarShortcutPicker(
+  BuildContext context, {
+  MiniAppStore? miniApps,
+  BrowserLibrary? browserLibrary,
+}) async {
+  final apps = miniApps ?? MiniAppStore.instance;
+  final library = browserLibrary ?? BrowserLibrary.instance;
+  await Future.wait([apps.load(), library.load()]);
+  if (!context.mounted) return;
+  await showFormSheet<void>(
+    context,
+    builder: (_) => _ShortcutPicker(apps: apps, library: library),
+  );
 }
 
 /// Chooses which mini apps and bookmarked pages get a card; a tap adds or

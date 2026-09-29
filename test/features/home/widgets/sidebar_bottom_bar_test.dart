@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -154,14 +155,22 @@ void main() {
       });
       await pump(tester);
 
-      final add = find.byKey(SidebarBottomBar.addShortcutKey);
-      expect(add, findsOneWidget);
-      expect(
-        find.descendant(of: add, matching: find.text('Shortcut')),
-        findsOneWidget,
-      );
+      // Nothing pinned: no row, and no add button in the sidebar either.
+      expect(find.byKey(SidebarBottomBar.shortcutsKey), findsNothing);
 
-      await tester.tap(add);
+      // Settings open the picker. The stores were loaded outside the fake
+      // clock, so their futures finish outside it too.
+      final context = tester.element(find.byType(SidebarBottomBar));
+      await tester.runAsync(() async {
+        unawaited(
+          showSidebarShortcutPicker(
+            context,
+            miniApps: apps,
+            browserLibrary: library,
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+      });
       await tester.pumpAndSettle();
       expect(find.text('Sidebar shortcuts'), findsOneWidget);
       await tester.tap(find.text('Naruto'));
@@ -190,8 +199,6 @@ void main() {
       expect(first.top, second.top);
       expect(first.width, second.width);
       expect(first.height, greaterThanOrEqualTo(56));
-      // Everything is pinned: nothing left to add.
-      expect(add, findsNothing);
 
       await tester.longPress(find.byKey(SidebarBottomBar.shortcutKey(app)));
       await tester.pumpAndSettle();
@@ -199,12 +206,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(settings.sidebarShortcuts, const [page]);
       expect(find.byKey(SidebarBottomBar.shortcutKey(app)), findsNothing);
-      // Naruto can be added again, now as a compact + after the cards.
-      expect(add, findsOneWidget);
-      expect(
-        find.descendant(of: add, matching: find.text('Shortcut')),
-        findsNothing,
-      );
     });
 
     testWidgets('a deleted mini app drops out of the row', (tester) async {

@@ -2446,9 +2446,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sideDrawerNewChat => '新对话';
 
   @override
-  String get sideDrawerShortcutAdd => '快捷方式';
-
-  @override
   String get sideDrawerShortcutsTitle => '侧边栏快捷方式';
 
   @override
@@ -13788,9 +13785,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get sideDrawerNewChat => '新对话';
 
   @override
-  String get sideDrawerShortcutAdd => '快捷方式';
-
-  @override
   String get sideDrawerShortcutsTitle => '侧边栏快捷方式';
 
   @override
@@ -25057,9 +25051,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sideDrawerNewChat => '新對話';
-
-  @override
-  String get sideDrawerShortcutAdd => '捷徑';
 
   @override
   String get sideDrawerShortcutsTitle => '側邊欄捷徑';

@@ -3,6 +3,8 @@ import 'mobile_background_settings_page.dart';
 import 'package:flutter/material.dart';
 
 import 'glass_theme_settings_page.dart';
+import '../../home/widgets/sidebar_bottom_bar.dart'
+    show showSidebarShortcutPicker;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../icons/lucide_adapter.dart';

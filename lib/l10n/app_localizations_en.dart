@@ -2534,9 +2534,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sideDrawerNewChat => 'New chat';
 
   @override
-  String get sideDrawerShortcutAdd => 'Shortcut';
-
-  @override
   String get sideDrawerShortcutsTitle => 'Sidebar shortcuts';
 
   @override
