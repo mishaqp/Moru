@@ -180,6 +180,16 @@ void main() {
       const page = SidebarShortcut.webPage('https://kimi.com/', '');
       expect(find.byKey(SidebarBottomBar.shortcutKey(app)), findsOneWidget);
       expect(find.byKey(SidebarBottomBar.shortcutKey(page)), findsOneWidget);
+      // Two big cards share one row.
+      final first = tester.getRect(
+        find.byKey(SidebarBottomBar.shortcutKey(app)),
+      );
+      final second = tester.getRect(
+        find.byKey(SidebarBottomBar.shortcutKey(page)),
+      );
+      expect(first.top, second.top);
+      expect(first.width, second.width);
+      expect(first.height, greaterThanOrEqualTo(56));
       // Everything is pinned: nothing left to add.
       expect(add, findsNothing);
 

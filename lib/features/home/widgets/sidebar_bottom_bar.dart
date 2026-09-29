@@ -144,52 +144,70 @@ class _SidebarBottomBarState extends State<SidebarBottomBar> {
             final visible = _visible(pinned);
             final canAdd = _hasCandidates(pinned.toSet());
             if (visible.isEmpty && !canAdd) return const SizedBox.shrink();
-            return SizedBox(
+            final add = AppLocalizations.of(context)!;
+            final cards = <Widget>[
+              for (final item in visible)
+                _ShortcutCard(
+                  key: SidebarBottomBar.shortcutKey(item.shortcut),
+                  glass: widget.glass,
+                  leading: item.app == null
+                      ? const _WebIcon(size: 28)
+                      : MiniAppIcon(app: item.app!, size: 28),
+                  label: item.app?.name ?? _pageName(item.shortcut),
+                  onTap: () => unawaited(_open(item.shortcut)),
+                  onLongPress: () => unawaited(
+                    _remove(
+                      item.shortcut,
+                      item.app?.name ?? _pageName(item.shortcut),
+                    ),
+                  ),
+                ),
+              if (canAdd)
+                _ShortcutCard(
+                  key: SidebarBottomBar.addShortcutKey,
+                  glass: widget.glass,
+                  leading: Icon(
+                    Lucide.Plus,
+                    size: 22,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  label: visible.isEmpty ? add.sideDrawerShortcutAdd : null,
+                  tooltip: add.sideDrawerShortcutsTitle,
+                  onTap: () => unawaited(_pick()),
+                ),
+            ];
+            // Two big cards to a row; more than two rows scroll.
+            return Padding(
               key: SidebarBottomBar.shortcutsKey,
-              height: 52,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                children: [
-                  for (final item in visible)
-                    _ShortcutCard(
-                      key: SidebarBottomBar.shortcutKey(item.shortcut),
-                      glass: widget.glass,
-                      leading: item.app == null
-                          ? const _WebIcon(size: 28)
-                          : MiniAppIcon(app: item.app!, size: 28),
-                      label: item.app?.name ?? _pageName(item.shortcut),
-                      onTap: () => unawaited(_open(item.shortcut)),
-                      onLongPress: () => unawaited(
-                        _remove(
-                          item.shortcut,
-                          item.app?.name ?? _pageName(item.shortcut),
-                        ),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final cell = (box.maxWidth - _gridGap) / 2;
+                  return ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxHeight: _cardHeight * 2 + _gridGap,
+                    ),
+                    child: SingleChildScrollView(
+                      child: Wrap(
+                        spacing: _gridGap,
+                        runSpacing: _gridGap,
+                        children: [
+                          for (final card in cards)
+                            SizedBox(width: cell, child: card),
+                        ],
                       ),
                     ),
-                  if (canAdd)
-                    _ShortcutCard(
-                      key: SidebarBottomBar.addShortcutKey,
-                      glass: widget.glass,
-                      leading: Icon(
-                        Lucide.Plus,
-                        size: 20,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      label: visible.isEmpty
-                          ? AppLocalizations.of(context)!.sideDrawerShortcutAdd
-                          : null,
-                      tooltip: AppLocalizations.of(
-                        context,
-                      )!.sideDrawerShortcutsTitle,
-                      onTap: () => unawaited(_pick()),
-                    ),
-                ],
+                  );
+                },
               ),
             );
           },
         ),
-        _Dock(avatar: widget.avatar, onAvatarTap: widget.onAvatarTap),
+        _Dock(
+          glass: widget.glass,
+          avatar: widget.avatar,
+          onAvatarTap: widget.onAvatarTap,
+        ),
       ],
     );
   }
@@ -201,6 +219,9 @@ String _pageName(SidebarShortcut shortcut) {
   final host = Uri.tryParse(shortcut.target)?.host ?? '';
   return host.isEmpty ? shortcut.target : host;
 }
+
+const double _cardHeight = 56;
+const double _gridGap = 10;
 
 class _ShortcutCard extends StatelessWidget {
   const _ShortcutCard({
@@ -222,7 +243,7 @@ class _ShortcutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(16);
+    final radius = BorderRadius.circular(22);
     final text = label;
     Widget card = GestureDetector(
       onLongPress: onLongPress,
@@ -233,27 +254,23 @@ class _ShortcutCard extends StatelessWidget {
         onTap: onTap,
         padding: EdgeInsets.zero,
         child: Container(
-          constraints: BoxConstraints(
-            minWidth: 48,
-            maxWidth: text == null ? 48 : 150,
-          ),
-          padding: EdgeInsets.symmetric(horizontal: text == null ? 0 : 10),
+          height: _cardHeight,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: sidebarGlassTile(context, glass: glass, radius: radius),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               leading,
               if (text != null) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Flexible(
                   child: Text(
                     text,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: AppFontWeights.medium,
+                      fontSize: 15,
+                      fontWeight: AppFontWeights.emphasis,
                     ),
                   ),
                 ),
@@ -264,10 +281,7 @@ class _ShortcutCard extends StatelessWidget {
       ),
     );
     if (tooltip != null) card = Tooltip(message: tooltip, child: card);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      child: Semantics(button: true, label: tooltip, child: card),
-    );
+    return Semantics(button: true, label: tooltip, child: card);
   }
 }
 
@@ -385,8 +399,13 @@ class _ShortcutPicker extends StatelessWidget {
 
 /// The avatar and one-tap icons for the app's main screens.
 class _Dock extends StatelessWidget {
-  const _Dock({required this.avatar, required this.onAvatarTap});
+  const _Dock({
+    required this.glass,
+    required this.avatar,
+    required this.onAvatarTap,
+  });
 
+  final bool glass;
   final Widget avatar;
   final VoidCallback onAvatarTap;
 
@@ -422,7 +441,7 @@ class _Dock extends StatelessWidget {
 
     return Padding(
       key: SidebarBottomBar.dockKey,
-      padding: const EdgeInsets.fromLTRB(16, 6, 12, 10),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
       child: Row(
         children: [
           GestureDetector(
@@ -430,41 +449,51 @@ class _Dock extends StatelessWidget {
             onTap: onAvatarTap,
             child: avatar,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 10),
+          // One rounded pill holds the icons.
           Expanded(
-            child: Row(
-              children: [
-                item(
-                  Lucide.LayoutGrid,
-                  l10n.miniAppsTitle,
-                  () => push(const MiniAppsPage()),
-                ),
-                item(
-                  Lucide.SquareTerminal,
-                  l10n.workspaceEnvTitle,
-                  () => WorkspaceNavigation.openEnvironmentPage(context),
-                ),
-                item(
-                  Lucide.CalendarClock,
-                  l10n.scheduledTasksTitle,
-                  () => push(const ScheduledTasksPage()),
-                ),
-                item(
-                  Lucide.Brain,
-                  l10n.memorySettingsPageTitle,
-                  () => push(const MemorySettingsPage()),
-                ),
-                item(
-                  Lucide.Languages,
-                  l10n.desktopNavTranslateTooltip,
-                  () => push(const TranslatePage()),
-                ),
-                item(
-                  Lucide.Settings,
-                  l10n.settingsPageTitle,
-                  () => push(const SettingsPage()),
-                ),
-              ],
+            child: Container(
+              height: 52,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              decoration: sidebarGlassTile(
+                context,
+                glass: glass,
+                radius: BorderRadius.circular(26),
+              ),
+              child: Row(
+                children: [
+                  item(
+                    Lucide.LayoutGrid,
+                    l10n.miniAppsTitle,
+                    () => push(const MiniAppsPage()),
+                  ),
+                  item(
+                    Lucide.SquareTerminal,
+                    l10n.workspaceEnvTitle,
+                    () => WorkspaceNavigation.openEnvironmentPage(context),
+                  ),
+                  item(
+                    Lucide.CalendarClock,
+                    l10n.scheduledTasksTitle,
+                    () => push(const ScheduledTasksPage()),
+                  ),
+                  item(
+                    Lucide.Brain,
+                    l10n.memorySettingsPageTitle,
+                    () => push(const MemorySettingsPage()),
+                  ),
+                  item(
+                    Lucide.Languages,
+                    l10n.desktopNavTranslateTooltip,
+                    () => push(const TranslatePage()),
+                  ),
+                  item(
+                    Lucide.Settings,
+                    l10n.settingsPageTitle,
+                    () => push(const SettingsPage()),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
