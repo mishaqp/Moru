@@ -6,6 +6,13 @@ import 'acp_agent.dart';
 /// Common provider failures reported as JSON-RPC errors or process stderr.
 enum AcpFailureKind { apiKey, model, network }
 
+/// The agent's command is not in the Linux environment: the shell's
+/// "command not found" status, e.g. after switching to a fresh distribution.
+bool isAcpCommandMissing(Object error) {
+  final text = error is AcpError ? error.message : error.toString();
+  return text.contains('exited (code 127)');
+}
+
 AcpFailureKind? classifyAcpFailure(Object error) {
   if (error is SocketException) return AcpFailureKind.network;
   if (error is AcpError && error.code == 401) {

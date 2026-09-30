@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/core/providers/environment_provider.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_manager.dart';
+import 'package:Kelivo/core/services/acp/acp_error_messages.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/features/agents/pages/agents_page.dart';
 
@@ -29,6 +30,7 @@ class _AgentRuntime extends FakeWorkspaceRuntime
   String probeOutput = '';
   int installExit = 0;
   bool moruAvailable = true;
+  bool agentMissing = false;
   String nodeVersion = 'v24.0.0';
   final _agents = <String, StreamController<CommandEvent>>{};
   final cancelled = <String>[];
@@ -36,6 +38,19 @@ class _AgentRuntime extends FakeWorkspaceRuntime
   @override
   Stream<CommandEvent> run(CommandRequest request) {
     requests.add(request);
+    if (request.keepStdinOpen && agentMissing) {
+      // What the guest shell reports when the command is not installed.
+      return Stream.fromIterable([
+        const CommandStarted(),
+        CommandOutput(
+          OutputStreamKind.stderr,
+          Uint8List.fromList(
+            utf8.encode('kelivo: exec: codex-acp: not found\n'),
+          ),
+        ),
+        _exit(127),
+      ]);
+    }
     if (request.keepStdinOpen) {
       final events = StreamController<CommandEvent>();
       _agents[request.runId] = events;
@@ -296,6 +311,24 @@ void main() {
     // The check stops the agent again.
     expect(runtime.cancelled, contains(launch.runId));
   });
+
+  test(
+    'a check whose command is gone marks the agent as not installed',
+    () async {
+      runtime.probeOutput = '__acp_codex=1\n';
+      final agents = manager();
+      await agents.refresh();
+      expect(agents.state('codex'), AcpInstallState.installed);
+      // A switched distribution no longer has the agent.
+      runtime
+        ..agentMissing = true
+        ..probeOutput = '__acp_codex=0\n';
+      final result = await agents.check(AcpAgentSpec.byId('codex')!, provider);
+      expect(result.ok, isFalse);
+      expect(isAcpCommandMissing(result.error!), isTrue, reason: result.error);
+      expect(agents.state('codex'), AcpInstallState.missing);
+    },
+  );
 
   test(
     'a new check reports unavailable instead of keeping the previous result',

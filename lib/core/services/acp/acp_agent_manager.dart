@@ -432,6 +432,10 @@ class AcpAgentManager extends ChangeNotifier {
     }
     _checks[spec.id] = result;
     notifyListeners();
+    // A command that is not there means the installed state is stale.
+    if (result.error != null && isAcpCommandMissing(result.error!)) {
+      await refresh();
+    }
     return result;
   }
 

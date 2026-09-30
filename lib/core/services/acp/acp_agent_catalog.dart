@@ -255,8 +255,13 @@ class AcpAgentSpec {
       id: claudeCodeId,
       name: 'Claude Code',
       command: 'claude-agent-acp',
+      // Claude Code runs its commands through bash or zsh ("No suitable
+      // shell found" otherwise); Alpine has only BusyBox sh.
       installScript:
-          'set -e\n$_npmInstall @anthropic-ai/claude-code '
+          'set -e\n'
+          'if ! command -v bash >/dev/null 2>&1 && '
+          'command -v apk >/dev/null 2>&1; then apk add --no-cache bash; fi\n'
+          '$_npmInstall @anthropic-ai/claude-code '
           '@agentclientprotocol/claude-agent-acp\n',
       api: AcpModelApi.anthropic,
       homepage: 'https://docs.anthropic.com/en/docs/claude-code',

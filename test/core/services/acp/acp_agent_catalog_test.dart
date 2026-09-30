@@ -27,6 +27,34 @@ void main() {
     }
   });
 
+  test('installing Claude Code adds bash on Alpine only when it is '
+      'missing', () async {
+    final script = AcpAgentSpec.byId('claude-code')!.installScript;
+    Future<String> install({required bool hasBash}) async {
+      final bin = await Directory.systemTemp.createTemp('moru-install');
+      addTearDown(() => bin.delete(recursive: true));
+      final log = File('${bin.path}/calls');
+      for (final tool in ['apk', 'npm', if (hasBash) 'bash']) {
+        final file = File('${bin.path}/$tool')
+          ..writeAsStringSync('#!/bin/sh\necho "$tool \$*" >> "${log.path}"\n');
+        await Process.run('chmod', ['+x', file.path]);
+      }
+      final result = await Process.run(
+        '/bin/sh',
+        ['-c', script],
+        environment: {'PATH': bin.path},
+        includeParentEnvironment: false,
+      );
+      expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+      return log.readAsStringSync();
+    }
+
+    final alpine = await install(hasBash: false);
+    expect(alpine, contains('apk add --no-cache bash'));
+    expect(alpine, contains('@anthropic-ai/claude-code'));
+    expect(await install(hasBash: true), isNot(contains('apk')));
+  }, testOn: 'linux || mac-os');
+
   test('Kimi Code starts ACP from its installed executable', () {
     final spec = AcpAgentSpec.byId('kimi-code');
     expect(spec, isNotNull);

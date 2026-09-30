@@ -32,8 +32,9 @@ class ProotArgvTest {
             "/nativelib/libproot_exec.so --root-id --link2symlink --kill-on-exit " +
                 "-r /data/rootfs -w /workspace -b /host/files:/workspace " +
                 "-b /dev -b /proc -b /sys /usr/bin/env -i HOME=/root PATH=/bin LANG=C.UTF-8 " +
+                "KELIVO_PATH=/bin " +
                 "/bin/sh -lc " + ProotCommand.BASH_EVAL + " kelivo /workspace echo hello"
-        val prepare = launch.argv.indexOf("LANG=C.UTF-8") + 1
+        val prepare = launch.argv.indexOf("KELIVO_PATH=/bin") + 1
         assertEquals(listOf("/bin/sh", "-c"), launch.argv.subList(prepare, prepare + 2))
         assertEquals(listOf("kelivo-git", "/workspace"), launch.argv.subList(prepare + 3, prepare + 5))
         assertEquals(golden, (launch.argv.take(prepare) + launch.argv.drop(prepare + 5)).joinToString(" "))
@@ -91,6 +92,60 @@ class ProotArgvTest {
         assertTrue(output, lines.contains("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"))
         assertTrue(output, lines.contains("HOME=/root"))
         assertTrue(output, lines.contains("LANG=C.UTF-8"))
+    }
+
+    @Test
+    fun callerPathSurvivesALoginProfileThatResetsIt() {
+        assumeTrue(File("/usr/bin/env").canExecute())
+        // Alpine's /etc/profile sets PATH itself, dropping Moru's npm prefix
+        // where the agents live; a login profile in HOME does the same here.
+        val home = tmp.newFolder("home")
+        File(home, ".profile").writeText("PATH=/usr/bin:/bin\n")
+        File(home, ".bash_profile").writeText("PATH=/usr/bin:/bin\n")
+        val bin = tmp.newFolder("npm", "bin")
+        File(bin, "moru-agent").apply {
+            writeText("#!/bin/sh\necho agent-found\n")
+            setExecutable(true)
+        }
+        for (shell in listOf("/bin/sh", "/bin/bash").filter { File(it).canExecute() }) {
+            val launch = ProotCommand.build(
+                nativeLibDir = File("/nativelib"),
+                rootfsDir = File("/data/rootfs"),
+                tmpDir = File("/data/tmp"),
+                binds = emptyList(),
+                cwd = "/",
+                command = "moru-agent; echo \"path=\$PATH\"; " +
+                    "echo \"keep=\${${ProotCommand.PATH_KEEP}-unset}\"",
+                shell = shell,
+                env = mapOf(
+                    "HOME" to home.absolutePath,
+                    "PATH" to "${bin.absolutePath}:/usr/bin:/bin",
+                    "GIT_CONFIG_SYSTEM" to tmp.newFile().absolutePath,
+                    "GIT_CONFIG_GLOBAL" to "/dev/null",
+                ),
+                includeLibraryPath = false,
+            )
+            val argv = launch.argv.drop(launch.argv.indexOf("/usr/bin/env"))
+            val process = ProcessBuilder(argv).redirectErrorStream(true).start()
+            val output = process.inputStream.bufferedReader().use { it.readText() }
+            assertEquals(output, 0, process.waitFor())
+            val lines = output.lineSequence().toSet()
+            assertTrue("$shell: $output", lines.contains("agent-found"))
+            // Only what the profile dropped is added back, once, in front.
+            assertTrue("$shell: $output", lines.contains("path=${bin.absolutePath}:/usr/bin:/bin"))
+            assertTrue("$shell: $output", lines.contains("keep=unset"))
+        }
+    }
+
+    @Test
+    fun terminalAndDefaultPathRunsDoNotCarryACallerPath() {
+        for (command in listOf("echo hello", null)) {
+            val launch = ProotCommand.build(
+                File("/libs"), File("/rootfs"), File("/tmp"), emptyList(), "/root", command,
+                mapOf("HOME" to "/root"),
+            )
+            assertFalse(launch.argv.any { it.startsWith("${ProotCommand.PATH_KEEP}=") })
+        }
     }
 
     @Test

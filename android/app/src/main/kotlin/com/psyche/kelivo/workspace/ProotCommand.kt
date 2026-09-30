@@ -19,7 +19,31 @@ object ProotCommand {
     const val LOADER_LIB = "libproot_loader.so"
     const val TALLOC_LIB = "libtalloc.so"
     const val TALLOC_SONAME = "libtalloc.so.2"
-    const val BASH_EVAL = "cd -- \"\$1\" && eval \"\$2\""
+    /** Carries a caller's PATH past the login shell's profile. */
+    const val PATH_KEEP = "KELIVO_PATH"
+
+    // A login shell reads /etc/profile, which on Alpine and Debian replaces
+    // PATH. Put back the directories a caller asked for (for example Moru's
+    // npm prefix) that the profile dropped, ahead of the profile's own.
+    val BASH_EVAL = """
+        if [ -n "${'$'}{$PATH_KEEP-}" ]; then
+          kelivo_add=
+          kelivo_rest=${'$'}$PATH_KEEP:
+          while [ -n "${'$'}kelivo_rest" ]; do
+            kelivo_dir=${'$'}{kelivo_rest%%:*}
+            kelivo_rest=${'$'}{kelivo_rest#*:}
+            case ":${'$'}PATH:${'$'}kelivo_add:" in
+              *":${'$'}kelivo_dir:"*) ;;
+              *) [ -z "${'$'}kelivo_dir" ] || kelivo_add=${'$'}{kelivo_add:+${'$'}kelivo_add:}${'$'}kelivo_dir ;;
+            esac
+          done
+          [ -z "${'$'}kelivo_add" ] || PATH=${'$'}kelivo_add${'$'}{PATH:+:${'$'}PATH}
+          export PATH
+          unset kelivo_add kelivo_rest kelivo_dir
+        fi
+        unset $PATH_KEEP
+        cd -- "${'$'}1" && eval "${'$'}2"
+    """.trimIndent()
     // Chroot runs as root while the bound workspace belongs to the Android
     // app. Prepare existing rootfs images too, before exec/PTY and agent runs.
     private val GIT_PREPARE = """
@@ -144,6 +168,8 @@ object ProotCommand {
         guestEnv.putIfAbsent("LANG", "C.UTF-8")
         if (command == null) {
             guestEnv.putIfAbsent("TERM", "xterm-256color")
+        } else {
+            env["PATH"]?.let { guestEnv[PATH_KEEP] = it }
         }
         for ((key, value) in guestEnv) {
             argv += "$key=$value"

@@ -52,6 +52,21 @@ class AcpChatBridge {
       return null;
     }
     final l10n = AppLocalizations.of(context)!;
+    final manager = context.read<AcpAgentManager>();
+    final name = manager.agent(assistant.agentId!)?.name;
+    // A command the environment lacks (a fresh or switched distribution)
+    // means "install it", not a raw shell status; the list re-checks too.
+    Object translate(Object error) {
+      if (name != null && isAcpCommandMissing(error)) {
+        unawaited(manager.refresh());
+        return AcpError(
+          AcpError.internalError,
+          l10n.agentsChatNotInstalled(name),
+        );
+      }
+      return localizeAcpError(error, l10n);
+    }
+
     try {
       final stream = await _streamFor(
         assistant: assistant,
@@ -62,9 +77,11 @@ class AcpChatBridge {
         apiMessages: apiMessages,
         userImagePaths: userImagePaths,
       );
-      return stream == null ? null : localizeStreamErrors(stream, l10n);
+      return stream?.handleError((Object error, StackTrace stackTrace) {
+        Error.throwWithStackTrace(translate(error), stackTrace);
+      });
     } catch (error, stackTrace) {
-      Error.throwWithStackTrace(localizeAcpError(error, l10n), stackTrace);
+      Error.throwWithStackTrace(translate(error), stackTrace);
     }
   }
 
