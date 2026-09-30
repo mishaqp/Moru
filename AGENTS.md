@@ -93,9 +93,13 @@ package name does not require building other platforms.
   Kimi uses `kimi acp`; DeepSeek Harness is installed globally in Moru's npm
   prefix and runs `dsh --profile acp`, never `npx` per launch. Probe the active
   runtime's Node before installing or starting them: Kimi needs >=22.19.0;
-  DSH accepts ^22.19.0 or >=24.0.0 (not Node 23). Distro `nodejs npm` packages
-  alone do not guarantee this. Ubuntu 22.04/24.04 and Debian 12 have a verified
-  NodeSource 24 apt upgrade path; Alpine uses its own musl `apk` packages.
+  DSH accepts ^22.19.0 or >=24.0.0 (not Node 23). Distro Node on apt systems
+  is 12-20, so installing an agent runs `AcpAgentSpec.nodeUpgradeScript`
+  (removes distro npm/libnode*, installs NodeSource 24) when Node is too old;
+  verified on Ubuntu 22.04/24.04 and Debian 13. Alpine's own `apk` Node is
+  new enough (22.23 on 3.22, 24 on 3.23+). DSH builds koffi with CMake on
+  Alpine. Every built-in agent was installed and answered ACP `initialize`
+  on Alpine 3.24 and Debian 13.
   `AcpChatSessions` restores with load first, advertised resume second, then
   a new session with history; missing modes/plans are valid capabilities.
   `AcpAgentWebServers` owns the official Kimi/DSH/OpenCode Web processes in
@@ -112,7 +116,10 @@ package name does not require building other platforms.
   `--link2symlink`, which leaves dangling links after atomic writes) and
   load `AcpFsCompat` via `NODE_OPTIONS` to copy when Android denies link(2).
   PRoot always binds `/dev/fd`, `/dev/shm`, `--sysvipc`, and stand-ins for
-  unreadable `/proc/stat`/`/proc/vmstat` (`ProotCommand.stageGuest`).
+  unreadable `/proc/stat`/`/proc/vmstat` (`ProotCommand.stageGuest`). Root
+  mode (`moru_chroot`) adds missing `/dev/fd` and `/dev/std*` links to the
+  device's /dev, binds the rootfs `/tmp` on `/dev/shm`, and probes `/bin/sh`
+  inside the chroot (Alpine's is an absolute link to busybox).
   `RootfsProfile` writes `/etc/profile.d/moru-agents.sh` so the terminal
   finds agents. Built-in install scripts first add system packages one by
   one (`moru_packages` in `acp_agent_catalog.dart`); a missing package is

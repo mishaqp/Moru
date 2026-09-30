@@ -110,7 +110,7 @@ class AcpAgentManager extends ChangeNotifier {
         ..addListener(notifyListeners));
 
   AcpNodeIssue? nodeIssueFor(AcpAgentSpec spec) {
-    if (!_nodeProbed || spec.nodeMajor < 22) return null;
+    if (!_nodeProbed) return null;
     final match = RegExp(r'^v?(\d+)\.(\d+)\.(\d+)$').firstMatch(_nodeVersion);
     final major = int.tryParse(match?.group(1) ?? '') ?? 0;
     final minor = int.tryParse(match?.group(2) ?? '') ?? 0;
@@ -313,7 +313,7 @@ class AcpAgentManager extends ChangeNotifier {
           }
         }
       }
-      await _requireNode(runtime, spec);
+      await _ensureNode(runtime, spec);
       final (code, _) = await _run(
         runtime,
         spec.installScript,
@@ -505,6 +505,27 @@ class AcpAgentManager extends ChangeNotifier {
 
   Future<void> _requireNode(WorkspaceRuntime runtime, AcpAgentSpec spec) async {
     if (spec.nodeMajor < 22) return;
+    await _probeNode(runtime);
+    _throwNodeIssue(spec);
+  }
+
+  /// Before an installation: Debian and Ubuntu ship an older Node than
+  /// the agents need (12 to 20), so it is replaced with Node 24 from
+  /// NodeSource. Alpine's own packages are new enough.
+  Future<void> _ensureNode(WorkspaceRuntime runtime, AcpAgentSpec spec) async {
+    await _probeNode(runtime);
+    if (nodeIssueFor(spec) == null) return;
+    _append('Node.js 24 (NodeSource)…\n');
+    await _run(
+      runtime,
+      AcpAgentSpec.nodeUpgradeScript,
+      timeout: const Duration(minutes: 15),
+    );
+    await _probeNode(runtime);
+    _throwNodeIssue(spec);
+  }
+
+  Future<void> _probeNode(WorkspaceRuntime runtime) async {
     final (_, output) = await _run(
       runtime,
       "printf '__moru_node='; node --version 2>/dev/null || true; printf '\\n'",
@@ -512,6 +533,9 @@ class AcpAgentManager extends ChangeNotifier {
     );
     _recordNode(output);
     notifyListeners();
+  }
+
+  void _throwNodeIssue(AcpAgentSpec spec) {
     final issue = nodeIssueFor(spec);
     if (issue != null) {
       throw AcpError(

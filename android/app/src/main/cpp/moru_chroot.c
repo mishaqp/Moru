@@ -237,6 +237,34 @@ static void require_root(void) {
   }
 }
 
+// Android's /dev has no /dev/fd, /dev/std* or /dev/shm, which shells
+// (process substitution) and runtimes (POSIX semaphores) expect. The links
+// are added to the device's /dev like other Android chroots do; /dev/shm is
+// the rootfs /tmp, as under PRoot, mounted in this namespace only.
+static void standard_devices(const char *rootfs, uid_t uid, gid_t gid) {
+  static const char *const links[][2] = {
+      {"/dev/fd", "/proc/self/fd"},
+      {"/dev/stdin", "/proc/self/fd/0"},
+      {"/dev/stdout", "/proc/self/fd/1"},
+      {"/dev/stderr", "/proc/self/fd/2"},
+  };
+  char path[PATH_MAX];
+  struct stat info;
+  for (size_t i = 0; i < sizeof(links) / sizeof(links[0]); i++) {
+    join(path, rootfs, links[i][0]);
+    if (lstat(path, &info) != 0 && symlink(links[i][1], path) != 0 &&
+        errno != EEXIST) {
+      fail(path);
+    }
+  }
+  char tmp[PATH_MAX];
+  join(tmp, rootfs, "/tmp");
+  make_dirs(tmp, uid, gid);
+  join(path, rootfs, "/dev/shm");
+  if (mkdir(path, 01777) != 0 && errno != EEXIST) fail(path);
+  if (mount(tmp, path, NULL, MS_BIND, NULL) != 0) fail(path);
+}
+
 // The private mount namespace and the mounts of the rootfs.
 static void prepare(const char *rootfs, struct bind *binds, int bind_count,
                     uid_t uid, gid_t gid) {
@@ -256,6 +284,7 @@ static void prepare(const char *rootfs, struct bind *binds, int bind_count,
   join(target, rootfs, "/sys");
   make_dirs(target, uid, gid);
   if (mount("/sys", target, NULL, MS_BIND | MS_REC, NULL) != 0) fail(target);
+  standard_devices(rootfs, uid, gid);
   qsort(binds, (size_t)bind_count, sizeof(*binds), by_depth);
   for (int i = 0; i < bind_count; i++) {
     join(target, rootfs, binds[i].guest);

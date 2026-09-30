@@ -259,10 +259,11 @@ class AcpAgentSpec {
       'moru_packages "bash ca-certificates curl git procps ripgrep gcompat glib" '
       '"bash ca-certificates curl git procps ripgrep" || $_packagesWarning\n';
 
-  /// DeepSeek Harness builds node-pty from source where no prebuilt matches.
+  /// DeepSeek Harness builds node-pty and koffi (with CMake) from source
+  /// where no prebuilt matches, as on Alpine.
   static const String _buildPackages =
-      'moru_packages "build-base python3 linux-headers util-linux-dev" '
-      '"build-essential python3" || $_packagesWarning\n';
+      'moru_packages "build-base cmake python3 linux-headers util-linux-dev" '
+      '"build-essential cmake python3" || $_packagesWarning\n';
 
   /// A package source without one of them (Ubuntu without universe) must
   /// not stop the agent's own installation; the log says what happened.
@@ -297,6 +298,28 @@ moru_packages() {
 """;
 
   static const String _prepare = 'set -e\n$_packagesFunction$_agentPackages';
+
+  /// Node 24 from NodeSource in place of an apt distribution's older
+  /// Node. Its package includes npm and ships files that the distribution's
+  /// npm and libnode packages own (Ubuntu 22.04's libnode-dev), so those
+  /// go first.
+  static const String nodeUpgradeScript =
+      'set -e\n'
+      'command -v apt-get >/dev/null 2>&1 || '
+      "{ echo 'Moru: Node.js is too old and there is no apt-get to update it' >&2; exit 1; }\n"
+      'export DEBIAN_FRONTEND=noninteractive\n'
+      "moru_old=\$(dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\\n' "
+      "npm 'libnode*' 2>/dev/null | sed -n 's/^ii *//p')\n"
+      'if [ -n "\$moru_old" ]; then '
+      'apt-get -o DPkg::Lock::Timeout=120 remove -y \$moru_old; fi\n'
+      'apt-get -o DPkg::Lock::Timeout=120 -f install -y\n'
+      'apt-get -o DPkg::Lock::Timeout=120 update\n'
+      'apt-get -o DPkg::Lock::Timeout=120 install -y --no-install-recommends '
+      'ca-certificates curl bash gnupg\n'
+      'curl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\n'
+      'bash /tmp/moru-node24-setup.sh\n'
+      'apt-get -o DPkg::Lock::Timeout=120 install -y nodejs\n'
+      'node --version\n';
 
   /// Agents offered in the list, in the order shown.
   static const List<AcpAgentSpec> builtIn = [

@@ -33,6 +33,9 @@ class _AgentRuntime extends FakeWorkspaceRuntime
   bool moruAvailable = true;
   bool agentMissing = false;
   String nodeVersion = 'v24.0.0';
+
+  /// The Node a NodeSource upgrade leaves behind; null when it fails.
+  String? upgradedNode;
   final _agents = <String, StreamController<CommandEvent>>{};
   final cancelled = <String>[];
 
@@ -64,6 +67,10 @@ class _AgentRuntime extends FakeWorkspaceRuntime
     if (request.env.containsKey('MORU_MCP_TOKEN')) {
       output = moruAvailable ? '__moru_mcp_available__\n' : '';
       code = moruAvailable ? 0 : 1;
+    } else if (script.contains('deb.nodesource.com')) {
+      if (upgradedNode != null) nodeVersion = upgradedNode!;
+      output = '';
+      code = upgradedNode == null ? 1 : 0;
     } else if (script.contains('__moru_node=')) {
       output = '__moru_node=$nodeVersion\n$probeOutput';
       code = 0;
@@ -160,6 +167,38 @@ void main() {
     expect(agents.state(spec.id), isNot(AcpInstallState.installed));
     expect(
       runtime.requests.any((r) => r.command.contains('npm install')),
+      isFalse,
+    );
+    agents.dispose();
+  });
+
+  test('an old Node is updated from NodeSource before the agent', () async {
+    // Debian 13's own Node.
+    runtime
+      ..nodeVersion = 'v20.19.2'
+      ..upgradedNode = 'v24.21.0';
+    final agents = manager();
+    final spec = AcpAgentSpec.byId('kimi-code')!;
+    await agents.install(spec);
+    expect(agents.failure, isNull);
+    expect(agents.state(spec.id), AcpInstallState.installed);
+    final commands = runtime.requests.map((r) => r.command).toList();
+    final upgrade = commands.indexWhere((c) => c.contains('nodesource'));
+    expect(upgrade, isNot(-1));
+    expect(
+      commands.indexWhere((c) => c.contains('npm install')),
+      greaterThan(upgrade),
+    );
+    expect(agents.log, contains('Node.js 24'));
+    agents.dispose();
+  });
+
+  test('a Node new enough is left alone', () async {
+    final agents = manager();
+    await agents.install(AcpAgentSpec.byId('claude-code')!);
+    expect(agents.failure, isNull);
+    expect(
+      runtime.requests.any((r) => r.command.contains('nodesource')),
       isFalse,
     );
     agents.dispose();
@@ -266,7 +305,11 @@ void main() {
     expect(agents.failure, isNull);
     expect(agents.state('codex'), AcpInstallState.installed);
     expect(agents.log, contains('added 42 packages'));
-    expect(runtime.requests.single.command, spec.installScript);
+    // Node's version is read first, then the npm script runs.
+    expect(runtime.requests.map((r) => r.command), [
+      contains('__moru_node='),
+      spec.installScript,
+    ]);
     expect(agents.busy, isFalse);
   });
 

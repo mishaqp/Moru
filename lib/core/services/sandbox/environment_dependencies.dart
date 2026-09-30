@@ -79,7 +79,10 @@ extension EnvironmentDependencyCommands on EnvironmentDependency {
     EnvironmentDependency.ssh =>
       'ssh -V && command -v scp && command -v sftp && command -v ssh-keygen',
     EnvironmentDependency.network => 'curl --version && wget --version',
-    EnvironmentDependency.archive => 'zip -v && unzip -v',
+    // zip -v opens with a copyright line; its second line is the version.
+    EnvironmentDependency.archive =>
+      'zip -v >/dev/null && unzip -v >/dev/null && '
+          'zip -v | sed -n "2s/^This is //p"',
     // procps' ps (BusyBox's has no --version), psmisc's killall, tmux.
     EnvironmentDependency.processes => 'ps --version && killall -V && tmux -V',
     EnvironmentDependency.compat =>

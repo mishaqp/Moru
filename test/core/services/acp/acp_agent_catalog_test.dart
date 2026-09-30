@@ -141,7 +141,12 @@ grep -qx "$p" "$DIR/installed" && echo "install ok installed"''',
 
     test('DeepSeek Harness also gets build tools for node-pty', () async {
       final (log, _) = await install('deepseek-harness', alpine: true);
-      for (final package in ['build-base', 'python3', 'linux-headers']) {
+      for (final package in [
+        'build-base',
+        'cmake',
+        'python3',
+        'linux-headers',
+      ]) {
         expect(log, contains('add --no-cache $package\n'));
       }
       expect(log, contains('@deepseek-ai/dsh'));

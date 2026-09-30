@@ -37,6 +37,18 @@ int main(void) {
   return 3;
 }
 ''',
+    # Uses /dev/fd and /dev/shm like shells and runtimes do.
+    'devices': r'''
+#include <fcntl.h>
+#include <stdio.h>
+#include <unistd.h>
+int main(void) {
+  int fd = open("/dev/shm/moru-shm", O_CREAT | O_WRONLY, 0600);
+  printf("fd=%d stdout=%d shm=%d\n", access("/dev/fd/0", F_OK) == 0,
+         access("/dev/stdout", F_OK) == 0, fd >= 0);
+  return 0;
+}
+''',
     # Leaves a child in its own session behind and exits 5.
     'orphan': r'''
 #include <unistd.h>
@@ -176,6 +188,12 @@ class MoruChrootTest(unittest.TestCase):
         self.assertEqual(missing.returncode, 127)
         self.assertEqual(self.sudo(self.helper, 'probe', '--rootfs', self.rootfs).stdout,
                          'moru_chroot ok\n')
+
+    def test_standard_devices_exist_and_shm_is_the_rootfs_tmp(self):
+        result = self.helper_run('devices', '/bin/devices')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, 'fd=1 stdout=1 shm=1\n')
+        self.assertTrue((self.rootfs / 'tmp/moru-shm').exists())
 
     def test_probe_resolves_the_shell_inside_the_rootfs(self):
         # Alpine: /bin/sh -> /bin/busybox, an absolute link that only
