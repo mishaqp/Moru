@@ -226,6 +226,36 @@ grep -qx "$p" "$DIR/installed" && echo "install ok installed"''',
   });
 
   for (final fixture in [
+    (anthropic: true, responses: false, api: 'anthropic-messages'),
+    (anthropic: false, responses: true, api: 'openai-responses'),
+    (anthropic: false, responses: false, api: 'openai-completions'),
+  ]) {
+    test('DeepSeek Harness forwards custom headers for ${fixture.api}', () {
+      const headers = {
+        'X-Gateway-Route': 'moru',
+        'X-Tenant': r'team "quoted"\route',
+      };
+      final input = AcpProviderInput(
+        baseUrl: 'https://gw.example/v1',
+        apiKey: 'secret-never-written',
+        model: 'm',
+        anthropicProvider: fixture.anthropic,
+        responsesApi: fixture.responses,
+        headers: headers,
+      );
+      final launch = AcpAgentSpec.byId('deepseek-harness')!.launch(input);
+      final content = launch.files.single.content;
+      final patch = jsonDecode(content) as List;
+      final provider = (patch[0] as Map)['config']['providers']['moru'] as Map;
+      expect(provider['api'], fixture.api);
+      expect(provider['headers'], headers);
+      expect(provider['apiKeyEnv'], 'MORU_AGENT_API_KEY');
+      expect(launch.environment['MORU_AGENT_API_KEY'], input.apiKey);
+      expect(content, isNot(contains(input.apiKey)));
+    });
+  }
+
+  for (final fixture in [
     (
       anthropic: false,
       responses: true,

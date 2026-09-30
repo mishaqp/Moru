@@ -574,7 +574,7 @@ moru_packages() {
         ? anthropicBaseUrl(provider)
         : openAiBaseUrl(provider.baseUrl);
     // JSON is valid YAML, and encoding all values prevents model ids or URLs
-    // from becoming additional YAML fields. Credentials stay in the environment.
+    // from becoming additional YAML fields. The API key stays in the environment.
     return const JsonEncoder.withIndent('  ').convert([
       {
         'id': 'llm-pi-ai',
@@ -584,6 +584,7 @@ moru_packages() {
               'apiKeyEnv': 'MORU_AGENT_API_KEY',
               'api': api,
               'baseURL': baseUrl,
+              if (provider.headers.isNotEmpty) 'headers': provider.headers,
               'models': [
                 {
                   'id': provider.model,
