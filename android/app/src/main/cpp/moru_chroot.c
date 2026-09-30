@@ -368,9 +368,6 @@ static int probe(int argc, char **argv) {
   const char *rootfs = argv[1];
   if (!clean_absolute(rootfs)) usage("--rootfs");
   require_root();
-  char shell[PATH_MAX];
-  join(shell, rootfs, "/bin/sh");
-  if (access(shell, X_OK) != 0) fail(shell);
   pid_t child = fork();
   if (child < 0) fail("fork");
   if (child == 0) {
@@ -378,6 +375,10 @@ static int probe(int argc, char **argv) {
     if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0) {
       fail("make mounts private");
     }
+    // Look for the shell as the guest will: Alpine's /bin/sh is an absolute
+    // link to /bin/busybox, which only resolves inside the rootfs.
+    if (chroot(rootfs) != 0) fail("chroot");
+    if (access("/bin/sh", X_OK) != 0) fail("/bin/sh");
     _exit(0);
   }
   int status = 0;

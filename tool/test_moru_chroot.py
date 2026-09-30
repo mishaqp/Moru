@@ -177,6 +177,23 @@ class MoruChrootTest(unittest.TestCase):
         self.assertEqual(self.sudo(self.helper, 'probe', '--rootfs', self.rootfs).stdout,
                          'moru_chroot ok\n')
 
+    def test_probe_resolves_the_shell_inside_the_rootfs(self):
+        # Alpine: /bin/sh -> /bin/busybox, an absolute link that only
+        # resolves inside the guest.
+        alpine = self.temp / 'alpine'
+        (alpine / 'bin').mkdir(parents=True)
+        (alpine / 'bin/moru-busybox').write_bytes(b'')
+        (alpine / 'bin/moru-busybox').chmod(0o755)
+        (alpine / 'bin/sh').symlink_to('/bin/moru-busybox')
+        self.assertFalse(Path('/bin/moru-busybox').exists())
+        result = self.sudo(self.helper, 'probe', '--rootfs', alpine, check=False)
+        self.assertEqual((result.returncode, result.stdout), (0, 'moru_chroot ok\n'),
+                         result.stderr)
+        (alpine / 'bin/moru-busybox').unlink()
+        result = self.sudo(self.helper, 'probe', '--rootfs', alpine, check=False)
+        self.assertEqual(result.returncode, 125)
+        self.assertIn('/bin/sh', result.stderr)
+
     def test_needs_root(self):
         if os.geteuid() == 0:
             result = subprocess.run(
