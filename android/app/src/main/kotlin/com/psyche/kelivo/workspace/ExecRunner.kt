@@ -19,6 +19,8 @@ data class ExecRequest(
     val timeoutMs: Long,
     val keepStdinOpen: Boolean = false,
     val prootArguments: List<String> = emptyList(),
+    /** False for agents: they need real (copied) files where PRoot would fake links. */
+    val emulateHardLinks: Boolean = true,
     val shell: String? = null,
     /** Runs in the fast mode's chroot instead of PRoot. */
     val chroot: ChrootOptions? = null,
@@ -57,6 +59,7 @@ class ExecRunner(
             )
         } else {
             ProotCommand.stageTalloc(request.nativeLibDir, request.tmpDir)
+            ProotCommand.stageGuest(request.rootfsDir, request.tmpDir)
             ProotCommand.build(
                 nativeLibDir = request.nativeLibDir,
                 rootfsDir = request.rootfsDir,
@@ -67,6 +70,7 @@ class ExecRunner(
                 env = request.env,
                 extraArgs = request.prootArguments,
                 shell = request.shell,
+                emulateHardLinks = request.emulateHardLinks,
             )
         }
         val builder = ProcessBuilder(launch.argv)

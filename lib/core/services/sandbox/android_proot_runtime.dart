@@ -167,6 +167,7 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
       command: request.command,
       timeoutMs: request.timeout.inMilliseconds,
       keepStdinOpen: request.keepStdinOpen,
+      emulateHardLinks: request.emulateHardLinks,
       env: request.env,
       binds: _binds(request.mounts),
       prootArguments: env.prootArguments,

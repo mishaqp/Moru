@@ -101,14 +101,23 @@ object ProotCommand {
         extraArgs: List<String> = emptyList(),
         shell: String? = null,
         includeLibraryPath: Boolean = File(nativeLibDir, TALLOC_LIB).isFile,
+        emulateHardLinks: Boolean = true,
     ): ProotLaunch {
         val guestCwd = validateGuestCwd(cwd)
         require(extraArgs.none { it.contains('\u0000') }) { "PRoot argument contains a NUL byte" }
         val argv = mutableListOf(
             File(nativeLibDir, EXEC_LIB).absolutePath,
             "--root-id",
-            "--link2symlink",
+            // Hard links are denied to Android apps; PRoot fakes them with
+            // symlinks. Agents publish files atomically (write a temporary
+            // file, link it into place, remove the temporary), which that
+            // fake turns into a dangling link, so their launches opt out and
+            // fall back to a copy instead (see AcpAgentSpec's fs shim).
+            *(if (emulateHardLinks) arrayOf("--link2symlink") else emptyArray()),
             "--kill-on-exit",
+            // System V shared memory and semaphores, used by Python's
+            // multiprocessing, PostgreSQL and some Node native modules.
+            "--sysvipc",
             *extraArgs.toTypedArray(),
             "-r",
             rootfsDir.absolutePath,
@@ -123,6 +132,18 @@ object ProotCommand {
         // PRoot bindings are writable. The app and file tools enforce the
         // user's read-only preference; arbitrary shell programs are not isolated.
         argv += listOf("-b", "/dev", "-b", "/proc", "-b", "/sys")
+        // Android's /dev has no fd or shm entries that shells (process
+        // substitution) and runtimes expect; proot-distro binds the same.
+        // Per-descriptor stdin/stdout/stderr binds are left out: PRoot warns
+        // about them on every run whose descriptor is a pipe or closed.
+        argv += listOf(
+            "-b", "/proc/self/fd:/dev/fd",
+            "-b", "${File(rootfsDir, "tmp").absolutePath}:/dev/shm",
+        )
+        for (name in PROC_STAND_INS) {
+            val standIn = File(tmpDir, "proc-$name")
+            if (standIn.isFile) argv += listOf("-b", "${standIn.absolutePath}:/proc/$name")
+        }
         argv += guestCommand(rootfsDir, guestCwd, command, env, shell)
 
         val processEnv = linkedMapOf(
@@ -182,6 +203,58 @@ object ProotCommand {
         }
         return argv
     }
+
+    private val PROC_STAND_INS = listOf("stat", "vmstat")
+
+    /** What [build]'s binds need on disk before PRoot starts. */
+    fun stageGuest(rootfsDir: File, tmpDir: File) {
+        File(rootfsDir, "tmp").mkdirs()
+        stageProcStandIns(tmpDir)
+    }
+
+    /**
+     * Android forbids apps to read /proc/stat and /proc/vmstat, so Node's
+     * os.cpus() comes back empty and top/free/ps fail. Like proot-distro and
+     * ReTerminal, stand-ins are bound over them; only when the real files
+     * cannot be read, so a device that allows it keeps its real numbers.
+     */
+    fun stageProcStandIns(
+        tmpDir: File,
+        cpus: Int = Runtime.getRuntime().availableProcessors(),
+        readable: (File) -> Boolean = ::canRead,
+    ) {
+        tmpDir.mkdirs()
+        for (name in PROC_STAND_INS) {
+            val standIn = File(tmpDir, "proc-$name")
+            if (readable(File("/proc/$name"))) {
+                standIn.delete()
+                continue
+            }
+            val text = if (name == "stat") procStat(cpus) else PROC_VMSTAT
+            if (!standIn.isFile || standIn.readText() != text) standIn.writeText(text)
+        }
+    }
+
+    private fun canRead(file: File): Boolean = try {
+        file.inputStream().use { it.read() }
+        true
+    } catch (_: Exception) {
+        false
+    }
+
+    /** Idle counters for [cpus] cores, in the kernel's /proc/stat layout. */
+    fun procStat(cpus: Int): String = buildString {
+        val count = cpus.coerceAtLeast(1)
+        append("cpu  ${100 * count} 0 ${100 * count} ${10000 * count} 0 0 0 0 0 0\n")
+        for (cpu in 0 until count) append("cpu$cpu 100 0 100 10000 0 0 0 0 0 0\n")
+        append("intr 0\nctxt 0\nbtime 0\nprocesses 1\nprocs_running 1\nprocs_blocked 0\nsoftirq 0\n")
+    }
+
+    private val PROC_VMSTAT = listOf(
+        "nr_free_pages", "nr_inactive_anon", "nr_active_anon", "nr_inactive_file",
+        "nr_active_file", "nr_dirty", "nr_writeback", "pgpgin", "pgpgout",
+        "pswpin", "pswpout", "pgfault", "pgmajfault",
+    ).joinToString("") { "$it 0\n" }
 
     /** Copy libtalloc.so to the SONAME proot actually DT_NEEDs. */
     fun stageTalloc(nativeLibDir: File, tmpDir: File) {

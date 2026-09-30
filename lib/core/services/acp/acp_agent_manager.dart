@@ -15,6 +15,7 @@ import 'acp_mcp_stdio_bridge.dart';
 import 'acp_mcp_probe.dart';
 import 'acp_stdio_channel.dart';
 import 'acp_error_messages.dart';
+import 'acp_fs_compat.dart';
 import 'acp_agent_web_servers.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -458,11 +459,15 @@ class AcpAgentManager extends ChangeNotifier {
     final launch = spec.launch(provider);
     await _requireNode(runtime, spec);
     final variables = (await environment.loadExecutionConfig()).variables;
-    final env = {...variables, ...launch.environment};
+    final env = _agentEnvironment(variables, launch);
     {
       final (code, output) = await _run(
         runtime,
-        writeFilesScript([...launch.files, AcpMcpStdioBridge.file]),
+        writeFilesScript([
+          ...launch.files,
+          AcpMcpStdioBridge.file,
+          AcpFsCompat.file,
+        ]),
         capture: true,
         environment: env,
       );
@@ -481,6 +486,7 @@ class AcpAgentManager extends ChangeNotifier {
       mounts: mounts,
       environment: env,
       isCancelled: isCancelled,
+      emulateHardLinks: false,
     );
     return AcpAgent.start(
       AcpStdioChannel(transport),
@@ -515,6 +521,17 @@ class AcpAgentManager extends ChangeNotifier {
     }
   }
 
+  /// The user's variables, the agent's own, and the hard-link shim that
+  /// agents need because they run without PRoot's fake links.
+  static Map<String, String> _agentEnvironment(
+    Map<String, String> variables,
+    AcpLaunch launch,
+  ) {
+    final env = {...variables, ...launch.environment};
+    env['NODE_OPTIONS'] = AcpFsCompat.nodeOptions(env['NODE_OPTIONS']);
+    return env;
+  }
+
   Future<(WorkspaceRuntime, AcpLaunch)> _prepareWeb(
     AcpAgentSpec spec,
     AcpProviderInput provider,
@@ -530,13 +547,13 @@ class AcpAgentManager extends ChangeNotifier {
       configDirectory: directory,
     );
     if (launch == null) throw const AcpWebException(AcpWebFailure.start);
-    final env = {
-      ...(await environment.loadExecutionConfig()).variables,
-      ...launch.environment,
-    };
+    final env = _agentEnvironment(
+      (await environment.loadExecutionConfig()).variables,
+      launch,
+    );
     final (code, _) = await _run(
       runtime,
-      writeFilesScript(launch.files),
+      writeFilesScript([...launch.files, AcpFsCompat.file]),
       capture: true,
       environment: env,
     );

@@ -399,6 +399,7 @@ class ExecArgs {
     this.env = const <String, String>{},
     this.binds = const <BindMount>[],
     this.prootArguments = const [],
+    this.emulateHardLinks = true,
     this.shell,
     this.chroot = false,
   });
@@ -413,6 +414,7 @@ class ExecArgs {
   final Map<String, String> env;
   final List<BindMount> binds;
   final List<String> prootArguments;
+  final bool emulateHardLinks;
   final String? shell;
 
   /// Runs in the fast mode's chroot (as root, through su) instead of PRoot.
@@ -426,6 +428,7 @@ class ExecArgs {
     'command': command,
     'timeoutMs': timeoutMs,
     if (keepStdinOpen) 'keepStdinOpen': true,
+    if (!emulateHardLinks) 'emulateHardLinks': false,
     'env': env,
     'binds': [for (final bind in binds) bind.toMap()],
     if (prootArguments.isNotEmpty) 'prootArguments': prootArguments,

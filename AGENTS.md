@@ -107,7 +107,12 @@ package name does not require building other platforms.
   Only ACP launches pass `PATH`; `ProotCommand` carries it as `KELIVO_PATH`
   and restores dropped entries after the guest's login profile (Alpine and
   Debian reset `PATH` in `/etc/profile`). Exit 127 means the agent's command
-  is missing: say "not installed" and re-probe installation. Guest launch preparation trusts only `/workspace` in
+  is missing: say "not installed" and re-probe installation.
+  Agent and agent-Web launches set `emulateHardLinks: false` (no PRoot
+  `--link2symlink`, which leaves dangling links after atomic writes) and
+  load `AcpFsCompat` via `NODE_OPTIONS` to copy when Android denies link(2).
+  PRoot always binds `/dev/fd`, `/dev/shm`, `--sysvipc`, and stand-ins for
+  unreadable `/proc/stat`/`/proc/vmstat` (`ProotCommand.stageGuest`). Guest launch preparation trusts only `/workspace` in
   system Git config to handle the Android UID/root-chroot ownership mismatch.
 - **Mini apps**: published web apps (`MiniAppStore`, bridge `moru.*` in
   `MiniAppBridge`). They keep an error journal, the last 5 versions, and

@@ -193,6 +193,7 @@ class WorkspacePlugin(private val context: Context) {
                 timeoutMs = number(args["timeoutMs"], 60_000L),
                 keepStdinOpen = args["keepStdinOpen"] == true,
                 prootArguments = parseStringList(args["prootArguments"]),
+                emulateHardLinks = args["emulateHardLinks"] != false,
                 shell = args["shell"]?.toString(),
                 chroot = chrootOptions(args),
             ),

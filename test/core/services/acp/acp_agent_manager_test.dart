@@ -9,6 +9,7 @@ import 'package:Kelivo/core/providers/environment_provider.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_manager.dart';
 import 'package:Kelivo/core/services/acp/acp_error_messages.dart';
+import 'package:Kelivo/core/services/acp/acp_fs_compat.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/features/agents/pages/agents_page.dart';
 
@@ -308,6 +309,21 @@ void main() {
     expect(launch.command, "exec 'codex-acp'");
     expect(launch.env['MORU_CODEX_API_KEY'], 'sk-test');
     expect(launch.env['CODEX_HOME'], '$acpConfigDir/codex');
+    // Agents run without PRoot's fake hard links, with the copy fallback.
+    expect(launch.emulateHardLinks, isFalse);
+    expect(launch.env['NODE_OPTIONS'], '--require=${AcpFsCompat.path}');
+    expect(write.command, contains(AcpFsCompat.path));
+    // Package installs keep the usual behaviour.
+    expect(
+      runtime.requests.where((r) => !r.keepStdinOpen),
+      everyElement(
+        isA<CommandRequest>().having(
+          (r) => r.emulateHardLinks,
+          'emulateHardLinks',
+          isTrue,
+        ),
+      ),
+    );
     // The check stops the agent again.
     expect(runtime.cancelled, contains(launch.runId));
   });

@@ -29,9 +29,10 @@ class ProotArgvTest {
             includeLibraryPath = true,
         )
         val golden =
-            "/nativelib/libproot_exec.so --root-id --link2symlink --kill-on-exit " +
+            "/nativelib/libproot_exec.so --root-id --link2symlink --kill-on-exit --sysvipc " +
                 "-r /data/rootfs -w /workspace -b /host/files:/workspace " +
-                "-b /dev -b /proc -b /sys /usr/bin/env -i HOME=/root PATH=/bin LANG=C.UTF-8 " +
+                "-b /dev -b /proc -b /sys -b /proc/self/fd:/dev/fd -b /data/rootfs/tmp:/dev/shm " +
+                "/usr/bin/env -i HOME=/root PATH=/bin LANG=C.UTF-8 " +
                 "KELIVO_PATH=/bin " +
                 "/bin/sh -lc " + ProotCommand.BASH_EVAL + " kelivo /workspace echo hello"
         val prepare = launch.argv.indexOf("KELIVO_PATH=/bin") + 1
@@ -135,6 +136,40 @@ class ProotArgvTest {
             assertTrue("$shell: $output", lines.contains("path=${bin.absolutePath}:/usr/bin:/bin"))
             assertTrue("$shell: $output", lines.contains("keep=unset"))
         }
+    }
+
+    @Test
+    fun agentsRunWithoutFakeHardLinks() {
+        fun argv(emulate: Boolean) = ProotCommand.build(
+            File("/libs"), File("/rootfs"), File("/tmp"), emptyList(), "/root", "true",
+            emptyMap(), emulateHardLinks = emulate,
+        ).argv
+        assertTrue(argv(true).contains("--link2symlink"))
+        assertFalse(argv(false).contains("--link2symlink"))
+        assertTrue(argv(false).contains("--kill-on-exit"))
+    }
+
+    @Test
+    fun hiddenProcFilesGetStandInsOnlyWhenUnreadable() {
+        val staged = tmp.newFolder("staged")
+        ProotCommand.stageProcStandIns(staged, cpus = 4, readable = { false })
+        val stat = File(staged, "proc-stat").readText()
+        assertEquals(4, stat.lines().count { Regex("^cpu\\d+ ").containsMatchIn(it) })
+        assertTrue(stat.startsWith("cpu  "))
+        assertTrue(File(staged, "proc-vmstat").readText().contains("pgfault 0"))
+        val argv = ProotCommand.build(
+            File("/libs"), File("/rootfs"), staged, emptyList(), "/root", "true", emptyMap(),
+        ).argv
+        assertTrue(argv.contains("${File(staged, "proc-stat").absolutePath}:/proc/stat"))
+        assertTrue(argv.contains("${File(staged, "proc-vmstat").absolutePath}:/proc/vmstat"))
+
+        // A device that lets apps read them keeps the real files.
+        ProotCommand.stageProcStandIns(staged, cpus = 4, readable = { true })
+        assertFalse(File(staged, "proc-stat").exists())
+        val real = ProotCommand.build(
+            File("/libs"), File("/rootfs"), staged, emptyList(), "/root", "true", emptyMap(),
+        ).argv
+        assertFalse(real.any { it.endsWith(":/proc/stat") })
     }
 
     @Test

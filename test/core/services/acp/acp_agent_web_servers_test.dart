@@ -88,6 +88,7 @@ void main() {
       expect(runtime.requests.single.mounts.single.guest, '/workspace');
       expect(runtime.requests.single.timeout, Duration.zero);
       expect(runtime.requests.single.keepStdinOpen, isTrue);
+      expect(runtime.requests.single.emulateHardLinks, isFalse);
       await servers.open(
         spec,
         provider,

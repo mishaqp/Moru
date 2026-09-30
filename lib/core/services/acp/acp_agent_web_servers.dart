@@ -130,6 +130,7 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
               env: launch.environment,
               timeout: Duration.zero,
               keepStdinOpen: true,
+              emulateHardLinks: false,
               isCancelled: () => run.stopped,
             ),
           )

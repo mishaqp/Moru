@@ -48,6 +48,7 @@ class CommandRequest {
     this.mounts = const <Mount>[],
     this.isCancelled,
     this.keepStdinOpen = false,
+    this.emulateHardLinks = true,
   });
 
   final String runId;
@@ -55,6 +56,11 @@ class CommandRequest {
 
   /// Keep a raw stdin pipe open for a persistent protocol process.
   final bool keepStdinOpen;
+
+  /// PRoot fakes hard links with symlinks, which breaks programs that publish
+  /// files atomically (write, link into place, remove the temporary): coding
+  /// agents turn off the fake and copy instead ([AcpFsCompat]).
+  final bool emulateHardLinks;
 
   /// Resolved path in the runtime's vocabulary (guest path when sandboxed,
   /// host path when native).

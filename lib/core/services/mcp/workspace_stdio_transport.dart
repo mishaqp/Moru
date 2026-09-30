@@ -60,6 +60,7 @@ class WorkspaceStdioTransport implements ClientTransport {
     Map<String, String> environment = const {},
     Duration startupTimeout = const Duration(seconds: 30),
     bool Function()? isCancelled,
+    bool emulateHardLinks = true,
   }) async {
     if (command.trim().isEmpty) throw ArgumentError('STDIO command is empty');
     final launch = 'exec ${[command, ...arguments].map(_quote).join(' ')}';
@@ -96,6 +97,7 @@ class WorkspaceStdioTransport implements ClientTransport {
             mounts: mounts,
             env: environment,
             keepStdinOpen: true,
+            emulateHardLinks: emulateHardLinks,
             timeout: Duration.zero,
             isCancelled: () =>
                 transport._closing || isCancelled?.call() == true,

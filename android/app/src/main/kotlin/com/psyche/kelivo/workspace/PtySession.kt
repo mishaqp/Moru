@@ -45,6 +45,7 @@ class PtySessions(
             )
         } else {
             ProotCommand.stageTalloc(nativeLibDir, tmpDir)
+            ProotCommand.stageGuest(rootfsDir, tmpDir)
             ProotCommand.build(
                 nativeLibDir = nativeLibDir,
                 rootfsDir = rootfsDir,
