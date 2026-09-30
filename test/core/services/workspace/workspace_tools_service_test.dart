@@ -17,6 +17,7 @@ import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_check.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tools_service.dart';
+import 'package:Kelivo/core/services/api/generation/tool_result_images.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
 import 'package:Kelivo/utils/mcp_structured_image.dart';
 
@@ -989,6 +990,28 @@ void main() {
       expect(result.content, contains('![]('));
       expect(result.metadata, contains(kMcpResultMetadataKey));
     });
+
+    test(
+      'read_file image does not reopen a replaced source for the model',
+      () async {
+        final png = Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]);
+        final file = File(p.join(workspaceDir.path, 'original.png'))
+          ..writeAsBytesSync(png);
+        final result = client(
+          await service().handle(ctx(), 'read_file', {
+            'path': file.path,
+          }, toolCallId: 'read-img-swap'),
+        );
+        final replacement = File(p.join(tmp.path, 'replacement.png'))
+          ..writeAsBytesSync([1, 2, 3, 4]);
+        file.deleteSync();
+        Link(file.path).createSync(replacement.path);
+
+        final images = await loadToolResultImages(result.metadata);
+        expect(images.single.base64, base64Encode(png));
+        expect(result.content, isNot(contains(file.path)));
+      },
+    );
 
     test('write_file and edit_file content shapes', () async {
       final tools = service();

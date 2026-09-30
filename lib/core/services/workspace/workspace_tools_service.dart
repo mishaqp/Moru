@@ -1305,7 +1305,10 @@ class WorkspaceToolsService {
         files: [_fileFor(ctx, resolved)],
       );
       if (result.imageBytes != null) {
-        final uri = resolved.hostPath;
+        // Reuse bytes read from the checked descriptor. A pathname can be
+        // replaced before the UI or the next model request loads this result.
+        final uri =
+            'data:${result.imageMime};base64,${base64Encode(result.imageBytes!)}';
         await _maybeNoteSkillRead(ctx, resolved);
         await _markToolsUsed(
           ctx,

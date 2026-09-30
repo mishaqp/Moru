@@ -8,6 +8,8 @@ import 'package:path/path.dart' as p;
 import 'edit_matchers.dart';
 import 'unified_diff.dart';
 import 'workspace_paths.dart';
+import 'workspace_file_access.dart';
+import 'workspace_runtime.dart';
 import '../../models/external_mount.dart';
 
 class HostFileException implements Exception {
@@ -110,6 +112,16 @@ class GrepResult {
   final bool truncated;
 }
 
+class _CheckedHostPath {
+  const _CheckedHostPath(this.resolved, this.access, this.lexicalHostPath);
+
+  final ResolvedPath resolved;
+  final WorkspaceFileAccess access;
+  final String lexicalHostPath;
+  String get hostPath => resolved.hostPath;
+  String get modelPath => resolved.modelPath;
+}
+
 class HostFileTools {
   HostFileTools(this.paths, {this.checkCancelled});
 
@@ -147,16 +159,16 @@ class HostFileTools {
       throw HostFileException('not a file: ${resolved.modelPath}');
     }
 
-    final mime = _imageMime(resolved.hostPath);
-    if (mime != null) {
-      return ReadFileResult(
-        imageBytes: await file.readAsBytes(),
-        imageMime: mime,
-      );
-    }
-
-    final handle = await file.open();
+    final opened = await resolved.access.openRead(resolved.hostPath);
+    final handle = opened.handle;
     try {
+      final mime = _imageMime(resolved.hostPath);
+      if (mime != null) {
+        return ReadFileResult(
+          imageBytes: await opened.readBytes(),
+          imageMime: mime,
+        );
+      }
       final probeLen = (await handle.length()) < binaryProbeBytes
           ? await handle.length()
           : binaryProbeBytes;
@@ -164,55 +176,64 @@ class HostFileTools {
       if (_containsNul(probe)) {
         return ReadFileResult(binary: true, hexPreview: _hexPreview(probe));
       }
-    } finally {
-      await handle.close();
-    }
+      await handle.setPosition(0);
 
-    final start = (offset ?? 1) < 1 ? 1 : (offset ?? 1);
-    final pageLimit = limit == null ? null : (limit < 1 ? 1 : limit);
-    final buffer = StringBuffer();
-    var encodedBytes = 0;
-    var included = 0;
-    await for (final line in _readBoundedLines(file, start)) {
-      if (pageLimit != null && included >= pageLimit) {
-        return ReadFileResult(text: buffer.toString(), nextOffset: line.number);
-      }
-      final prefix = '${line.number.toString().padLeft(6)}|';
-      final size = prefix.length + line.bytes.length + 1;
-      if (encodedBytes + size > readCapBytes && included > 0) {
-        return ReadFileResult(text: buffer.toString(), nextOffset: line.number);
-      }
-      const marker = ' [line truncated]';
-      final truncated = line.truncated || size > readCapBytes;
-      final maxContent =
-          readCapBytes - prefix.length - 1 - (truncated ? marker.length : 0);
-      var end = line.bytes.length.clamp(0, maxContent);
-      // Do not split a UTF-8 code point at the byte cap.
-      if (end < line.bytes.length) {
-        while (end > 0 && (line.bytes[end] & 0xc0) == 0x80) {
-          end--;
+      final start = (offset ?? 1) < 1 ? 1 : (offset ?? 1);
+      final pageLimit = limit == null ? null : (limit < 1 ? 1 : limit);
+      final buffer = StringBuffer();
+      var encodedBytes = 0;
+      var included = 0;
+      await for (final line in _readBoundedLines(handle, start)) {
+        if (pageLimit != null && included >= pageLimit) {
+          return ReadFileResult(
+            text: buffer.toString(),
+            nextOffset: line.number,
+          );
         }
+        final prefix = '${line.number.toString().padLeft(6)}|';
+        final size = prefix.length + line.bytes.length + 1;
+        if (encodedBytes + size > readCapBytes && included > 0) {
+          return ReadFileResult(
+            text: buffer.toString(),
+            nextOffset: line.number,
+          );
+        }
+        const marker = ' [line truncated]';
+        final truncated = line.truncated || size > readCapBytes;
+        final maxContent =
+            readCapBytes - prefix.length - 1 - (truncated ? marker.length : 0);
+        var end = line.bytes.length.clamp(0, maxContent);
+        // Do not split a UTF-8 code point at the byte cap.
+        if (end < line.bytes.length) {
+          while (end > 0 && (line.bytes[end] & 0xc0) == 0x80) {
+            end--;
+          }
+        }
+        final text = utf8.decode(line.bytes.sublist(0, end));
+        final formatted = '$prefix$text${truncated ? marker : ''}\n';
+        buffer.write(formatted);
+        encodedBytes += utf8.encode(formatted).length;
+        included++;
       }
-      final text = utf8.decode(line.bytes.sublist(0, end));
-      final formatted = '$prefix$text${truncated ? marker : ''}\n';
-      buffer.write(formatted);
-      encodedBytes += utf8.encode(formatted).length;
-      included++;
+      return ReadFileResult(text: buffer.toString());
+    } finally {
+      await opened.close();
     }
-    return ReadFileResult(text: buffer.toString());
   }
 
   /// Keeps at most one page of a line, even for minified or generated files.
   /// Splits bytes before decoding so a single huge line cannot grow a decoder's
   /// line buffer. Lines before the requested offset are scanned without storage.
   static Stream<({int number, List<int> bytes, bool truncated})>
-  _readBoundedLines(File file, int start) async* {
+  _readBoundedLines(RandomAccessFile handle, int start) async* {
     var number = 1;
     var bytes = <int>[];
     var truncated = false;
     var hasContent = false;
     var afterCr = false;
-    await for (final chunk in file.openRead()) {
+    while (true) {
+      final chunk = await handle.read(16 * 1024);
+      if (chunk.isEmpty) break;
       for (final byte in chunk) {
         if (afterCr && byte == 10) {
           afterCr = false;
@@ -250,15 +271,20 @@ class HostFileTools {
     String? cwd,
   }) async {
     final resolved = await _resolve(path, cwd);
-    if (paths.isReadOnlyPath(resolved.hostPath)) {
+    if (paths.isReadOnlyPath(resolved.lexicalHostPath)) {
       throw const HostFileException('External mount is read-only');
     }
     final file = File(resolved.hostPath);
     final created = !await file.exists();
     checkCancelled?.call();
-    await file.parent.create(recursive: true);
+    await resolved.access.createDirectory(file.parent.path);
     checkCancelled?.call();
-    await file.writeAsString(content);
+    final opened = await resolved.access.openWrite(resolved.lexicalHostPath);
+    try {
+      await opened.handle.writeString(content);
+    } finally {
+      await opened.close();
+    }
     return WriteFileResult(
       bytes: utf8.encode(content).length,
       created: created,
@@ -273,14 +299,14 @@ class HostFileTools {
     String? cwd,
   }) async {
     final resolved = await _resolve(path, cwd);
-    if (paths.isReadOnlyPath(resolved.hostPath)) {
+    if (paths.isReadOnlyPath(resolved.lexicalHostPath)) {
       throw const HostFileException('External mount is read-only');
     }
     final file = File(resolved.hostPath);
     if (!await file.exists()) {
       throw HostFileException('file not found: ${resolved.modelPath}');
     }
-    final original = await file.readAsString();
+    final original = await resolved.access.readString(resolved.hostPath);
     final outcome = applyEdit(
       original: original,
       oldText: oldText,
@@ -292,7 +318,12 @@ class HostFileTools {
     }
     final applied = outcome as EditApplied;
     checkCancelled?.call();
-    await file.writeAsString(applied.updated);
+    final opened = await resolved.access.openWrite(resolved.lexicalHostPath);
+    try {
+      await opened.handle.writeString(applied.updated);
+    } finally {
+      await opened.close();
+    }
     return EditFileResult(
       changed: original != applied.updated,
       diff: UnifiedDiff.compute(
@@ -313,11 +344,12 @@ class HostFileTools {
   }) async {
     await paths.refreshExternalMounts();
     if (paths.sandboxed && p.posix.normalize(path) == ExternalMount.root) {
+      final access = paths.fileAccess;
       final entries = <ListDirEntry>[];
       var truncated = false;
       for (final mount in paths.externalMounts) {
         final dir = Directory(mount.host);
-        final stat = await dir.stat();
+        final stat = await access.stat(dir.path);
         entries.add(
           ListDirEntry(
             name: p.posix.basename(mount.guest),
@@ -328,7 +360,7 @@ class HostFileTools {
           ),
         );
         if (depth > 1) {
-          truncated = await _walkDir(dir, depth - 1, entries);
+          truncated = await _walkDir(dir, depth - 1, entries, access);
           if (truncated) break;
         }
       }
@@ -343,7 +375,12 @@ class HostFileTools {
       throw HostFileException('not a directory: ${resolved.modelPath}');
     }
     final entries = <ListDirEntry>[];
-    final truncated = await _walkDir(dir, depth < 1 ? 1 : depth, entries);
+    final truncated = await _walkDir(
+      dir,
+      depth < 1 ? 1 : depth,
+      entries,
+      resolved.access,
+    );
     return ListDirResult(entries: entries, truncated: truncated);
   }
 
@@ -369,7 +406,11 @@ class HostFileTools {
       }
       return const GlobResult(paths: [], truncated: false);
     }
-    await for (final entity in _walkEntities(root, skipDotDirs: skipDotDirs)) {
+    await for (final entity in _walkEntities(
+      root,
+      access: resolved.access,
+      skipDotDirs: skipDotDirs,
+    )) {
       final name = p.basename(entity.path);
       if (_isL2s(name)) continue;
       final rel = p
@@ -401,9 +442,15 @@ class HostFileTools {
     var truncated = false;
 
     Future<bool> scanFile(File file) async {
-      final stat = await file.stat();
-      if (stat.size > maxFileBytes) return false;
-      final bytes = await file.readAsBytes();
+      final opened = await resolved.access.openRead(file.path);
+      late Uint8List bytes;
+      try {
+        if (await opened.handle.length() > maxFileBytes) return false;
+        bytes = await opened.readBytes(maxBytes: maxFileBytes + 1);
+        if (bytes.length > maxFileBytes) return false;
+      } finally {
+        await opened.close();
+      }
       if (_containsNul(
         bytes.length > binaryProbeBytes
             ? bytes.sublist(0, binaryProbeBytes)
@@ -430,7 +477,11 @@ class HostFileTools {
     if (!await root.exists()) {
       return const GrepResult(matches: [], truncated: false);
     }
-    await for (final entity in _walkEntities(root, skipDotDirs: true)) {
+    await for (final entity in _walkEntities(
+      root,
+      access: resolved.access,
+      skipDotDirs: true,
+    )) {
       if (entity is! File) continue;
       if (_isL2s(p.basename(entity.path))) continue;
       if (await scanFile(entity)) {
@@ -441,37 +492,65 @@ class HostFileTools {
     return GrepResult(matches: matches, truncated: truncated);
   }
 
-  Future<ResolvedPath> _resolve(String path, String? cwd) async {
+  Future<_CheckedHostPath> _resolve(String path, String? cwd) async {
     await paths.refreshExternalMounts();
-    return paths.resolveReal(path, cwd: paths.normalizeCwd(cwd));
+    final access = paths.fileAccess;
+    final lexical = paths.resolve(path, cwd: paths.normalizeCwd(cwd));
+    final resolved = await paths.resolveReal(
+      path,
+      cwd: paths.normalizeCwd(cwd),
+    );
+    if (resolved.zone == WorkspaceZone.outside) {
+      throw const PathResolutionException('path outside allowed roots');
+    }
+    try {
+      await access.resolve(resolved.hostPath);
+    } on WorkspaceFileAccessException catch (error) {
+      throw PathResolutionException(error.message);
+    }
+    return _CheckedHostPath(resolved, access, lexical.hostPath);
   }
 
   Future<bool> _walkDir(
     Directory dir,
     int remainingDepth,
     List<ListDirEntry> out,
+    WorkspaceFileAccess access,
   ) async {
-    final entities = await dir.list(followLinks: false).toList();
+    final entities = await access.withDirectory(dir.path, (anchored) async {
+      final children = <({String name, FileStat stat})>[];
+      await for (final entity in Directory(anchored).list(followLinks: false)) {
+        final name = p.basename(entity.path);
+        if (_isL2s(name)) continue;
+        try {
+          children.add((
+            name: name,
+            stat: await access.stat(p.join(dir.path, name)),
+          ));
+        } on WorkspaceFileAccessException {
+          // Escaping links are not exposed, just as in DocumentsProvider.
+        } on FileSystemException {
+          // A running command may remove an entry while listing it.
+        }
+      }
+      return children;
+    });
     entities.sort((a, b) {
-      final aDir = a is Directory;
-      final bDir = b is Directory;
+      final aDir = a.stat.type == FileSystemEntityType.directory;
+      final bDir = b.stat.type == FileSystemEntityType.directory;
       if (aDir != bDir) return aDir ? -1 : 1;
-      return p
-          .basename(a.path)
-          .toLowerCase()
-          .compareTo(p.basename(b.path).toLowerCase());
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
     });
     var truncated = false;
     for (final entity in entities) {
       if (out.length >= listCap) return true;
-      final name = p.basename(entity.path);
-      if (_isL2s(name)) continue;
-      final stat = await entity.stat();
+      final name = entity.name;
+      final stat = entity.stat;
       final isDir = stat.type == FileSystemEntityType.directory;
       out.add(
         ListDirEntry(
           name: name,
-          path: paths.toModelPath(entity.path),
+          path: paths.toModelPath(p.join(dir.path, name)),
           isDirectory: isDir,
           size: isDir ? 0 : stat.size,
           modified: stat.modified,
@@ -479,7 +558,12 @@ class HostFileTools {
       );
       if (isDir && remainingDepth > 1 && !name.startsWith('.')) {
         truncated =
-            await _walkDir(Directory(entity.path), remainingDepth - 1, out) ||
+            await _walkDir(
+              Directory(p.join(dir.path, name)),
+              remainingDepth - 1,
+              out,
+              access,
+            ) ||
             truncated;
       }
     }
@@ -488,21 +572,40 @@ class HostFileTools {
 
   Stream<FileSystemEntity> _walkEntities(
     Directory root, {
+    required WorkspaceFileAccess access,
     required bool skipDotDirs,
   }) async* {
     final stack = <Directory>[root];
+    final visited = <String>{};
     while (stack.isNotEmpty) {
       final dir = stack.removeLast();
-      final children = await dir.list(followLinks: false).toList();
-      for (final entity in children) {
-        final name = p.basename(entity.path);
-        if (entity is Directory) {
+      final real = await access.resolve(dir.path);
+      if (!visited.add(real)) continue;
+      final children = await access.withDirectory(
+        dir.path,
+        (anchored) async =>
+            (await Directory(anchored).list(followLinks: false).toList())
+                .map((entity) => p.basename(entity.path))
+                .toList(),
+      );
+      for (final name in children) {
+        if (_isL2s(name)) continue;
+        final child = p.join(dir.path, name);
+        late FileStat stat;
+        try {
+          stat = await access.stat(child);
+        } on WorkspaceFileAccessException {
+          continue;
+        } on FileSystemException {
+          continue;
+        }
+        if (stat.type == FileSystemEntityType.directory) {
           if (skipDotDirs && name.startsWith('.')) continue;
-          if (_isL2s(name)) continue;
-          stack.add(entity);
-          yield entity;
+          final directory = Directory(child);
+          stack.add(directory);
+          yield directory;
         } else {
-          yield entity;
+          yield File(child);
         }
       }
     }
