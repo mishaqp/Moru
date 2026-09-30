@@ -43,6 +43,9 @@ package name does not require building other platforms.
   `MessageBuilderService.injectWorkspacePrompt` injects it. Nothing is stored in
   the conversation, the assistant's system prompt is untouched, and a missing,
   empty, oversized or unreadable file is skipped silently.
+  Only a real path inside the real workspace root is eligible; the shared
+  `WorkspaceFileAccess` also verifies the opened descriptor. Outward symlinks
+  are skipped silently, including a symlink in the middle of the path.
 - **Pending message queue**: submitting while a reply streams parks the message
   instead of rejecting it. `QueuedInputQueue` (`lib/features/home/controllers/`)
   owns the FIFO, `HomeViewModel` drains it when a conversation goes idle, and
@@ -156,6 +159,26 @@ package name does not require building other platforms.
   `ProcessKeepAlive` (`app.keep_alive`).
 
 ## Pre-commit checklist
+
+All model file tools and the Files UI use
+`lib/core/services/workspace/workspace_file_access.dart` as the common boundary.
+Resolve symlinks in every path component and compare with captured real allowed
+roots; verify `/proc/self/fd` after opening and keep that descriptor alive for
+the actual read. Content writes verify before truncating; parent descriptors
+anchor creation, rename and unlink. Do not replace this with lexical checks or
+reopen a checked pathname later. Internal symlinks remain valid; deleting a
+final symlink checks its parent and removes only the link. Content writes
+through read-only aliases remain blocked, including when their targets are
+reached by another path.
+Unlinking a final symlink to a read-only target is allowed only when its own
+parent is writable; the target is never changed.
+Preview/share/export snapshots live in private app data, outside the model
+file roots, and are copied from a checked open descriptor. Explicit picker
+access grants only the selected file. Markdown images and linked thumbnails
+render checked bytes; HTML previews disable file/content access, and the local
+preview server checks every resource against the original granted root.
+If a registered runtime's status cannot be read, workspace tools fail closed
+before creating a context; they never fall back to native unsandboxed policy.
 
 ```bash
 dart format lib test
