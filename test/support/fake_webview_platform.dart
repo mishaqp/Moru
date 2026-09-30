@@ -20,6 +20,7 @@ class FakeWebViewPlatform extends WebViewPlatform {
   /// (e.g. one built inside a private `State`), as long as nothing else
   /// creates a `WebViewController` in between.
   static FakeWebViewController? lastCreated;
+  static void Function(FakeWebViewController)? onCreated;
 
   @override
   PlatformWebViewController createPlatformWebViewController(
@@ -27,6 +28,7 @@ class FakeWebViewPlatform extends WebViewPlatform {
   ) {
     final controller = FakeWebViewController(params);
     lastCreated = controller;
+    onCreated?.call(controller);
     return controller;
   }
 
@@ -58,6 +60,12 @@ class FakeNavigationDelegate extends PlatformNavigationDelegate {
   NavigationRequestCallback? onNavigationRequest;
   HttpResponseErrorCallback? onHttpError;
   SslAuthErrorCallback? onSslAuthError;
+  HttpAuthRequestCallback? onHttpAuthRequest;
+
+  @override
+  Future<void> setOnHttpAuthRequest(HttpAuthRequestCallback callback) async {
+    onHttpAuthRequest = callback;
+  }
 
   @override
   Future<void> setOnSSlAuthError(SslAuthErrorCallback onSslAuthError) async {
@@ -139,6 +147,8 @@ class FakeWebViewController extends PlatformWebViewController {
   Future<void> setPlatformNavigationDelegate(
     PlatformNavigationDelegate handler,
   ) async {
+    final setup = onSetNavigationDelegate;
+    if (setup != null) await setup();
     _delegate = handler as FakeNavigationDelegate;
     delegatesSet++;
   }
@@ -146,9 +156,18 @@ class FakeWebViewController extends PlatformWebViewController {
   /// How many navigation delegates were set; the real plugin resets its
   /// download listener with each one.
   int delegatesSet = 0;
+  Future<void> Function()? onSetNavigationDelegate;
+  FakeNavigationDelegate? get navigationDelegate => _delegate;
 
   @override
-  Future<void> setJavaScriptMode(JavaScriptMode javaScriptMode) async {}
+  Future<void> setJavaScriptMode(JavaScriptMode javaScriptMode) async {
+    this.javaScriptMode = javaScriptMode;
+  }
+
+  JavaScriptMode? javaScriptMode;
+  List<String> get javaScriptChannels => _channels.keys.toList();
+  List<String> get loadedUrls => List.unmodifiable(_history);
+  Future<void> Function(LoadRequestParams params)? onLoadRequest;
 
   @override
   Future<void> setBackgroundColor(Color color) async {}
@@ -198,6 +217,10 @@ class FakeWebViewController extends PlatformWebViewController {
   @override
   Future<void> loadRequest(LoadRequestParams params) async {
     _navigateTo(params.uri.toString());
+    final handler = onLoadRequest;
+    if (handler != null) {
+      await handler(params);
+    }
   }
 
   /// The most recent HTML string passed to [loadHtmlString].
@@ -277,6 +300,19 @@ class FakeWebViewController extends PlatformWebViewController {
   void simulateWebResourceError(WebResourceError error) {
     _delegate?.onWebResourceError?.call(error);
   }
+
+  void simulateHttpAuthRequest(HttpAuthRequest request) {
+    _delegate?.onHttpAuthRequest?.call(request);
+  }
+
+  void simulateHttpError(HttpResponseError error) {
+    _delegate?.onHttpError?.call(error);
+  }
+
+  Future<NavigationDecision?> simulateNavigationRequest(String url) async =>
+      _delegate?.onNavigationRequest?.call(
+        NavigationRequest(url: url, isMainFrame: true),
+      );
 
   @override
   Future<bool> canGoBack() async => _index > 0;

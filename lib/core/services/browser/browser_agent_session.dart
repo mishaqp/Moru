@@ -872,16 +872,25 @@ class BrowserAgentSession {
   }
 
   /// Opens a new tab and puts it on screen, loading [url] when given.
-  Future<Map<String, dynamic>> newTab({String? url, bool byAgent = false}) {
+  Future<Map<String, dynamic>> newTab({
+    String? url,
+    bool byAgent = false,
+    WebViewController? preparedController,
+    bool Function()? mayOpen,
+  }) {
     return _newTab(
       url: url == null ? null : Uri.tryParse(url),
       byAgent: byAgent,
+      preparedController: preparedController,
+      mayOpen: mayOpen,
     );
   }
 
   Future<Map<String, dynamic>> _newTab({
     Uri? url,
     required bool byAgent,
+    WebViewController? preparedController,
+    bool Function()? mayOpen,
   }) async {
     final factory = controllerFactory;
     if (!isAttached || factory == null) {
@@ -899,20 +908,35 @@ class BrowserAgentSession {
         'tabs': _tabsJson(),
       };
     }
-    final controller = factory();
+    final controller = preparedController ?? factory();
+    if (_tabFor(controller) != null) {
+      throw StateError('A new tab requires a fresh controller.');
+    }
     final tab = BrowserTab(
       id: 'tab${++_nextTabId}',
       controller: controller,
       byAgent: byAgent,
       lastUsed: clock(),
     );
-    _tabs.add(tab);
+    // Ordinary tabs keep their existing capacity reservation during setup.
+    if (preparedController == null) _tabs.add(tab);
     await BrowserHandoffs.instance.setNavigationDelegate(
       controller,
       _tabDelegate(tab),
     );
     installDialogHandlers(controller);
     await _switchAway();
+    // A prepared agent controller may be revoked while native delegate setup
+    // runs, or the browser may close before the handoff reaches this point.
+    if (preparedController != null) {
+      if (!isAttached || mayOpen?.call() == false) {
+        return {'ok': false, 'error': 'browser_target_stopped'};
+      }
+      if (_tabs.length >= maxTabs) {
+        return {'ok': false, 'error': 'too_many_tabs'};
+      }
+      _tabs.add(tab);
+    }
     _activate(tab);
     if (byAgent) _ensureIdleTimer();
     if (url != null) {

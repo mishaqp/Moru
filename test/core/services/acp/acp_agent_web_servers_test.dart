@@ -69,7 +69,7 @@ void main() {
         provider,
         cwd: '/workspace',
         mounts: const [Mount(host: '/tmp/example', guest: '/workspace')],
-        openBrowser: (url) async => opened.add(url),
+        openBrowser: (target) async => opened.add(target.url),
       );
       await launched.future;
       // Wait for the condition that the persistent process has been subscribed.
@@ -81,25 +81,85 @@ void main() {
       runtime.output('Local: http://127.0.0.1:4322/#token=se');
       expect(opened, isEmpty);
       runtime.output('cret\n');
+      await Future<void>.delayed(Duration.zero);
+      expect(opened, isEmpty);
+      runtime.output('http://127.0.0.1:4321/?token=unexpected\n');
+      runtime.output('http://127.0.0.1:4321/#token=unexpected\n');
+      runtime.output('http://127.0.0.1:4321/session\n');
+      await Future<void>.delayed(Duration.zero);
+      expect(opened, isEmpty);
+      runtime.output('Local: http://127.0.0.1:4321/\n');
       await opening;
-      expect(opened, ['http://127.0.0.1:4322/#token=secret']);
+      expect(opened, ['http://127.0.0.1:4321/']);
       expect(servers.running(spec.id), isTrue);
       expect(runtime.requests.single.cwd, '/workspace');
       expect(runtime.requests.single.mounts.single.guest, '/workspace');
       expect(runtime.requests.single.timeout, Duration.zero);
       expect(runtime.requests.single.keepStdinOpen, isTrue);
       expect(runtime.requests.single.emulateHardLinks, isFalse);
+      expect(
+        runtime.requests.single.env['OPENCODE_SERVER_PASSWORD']?.length,
+        greaterThanOrEqualTo(32),
+      );
       await servers.open(
         spec,
         provider,
         cwd: '/workspace',
         mounts: const [Mount(host: '/tmp/example', guest: '/workspace')],
-        openBrowser: (url) async => opened.add(url),
+        openBrowser: (target) async => opened.add(target.url),
       );
       expect(runtime.requests, hasLength(1));
       await servers.stop(spec.id);
       expect(runtime.cancelled, [runtime.requests.single.runId]);
       expect(servers.running(spec.id), isFalse);
+      servers.dispose();
+      await runtime.events.close();
+    },
+  );
+
+  test(
+    'every OpenCode process overrides the user password in env only',
+    () async {
+      final runtime = _WebRuntime();
+      final servers = AcpAgentWebServers(
+        freePort: () async => 4321,
+        prepare: (_, input, port, directory) async => (
+          runtime,
+          const AcpLaunch(
+            command: 'opencode',
+            arguments: ['web', '--port', '4321'],
+            environment: {
+              'OPENCODE_SERVER_PASSWORD': 'user-supplied-password',
+              'OPENCODE_SERVER_USERNAME': 'local-user',
+            },
+          ),
+        ),
+      );
+      final passwords = <String>[];
+      for (var i = 0; i < 2; i++) {
+        final opening = servers.open(
+          spec,
+          provider,
+          cwd: '/workspace',
+          openBrowser: (_) async {},
+        );
+        await Future.doWhile(() async {
+          await Future<void>.value();
+          return runtime.requests.length <= i;
+        });
+        final request = runtime.requests.last;
+        final password = request.env['OPENCODE_SERVER_PASSWORD'];
+        expect(password, isNotNull);
+        expect(password, isNot('user-supplied-password'));
+        expect(password!.length, greaterThanOrEqualTo(32));
+        expect(request.command, isNot(contains(password)));
+        expect(request.env['OPENCODE_SERVER_USERNAME'], 'local-user');
+        passwords.add(password);
+        runtime.output('http://127.0.0.1:4321/\n');
+        await opening;
+        await servers.stop(spec.id);
+      }
+      expect(passwords[0] == passwords[1], isFalse);
       servers.dispose();
       await runtime.events.close();
     },
@@ -260,7 +320,7 @@ void main() {
     // The new settings must trigger a replacement process before opening.
     await Future<void>.delayed(Duration.zero);
     expect(runtime.requests, hasLength(2));
-    runtime.output('http://127.0.0.1:4321/?token=second\n');
+    runtime.output('http://127.0.0.1:4321/\n');
     await second;
     expect(inputs, [provider, next]);
     expect(runtime.requests.last.cwd, '/different');
@@ -284,7 +344,7 @@ void main() {
         AcpAgentSpec.byId(id)!,
         provider,
         cwd: '/workspace',
-        openBrowser: (url) async => opened.add(url),
+        openBrowser: (target) async => opened.add(target.url),
       );
       await Future.doWhile(() async {
         await Future<void>.value();

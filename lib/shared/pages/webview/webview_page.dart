@@ -49,10 +49,14 @@ class WebViewPage extends StatefulWidget {
     this.url,
     this.contentBase64,
     this.agentSession = false,
+    this.preparedController,
   });
   final String? url;
   final String? contentBase64; // HTML string in Base64
   final bool agentSession;
+
+  /// A fresh controller whose app-owned authentication bootstrap has finished.
+  final WebViewController? preparedController;
 
   @override
   State<WebViewPage> createState() => _WebViewPageState();
@@ -81,6 +85,15 @@ WebViewController createAgentBrowserController() {
           onMessageReceived: (message) => _agentConsoleSink?.call(message),
         );
   return controller;
+}
+
+/// Enables the normal browser only after an isolated authentication bootstrap.
+Future<void> prepareAgentBrowserController(WebViewController controller) async {
+  await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
+  await controller.addJavaScriptChannel(
+    'Console',
+    onMessageReceived: (message) => _agentConsoleSink?.call(message),
+  );
 }
 
 class _WebViewPageState extends State<WebViewPage> with RouteAware {
@@ -149,6 +162,7 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     }
     _controller =
         adopted ??
+        widget.preparedController ??
         (widget.agentSession
             ? createAgentBrowserController()
             : (createSiteAwareController(visible: () => mounted)

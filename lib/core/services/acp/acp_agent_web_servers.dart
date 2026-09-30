@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../workspace/workspace_runtime.dart';
+import '../browser/browser_http_auth.dart';
 import 'acp_agent_catalog.dart';
 
 enum AcpWebFailure { start, timeout, exited, stopped }
@@ -26,6 +28,14 @@ typedef AcpWebPrepare =
       int port,
       String directory,
     );
+
+/// A browser handoff. OpenCode's URL is clean; its credentials stay in memory.
+class AcpWebTarget {
+  const AcpWebTarget(this.url, {this.authentication});
+
+  final String url;
+  final BrowserHttpAuth? authentication;
+}
 
 /// App-owned Linux processes. Their printed login URLs are kept privately
 /// only until opening the browser, never recorded as output or diagnostics.
@@ -54,7 +64,7 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
     AcpProviderInput provider, {
     required String cwd,
     List<Mount> mounts = const [],
-    required Future<void> Function(String url) openBrowser,
+    required Future<void> Function(AcpWebTarget target) openBrowser,
   }) async {
     var run = _runs[spec.id];
     while (run != null && !run.matches(provider, cwd, mounts)) {
@@ -68,9 +78,9 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
       _changed();
       run.started = _start(spec, provider, cwd, mounts, run);
     }
-    final String url;
+    final AcpWebTarget target;
     try {
-      url = await run.address.future;
+      target = await run.address.future;
     } catch (_) {
       await run.started;
       rethrow;
@@ -78,7 +88,7 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
     if (run.stopped || _runs[spec.id] != run) {
       throw const AcpWebException(AcpWebFailure.stopped);
     }
-    await openBrowser(url);
+    await openBrowser(target);
   }
 
   Future<void> _start(
@@ -99,6 +109,21 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
         '$acpConfigDir/web-${spec.id}',
       );
       if (run.stopped) return;
+      // Preparation includes user variables. Always replace even an explicitly
+      // configured password, once per actual Web process, after that merge.
+      final environment = Map<String, String>.of(launch.environment);
+      if (spec.id == AcpAgentSpec.openCodeId) {
+        final random = Random.secure();
+        final password = base64Url.encode(
+          List<int>.generate(32, (_) => random.nextInt(256)),
+        );
+        environment['OPENCODE_SERVER_PASSWORD'] = password;
+        run.authentication = BrowserHttpAuth(
+          origin: Uri.parse('http://127.0.0.1:$port/'),
+          username: environment['OPENCODE_SERVER_USERNAME'] ?? 'opencode',
+          password: password,
+        );
+      }
       run.runtime = runtime;
       timer = Timer(startTimeout, () {
         if (!run.address.isCompleted) {
@@ -127,7 +152,7 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
               ].map(_quote).join(' '),
               cwd: cwd,
               mounts: mounts,
-              env: launch.environment,
+              env: environment,
               timeout: Duration.zero,
               keepStdinOpen: true,
               emulateHardLinks: false,
@@ -163,6 +188,13 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
                           uri.port > 65535) {
                         continue;
                       }
+                      if (spec.id == AcpAgentSpec.openCodeId &&
+                          (uri.port != port ||
+                              uri.query.isNotEmpty ||
+                              uri.fragment.isNotEmpty ||
+                              (uri.path.isNotEmpty && uri.path != '/'))) {
+                        continue;
+                      }
                       // These agents print authenticated URLs. An earlier bare
                       // listening address must not lose the browser login token.
                       if (spec.id == AcpAgentSpec.kimiCodeId &&
@@ -178,7 +210,14 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
                       }
                       if (!run.address.isCompleted) {
                         run.ready = true;
-                        run.address.complete(url);
+                        run.address.complete(
+                          AcpWebTarget(
+                            spec.id == AcpAgentSpec.openCodeId
+                                ? 'http://127.0.0.1:$port/'
+                                : url,
+                            authentication: run.authentication,
+                          ),
+                        );
                         _changed();
                       }
                     }
@@ -215,6 +254,8 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
     _runs.remove(id);
     run.ready = false;
     run.stopped = true;
+    run.authentication?.dispose();
+    run.authentication = null;
     unawaited(run.events?.cancel());
     _changed();
   }
@@ -227,6 +268,8 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _stopRun(String id, _WebRun run) async {
     if (run.stopped) return;
     run.stopped = true;
+    run.authentication?.dispose();
+    run.authentication = null;
     if (!run.address.isCompleted) {
       run.address.completeError(const AcpWebException(AcpWebFailure.stopped));
     }
@@ -292,7 +335,8 @@ class _WebRun {
       provider.contextWindow == input.contextWindow &&
       mapEquals(provider.headers, input.headers);
   final runId = 'acp-web-${const Uuid().v4()}';
-  final address = Completer<String>();
+  final address = Completer<AcpWebTarget>();
+  BrowserHttpAuth? authentication;
   Future<void>? started;
   WorkspaceRuntime? runtime;
   StreamSubscription<CommandEvent>? events;

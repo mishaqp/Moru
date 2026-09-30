@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/services/browser/browser_agent_session.dart';
+import '../../../core/services/browser/browser_http_auth.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../widgets/snackbar.dart' show rootNavigatorKey;
 import '../../../theme/app_font_weights.dart';
 import 'webview_page.dart';
+import 'webview_site_handlers.dart';
 import 'webview_status_banner.dart';
 
 /// Opens the shared agent browser: expands the mini window when the browser
@@ -17,37 +19,104 @@ import 'webview_status_banner.dart';
 Future<void> openSharedBrowser({
   String startUrl = 'https://www.google.com',
   bool newTab = false,
+  BrowserHttpAuth? authentication,
 }) async {
   final session = BrowserAgentSession.instance;
   final navigator = rootNavigatorKey.currentState;
   if (navigator == null) return;
-  if (session.minimized.value) {
-    await session.releaseMiniWindow();
+  final wasAttached = session.isAttached;
+  WebViewController? prepared;
+  Future<void> addTab() async {
+    if (authentication != null && !authentication.isActive) {
+      throw const BrowserHttpAuthException();
+    }
+    final result = await session.newTab(
+      url: startUrl,
+      preparedController: prepared,
+      mayOpen: authentication == null ? null : () => authentication.isActive,
+    );
+    if (authentication != null &&
+        (result['ok'] != true || !authentication.isActive)) {
+      if (result['ok'] == true) {
+        await session.closeTab(result['tab_id'] as String);
+      }
+      throw const BrowserHttpAuthException();
+    }
+  }
+
+  try {
+    if (authentication != null) {
+      // Never authorize an existing controller: Android's challenge gives no
+      // port. Bootstrap privately before the controller joins tabs/user scripts.
+      if (startUrl != authentication.origin.toString()) {
+        throw const BrowserHttpAuthException();
+      }
+      prepared = createSiteAwareController(
+        visible: () => session.isRouteCurrent && !session.minimized.value,
+      );
+      await authentication.bootstrap(prepared);
+      await prepareAgentBrowserController(prepared);
+      if (!authentication.isActive || (wasAttached && !session.isAttached)) {
+        throw const BrowserHttpAuthException();
+      }
+      newTab = true;
+    }
+    if (session.minimized.value) {
+      await session.releaseMiniWindow();
+      if (authentication != null && !authentication.isActive) {
+        throw const BrowserHttpAuthException();
+      }
+      unawaited(
+        navigator.push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => const WebViewPage(agentSession: true),
+          ),
+        ),
+      );
+      if (newTab) {
+        // The page takes the parked browser back in its first frame.
+        await WidgetsBinding.instance.endOfFrame;
+        await addTab();
+      }
+      return;
+    }
+    if (session.isAttached) {
+      if (newTab) await addTab();
+      return;
+    }
     unawaited(
       navigator.push<void>(
         MaterialPageRoute<void>(
-          builder: (_) => const WebViewPage(agentSession: true),
+          builder: (_) => WebViewPage(
+            url: startUrl,
+            agentSession: true,
+            preparedController: prepared,
+          ),
         ),
       ),
     );
-    if (newTab) {
-      // The page takes the parked browser back in its first frame.
-      await WidgetsBinding.instance.endOfFrame;
-      await session.newTab(url: startUrl);
+  } catch (_) {
+    if (authentication == null) rethrow;
+    final abandoned = prepared;
+    if (abandoned != null) {
+      // There is no native controller disposal API. Stop its page and release
+      // our reference; it never joins the shared session on a failed handoff.
+      try {
+        await abandoned.setJavaScriptMode(JavaScriptMode.disabled);
+        await abandoned.setNavigationDelegate(
+          NavigationDelegate(
+            onHttpAuthRequest: (request) => request.onCancel(),
+          ),
+        );
+        unawaited(
+          abandoned
+              .loadRequest(Uri.parse('about:blank'))
+              .catchError((Object _) {}),
+        );
+      } catch (_) {}
     }
-    return;
+    throw const BrowserHttpAuthException();
   }
-  if (session.isAttached) {
-    if (newTab) await session.newTab(url: startUrl);
-    return;
-  }
-  unawaited(
-    navigator.push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => WebViewPage(url: startUrl, agentSession: true),
-      ),
-    ),
-  );
 }
 
 /// The minimized shared browser, floating above every screen like a

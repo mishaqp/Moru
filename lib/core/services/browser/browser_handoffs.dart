@@ -102,6 +102,11 @@ class BrowserHandoffs {
     WebViewController controller,
     NavigationDelegate delegate,
   ) async {
+    // Ordinary browser pages never receive app-owned agent credentials. Apply
+    // this to every delegate replacement, including background/minimized tabs.
+    await delegate.platform.setOnHttpAuthRequest(
+      (request) => request.onCancel(),
+    );
     await controller.setNavigationDelegate(delegate);
     await _watchDownloads(controller);
   }

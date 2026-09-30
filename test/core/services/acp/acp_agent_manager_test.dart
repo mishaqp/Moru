@@ -263,7 +263,7 @@ void main() {
     () async {
       final agents = manager();
       final opening = agents.webServers.open(
-        AcpAgentSpec.byId('opencode')!,
+        AcpAgentSpec.byId('kimi-code')!,
         provider,
         cwd: '/workspace',
         openBrowser: (_) async {},
@@ -284,6 +284,49 @@ void main() {
       await opening;
       expect(agents.log, isEmpty);
       expect(request.command, isNot(contains('private-web-token')));
+      await agents.webServers.stopAll();
+      agents.dispose();
+    },
+  );
+
+  test(
+    'OpenCode generated Web password stays out of command, URL and log',
+    () async {
+      final agents = manager();
+      String? openedUrl;
+      final opening = agents.webServers.open(
+        AcpAgentSpec.byId('opencode')!,
+        provider,
+        cwd: '/workspace',
+        openBrowser: (target) async => openedUrl = target.url,
+      );
+      await Future.doWhile(() async {
+        await Future<void>.delayed(Duration.zero);
+        return !runtime.requests.any((request) => request.keepStdinOpen);
+      });
+      final request = runtime.requests.last;
+      final password = request.env['OPENCODE_SERVER_PASSWORD']!;
+      expect(password.length, greaterThanOrEqualTo(32));
+      expect(request.command.contains(password), isFalse);
+      final port = RegExp(
+        r"'--port' '(\d+)'",
+      ).firstMatch(request.command)!.group(1)!;
+      runtime._agents[request.runId]!.add(
+        CommandOutput(
+          OutputStreamKind.stderr,
+          Uint8List.fromList(utf8.encode('password marker: $password\n')),
+        ),
+      );
+      runtime._agents[request.runId]!.add(
+        CommandOutput(
+          OutputStreamKind.stdout,
+          Uint8List.fromList(utf8.encode('http://127.0.0.1:$port/\n')),
+        ),
+      );
+      await opening;
+      expect(openedUrl, 'http://127.0.0.1:$port/');
+      expect(openedUrl!.contains(password), isFalse);
+      expect(agents.log, isEmpty);
       await agents.webServers.stopAll();
       agents.dispose();
     },

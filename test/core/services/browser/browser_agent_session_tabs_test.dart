@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:Kelivo/core/services/browser/browser_agent_session.dart';
@@ -117,6 +118,57 @@ void main() {
       'invalid_url',
     );
   });
+
+  for (final prepared in [false, true]) {
+    test(
+      'concurrent handoffs share the last tab slot (prepared=$prepared)',
+      () async {
+        for (var i = 1; i < BrowserAgentSession.maxTabs - 1; i++) {
+          await session.newTab(url: 'https://tab$i.example/');
+        }
+        final firstEntered = Completer<void>();
+        final secondEntered = Completer<void>();
+        final release = Completer<void>();
+        var entered = 0;
+        WebViewController makeController() {
+          final controller = WebViewController();
+          (controller.platform as FakeWebViewController)
+              .onSetNavigationDelegate = () async {
+            entered++;
+            (entered == 1 ? firstEntered : secondEntered).complete();
+            await release.future;
+          };
+          return controller;
+        }
+
+        session.controllerFactory = makeController;
+        final one = session.newTab(
+          url: 'https://one.example/',
+          byAgent: !prepared,
+          preparedController: prepared ? makeController() : null,
+          mayOpen: prepared ? () => true : null,
+        );
+        await firstEntered.future;
+        final two = session.newTab(
+          url: 'https://two.example/',
+          byAgent: !prepared,
+          preparedController: prepared ? makeController() : null,
+          mayOpen: prepared ? () => true : null,
+        );
+        // The second request either reaches the same native setup barrier or
+        // refuses the slot already reserved by the first ordinary tab.
+        await Future.any<void>([secondEntered.future, two.then<void>((_) {})]);
+        release.complete();
+        final results = await Future.wait([one, two]);
+        expect(results.where((result) => result['ok'] == true), hasLength(1));
+        expect(
+          results.where((result) => result['error'] == 'too_many_tabs'),
+          hasLength(1),
+        );
+        expect(session.tabs.value, hasLength(BrowserAgentSession.maxTabs));
+      },
+    );
+  }
 
   test('tabs the model left unused for 15 minutes close, except the one on '
       'screen and the user\'s', () async {

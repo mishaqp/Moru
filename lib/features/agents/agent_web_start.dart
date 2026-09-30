@@ -35,6 +35,10 @@ Future<void> openAgentWeb(
     provider,
     cwd: sandboxed ? '/workspace' : root,
     mounts: sandboxed ? [Mount(host: root, guest: '/workspace')] : const [],
-    openBrowser: (url) => openSharedBrowser(startUrl: url, newTab: true),
+    openBrowser: (target) => openSharedBrowser(
+      startUrl: target.url,
+      authentication: target.authentication,
+      newTab: true,
+    ),
   );
 }
