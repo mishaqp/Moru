@@ -359,6 +359,7 @@ class AcpAgentManager extends ChangeNotifier {
     try {
       final (code, _) = await _run(
         runtime,
+        'set -e\n'
         'npm uninstall -g --prefix $acpNpmPrefix $packages\n'
         'rm -f $acpNpmPrefix/bin/${spec.command}\n',
         timeout: const Duration(minutes: 5),
@@ -371,6 +372,10 @@ class AcpAgentManager extends ChangeNotifier {
       _states[spec.id] = AcpInstallState.missing;
       _checks.remove(spec.id);
       failedAgentId = null;
+    } catch (error) {
+      _append('\n$error\n');
+      failure = AcpAgentFailure.remove;
+      failureKind = classifyAcpFailure(error);
     } finally {
       busyAgentId = null;
       _runId = null;

@@ -30,6 +30,9 @@ class _AgentRuntime extends FakeWorkspaceRuntime
     implements WorkspaceStdioRuntime {
   String probeOutput = '';
   int installExit = 0;
+  int uninstallExit = 0;
+  String uninstallOutput = '';
+  Object? uninstallError;
   bool moruAvailable = true;
   bool agentMissing = false;
   String nodeVersion = 'v24.0.0';
@@ -80,6 +83,10 @@ class _AgentRuntime extends FakeWorkspaceRuntime
     } else if (script.contains('npm install')) {
       output = 'added 42 packages in 9s\n';
       code = installExit;
+    } else if (script.contains('npm uninstall')) {
+      if (uninstallError != null) return Stream.error(uninstallError!);
+      output = uninstallOutput;
+      code = uninstallExit;
     } else {
       output = '';
       code = 0;
@@ -321,6 +328,100 @@ void main() {
     expect(agents.failedAgentId, 'codex');
     expect(agents.state('codex'), isNot(AcpInstallState.installed));
     expect(agents.log, contains('added 42 packages'));
+  });
+
+  test(
+    'uninstall shell stops at npm failure before launcher cleanup',
+    () async {
+      if (!Platform.isLinux && !Platform.isMacOS) return;
+      final dir = await Directory.systemTemp.createTemp('acp-uninstall-');
+      addTearDown(() => dir.delete(recursive: true));
+      final bin = await Directory('${dir.path}/bin').create();
+      final npmMarker = File('${dir.path}/npm-called');
+      final rmMarker = File('${dir.path}/rm-called');
+      await File('${bin.path}/npm').writeAsString(
+        '#!/bin/sh\n'
+        'printf npm > "\$ACP_FIXTURE_NPM_MARKER"\n'
+        'echo "npm uninstall failed" >&2\n'
+        'exit 42\n',
+      );
+      await File('${bin.path}/rm').writeAsString(
+        '#!/bin/sh\n'
+        'printf rm > "\$ACP_FIXTURE_RM_MARKER"\n'
+        'exit 0\n',
+      );
+      final chmod = await Process.run('/bin/chmod', [
+        '+x',
+        '${bin.path}/npm',
+        '${bin.path}/rm',
+      ]);
+      expect(chmod.exitCode, 0, reason: '${chmod.stderr}');
+      final agents = manager();
+      addTearDown(agents.dispose);
+      await agents.uninstall(AcpAgentSpec.byId('codex')!);
+      final result = await Process.run(
+        '/bin/sh',
+        ['-c', runtime.requests.single.command],
+        environment: {
+          'PATH': '${bin.path}:${Platform.environment['PATH']}',
+          'ACP_FIXTURE_NPM_MARKER': npmMarker.path,
+          'ACP_FIXTURE_RM_MARKER': rmMarker.path,
+        },
+      );
+      expect(await npmMarker.exists(), isTrue);
+      expect(result.exitCode, 42, reason: '${result.stderr}');
+      expect(await rmMarker.exists(), isFalse);
+    },
+  );
+
+  test(
+    'failed uninstall keeps installed state and the error journal',
+    () async {
+      runtime
+        ..probeOutput = '__acp_codex=1\n'
+        ..uninstallExit = 42
+        ..uninstallOutput = 'npm ERR! EACCES: permission denied\n';
+      final agents = manager();
+      addTearDown(agents.dispose);
+      await agents.refresh();
+      expect(agents.state('codex'), AcpInstallState.installed);
+      await agents.uninstall(AcpAgentSpec.byId('codex')!);
+      expect(agents.failure, AcpAgentFailure.remove);
+      expect(agents.failedAgentId, 'codex');
+      expect(agents.state('codex'), AcpInstallState.installed);
+      expect(agents.log, contains('npm ERR! EACCES: permission denied'));
+      expect(agents.busy, isFalse);
+    },
+  );
+
+  test(
+    'uninstall runtime errors keep installed state and are journaled',
+    () async {
+      runtime
+        ..probeOutput = '__acp_codex=1\n'
+        ..uninstallError = StateError('runtime disconnected');
+      final agents = manager();
+      addTearDown(agents.dispose);
+      await agents.refresh();
+      await agents.uninstall(AcpAgentSpec.byId('codex')!);
+      expect(agents.failure, AcpAgentFailure.remove);
+      expect(agents.failedAgentId, 'codex');
+      expect(agents.state('codex'), AcpInstallState.installed);
+      expect(agents.log, contains('runtime disconnected'));
+      expect(agents.busy, isFalse);
+    },
+  );
+
+  test('successful uninstall marks the agent missing', () async {
+    runtime.probeOutput = '__acp_codex=1\n';
+    final agents = manager();
+    addTearDown(agents.dispose);
+    await agents.refresh();
+    await agents.uninstall(AcpAgentSpec.byId('codex')!);
+    expect(agents.failure, isNull);
+    expect(agents.failedAgentId, isNull);
+    expect(agents.state('codex'), AcpInstallState.missing);
+    expect(agents.busy, isFalse);
   });
 
   test('without the Linux environment nothing starts', () async {
