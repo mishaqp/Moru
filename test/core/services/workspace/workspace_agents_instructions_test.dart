@@ -68,6 +68,78 @@ void main() {
   }
 
   group('workspace AGENTS.md', () {
+    for (final sandboxed in [true, false]) {
+      test('skips AGENTS.md linking outside, sandboxed=$sandboxed', () async {
+        final outside = File(p.join(temp.path, 'outside-instructions.md'))
+          ..writeAsStringSync('OUTSIDE-INSTRUCTION');
+        Link(p.join(workspaceRoot.path, 'AGENTS.md')).createSync(outside.path);
+
+        final files = await WorkspaceAgentsInstructions.read(
+          context(
+            modelCwd: sandboxed ? '/workspace' : workspaceRoot.path,
+            sandboxed: sandboxed,
+          ),
+        );
+        expect(files, isEmpty);
+      });
+    }
+
+    test(
+      'skips a directory link in the middle of the AGENTS.md path',
+      () async {
+        writeRootAgents('ROOT-INSTRUCTION');
+        final outside = Directory(p.join(temp.path, 'outside-project'))
+          ..createSync();
+        final nested = Directory(p.join(outside.path, 'nested'))..createSync();
+        File(
+          p.join(nested.path, 'AGENTS.md'),
+        ).writeAsStringSync('OUTSIDE-INSTRUCTION');
+        Link(p.join(workspaceRoot.path, 'linked')).createSync(outside.path);
+
+        final files = await WorkspaceAgentsInstructions.read(
+          context(modelCwd: '/workspace/linked/nested'),
+        );
+        expect(files.map((file) => file.content), ['ROOT-INSTRUCTION']);
+      },
+    );
+
+    test(
+      'reads links inside the real workspace and keeps the size cap',
+      () async {
+        final inside = Directory(p.join(workspaceRoot.path, 'notes'))
+          ..createSync();
+        final instruction = File(p.join(inside.path, 'instructions.md'))
+          ..writeAsStringSync('INSIDE-INSTRUCTION');
+        Link(p.join(inside.path, 'AGENTS.md')).createSync(instruction.path);
+        Link(p.join(workspaceRoot.path, 'linked')).createSync(inside.path);
+        final ctx = context(modelCwd: '/workspace/linked');
+
+        final files = await WorkspaceAgentsInstructions.read(ctx);
+        expect(files.single.content, 'INSIDE-INSTRUCTION');
+        expect(files.single.modelPath, '/workspace/linked/AGENTS.md');
+        instruction.writeAsStringSync(
+          'x' * (WorkspaceAgentsInstructions.maxFileBytes + 1),
+        );
+        expect(await WorkspaceAgentsInstructions.read(ctx), isEmpty);
+      },
+    );
+
+    test(
+      'compares with the real root when the workspace root is a link',
+      () async {
+        final realRoot = Directory(p.join(temp.path, 'real-project'))
+          ..createSync();
+        File(p.join(realRoot.path, 'AGENTS.md')).writeAsStringSync('REAL-ROOT');
+        workspaceRoot.deleteSync();
+        Link(workspaceRoot.path).createSync(realRoot.path);
+
+        final files = await WorkspaceAgentsInstructions.read(
+          context(modelCwd: '/workspace'),
+        );
+        expect(files.single.content, 'REAL-ROOT');
+      },
+    );
+
     test('is injected when it exists', () async {
       writeRootAgents('# Rules\nAlways run the analyzer before pushing.\n');
 
