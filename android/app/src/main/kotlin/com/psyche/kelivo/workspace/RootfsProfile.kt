@@ -5,7 +5,7 @@ import java.io.File
 /**
  * Puts the coding agents Moru installs (Settings → Agents, npm prefix
  * /root/.npm-global, see AcpAgentSpec) on the terminal's PATH. Every login
- * shell of Alpine, Debian and Ubuntu sources /etc/profile.d/*.sh after
+ * shell of Alpine, Debian and Ubuntu sources the scripts in /etc/profile.d after
  * setting its own PATH, so `claude`, `kimi` or `opencode` work in the
  * terminal whichever distribution is installed.
  */
