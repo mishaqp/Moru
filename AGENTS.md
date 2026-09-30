@@ -112,7 +112,14 @@ package name does not require building other platforms.
   `--link2symlink`, which leaves dangling links after atomic writes) and
   load `AcpFsCompat` via `NODE_OPTIONS` to copy when Android denies link(2).
   PRoot always binds `/dev/fd`, `/dev/shm`, `--sysvipc`, and stand-ins for
-  unreadable `/proc/stat`/`/proc/vmstat` (`ProotCommand.stageGuest`). Guest launch preparation trusts only `/workspace` in
+  unreadable `/proc/stat`/`/proc/vmstat` (`ProotCommand.stageGuest`).
+  `RootfsProfile` writes `/etc/profile.d/moru-agents.sh` so the terminal
+  finds agents. Built-in install scripts first add system packages one by
+  one (`moru_packages` in `acp_agent_catalog.dart`); a missing package is
+  logged, not fatal. Environment → Packages groups `EnvironmentDependencies`
+  (development, agents, SSH); ticked rows install through one `installAll`
+  and `agentDependencies` is the "prepare for agents" set.
+  Guest launch preparation trusts only `/workspace` in
   system Git config to handle the Android UID/root-chroot ownership mismatch.
 - **Mini apps**: published web apps (`MiniAppStore`, bridge `moru.*` in
   `MiniAppBridge`). They keep an error journal, the last 5 versions, and

@@ -4357,5 +4357,23 @@
         "type": "String"
       }
     }
-  }
+  },
+  "workspaceEnvGroupDevelopment": "開發",
+  "workspaceEnvGroupAgents": "AI 智慧體",
+  "workspaceEnvGroupAgentsDetail": "「為智慧體做準備」會安裝程式設計智慧體所需的系統元件；開啟智慧體可安裝、更新或檢查。",
+  "workspaceEnvGroupSsh": "SSH",
+  "workspaceEnvPrepareAgents": "為智慧體做準備",
+  "workspaceEnvPrepareAgentsDone": "智慧體所需元件均已安裝",
+  "workspaceEnvDependencyBuildTitle": "建置工具",
+  "workspaceEnvDependencyBuild": "編譯器與 make，用於建置 Node 與 Python 模組",
+  "workspaceEnvDependencyProcessesTitle": "行程工具",
+  "workspaceEnvDependencyCompatTitle": "glibc 相容層",
+  "workspaceEnvDependencyCompat": "在 Alpine 上執行為一般 Linux 建置的程式",
+  "workspaceEnvDependencyBash": "智慧體與腳本執行命令所用的 Shell",
+  "workspaceEnvDependencyRipgrep": "快速程式碼搜尋，程式設計智慧體使用它",
+  "workspaceEnvDependencySshTitle": "SSH 用戶端",
+  "workspaceEnvDependencySshpass": "為腳本提供密碼登入",
+  "workspaceEnvDependencySshdTitle": "SSH 伺服器",
+  "workspaceEnvDependencySshd": "透過 SSH 連線到手機",
+  "workspaceEnvInstallSelected": "安裝所選（{count}）"
 }

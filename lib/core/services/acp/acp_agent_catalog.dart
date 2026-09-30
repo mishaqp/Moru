@@ -249,19 +249,63 @@ class AcpAgentSpec {
   static const String _npmInstall =
       'npm install -g --prefix $acpNpmPrefix --no-audit --no-fund';
 
+  /// What coding agents run besides Node, installed by the distribution's
+  /// package manager before the agent itself; present packages are kept.
+  /// bash runs their commands (Alpine only has BusyBox sh), ripgrep is
+  /// their search, git and curl their everyday tools, procps gives ps and
+  /// kill. On Alpine (musl), gcompat and glib let the glibc builds some npm
+  /// packages ship run at all. The same set OmniBot prepares.
+  static const String _agentPackages =
+      'moru_packages "bash ca-certificates curl git procps ripgrep gcompat glib" '
+      '"bash ca-certificates curl git procps ripgrep" || $_packagesWarning\n';
+
+  /// DeepSeek Harness builds node-pty from source where no prebuilt matches.
+  static const String _buildPackages =
+      'moru_packages "build-base python3 linux-headers util-linux-dev" '
+      '"build-essential python3" || $_packagesWarning\n';
+
+  /// A package source without one of them (Ubuntu without universe) must
+  /// not stop the agent's own installation; the log says what happened.
+  static const String _packagesWarning =
+      "echo 'Moru: some system packages could not be installed' >&2";
+
+  /// `moru_packages ALPINE DEBIAN`: installs whichever listed packages are
+  /// missing with apk or apt-get, one at a time so a package the source
+  /// lacks does not hold back the rest; fails if any could not be installed.
+  /// A distribution with neither package manager is left as is.
+  static const String _packagesFunction = r"""
+moru_packages() {
+  moru_failed=
+  if command -v apk >/dev/null 2>&1; then
+    for moru_package in $1; do
+      apk info -e "$moru_package" >/dev/null 2>&1 ||
+        apk --wait 120 add --no-cache "$moru_package" ||
+        moru_failed="$moru_failed $moru_package"
+    done
+  elif command -v apt-get >/dev/null 2>&1; then
+    export DEBIAN_FRONTEND=noninteractive
+    moru_updated=
+    for moru_package in $2; do
+      dpkg-query -W -f='${Status}' "$moru_package" 2>/dev/null | grep -q 'ok installed' && continue
+      [ -n "$moru_updated" ] || { apt-get -o DPkg::Lock::Timeout=120 update; moru_updated=1; }
+      apt-get -o DPkg::Lock::Timeout=120 install -y --no-install-recommends "$moru_package" ||
+        moru_failed="$moru_failed $moru_package"
+    done
+  fi
+  [ -z "$moru_failed" ] || { echo "Moru: not installed:$moru_failed" >&2; return 1; }
+}
+""";
+
+  static const String _prepare = 'set -e\n$_packagesFunction$_agentPackages';
+
   /// Agents offered in the list, in the order shown.
   static const List<AcpAgentSpec> builtIn = [
     AcpAgentSpec(
       id: claudeCodeId,
       name: 'Claude Code',
       command: 'claude-agent-acp',
-      // Claude Code runs its commands through bash or zsh ("No suitable
-      // shell found" otherwise); Alpine has only BusyBox sh.
       installScript:
-          'set -e\n'
-          'if ! command -v bash >/dev/null 2>&1 && '
-          'command -v apk >/dev/null 2>&1; then apk add --no-cache bash; fi\n'
-          '$_npmInstall @anthropic-ai/claude-code '
+          '$_prepare$_npmInstall @anthropic-ai/claude-code '
           '@agentclientprotocol/claude-agent-acp\n',
       api: AcpModelApi.anthropic,
       homepage: 'https://docs.anthropic.com/en/docs/claude-code',
@@ -271,7 +315,7 @@ class AcpAgentSpec {
       name: 'Codex',
       command: 'codex-acp',
       installScript:
-          'set -e\n$_npmInstall @openai/codex '
+          '$_prepare$_npmInstall @openai/codex '
           '@agentclientprotocol/codex-acp\n',
       api: AcpModelApi.openai,
       homepage: 'https://github.com/openai/codex',
@@ -284,7 +328,7 @@ class AcpAgentSpec {
       // OpenCode publishes separate binaries for glibc and musl systems;
       // npm picks by CPU only, so the matching one is installed by name.
       installScript:
-          'set -e\n$_npmInstall opencode-ai\n'
+          '$_prepare$_npmInstall opencode-ai\n'
           'platform=opencode-linux-arm64\n'
           'if [ -f /etc/alpine-release ]; then '
           'platform=opencode-linux-arm64-musl; fi\n'
@@ -302,7 +346,7 @@ class AcpAgentSpec {
       name: 'Kimi Code',
       command: 'kimi',
       arguments: ['acp'],
-      installScript: 'set -e\n$_npmInstall @moonshot-ai/kimi-code\n',
+      installScript: '$_prepare$_npmInstall @moonshot-ai/kimi-code\n',
       api: AcpModelApi.any,
       homepage: 'https://github.com/MoonshotAI/kimi-code',
       nodeMajor: 22,
@@ -313,7 +357,7 @@ class AcpAgentSpec {
       name: 'DeepSeek Harness',
       command: 'dsh',
       arguments: ['--profile', 'acp'],
-      installScript: 'set -e\n$_npmInstall @deepseek-ai/dsh\n',
+      installScript: '$_prepare$_buildPackages$_npmInstall @deepseek-ai/dsh\n',
       api: AcpModelApi.any,
       homepage: 'https://github.com/deepseek-ai/deepseek-harness',
       nodeMajor: 22,

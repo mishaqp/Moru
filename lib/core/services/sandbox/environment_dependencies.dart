@@ -8,13 +8,44 @@ import 'package:Kelivo/core/models/environment_state.dart';
 import 'package:Kelivo/core/providers/environment_provider.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 
-enum EnvironmentDependency { python, node, git, ssh, network, archive }
+/// Packages the Linux environment offers, in the order shown, grouped by
+/// [EnvironmentDependencyCommands.group]. The set follows what coding agents
+/// need on Android (as OmniBot prepares it): a shell, search, build tools
+/// and, on musl, the glibc compatibility layer.
+enum EnvironmentDependency {
+  node,
+  python,
+  git,
+  bash,
+  ripgrep,
+  build,
+  network,
+  archive,
+  processes,
+  compat,
+  ssh,
+  sshpass,
+  sshd,
+}
+
+enum DependencyGroup { development, ssh }
 
 enum DependencyStatus { unknown, missing, installed }
 
 enum DependencyFailure { check, install, cancelled }
 
 extension EnvironmentDependencyCommands on EnvironmentDependency {
+  DependencyGroup get group => switch (this) {
+    EnvironmentDependency.ssh ||
+    EnvironmentDependency.sshpass ||
+    EnvironmentDependency.sshd => DependencyGroup.ssh,
+    _ => DependencyGroup.development,
+  };
+
+  /// Whether the distribution has it at all: the glibc layer is for musl.
+  bool available({required bool alpine}) =>
+      this != EnvironmentDependency.compat || alpine;
+
   String packages({required bool alpine}) => switch (this) {
     EnvironmentDependency.python =>
       alpine
@@ -22,21 +53,40 @@ extension EnvironmentDependencyCommands on EnvironmentDependency {
           : 'python3 python3-pip python3-venv',
     EnvironmentDependency.node => 'nodejs npm',
     EnvironmentDependency.git => 'git',
-    EnvironmentDependency.ssh =>
-      alpine ? 'openssh-client-default' : 'openssh-client',
+    EnvironmentDependency.bash => 'bash',
+    EnvironmentDependency.ripgrep => 'ripgrep',
+    EnvironmentDependency.build =>
+      alpine ? 'build-base linux-headers' : 'build-essential',
     EnvironmentDependency.network => 'curl wget',
     EnvironmentDependency.archive => 'zip unzip',
+    EnvironmentDependency.processes => 'procps psmisc tmux',
+    EnvironmentDependency.compat => alpine ? 'gcompat glib' : '',
+    EnvironmentDependency.ssh =>
+      alpine ? 'openssh-client-default' : 'openssh-client',
+    EnvironmentDependency.sshpass => 'sshpass',
+    EnvironmentDependency.sshd => 'openssh-server',
   };
 
+  /// Succeeds when installed; its first line is shown as the version.
   String probe({required bool alpine}) => switch (this) {
     EnvironmentDependency.python =>
       'python3 --version && python3 -m pip --version && ${alpine ? 'virtualenv --version' : 'python3 -m venv --help'}',
     EnvironmentDependency.node => 'node --version && npm --version',
     EnvironmentDependency.git => 'git --version',
+    EnvironmentDependency.bash => 'bash --version',
+    EnvironmentDependency.ripgrep => 'rg --version',
+    EnvironmentDependency.build => 'cc --version && make --version',
     EnvironmentDependency.ssh =>
       'ssh -V && command -v scp && command -v sftp && command -v ssh-keygen',
     EnvironmentDependency.network => 'curl --version && wget --version',
     EnvironmentDependency.archive => 'zip -v && unzip -v',
+    // procps' ps (BusyBox's has no --version), psmisc's killall, tmux.
+    EnvironmentDependency.processes => 'ps --version && killall -V && tmux -V',
+    EnvironmentDependency.compat =>
+      'apk info -e gcompat && apk info -e glib && echo gcompat glib',
+    EnvironmentDependency.sshpass => 'sshpass -V',
+    EnvironmentDependency.sshd =>
+      'test -x /usr/sbin/sshd && echo OpenSSH server',
   };
 }
 
@@ -63,11 +113,16 @@ class EnvironmentDependencies extends ChangeNotifier {
   final MirrorService mirrors;
   MirrorCancelToken? _mirrorCancel;
   final Map<EnvironmentDependency, DependencyStatus> _statuses = {};
+  final Map<EnvironmentDependency, String> _versions = {};
   final List<int> _output = [];
   String? _runId;
   bool _cancelled = false;
   bool busy = false;
-  EnvironmentDependency? installing;
+
+  /// What the running installation covers; empty when none runs.
+  Set<EnvironmentDependency> installingAll = const {};
+  EnvironmentDependency? get installing =>
+      installingAll.isEmpty ? null : installingAll.first;
   EnvironmentDependency? lastInstalled;
   EnvironmentDependency? lastAttempt;
   DependencyFailure? failure;
@@ -75,33 +130,62 @@ class EnvironmentDependencies extends ChangeNotifier {
   DependencyStatus status(EnvironmentDependency dependency) =>
       _statuses[dependency] ?? DependencyStatus.unknown;
 
+  /// The installed version's first line, e.g. `v24.1.0` or `ripgrep 14.1.1`.
+  String? version(EnvironmentDependency dependency) => _versions[dependency];
+
+  /// What this distribution offers, in display order.
+  List<EnvironmentDependency> get offered => [
+    for (final dependency in EnvironmentDependency.values)
+      if (dependency.available(alpine: alpine)) dependency,
+  ];
+
   void _environmentChanged() {
     if (env.state.phase != EnvironmentPhase.ready) {
       _statuses.clear();
+      _versions.clear();
       lastInstalled = null;
       notifyListeners();
     }
   }
 
   String get probeScript => [
-    for (final dependency in EnvironmentDependency.values)
-      'if ( ${dependency.probe(alpine: alpine)} ) >/dev/null 2>&1; then '
-          "echo '__kelivo_dep_${dependency.name}=1'; else "
+    for (final dependency in offered)
+      'if moru_out=\$( ( ${dependency.probe(alpine: alpine)} ) 2>&1 ); then '
+          "echo '__kelivo_dep_${dependency.name}=1'; "
+          'printf "__kelivo_ver_${dependency.name}=%s\\n" '
+          '"\$(printf "%s\\n" "\$moru_out" | head -n 1)"; else '
           "echo '__kelivo_dep_${dependency.name}=0'; fi",
   ].join('\n');
 
-  String installScript(EnvironmentDependency dependency) {
-    final packages = dependency.packages(alpine: alpine);
-    if (alpine) {
-      return 'set -e\napk --wait 60 update\napk --wait 60 add $packages\n';
-    }
+  /// Installs [dependencies]' packages one at a time, so a package the
+  /// source lacks does not hold back the rest; fails if any failed. The
+  /// probe afterwards shows which ones made it.
+  String installScript(Iterable<EnvironmentDependency> dependencies) {
+    final packages = [
+      for (final dependency in dependencies)
+        if (dependency.packages(alpine: alpine).isNotEmpty)
+          dependency.packages(alpine: alpine),
+    ].join(' ');
+    final each = alpine
+        ? 'apk --wait 60 add'
+        : 'apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=2 '
+              'install -y --no-install-recommends';
+    final loop =
+        'moru_failed=\n'
+        'for moru_package in $packages; do\n'
+        '  $each "\$moru_package" || '
+        'moru_failed="\$moru_failed \$moru_package"\n'
+        'done\n'
+        '[ -z "\$moru_failed" ] || '
+        '{ echo "Not installed:\$moru_failed" >&2; exit 1; }\n';
+    if (alpine) return 'set -e\napk --wait 60 update\n$loop';
     return 'set -e\nexport DEBIAN_FRONTEND=noninteractive\n'
         'dpkg --configure -a\n'
         'apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=2 '
         '-o APT::Update::Error-Mode=any update\n'
         'apt-get -o DPkg::Lock::Timeout=60 -f install -y\n'
-        'apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=2 '
-        'install -y --no-install-recommends ca-certificates $packages\n';
+        '$each ca-certificates\n'
+        '$loop';
   }
 
   Future<void> refresh() async {
@@ -126,27 +210,35 @@ class EnvironmentDependencies extends ChangeNotifier {
     }
   }
 
-  Future<void> install(EnvironmentDependency dependency) async {
-    if (busy ||
+  Future<void> install(EnvironmentDependency dependency) =>
+      installAll({dependency});
+
+  /// One transaction for several packages, as picked with the checkboxes.
+  Future<void> installAll(Set<EnvironmentDependency> dependencies) async {
+    final picked = dependencies.where(offered.contains).toSet();
+    if (picked.isEmpty ||
+        busy ||
         !supportsPackages ||
         env.state.phase != EnvironmentPhase.ready) {
       return;
     }
     busy = true;
     _cancelled = false;
-    installing = dependency;
-    lastAttempt = dependency;
+    installingAll = picked;
+    lastAttempt = picked.first;
     lastInstalled = null;
     failure = null;
     _output.clear();
-    _statuses[dependency] = DependencyStatus.unknown;
+    for (final dependency in picked) {
+      _statuses[dependency] = DependencyStatus.unknown;
+    }
     notifyListeners();
     try {
       _mirrorCancel = MirrorCancelToken();
       final categories = {
         alpine ? MirrorCategory.apk : MirrorCategory.apt,
-        if (dependency == EnvironmentDependency.python) MirrorCategory.pip,
-        if (dependency == EnvironmentDependency.node) MirrorCategory.npm,
+        if (picked.contains(EnvironmentDependency.python)) MirrorCategory.pip,
+        if (picked.contains(EnvironmentDependency.node)) MirrorCategory.npm,
       };
       for (final category in categories) {
         final selection = env.mirrors[category];
@@ -173,17 +265,24 @@ class EnvironmentDependencies extends ChangeNotifier {
         );
       }
       if (_cancelled) throw StateError('Cancelled');
-      await _run(
-        installScript(dependency),
-        timeout: const Duration(minutes: 30),
-        showOutput: true,
-      );
+      Object? installError;
+      try {
+        await _run(
+          installScript(picked),
+          timeout: const Duration(minutes: 30),
+          showOutput: true,
+        );
+      } catch (error) {
+        installError = error;
+      }
       if (_cancelled) throw StateError('Cancelled');
+      // Probe even after a partial failure, so what did install shows so.
       await _probe();
-      if (status(dependency) != DependencyStatus.installed) {
+      if (installError != null ||
+          picked.any((d) => status(d) != DependencyStatus.installed)) {
         throw StateError('Installed commands failed verification');
       }
-      lastInstalled = dependency;
+      lastInstalled = picked.first;
       await env.clearCachedDiskUsage();
     } catch (_) {
       failure = _cancelled
@@ -191,7 +290,7 @@ class EnvironmentDependencies extends ChangeNotifier {
           : DependencyFailure.install;
     } finally {
       _mirrorCancel = null;
-      installing = null;
+      installingAll = const {};
       busy = false;
       notifyListeners();
     }
@@ -212,8 +311,19 @@ class EnvironmentDependencies extends ChangeNotifier {
     );
     final lines = const LineSplitter().convert(output).toSet();
     final statuses = <EnvironmentDependency, DependencyStatus>{};
-    for (final dependency in EnvironmentDependency.values) {
+    final versions = <EnvironmentDependency, String>{};
+    for (final dependency in offered) {
       final prefix = '__kelivo_dep_${dependency.name}=';
+      final version = lines
+          .where((line) => line.startsWith('__kelivo_ver_${dependency.name}='))
+          .map((line) => line.substring(line.indexOf('=') + 1).trim())
+          .where((text) => text.isNotEmpty)
+          .firstOrNull;
+      if (version != null) {
+        versions[dependency] = version.length > 48
+            ? '${version.substring(0, 47)}…'
+            : version;
+      }
       final installed = lines.contains('${prefix}1');
       final missing = lines.contains('${prefix}0');
       if (installed == missing) {
@@ -224,6 +334,9 @@ class EnvironmentDependencies extends ChangeNotifier {
           : DependencyStatus.missing;
     }
     _statuses.addAll(statuses);
+    _versions
+      ..removeWhere((dependency, _) => statuses.containsKey(dependency))
+      ..addAll(versions);
   }
 
   Future<String> _run(

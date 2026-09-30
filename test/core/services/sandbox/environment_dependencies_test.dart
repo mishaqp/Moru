@@ -45,7 +45,9 @@ void main() {
           service.status(EnvironmentDependency.python),
           DependencyStatus.missing,
         );
-        for (final dependency in EnvironmentDependency.values) {
+        // The glibc layer is offered on Alpine only.
+        expect(service.offered.contains(EnvironmentDependency.compat), alpine);
+        for (final dependency in service.offered) {
           await service.install(dependency);
           expect(service.failure, isNull);
           expect(service.status(dependency), DependencyStatus.installed);

@@ -5274,5 +5274,23 @@
         "type": "String"
       }
     }
-  }
+  },
+  "workspaceEnvGroupDevelopment": "Разработка",
+  "workspaceEnvGroupAgents": "ИИ-агенты",
+  "workspaceEnvGroupAgentsDetail": "«Подготовить для агентов» ставит то, что агентам нужно от системы. Откройте агента, чтобы установить, обновить или проверить его.",
+  "workspaceEnvGroupSsh": "SSH",
+  "workspaceEnvPrepareAgents": "Подготовить для агентов",
+  "workspaceEnvPrepareAgentsDone": "Всё нужное агентам установлено",
+  "workspaceEnvDependencyBuildTitle": "Сборка",
+  "workspaceEnvDependencyBuild": "Компилятор и make: собирать модули Node и Python",
+  "workspaceEnvDependencyProcessesTitle": "Процессы",
+  "workspaceEnvDependencyCompatTitle": "Совместимость с glibc",
+  "workspaceEnvDependencyCompat": "Запуск программ для обычного Linux на Alpine",
+  "workspaceEnvDependencyBash": "Оболочка, в которой агенты и скрипты выполняют команды",
+  "workspaceEnvDependencyRipgrep": "Быстрый поиск по коду — им ищут агенты",
+  "workspaceEnvDependencySshTitle": "SSH-клиент",
+  "workspaceEnvDependencySshpass": "Вход по паролю для скриптов",
+  "workspaceEnvDependencySshdTitle": "SSH-сервер",
+  "workspaceEnvDependencySshd": "Подключаться к телефону по SSH",
+  "workspaceEnvInstallSelected": "Установить выбранное ({count})"
 }

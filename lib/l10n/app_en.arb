@@ -5476,5 +5476,28 @@
         "type": "String"
       }
     }
+  },
+  "workspaceEnvGroupDevelopment": "Development",
+  "workspaceEnvGroupAgents": "AI agents",
+  "workspaceEnvGroupAgentsDetail": "“Prepare for agents” installs what coding agents need from the system; open an agent to install, update or check it.",
+  "workspaceEnvGroupSsh": "SSH",
+  "workspaceEnvPrepareAgents": "Prepare for agents",
+  "workspaceEnvPrepareAgentsDone": "Everything agents need is installed",
+  "workspaceEnvDependencyBuildTitle": "Build tools",
+  "workspaceEnvDependencyBuild": "Compiler and make, to build Node and Python modules",
+  "workspaceEnvDependencyProcessesTitle": "Processes",
+  "workspaceEnvDependencyCompatTitle": "glibc compatibility",
+  "workspaceEnvDependencyCompat": "Runs programs built for regular Linux on Alpine",
+  "workspaceEnvDependencyBash": "The shell agents and scripts run commands in",
+  "workspaceEnvDependencyRipgrep": "Fast code search, used by coding agents",
+  "workspaceEnvDependencySshTitle": "SSH client",
+  "workspaceEnvDependencySshpass": "Password logins for scripts",
+  "workspaceEnvDependencySshdTitle": "SSH server",
+  "workspaceEnvDependencySshd": "Connect to the phone over SSH",
+  "workspaceEnvInstallSelected": "Install selected ({count})",
+  "@workspaceEnvInstallSelected": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
   }
 }

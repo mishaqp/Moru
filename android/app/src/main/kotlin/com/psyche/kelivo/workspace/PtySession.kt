@@ -30,6 +30,7 @@ class PtySessions(
         tmpDir.mkdirs()
         RootfsCertificates.ensureInstalled(rootfsDir)
         val launch = if (chroot != null) {
+            RootfsProfile.ensureInstalled(rootfsDir)
             ChrootCommand.build(
                 nativeLibDir = nativeLibDir,
                 rootfsDir = rootfsDir,

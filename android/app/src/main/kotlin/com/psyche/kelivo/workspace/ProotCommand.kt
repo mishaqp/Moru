@@ -210,6 +210,7 @@ object ProotCommand {
     fun stageGuest(rootfsDir: File, tmpDir: File) {
         File(rootfsDir, "tmp").mkdirs()
         stageProcStandIns(tmpDir)
+        RootfsProfile.ensureInstalled(rootfsDir)
     }
 
     /**

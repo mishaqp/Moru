@@ -11623,6 +11623,63 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get agentsNodeUpdateUnknown =>
       '此发行版暂无已确认的升级方法。请查阅其官方 Node.js 安装说明，然后重新打开此卡片。';
+
+  @override
+  String get workspaceEnvGroupDevelopment => '开发';
+
+  @override
+  String get workspaceEnvGroupAgents => 'AI 智能体';
+
+  @override
+  String get workspaceEnvGroupAgentsDetail =>
+      '“为智能体做准备”会安装编程智能体所需的系统组件；打开智能体可安装、更新或检查。';
+
+  @override
+  String get workspaceEnvGroupSsh => 'SSH';
+
+  @override
+  String get workspaceEnvPrepareAgents => '为智能体做准备';
+
+  @override
+  String get workspaceEnvPrepareAgentsDone => '智能体所需组件均已安装';
+
+  @override
+  String get workspaceEnvDependencyBuildTitle => '构建工具';
+
+  @override
+  String get workspaceEnvDependencyBuild => '编译器和 make，用于构建 Node 与 Python 模块';
+
+  @override
+  String get workspaceEnvDependencyProcessesTitle => '进程工具';
+
+  @override
+  String get workspaceEnvDependencyCompatTitle => 'glibc 兼容层';
+
+  @override
+  String get workspaceEnvDependencyCompat => '在 Alpine 上运行为常规 Linux 构建的程序';
+
+  @override
+  String get workspaceEnvDependencyBash => '智能体与脚本执行命令所用的 Shell';
+
+  @override
+  String get workspaceEnvDependencyRipgrep => '快速代码搜索，编程智能体使用它';
+
+  @override
+  String get workspaceEnvDependencySshTitle => 'SSH 客户端';
+
+  @override
+  String get workspaceEnvDependencySshpass => '为脚本提供密码登录';
+
+  @override
+  String get workspaceEnvDependencySshdTitle => 'SSH 服务器';
+
+  @override
+  String get workspaceEnvDependencySshd => '通过 SSH 连接到手机';
+
+  @override
+  String workspaceEnvInstallSelected(int count) {
+    return '安装所选（$count）';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -23173,6 +23230,63 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get agentsNodeUpdateUnknown =>
       '此发行版暂无已确认的升级方法。请查阅其官方 Node.js 安装说明，然后重新打开此卡片。';
+
+  @override
+  String get workspaceEnvGroupDevelopment => '开发';
+
+  @override
+  String get workspaceEnvGroupAgents => 'AI 智能体';
+
+  @override
+  String get workspaceEnvGroupAgentsDetail =>
+      '“为智能体做准备”会安装编程智能体所需的系统组件；打开智能体可安装、更新或检查。';
+
+  @override
+  String get workspaceEnvGroupSsh => 'SSH';
+
+  @override
+  String get workspaceEnvPrepareAgents => '为智能体做准备';
+
+  @override
+  String get workspaceEnvPrepareAgentsDone => '智能体所需组件均已安装';
+
+  @override
+  String get workspaceEnvDependencyBuildTitle => '构建工具';
+
+  @override
+  String get workspaceEnvDependencyBuild => '编译器和 make，用于构建 Node 与 Python 模块';
+
+  @override
+  String get workspaceEnvDependencyProcessesTitle => '进程工具';
+
+  @override
+  String get workspaceEnvDependencyCompatTitle => 'glibc 兼容层';
+
+  @override
+  String get workspaceEnvDependencyCompat => '在 Alpine 上运行为常规 Linux 构建的程序';
+
+  @override
+  String get workspaceEnvDependencyBash => '智能体与脚本执行命令所用的 Shell';
+
+  @override
+  String get workspaceEnvDependencyRipgrep => '快速代码搜索，编程智能体使用它';
+
+  @override
+  String get workspaceEnvDependencySshTitle => 'SSH 客户端';
+
+  @override
+  String get workspaceEnvDependencySshpass => '为脚本提供密码登录';
+
+  @override
+  String get workspaceEnvDependencySshdTitle => 'SSH 服务器';
+
+  @override
+  String get workspaceEnvDependencySshd => '通过 SSH 连接到手机';
+
+  @override
+  String workspaceEnvInstallSelected(int count) {
+    return '安装所选（$count）';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -34797,4 +34911,61 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get agentsNodeUpdateUnknown =>
       '此發行版暫無已確認的升級方法。請查閱其官方 Node.js 安裝說明，然後重新開啟此卡片。';
+
+  @override
+  String get workspaceEnvGroupDevelopment => '開發';
+
+  @override
+  String get workspaceEnvGroupAgents => 'AI 智慧體';
+
+  @override
+  String get workspaceEnvGroupAgentsDetail =>
+      '「為智慧體做準備」會安裝程式設計智慧體所需的系統元件；開啟智慧體可安裝、更新或檢查。';
+
+  @override
+  String get workspaceEnvGroupSsh => 'SSH';
+
+  @override
+  String get workspaceEnvPrepareAgents => '為智慧體做準備';
+
+  @override
+  String get workspaceEnvPrepareAgentsDone => '智慧體所需元件均已安裝';
+
+  @override
+  String get workspaceEnvDependencyBuildTitle => '建置工具';
+
+  @override
+  String get workspaceEnvDependencyBuild => '編譯器與 make，用於建置 Node 與 Python 模組';
+
+  @override
+  String get workspaceEnvDependencyProcessesTitle => '行程工具';
+
+  @override
+  String get workspaceEnvDependencyCompatTitle => 'glibc 相容層';
+
+  @override
+  String get workspaceEnvDependencyCompat => '在 Alpine 上執行為一般 Linux 建置的程式';
+
+  @override
+  String get workspaceEnvDependencyBash => '智慧體與腳本執行命令所用的 Shell';
+
+  @override
+  String get workspaceEnvDependencyRipgrep => '快速程式碼搜尋，程式設計智慧體使用它';
+
+  @override
+  String get workspaceEnvDependencySshTitle => 'SSH 用戶端';
+
+  @override
+  String get workspaceEnvDependencySshpass => '為腳本提供密碼登入';
+
+  @override
+  String get workspaceEnvDependencySshdTitle => 'SSH 伺服器';
+
+  @override
+  String get workspaceEnvDependencySshd => '透過 SSH 連線到手機';
+
+  @override
+  String workspaceEnvInstallSelected(int count) {
+    return '安裝所選（$count）';
+  }
 }

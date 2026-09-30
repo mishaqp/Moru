@@ -12162,4 +12162,66 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get agentsNodeUpdateUnknown =>
       'No verified upgrade method is available for this distribution. Check its official Node.js installation instructions; then reopen this card.';
+
+  @override
+  String get workspaceEnvGroupDevelopment => 'Development';
+
+  @override
+  String get workspaceEnvGroupAgents => 'AI agents';
+
+  @override
+  String get workspaceEnvGroupAgentsDetail =>
+      '“Prepare for agents” installs what coding agents need from the system; open an agent to install, update or check it.';
+
+  @override
+  String get workspaceEnvGroupSsh => 'SSH';
+
+  @override
+  String get workspaceEnvPrepareAgents => 'Prepare for agents';
+
+  @override
+  String get workspaceEnvPrepareAgentsDone =>
+      'Everything agents need is installed';
+
+  @override
+  String get workspaceEnvDependencyBuildTitle => 'Build tools';
+
+  @override
+  String get workspaceEnvDependencyBuild =>
+      'Compiler and make, to build Node and Python modules';
+
+  @override
+  String get workspaceEnvDependencyProcessesTitle => 'Processes';
+
+  @override
+  String get workspaceEnvDependencyCompatTitle => 'glibc compatibility';
+
+  @override
+  String get workspaceEnvDependencyCompat =>
+      'Runs programs built for regular Linux on Alpine';
+
+  @override
+  String get workspaceEnvDependencyBash =>
+      'The shell agents and scripts run commands in';
+
+  @override
+  String get workspaceEnvDependencyRipgrep =>
+      'Fast code search, used by coding agents';
+
+  @override
+  String get workspaceEnvDependencySshTitle => 'SSH client';
+
+  @override
+  String get workspaceEnvDependencySshpass => 'Password logins for scripts';
+
+  @override
+  String get workspaceEnvDependencySshdTitle => 'SSH server';
+
+  @override
+  String get workspaceEnvDependencySshd => 'Connect to the phone over SSH';
+
+  @override
+  String workspaceEnvInstallSelected(int count) {
+    return 'Install selected ($count)';
+  }
 }

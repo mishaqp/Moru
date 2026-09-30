@@ -27,33 +27,126 @@ void main() {
     }
   });
 
-  test('installing Claude Code adds bash on Alpine only when it is '
-      'missing', () async {
-    final script = AcpAgentSpec.byId('claude-code')!.installScript;
-    Future<String> install({required bool hasBash}) async {
+  group('installing an agent prepares the system first', () {
+    /// Runs [spec]'s install script against fake package tools on PATH:
+    /// [installed] packages are present, [unavailable] ones cannot be added.
+    Future<(String log, String stderr)> install(
+      String id, {
+      required bool alpine,
+      Set<String> installed = const {},
+      Set<String> unavailable = const {},
+    }) async {
       final bin = await Directory.systemTemp.createTemp('moru-install');
       addTearDown(() => bin.delete(recursive: true));
-      final log = File('${bin.path}/calls');
-      for (final tool in ['apk', 'npm', if (hasBash) 'bash']) {
-        final file = File('${bin.path}/$tool')
-          ..writeAsStringSync('#!/bin/sh\necho "$tool \$*" >> "${log.path}"\n');
-        await Process.run('chmod', ['+x', file.path]);
+      final log = '${bin.path}/calls';
+      File(
+        '${bin.path}/installed',
+      ).writeAsStringSync('${installed.join('\n')}\n');
+      File(
+        '${bin.path}/unavailable',
+      ).writeAsStringSync('${unavailable.join('\n')}\n');
+      final tools = {
+        'npm': r'echo "npm $*" >> "$LOG"',
+        if (alpine)
+          'apk': r'''
+echo "apk $*" >> "$LOG"
+if [ "$1" = info ]; then grep -qx "$3" "$DIR/installed"; exit; fi
+for p; do :; done
+! grep -qx "$p" "$DIR/unavailable"''',
+        if (!alpine) ...{
+          'apt-get': r'''
+echo "apt-get $*" >> "$LOG"
+for p; do :; done
+[ "$p" = update ] || ! grep -qx "$p" "$DIR/unavailable"''',
+          'dpkg-query': r'''
+for p; do :; done
+grep -qx "$p" "$DIR/installed" && echo "install ok installed"''',
+        },
+      };
+      for (final MapEntry(:key, :value) in tools.entries) {
+        File('${bin.path}/$key').writeAsStringSync('#!/bin/sh\n$value\n');
+        await Process.run('chmod', ['+x', '${bin.path}/$key']);
       }
       final result = await Process.run(
         '/bin/sh',
-        ['-c', script],
-        environment: {'PATH': bin.path},
+        ['-c', AcpAgentSpec.byId(id)!.installScript],
+        environment: {
+          'PATH': '${bin.path}:/usr/bin:/bin',
+          'LOG': log,
+          'DIR': bin.path,
+        },
         includeParentEnvironment: false,
       );
       expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
-      return log.readAsStringSync();
+      return (File(log).readAsStringSync(), result.stderr as String);
     }
 
-    final alpine = await install(hasBash: false);
-    expect(alpine, contains('apk add --no-cache bash'));
-    expect(alpine, contains('@anthropic-ai/claude-code'));
-    expect(await install(hasBash: true), isNot(contains('apk')));
-  }, testOn: 'linux || mac-os');
+    test(
+      'Alpine gets bash, ripgrep and the glibc compatibility layer',
+      () async {
+        final (log, _) = await install('claude-code', alpine: true);
+        for (final package in [
+          'bash',
+          'ripgrep',
+          'git',
+          'curl',
+          'procps',
+          'gcompat',
+          'glib',
+        ]) {
+          expect(log, contains('apk --wait 120 add --no-cache $package\n'));
+        }
+        expect(log, contains('@anthropic-ai/claude-code'));
+        expect(
+          log.indexOf('add --no-cache bash'),
+          lessThan(log.indexOf('npm')),
+        );
+      },
+    );
+
+    test('present packages are kept', () async {
+      final (log, _) = await install(
+        'codex',
+        alpine: true,
+        installed: {
+          'bash',
+          'ca-certificates',
+          'curl',
+          'git',
+          'procps',
+          'ripgrep',
+          'gcompat',
+          'glib',
+        },
+      );
+      expect(log, isNot(contains(' add ')));
+      expect(log, contains('@openai/codex'));
+    });
+
+    test('a package the source lacks does not stop the agent', () async {
+      final (log, stderr) = await install(
+        'claude-code',
+        alpine: false,
+        installed: {'bash', 'ca-certificates', 'curl', 'git', 'procps'},
+        unavailable: {'ripgrep'},
+      );
+      expect(
+        'apt-get -o DPkg::Lock::Timeout=120 update'.allMatches(log),
+        hasLength(1),
+      );
+      expect(log, contains('install -y --no-install-recommends ripgrep'));
+      expect(stderr, contains('Moru: not installed: ripgrep'));
+      expect(log, contains('npm install -g'));
+    });
+
+    test('DeepSeek Harness also gets build tools for node-pty', () async {
+      final (log, _) = await install('deepseek-harness', alpine: true);
+      for (final package in ['build-base', 'python3', 'linux-headers']) {
+        expect(log, contains('add --no-cache $package\n'));
+      }
+      expect(log, contains('@deepseek-ai/dsh'));
+    });
+  });
 
   test('Kimi Code starts ACP from its installed executable', () {
     final spec = AcpAgentSpec.byId('kimi-code');

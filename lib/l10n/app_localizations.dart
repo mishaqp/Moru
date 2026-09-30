@@ -21692,6 +21692,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No verified upgrade method is available for this distribution. Check its official Node.js installation instructions; then reopen this card.'**
   String get agentsNodeUpdateUnknown;
+
+  /// No description provided for @workspaceEnvGroupDevelopment.
+  ///
+  /// In en, this message translates to:
+  /// **'Development'**
+  String get workspaceEnvGroupDevelopment;
+
+  /// No description provided for @workspaceEnvGroupAgents.
+  ///
+  /// In en, this message translates to:
+  /// **'AI agents'**
+  String get workspaceEnvGroupAgents;
+
+  /// No description provided for @workspaceEnvGroupAgentsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'“Prepare for agents” installs what coding agents need from the system; open an agent to install, update or check it.'**
+  String get workspaceEnvGroupAgentsDetail;
+
+  /// No description provided for @workspaceEnvGroupSsh.
+  ///
+  /// In en, this message translates to:
+  /// **'SSH'**
+  String get workspaceEnvGroupSsh;
+
+  /// No description provided for @workspaceEnvPrepareAgents.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare for agents'**
+  String get workspaceEnvPrepareAgents;
+
+  /// No description provided for @workspaceEnvPrepareAgentsDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything agents need is installed'**
+  String get workspaceEnvPrepareAgentsDone;
+
+  /// No description provided for @workspaceEnvDependencyBuildTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Build tools'**
+  String get workspaceEnvDependencyBuildTitle;
+
+  /// No description provided for @workspaceEnvDependencyBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'Compiler and make, to build Node and Python modules'**
+  String get workspaceEnvDependencyBuild;
+
+  /// No description provided for @workspaceEnvDependencyProcessesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Processes'**
+  String get workspaceEnvDependencyProcessesTitle;
+
+  /// No description provided for @workspaceEnvDependencyCompatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'glibc compatibility'**
+  String get workspaceEnvDependencyCompatTitle;
+
+  /// No description provided for @workspaceEnvDependencyCompat.
+  ///
+  /// In en, this message translates to:
+  /// **'Runs programs built for regular Linux on Alpine'**
+  String get workspaceEnvDependencyCompat;
+
+  /// No description provided for @workspaceEnvDependencyBash.
+  ///
+  /// In en, this message translates to:
+  /// **'The shell agents and scripts run commands in'**
+  String get workspaceEnvDependencyBash;
+
+  /// No description provided for @workspaceEnvDependencyRipgrep.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast code search, used by coding agents'**
+  String get workspaceEnvDependencyRipgrep;
+
+  /// No description provided for @workspaceEnvDependencySshTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'SSH client'**
+  String get workspaceEnvDependencySshTitle;
+
+  /// No description provided for @workspaceEnvDependencySshpass.
+  ///
+  /// In en, this message translates to:
+  /// **'Password logins for scripts'**
+  String get workspaceEnvDependencySshpass;
+
+  /// No description provided for @workspaceEnvDependencySshdTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'SSH server'**
+  String get workspaceEnvDependencySshdTitle;
+
+  /// No description provided for @workspaceEnvDependencySshd.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to the phone over SSH'**
+  String get workspaceEnvDependencySshd;
+
+  /// No description provided for @workspaceEnvInstallSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Install selected ({count})'**
+  String workspaceEnvInstallSelected(int count);
 }
 
 class _AppLocalizationsDelegate

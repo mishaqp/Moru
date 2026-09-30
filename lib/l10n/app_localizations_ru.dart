@@ -12293,4 +12293,65 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get agentsNodeUpdateUnknown =>
       'Для этого дистрибутива нет подтверждённого способа обновления. Проверьте его официальную инструкцию по установке Node.js, затем снова откройте карточку.';
+
+  @override
+  String get workspaceEnvGroupDevelopment => 'Разработка';
+
+  @override
+  String get workspaceEnvGroupAgents => 'ИИ-агенты';
+
+  @override
+  String get workspaceEnvGroupAgentsDetail =>
+      '«Подготовить для агентов» ставит то, что агентам нужно от системы. Откройте агента, чтобы установить, обновить или проверить его.';
+
+  @override
+  String get workspaceEnvGroupSsh => 'SSH';
+
+  @override
+  String get workspaceEnvPrepareAgents => 'Подготовить для агентов';
+
+  @override
+  String get workspaceEnvPrepareAgentsDone => 'Всё нужное агентам установлено';
+
+  @override
+  String get workspaceEnvDependencyBuildTitle => 'Сборка';
+
+  @override
+  String get workspaceEnvDependencyBuild =>
+      'Компилятор и make: собирать модули Node и Python';
+
+  @override
+  String get workspaceEnvDependencyProcessesTitle => 'Процессы';
+
+  @override
+  String get workspaceEnvDependencyCompatTitle => 'Совместимость с glibc';
+
+  @override
+  String get workspaceEnvDependencyCompat =>
+      'Запуск программ для обычного Linux на Alpine';
+
+  @override
+  String get workspaceEnvDependencyBash =>
+      'Оболочка, в которой агенты и скрипты выполняют команды';
+
+  @override
+  String get workspaceEnvDependencyRipgrep =>
+      'Быстрый поиск по коду — им ищут агенты';
+
+  @override
+  String get workspaceEnvDependencySshTitle => 'SSH-клиент';
+
+  @override
+  String get workspaceEnvDependencySshpass => 'Вход по паролю для скриптов';
+
+  @override
+  String get workspaceEnvDependencySshdTitle => 'SSH-сервер';
+
+  @override
+  String get workspaceEnvDependencySshd => 'Подключаться к телефону по SSH';
+
+  @override
+  String workspaceEnvInstallSelected(int count) {
+    return 'Установить выбранное ($count)';
+  }
 }

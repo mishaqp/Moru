@@ -44,6 +44,7 @@ class ExecRunner(
         RootfsCertificates.ensureInstalled(request.rootfsDir)
         val chroot = request.chroot
         val launch = if (chroot != null) {
+            RootfsProfile.ensureInstalled(request.rootfsDir)
             ChrootCommand.build(
                 nativeLibDir = request.nativeLibDir,
                 rootfsDir = request.rootfsDir,
