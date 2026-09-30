@@ -90,6 +90,10 @@ package name does not require building other platforms.
   Hidden chats cannot use the live browser UI. Settings → Agents → Check runs
   `AcpMcpProbe` from the active Linux runtime to report actual loopback access;
   device PRoot/root-chroot availability must be tested on the phone.
+  Codex always uses `wire_api = "responses"`; its detail page and the assistant
+  agent picker warn when the selected provider has no Responses API enabled.
+  DeepSeek Harness passes custom request headers in `providers.moru.headers`
+  for all three supported APIs.
   Kimi uses `kimi acp`; DeepSeek Harness is installed globally in Moru's npm
   prefix and runs `dsh --profile acp`, never `npx` per launch. Probe the active
   runtime's Node before installing or starting them: Kimi needs >=22.19.0;
@@ -106,6 +110,13 @@ package name does not require building other platforms.
   the Linux runtime, with separate persistent configs and the assistant's
   workspace. Bind only 127.0.0.1, wait for the printed authenticated address,
   and send the login URL only to `openSharedBrowser`, never a log or chat.
+  OpenCode Web instead gets a fresh cryptographically random password for
+  every process, only in `OPENCODE_SERVER_PASSWORD`. Its clean URL must match
+  the allocated port. A new JS-disabled WebView authenticates once at `/session`
+  before joining the shared browser; Chromium's Basic auth cache is scoped to
+  the exact scheme, host and port. Ordinary browser delegates cancel auth
+  challenges. Never put credentials into URLs, JavaScript, the browser library
+  or `WebViewDatabase`; Stop revokes an in-flight browser bootstrap.
   Stop on the card, app detach and provider disposal; changed launch settings
   replace the process.
   Only ACP launches pass `PATH`; `ProotCommand` carries it as `KELIVO_PATH`
@@ -126,6 +137,10 @@ package name does not require building other platforms.
   logged, not fatal. Environment → Packages groups `EnvironmentDependencies`
   (development, agents, SSH); ticked rows install through one `installAll`
   and `agentDependencies` is the "prepare for agents" set.
+  Built-in removal uses each spec's explicit npm package manifest and `set -e`.
+  A failed npm removal leaves the agent installed and keeps its error journal;
+  OpenCode's manifest includes both arm64 platform packages. Do not infer
+  package names from installation shell text or remove shared system packages.
   Guest launch preparation trusts only `/workspace` in
   system Git config to handle the Android UID/root-chroot ownership mismatch.
 - **Mini apps**: published web apps (`MiniAppStore`, bridge `moru.*` in
