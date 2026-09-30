@@ -29,6 +29,7 @@ class _AgentRuntime extends FakeWorkspaceRuntime
   String probeOutput = '';
   int installExit = 0;
   bool moruAvailable = true;
+  String nodeVersion = 'v24.0.0';
   final _agents = <String, StreamController<CommandEvent>>{};
   final cancelled = <String>[];
 
@@ -47,6 +48,9 @@ class _AgentRuntime extends FakeWorkspaceRuntime
     if (request.env.containsKey('MORU_MCP_TOKEN')) {
       output = moruAvailable ? '__moru_mcp_available__\n' : '';
       code = moruAvailable ? 0 : 1;
+    } else if (script.contains('__moru_node=')) {
+      output = '__moru_node=$nodeVersion\n$probeOutput';
+      code = 0;
     } else if (script.contains('__acp_')) {
       output = probeOutput;
       code = 0;
@@ -105,6 +109,7 @@ class _AgentRuntime extends FakeWorkspaceRuntime
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late _AgentRuntime runtime;
   late WorkspaceRuntimeProvider runtimeProvider;
   late EnvironmentProvider environment;
@@ -128,6 +133,98 @@ void main() {
     apiKey: 'sk-test',
     model: 'gpt-5',
     responsesApi: true,
+  );
+
+  test('new agents reject old Node before any npm installation', () async {
+    runtime.nodeVersion = 'v18.19.1';
+    final agents = manager();
+    final spec = AcpAgentSpec.byId('deepseek-harness')!;
+    await agents.install(spec);
+    expect(agents.nodeIssueFor(spec), isNotNull);
+    expect(agents.state(spec.id), isNot(AcpInstallState.installed));
+    expect(
+      runtime.requests.any((r) => r.command.contains('npm install')),
+      isFalse,
+    );
+    agents.dispose();
+  });
+
+  test(
+    'DSH rejects Node 23 and unreadable versions; Kimi accepts Node 23',
+    () async {
+      final agents = manager();
+      final dsh = AcpAgentSpec.byId('deepseek-harness')!;
+      runtime.nodeVersion = 'v23.11.0';
+      await agents.install(dsh);
+      expect(agents.nodeIssueFor(dsh), isNotNull);
+      await agents.install(AcpAgentSpec.byId('kimi-code')!);
+      expect(agents.failure, isNull);
+      runtime.nodeVersion = '';
+      await agents.install(dsh);
+      expect(agents.nodeIssueFor(dsh), isNotNull);
+      agents.dispose();
+    },
+  );
+
+  test(
+    'fresh Node probe gates agent start even after a previous good refresh',
+    () async {
+      final agents = manager();
+      runtime.probeOutput = '__acp_deepseek-harness=1\n';
+      await agents.refresh();
+      final dsh = AcpAgentSpec.byId('deepseek-harness')!;
+      expect(agents.nodeIssueFor(dsh), isNull);
+      runtime.nodeVersion = 'v22.18.0';
+      await expectLater(agents.start(dsh, provider), throwsA(isA<Exception>()));
+      expect(agents.nodeIssueFor(dsh), isNotNull);
+      expect(runtime.requests.any((r) => r.keepStdinOpen), isFalse);
+      agents.dispose();
+    },
+  );
+
+  for (final id in ['kimi-code', 'deepseek-harness']) {
+    test('$id check includes the actual Moru tools probe', () async {
+      final agents = manager();
+      final result = await agents.check(AcpAgentSpec.byId(id)!, provider);
+      expect(result.ok, isTrue);
+      expect(result.moruToolsAvailable, isTrue);
+      expect(
+        runtime.requests.any((r) => r.env.containsKey('MORU_MCP_TOKEN')),
+        isTrue,
+      );
+      agents.dispose();
+    });
+  }
+
+  test(
+    'Web output including the login token never enters the agent log',
+    () async {
+      final agents = manager();
+      final opening = agents.webServers.open(
+        AcpAgentSpec.byId('opencode')!,
+        provider,
+        cwd: '/workspace',
+        openBrowser: (_) async {},
+      );
+      await Future.doWhile(() async {
+        await Future<void>.delayed(Duration.zero);
+        return !runtime.requests.any((r) => r.keepStdinOpen);
+      });
+      final request = runtime.requests.last;
+      runtime._agents[request.runId]!.add(
+        CommandOutput(
+          OutputStreamKind.stdout,
+          Uint8List.fromList(
+            utf8.encode('http://127.0.0.1:12345/#token=private-web-token\n'),
+          ),
+        ),
+      );
+      await opening;
+      expect(agents.log, isEmpty);
+      expect(request.command, isNot(contains('private-web-token')));
+      await agents.webServers.stopAll();
+      agents.dispose();
+    },
   );
 
   test('refresh finds which agents are installed', () async {

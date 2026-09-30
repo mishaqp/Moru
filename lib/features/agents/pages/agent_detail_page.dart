@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/acp/acp_agent_manager.dart';
+import '../../../core/services/acp/acp_agent_catalog.dart';
+import '../../../core/services/acp/acp_agent_web_servers.dart';
 import '../../../core/services/acp/acp_error_messages.dart';
 import '../../../core/services/acp/acp_provider_input.dart';
 import '../../../icons/lucide_adapter.dart';
@@ -14,7 +16,9 @@ import '../../../shared/widgets/ios_settings_rows.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../shared/widgets/section_card.dart';
+import '../../../shared/widgets/snackbar.dart';
 import '../agent_chat_start.dart';
+import '../agent_web_start.dart';
 import '../widgets/agent_labels.dart';
 import '../widgets/agent_log_view.dart';
 import 'agents_page.dart';
@@ -30,6 +34,8 @@ class AgentDetailPage extends StatelessWidget {
   static const Key checkKey = ValueKey('agent-check');
   static const Key chatKey = ValueKey('agent-start-chat');
   static const Key removeKey = ValueKey('agent-remove');
+  static const Key webOpenKey = ValueKey('agent-web-open');
+  static const Key webStopKey = ValueKey('agent-web-stop');
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +58,15 @@ class AgentDetailPage extends StatelessWidget {
         : acpProviderInputFor(settings, providerKey, modelId);
     final check = manager.lastCheck(spec.id);
     final failure = manager.failedAgentId == spec.id ? manager.failure : null;
+    final nodeIssue = manager.nodeIssueFor(spec);
+    final hasWeb = [
+      AcpAgentSpec.kimiCodeId,
+      AcpAgentSpec.deepSeekHarnessId,
+      AcpAgentSpec.openCodeId,
+    ].contains(spec.id);
+    final web = hasWeb ? manager.webServers : null;
+    final webBusy =
+        web?.starting(spec.id) == true || web?.running(spec.id) == true;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -90,6 +105,59 @@ class AgentDetailPage extends StatelessWidget {
           IosSectionFooter(text: agentModelHint(l10n, spec)),
           if (!manager.environmentAvailable)
             _Notice(text: l10n.agentsNeedEnvironment, error: true),
+          if (nodeIssue != null) ...[
+            _Notice(text: nodeIssue.message(l10n), error: true),
+            IosSectionFooter(text: manager.nodeUpdateHint(l10n)),
+          ],
+          if (web?.failure(spec.id) case final error?)
+            _Notice(
+              text: switch (error) {
+                AcpWebFailure.start => l10n.agentsWebStartFailed,
+                AcpWebFailure.timeout => l10n.agentsWebTimeout,
+                AcpWebFailure.exited => l10n.agentsWebExited,
+                AcpWebFailure.stopped => l10n.agentsWebStopped,
+              },
+              error: true,
+            ),
+          if (hasWeb && (state == AcpInstallState.installed || webBusy)) ...[
+            IosTileButton(
+              key: webOpenKey,
+              icon: LucideIcons.globe,
+              label: l10n.agentsWebOpen,
+              enabled: provider != null && !web!.starting(spec.id) && idle,
+              onTap: () async {
+                try {
+                  await openAgentWeb(context, spec, provider!);
+                } catch (_) {
+                  if (context.mounted) {
+                    AppSnackBarManager().show(
+                      context,
+                      AppNotification(
+                        message: l10n.agentsWebStartFailed,
+                        type: NotificationType.error,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+            if (webBusy) ...[
+              IosSectionFooter(
+                text: web!.starting(spec.id)
+                    ? l10n.agentsWebStarting
+                    : l10n.agentsWebRunning,
+              ),
+              IosTileButton(
+                key: webStopKey,
+                icon: LucideIcons.square,
+                label: l10n.agentsWebStop,
+                onTap: () => unawaited(web.stop(spec.id)),
+              ),
+            ],
+            if (spec.id == AcpAgentSpec.deepSeekHarnessId)
+              IosSectionFooter(text: l10n.agentsWebDeepSeekWorkspace),
+            const SizedBox(height: 12),
+          ],
           if ((failure == null || failure == AcpAgentFailure.check
                   ? null
                   : acpFailureMessage(manager.failureKind, l10n) ??

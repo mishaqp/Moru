@@ -15,6 +15,7 @@ import 'acp_mcp_stdio_bridge.dart';
 import 'acp_mcp_probe.dart';
 import 'acp_stdio_channel.dart';
 import 'acp_error_messages.dart';
+import 'acp_agent_web_servers.dart';
 import '../../../l10n/app_localizations.dart';
 
 enum AcpInstallState { unknown, missing, installed }
@@ -26,6 +27,7 @@ enum AcpAgentFailure {
 
   /// Node.js could not be installed.
   node,
+  nodeVersion,
   install,
   remove,
 
@@ -40,15 +42,29 @@ class AcpCheckResult {
     this.error,
     this.failureKind,
     this.moruToolsAvailable = false,
+    this.nodeIssue,
   });
 
   final AcpAgentInfo? info;
   final String? error;
   final AcpFailureKind? failureKind;
   final bool moruToolsAvailable;
+  final AcpNodeIssue? nodeIssue;
   String? errorMessage(AppLocalizations l10n) =>
-      acpFailureMessage(failureKind, l10n) ?? error;
+      nodeIssue?.message(l10n) ?? acpFailureMessage(failureKind, l10n) ?? error;
   bool get ok => info != null;
+}
+
+class AcpNodeIssue {
+  const AcpNodeIssue(this.agent, this.requiredVersion, this.actual);
+  final String agent;
+  final String requiredVersion;
+  final String actual;
+  String message(AppLocalizations l10n) => l10n.agentsNodeVersionRequired(
+    agent,
+    requiredVersion,
+    actual.isEmpty ? l10n.agentsNodeVersionUnknown : actual,
+  );
 }
 
 /// Installs, removes and checks agents in the Linux environment, and starts
@@ -84,6 +100,45 @@ class AcpAgentManager extends ChangeNotifier {
   AcpAgentFailure? failure;
   AcpFailureKind? failureKind;
   String? failedAgentId;
+  String _nodeVersion = '';
+  bool _nodeProbed = false;
+  AcpAgentWebServers? _webServers;
+
+  AcpAgentWebServers get webServers =>
+      _webServers ??= (AcpAgentWebServers(prepare: _prepareWeb)
+        ..addListener(notifyListeners));
+
+  AcpNodeIssue? nodeIssueFor(AcpAgentSpec spec) {
+    if (!_nodeProbed || spec.nodeMajor < 22) return null;
+    final match = RegExp(r'^v?(\d+)\.(\d+)\.(\d+)$').firstMatch(_nodeVersion);
+    final major = int.tryParse(match?.group(1) ?? '') ?? 0;
+    final minor = int.tryParse(match?.group(2) ?? '') ?? 0;
+    final compatible =
+        (major > spec.nodeMajor ||
+            (major == spec.nodeMajor && minor >= spec.nodeMinor)) &&
+        (spec.id != AcpAgentSpec.deepSeekHarnessId || major != 23);
+    return compatible
+        ? null
+        : AcpNodeIssue(
+            spec.name,
+            spec.id == AcpAgentSpec.deepSeekHarnessId
+                ? '≥22.19.0 <23.0.0 / ≥24.0.0'
+                : '≥${spec.minimumNodeVersion}',
+            _nodeVersion,
+          );
+  }
+
+  String nodeUpdateHint(AppLocalizations l10n) {
+    final state = environment.state;
+    if ((state.distro == 'ubuntu' &&
+            (state.version?.startsWith('24.04') == true ||
+                state.version?.startsWith('22.04') == true)) ||
+        (state.distro == 'debian' && state.version?.split('.').first == '12')) {
+      return l10n.agentsNodeUpdateDebian;
+    }
+    if (state.distro == 'alpine') return l10n.agentsNodeUpdateAlpine;
+    return l10n.agentsNodeUpdateUnknown;
+  }
 
   List<AcpAgentSpec> get agents => [...AcpAgentSpec.builtIn, ..._custom];
   List<AcpAgentSpec> get customAgents => _custom;
@@ -196,12 +251,15 @@ class AcpAgentManager extends ChangeNotifier {
     try {
       final specs = agents;
       final script = [
+        "printf '__moru_node='; node --version 2>/dev/null || true",
+        "printf '\\n'",
         for (final spec in specs)
           'if command -v ${_quote(spec.command)} >/dev/null 2>&1; then '
               "echo '__acp_${spec.id}=1'; else echo '__acp_${spec.id}=0'; fi",
       ].join('\n');
       final (code, output) = await _run(runtime, script, capture: true);
       if (code == 0) {
+        _recordNode(output);
         for (final spec in specs) {
           if (output.contains('__acp_${spec.id}=1')) {
             _states[spec.id] = AcpInstallState.installed;
@@ -254,6 +312,7 @@ class AcpAgentManager extends ChangeNotifier {
           }
         }
       }
+      await _requireNode(runtime, spec);
       final (code, _) = await _run(
         runtime,
         spec.installScript,
@@ -269,7 +328,9 @@ class AcpAgentManager extends ChangeNotifier {
       failedAgentId = null;
     } catch (error) {
       _append('\n$error\n');
-      failure = AcpAgentFailure.install;
+      failure = nodeIssueFor(spec) != null
+          ? AcpAgentFailure.nodeVersion
+          : AcpAgentFailure.install;
       failureKind = classifyAcpFailure(error);
     } finally {
       busyAgentId = null;
@@ -282,6 +343,7 @@ class AcpAgentManager extends ChangeNotifier {
   Future<void> uninstall(AcpAgentSpec spec) async {
     final runtime = _runtime;
     if (busy || runtime == null || spec.isCustom) return;
+    await _webServers?.stop(spec.id);
     final packages = RegExp(r'(@[\w.-]+/[\w.-]+|opencode-ai)')
         .allMatches(spec.installScript)
         .map((match) => match.group(0)!)
@@ -359,6 +421,7 @@ class AcpAgentManager extends ChangeNotifier {
         moruToolsAvailable: moruToolsAvailable,
         error: error is AcpError ? error.message : error.toString(),
         failureKind: classifyAcpFailure(error),
+        nodeIssue: nodeIssueFor(spec),
       );
       failure = AcpAgentFailure.check;
       failureKind = result.failureKind;
@@ -389,6 +452,7 @@ class AcpAgentManager extends ChangeNotifier {
       );
     }
     final launch = spec.launch(provider);
+    await _requireNode(runtime, spec);
     final variables = (await environment.loadExecutionConfig()).variables;
     final env = {...variables, ...launch.environment};
     {
@@ -418,6 +482,77 @@ class AcpAgentManager extends ChangeNotifier {
       AcpStdioChannel(transport),
       clientVersion: clientVersion,
     );
+  }
+
+  void _recordNode(String output) {
+    final marker = RegExp(
+      r'^__moru_node=([^\r\n]*)',
+      multiLine: true,
+    ).firstMatch(output);
+    _nodeVersion = marker?.group(1)?.trim() ?? '';
+    _nodeProbed = true;
+  }
+
+  Future<void> _requireNode(WorkspaceRuntime runtime, AcpAgentSpec spec) async {
+    if (spec.nodeMajor < 22) return;
+    final (_, output) = await _run(
+      runtime,
+      "printf '__moru_node='; node --version 2>/dev/null || true; printf '\\n'",
+      capture: true,
+    );
+    _recordNode(output);
+    notifyListeners();
+    final issue = nodeIssueFor(spec);
+    if (issue != null) {
+      throw AcpError(
+        AcpError.internalError,
+        '${issue.agent} requires Node.js ${issue.requiredVersion}; detected ${issue.actual}',
+      );
+    }
+  }
+
+  Future<(WorkspaceRuntime, AcpLaunch)> _prepareWeb(
+    AcpAgentSpec spec,
+    AcpProviderInput provider,
+    int port,
+    String directory,
+  ) async {
+    final runtime = _runtime;
+    if (runtime == null) throw const AcpWebException(AcpWebFailure.start);
+    await _requireNode(runtime, spec);
+    final launch = spec.webLaunch(
+      provider,
+      port: port,
+      configDirectory: directory,
+    );
+    if (launch == null) throw const AcpWebException(AcpWebFailure.start);
+    final env = {
+      ...(await environment.loadExecutionConfig()).variables,
+      ...launch.environment,
+    };
+    final (code, _) = await _run(
+      runtime,
+      writeFilesScript(launch.files),
+      capture: true,
+      environment: env,
+    );
+    if (code != 0) throw const AcpWebException(AcpWebFailure.start);
+    return (
+      runtime,
+      AcpLaunch(
+        command: launch.command,
+        arguments: launch.arguments,
+        environment: env,
+        files: launch.files,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _webServers?.removeListener(notifyListeners);
+    _webServers?.dispose();
+    super.dispose();
   }
 
   /// Writes [files] through base64, so no content can break the script.

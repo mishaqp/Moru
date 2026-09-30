@@ -32,7 +32,7 @@ class _ProbeRuntime extends FakeWorkspaceRuntime
           OutputStreamKind.stdout,
           Uint8List.fromList(
             utf8.encode(
-              '__acp_claude-code=0\n__acp_codex=0\n__acp_opencode=1\n',
+              '__moru_node=v18.19.1\n__acp_claude-code=0\n__acp_codex=0\n__acp_opencode=1\n__acp_kimi-code=0\n__acp_deepseek-harness=0\n',
             ),
           ),
         ),
@@ -101,7 +101,10 @@ void main() {
     await settings.loaded;
   });
 
-  tearDown(() => settings.dispose());
+  tearDown(() {
+    settings.dispose();
+    manager.dispose();
+  });
 
   for (final available in [true, false]) {
     testWidgets(
@@ -111,7 +114,6 @@ void main() {
           () async => _CheckedManager(available),
         ))!;
         manager = checked;
-        addTearDown(checked.dispose);
         await tester.runAsync(manager.refresh);
         await pumpPage(tester, const AgentDetailPage(agentId: 'opencode'));
         expect(
@@ -129,11 +131,17 @@ void main() {
     await tester.runAsync(manager.refresh);
     await pumpPage(tester, const AgentsPage());
     expect(find.textContaining('Coding agents such as Claude Code'), findsOne);
-    for (final name in ['Claude Code', 'Codex', 'OpenCode']) {
+    for (final name in [
+      'Claude Code',
+      'Codex',
+      'OpenCode',
+      'Kimi Code',
+      'DeepSeek Harness',
+    ]) {
       expect(find.text(name), findsOneWidget);
     }
     expect(find.text('Installed'), findsOneWidget);
-    expect(find.text('Not installed'), findsNWidgets(2));
+    expect(find.text('Not installed'), findsNWidgets(4));
 
     await tester.tap(find.text('Codex'));
     await tester.pumpAndSettle();
@@ -144,6 +152,25 @@ void main() {
     expect(find.byKey(AgentDetailPage.checkKey), findsNothing);
     expect(find.byKey(AgentDetailPage.removeKey), findsNothing);
   });
+
+  testWidgets(
+    'new agent card explains incompatible Node and upgrade; OpenCode offers Web UI',
+    (tester) async {
+      await tester.runAsync(manager.refresh);
+      await pumpPage(
+        tester,
+        const AgentDetailPage(agentId: 'deepseek-harness'),
+      );
+      expect(
+        find.textContaining('Detected in the Linux environment: v18.19.1'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('No verified upgrade method'), findsOneWidget);
+      await pumpPage(tester, const AgentDetailPage(agentId: 'opencode'));
+      expect(find.byKey(AgentDetailPage.webOpenKey), findsOneWidget);
+      expect(find.text('Open web interface'), findsOneWidget);
+    },
+  );
 
   testWidgets('an installed agent offers update, check and remove; the check '
       'needs a default model first', (tester) async {
@@ -158,7 +185,11 @@ void main() {
   testWidgets('your own agent is added by its command line', (tester) async {
     await tester.runAsync(() => manager.loaded);
     await pumpPage(tester, const AgentsPage());
-    await tester.tap(find.byKey(const ValueKey('agent-add-custom')));
+    await tester.ensureVisible(find.byKey(const ValueKey('agent-add-custom')));
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => tester.tap(find.byKey(const ValueKey('agent-add-custom'))),
+    );
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('agent-custom-name')),
@@ -168,19 +199,13 @@ void main() {
       find.byKey(const ValueKey('agent-custom-command')),
       'goose acp --with-builtin developer',
     );
-    await tester.tap(find.text('Save'));
-    // The dialog closes, then the preferences write finishes outside the
-    // fake clock.
-    for (
-      var i = 0;
-      i < 40 && find.byType(AgentDetailPage).evaluate().isEmpty;
-      i++
-    ) {
-      await tester.pump(const Duration(milliseconds: 50));
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 10)),
-      );
-    }
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Save'));
+      await Future.doWhile(() async {
+        await Future<void>.delayed(Duration.zero);
+        return manager.customAgents.isEmpty;
+      });
+    });
     await tester.pumpAndSettle();
     final spec = manager.customAgents.single;
     expect(spec.name, 'Goose');
@@ -228,29 +253,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('None — the model answers'), findsOneWidget);
 
-    // Loading and saving finish outside the fake clock.
-    Future<void> settle() async {
-      for (var i = 0; i < 20; i++) {
-        await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 10)),
-        );
-        await tester.pump(const Duration(milliseconds: 50));
-      }
+    Future<void> choose(String label, String? expectedId) async {
+      await tester.runAsync(
+        () => tester.tap(find.byKey(AssistantAgentCard.rowKey)),
+      );
+      await tester.runAsync(() => manager.loaded);
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        await tester.tap(find.text(label).last);
+        await Future.doWhile(() async {
+          await Future<void>.delayed(Duration.zero);
+          return assistants.getById(id)!.agentId != expectedId;
+        });
+      });
       await tester.pumpAndSettle();
     }
 
-    Future<void> choose(String label) async {
-      await tester.tap(find.byKey(AssistantAgentCard.rowKey));
-      await settle();
-      await tester.tap(find.text(label).last);
-      await settle();
-    }
-
-    await choose('OpenCode');
+    await choose('OpenCode', 'opencode');
     expect(assistants.getById(id)!.agentId, 'opencode');
     expect(find.text('OpenCode'), findsOneWidget);
 
-    await choose('None — the model answers');
+    await choose('None — the model answers', null);
     expect(assistants.getById(id)!.agentId, isNull);
   });
 }

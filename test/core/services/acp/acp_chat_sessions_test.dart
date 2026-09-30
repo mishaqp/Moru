@@ -23,12 +23,16 @@ class _ScriptedAgent extends AcpChannel {
   _ScriptedAgent({
     this.loadSession = false,
     this.loadFails = false,
+    this.resumeSession = false,
+    this.resumeFails = false,
     this.images = false,
     this.mcpHttp = false,
   });
 
   final bool loadSession;
   final bool loadFails;
+  final bool resumeSession;
+  final bool resumeFails;
   final bool images;
   final bool mcpHttp;
   final _incoming = StreamController<dynamic>();
@@ -61,6 +65,9 @@ class _ScriptedAgent extends AcpChannel {
           'protocolVersion': 1,
           'agentCapabilities': {
             'loadSession': loadSession,
+            'sessionCapabilities': {
+              if (resumeSession) 'resume': <String, Object?>{},
+            },
             'promptCapabilities': {'image': images},
             'mcpCapabilities': {'http': mcpHttp},
           },
@@ -77,7 +84,8 @@ class _ScriptedAgent extends AcpChannel {
           },
         });
       case 'session/load':
-        if (loadFails) {
+      case 'session/resume':
+        if (copy['method'] == 'session/load' ? loadFails : resumeFails) {
           scheduleMicrotask(
             () => _incoming.add({
               'jsonrpc': '2.0',
@@ -174,6 +182,8 @@ void main() {
   AcpChatSessions sessionsWith({
     bool loadSession = false,
     bool loadFails = false,
+    bool resumeSession = false,
+    bool resumeFails = false,
     bool images = false,
     bool mcpHttp = false,
   }) {
@@ -185,6 +195,8 @@ void main() {
         final channel = _ScriptedAgent(
           loadSession: loadSession,
           loadFails: loadFails,
+          resumeSession: resumeSession,
+          resumeFails: resumeFails,
           images: images,
           mcpHttp: mcpHttp,
         );
@@ -203,11 +215,12 @@ void main() {
     String history = '',
     String cwd = '/workspace',
     AcpProviderInput? using,
+    AcpAgentSpec? agentSpec,
     void Function(String)? onSession,
     AcpMcpTools? moruTools,
   }) => AcpChatTurn(
     conversationId: conversation,
-    spec: spec,
+    spec: agentSpec ?? spec,
     provider: using ?? provider,
     cwd: cwd,
     prompt: [
@@ -594,6 +607,31 @@ void main() {
     },
   );
 
+  test(
+    'changing Kimi model context regenerates its agent configuration',
+    () async {
+      final sessions = sessionsWith();
+      addTearDown(sessions.closeAll);
+      final kimi = AcpAgentSpec.byId('kimi-code')!;
+      await answer(sessions, turn('hi', agentSpec: kimi));
+      await answer(
+        sessions,
+        turn(
+          'more',
+          agentSpec: kimi,
+          using: const AcpProviderInput(
+            baseUrl: 'https://api.deepseek.com/v1',
+            apiKey: 'k',
+            model: 'deepseek-chat',
+            contextWindow: 65536,
+          ),
+        ),
+      );
+      expect(started, hasLength(2));
+      expect(started.first.isClosed, isTrue);
+    },
+  );
+
   test('a saved session is reopened when the agent can, with no history '
       'sent again', () async {
     final sessions = sessionsWith(loadSession: true);
@@ -624,6 +662,121 @@ void main() {
     expect(saved, ['new-1']);
     sessions.closeAll();
   });
+
+  test(
+    'an agent advertising resume restores the saved session without history',
+    () async {
+      final sessions = sessionsWith(resumeSession: true);
+      addTearDown(sessions.closeAll);
+      final saved = <String>[];
+      expect(
+        await answer(
+          sessions,
+          turn(
+            'hi',
+            saved: 'old-7',
+            history: 'User: old',
+            onSession: saved.add,
+          ),
+        ),
+        'old-7:hi',
+      );
+      final request = started.single.sent.singleWhere(
+        (m) => m['method'] == 'session/resume',
+      );
+      expect(request['params'], {
+        'sessionId': 'old-7',
+        'cwd': '/workspace',
+        'mcpServers': [],
+      });
+      expect(
+        started.single.sent.where((m) => m['method'] == 'session/new'),
+        isEmpty,
+      );
+      expect(saved, isEmpty);
+      expect(sessions.sessionFor('c1')!.id, 'old-7');
+    },
+  );
+
+  test(
+    'load takes precedence when an agent supports both restore methods',
+    () async {
+      final sessions = sessionsWith(loadSession: true, resumeSession: true);
+      addTearDown(sessions.closeAll);
+      expect(await answer(sessions, turn('hi', saved: 'saved')), 'saved:hi');
+      expect(
+        started.single.sent.where((m) => m['method'] == 'session/load'),
+        hasLength(1),
+      );
+      expect(
+        started.single.sent.where((m) => m['method'] == 'session/resume'),
+        isEmpty,
+      );
+    },
+  );
+
+  test(
+    'a failed resume creates a session and supplies the chat history',
+    () async {
+      final sessions = sessionsWith(resumeSession: true, resumeFails: true);
+      addTearDown(sessions.closeAll);
+      final saved = <String>[];
+      final text = await answer(
+        sessions,
+        turn('hi', saved: 'gone', history: 'User: old', onSession: saved.add),
+      );
+      expect(text, startsWith('new-1:Earlier in this chat'));
+      expect(
+        started.single.sent.map((m) => m['method']),
+        containsAllInOrder(['session/resume', 'session/new', 'session/prompt']),
+      );
+      expect(saved, ['new-1']);
+    },
+  );
+
+  test(
+    'an agent with no restore capability creates a session with history',
+    () async {
+      final sessions = sessionsWith();
+      addTearDown(sessions.closeAll);
+      final text = await answer(
+        sessions,
+        turn('hi', saved: 'saved', history: 'User: old'),
+      );
+      expect(text, startsWith('new-1:Earlier in this chat'));
+      expect(
+        started.single.sent.where(
+          (m) =>
+              m['method'] == 'session/resume' || m['method'] == 'session/load',
+        ),
+        isEmpty,
+      );
+    },
+  );
+
+  for (final http in [true, false]) {
+    test(
+      'resume preserves Moru ${http ? 'HTTP' : 'stdio'} MCP binding',
+      () async {
+        final sessions = sessionsWith(resumeSession: true, mcpHttp: http);
+        addTearDown(sessions.closeAll);
+        final tools = AcpMcpTools(
+          key: 'a',
+          definitions: () => [],
+          execute: (_, _, {required toolCallId}) async => {'content': []},
+        );
+        await answer(sessions, turn('hi', saved: 'saved', moruTools: tools));
+        final request = started.single.sent.singleWhere(
+          (m) => m['method'] == 'session/resume',
+        );
+        final config =
+            ((request['params'] as Map)['mcpServers'] as List).single as Map;
+        expect(config['name'], 'moru');
+        expect(config.containsKey('url'), http);
+        expect(config.containsKey('command'), !http);
+      },
+    );
+  }
 
   test('an idle agent is stopped to free memory', () async {
     started = [];

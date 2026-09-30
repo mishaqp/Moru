@@ -28,6 +28,7 @@ class AcpProviderInput {
     this.anthropicProvider = false,
     this.responsesApi = false,
     this.imageInput = false,
+    this.contextWindow = 32768,
     this.headers = const {},
   });
 
@@ -45,6 +46,9 @@ class AcpProviderInput {
 
   /// The selected Moru model accepts images, including model overrides.
   final bool imageInput;
+
+  /// A valid context limit for agents requiring explicit model metadata.
+  final int contextWindow;
   final Map<String, String> headers;
 }
 
@@ -82,6 +86,7 @@ class AcpAgentSpec {
     required this.api,
     required this.homepage,
     this.nodeMajor = 18,
+    this.nodeMinor = 0,
   });
 
   final String id;
@@ -98,13 +103,16 @@ class AcpAgentSpec {
 
   /// The oldest Node.js the agent runs on.
   final int nodeMajor;
+  final int nodeMinor;
+  String get minimumNodeVersion => '$nodeMajor.$nodeMinor.0';
 
   bool get isCustom => id.startsWith(customPrefix);
 
   static const String customPrefix = 'custom:';
 
   /// The command and its settings for [provider].
-  AcpLaunch launch(AcpProviderInput provider) {
+  AcpLaunch launch(AcpProviderInput provider, {String? configDirectory}) {
+    final root = configDirectory ?? acpConfigDir;
     final common = <String, String>{
       'PATH':
           '$acpNpmPrefix/bin:/usr/local/sbin:/usr/local/bin:'
@@ -142,7 +150,7 @@ class AcpAgentSpec {
           },
         );
       case codexId:
-        const home = '$acpConfigDir/codex';
+        final home = '$root/codex';
         return AcpLaunch(
           command: command,
           arguments: arguments,
@@ -154,7 +162,7 @@ class AcpAgentSpec {
           files: [AcpConfigFile('$home/config.toml', codexConfig(provider))],
         );
       case openCodeId:
-        const path = '$acpConfigDir/opencode.json';
+        final path = '$root/opencode.json';
         return AcpLaunch(
           command: command,
           arguments: arguments,
@@ -164,6 +172,23 @@ class AcpAgentSpec {
             'OPENCODE_DISABLE_AUTOUPDATE': 'true',
           },
           files: [AcpConfigFile(path, openCodeConfig(provider))],
+        );
+      case kimiCodeId:
+        final home = '$root/kimi-code';
+        return AcpLaunch(
+          command: command,
+          arguments: arguments,
+          environment: {...common, 'KIMI_CODE_HOME': home},
+          files: [AcpConfigFile('$home/config.toml', kimiCodeConfig(provider))],
+        );
+      case deepSeekHarnessId:
+        final home = '$root/deepseek-harness';
+        final path = '$home/moru.yaml';
+        return AcpLaunch(
+          command: command,
+          arguments: ['--patch', path, ...arguments],
+          environment: {...common, 'DSH_HOME': home},
+          files: [AcpConfigFile(path, deepSeekHarnessConfig(provider))],
         );
       default:
         return AcpLaunch(
@@ -179,9 +204,47 @@ class AcpAgentSpec {
     }
   }
 
+  /// A built-in browser interface, available only to the Android client through
+  /// the Linux environment's loopback. Unsupported agents have no Web launch.
+  AcpLaunch? webLaunch(
+    AcpProviderInput provider, {
+    required int port,
+    String? configDirectory,
+  }) {
+    if (id != kimiCodeId && id != deepSeekHarnessId && id != openCodeId) {
+      return null;
+    }
+    if (port < 1 || port > 65535) {
+      throw ArgumentError.value(port, 'port', 'Must be between 1 and 65535');
+    }
+    final acp = launch(provider, configDirectory: configDirectory);
+    return AcpLaunch(
+      command: command,
+      arguments: switch (id) {
+        deepSeekHarnessId => [
+          '--patch',
+          acp.files.single.path,
+          '--profile',
+          'web',
+          '--host',
+          '127.0.0.1',
+          '--port',
+          '$port',
+          '--no-open',
+        ],
+        openCodeId => ['web', '--hostname', '127.0.0.1', '--port', '$port'],
+        _ => ['web', '--host', '127.0.0.1', '--port', '$port', '--no-open'],
+      },
+      environment: acp.environment,
+      files: acp.files,
+    );
+  }
+
   static const String claudeCodeId = 'claude-code';
   static const String codexId = 'codex';
   static const String openCodeId = 'opencode';
+  static const String kimiCodeId = 'kimi-code';
+  static const String deepSeekHarnessId = 'deepseek-harness';
 
   static const String _npmInstall =
       'npm install -g --prefix $acpNpmPrefix --no-audit --no-fund';
@@ -228,6 +291,28 @@ class AcpAgentSpec {
           'ln -sf "\$binary" $acpNpmPrefix/bin/opencode\n',
       api: AcpModelApi.openai,
       homepage: 'https://opencode.ai',
+    ),
+    AcpAgentSpec(
+      id: kimiCodeId,
+      name: 'Kimi Code',
+      command: 'kimi',
+      arguments: ['acp'],
+      installScript: 'set -e\n$_npmInstall @moonshot-ai/kimi-code\n',
+      api: AcpModelApi.any,
+      homepage: 'https://github.com/MoonshotAI/kimi-code',
+      nodeMajor: 22,
+      nodeMinor: 19,
+    ),
+    AcpAgentSpec(
+      id: deepSeekHarnessId,
+      name: 'DeepSeek Harness',
+      command: 'dsh',
+      arguments: ['--profile', 'acp'],
+      installScript: 'set -e\n$_npmInstall @deepseek-ai/dsh\n',
+      api: AcpModelApi.any,
+      homepage: 'https://github.com/deepseek-ai/deepseek-harness',
+      nodeMajor: 22,
+      nodeMinor: 19,
     ),
   ];
 
@@ -366,5 +451,85 @@ class AcpAgentSpec {
         },
       },
     });
+  }
+
+  static String kimiCodeConfig(AcpProviderInput provider) {
+    if (provider.contextWindow <= 0) {
+      throw ArgumentError.value(
+        provider.contextWindow,
+        'contextWindow',
+        'Must be positive',
+      );
+    }
+    final type = provider.anthropicProvider
+        ? 'anthropic'
+        : provider.responsesApi
+        ? 'openai_responses'
+        : 'openai';
+    final baseUrl = provider.anthropicProvider
+        ? anthropicBaseUrl(provider)
+        : openAiBaseUrl(provider.baseUrl);
+    final lines = [
+      'default_model = "moru"',
+      '',
+      '[providers.moru]',
+      'type = "$type"',
+      'base_url = ${jsonEncode(baseUrl)}',
+      'api_key_env = "MORU_AGENT_API_KEY"',
+      if (provider.headers.isNotEmpty) ...[
+        '',
+        '[providers.moru.custom_headers]',
+        for (final entry in provider.headers.entries)
+          '${jsonEncode(entry.key)} = ${jsonEncode(entry.value)}',
+      ],
+      '',
+      '[models.moru]',
+      'provider = "moru"',
+      'model = ${jsonEncode(provider.model)}',
+      'max_context_size = ${provider.contextWindow}',
+      'capabilities = ${jsonEncode(['tool_use', if (provider.imageInput) 'image_in'])}',
+    ];
+    return '${lines.join('\n')}\n';
+  }
+
+  static String deepSeekHarnessConfig(AcpProviderInput provider) {
+    final api = provider.anthropicProvider
+        ? 'anthropic-messages'
+        : provider.responsesApi
+        ? 'openai-responses'
+        : 'openai-completions';
+    final baseUrl = provider.anthropicProvider
+        ? anthropicBaseUrl(provider)
+        : openAiBaseUrl(provider.baseUrl);
+    // JSON is valid YAML, and encoding all values prevents model ids or URLs
+    // from becoming additional YAML fields. Credentials stay in the environment.
+    return const JsonEncoder.withIndent('  ').convert([
+      {
+        'id': 'llm-pi-ai',
+        'config': {
+          'providers': {
+            'moru': {
+              'apiKeyEnv': 'MORU_AGENT_API_KEY',
+              'api': api,
+              'baseURL': baseUrl,
+              'models': [
+                {
+                  'id': provider.model,
+                  'input': ['text', if (provider.imageInput) 'image'],
+                },
+              ],
+            },
+          },
+        },
+      },
+      {
+        'id': 'acp',
+        'config': {'provider': 'moru', 'model': provider.model},
+      },
+      {
+        'id': 'agent-default-model',
+        'config': {'provider': 'moru', 'model': provider.model},
+      },
+    ]);
   }
 }

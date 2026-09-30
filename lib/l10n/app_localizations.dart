@@ -21586,6 +21586,112 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No network connection. Check your connection and try again.'**
   String get agentsErrorNetwork;
+
+  /// No description provided for @agentsDescKimiCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Moonshot’s coding agent: edits files and runs commands.'**
+  String get agentsDescKimiCode;
+
+  /// No description provided for @agentsDescDeepSeekHarness.
+  ///
+  /// In en, this message translates to:
+  /// **'DeepSeek’s coding agent: works on files and commands in a workspace.'**
+  String get agentsDescDeepSeekHarness;
+
+  /// No description provided for @agentsApiCompatible.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses the Moru provider with Anthropic, Chat Completions or Responses API.'**
+  String get agentsApiCompatible;
+
+  /// No description provided for @agentsWebOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open web interface'**
+  String get agentsWebOpen;
+
+  /// No description provided for @agentsWebStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get agentsWebStop;
+
+  /// No description provided for @agentsWebStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting the web interface…'**
+  String get agentsWebStarting;
+
+  /// No description provided for @agentsWebRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'The web interface is running in the background.'**
+  String get agentsWebRunning;
+
+  /// No description provided for @agentsWebTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The agent did not print a local web address within 120 seconds. Stop it and try again.'**
+  String get agentsWebTimeout;
+
+  /// No description provided for @agentsWebExited.
+  ///
+  /// In en, this message translates to:
+  /// **'The web process exited. Open the interface again to restart it.'**
+  String get agentsWebExited;
+
+  /// No description provided for @agentsWebStartFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start the web interface. Check the Linux environment, agent installation and Node.js version.'**
+  String get agentsWebStartFailed;
+
+  /// No description provided for @agentsWebStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'The web interface was stopped.'**
+  String get agentsWebStopped;
+
+  /// No description provided for @agentsWebDeepSeekWorkspace.
+  ///
+  /// In en, this message translates to:
+  /// **'For DeepSeek Harness, choose or add /workspace in the web interface.'**
+  String get agentsWebDeepSeekWorkspace;
+
+  /// No description provided for @agentsNodeVersionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'{agent} requires Node.js {requiredVersion}. Detected in the Linux environment: {actual}. Update Node.js, reopen this card and try again.'**
+  String agentsNodeVersionRequired(
+    String agent,
+    String requiredVersion,
+    String actual,
+  );
+
+  /// No description provided for @agentsNodeVersionUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'version unavailable'**
+  String get agentsNodeVersionUnknown;
+
+  /// No description provided for @agentsNodeUpdateDebian.
+  ///
+  /// In en, this message translates to:
+  /// **'In the Linux terminal, install Node.js 24 from the official NodeSource repository:\napt-get update\napt-get install -y ca-certificates curl bash\ncurl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\nbash /tmp/moru-node24-setup.sh\napt-get install -y nodejs\nnode --version\nnpm --version\nInstructions: https://github.com/nodesource/distributions/blob/master/DEV_README.md'**
+  String get agentsNodeUpdateDebian;
+
+  /// No description provided for @agentsNodeUpdateAlpine.
+  ///
+  /// In en, this message translates to:
+  /// **'In the Linux terminal, update the Alpine packages:\napk update\napk add --upgrade nodejs npm\nnode --version\nnpm --version'**
+  String get agentsNodeUpdateAlpine;
+
+  /// No description provided for @agentsNodeUpdateUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'No verified upgrade method is available for this distribution. Check its official Node.js installation instructions; then reopen this card.'**
+  String get agentsNodeUpdateUnknown;
 }
 
 class _AppLocalizationsDelegate

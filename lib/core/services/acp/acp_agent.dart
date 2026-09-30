@@ -17,6 +17,7 @@ class AcpAgentInfo {
     this.name,
     this.version,
     this.loadSession = false,
+    this.resumeSession = false,
     this.imagePrompts = false,
     this.mcpHttp = false,
     this.authMethods = const [],
@@ -30,6 +31,7 @@ class AcpAgentInfo {
       name: info['title'] as String? ?? info['name'] as String?,
       version: info['version'] as String?,
       loadSession: caps['loadSession'] == true,
+      resumeSession: _map(caps['sessionCapabilities'])['resume'] != null,
       imagePrompts: prompt['image'] == true,
       mcpHttp: _map(caps['mcpCapabilities'])['http'] == true,
       authMethods: [
@@ -49,6 +51,9 @@ class AcpAgentInfo {
 
   /// The agent can reopen an earlier session (`session/load`).
   final bool loadSession;
+
+  /// The agent can reopen a session without replaying its history.
+  final bool resumeSession;
 
   /// Prompts may carry images.
   final bool imagePrompts;
@@ -241,6 +246,19 @@ class AcpAgent {
     List<Map<String, Object?>> mcpServers = const [],
   }) async {
     final result = await _connection.request('session/load', {
+      'sessionId': sessionId,
+      'cwd': cwd,
+      'mcpServers': mcpServers,
+    });
+    return AcpSession.fromResult(sessionId, result);
+  }
+
+  Future<AcpSession> resumeSession({
+    required String sessionId,
+    required String cwd,
+    List<Map<String, Object?>> mcpServers = const [],
+  }) async {
+    final result = await _connection.request('session/resume', {
       'sessionId': sessionId,
       'cwd': cwd,
       'mcpServers': mcpServers,

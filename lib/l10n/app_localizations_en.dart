@@ -12094,4 +12094,72 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get agentsErrorNetwork =>
       'No network connection. Check your connection and try again.';
+
+  @override
+  String get agentsDescKimiCode =>
+      'Moonshot’s coding agent: edits files and runs commands.';
+
+  @override
+  String get agentsDescDeepSeekHarness =>
+      'DeepSeek’s coding agent: works on files and commands in a workspace.';
+
+  @override
+  String get agentsApiCompatible =>
+      'Uses the Moru provider with Anthropic, Chat Completions or Responses API.';
+
+  @override
+  String get agentsWebOpen => 'Open web interface';
+
+  @override
+  String get agentsWebStop => 'Stop';
+
+  @override
+  String get agentsWebStarting => 'Starting the web interface…';
+
+  @override
+  String get agentsWebRunning =>
+      'The web interface is running in the background.';
+
+  @override
+  String get agentsWebTimeout =>
+      'The agent did not print a local web address within 120 seconds. Stop it and try again.';
+
+  @override
+  String get agentsWebExited =>
+      'The web process exited. Open the interface again to restart it.';
+
+  @override
+  String get agentsWebStartFailed =>
+      'Could not start the web interface. Check the Linux environment, agent installation and Node.js version.';
+
+  @override
+  String get agentsWebStopped => 'The web interface was stopped.';
+
+  @override
+  String get agentsWebDeepSeekWorkspace =>
+      'For DeepSeek Harness, choose or add /workspace in the web interface.';
+
+  @override
+  String agentsNodeVersionRequired(
+    String agent,
+    String requiredVersion,
+    String actual,
+  ) {
+    return '$agent requires Node.js $requiredVersion. Detected in the Linux environment: $actual. Update Node.js, reopen this card and try again.';
+  }
+
+  @override
+  String get agentsNodeVersionUnknown => 'version unavailable';
+
+  @override
+  String get agentsNodeUpdateDebian =>
+      'In the Linux terminal, install Node.js 24 from the official NodeSource repository:\napt-get update\napt-get install -y ca-certificates curl bash\ncurl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\nbash /tmp/moru-node24-setup.sh\napt-get install -y nodejs\nnode --version\nnpm --version\nInstructions: https://github.com/nodesource/distributions/blob/master/DEV_README.md';
+
+  @override
+  String get agentsNodeUpdateAlpine =>
+      'In the Linux terminal, update the Alpine packages:\napk update\napk add --upgrade nodejs npm\nnode --version\nnpm --version';
+
+  @override
+  String get agentsNodeUpdateUnknown =>
+      'No verified upgrade method is available for this distribution. Check its official Node.js installation instructions; then reopen this card.';
 }

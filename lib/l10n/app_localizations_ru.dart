@@ -12226,4 +12226,71 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get agentsErrorNetwork =>
       'Нет сети. Проверьте подключение и попробуйте снова.';
+
+  @override
+  String get agentsDescKimiCode =>
+      'Агент Moonshot: правит файлы и запускает команды.';
+
+  @override
+  String get agentsDescDeepSeekHarness =>
+      'Агент DeepSeek: работает с файлами и командами в рабочей папке.';
+
+  @override
+  String get agentsApiCompatible =>
+      'Использует провайдера Moru через Anthropic, Chat Completions или Responses API.';
+
+  @override
+  String get agentsWebOpen => 'Открыть веб-интерфейс';
+
+  @override
+  String get agentsWebStop => 'Остановить';
+
+  @override
+  String get agentsWebStarting => 'Запускается веб-интерфейс…';
+
+  @override
+  String get agentsWebRunning => 'Веб-интерфейс работает в фоне.';
+
+  @override
+  String get agentsWebTimeout =>
+      'Агент не напечатал локальный веб-адрес за 120 секунд. Остановите его и попробуйте снова.';
+
+  @override
+  String get agentsWebExited =>
+      'Веб-процесс завершился. Откройте интерфейс снова, чтобы запустить его.';
+
+  @override
+  String get agentsWebStartFailed =>
+      'Не удалось запустить веб-интерфейс. Проверьте Linux-окружение, установку агента и версию Node.js.';
+
+  @override
+  String get agentsWebStopped => 'Веб-интерфейс остановлен.';
+
+  @override
+  String get agentsWebDeepSeekWorkspace =>
+      'В веб-интерфейсе DeepSeek Harness выберите или добавьте папку /workspace.';
+
+  @override
+  String agentsNodeVersionRequired(
+    String agent,
+    String requiredVersion,
+    String actual,
+  ) {
+    return 'Для $agent нужен Node.js $requiredVersion. В Linux-окружении обнаружен: $actual. Обновите Node.js, снова откройте карточку и повторите действие.';
+  }
+
+  @override
+  String get agentsNodeVersionUnknown => 'версия недоступна';
+
+  @override
+  String get agentsNodeUpdateDebian =>
+      'В терминале Linux установите Node.js 24 из официального репозитория NodeSource:\napt-get update\napt-get install -y ca-certificates curl bash\ncurl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\nbash /tmp/moru-node24-setup.sh\napt-get install -y nodejs\nnode --version\nnpm --version\nИнструкция: https://github.com/nodesource/distributions/blob/master/DEV_README.md';
+
+  @override
+  String get agentsNodeUpdateAlpine =>
+      'В терминале Linux обновите пакеты Alpine:\napk update\napk add --upgrade nodejs npm\nnode --version\nnpm --version';
+
+  @override
+  String get agentsNodeUpdateUnknown =>
+      'Для этого дистрибутива нет подтверждённого способа обновления. Проверьте его официальную инструкцию по установке Node.js, затем снова откройте карточку.';
 }

@@ -11561,6 +11561,68 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentsErrorNetwork => '无法连接网络。请检查网络连接后重试。';
+
+  @override
+  String get agentsDescKimiCode => 'Moonshot 编程代理：编辑文件并运行命令。';
+
+  @override
+  String get agentsDescDeepSeekHarness => 'DeepSeek 编程代理：在工作目录中处理文件和命令。';
+
+  @override
+  String get agentsApiCompatible =>
+      '通过 Anthropic、Chat Completions 或 Responses API 使用 Moru 服务商。';
+
+  @override
+  String get agentsWebOpen => '打开网页界面';
+
+  @override
+  String get agentsWebStop => '停止';
+
+  @override
+  String get agentsWebStarting => '正在启动网页界面…';
+
+  @override
+  String get agentsWebRunning => '网页界面正在后台运行。';
+
+  @override
+  String get agentsWebTimeout => '代理未在 120 秒内输出本地网页地址。请停止后重试。';
+
+  @override
+  String get agentsWebExited => '网页进程已退出。重新打开界面以再次启动。';
+
+  @override
+  String get agentsWebStartFailed => '无法启动网页界面。请检查 Linux 环境、代理安装和 Node.js 版本。';
+
+  @override
+  String get agentsWebStopped => '网页界面已停止。';
+
+  @override
+  String get agentsWebDeepSeekWorkspace =>
+      '请在 DeepSeek Harness 网页界面中选择或添加 /workspace 目录。';
+
+  @override
+  String agentsNodeVersionRequired(
+    String agent,
+    String requiredVersion,
+    String actual,
+  ) {
+    return '$agent 需要 Node.js $requiredVersion。Linux 环境中检测到：$actual。请更新 Node.js，重新打开此卡片后重试。';
+  }
+
+  @override
+  String get agentsNodeVersionUnknown => '无法获取版本';
+
+  @override
+  String get agentsNodeUpdateDebian =>
+      '在 Linux 终端中从 NodeSource 官方仓库安装 Node.js 24：\napt-get update\napt-get install -y ca-certificates curl bash\ncurl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\nbash /tmp/moru-node24-setup.sh\napt-get install -y nodejs\nnode --version\nnpm --version\n说明：https://github.com/nodesource/distributions/blob/master/DEV_README.md';
+
+  @override
+  String get agentsNodeUpdateAlpine =>
+      '在 Linux 终端中更新 Alpine 软件包：\napk update\napk add --upgrade nodejs npm\nnode --version\nnpm --version';
+
+  @override
+  String get agentsNodeUpdateUnknown =>
+      '此发行版暂无已确认的升级方法。请查阅其官方 Node.js 安装说明，然后重新打开此卡片。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -23049,6 +23111,68 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get agentsErrorNetwork => '无法连接网络。请检查网络连接后重试。';
+
+  @override
+  String get agentsDescKimiCode => 'Moonshot 编程代理：编辑文件并运行命令。';
+
+  @override
+  String get agentsDescDeepSeekHarness => 'DeepSeek 编程代理：在工作目录中处理文件和命令。';
+
+  @override
+  String get agentsApiCompatible =>
+      '通过 Anthropic、Chat Completions 或 Responses API 使用 Moru 服务商。';
+
+  @override
+  String get agentsWebOpen => '打开网页界面';
+
+  @override
+  String get agentsWebStop => '停止';
+
+  @override
+  String get agentsWebStarting => '正在启动网页界面…';
+
+  @override
+  String get agentsWebRunning => '网页界面正在后台运行。';
+
+  @override
+  String get agentsWebTimeout => '代理未在 120 秒内输出本地网页地址。请停止后重试。';
+
+  @override
+  String get agentsWebExited => '网页进程已退出。重新打开界面以再次启动。';
+
+  @override
+  String get agentsWebStartFailed => '无法启动网页界面。请检查 Linux 环境、代理安装和 Node.js 版本。';
+
+  @override
+  String get agentsWebStopped => '网页界面已停止。';
+
+  @override
+  String get agentsWebDeepSeekWorkspace =>
+      '请在 DeepSeek Harness 网页界面中选择或添加 /workspace 目录。';
+
+  @override
+  String agentsNodeVersionRequired(
+    String agent,
+    String requiredVersion,
+    String actual,
+  ) {
+    return '$agent 需要 Node.js $requiredVersion。Linux 环境中检测到：$actual。请更新 Node.js，重新打开此卡片后重试。';
+  }
+
+  @override
+  String get agentsNodeVersionUnknown => '无法获取版本';
+
+  @override
+  String get agentsNodeUpdateDebian =>
+      '在 Linux 终端中从 NodeSource 官方仓库安装 Node.js 24：\napt-get update\napt-get install -y ca-certificates curl bash\ncurl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\nbash /tmp/moru-node24-setup.sh\napt-get install -y nodejs\nnode --version\nnpm --version\n说明：https://github.com/nodesource/distributions/blob/master/DEV_README.md';
+
+  @override
+  String get agentsNodeUpdateAlpine =>
+      '在 Linux 终端中更新 Alpine 软件包：\napk update\napk add --upgrade nodejs npm\nnode --version\nnpm --version';
+
+  @override
+  String get agentsNodeUpdateUnknown =>
+      '此发行版暂无已确认的升级方法。请查阅其官方 Node.js 安装说明，然后重新打开此卡片。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -34611,4 +34735,66 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentsErrorNetwork => '無法連線網路。請檢查網路連線後重試。';
+
+  @override
+  String get agentsDescKimiCode => 'Moonshot 程式代理：編輯檔案並執行命令。';
+
+  @override
+  String get agentsDescDeepSeekHarness => 'DeepSeek 程式代理：在工作目錄中處理檔案和命令。';
+
+  @override
+  String get agentsApiCompatible =>
+      '透過 Anthropic、Chat Completions 或 Responses API 使用 Moru 供應商。';
+
+  @override
+  String get agentsWebOpen => '開啟網頁介面';
+
+  @override
+  String get agentsWebStop => '停止';
+
+  @override
+  String get agentsWebStarting => '正在啟動網頁介面…';
+
+  @override
+  String get agentsWebRunning => '網頁介面正在背景執行。';
+
+  @override
+  String get agentsWebTimeout => '代理未在 120 秒內輸出本機網頁位址。請停止後重試。';
+
+  @override
+  String get agentsWebExited => '網頁程序已結束。重新開啟介面以再次啟動。';
+
+  @override
+  String get agentsWebStartFailed => '無法啟動網頁介面。請檢查 Linux 環境、代理安裝和 Node.js 版本。';
+
+  @override
+  String get agentsWebStopped => '網頁介面已停止。';
+
+  @override
+  String get agentsWebDeepSeekWorkspace =>
+      '請在 DeepSeek Harness 網頁介面中選擇或新增 /workspace 目錄。';
+
+  @override
+  String agentsNodeVersionRequired(
+    String agent,
+    String requiredVersion,
+    String actual,
+  ) {
+    return '$agent 需要 Node.js $requiredVersion。Linux 環境中偵測到：$actual。請更新 Node.js，重新開啟此卡片後再試。';
+  }
+
+  @override
+  String get agentsNodeVersionUnknown => '無法取得版本';
+
+  @override
+  String get agentsNodeUpdateDebian =>
+      '在 Linux 終端中從 NodeSource 官方儲存庫安裝 Node.js 24：\napt-get update\napt-get install -y ca-certificates curl bash\ncurl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\nbash /tmp/moru-node24-setup.sh\napt-get install -y nodejs\nnode --version\nnpm --version\n說明：https://github.com/nodesource/distributions/blob/master/DEV_README.md';
+
+  @override
+  String get agentsNodeUpdateAlpine =>
+      '在 Linux 終端中更新 Alpine 套件：\napk update\napk add --upgrade nodejs npm\nnode --version\nnpm --version';
+
+  @override
+  String get agentsNodeUpdateUnknown =>
+      '此發行版暫無已確認的升級方法。請查閱其官方 Node.js 安裝說明，然後重新開啟此卡片。';
 }

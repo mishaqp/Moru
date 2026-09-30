@@ -68,7 +68,8 @@ package name does not require building other platforms.
   `ComposerStatusStrip` shows the open plan (`TaskPlanChip`) and the running
   command (`RunningToolChip`) side by side above the composer.
 
-- **ACP agents**: coding agents (Claude Code, Codex, OpenCode, custom) speak
+- **ACP agents**: coding agents (Claude Code, Codex, OpenCode, Kimi Code,
+  DeepSeek Harness, custom) speak
   the Agent Client Protocol over the Linux environment's STDIO pipes
   (`lib/core/services/acp/`). `AcpAgentManager` installs them with npm and
   checks them (Settings → Agents); `AcpAgentSpec.launch` maps a Moru provider
@@ -84,11 +85,26 @@ package name does not require building other platforms.
   chat's assistant, conversation and workspace context. File/shell tools
   are excluded. `AcpMcpBinding` pairs each call with the agent's existing
   ACP tool card; only the Moru handler asks for approval. HTTP-capable agents
-  receive an HTTP `mcpServers` entry on new/load; others use the dependency-free
+  receive an HTTP `mcpServers` entry on new/load/resume; others use the dependency-free
   Node `AcpMcpStdioBridge` written by `writeFilesScript` (token only in env).
   Hidden chats cannot use the live browser UI. Settings → Agents → Check runs
   `AcpMcpProbe` from the active Linux runtime to report actual loopback access;
   device PRoot/root-chroot availability must be tested on the phone.
+  Kimi uses `kimi acp`; DeepSeek Harness is installed globally in Moru's npm
+  prefix and runs `dsh --profile acp`, never `npx` per launch. Probe the active
+  runtime's Node before installing or starting them: Kimi needs >=22.19.0;
+  DSH accepts ^22.19.0 or >=24.0.0 (not Node 23). Distro `nodejs npm` packages
+  alone do not guarantee this. Ubuntu 22.04/24.04 and Debian 12 have a verified
+  NodeSource 24 apt upgrade path; Alpine uses its own musl `apk` packages.
+  `AcpChatSessions` restores with load first, advertised resume second, then
+  a new session with history; missing modes/plans are valid capabilities.
+  `AcpAgentWebServers` owns the official Kimi/DSH/OpenCode Web processes in
+  the Linux runtime, with separate persistent configs and the assistant's
+  workspace. Bind only 127.0.0.1, wait for the printed authenticated address,
+  and send the login URL only to `openSharedBrowser`, never a log or chat.
+  Stop on the card, app detach and provider disposal; changed launch settings
+  replace the process. Guest launch preparation trusts only `/workspace` in
+  system Git config to handle the Android UID/root-chroot ownership mismatch.
 - **Mini apps**: published web apps (`MiniAppStore`, bridge `moru.*` in
   `MiniAppBridge`). They keep an error journal, the last 5 versions, and
   manifest game settings (`MiniAppDisplay`). Background jobs (`moru.jobs`,

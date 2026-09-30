@@ -4327,5 +4327,35 @@
   "agentsImageNotSent": "图片未发送给代理。",
   "agentsErrorApiKey": "提供商的 API 密钥无效。",
   "agentsErrorModel": "未找到模型。请检查提供商的模型设置。",
-  "agentsErrorNetwork": "无法连接网络。请检查网络连接后重试。"
+  "agentsErrorNetwork": "无法连接网络。请检查网络连接后重试。",
+  "agentsDescKimiCode": "Moonshot 编程代理：编辑文件并运行命令。",
+  "agentsDescDeepSeekHarness": "DeepSeek 编程代理：在工作目录中处理文件和命令。",
+  "agentsApiCompatible": "通过 Anthropic、Chat Completions 或 Responses API 使用 Moru 服务商。",
+  "agentsWebOpen": "打开网页界面",
+  "agentsWebStop": "停止",
+  "agentsWebStarting": "正在启动网页界面…",
+  "agentsWebRunning": "网页界面正在后台运行。",
+  "agentsWebTimeout": "代理未在 120 秒内输出本地网页地址。请停止后重试。",
+  "agentsWebExited": "网页进程已退出。重新打开界面以再次启动。",
+  "agentsWebStartFailed": "无法启动网页界面。请检查 Linux 环境、代理安装和 Node.js 版本。",
+  "agentsWebStopped": "网页界面已停止。",
+  "agentsWebDeepSeekWorkspace": "请在 DeepSeek Harness 网页界面中选择或添加 /workspace 目录。",
+  "agentsNodeVersionRequired": "{agent} 需要 Node.js {requiredVersion}。Linux 环境中检测到：{actual}。请更新 Node.js，重新打开此卡片后重试。",
+  "agentsNodeVersionUnknown": "无法获取版本",
+  "agentsNodeUpdateDebian": "在 Linux 终端中从 NodeSource 官方仓库安装 Node.js 24：\napt-get update\napt-get install -y ca-certificates curl bash\ncurl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\nbash /tmp/moru-node24-setup.sh\napt-get install -y nodejs\nnode --version\nnpm --version\n说明：https://github.com/nodesource/distributions/blob/master/DEV_README.md",
+  "agentsNodeUpdateAlpine": "在 Linux 终端中更新 Alpine 软件包：\napk update\napk add --upgrade nodejs npm\nnode --version\nnpm --version",
+  "agentsNodeUpdateUnknown": "此发行版暂无已确认的升级方法。请查阅其官方 Node.js 安装说明，然后重新打开此卡片。",
+  "@agentsNodeVersionRequired": {
+    "placeholders": {
+      "agent": {
+        "type": "String"
+      },
+      "requiredVersion": {
+        "type": "String"
+      },
+      "actual": {
+        "type": "String"
+      }
+    }
+  }
 }

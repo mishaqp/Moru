@@ -18,6 +18,8 @@ String agentSummary(AppLocalizations l10n, AcpAgentSpec spec) =>
       AcpAgentSpec.claudeCodeId => l10n.agentsDescClaudeCode,
       AcpAgentSpec.codexId => l10n.agentsDescCodex,
       AcpAgentSpec.openCodeId => l10n.agentsDescOpenCode,
+      AcpAgentSpec.kimiCodeId => l10n.agentsDescKimiCode,
+      AcpAgentSpec.deepSeekHarnessId => l10n.agentsDescDeepSeekHarness,
       _ => [spec.command, ...spec.arguments].join(' '),
     };
 
@@ -27,6 +29,8 @@ String agentModelHint(AppLocalizations l10n, AcpAgentSpec spec) =>
       AcpAgentSpec.claudeCodeId => l10n.agentsApiAnthropic,
       AcpAgentSpec.codexId => l10n.agentsApiCodex,
       AcpAgentSpec.openCodeId => l10n.agentsApiOpenai,
+      AcpAgentSpec.kimiCodeId ||
+      AcpAgentSpec.deepSeekHarnessId => l10n.agentsApiCompatible,
       _ => l10n.agentsApiCustom,
     };
 
@@ -50,6 +54,7 @@ String? agentFailureLabel(AppLocalizations l10n, AcpAgentFailure? failure) =>
     switch (failure) {
       AcpAgentFailure.noEnvironment => l10n.agentsNeedEnvironment,
       AcpAgentFailure.node => l10n.agentsFailureNode,
+      AcpAgentFailure.nodeVersion => null,
       AcpAgentFailure.install => l10n.agentsFailureInstall,
       AcpAgentFailure.remove => l10n.agentsFailureRemove,
       // The check shows its own error text.

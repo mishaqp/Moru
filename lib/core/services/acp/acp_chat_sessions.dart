@@ -184,13 +184,20 @@ class AcpChatSessions extends ChangeNotifier {
       AcpSession? session;
       var needsHistory = true;
       final saved = turn.savedSessionId;
-      if (saved != null && agent.info.loadSession) {
+      if (saved != null &&
+          (agent.info.loadSession || agent.info.resumeSession)) {
         try {
-          session = await agent.loadSession(
-            sessionId: saved,
-            cwd: turn.cwd,
-            mcpServers: mcpServers,
-          );
+          session = agent.info.loadSession
+              ? await agent.loadSession(
+                  sessionId: saved,
+                  cwd: turn.cwd,
+                  mcpServers: mcpServers,
+                )
+              : await agent.resumeSession(
+                  sessionId: saved,
+                  cwd: turn.cwd,
+                  mcpServers: mcpServers,
+                );
           needsHistory = false;
         } on AcpError {
           // The agent lost it (updated, cleaned up): start over with the
@@ -251,6 +258,7 @@ class AcpChatSessions extends ChangeNotifier {
     turn.provider.baseUrl,
     turn.provider.model,
     turn.provider.imageInput,
+    turn.provider.contextWindow,
     turn.provider.apiKey.hashCode,
     turn.cwd,
     turn.moruTools?.key,
