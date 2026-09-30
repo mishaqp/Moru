@@ -75,7 +75,7 @@ class RootfsInfoTest {
             for (command in listOf("echo ok", null)) {
                 val base = ProotCommand.build(root, root, root, emptyList(), "/", command, emptyMap(), extraArgs = listOf("-k", "5.10.0"))
                 assertTrue(base.argv.contains("/bin/sh"))
-                assertEquals(listOf("-k", "5.10.0"), base.argv.subList(4, 6))
+                assertEquals(listOf("--sysvipc", "-k", "5.10.0"), base.argv.subList(4, 7))
                 File(root, "bin/bash").apply { writeText("shell fixture"); setExecutable(true) }
                 val bash = ProotCommand.build(root, root, root, emptyList(), "/", command, emptyMap())
                 assertTrue(bash.argv.contains("/bin/bash"))
