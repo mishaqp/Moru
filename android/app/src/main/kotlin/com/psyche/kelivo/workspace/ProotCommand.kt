@@ -20,6 +20,41 @@ object ProotCommand {
     const val TALLOC_LIB = "libtalloc.so"
     const val TALLOC_SONAME = "libtalloc.so.2"
     const val BASH_EVAL = "cd -- \"\$1\" && eval \"\$2\""
+    // Chroot runs as root while the bound workspace belongs to the Android
+    // app. Prepare existing rootfs images too, before exec/PTY and agent runs.
+    private val GIT_PREPARE = """
+        if command -v git >/dev/null 2>&1; then
+          moru_git_safe() {
+            git config --system --get-all safe.directory 2>/dev/null |
+              awk -v directory="${'$'}1" '${'$'}0 == "" { safe=0 } ${'$'}0 == directory { safe=1 } END { exit !safe }'
+          }
+          moru_git_attempt=0
+          while ! moru_git_safe "${'$'}1"; do
+            if moru_git_error=${'$'}(git config --system --add safe.directory "${'$'}1" 2>&1); then
+              break
+            else
+              moru_git_code=${'$'}?
+            fi
+            moru_git_safe "${'$'}1" && break
+            moru_git_config=${'$'}(git var GIT_CONFIG_SYSTEM) || exit "${'$'}moru_git_code"
+            # A competing writer may have removed its lock since Git failed.
+            # Try once immediately in that case; persistent errors still stop.
+            if [ ! -e "${'$'}moru_git_config.lock" ] && [ "${'$'}moru_git_attempt" -eq 0 ]; then
+              moru_git_attempt=1
+              continue
+            fi
+            if [ ! -e "${'$'}moru_git_config.lock" ] || [ "${'$'}moru_git_attempt" -ge 50 ]; then
+              moru_git_safe "${'$'}1" && break
+              printf '%s\n' "${'$'}moru_git_error" >&2
+              exit "${'$'}moru_git_code"
+            fi
+            moru_git_attempt=${'$'}((moru_git_attempt + 1))
+            sleep 0.1
+          done
+        fi
+        shift
+        exec "${'$'}@"
+    """.trimIndent()
 
     fun validateGuestCwd(cwd: String): String {
         val trimmed = cwd.trim()
@@ -113,6 +148,7 @@ object ProotCommand {
         for ((key, value) in guestEnv) {
             argv += "$key=$value"
         }
+        argv += listOf("/bin/sh", "-c", GIT_PREPARE, "kelivo-git", "/workspace")
         if (command == null) {
             argv += listOf(guestShell, "-l")
         } else {

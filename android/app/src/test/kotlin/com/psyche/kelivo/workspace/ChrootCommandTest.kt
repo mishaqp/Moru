@@ -50,6 +50,9 @@ class ChrootCommandTest {
             ),
         )
         val separator = args.indexOf("--")
+        val guest = args.subList(separator + 1, args.size)
+        assertEquals(listOf("/bin/sh", "-c"), guest.subList(6, 8))
+        assertEquals(listOf("kelivo-git", "/workspace"), guest.subList(9, 11))
         assertEquals(
             listOf(
                 "/nativelib/libmoru_chroot.so", "run",
@@ -72,7 +75,7 @@ class ChrootCommandTest {
                 "LANG=C.UTF-8",
                 "/bin/bash", "-lc", ProotCommand.BASH_EVAL, "kelivo", "/workspace", "echo hello",
             ),
-            args.subList(separator + 1, args.size),
+            guest.take(6) + guest.drop(11),
         )
     }
 

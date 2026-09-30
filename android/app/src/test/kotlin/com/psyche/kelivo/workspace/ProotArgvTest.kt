@@ -5,9 +5,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 
 class ProotArgvTest {
+    @get:Rule
+    val tmp = TemporaryFolder()
+
     @Test
     fun execArgvMatchesGoldenString() {
         val launch = ProotCommand.build(
@@ -28,7 +33,10 @@ class ProotArgvTest {
                 "-r /data/rootfs -w /workspace -b /host/files:/workspace " +
                 "-b /dev -b /proc -b /sys /usr/bin/env -i HOME=/root PATH=/bin LANG=C.UTF-8 " +
                 "/bin/sh -lc " + ProotCommand.BASH_EVAL + " kelivo /workspace echo hello"
-        assertEquals(golden, launch.argv.joinToString(" "))
+        val prepare = launch.argv.indexOf("LANG=C.UTF-8") + 1
+        assertEquals(listOf("/bin/sh", "-c"), launch.argv.subList(prepare, prepare + 2))
+        assertEquals(listOf("kelivo-git", "/workspace"), launch.argv.subList(prepare + 3, prepare + 5))
+        assertEquals(golden, (launch.argv.take(prepare) + launch.argv.drop(prepare + 5)).joinToString(" "))
         assertEquals("/data", launch.workingDirectory.absolutePath)
         assertEquals("/nativelib/libproot_loader.so", launch.processEnv["PROOT_LOADER"])
         assertEquals("/data/tmp", launch.processEnv["PROOT_TMP_DIR"])
@@ -66,7 +74,10 @@ class ProotArgvTest {
             cwd = "/",
             command = "/usr/bin/env",
             shell = "/bin/bash",
-            env = emptyMap(),
+            env = mapOf(
+                "GIT_CONFIG_SYSTEM" to tmp.newFile("gitconfig").absolutePath,
+                "GIT_CONFIG_GLOBAL" to "/dev/null",
+            ),
             includeLibraryPath = false,
         )
         val argv = launch.argv.drop(launch.argv.indexOf("/usr/bin/env")).toMutableList()
