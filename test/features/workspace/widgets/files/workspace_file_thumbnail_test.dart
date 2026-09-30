@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:Kelivo/features/workspace/widgets/files/file_browser_ops.dart';
+import 'package:Kelivo/core/services/workspace/workspace_file_access.dart';
 import 'package:Kelivo/features/workspace/widgets/files/workspace_file_thumbnail.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/utils/safe_resize_image.dart';
@@ -140,6 +141,34 @@ void main() {
   setUp(() {
     tempDir = Directory.systemTemp.createTempSync('kelivo_file_thumbnail_');
   });
+
+  testWidgets(
+    'a stale image row cannot decode a file symlink outside its root',
+    (tester) async {
+      final source = File('${tempDir.path}/image.png')
+        ..writeAsBytesSync(_solidPng(1, 1));
+      final stat = source.statSync();
+      final entry = FileBrowserEntry(
+        name: 'image.png',
+        hostPath: source.path,
+        isDirectory: false,
+        size: stat.size,
+        modified: stat.modified,
+        rootPath: tempDir.path,
+      );
+      final outside = Directory.systemTemp.createTempSync('thumbnail_outside_');
+      addTearDown(() => outside.deleteSync(recursive: true));
+      final target = File('${outside.path}/secret.png')
+        ..writeAsBytesSync(_solidPng(1, 1));
+      source.deleteSync();
+      Link(source.path).createSync(target.path);
+      await tester.pumpWidget(_thumbnail(entry));
+      expect(await _load(tester), isA<WorkspaceFileAccessException>());
+      expect(binding.decodeCalls, 0);
+      expect(find.byType(RawImage), findsNothing);
+      expect(target.existsSync(), isTrue);
+    },
+  );
 
   tearDown(() {
     binding.blockPixelDecoding = false;

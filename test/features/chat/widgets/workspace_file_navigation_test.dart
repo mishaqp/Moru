@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
+// ignore: depend_on_referenced_packages
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:Kelivo/features/chat/widgets/produced_files_row.dart';
 import 'package:Kelivo/features/workspace/widgets/files/workspace_file_thumbnail.dart';
 
@@ -27,6 +29,15 @@ import 'package:Kelivo/shared/widgets/snackbar.dart';
 
 import '../../../support/business_test_harness.dart';
 
+class _PathProvider extends PathProviderPlatform {
+  _PathProvider(this.root);
+  final String root;
+  @override
+  Future<String?> getApplicationDocumentsPath() async => root;
+  @override
+  Future<String?> getApplicationSupportPath() async => root;
+}
+
 class _Chat extends ChatService {
   _Chat(this.conversation);
   final Conversation conversation;
@@ -37,12 +48,17 @@ class _Chat extends ChatService {
 
 void main() {
   late Directory root;
+  late PathProviderPlatform previousPaths;
   late AppDatabase db;
   late WorkspaceProvider workspaces;
   late Conversation conversation;
 
   setUp(() async {
     root = Directory.systemTemp.createTempSync('kelivo_file_navigation_');
+    previousPaths = PathProviderPlatform.instance;
+    final appData = Directory(p.join(root.path, 'private-app-data'))
+      ..createSync();
+    PathProviderPlatform.instance = _PathProvider(appData.path);
     File(p.join(root.path, 'note.txt')).writeAsStringSync('preview content');
     Directory(p.join(root.path, 'folder')).createSync();
     File(p.join(root.path, 'folder', 'child.txt')).writeAsStringSync('child');
@@ -62,6 +78,7 @@ void main() {
   });
 
   tearDown(() async {
+    PathProviderPlatform.instance = previousPaths;
     workspaces.dispose();
     await db.close();
     root.deleteSync(recursive: true);
@@ -124,16 +141,21 @@ void main() {
           ),
         ),
       );
-      await tester.tap(find.text('note.txt'));
+      await tester.runAsync(() => tester.tap(find.text('note.txt')));
       await settle(tester);
       expect(find.byType(FilePreviewFrame), findsOneWidget);
+      final previewFile = tester
+          .widget<FilePreviewFrame>(find.byType(FilePreviewFrame))
+          .file;
+      expect(p.basename(previewFile.path), 'note.txt');
+      expect(previewFile.path, contains('/workspace-previews/snapshot-'));
       expect(
-        tester
-            .widget<FilePreviewFrame>(find.byType(FilePreviewFrame))
-            .file
-            .path,
-        p.join(root.path, 'note.txt'),
+        await tester.runAsync(previewFile.readAsString),
+        'preview content',
       );
+      Navigator.of(tester.element(find.byType(FilePreviewFrame))).pop();
+      await settle(tester);
+      expect(previewFile.existsSync(), isFalse);
       expect(tester.takeException(), isNull);
     },
     variant: TargetPlatformVariant({
@@ -161,7 +183,7 @@ void main() {
                   ),
           ),
         );
-        await tester.tap(find.text('folder').first);
+        await tester.runAsync(() => tester.tap(find.text('folder').first));
         await settle(tester);
         expect(find.byType(FileBrowser), findsOneWidget);
         final browser = tester.widget<FileBrowser>(find.byType(FileBrowser));
@@ -193,27 +215,29 @@ void main() {
         ),
       ),
     );
-    await tester.pumpWidget(
-      harness(
-        ProducedFilesRow(
-          conversationId: 'c1',
-          parts: [
-            WorkspaceToolPart(
-              id: 'shell-image',
-              toolName: 'shell',
-              metadata: const WorkspaceToolMetadata(
-                tool: 'shell',
-                status: 'ok',
-                files: [
-                  WorkspaceToolFile(
-                    path: '/workspace/plot.png',
-                    link: 'kelivo://workspace/plot.png',
-                    role: WorkspaceFileRole.created,
-                  ),
-                ],
-              ).toJson(),
-            ),
-          ],
+    await tester.runAsync(
+      () => tester.pumpWidget(
+        harness(
+          ProducedFilesRow(
+            conversationId: 'c1',
+            parts: [
+              WorkspaceToolPart(
+                id: 'shell-image',
+                toolName: 'shell',
+                metadata: const WorkspaceToolMetadata(
+                  tool: 'shell',
+                  status: 'ok',
+                  files: [
+                    WorkspaceToolFile(
+                      path: '/workspace/plot.png',
+                      link: 'kelivo://workspace/plot.png',
+                      role: WorkspaceFileRole.created,
+                    ),
+                  ],
+                ).toJson(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -241,7 +265,7 @@ void main() {
           ),
         ),
       );
-      await tester.tap(find.text('missing.txt'));
+      await tester.runAsync(() => tester.tap(find.text('missing.txt')));
       await settle(tester);
       expect(find.text('File no longer exists'), findsOneWidget);
       expect(find.byType(FilePreviewFrame), findsNothing);

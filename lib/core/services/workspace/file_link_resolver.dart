@@ -7,6 +7,7 @@ import '../../providers/workspace_provider.dart';
 import '../../providers/external_mounts_provider.dart';
 import '../../../utils/app_directories.dart';
 import 'workspace_paths.dart';
+import 'workspace_file_access.dart';
 
 enum KelivoLinkKind {
   workspaceFile,
@@ -234,6 +235,12 @@ class FileLinkException implements Exception {
   final FileLinkFailure reason;
 }
 
+class ResolvedWorkspaceEntry {
+  const ResolvedWorkspaceEntry({required this.entry, required this.rootPath});
+  final FileSystemEntity entry;
+  final String rootPath;
+}
+
 class FileLinkResolver {
   FileLinkResolver({required this.workspaces, this.externalMounts});
 
@@ -258,6 +265,16 @@ class FileLinkResolver {
   }
 
   Future<FileSystemEntity?> resolveToHostEntry(
+    KelivoLink link, {
+    required String conversationId,
+    required WorkspaceBinding binding,
+  }) async => (await resolveToHostAccess(
+    link,
+    conversationId: conversationId,
+    binding: binding,
+  ))?.entry;
+
+  Future<ResolvedWorkspaceEntry?> resolveToHostAccess(
     KelivoLink link, {
     required String conversationId,
     required WorkspaceBinding binding,
@@ -309,7 +326,10 @@ class FileLinkResolver {
       case KelivoLinkKind.terminal:
         return null;
     }
-    return _entryUnderRoot(root, link.relativePath);
+    final entry = await _entryUnderRoot(root, link.relativePath);
+    return entry == null
+        ? null
+        : ResolvedWorkspaceEntry(entry: entry, rootPath: root);
   }
 
   static bool _isSafeRelativePath(String relativePath) {
@@ -321,23 +341,18 @@ class FileLinkResolver {
     return relativePath.split('/').every(KelivoLink._isSafeSegment);
   }
 
-  static FileSystemEntity? _entryUnderRoot(String root, String relativePath) {
+  static Future<FileSystemEntity?> _entryUnderRoot(
+    String root,
+    String relativePath,
+  ) async {
     try {
-      final canonicalRoot = Directory(root).resolveSymbolicLinksSync();
       final joined = p.join(p.canonicalize(root), relativePath);
-      final type = FileSystemEntity.typeSync(joined);
-      if (type == FileSystemEntityType.notFound) {
-        throw const FileLinkException(FileLinkFailure.missing);
-      }
-      final canonical = type == FileSystemEntityType.directory
-          ? Directory(joined).resolveSymbolicLinksSync()
-          : File(joined).resolveSymbolicLinksSync();
-      if (!p.equals(canonicalRoot, canonical) &&
-          !p.isWithin(canonicalRoot, canonical)) {
-        return null;
-      }
-      if (type == FileSystemEntityType.file) return File(joined);
-      if (type == FileSystemEntityType.directory) return Directory(joined);
+      final access = WorkspaceFileAccess(roots: [root]);
+      final stat = await access.stat(joined);
+      if (stat.type == FileSystemEntityType.file) return File(joined);
+      if (stat.type == FileSystemEntityType.directory) return Directory(joined);
+      return null;
+    } on WorkspaceFileAccessException {
       return null;
     } on FileSystemException {
       throw const FileLinkException(FileLinkFailure.missing);

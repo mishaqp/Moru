@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:Kelivo/l10n/app_localizations.dart';
+import 'package:Kelivo/core/services/workspace/workspace_file_access.dart';
 import 'package:Kelivo/shared/utils/save_file_picker.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart';
 
@@ -148,6 +149,8 @@ Future<Uri> _browserUriForPreviewFile(File file) async {
 Future<Uri> startPreviewFileBrowserServer(File file) async {
   await closePreviewFileBrowserServer();
   final root = file.parent.absolute.path;
+  final access = WorkspaceFileAccess(roots: [root]);
+  await access.resolve(file.path);
   final name = p.basename(file.path);
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   _previewBrowserServer = server;
@@ -158,24 +161,21 @@ Future<Uri> startPreviewFileBrowserServer(File file) async {
         rel = '/$name';
       }
       final requested = p.normalize(p.join(root, rel.replaceFirst('/', '')));
-      final allowed =
-          p.isWithin(root, requested) ||
-          p.equals(requested, p.join(root, name));
-      if (!allowed) {
-        request.response.statusCode = HttpStatus.forbidden;
+      final opened = await access.openRead(requested);
+      try {
+        request.response.headers.contentType = ContentType.parse(
+          _mimeForPreviewPath(requested),
+        );
+        await request.response.addStream(File(opened.path).openRead());
         await request.response.close();
-        return;
+      } finally {
+        await opened.close();
       }
-      final target = File(requested);
-      if (!target.existsSync()) {
-        request.response.statusCode = HttpStatus.notFound;
-        await request.response.close();
-        return;
-      }
-      request.response.headers.contentType = ContentType.parse(
-        _mimeForPreviewPath(requested),
-      );
-      await request.response.addStream(target.openRead());
+    } on WorkspaceFileAccessException {
+      request.response.statusCode = HttpStatus.forbidden;
+      await request.response.close();
+    } on FileSystemException {
+      request.response.statusCode = HttpStatus.notFound;
       await request.response.close();
     } catch (_) {
       try {

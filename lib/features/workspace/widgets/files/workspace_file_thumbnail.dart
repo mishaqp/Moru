@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:Kelivo/features/chat/widgets/workspace_tool_ui.dart'
     show workspaceFileTypeIcon;
+import 'package:Kelivo/core/services/workspace/workspace_file_access.dart';
 import 'package:Kelivo/features/workspace/widgets/files/file_browser_ops.dart';
 import 'package:Kelivo/features/workspace/widgets/preview/preview_file_type.dart';
 import 'package:Kelivo/utils/safe_resize_image.dart';
@@ -83,10 +84,12 @@ class _ThumbnailFileImage extends FileImage {
   _ThumbnailFileImage(FileBrowserEntry entry)
     : modified = entry.modified.microsecondsSinceEpoch,
       sourceBytes = entry.size,
+      rootPath = entry.rootPath ?? p.dirname(entry.hostPath),
       super(File(entry.hostPath));
 
   final int modified;
   final int sourceBytes;
+  final String rootPath;
 
   // Serialize thumbnail decoding, including source buffers, so a newly visible
   // page of images cannot multiply the per-image intermediate memory budget.
@@ -112,11 +115,25 @@ class _ThumbnailFileImage extends FileImage {
   }
 
   Future<ImageInfo> _firstFrame(ImageDecoderCallback decode) async {
-    final length = await file.length();
-    if (length <= 0 || length > WorkspaceFileThumbnail.maxSourceBytes) {
-      throw StateError('Image is outside the thumbnail input size limit');
+    final source = await WorkspaceFileAccess(
+      roots: [rootPath],
+    ).openRead(file.path);
+    late final ui.ImmutableBuffer buffer;
+    try {
+      final length = await source.handle.length();
+      if (length <= 0 || length > WorkspaceFileThumbnail.maxSourceBytes) {
+        throw StateError('Image is outside the thumbnail input size limit');
+      }
+      final bytes = await source.readBytes(
+        maxBytes: WorkspaceFileThumbnail.maxSourceBytes + 1,
+      );
+      if (bytes.length > WorkspaceFileThumbnail.maxSourceBytes) {
+        throw StateError('Image is outside the thumbnail input size limit');
+      }
+      buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+    } finally {
+      await source.close();
     }
-    final buffer = await ui.ImmutableBuffer.fromFilePath(file.path);
     try {
       // Read metadata only: creating a codec can already start pixel decoding.
       // Check the same immutable bytes that will be handed to the decoder.
@@ -150,9 +167,10 @@ class _ThumbnailFileImage extends FileImage {
   bool operator ==(Object other) =>
       other is _ThumbnailFileImage &&
       other.file.path == file.path &&
+      other.rootPath == rootPath &&
       other.modified == modified &&
       other.sourceBytes == sourceBytes;
 
   @override
-  int get hashCode => Object.hash(file.path, modified, sourceBytes);
+  int get hashCode => Object.hash(file.path, rootPath, modified, sourceBytes);
 }

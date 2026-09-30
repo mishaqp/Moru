@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
+import 'package:Kelivo/core/services/workspace/workspace_file_access.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/segmented_tabs.dart';
@@ -43,9 +45,47 @@ class _HtmlFilePreviewState extends State<HtmlFilePreview> {
       _error = null;
     });
     try {
-      final controller = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted);
-      await controller.loadFile(widget.file.absolute.path);
+      final source = await WorkspaceFileAccess(
+        roots: [widget.file.parent.path],
+      ).readString(widget.file.path);
+      final controller = WebViewController();
+      final platform = controller.platform;
+      if (platform is AndroidWebViewController) {
+        await platform.setAllowFileAccess(false);
+        await platform.setAllowContentAccess(false);
+      }
+      await controller.setNavigationDelegate(
+        NavigationDelegate(
+          onNavigationRequest: (request) {
+            final uri = Uri.tryParse(request.url);
+            return uri != null &&
+                    (uri.scheme == 'http' ||
+                        uri.scheme == 'https' ||
+                        request.url == 'about:blank')
+                ? NavigationDecision.navigate
+                : NavigationDecision.prevent;
+          },
+        ),
+      );
+      await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
+      // loadFile enables unrestricted Android file access. Loading the checked
+      // text with an HTTPS origin keeps HTML/SVG resources out of local files
+      // and content providers, including subresources that bypass navigation.
+      const policy =
+          '<meta http-equiv="Content-Security-Policy" '
+          'content="default-src http: https: data: blob: \'unsafe-inline\' \'unsafe-eval\'; '
+          'base-uri \'none\'; object-src \'none\'">';
+      final doctype = RegExp(
+        r'^\s*<!doctype[^>]*>',
+        caseSensitive: false,
+      ).firstMatch(source);
+      final html = doctype == null
+          ? '$policy$source'
+          : '${source.substring(0, doctype.end)}$policy${source.substring(doctype.end)}';
+      await controller.loadHtmlString(
+        html,
+        baseUrl: 'https://moru-workspace-preview.invalid/',
+      );
       if (!mounted) return;
       setState(() {
         _controller = controller;

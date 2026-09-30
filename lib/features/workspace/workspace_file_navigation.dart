@@ -1,4 +1,7 @@
 import 'dart:io';
+import 'dart:typed_data';
+
+import '../../core/services/workspace/workspace_file_access.dart';
 
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
@@ -20,7 +23,7 @@ import 'widgets/preview/file_preview.dart';
 import 'workspace_layout.dart';
 import 'workspace_navigation.dart';
 
-Future<FileSystemEntity?> _resolveLinkedEntry(
+Future<ResolvedWorkspaceEntry?> _resolveLinkedEntry(
   BuildContext context,
   KelivoLink link, {
   String? conversationId,
@@ -38,7 +41,7 @@ Future<FileSystemEntity?> _resolveLinkedEntry(
       externalMounts: context.read<ExternalMountsProvider?>(),
     );
   }
-  return resolver.resolveToHostEntry(
+  return resolver.resolveToHostAccess(
     link,
     conversationId: conversation.id,
     binding: WorkspaceBinding.fromExtras(conversation.extras),
@@ -58,7 +61,45 @@ Future<File?> resolveWorkspaceLinkedFile(
       parsed,
       conversationId: conversationId,
     );
-    return entry is File ? entry : null;
+    return entry?.entry is File ? entry!.entry as File : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<ResolvedWorkspaceEntry?> resolveWorkspaceLinkedEntry(
+  BuildContext context,
+  String? link, {
+  String? conversationId,
+}) async {
+  final parsed = link == null ? null : KelivoLink.tryParse(link);
+  if (parsed == null || parsed.kind == KelivoLinkKind.terminal) return null;
+  try {
+    return await _resolveLinkedEntry(
+      context,
+      parsed,
+      conversationId: conversationId,
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<Uint8List?> readWorkspaceLinkedFile(
+  BuildContext context,
+  String? link, {
+  String? conversationId,
+}) async {
+  final resolved = await resolveWorkspaceLinkedEntry(
+    context,
+    link,
+    conversationId: conversationId,
+  );
+  if (resolved?.entry is! File) return null;
+  try {
+    return await WorkspaceFileAccess(
+      roots: [resolved!.rootPath],
+    ).readBytes(resolved.entry.path);
   } catch (_) {
     return null;
   }
@@ -76,11 +117,11 @@ Future<void> openWorkspaceLinkedFile(
     WorkspaceNavigation.openTerminal(context, command: parsed!.terminalCommand);
     return;
   }
-  FileSystemEntity? entry;
+  ResolvedWorkspaceEntry? resolved;
   var error = l10n.workspaceFileNotAvailable;
   try {
     if (parsed != null) {
-      entry = await _resolveLinkedEntry(
+      resolved = await _resolveLinkedEntry(
         context,
         parsed,
         conversationId: conversationId,
@@ -95,13 +136,29 @@ Future<void> openWorkspaceLinkedFile(
     // Directory permissions may have changed since the tool ran.
   }
   if (!context.mounted) return;
+  final entry = resolved?.entry;
   if (entry is File) {
-    await showFilePreview(context, entry, title: title);
+    try {
+      await FileBrowserOps.withReadableFile<void>(
+        rootPath: resolved!.rootPath,
+        hostPath: entry.path,
+        operation: (file) async {
+          if (context.mounted) {
+            await showFilePreview(context, file, title: title);
+          }
+        },
+      );
+    } catch (_) {
+      if (context.mounted) {
+        showAppSnackBar(context, message: error, type: NotificationType.info);
+      }
+    }
   } else if (entry is Directory) {
     await _showDirectory(
       context,
       entry,
       link: parsed!,
+      accessRoot: resolved!.rootPath,
       conversationId: conversationId,
       title: title,
     );
@@ -114,6 +171,7 @@ Future<void> _showDirectory(
   BuildContext context,
   Directory directory, {
   required KelivoLink link,
+  required String accessRoot,
   String? conversationId,
   String? title,
 }) {
@@ -133,6 +191,7 @@ Future<void> _showDirectory(
   final name = title ?? p.basename(directory.path);
   final browser = FileBrowser(
     root: directory,
+    accessRoot: accessRoot,
     rootLabel: name,
     readOnly: true,
     modelPathOf: (host) => useGuestPaths && guestPath != null

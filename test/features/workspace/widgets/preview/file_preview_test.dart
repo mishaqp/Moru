@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+// ignore: depend_on_referenced_packages
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 import 'package:Kelivo/core/database/app_database.dart';
 import 'package:Kelivo/core/database/extension_entity_store.dart';
@@ -115,6 +117,23 @@ class _FakeChatService extends ChatService {
   }
 }
 
+class _PreviewPaths extends PathProviderPlatform {
+  _PreviewPaths(this.root);
+  final String root;
+  @override
+  Future<String?> getApplicationDocumentsPath() async => root;
+  @override
+  Future<String?> getApplicationSupportPath() async => root;
+}
+
+class _PreviewOpenedObserver extends NavigatorObserver {
+  final opened = Completer<void>();
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (previousRoute != null && !opened.isCompleted) opened.complete();
+  }
+}
+
 class _RecordingResolver extends FileLinkResolver {
   _RecordingResolver(WorkspaceProvider workspaces)
     : super(workspaces: workspaces);
@@ -123,22 +142,16 @@ class _RecordingResolver extends FileLinkResolver {
   File? result;
 
   @override
-  Future<FileSystemEntity?> resolveToHostEntry(
+  Future<ResolvedWorkspaceEntry?> resolveToHostAccess(
     KelivoLink link, {
     required String conversationId,
     required WorkspaceBinding binding,
   }) async {
     calls.add(link);
-    return result;
+    return result == null
+        ? null
+        : ResolvedWorkspaceEntry(entry: result!, rootPath: result!.parent.path);
   }
-}
-
-Future<void> _pumpAsyncUi(WidgetTester tester) async {
-  await tester.pump();
-  await tester.runAsync(() async {
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-  });
-  await tester.pump();
 }
 
 Future<void> _loadCodePreview(WidgetTester tester) async {
@@ -225,12 +238,18 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late Directory tempDir;
+  late PathProviderPlatform previousPaths;
 
   setUp(() {
     tempDir = Directory.systemTemp.createTempSync('kelivo_preview_');
+    previousPaths = PathProviderPlatform.instance;
+    final privateRoot = Directory(p.join(tempDir.path, 'private-app-data'))
+      ..createSync();
+    PathProviderPlatform.instance = _PreviewPaths(privateRoot.path);
   });
 
   tearDown(() {
+    PathProviderPlatform.instance = previousPaths;
     if (tempDir.existsSync()) {
       tempDir.deleteSync(recursive: true);
     }
@@ -650,6 +669,7 @@ void main() {
       await database.close();
     });
     final resolver = _RecordingResolver(workspaces)..result = previewFile;
+    final navigation = _PreviewOpenedObserver();
 
     final conversation = Conversation(
       id: 'conv-workspace',
@@ -670,6 +690,7 @@ void main() {
           Provider<FileLinkResolver>.value(value: resolver),
         ],
         child: MaterialApp(
+          navigatorObservers: [navigation],
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: const Scaffold(
@@ -683,11 +704,23 @@ void main() {
     await tester.pump();
     final link = find.text('foo');
     final richLink = find.textContaining('foo', findRichText: true);
-    await tester.tap(link.evaluate().isNotEmpty ? link : richLink.first);
-    await _pumpAsyncUi(tester);
-    if (find.byType(CodeFilePreview).evaluate().isNotEmpty) {
-      await _loadCodePreview(tester);
+    await tester.runAsync(
+      () => tester.tap(link.evaluate().isNotEmpty ? link : richLink.first),
+    );
+    while (!navigation.opened.isCompleted) {
+      await tester.pump();
+      await tester.runAsync(() => Future<void>(() {}));
     }
+    await navigation.opened.future;
+    // didPush registers the route before its transition builds the preview.
+    // Advance that transition while draining the real IO event queue, then
+    // await the preview's loader before trying to settle its busy spinner.
+    while (find.byType(CodeFilePreview).evaluate().isEmpty) {
+      await tester.pump(const Duration(milliseconds: 16));
+      await tester.runAsync(() => Future<void>(() {}));
+    }
+    await _loadCodePreview(tester);
+    await tester.pumpAndSettle();
 
     expect(resolver.calls, hasLength(1));
     expect(resolver.calls.single.kind, KelivoLinkKind.workspaceFile);

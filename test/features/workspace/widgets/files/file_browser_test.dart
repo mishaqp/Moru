@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:Kelivo/core/models/workspace.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
@@ -31,6 +32,19 @@ Future<void> _reload(WidgetTester tester) async {
   await tester.pump();
 }
 
+Future<void> _finishMutation(
+  WidgetTester tester,
+  Completer<void> completed,
+) async {
+  // Native IO returns outside FakeAsync. Pump the queued continuation between
+  // real event-loop turns until the runner reports the actual completed write.
+  while (!completed.isCompleted) {
+    await tester.pump();
+    await tester.runAsync(() => Future<void>(() {}));
+  }
+  await completed.future;
+}
+
 Future<void> _pumpUi(WidgetTester tester) async {
   await _flushIo(tester);
   await tester.pump();
@@ -46,7 +60,7 @@ Future<void> _tapFormConfirm(WidgetTester tester) async {
       .last;
   await tester.ensureVisible(confirm);
   await tester.pump();
-  await tester.tap(confirm);
+  await tester.runAsync(() => tester.tap(confirm));
 }
 
 Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
@@ -64,7 +78,7 @@ Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
     await tester.ensureVisible(finder);
   }
   await tester.pump();
-  await tester.tap(finder);
+  await tester.runAsync(() => tester.tap(finder));
   await _pumpUi(tester);
 }
 
@@ -79,11 +93,12 @@ Widget _harness({required Widget child}) {
   );
 }
 
-FileBrowser _browser(Directory root) {
+FileBrowser _browser(Directory root, {FileMutationRunner? mutationRunner}) {
   return FileBrowser(
     root: root,
     rootLabel: 'Root',
     modelPathOf: (host) => host,
+    mutationRunner: mutationRunner,
   );
 }
 
@@ -287,10 +302,21 @@ void main() {
   ) async {
     File(p.join(tempDir.path, 'keep.txt')).writeAsStringSync('k');
 
-    await pumpHarness(tester, child: _browser(tempDir));
+    final completed = List.generate(3, (_) => Completer<void>());
+    var operationIndex = 0;
+    await pumpHarness(
+      tester,
+      child: _browser(
+        tempDir,
+        mutationRunner: (mutation) async {
+          await FileBrowserOps.runMutation(mutation);
+          completed[operationIndex++].complete();
+        },
+      ),
+    );
     await _reload(tester);
 
-    await tester.tap(find.byKey(FileBrowser.newKey));
+    await tester.runAsync(() => tester.tap(find.byKey(FileBrowser.newKey)));
     await _pumpUi(tester);
     await _tapVisible(tester, find.text('New folder'));
     await tester.enterText(find.byType(TextField), 'created');
@@ -301,12 +327,15 @@ void main() {
     );
     await _pumpUi(tester);
     await _reload(tester);
+    await _reload(tester);
+    await _finishMutation(tester, completed[0]);
+    await _reload(tester);
     expect(Directory(p.join(tempDir.path, 'created')).existsSync(), isTrue);
     expect(find.byKey(FileBrowser.itemKey('created')), findsOneWidget);
 
     await tester.longPress(find.byKey(FileBrowser.itemKey('created')));
     await _pumpUi(tester);
-    await tester.tap(find.text('Rename'));
+    await tester.runAsync(() => tester.tap(find.text('Rename')));
     await _pumpUi(tester);
     await tester.enterText(find.byType(TextField), 'renamed');
     await _tapFormConfirm(tester);
@@ -316,15 +345,20 @@ void main() {
     );
     await _pumpUi(tester);
     await _reload(tester);
+    await _reload(tester);
+    await _finishMutation(tester, completed[1]);
+    await _reload(tester);
     expect(Directory(p.join(tempDir.path, 'renamed')).existsSync(), isTrue);
     expect(Directory(p.join(tempDir.path, 'created')).existsSync(), isFalse);
 
     await tester.longPress(find.byKey(FileBrowser.itemKey('renamed')));
     await _pumpUi(tester);
-    await tester.tap(find.text('Delete'));
+    await tester.runAsync(() => tester.tap(find.text('Delete')));
     await _pumpUi(tester);
-    await tester.tap(
-      find.byKey(const ValueKey<String>('workspace-confirm-accept')),
+    await tester.runAsync(
+      () => tester.tap(
+        find.byKey(const ValueKey<String>('workspace-confirm-accept')),
+      ),
     );
     await tester.pump();
     await tester.runAsync(
@@ -332,6 +366,7 @@ void main() {
     );
     await _pumpUi(tester);
     await _reload(tester);
+    await _finishMutation(tester, completed[2]);
     expect(Directory(p.join(tempDir.path, 'renamed')).existsSync(), isFalse);
   });
 
@@ -343,7 +378,7 @@ void main() {
 
     await tester.longPress(find.byKey(FileBrowser.itemKey('safe.txt')));
     await _pumpUi(tester);
-    await tester.tap(find.text('Rename'));
+    await tester.runAsync(() => tester.tap(find.text('Rename')));
     await _pumpUi(tester);
     await tester.enterText(find.byType(TextField), '../escape.txt');
     await _tapFormConfirm(tester);

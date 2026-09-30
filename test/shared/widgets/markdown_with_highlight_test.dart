@@ -396,6 +396,24 @@ void main() {
     source.value += '\r\n\r\nNext ![alt](${file.path}';
     await tester.pumpAndSettle();
     source.value += ')';
+    await tester.pump();
+    final reads = tester
+        .widgetList<FutureBuilder<Uint8List?>>(
+          find.byType(FutureBuilder<Uint8List?>),
+        )
+        .map((builder) => builder.future)
+        .whereType<Future<Uint8List?>>()
+        .toList();
+    var remaining = reads.length;
+    for (final read in reads) {
+      read.whenComplete(() => remaining--);
+    }
+    final deadline = Stopwatch()..start();
+    while (remaining > 0 && deadline.elapsed < const Duration(seconds: 10)) {
+      await tester.runAsync(() => Future<void>(() {}));
+      await tester.pump();
+    }
+    expect(remaining, 0, reason: 'checked local image read did not complete');
     await tester.pumpAndSettle();
     final markdown = tester
         .widgetList<GptMarkdown>(find.byType(GptMarkdown))

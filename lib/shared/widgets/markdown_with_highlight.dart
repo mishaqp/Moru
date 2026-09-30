@@ -19,7 +19,6 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:super_clipboard/super_clipboard.dart';
-import '../../utils/sandbox_path_resolver.dart';
 import '../../utils/clipboard_images.dart';
 import '../../utils/svg_preview_html.dart';
 import '../../features/chat/pages/image_viewer_page.dart';
@@ -38,7 +37,12 @@ import 'package:Kelivo/theme/theme_factory.dart' show getPlatformFontFallback;
 import 'package:provider/provider.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import '../../core/providers/settings_provider.dart';
+import '../../core/providers/workspace_provider.dart';
+import '../../core/providers/external_mounts_provider.dart';
+import '../../core/models/workspace_binding.dart';
+import '../../core/services/chat/chat_service.dart';
 import '../../core/services/workspace/file_link_resolver.dart';
+import '../../core/services/workspace/local_image_access.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
 import '../../features/mini_apps/mini_app_launcher.dart';
 import '../../features/workspace/workspace_file_navigation.dart';
@@ -455,47 +459,33 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
         imageBuilder: !widget.renderImages
             ? (ctx, url, width, height) => const _InertImagePlaceholder()
             : (ctx, url, width, height) {
-                if (KelivoLink.tryParse(url) != null) {
+                final imgs = imageUrls.isNotEmpty ? imageUrls : <String>[url];
+                if (!url.startsWith('http://') &&
+                    !url.startsWith('https://') &&
+                    !url.startsWith('data:')) {
+                  if (!p.isAbsolute(url) &&
+                      !url.startsWith('file://') &&
+                      !url.startsWith('kelivo-file://') &&
+                      KelivoLink.tryParse(url) == null) {
+                    return const Icon(Icons.broken_image);
+                  }
                   return _KelivoMarkdownImage(
                     url: url,
+                    images: imgs,
                     width: width,
                     height: height,
                     conversationId: widget.conversationId,
                   );
                 }
-                final imgs = imageUrls.isNotEmpty ? imageUrls : <String>[url];
-                final idx = imgs.indexOf(url);
-                final initial = idx >= 0 ? idx : 0;
                 final provider = _imageProviderFor(url);
                 return GestureDetector(
                   onTap: () {
-                    Navigator.of(ctx).push(
-                      PageRouteBuilder(
-                        pageBuilder: (_, __, ___) => ImageViewerPage(
-                          images: imgs,
-                          initialIndex: initial,
-                        ),
-                        transitionDuration: const Duration(milliseconds: 360),
-                        reverseTransitionDuration: const Duration(
-                          milliseconds: 280,
-                        ),
-                        transitionsBuilder: (context, anim, sec, child) {
-                          final curved = CurvedAnimation(
-                            parent: anim,
-                            curve: Curves.easeOutCubic,
-                            reverseCurve: Curves.easeInCubic,
-                          );
-                          return FadeTransition(
-                            opacity: curved,
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(0, 0.02),
-                                end: Offset.zero,
-                              ).animate(curved),
-                              child: child,
-                            ),
-                          );
-                        },
+                    unawaited(
+                      _openMarkdownImages(
+                        ctx,
+                        imgs,
+                        url,
+                        conversationId: widget.conversationId,
                       ),
                     );
                   },
@@ -898,12 +888,14 @@ class _InertImagePlaceholder extends StatelessWidget {
 class _KelivoMarkdownImage extends StatefulWidget {
   const _KelivoMarkdownImage({
     required this.url,
+    this.images = const [],
     this.width,
     this.height,
     this.conversationId,
   });
 
   final String url;
+  final List<String> images;
   final double? width;
   final double? height;
   final String? conversationId;
@@ -913,7 +905,7 @@ class _KelivoMarkdownImage extends StatefulWidget {
 }
 
 class _KelivoMarkdownImageState extends State<_KelivoMarkdownImage> {
-  Future<File?>? _future;
+  Future<Uint8List?>? _future;
 
   @override
   void didChangeDependencies() {
@@ -930,10 +922,8 @@ class _KelivoMarkdownImageState extends State<_KelivoMarkdownImage> {
     }
   }
 
-  Future<File?> _resolve() async {
-    final link = KelivoLink.tryParse(widget.url);
-    if (link == null) return null;
-    return resolveWorkspaceLinkedFile(
+  Future<Uint8List?> _resolve() async {
+    return _readMarkdownImage(
       context,
       widget.url,
       conversationId: widget.conversationId,
@@ -957,7 +947,7 @@ class _KelivoMarkdownImageState extends State<_KelivoMarkdownImage> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<File?>(
+    return FutureBuilder<Uint8List?>(
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
@@ -973,35 +963,40 @@ class _KelivoMarkdownImageState extends State<_KelivoMarkdownImage> {
             ),
           );
         }
-        final file = snapshot.data;
-        if (file == null) return _broken(context);
+        final bytes = snapshot.data;
+        if (bytes == null) return _broken(context);
         return GestureDetector(
           onTap: () {
-            Navigator.of(context).push(
-              PageRouteBuilder<void>(
-                pageBuilder: (_, __, ___) =>
-                    ImageViewerPage(images: [file.path]),
-                transitionDuration: const Duration(milliseconds: 360),
-                reverseTransitionDuration: const Duration(milliseconds: 280),
-                transitionsBuilder: (context, anim, sec, child) {
-                  final curved = CurvedAnimation(
-                    parent: anim,
-                    curve: Curves.easeOutCubic,
-                    reverseCurve: Curves.easeInCubic,
-                  );
-                  return FadeTransition(opacity: curved, child: child);
-                },
+            unawaited(
+              _openMarkdownImages(
+                context,
+                widget.images.isEmpty ? [widget.url] : widget.images,
+                widget.url,
+                checkedSource: 'data:image/*;base64,${base64Encode(bytes)}',
+                conversationId: widget.conversationId,
               ),
             );
           },
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.file(
-              file,
-              width: widget.width,
-              height: widget.height,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stack) => _broken(context),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final displayWidth = widget.width ?? constraints.maxWidth;
+                final dpr = MediaQuery.devicePixelRatioOf(context);
+                return Image.memory(
+                  bytes,
+                  width: displayWidth,
+                  height: widget.height,
+                  cacheWidth: displayWidth.isFinite
+                      ? math.max(1, (displayWidth * dpr).ceil())
+                      : null,
+                  cacheHeight: widget.height == null
+                      ? null
+                      : math.max(1, (widget.height! * dpr).ceil()),
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stack) => _broken(context),
+                );
+              },
             ),
           ),
         );
@@ -2705,13 +2700,92 @@ ImageProvider? _imageProviderFor(String src) {
     } catch (_) {}
     return null;
   }
-  final fixed = SandboxPathResolver.fix(src);
-  final f = File(fixed);
-  if (f.existsSync()) {
-    return FileImage(f);
-  }
-  // Missing local file or unsupported scheme
+  // Local sources are read asynchronously through the shared file boundary.
   return null;
+}
+
+Future<Uint8List?> _readMarkdownImage(
+  BuildContext context,
+  String source, {
+  String? conversationId,
+}) {
+  if (KelivoLink.tryParse(source) != null) {
+    return readWorkspaceLinkedFile(
+      context,
+      source,
+      conversationId: conversationId,
+    );
+  }
+  final chat = context.read<ChatService?>();
+  final id = conversationId ?? chat?.currentConversationId;
+  final conversation = id == null ? null : chat?.getConversation(id);
+  return readLocalImageBytes(
+    source,
+    conversationId: id,
+    binding: WorkspaceBinding.fromExtras(conversation?.extras ?? const {}),
+    workspaces: context.read<WorkspaceProvider?>(),
+    externalMounts: context.read<ExternalMountsProvider?>(),
+  );
+}
+
+Future<void> _openMarkdownImages(
+  BuildContext context,
+  List<String> sources,
+  String selected, {
+  String? checkedSource,
+  String? conversationId,
+}) async {
+  final safeSources = <String>[];
+  var initial = 0;
+  for (final source in sources) {
+    String? safe;
+    if (source == selected && checkedSource != null) {
+      safe = checkedSource;
+    } else if (source.startsWith('http://') ||
+        source.startsWith('https://') ||
+        source.startsWith('data:')) {
+      safe = source;
+    } else {
+      if (!context.mounted) return;
+      final bytes = await _readMarkdownImage(
+        context,
+        source,
+        conversationId: conversationId,
+      );
+      if (bytes != null) safe = 'data:image/*;base64,${base64Encode(bytes)}';
+    }
+    if (safe == null) continue;
+    if (source == selected) initial = safeSources.length;
+    safeSources.add(safe);
+  }
+  if (!context.mounted || safeSources.isEmpty) return;
+  unawaited(
+    Navigator.of(context).push<void>(
+      PageRouteBuilder<void>(
+        pageBuilder: (_, __, ___) =>
+            ImageViewerPage(images: safeSources, initialIndex: initial),
+        transitionDuration: const Duration(milliseconds: 360),
+        reverseTransitionDuration: const Duration(milliseconds: 280),
+        transitionsBuilder: (_, animation, secondary, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.02),
+                end: Offset.zero,
+              ).animate(curved),
+              child: child,
+            ),
+          );
+        },
+      ),
+    ),
+  );
 }
 
 class _CollapsibleCodeBlock extends StatefulWidget {
