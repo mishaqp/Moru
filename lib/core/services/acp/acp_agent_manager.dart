@@ -11,6 +11,7 @@ import '../sandbox/environment_dependencies.dart';
 import '../workspace/workspace_runtime.dart';
 import 'acp_agent.dart';
 import 'acp_agent_catalog.dart';
+import 'acp_mcp_stdio_bridge.dart';
 import 'acp_stdio_channel.dart';
 import 'acp_error_messages.dart';
 import '../../../l10n/app_localizations.dart';
@@ -367,10 +368,10 @@ class AcpAgentManager extends ChangeNotifier {
     final launch = spec.launch(provider);
     final variables = (await environment.loadExecutionConfig()).variables;
     final env = {...variables, ...launch.environment};
-    if (launch.files.isNotEmpty) {
+    {
       final (code, output) = await _run(
         runtime,
-        writeFilesScript(launch.files),
+        writeFilesScript([...launch.files, AcpMcpStdioBridge.file]),
         capture: true,
         environment: env,
       );

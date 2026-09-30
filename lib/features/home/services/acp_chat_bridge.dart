@@ -22,6 +22,7 @@ import '../../../core/services/workspace/workspace_runtime.dart';
 import '../../../core/services/workspace/workspace_tools_service.dart';
 import '../../../l10n/app_localizations.dart';
 import 'tool_approval_service.dart';
+import 'acp_moru_tools.dart';
 
 /// Extras key of a chat's agent session: `{agent, id}`.
 const String acpSessionKey = 'acp.session';
@@ -137,6 +138,9 @@ class AcpChatBridge {
     );
     final message = acpPromptFromMessages(apiMessages);
     final saved = chats.getConversation(conversationId)?.extras[acpSessionKey];
+    if (!context.mounted) {
+      throw const AcpError(AcpError.disconnected, 'The agent chat was closed');
+    }
 
     return sessions.send(
       AcpChatTurn(
@@ -146,6 +150,18 @@ class AcpChatBridge {
         cwd: workspace?.cwd ?? '/root',
         mounts: workspace?.paths.mounts ?? const [],
         prompt: message.prompt,
+        moruTools: AcpMoruTools.create(
+          context: context,
+          assistant: assistant,
+          chats: chats,
+          assistants: assistants,
+          settings: settings,
+          conversationId: conversationId,
+          providerKey: providerKey,
+          modelId: modelId,
+          workspace: workspace,
+          approvals: approvals,
+        ),
         userImagePaths: userImagePaths,
         imageNotSentMessage: l10n.agentsImageNotSent,
         savedModeId:

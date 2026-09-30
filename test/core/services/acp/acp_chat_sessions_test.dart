@@ -11,6 +11,7 @@ import 'package:Kelivo/core/services/acp/acp_agent.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
 import 'package:Kelivo/core/services/acp/acp_chat_prompt.dart';
 import 'package:Kelivo/core/services/acp/acp_chat_sessions.dart';
+import 'package:Kelivo/core/services/acp/acp_mcp_binding.dart';
 import 'package:Kelivo/core/services/api/stream/stream_chunk.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/features/home/services/acp_chat_bridge.dart';
@@ -23,11 +24,13 @@ class _ScriptedAgent extends AcpChannel {
     this.loadSession = false,
     this.loadFails = false,
     this.images = false,
+    this.mcpHttp = false,
   });
 
   final bool loadSession;
   final bool loadFails;
   final bool images;
+  final bool mcpHttp;
   final _incoming = StreamController<dynamic>();
   final _closed = Completer<void>();
   final sent = <Map<String, Object?>>[];
@@ -59,6 +62,7 @@ class _ScriptedAgent extends AcpChannel {
           'agentCapabilities': {
             'loadSession': loadSession,
             'promptCapabilities': {'image': images},
+            'mcpCapabilities': {'http': mcpHttp},
           },
         });
       case 'session/new':
@@ -171,6 +175,7 @@ void main() {
     bool loadSession = false,
     bool loadFails = false,
     bool images = false,
+    bool mcpHttp = false,
   }) {
     started = [];
     launches = [];
@@ -181,6 +186,7 @@ void main() {
           loadSession: loadSession,
           loadFails: loadFails,
           images: images,
+          mcpHttp: mcpHttp,
         );
         started.add(channel);
         return AcpAgent.start(channel, clientVersion: '1');
@@ -198,6 +204,7 @@ void main() {
     String cwd = '/workspace',
     AcpProviderInput? using,
     void Function(String)? onSession,
+    AcpMcpTools? moruTools,
   }) => AcpChatTurn(
     conversationId: conversation,
     spec: spec,
@@ -212,12 +219,73 @@ void main() {
     userImagePaths: images,
     imageNotSentMessage: "Image was not sent.",
     onSession: onSession,
+    moruTools: moruTools,
   );
 
   Future<String> answer(AcpChatSessions sessions, AcpChatTurn turn) async {
     final chunks = await sessions.send(turn).toList();
     expect(chunks.last, isA<Finish>());
     return chunks.whereType<TextDelta>().map((c) => c.text).join();
+  }
+
+  for (final http in [true, false]) {
+    for (final load in [true, false]) {
+      test(
+        'Moru MCP is sent on ${load ? 'load' : 'new'} (${http ? 'HTTP' : 'stdio'}) and closes with the process',
+        () async {
+          final sessions = sessionsWith(loadSession: load, mcpHttp: http);
+          addTearDown(sessions.closeAll);
+          final tools = AcpMcpTools(
+            key: 'a',
+            definitions: () => [],
+            execute: (_, _, {required toolCallId}) async => {'content': []},
+          );
+          await answer(
+            sessions,
+            turn('hello', saved: load ? 'saved' : null, moruTools: tools),
+          );
+          final request = started.single.sent.singleWhere(
+            (m) => m['method'] == (load ? 'session/load' : 'session/new'),
+          );
+          final config =
+              ((request['params'] as Map)['mcpServers'] as List).single as Map;
+          expect(config['name'], 'moru');
+          final env = config['env'] as List?;
+          final url = http
+              ? config['url'] as String
+              : (env!.first as Map)['value'] as String;
+          final token = http
+              ? ((config['headers'] as List).single as Map)['value'] as String
+              : 'Bearer ${(env!.last as Map)['value']}';
+          final client = HttpClient();
+          addTearDown(client.close);
+          final ping = await client.postUrl(Uri.parse(url));
+          ping.headers.set('Authorization', token);
+          ping.write(jsonEncode({'jsonrpc': '2.0', 'id': 1, 'method': 'ping'}));
+          final response = await ping.close();
+          expect(response.statusCode, 200);
+          await response.drain<void>();
+          // Process death (not only explicit close) owns server cleanup.
+          started.single.close();
+          final removed = Completer<void>();
+          void changed() {
+            if (!sessions.hasAgent('c1') && !removed.isCompleted) {
+              removed.complete();
+            }
+          }
+
+          sessions.addListener(changed);
+          addTearDown(() => sessions.removeListener(changed));
+          changed();
+          await removed.future;
+          // The listener closure is scheduled before its change notification.
+          await expectLater(
+            Socket.connect('127.0.0.1', Uri.parse(url).port),
+            throwsA(isA<SocketException>()),
+          );
+        },
+      );
+    }
   }
 
   test('audio and video are never wrapped in image blocks', () async {

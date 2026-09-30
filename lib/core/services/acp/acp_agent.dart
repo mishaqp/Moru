@@ -18,6 +18,7 @@ class AcpAgentInfo {
     this.version,
     this.loadSession = false,
     this.imagePrompts = false,
+    this.mcpHttp = false,
     this.authMethods = const [],
   });
 
@@ -30,6 +31,7 @@ class AcpAgentInfo {
       version: info['version'] as String?,
       loadSession: caps['loadSession'] == true,
       imagePrompts: prompt['image'] == true,
+      mcpHttp: _map(caps['mcpCapabilities'])['http'] == true,
       authMethods: [
         for (final method in result['authMethods'] as List? ?? const [])
           if (method is Map && method['id'] is String)
@@ -50,6 +52,7 @@ class AcpAgentInfo {
 
   /// Prompts may carry images.
   final bool imagePrompts;
+  final bool mcpHttp;
   final List<AcpAuthMethod> authMethods;
 }
 
@@ -168,6 +171,7 @@ class AcpAgent {
 
   /// Session mode updates also arrive while no prompt is running.
   void Function(String sessionId, String modeId)? onModeChanged;
+  void Function(String sessionId, Map<String, Object?> update)? onToolUpdate;
 
   /// Completes when the process is gone.
   Future<void> get done => _connection.done;
@@ -355,6 +359,13 @@ class AcpAgent {
     }
     final turn = _turns[sessionId];
     if (turn == null) return;
+    if (update['sessionUpdate'] == 'tool_call' ||
+        update['sessionUpdate'] == 'tool_call_update') {
+      onToolUpdate?.call(
+        sessionId as String,
+        Map<String, Object?>.from(update),
+      );
+    }
     turn.add(turn.translator.translate(Map<String, Object?>.from(update)));
   }
 
@@ -377,6 +388,10 @@ class AcpAgent {
     // A permission request is also a tool update: the card shows what is
     // being asked about while the choice is open.
     if (turn != null && toolCall.isNotEmpty) {
+      onToolUpdate?.call(sessionId, {
+        ...toolCall,
+        'sessionUpdate': 'tool_call_update',
+      });
       turn.add(
         turn.translator.translate({
           ...toolCall,

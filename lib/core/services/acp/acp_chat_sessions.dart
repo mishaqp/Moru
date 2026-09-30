@@ -8,6 +8,7 @@ import '../workspace/workspace_runtime.dart';
 import 'acp_agent.dart';
 import 'acp_agent_catalog.dart';
 import 'acp_chat_prompt.dart';
+import 'acp_mcp_binding.dart';
 
 /// Starts an agent process for a chat.
 typedef AcpAgentStarter =
@@ -35,6 +36,7 @@ class AcpChatTurn {
     this.onSession,
     this.onPermission,
     this.onPlan,
+    this.moruTools,
   });
 
   final String conversationId;
@@ -58,6 +60,7 @@ class AcpChatTurn {
   final void Function(String sessionId)? onSession;
   final AcpPermissionHandler? onPermission;
   final void Function(TaskPlan plan)? onPlan;
+  final AcpMcpTools? moruTools;
 }
 
 /// One agent process per chat that talks to one: the process and its
@@ -84,7 +87,13 @@ class AcpChatSessions extends ChangeNotifier {
   Stream<StreamChunk> send(AcpChatTurn turn) async* {
     final chat = await _ensure(turn);
     chat.idle?.cancel();
-    chat.agent.onPermission = turn.onPermission;
+    if (turn.moruTools case final tools?) chat.mcp?.beginTurn(tools);
+    chat.agent.onPermission = (request) async {
+      if (chat.mcp?.ownsPermission(request) == true) {
+        return chat.mcp!.permissionChoice(request);
+      }
+      return turn.onPermission?.call(request);
+    };
     var prompt = turn.prompt;
     if (chat.needsHistory && turn.history.trim().isNotEmpty) {
       prompt = [
@@ -121,9 +130,11 @@ class AcpChatSessions extends ChangeNotifier {
       chat.needsHistory = false;
       yield* chat.agent.prompt(chat.sessionId, prompt, onPlan: turn.onPlan);
     } finally {
+      chat.mcp?.endTurn();
       if (chat.agent.isAlive) {
         chat.idle = Timer(idleTimeout, () => close(turn.conversationId));
       } else {
+        if (chat.mcp case final mcp?) unawaited(mcp.close());
         _chats.remove(turn.conversationId);
         notifyListeners();
       }
@@ -133,6 +144,7 @@ class AcpChatSessions extends ChangeNotifier {
   Future<void> cancel(String conversationId) async {
     final chat = _chats[conversationId];
     if (chat == null || !chat.agent.isAlive) return;
+    chat.mcp?.endTurn();
     await chat.agent.cancel(chat.sessionId);
   }
 
@@ -140,6 +152,7 @@ class AcpChatSessions extends ChangeNotifier {
     final chat = _chats.remove(conversationId);
     chat?.idle?.cancel();
     chat?.agent.close();
+    if (chat?.mcp case final mcp?) unawaited(mcp.close());
     if (chat != null) notifyListeners();
   }
 
@@ -162,13 +175,22 @@ class AcpChatSessions extends ChangeNotifier {
       cwd: turn.cwd,
       mounts: turn.mounts,
     );
+    AcpMcpBinding? mcp;
     try {
+      if (turn.moruTools case final tools?) {
+        mcp = await AcpMcpBinding.start(tools);
+      }
+      final mcpServers = [if (mcp != null) mcp.serverConfig(agent.info)];
       AcpSession? session;
       var needsHistory = true;
       final saved = turn.savedSessionId;
       if (saved != null && agent.info.loadSession) {
         try {
-          session = await agent.loadSession(sessionId: saved, cwd: turn.cwd);
+          session = await agent.loadSession(
+            sessionId: saved,
+            cwd: turn.cwd,
+            mcpServers: mcpServers,
+          );
           needsHistory = false;
         } on AcpError {
           // The agent lost it (updated, cleaned up): start over with the
@@ -176,10 +198,14 @@ class AcpChatSessions extends ChangeNotifier {
         }
       }
       if (session == null) {
-        session = await agent.newSession(cwd: turn.cwd);
+        session = await agent.newSession(cwd: turn.cwd, mcpServers: mcpServers);
         turn.onSession?.call(session.id);
       }
-      final chat = _ChatAgent(key, agent, session)..needsHistory = needsHistory;
+      final chat = _ChatAgent(key, agent, session, mcp)
+        ..needsHistory = needsHistory;
+      agent.onToolUpdate = (sessionId, update) {
+        if (sessionId == chat.sessionId) chat.mcp?.observe(update);
+      };
       agent.onModeChanged = (sessionId, modeId) {
         if (sessionId != chat.sessionId ||
             !identical(_chats[turn.conversationId], chat)) {
@@ -196,6 +222,7 @@ class AcpChatSessions extends ChangeNotifier {
       notifyListeners();
       unawaited(
         agent.done.then((_) {
+          if (chat.mcp case final mcp?) unawaited(mcp.close());
           if (identical(_chats[turn.conversationId], chat)) {
             _chats.remove(turn.conversationId);
             chat.idle?.cancel();
@@ -205,6 +232,7 @@ class AcpChatSessions extends ChangeNotifier {
       );
       return chat;
     } catch (_) {
+      await mcp?.close();
       agent.close();
       rethrow;
     }
@@ -225,15 +253,17 @@ class AcpChatSessions extends ChangeNotifier {
     turn.provider.imageInput,
     turn.provider.apiKey.hashCode,
     turn.cwd,
+    turn.moruTools?.key,
     for (final mount in turn.mounts) '${mount.host}>${mount.guest}',
   ].join('\u0000');
 }
 
 class _ChatAgent {
-  _ChatAgent(this.key, this.agent, this.session);
+  _ChatAgent(this.key, this.agent, this.session, this.mcp);
 
   final String key;
   final AcpAgent agent;
+  final AcpMcpBinding? mcp;
   AcpSession session;
   String get sessionId => session.id;
   bool needsHistory = true;
