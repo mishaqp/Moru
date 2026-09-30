@@ -157,11 +157,12 @@ class WorkspaceToolsService {
         status = await runtime.status();
       } catch (e) {
         debugPrint('Workspace runtime status failed: $e');
+        // Its path and mount policy is unknown. Do not expose native host
+        // paths after a failed sandbox probe.
+        return null;
       }
     }
-    final sandboxed = runtime != null
-        ? (status?.sandboxed ?? false)
-        : Platform.isAndroid;
+    final sandboxed = status?.sandboxed ?? Platform.isAndroid;
 
     final sessionDir = await AppDirectories.sessionDir(conversationId);
     final skillsDir = await AppDirectories.getSkillsDirectory();
