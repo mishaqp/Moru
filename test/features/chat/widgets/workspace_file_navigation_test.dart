@@ -130,21 +130,15 @@ void main() {
     ),
   );
 
-  Future<void> settle(WidgetTester tester) async {
-    // The destination starts disk IO when its route is first built.
-    for (var i = 0; i < 4; i++) {
-      await tester.pump(const Duration(milliseconds: 100));
+  Future<void> settle(WidgetTester tester, bool Function() done) async {
+    for (var attempt = 0; attempt < 500 && !done(); attempt++) {
+      await tester.pump(const Duration(milliseconds: 16));
       await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 30)),
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
       );
+      expect(tester.takeException(), isNull);
     }
-    if (find.byType(FileBrowser).evaluate().isNotEmpty) {
-      await tester.runAsync(
-        tester.state<FileBrowserState>(find.byType(FileBrowser)).refreshEntries,
-      );
-      await tester.pump();
-    }
-    await tester.pumpAndSettle();
+    expect(done(), isTrue, reason: 'Expected UI state after 500 iterations');
   }
 
   testWidgets(
@@ -172,7 +166,12 @@ void main() {
         ),
       );
       await tester.runAsync(() => tester.tap(find.text('note.txt')));
-      await settle(tester);
+      await settle(
+        tester,
+        () =>
+            find.byType(FilePreviewFrame).evaluate().isNotEmpty &&
+            find.byType(PreviewLoading).evaluate().isEmpty,
+      );
       expect(find.byType(FilePreviewFrame), findsOneWidget);
       final previewFile = tester
           .widget<FilePreviewFrame>(find.byType(FilePreviewFrame))
@@ -184,7 +183,12 @@ void main() {
         'preview content',
       );
       Navigator.of(tester.element(find.byType(FilePreviewFrame))).pop();
-      await settle(tester);
+      await settle(
+        tester,
+        () =>
+            find.byType(FilePreviewFrame).evaluate().isEmpty &&
+            !previewFile.existsSync(),
+      );
       expect(previewFile.existsSync(), isFalse);
       expect(tester.takeException(), isNull);
     },
@@ -214,7 +218,12 @@ void main() {
           ),
         );
         await tester.runAsync(() => tester.tap(find.text('folder').first));
-        await settle(tester);
+        await settle(
+          tester,
+          () =>
+              find.byType(FileBrowser).evaluate().isNotEmpty &&
+              find.text('child.txt').evaluate().isNotEmpty,
+        );
         expect(find.byType(FileBrowser), findsOneWidget);
         final browser = tester.widget<FileBrowser>(find.byType(FileBrowser));
         expect(browser.readOnly, isTrue);
@@ -225,7 +234,7 @@ void main() {
         );
         expect(find.text('child.txt'), findsOneWidget);
         Navigator.of(tester.element(find.byType(FileBrowser))).pop();
-        await settle(tester);
+        await settle(tester, () => find.byType(FileBrowser).evaluate().isEmpty);
       }
     },
     variant: TargetPlatformVariant({
@@ -263,15 +272,29 @@ void main() {
       ),
     );
     await tester.runAsync(() => tester.tap(find.text('index.html')));
-    while (!platform.loaded.isCompleted) {
+    for (
+      var attempt = 0;
+      attempt < 500 &&
+          (!platform.loaded.isCompleted ||
+              find.byType(FilePreviewFrame).evaluate().isEmpty);
+      attempt++
+    ) {
       // Route construction creates the native HTTP listener. Keep it in the
       // real zone so an actual HTTP request need not wait for FakeAsync pumps.
       await tester.runAsync(
         () => tester.pump(const Duration(milliseconds: 16)),
       );
-      await tester.runAsync(() => Future<void>(() {}));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
       expect(find.byType(PreviewError), findsNothing);
     }
+    expect(
+      platform.loaded.isCompleted,
+      isTrue,
+      reason: 'Expected HTML load after 500 iterations',
+    );
+    expect(find.byType(FilePreviewFrame), findsOneWidget);
     final uri = await platform.loaded.future;
     expect(uri.scheme, 'http');
     expect(uri.host, '127.0.0.1');
@@ -354,7 +377,10 @@ void main() {
         ),
       ),
     );
-    await settle(tester);
+    await settle(
+      tester,
+      () => find.byType(WorkspaceFileThumbnail).evaluate().isNotEmpty,
+    );
     expect(find.byType(WorkspaceFileThumbnail), findsOneWidget);
     expect(
       tester
@@ -379,7 +405,10 @@ void main() {
         ),
       );
       await tester.runAsync(() => tester.tap(find.text('missing.txt')));
-      await settle(tester);
+      await settle(
+        tester,
+        () => find.text('File no longer exists').evaluate().isNotEmpty,
+      );
       expect(find.text('File no longer exists'), findsOneWidget);
       expect(find.byType(FilePreviewFrame), findsNothing);
       await tester.pump(const Duration(seconds: 5));
