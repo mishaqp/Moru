@@ -4375,5 +4375,6 @@
   "workspaceEnvDependencySshpass": "為腳本提供密碼登入",
   "workspaceEnvDependencySshdTitle": "SSH 伺服器",
   "workspaceEnvDependencySshd": "透過 SSH 連線到手機",
-  "workspaceEnvInstallSelected": "安裝所選（{count}）"
+  "workspaceEnvInstallSelected": "安裝所選（{count}）",
+  "agentsCodexResponsesRequired": "Codex 僅支援提供 OpenAI Responses API 的服務商。請在服務商設定中啟用，或選擇其他代理。"
 }

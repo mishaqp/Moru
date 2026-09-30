@@ -474,7 +474,7 @@ moru_packages() {
       'name = "Moru"',
       'base_url = ${toml(openAiBaseUrl(provider.baseUrl))}',
       'env_key = "MORU_CODEX_API_KEY"',
-      'wire_api = "${provider.responsesApi ? 'responses' : 'chat'}"',
+      'wire_api = "responses"',
       if (provider.headers.isNotEmpty) ...[
         '',
         '[model_providers.moru.http_headers]',

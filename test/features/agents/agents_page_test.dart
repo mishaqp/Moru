@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:Kelivo/core/providers/environment_provider.dart';
+import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_manager.dart';
 import 'package:Kelivo/core/services/acp/acp_agent.dart';
@@ -71,7 +72,11 @@ void main() {
   late AcpAgentManager manager;
   late SettingsProvider settings;
 
-  Future<void> pumpPage(WidgetTester tester, Widget page) async {
+  Future<void> pumpPage(
+    WidgetTester tester,
+    Widget page, {
+    Locale locale = const Locale('en'),
+  }) async {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
@@ -79,7 +84,7 @@ void main() {
           ChangeNotifierProvider.value(value: settings),
         ],
         child: MaterialApp(
-          locale: const Locale('en'),
+          locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: page,
@@ -104,6 +109,119 @@ void main() {
   tearDown(() {
     settings.dispose();
     manager.dispose();
+  });
+
+  const codexWarning =
+      'Codex работает только с провайдерами, которые поддерживают OpenAI Responses API. Включите его в настройках провайдера или выберите другого агента';
+
+  Future<void> configureProvider(String id, bool responses) async {
+    await settings.setProviderConfig(
+      id,
+      ProviderConfig(
+        id: id,
+        enabled: true,
+        name: id,
+        apiKey: 'test-key',
+        baseUrl: 'https://api.example.com/v1',
+        providerType: ProviderKind.openai,
+        useResponseApi: responses,
+      ),
+    );
+  }
+
+  testWidgets('Codex detail warns only for a provider without Responses API', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      await manager.loaded;
+      await configureProvider('custom', false);
+      await settings.setCurrentModel('custom', 'model');
+    });
+    await pumpPage(
+      tester,
+      const AgentDetailPage(agentId: 'codex'),
+      locale: const Locale('ru'),
+    );
+    expect(find.text(codexWarning), findsOneWidget);
+    expect(tester.widget<Text>(find.text(codexWarning)).maxLines, isNull);
+
+    await tester.runAsync(() => configureProvider('custom', true));
+    await tester.pumpAndSettle();
+    expect(find.text(codexWarning), findsNothing);
+
+    await tester.runAsync(() => configureProvider('custom', false));
+    await pumpPage(
+      tester,
+      const AgentDetailPage(agentId: 'opencode'),
+      locale: const Locale('ru'),
+    );
+    expect(find.text(codexWarning), findsNothing);
+
+    await tester.runAsync(settings.resetCurrentModel);
+    await pumpPage(
+      tester,
+      const AgentDetailPage(agentId: 'codex'),
+      locale: const Locale('ru'),
+    );
+    expect(find.text(codexWarning), findsNothing);
+  });
+
+  testWidgets('assistant agent picker warns using the assistant provider', (
+    tester,
+  ) async {
+    late AssistantProvider assistants;
+    await tester.runAsync(() async {
+      assistants = AssistantProvider(
+        preferences: createBusinessTestPreferences(),
+      );
+      await assistants.loaded;
+      await manager.loaded;
+      await configureProvider('default', true);
+      await configureProvider('assistant', false);
+      await settings.setCurrentModel('default', 'model');
+    });
+    addTearDown(assistants.dispose);
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: manager),
+          ChangeNotifierProvider.value(value: assistants),
+          ChangeNotifierProvider.value(value: settings),
+        ],
+        child: MaterialApp(
+          locale: const Locale('ru'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(
+            body: AssistantAgentCard(
+              assistant: Assistant(
+                id: 'coder',
+                name: 'Coder',
+                chatModelProvider: 'assistant',
+                chatModelId: 'model',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => tester.tap(find.byKey(AssistantAgentCard.rowKey)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(codexWarning), findsOneWidget);
+    expect(tester.widget<Text>(find.text(codexWarning)).maxLines, isNull);
+
+    Navigator.of(tester.element(find.text(codexWarning))).pop();
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => configureProvider('assistant', true));
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => tester.tap(find.byKey(AssistantAgentCard.rowKey)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(codexWarning), findsNothing);
   });
 
   for (final available in [true, false]) {

@@ -18,6 +18,7 @@ import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../shared/widgets/section_card.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../agent_chat_start.dart';
+import '../agent_provider_compatibility.dart';
 import '../agent_web_start.dart';
 import '../widgets/agent_labels.dart';
 import '../widgets/agent_log_view.dart';
@@ -103,6 +104,13 @@ class AgentDetailPage extends StatelessWidget {
             ],
           ),
           IosSectionFooter(text: agentModelHint(l10n, spec)),
+          if (agentNeedsResponsesApiWarning(
+            spec.id,
+            providerKey == null
+                ? null
+                : settings.getProviderConfig(providerKey),
+          ))
+            _Notice(text: l10n.agentsCodexResponsesRequired, error: true),
           if (!manager.environmentAvailable)
             _Notice(text: l10n.agentsNeedEnvironment, error: true),
           if (nodeIssue != null) ...[

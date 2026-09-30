@@ -21800,6 +21800,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Install selected ({count})'**
   String workspaceEnvInstallSelected(int count);
+
+  /// No description provided for @agentsCodexResponsesRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Codex only works with providers that support the OpenAI Responses API. Enable it in the provider settings or choose another agent.'**
+  String get agentsCodexResponsesRequired;
 }
 
 class _AppLocalizationsDelegate

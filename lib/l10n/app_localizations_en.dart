@@ -12224,4 +12224,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String workspaceEnvInstallSelected(int count) {
     return 'Install selected ($count)';
   }
+
+  @override
+  String get agentsCodexResponsesRequired =>
+      'Codex only works with providers that support the OpenAI Responses API. Enable it in the provider settings or choose another agent.';
 }

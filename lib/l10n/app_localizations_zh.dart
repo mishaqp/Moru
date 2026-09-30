@@ -11680,6 +11680,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String workspaceEnvInstallSelected(int count) {
     return '安装所选（$count）';
   }
+
+  @override
+  String get agentsCodexResponsesRequired =>
+      'Codex 仅支持提供 OpenAI Responses API 的服务商。请在服务商设置中启用，或选择其他智能体。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -23287,6 +23291,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String workspaceEnvInstallSelected(int count) {
     return '安装所选（$count）';
   }
+
+  @override
+  String get agentsCodexResponsesRequired =>
+      'Codex 仅支持提供 OpenAI Responses API 的服务商。请在服务商设置中启用，或选择其他智能体。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -34968,4 +34976,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String workspaceEnvInstallSelected(int count) {
     return '安裝所選（$count）';
   }
+
+  @override
+  String get agentsCodexResponsesRequired =>
+      'Codex 僅支援提供 OpenAI Responses API 的服務商。請在服務商設定中啟用，或選擇其他代理。';
 }

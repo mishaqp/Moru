@@ -5292,5 +5292,6 @@
   "workspaceEnvDependencySshpass": "Вход по паролю для скриптов",
   "workspaceEnvDependencySshdTitle": "SSH-сервер",
   "workspaceEnvDependencySshd": "Подключаться к телефону по SSH",
-  "workspaceEnvInstallSelected": "Установить выбранное ({count})"
+  "workspaceEnvInstallSelected": "Установить выбранное ({count})",
+  "agentsCodexResponsesRequired": "Codex работает только с провайдерами, которые поддерживают OpenAI Responses API. Включите его в настройках провайдера или выберите другого агента"
 }

@@ -6,11 +6,14 @@ import 'package:provider/provider.dart';
 
 import '../../../core/models/assistant.dart';
 import '../../../core/providers/assistant_provider.dart';
+import '../../../core/providers/settings_provider.dart';
+import '../../../core/services/acp/acp_agent_catalog.dart';
 import '../../../core/services/acp/acp_agent_manager.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_settings_rows.dart';
 import '../../../shared/widgets/option_sheet.dart';
 import '../../../shared/widgets/section_card.dart';
+import '../agent_provider_compatibility.dart';
 import '../pages/agents_page.dart';
 import 'agent_labels.dart';
 
@@ -22,6 +25,11 @@ class AssistantAgentCard extends StatelessWidget {
   final Assistant assistant;
 
   static const Key rowKey = ValueKey('assistant-agent-row');
+
+  ProviderConfig? _provider(SettingsProvider settings) {
+    final key = assistant.chatModelProvider ?? settings.currentModelProvider;
+    return key == null ? null : settings.getProviderConfig(key);
+  }
 
   Future<void> _choose(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
@@ -53,6 +61,13 @@ class AssistantAgentCard extends StatelessWidget {
           label: l10n.agentsTitle,
         ),
       ],
+      footer:
+          agentNeedsResponsesApiWarning(
+            AcpAgentSpec.codexId,
+            _provider(context.read<SettingsProvider>()),
+          )
+          ? IosSectionFooter(text: l10n.agentsCodexResponsesRequired)
+          : null,
     );
     if (choice == null || !context.mounted) return;
     if (choice == manage) {
@@ -74,6 +89,7 @@ class AssistantAgentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final manager = context.watch<AcpAgentManager>();
+    final settings = context.watch<SettingsProvider>();
     final id = assistant.agentId;
     final spec = id == null ? null : manager.agent(id);
     return Column(
@@ -93,6 +109,8 @@ class AssistantAgentCard extends StatelessWidget {
           ],
         ),
         IosSectionFooter(text: l10n.assistantAgentHint),
+        if (agentNeedsResponsesApiWarning(id, _provider(settings)))
+          IosSectionFooter(text: l10n.agentsCodexResponsesRequired),
       ],
     );
   }

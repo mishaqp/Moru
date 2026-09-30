@@ -536,7 +536,8 @@ grep -qx "$p" "$DIR/installed" && echo "install ok installed"''',
       contains('base_url = "https://api.deepseek.com/v1"'),
     );
     expect(config.content, contains('env_key = "MORU_CODEX_API_KEY"'));
-    expect(config.content, contains('wire_api = "chat"'));
+    expect(config.content, contains('wire_api = "responses"'));
+    expect(config.content, isNot(contains('wire_api = "chat"')));
     // The key itself never lands in a file.
     expect(config.content, isNot(contains('sk-ds')));
 

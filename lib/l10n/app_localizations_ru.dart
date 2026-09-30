@@ -12354,4 +12354,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String workspaceEnvInstallSelected(int count) {
     return 'Установить выбранное ($count)';
   }
+
+  @override
+  String get agentsCodexResponsesRequired =>
+      'Codex работает только с провайдерами, которые поддерживают OpenAI Responses API. Включите его в настройках провайдера или выберите другого агента';
 }
