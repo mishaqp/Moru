@@ -83,6 +83,7 @@ class AcpAgentSpec {
     required this.command,
     this.arguments = const [],
     required this.installScript,
+    this.uninstallPackages = const [],
     required this.api,
     required this.homepage,
     this.nodeMajor = 18,
@@ -98,6 +99,10 @@ class AcpAgentSpec {
 
   /// Shell script that installs or updates the agent; npm is present.
   final String installScript;
+
+  /// All npm packages explicitly installed for this agent, including platform
+  /// variants. Shared tools and system packages are kept when it is removed.
+  final List<String> uninstallPackages;
   final AcpModelApi api;
   final String homepage;
 
@@ -330,6 +335,10 @@ moru_packages() {
       installScript:
           '$_prepare$_npmInstall @anthropic-ai/claude-code '
           '@agentclientprotocol/claude-agent-acp\n',
+      uninstallPackages: [
+        '@anthropic-ai/claude-code',
+        '@agentclientprotocol/claude-agent-acp',
+      ],
       api: AcpModelApi.anthropic,
       homepage: 'https://docs.anthropic.com/en/docs/claude-code',
     ),
@@ -340,6 +349,7 @@ moru_packages() {
       installScript:
           '$_prepare$_npmInstall @openai/codex '
           '@agentclientprotocol/codex-acp\n',
+      uninstallPackages: ['@openai/codex', '@agentclientprotocol/codex-acp'],
       api: AcpModelApi.openai,
       homepage: 'https://github.com/openai/codex',
     ),
@@ -361,6 +371,11 @@ moru_packages() {
           'binary="$acpNpmPrefix/lib/node_modules/\$platform/bin/opencode"\n'
           '"\$binary" --version >/dev/null\n'
           'ln -sf "\$binary" $acpNpmPrefix/bin/opencode\n',
+      uninstallPackages: [
+        'opencode-ai',
+        'opencode-linux-arm64',
+        'opencode-linux-arm64-musl',
+      ],
       api: AcpModelApi.openai,
       homepage: 'https://opencode.ai',
     ),
@@ -370,6 +385,7 @@ moru_packages() {
       command: 'kimi',
       arguments: ['acp'],
       installScript: '$_prepare$_npmInstall @moonshot-ai/kimi-code\n',
+      uninstallPackages: ['@moonshot-ai/kimi-code'],
       api: AcpModelApi.any,
       homepage: 'https://github.com/MoonshotAI/kimi-code',
       nodeMajor: 22,
@@ -381,6 +397,7 @@ moru_packages() {
       command: 'dsh',
       arguments: ['--profile', 'acp'],
       installScript: '$_prepare$_buildPackages$_npmInstall @deepseek-ai/dsh\n',
+      uninstallPackages: ['@deepseek-ai/dsh'],
       api: AcpModelApi.any,
       homepage: 'https://github.com/deepseek-ai/deepseek-harness',
       nodeMajor: 22,

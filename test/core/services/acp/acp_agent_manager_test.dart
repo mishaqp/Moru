@@ -331,6 +331,132 @@ void main() {
   });
 
   test(
+    'uninstall names every npm package installed by each built-in',
+    () async {
+      const packagesByAgent = {
+        'claude-code': [
+          '@anthropic-ai/claude-code',
+          '@agentclientprotocol/claude-agent-acp',
+        ],
+        'codex': ['@openai/codex', '@agentclientprotocol/codex-acp'],
+        'opencode': [
+          'opencode-ai',
+          'opencode-linux-arm64',
+          'opencode-linux-arm64-musl',
+        ],
+        'kimi-code': ['@moonshot-ai/kimi-code'],
+        'deepseek-harness': ['@deepseek-ai/dsh'],
+      };
+      final agents = manager();
+      addTearDown(agents.dispose);
+      for (final spec in AcpAgentSpec.builtIn) {
+        await agents.uninstall(spec);
+        final command = runtime.requests.last.command;
+        final npmCommand = const LineSplitter()
+            .convert(command)
+            .singleWhere((line) => line.startsWith('npm uninstall '));
+        expect(npmCommand.split(' '), [
+          'npm',
+          'uninstall',
+          '-g',
+          '--prefix',
+          acpNpmPrefix,
+          ...packagesByAgent[spec.id]!,
+        ], reason: spec.id);
+      }
+    },
+  );
+
+  test(
+    'OpenCode uninstall removes both platform packages through npm',
+    () async {
+      if (!Platform.isLinux && !Platform.isMacOS) return;
+      final dir = await Directory.systemTemp.createTemp('acp-uninstall-');
+      addTearDown(() => dir.delete(recursive: true));
+      final bin = await Directory('${dir.path}/bin').create();
+      final modules = await Directory('${dir.path}/node_modules').create();
+      const agentPackages = [
+        'opencode-ai',
+        'opencode-linux-arm64',
+        'opencode-linux-arm64-musl',
+      ];
+      const sharedPackages = ['node', 'npm', '@openai/codex'];
+      for (final package in [...agentPackages, ...sharedPackages]) {
+        await Directory('${modules.path}/$package').create(recursive: true);
+      }
+      final npmArguments = File('${dir.path}/npm-arguments');
+      final rmArguments = File('${dir.path}/rm-arguments');
+      await File('${bin.path}/npm').writeAsString(
+        '#!/bin/sh\n'
+        'printf "%s\\n" "\$@" > "\$ACP_FIXTURE_NPM_ARGUMENTS"\n'
+        'shift 4\n'
+        'for package do\n'
+        '  /bin/rm -rf "\$ACP_FIXTURE_MODULES/\$package"\n'
+        'done\n',
+      );
+      await File('${bin.path}/rm').writeAsString(
+        '#!/bin/sh\n'
+        'printf "%s\\n" "\$@" > "\$ACP_FIXTURE_RM_ARGUMENTS"\n',
+      );
+      final chmod = await Process.run('/bin/chmod', [
+        '+x',
+        '${bin.path}/npm',
+        '${bin.path}/rm',
+      ]);
+      expect(chmod.exitCode, 0, reason: '${chmod.stderr}');
+      final agents = manager();
+      addTearDown(agents.dispose);
+      await agents.uninstall(AcpAgentSpec.byId('opencode')!);
+      final result = await Process.run(
+        '/bin/sh',
+        ['-c', runtime.requests.single.command],
+        environment: {
+          'PATH': '${bin.path}:${Platform.environment['PATH']}',
+          'ACP_FIXTURE_MODULES': modules.path,
+          'ACP_FIXTURE_NPM_ARGUMENTS': npmArguments.path,
+          'ACP_FIXTURE_RM_ARGUMENTS': rmArguments.path,
+        },
+      );
+      expect(result.exitCode, 0, reason: '${result.stderr}');
+      expect(await npmArguments.readAsLines(), [
+        'uninstall',
+        '-g',
+        '--prefix',
+        acpNpmPrefix,
+        ...agentPackages,
+      ]);
+      expect(await rmArguments.readAsLines(), [
+        '-f',
+        '$acpNpmPrefix/bin/opencode',
+      ]);
+      for (final package in agentPackages) {
+        expect(
+          await Directory('${modules.path}/$package').exists(),
+          isFalse,
+          reason: package,
+        );
+      }
+      for (final package in sharedPackages) {
+        expect(
+          await Directory('${modules.path}/$package').exists(),
+          isTrue,
+          reason: package,
+        );
+      }
+    },
+  );
+
+  test('custom agents do not run an uninstall script', () async {
+    final agents = manager();
+    addTearDown(agents.dispose);
+    await agents.uninstall(
+      AcpAgentSpec.custom(id: 'mine', name: 'Mine', command: 'my-agent'),
+    );
+    expect(runtime.requests, isEmpty);
+    expect(agents.busy, isFalse);
+  });
+
+  test(
     'uninstall shell stops at npm failure before launcher cleanup',
     () async {
       if (!Platform.isLinux && !Platform.isMacOS) return;

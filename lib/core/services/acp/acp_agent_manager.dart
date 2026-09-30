@@ -345,11 +345,7 @@ class AcpAgentManager extends ChangeNotifier {
     final runtime = _runtime;
     if (busy || runtime == null || spec.isCustom) return;
     await _webServers?.stop(spec.id);
-    final packages = RegExp(r'(@[\w.-]+/[\w.-]+|opencode-ai)')
-        .allMatches(spec.installScript)
-        .map((match) => match.group(0)!)
-        .toSet()
-        .join(' ');
+    final packages = spec.uninstallPackages.join(' ');
     busyAgentId = spec.id;
     failure = null;
     failureKind = null;

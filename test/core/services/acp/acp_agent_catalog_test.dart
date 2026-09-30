@@ -27,6 +27,40 @@ void main() {
     }
   });
 
+  test(
+    'built-ins explicitly own every npm package installed by their script',
+    () {
+      expect(
+        {
+          for (final spec in AcpAgentSpec.builtIn)
+            spec.id: spec.uninstallPackages,
+        },
+        {
+          'claude-code': [
+            '@anthropic-ai/claude-code',
+            '@agentclientprotocol/claude-agent-acp',
+          ],
+          'codex': ['@openai/codex', '@agentclientprotocol/codex-acp'],
+          'opencode': [
+            'opencode-ai',
+            'opencode-linux-arm64',
+            'opencode-linux-arm64-musl',
+          ],
+          'kimi-code': ['@moonshot-ai/kimi-code'],
+          'deepseek-harness': ['@deepseek-ai/dsh'],
+        },
+      );
+      expect(
+        AcpAgentSpec.custom(
+          id: 'mine',
+          name: 'Mine',
+          command: 'my-agent',
+        ).uninstallPackages,
+        isEmpty,
+      );
+    },
+  );
+
   group('installing an agent prepares the system first', () {
     /// Runs [spec]'s install script against fake package tools on PATH:
     /// [installed] packages are present, [unavailable] ones cannot be added.
