@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:Kelivo/core/services/acp/acp_agent.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
 import 'package:Kelivo/core/services/acp/acp_chat_sessions.dart';
+import 'package:Kelivo/core/services/acp/acp_mcp_binding.dart';
 import 'package:Kelivo/features/home/widgets/acp_mode_chip.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/ios_tile_button.dart';
@@ -256,6 +257,62 @@ void main() {
       approvals.deny('acp-tool-schedule', conversationId: conversation.id);
       expect((await tester.runAsync(() => pending.call))!['isError'], isTrue);
       expect(approvals.pendingRequests, isEmpty);
+      // Cancel between dispatch and the handler's asynchronous pre-approval
+      // checks. No approval may be created after endTurn has already denied it.
+      await tester.runAsync(() async {
+        final finished = Completer<void>();
+        final cancellable = AcpMcpTools(
+          key: tools.key,
+          definitions: tools.definitions,
+          cancelApproval: tools.cancelApproval,
+          execute: (name, args, {required toolCallId}) async {
+            try {
+              return await tools.execute(name, args, toolCallId: toolCallId);
+            } finally {
+              finished.complete();
+            }
+          },
+        );
+        final binding = await AcpMcpBinding.start(cancellable);
+        var stopped = false;
+        var lateApprovals = 0;
+        void changed() {
+          if (stopped &&
+              approvals.isPending(
+                'acp-tool-cancel-schedule',
+                conversationId: conversation.id,
+              )) {
+            lateApprovals++;
+            approvals.deny(
+              'acp-tool-cancel-schedule',
+              conversationId: conversation.id,
+            );
+          }
+        }
+
+        approvals.addListener(changed);
+        try {
+          binding.beginTurn(cancellable);
+          binding.observe({
+            'sessionUpdate': 'tool_call',
+            'toolCallId': 'cancel-schedule',
+            'title': 'moru_manage_scheduled_tasks',
+            'rawInput': {'action': 'create'},
+          });
+          final call = binding.callTool('manage_scheduled_tasks', {
+            'action': 'create',
+          });
+          stopped = true;
+          binding.endTurn();
+          expect((await call)['isError'], isTrue);
+          await finished.future.timeout(const Duration(seconds: 2));
+          expect(lateApprovals, 0);
+          expect(approvals.pendingRequests, isEmpty);
+        } finally {
+          approvals.removeListener(changed);
+          await binding.close();
+        }
+      });
       // Switch chats while the agent is still replying: no browser UI or prompt.
       await tester.runAsync(() => chats.createConversation());
       final browser = (await tester.runAsync(

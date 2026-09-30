@@ -878,6 +878,8 @@
   "agentsCancel": "取消",
   "agentsSave": "儲存",
   "agentsLog": "記錄",
+  "agentsMoruToolsAvailable": "Moru 工具：可用",
+  "agentsMoruToolsUnavailable": "Moru 工具：無法使用",
   "agentsCheckOk": "正常：{name} {version} 已回應。",
   "agentsCheckFailed": "代理未能啟動：{error}",
   "agentsCheckModel": "檢查使用預設對話模型：{model}。",

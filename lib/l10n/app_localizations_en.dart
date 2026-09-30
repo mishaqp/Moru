@@ -2608,6 +2608,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get agentsLog => 'Log';
 
   @override
+  String get agentsMoruToolsAvailable => 'Moru tools: available';
+
+  @override
+  String get agentsMoruToolsUnavailable => 'Moru tools: unavailable';
+
+  @override
   String agentsCheckOk(String name, String version) {
     return 'It works: $name $version answered.';
   }

@@ -78,6 +78,17 @@ package name does not require building other platforms.
   into `StreamChunk`s (workspace cards, plan strip), permission requests go
   to `ToolApprovalService` on the tool card, and `AcpChatSessions` keeps one
   process and session per chat (`acp.session` in conversation extras).
+  Each process owns an authenticated loopback `AcpMcpServer` (dart:io,
+  random port/token): it exposes the assistant's browser, mini apps, memory
+  and scheduled tasks through the existing `ToolHandlerService`, with the
+  chat's assistant, conversation and workspace context. File/shell tools
+  are excluded. `AcpMcpBinding` pairs each call with the agent's existing
+  ACP tool card; only the Moru handler asks for approval. HTTP-capable agents
+  receive an HTTP `mcpServers` entry on new/load; others use the dependency-free
+  Node `AcpMcpStdioBridge` written by `writeFilesScript` (token only in env).
+  Hidden chats cannot use the live browser UI. Settings → Agents → Check runs
+  `AcpMcpProbe` from the active Linux runtime to report actual loopback access;
+  device PRoot/root-chroot availability must be tested on the phone.
 - **Mini apps**: published web apps (`MiniAppStore`, bridge `moru.*` in
   `MiniAppBridge`). They keep an error journal, the last 5 versions, and
   manifest game settings (`MiniAppDisplay`). Background jobs (`moru.jobs`,

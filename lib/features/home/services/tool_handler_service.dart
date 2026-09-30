@@ -14,6 +14,7 @@ import '../../../core/providers/memory_provider_v2.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/tts_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
+import '../../../core/services/api/tool_call_cancellation.dart';
 import '../../../core/services/api/json_schema_utils.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/mcp/mcp_tool_service.dart';
@@ -512,6 +513,7 @@ class ToolHandlerService {
 
     return (name, args, {toolCallId}) async {
       try {
+        ToolCallCancellation.current?.throwIfCancelled();
         if (workspaceContext != null &&
             workspaceTools != null &&
             WorkspaceToolsService.toolNames.contains(name)) {
@@ -543,6 +545,7 @@ class ToolHandlerService {
           assistant,
           conversationId: conversationId,
         );
+        ToolCallCancellation.current?.throwIfCancelled();
         if (memoryResult != null) {
           return memoryResult;
         }
@@ -580,6 +583,7 @@ class ToolHandlerService {
             arguments: args,
             conversationId: conversationId,
           );
+          ToolCallCancellation.current?.throwIfCancelled();
           if (!approval.approved) {
             return _toolError(
               error: 'approval_denied',

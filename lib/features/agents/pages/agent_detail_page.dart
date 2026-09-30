@@ -96,7 +96,7 @@ class AgentDetailPage extends StatelessWidget {
                         agentFailureLabel(l10n, failure))
               case final text?)
             _Notice(text: text, error: true),
-          if (check != null)
+          if (check != null) ...[
             _Notice(
               text: check.ok
                   ? l10n.agentsCheckOk(
@@ -106,6 +106,13 @@ class AgentDetailPage extends StatelessWidget {
                   : l10n.agentsCheckFailed(check.errorMessage(l10n) ?? ''),
               error: !check.ok,
             ),
+            _Notice(
+              text: check.moruToolsAvailable
+                  ? l10n.agentsMoruToolsAvailable
+                  : l10n.agentsMoruToolsUnavailable,
+              error: !check.moruToolsAvailable,
+            ),
+          ],
           const SizedBox(height: 4),
           if (busyHere) ...[
             const Center(child: CircularProgressIndicator.adaptive()),

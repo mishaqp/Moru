@@ -2635,6 +2635,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get agentsLog => 'Журнал';
 
   @override
+  String get agentsMoruToolsAvailable => 'Инструменты Moru: доступны';
+
+  @override
+  String get agentsMoruToolsUnavailable => 'Инструменты Moru: недоступны';
+
+  @override
   String agentsCheckOk(String name, String version) {
     return 'Работает: ответил $name $version.';
   }

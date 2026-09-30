@@ -2518,6 +2518,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentsLog => '日志';
 
   @override
+  String get agentsMoruToolsAvailable => 'Moru 工具：可用';
+
+  @override
+  String get agentsMoruToolsUnavailable => 'Moru 工具：不可用';
+
+  @override
   String agentsCheckOk(String name, String version) {
     return '正常：$name $version 已响应。';
   }
@@ -14071,6 +14077,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get agentsLog => '日志';
 
   @override
+  String get agentsMoruToolsAvailable => 'Moru 工具：可用';
+
+  @override
+  String get agentsMoruToolsUnavailable => 'Moru 工具：不可用';
+
+  @override
   String agentsCheckOk(String name, String version) {
     return '正常：$name $version 已响应。';
   }
@@ -25551,6 +25563,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentsLog => '記錄';
+
+  @override
+  String get agentsMoruToolsAvailable => 'Moru 工具：可用';
+
+  @override
+  String get agentsMoruToolsUnavailable => 'Moru 工具：無法使用';
 
   @override
   String agentsCheckOk(String name, String version) {

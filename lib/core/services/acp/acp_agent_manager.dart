@@ -12,6 +12,7 @@ import '../workspace/workspace_runtime.dart';
 import 'acp_agent.dart';
 import 'acp_agent_catalog.dart';
 import 'acp_mcp_stdio_bridge.dart';
+import 'acp_mcp_probe.dart';
 import 'acp_stdio_channel.dart';
 import 'acp_error_messages.dart';
 import '../../../l10n/app_localizations.dart';
@@ -34,11 +35,17 @@ enum AcpAgentFailure {
 
 /// The result of starting an agent and greeting it.
 class AcpCheckResult {
-  const AcpCheckResult({this.info, this.error, this.failureKind});
+  const AcpCheckResult({
+    this.info,
+    this.error,
+    this.failureKind,
+    this.moruToolsAvailable = false,
+  });
 
   final AcpAgentInfo? info;
   final String? error;
   final AcpFailureKind? failureKind;
+  final bool moruToolsAvailable;
   String? errorMessage(AppLocalizations l10n) =>
       acpFailureMessage(failureKind, l10n) ?? error;
   bool get ok => info != null;
@@ -328,12 +335,28 @@ class AcpAgentManager extends ChangeNotifier {
     notifyListeners();
     AcpAgent? agent;
     AcpCheckResult result;
+    var moruToolsAvailable = false;
     try {
+      final runtime = _runtime;
+      if (runtime != null) {
+        moruToolsAvailable = await AcpMcpProbe.check(
+          runtime,
+          environment: {
+            ...(await environment.loadExecutionConfig()).variables,
+            'PATH':
+                '$acpNpmPrefix/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+          },
+        );
+      }
       agent = await start(spec, provider);
-      result = AcpCheckResult(info: agent.info);
+      result = AcpCheckResult(
+        info: agent.info,
+        moruToolsAvailable: moruToolsAvailable,
+      );
       _states[spec.id] = AcpInstallState.installed;
     } catch (error) {
       result = AcpCheckResult(
+        moruToolsAvailable: moruToolsAvailable,
         error: error is AcpError ? error.message : error.toString(),
         failureKind: classifyAcpFailure(error),
       );

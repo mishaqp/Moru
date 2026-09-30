@@ -1143,6 +1143,8 @@
   "agentsCancel": "Отмена",
   "agentsSave": "Сохранить",
   "agentsLog": "Журнал",
+  "agentsMoruToolsAvailable": "Инструменты Moru: доступны",
+  "agentsMoruToolsUnavailable": "Инструменты Moru: недоступны",
   "agentsCheckOk": "Работает: ответил {name} {version}.",
   "agentsCheckFailed": "Агент не запустился: {error}",
   "agentsCheckModel": "Для проверки берётся модель чата по умолчанию: {model}.",

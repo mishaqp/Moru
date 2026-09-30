@@ -28,6 +28,7 @@ class _AgentRuntime extends FakeWorkspaceRuntime
     implements WorkspaceStdioRuntime {
   String probeOutput = '';
   int installExit = 0;
+  bool moruAvailable = true;
   final _agents = <String, StreamController<CommandEvent>>{};
   final cancelled = <String>[];
 
@@ -43,7 +44,10 @@ class _AgentRuntime extends FakeWorkspaceRuntime
     final script = request.command;
     final String output;
     final int code;
-    if (script.contains('__acp_')) {
+    if (request.env.containsKey('MORU_MCP_TOKEN')) {
+      output = moruAvailable ? '__moru_mcp_available__\n' : '';
+      code = moruAvailable ? 0 : 1;
+    } else if (script.contains('__acp_')) {
       output = probeOutput;
       code = 0;
     } else if (script.contains('npm install')) {
@@ -177,14 +181,17 @@ void main() {
     final result = await agents.check(AcpAgentSpec.byId('codex')!, provider);
     expect(result.ok, isTrue, reason: result.error);
     expect(result.info!.name, 'codex-acp');
+    expect(result.moruToolsAvailable, isTrue);
     expect(agents.lastCheck('codex')?.info?.version, '1.10.0');
     expect(agents.state('codex'), AcpInstallState.installed);
 
-    final write = runtime.requests.first;
+    final write = runtime.requests.singleWhere(
+      (r) => r.command.contains('base64 -d'),
+    );
     expect(write.command, contains('base64 -d'));
     // The key stays out of the settings file and the script.
     expect(write.command, isNot(contains('sk-test')));
-    final launch = runtime.requests[1];
+    final launch = runtime.requests.singleWhere((r) => r.keepStdinOpen);
     expect(launch.keepStdinOpen, isTrue);
     expect(launch.command, "exec 'codex-acp'");
     expect(launch.env['MORU_CODEX_API_KEY'], 'sk-test');
@@ -192,6 +199,31 @@ void main() {
     // The check stops the agent again.
     expect(runtime.cancelled, contains(launch.runId));
   });
+
+  test(
+    'a new check reports unavailable instead of keeping the previous result',
+    () async {
+      final agents = manager();
+      final spec = AcpAgentSpec.byId('codex')!;
+      expect((await agents.check(spec, provider)).moruToolsAvailable, isTrue);
+      runtime.moruAvailable = false;
+      final result = await agents.check(spec, provider);
+      expect(result.ok, isTrue);
+      expect(result.moruToolsAvailable, isFalse);
+      expect(agents.lastCheck(spec.id)!.moruToolsAvailable, isFalse);
+      final probes = runtime.requests
+          .where((r) => r.env.containsKey('MORU_MCP_TOKEN'))
+          .toList();
+      expect(probes, hasLength(2));
+      expect(
+        probes[0].env['MORU_MCP_TOKEN'],
+        isNot(probes[1].env['MORU_MCP_TOKEN']),
+      );
+      for (final probe in probes) {
+        expect(probe.command, isNot(contains(probe.env['MORU_MCP_TOKEN'])));
+      }
+    },
+  );
 
   test('your own agents are kept and can be deleted', () async {
     final prefs = createBusinessTestPreferences();

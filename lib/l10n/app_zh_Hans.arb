@@ -914,6 +914,8 @@
   "agentsCancel": "取消",
   "agentsSave": "保存",
   "agentsLog": "日志",
+  "agentsMoruToolsAvailable": "Moru 工具：可用",
+  "agentsMoruToolsUnavailable": "Moru 工具：不可用",
   "agentsCheckOk": "正常：{name} {version} 已响应。",
   "agentsCheckFailed": "智能体未能启动：{error}",
   "agentsCheckModel": "检查使用默认对话模型：{model}。",

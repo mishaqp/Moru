@@ -4848,6 +4848,18 @@ abstract class AppLocalizations {
   /// **'Log'**
   String get agentsLog;
 
+  /// No description provided for @agentsMoruToolsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Moru tools: available'**
+  String get agentsMoruToolsAvailable;
+
+  /// No description provided for @agentsMoruToolsUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Moru tools: unavailable'**
+  String get agentsMoruToolsUnavailable;
+
   /// No description provided for @agentsCheckOk.
   ///
   /// In en, this message translates to:

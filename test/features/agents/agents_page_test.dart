@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:Kelivo/core/providers/environment_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_manager.dart';
+import 'package:Kelivo/core/services/acp/acp_agent.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/features/agents/pages/agent_detail_page.dart';
 import 'package:Kelivo/features/agents/pages/agents_page.dart';
@@ -49,6 +50,23 @@ class _ProbeRuntime extends FakeWorkspaceRuntime
   Future<void> writeStdin(String runId, Uint8List data) async {}
 }
 
+class _CheckedManager extends AcpAgentManager {
+  _CheckedManager(this.available)
+    : super(
+        preferences: createBusinessTestPreferences(),
+        runtimeProvider: WorkspaceRuntimeProvider()..register(_ProbeRuntime()),
+        environment: EnvironmentProvider(
+          preferences: createBusinessTestPreferences(),
+        ),
+      );
+  final bool available;
+  @override
+  AcpCheckResult? lastCheck(String id) => AcpCheckResult(
+    info: const AcpAgentInfo(name: 'OpenCode', version: '1'),
+    moruToolsAvailable: available,
+  );
+}
+
 void main() {
   late AcpAgentManager manager;
   late SettingsProvider settings;
@@ -84,6 +102,26 @@ void main() {
   });
 
   tearDown(() => settings.dispose());
+
+  for (final available in [true, false]) {
+    testWidgets(
+      'agent check shows Moru tools ${available ? 'available' : 'unavailable'}',
+      (tester) async {
+        final checked = (await tester.runAsync(
+          () async => _CheckedManager(available),
+        ))!;
+        manager = checked;
+        addTearDown(checked.dispose);
+        await tester.runAsync(manager.refresh);
+        await pumpPage(tester, const AgentDetailPage(agentId: 'opencode'));
+        expect(
+          find.text('Moru tools: ${available ? 'available' : 'unavailable'}'),
+          findsOneWidget,
+        );
+        expect(find.text('It works: OpenCode 1 answered.'), findsOneWidget);
+      },
+    );
+  }
 
   testWidgets('the list explains agents and shows which are installed', (
     tester,
