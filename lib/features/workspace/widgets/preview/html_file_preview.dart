@@ -5,26 +5,43 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
-import 'package:Kelivo/core/services/workspace/workspace_file_access.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/segmented_tabs.dart';
 
 import 'code_file_preview.dart';
 import 'preview_states.dart';
+import 'preview_file_server.dart';
 
 class HtmlFilePreview extends StatefulWidget {
-  const HtmlFilePreview({super.key, required this.file, this.autoLoad = true});
+  const HtmlFilePreview({
+    super.key,
+    required this.file,
+    this.sourceFile,
+    this.accessRoot,
+    this.autoLoad = true,
+  });
 
   final File file;
+  final File? sourceFile;
+  final String? accessRoot;
   final bool autoLoad;
 
   @override
-  State<HtmlFilePreview> createState() => _HtmlFilePreviewState();
+  HtmlFilePreviewState createState() => HtmlFilePreviewState();
 }
 
-class _HtmlFilePreviewState extends State<HtmlFilePreview> {
+class HtmlFilePreviewState extends State<HtmlFilePreview> {
   WebViewController? _controller;
+  PreviewFileServer? _server;
+  final Set<Future<void>> _initializations = {};
+  int _generation = 0;
+  Future<void> _serverClosed = Future.value();
+
+  @visibleForTesting
+  Future<void> get serverClosed => _serverClosed;
+  @visibleForTesting
+  Uri? get renderedUri => _server?.uri;
   Object? _error;
   bool _showSource = false;
   bool _loading = true;
@@ -33,72 +50,117 @@ class _HtmlFilePreviewState extends State<HtmlFilePreview> {
   void initState() {
     super.initState();
     if (widget.autoLoad) {
-      unawaited(_init());
+      unawaited(load());
     } else {
       _loading = false;
     }
   }
 
-  Future<void> _init() async {
+  @override
+  void didUpdateWidget(HtmlFilePreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.file.path != widget.file.path ||
+        oldWidget.sourceFile?.path != widget.sourceFile?.path ||
+        oldWidget.accessRoot != widget.accessRoot ||
+        oldWidget.autoLoad != widget.autoLoad) {
+      if (widget.autoLoad) {
+        unawaited(load());
+      } else {
+        _generation++;
+        unawaited(_server?.close());
+        _server = null;
+      }
+    }
+  }
+
+  Future<void> load() {
+    if (!mounted) return Future.value();
+    final task = _init(++_generation);
+    _initializations.add(task);
+    unawaited(task.whenComplete(() => _initializations.remove(task)));
+    return task;
+  }
+
+  bool _current(int generation) => mounted && generation == _generation;
+
+  Future<void> _init(int generation) async {
+    final previous = _server;
+    _server = null;
     setState(() {
       _loading = true;
+      _controller = null;
       _error = null;
     });
+    PreviewFileServer? owned;
     try {
-      final source = await WorkspaceFileAccess(
-        roots: [widget.file.parent.path],
-      ).readString(widget.file.path);
+      await previous?.close();
+      if (!_current(generation)) return;
+      final original = widget.sourceFile ?? widget.file;
+      owned = await PreviewFileServer.start(
+        sourceFile: original,
+        accessRoot: widget.accessRoot ?? original.parent.path,
+      );
+      if (!_current(generation)) return;
+      _server = owned;
       final controller = WebViewController();
       final platform = controller.platform;
       if (platform is AndroidWebViewController) {
         await platform.setAllowFileAccess(false);
         await platform.setAllowContentAccess(false);
       }
+      if (!_current(generation)) return;
       await controller.setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: (request) {
             final uri = Uri.tryParse(request.url);
             return uri != null &&
-                    (uri.scheme == 'http' ||
-                        uri.scheme == 'https' ||
-                        request.url == 'about:blank')
+                    (uri.scheme == 'http' || uri.scheme == 'https')
                 ? NavigationDecision.navigate
                 : NavigationDecision.prevent;
           },
         ),
       );
       await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
-      // loadFile enables unrestricted Android file access. Loading the checked
-      // text with an HTTPS origin keeps HTML/SVG resources out of local files
-      // and content providers, including subresources that bypass navigation.
-      const policy =
-          '<meta http-equiv="Content-Security-Policy" '
-          'content="default-src http: https: data: blob: \'unsafe-inline\' \'unsafe-eval\'; '
-          'base-uri \'none\'; object-src \'none\'">';
-      final doctype = RegExp(
-        r'^\s*<!doctype[^>]*>',
-        caseSensitive: false,
-      ).firstMatch(source);
-      final html = doctype == null
-          ? '$policy$source'
-          : '${source.substring(0, doctype.end)}$policy${source.substring(doctype.end)}';
-      await controller.loadHtmlString(
-        html,
-        baseUrl: 'https://moru-workspace-preview.invalid/',
-      );
-      if (!mounted) return;
+      if (!_current(generation)) return;
+      await controller.loadRequest(owned.uri);
+      if (!_current(generation)) return;
       setState(() {
         _controller = controller;
         _loading = false;
         _error = null;
       });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e;
-        _loading = false;
-      });
+    } catch (_) {
+      if (_current(generation)) {
+        // Capability URLs must never become error text or logs.
+        setState(() {
+          _error = true;
+          _loading = false;
+        });
+        if (identical(_server, owned)) _server = null;
+        await owned?.close();
+      }
+    } finally {
+      if (!_current(generation)) {
+        if (identical(_server, owned)) _server = null;
+        await owned?.close();
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _generation++;
+    final server = _server;
+    _server = null;
+    final pending = _initializations.toList();
+    _serverClosed = () async {
+      await server?.close();
+      // A bind that completes after disposal still belongs to this preview;
+      // its obsolete initialization closes it before this Future completes.
+      await Future.wait(pending);
+    }();
+    unawaited(_serverClosed);
+    super.dispose();
   }
 
   @override
@@ -137,7 +199,7 @@ class _HtmlFilePreviewState extends State<HtmlFilePreview> {
       );
     }
     if (_error != null) {
-      return PreviewError(onRetry: () => unawaited(_init()));
+      return PreviewError(onRetry: () => unawaited(load()));
     }
     if (_loading || _controller == null) {
       return const PreviewLoading();

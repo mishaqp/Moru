@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:Kelivo/core/models/workspace.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
@@ -7,6 +8,8 @@ import 'package:Kelivo/features/workspace/pages/workspace_files_page.dart';
 import 'package:Kelivo/features/workspace/widgets/files/file_browser.dart';
 import 'package:Kelivo/features/workspace/widgets/files/file_browser_ops.dart';
 import 'package:Kelivo/features/workspace/widgets/files/workspace_file_thumbnail.dart';
+import 'package:Kelivo/features/workspace/widgets/preview/file_preview.dart';
+import 'package:Kelivo/features/workspace/widgets/preview/preview_states.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/custom_bottom_sheet.dart';
@@ -16,8 +19,62 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
+import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
+// ignore: depend_on_referenced_packages
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+// ignore: depend_on_referenced_packages
+import 'package:url_launcher_platform_interface/link.dart';
+// ignore: depend_on_referenced_packages
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 import '../../../../support/business_test_harness.dart';
+import '../../../../support/fake_webview_platform.dart';
+
+class _PreviewPaths extends PathProviderPlatform {
+  _PreviewPaths(this.root);
+  final String root;
+  @override
+  Future<String?> getApplicationDocumentsPath() async => root;
+  @override
+  Future<String?> getApplicationSupportPath() async => root;
+}
+
+class _HtmlLoadController extends FakeWebViewController {
+  _HtmlLoadController(super.params, this.loaded);
+  final Completer<Uri> loaded;
+  @override
+  Future<void> loadHtmlString(String html, {String? baseUrl}) async {
+    await super.loadHtmlString(html, baseUrl: baseUrl);
+    loaded.complete(Uri.parse(baseUrl ?? 'about:blank'));
+  }
+
+  @override
+  Future<void> loadRequest(LoadRequestParams params) async {
+    await super.loadRequest(params);
+    loaded.complete(params.uri);
+  }
+}
+
+class _HtmlLoadPlatform extends FakeWebViewPlatform {
+  final loaded = Completer<Uri>();
+  @override
+  PlatformWebViewController createPlatformWebViewController(
+    PlatformWebViewControllerCreationParams params,
+  ) => _HtmlLoadController(params, loaded);
+}
+
+class _LiveHttpOverrides extends HttpOverrides {}
+
+class _PreviewLauncher extends UrlLauncherPlatform {
+  final launched = Completer<Uri>();
+  @override
+  LinkDelegate? get linkDelegate => null;
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async {
+    launched.complete(Uri.parse(url));
+    return true;
+  }
+}
 
 Future<void> _flushIo(WidgetTester tester) async {
   await tester.runAsync(
@@ -219,6 +276,140 @@ void main() {
     ];
     expect(ys[0], lessThan(ys[1]));
     expect(ys[1], lessThan(ys[2]));
+  });
+
+  testWidgets('HTML from Files serves original page assets within its grant', (
+    tester,
+  ) async {
+    final workspace = Directory(p.join(tempDir.path, 'workspace'))
+      ..createSync();
+    final pages = Directory(p.join(workspace.path, 'pages'))..createSync();
+    final html = File(p.join(pages.path, 'index.html'))
+      ..writeAsStringSync(
+        '<link rel="stylesheet" href="style.css"><h1>Files</h1>',
+      );
+    File(
+      p.join(pages.path, 'style.css'),
+    ).writeAsStringSync('files asset marker');
+    File(
+      p.join(workspace.path, 'other.css'),
+    ).writeAsStringSync('workspace secret');
+    final outside = File(p.join(tempDir.path, 'outside.css'))
+      ..writeAsStringSync('outside secret');
+    Link(p.join(pages.path, 'escape.css')).createSync(outside.path);
+    final appData = Directory(p.join(tempDir.path, 'app-data'))..createSync();
+    final previousPaths = PathProviderPlatform.instance;
+    PathProviderPlatform.instance = _PreviewPaths(appData.path);
+    final previousWebView = WebViewPlatform.instance;
+    final platform = _HtmlLoadPlatform();
+    WebViewPlatform.instance = platform;
+    final previousLauncher = UrlLauncherPlatform.instance;
+    final launcher = _PreviewLauncher();
+    UrlLauncherPlatform.instance = launcher;
+    addTearDown(() {
+      PathProviderPlatform.instance = previousPaths;
+      WebViewPlatform.instance = previousWebView ?? FakeWebViewPlatform();
+      UrlLauncherPlatform.instance = previousLauncher;
+    });
+    addTearDown(closePreviewFileBrowserServer);
+
+    await pumpHarness(
+      tester,
+      child: FileBrowser(
+        root: pages,
+        accessRoot: workspace.path,
+        rootLabel: 'Pages',
+        modelPathOf: (host) => host,
+      ),
+    );
+    await _reload(tester);
+    await tester.runAsync(
+      () => tester.tap(find.byKey(FileBrowser.itemKey('index.html'))),
+    );
+    while (!platform.loaded.isCompleted) {
+      // Route construction creates the native HTTP listener. Keep it in the
+      // real zone so an actual HTTP request need not wait for FakeAsync pumps.
+      await tester.runAsync(
+        () => tester.pump(const Duration(milliseconds: 16)),
+      );
+      await tester.runAsync(() => Future<void>(() {}));
+      expect(find.byType(PreviewError), findsNothing);
+    }
+    final uri = await platform.loaded.future;
+    expect(uri.scheme, 'http');
+    expect(uri.host, '127.0.0.1');
+    final frame = tester.widget<FilePreviewFrame>(
+      find.byType(FilePreviewFrame),
+    );
+    expect(frame.file.path, contains('/workspace-previews/snapshot-'));
+    expect(frame.file.path, isNot(html.path));
+    expect(frame.sourceFile?.path, html.path);
+    expect(frame.accessRoot, workspace.path);
+    await tester.runAsync(
+      () => HttpOverrides.runWithHttpOverrides(() async {
+        final client = HttpClient();
+        try {
+          final response = await (await client.getUrl(
+            uri.resolve('style.css'),
+          )).close();
+          expect(response.statusCode, HttpStatus.ok);
+          expect(
+            await response.transform(utf8.decoder).join(),
+            'files asset marker',
+          );
+          for (final resource in ['escape.css', '../other.css']) {
+            final denied = await (await client.getUrl(
+              uri.resolve(resource),
+            )).close();
+            expect(denied.statusCode, HttpStatus.forbidden);
+            expect(
+              await denied.transform(utf8.decoder).join(),
+              isNot(contains('secret')),
+            );
+          }
+        } finally {
+          client.close(force: true);
+        }
+      }, _LiveHttpOverrides()),
+    );
+    await tester.runAsync(
+      () => tester.tap(find.byKey(FilePreviewFrame.openInBrowserActionKey)),
+    );
+    while (!launcher.launched.isCompleted) {
+      await tester.pump();
+      await tester.runAsync(() => Future<void>(() {}));
+    }
+    final browserUri = await launcher.launched.future;
+    expect(browserUri.scheme, 'http');
+    expect(browserUri.host, '127.0.0.1');
+    await tester.runAsync(
+      () => HttpOverrides.runWithHttpOverrides(() async {
+        final client = HttpClient();
+        try {
+          final response = await (await client.getUrl(
+            browserUri.resolve('style.css'),
+          )).close();
+          expect(response.statusCode, HttpStatus.ok);
+          expect(
+            await response.transform(utf8.decoder).join(),
+            'files asset marker',
+          );
+          final denied = await (await client.getUrl(
+            browserUri.resolve('escape.css'),
+          )).close();
+          expect(denied.statusCode, HttpStatus.forbidden);
+          await denied.drain<void>();
+        } finally {
+          client.close(force: true);
+        }
+      }, _LiveHttpOverrides()),
+    );
+    final htmlState = tester.state<HtmlFilePreviewState>(
+      find.byType(HtmlFilePreview),
+    );
+    await tester.runAsync(() => tester.pumpWidget(const SizedBox()));
+    await tester.runAsync(() => htmlState.serverClosed);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('navigates into a directory and breadcrumb returns', (

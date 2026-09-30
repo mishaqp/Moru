@@ -175,8 +175,15 @@ parent is writable; the target is never changed.
 Preview/share/export snapshots live in private app data, outside the model
 file roots, and are copied from a checked open descriptor. Explicit picker
 access grants only the selected file. Markdown images and linked thumbnails
-render checked bytes; HTML previews disable file/content access, and the local
-preview server checks every resource against the original granted root.
+render checked bytes. HTML previews disable file/content access and use the
+same token-protected loopback server as the browser action, with the original
+source file and granted root retained separately from the private snapshot.
+Each bounded resource read must stay in both that root and the captured real
+page directory; reject raw and encoded traversal before URI normalization.
+Keep the standard HTTP parser, close each HTTP connection after its response,
+and close an embedded preview server when its widget is disposed, including
+a server that finishes starting after disposal. CSP permits the server origin
+and blocks file/content URLs; navigation permits only HTTP/HTTPS.
 If a registered runtime's status cannot be read, workspace tools fail closed
 before creating a context; they never fall back to native unsandboxed policy.
 

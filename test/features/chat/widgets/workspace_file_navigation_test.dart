@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:async';
 // ignore: depend_on_referenced_packages
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:Kelivo/features/chat/widgets/produced_files_row.dart';
@@ -10,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
+import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 
 import 'package:Kelivo/core/database/app_database.dart';
 import 'package:Kelivo/core/database/extension_entity_store.dart';
@@ -23,11 +25,39 @@ import 'package:Kelivo/core/services/workspace/workspace_tool_metadata.dart';
 import 'package:Kelivo/features/chat/widgets/workspace_tool_ui.dart';
 import 'package:Kelivo/features/workspace/widgets/files/file_browser.dart';
 import 'package:Kelivo/features/workspace/widgets/preview/file_preview.dart';
+import 'package:Kelivo/features/workspace/widgets/preview/preview_states.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/markdown_with_highlight.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart';
 
 import '../../../support/business_test_harness.dart';
+import '../../../support/fake_webview_platform.dart';
+
+class _HtmlLoadController extends FakeWebViewController {
+  _HtmlLoadController(super.params, this.loaded);
+  final Completer<Uri> loaded;
+  @override
+  Future<void> loadHtmlString(String html, {String? baseUrl}) async {
+    await super.loadHtmlString(html, baseUrl: baseUrl);
+    loaded.complete(Uri.parse(baseUrl ?? 'about:blank'));
+  }
+
+  @override
+  Future<void> loadRequest(LoadRequestParams params) async {
+    await super.loadRequest(params);
+    loaded.complete(params.uri);
+  }
+}
+
+class _HtmlLoadPlatform extends FakeWebViewPlatform {
+  final loaded = Completer<Uri>();
+  @override
+  PlatformWebViewController createPlatformWebViewController(
+    PlatformWebViewControllerCreationParams params,
+  ) => _HtmlLoadController(params, loaded);
+}
+
+class _LiveHttpOverrides extends HttpOverrides {}
 
 class _PathProvider extends PathProviderPlatform {
   _PathProvider(this.root);
@@ -203,6 +233,89 @@ void main() {
       TargetPlatform.macOS,
     }),
   );
+
+  testWidgets('linked HTML serves original page assets within its grant', (
+    tester,
+  ) async {
+    final pages = Directory(p.join(root.path, 'pages'))..createSync();
+    final html = File(p.join(pages.path, 'index.html'))
+      ..writeAsStringSync('<script src="app.js"></script><h1>Linked</h1>');
+    File(p.join(pages.path, 'app.js')).writeAsStringSync('linked asset marker');
+    File(p.join(root.path, 'other.js')).writeAsStringSync('workspace secret');
+    final outside = Directory.systemTemp.createTempSync('html_link_outside_');
+    addTearDown(() => outside.deleteSync(recursive: true));
+    final secret = File(p.join(outside.path, 'secret.js'))
+      ..writeAsStringSync('outside secret');
+    Link(p.join(pages.path, 'escape.js')).createSync(secret.path);
+    final previousWebView = WebViewPlatform.instance;
+    final platform = _HtmlLoadPlatform();
+    WebViewPlatform.instance = platform;
+    addTearDown(
+      () => WebViewPlatform.instance = previousWebView ?? FakeWebViewPlatform(),
+    );
+    await tester.pumpWidget(
+      harness(
+        const WorkspaceFileChip(
+          path: '/workspace/pages/index.html',
+          link: 'kelivo://workspace/pages/index.html',
+          conversationId: 'c1',
+        ),
+      ),
+    );
+    await tester.runAsync(() => tester.tap(find.text('index.html')));
+    while (!platform.loaded.isCompleted) {
+      // Route construction creates the native HTTP listener. Keep it in the
+      // real zone so an actual HTTP request need not wait for FakeAsync pumps.
+      await tester.runAsync(
+        () => tester.pump(const Duration(milliseconds: 16)),
+      );
+      await tester.runAsync(() => Future<void>(() {}));
+      expect(find.byType(PreviewError), findsNothing);
+    }
+    final uri = await platform.loaded.future;
+    expect(uri.scheme, 'http');
+    expect(uri.host, '127.0.0.1');
+    final frame = tester.widget<FilePreviewFrame>(
+      find.byType(FilePreviewFrame),
+    );
+    expect(frame.file.path, contains('/workspace-previews/snapshot-'));
+    expect(frame.file.path, isNot(html.path));
+    expect(frame.sourceFile?.path, html.path);
+    expect(frame.accessRoot, root.path);
+    await tester.runAsync(
+      () => HttpOverrides.runWithHttpOverrides(() async {
+        final client = HttpClient();
+        try {
+          final response = await (await client.getUrl(
+            uri.resolve('app.js'),
+          )).close();
+          expect(response.statusCode, HttpStatus.ok);
+          expect(
+            await response.transform(utf8.decoder).join(),
+            'linked asset marker',
+          );
+          for (final resource in ['escape.js', '../other.js']) {
+            final denied = await (await client.getUrl(
+              uri.resolve(resource),
+            )).close();
+            expect(denied.statusCode, HttpStatus.forbidden);
+            expect(
+              await denied.transform(utf8.decoder).join(),
+              isNot(contains('secret')),
+            );
+          }
+        } finally {
+          client.close(force: true);
+        }
+      }, _LiveHttpOverrides()),
+    );
+    final htmlState = tester.state<HtmlFilePreviewState>(
+      find.byType(HtmlFilePreview),
+    );
+    await tester.runAsync(() => tester.pumpWidget(const SizedBox()));
+    await tester.runAsync(() => htmlState.serverClosed);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('shell images use the bounded shared thumbnail loader', (
     tester,

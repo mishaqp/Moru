@@ -138,13 +138,20 @@ Future<void> openWorkspaceLinkedFile(
   if (!context.mounted) return;
   final entry = resolved?.entry;
   if (entry is File) {
+    final accessRoot = resolved!.rootPath;
     try {
       await FileBrowserOps.withReadableFile<void>(
-        rootPath: resolved!.rootPath,
+        rootPath: accessRoot,
         hostPath: entry.path,
         operation: (file) async {
           if (context.mounted) {
-            await showFilePreview(context, file, title: title);
+            await showFilePreview(
+              context,
+              file,
+              title: title,
+              sourceFile: entry,
+              accessRoot: accessRoot,
+            );
           }
         },
       );

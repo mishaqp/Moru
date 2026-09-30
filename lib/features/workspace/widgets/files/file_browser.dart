@@ -344,11 +344,20 @@ class FileBrowserState extends State<FileBrowser> {
         return;
       }
       if (widget.pickDirectoryMode) return;
+      final accessRoot = _accessRoot;
       await FileBrowserOps.withReadableFile<void>(
-        rootPath: _accessRoot,
+        rootPath: accessRoot,
         hostPath: entry.hostPath,
         operation: (file) async {
-          if (mounted) await showFilePreview(context, file, title: entry.name);
+          if (mounted) {
+            await showFilePreview(
+              context,
+              file,
+              title: entry.name,
+              sourceFile: File(entry.hostPath),
+              accessRoot: accessRoot,
+            );
+          }
         },
       );
     } catch (error) {

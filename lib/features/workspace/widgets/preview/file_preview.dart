@@ -80,6 +80,8 @@ Future<void> showFilePreview(
   BuildContext context,
   File file, {
   String? title,
+  File? sourceFile,
+  String? accessRoot,
   FilePreviewKind? kind,
   bool autoLoad = true,
 }) async {
@@ -104,13 +106,21 @@ Future<void> showFilePreview(
       context,
       file: file,
       title: resolvedTitle,
+      sourceFile: sourceFile,
+      accessRoot: accessRoot,
       desktop: desktop,
       autoLoad: autoLoad,
     );
     return;
   }
 
-  final body = _previewBody(kind: resolvedKind, file: file, autoLoad: autoLoad);
+  final body = _previewBody(
+    kind: resolvedKind,
+    file: file,
+    sourceFile: sourceFile,
+    accessRoot: accessRoot,
+    autoLoad: autoLoad,
+  );
   if (desktop) {
     final height = MediaQuery.sizeOf(context).height * 0.8;
     await showAppDialog<void>(
@@ -120,6 +130,8 @@ Future<void> showFilePreview(
         height: height,
         child: FilePreviewFrame(
           file: file,
+          sourceFile: sourceFile,
+          accessRoot: accessRoot,
           title: resolvedTitle,
           kind: resolvedKind,
           dialog: true,
@@ -134,6 +146,8 @@ Future<void> showFilePreview(
     MaterialPageRoute<void>(
       builder: (_) => FilePreviewPage(
         file: file,
+        sourceFile: sourceFile,
+        accessRoot: accessRoot,
         title: resolvedTitle,
         kind: resolvedKind,
         child: body,
@@ -145,6 +159,8 @@ Future<void> showFilePreview(
 Widget _previewBody({
   required FilePreviewKind kind,
   required File file,
+  File? sourceFile,
+  String? accessRoot,
   bool autoLoad = true,
 }) {
   switch (kind) {
@@ -154,7 +170,12 @@ Widget _previewBody({
       return MarkdownFilePreview(file: file, autoLoad: autoLoad);
     case FilePreviewKind.html:
       if (htmlPreviewSupported) {
-        return HtmlFilePreview(file: file, autoLoad: autoLoad);
+        return HtmlFilePreview(
+          file: file,
+          sourceFile: sourceFile,
+          accessRoot: accessRoot,
+          autoLoad: autoLoad,
+        );
       }
       return CodeFilePreview(file: file, autoLoad: autoLoad);
     case FilePreviewKind.csv:
@@ -170,6 +191,8 @@ Future<void> _showImagePreview(
   BuildContext context, {
   required File file,
   required String title,
+  File? sourceFile,
+  String? accessRoot,
   required bool desktop,
   bool autoLoad = true,
 }) async {
@@ -182,6 +205,8 @@ Future<void> _showImagePreview(
         height: height,
         child: FilePreviewFrame(
           file: file,
+          sourceFile: sourceFile,
+          accessRoot: accessRoot,
           title: title,
           kind: FilePreviewKind.image,
           dialog: true,
@@ -222,12 +247,16 @@ class FilePreviewPage extends StatelessWidget {
   const FilePreviewPage({
     super.key,
     required this.file,
+    this.sourceFile,
+    this.accessRoot,
     required this.title,
     required this.kind,
     required this.child,
   });
 
   final File file;
+  final File? sourceFile;
+  final String? accessRoot;
   final String title;
   final FilePreviewKind kind;
   final Widget child;
@@ -236,6 +265,8 @@ class FilePreviewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return FilePreviewFrame(
       file: file,
+      sourceFile: sourceFile,
+      accessRoot: accessRoot,
       title: title,
       kind: kind,
       dialog: false,
@@ -248,6 +279,8 @@ class FilePreviewFrame extends StatelessWidget {
   const FilePreviewFrame({
     super.key,
     required this.file,
+    this.sourceFile,
+    this.accessRoot,
     required this.title,
     required this.kind,
     required this.dialog,
@@ -262,6 +295,8 @@ class FilePreviewFrame extends StatelessWidget {
   );
 
   final File file;
+  final File? sourceFile;
+  final String? accessRoot;
   final String title;
   final FilePreviewKind kind;
   final bool dialog;
@@ -368,7 +403,14 @@ class FilePreviewFrame extends StatelessWidget {
           key: FilePreviewFrame.openInBrowserActionKey,
           label: l10n.workspacePreviewOpenInBrowser,
           icon: Lucide.Globe,
-          onTap: () => unawaited(openPreviewFileInBrowser(context, file)),
+          onTap: () => unawaited(
+            openPreviewFileInBrowser(
+              context,
+              file,
+              sourceFile: sourceFile,
+              accessRoot: accessRoot,
+            ),
+          ),
         ),
       );
     }

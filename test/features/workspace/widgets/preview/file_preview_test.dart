@@ -522,7 +522,8 @@ void main() {
     expect(uri.scheme, 'http');
     expect(uri.host, '127.0.0.1');
     expect(uri.port, greaterThan(0));
-    expect(uri.path, '/page.html');
+    expect(uri.pathSegments, hasLength(2));
+    expect(uri.pathSegments.last, 'page.html');
   });
 
   testWidgets('desktop preview opens via dialog, not a bottom sheet', (

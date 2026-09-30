@@ -9,12 +9,13 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:Kelivo/l10n/app_localizations.dart';
-import 'package:Kelivo/core/services/workspace/workspace_file_access.dart';
+import 'preview_file_server.dart';
 import 'package:Kelivo/shared/utils/save_file_picker.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart';
 
-HttpServer? _previewBrowserServer;
+PreviewFileServer? _previewBrowserServer;
 Timer? _previewBrowserServerTtl;
+int _previewBrowserGeneration = 0;
 
 Future<void> copyFilePath(BuildContext context, File file) async {
   final l10n = AppLocalizations.of(context)!;
@@ -107,10 +108,18 @@ Future<void> revealPreviewFileInFileManager(
   }
 }
 
-Future<void> openPreviewFileInBrowser(BuildContext context, File file) async {
+Future<void> openPreviewFileInBrowser(
+  BuildContext context,
+  File file, {
+  File? sourceFile,
+  String? accessRoot,
+}) async {
   final l10n = AppLocalizations.of(context)!;
   try {
-    final uri = await _browserUriForPreviewFile(file);
+    final uri = await startPreviewFileBrowserServer(
+      sourceFile ?? file,
+      accessRoot: accessRoot,
+    );
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (ok) return;
     if (!context.mounted) return;
@@ -125,113 +134,57 @@ Future<void> openPreviewFileInBrowser(BuildContext context, File file) async {
         type: NotificationType.error,
       );
     }
-  } catch (e) {
+  } catch (_) {
     if (!context.mounted) return;
     showAppSnackBar(
       context,
-      message: l10n.chatMessageWidgetOpenFileError(e.toString()),
+      message: l10n.workspacePreviewLoadError,
       type: NotificationType.error,
     );
   }
 }
 
-/// iOS/Android cannot hand a sandboxed `file://` URL to Safari/Chrome.
-/// Serve the file (and siblings) over loopback so the system browser can
-/// load it.
-Future<Uri> _browserUriForPreviewFile(File file) async {
-  if (!Platform.isAndroid) {
-    return Uri.file(file.absolute.path);
-  }
-  return startPreviewFileBrowserServer(file);
-}
-
+/// The external browser has no page disposal hook, so its independently owned
+/// capability server expires after ten minutes. Embedded previews own theirs.
 @visibleForTesting
-Future<Uri> startPreviewFileBrowserServer(File file) async {
-  await closePreviewFileBrowserServer();
-  final root = file.parent.absolute.path;
-  final access = WorkspaceFileAccess(roots: [root]);
-  await access.resolve(file.path);
-  final name = p.basename(file.path);
-  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+Future<Uri> startPreviewFileBrowserServer(
+  File file, {
+  String? accessRoot,
+}) async {
+  final generation = ++_previewBrowserGeneration;
+  await _closePreviewFileBrowserServer();
+  if (generation != _previewBrowserGeneration) {
+    throw StateError('Preview closed');
+  }
+  final server = await PreviewFileServer.start(
+    sourceFile: file,
+    accessRoot: accessRoot ?? file.parent.path,
+  );
+  if (generation != _previewBrowserGeneration) {
+    await server.close();
+    throw StateError('Preview closed');
+  }
   _previewBrowserServer = server;
-  server.listen((request) async {
-    try {
-      var rel = Uri.decodeComponent(request.uri.path);
-      if (rel == '/' || rel.isEmpty) {
-        rel = '/$name';
-      }
-      final requested = p.normalize(p.join(root, rel.replaceFirst('/', '')));
-      final opened = await access.openRead(requested);
-      try {
-        request.response.headers.contentType = ContentType.parse(
-          _mimeForPreviewPath(requested),
-        );
-        await request.response.addStream(File(opened.path).openRead());
-        await request.response.close();
-      } finally {
-        await opened.close();
-      }
-    } on WorkspaceFileAccessException {
-      request.response.statusCode = HttpStatus.forbidden;
-      await request.response.close();
-    } on FileSystemException {
-      request.response.statusCode = HttpStatus.notFound;
-      await request.response.close();
-    } catch (_) {
-      try {
-        request.response.statusCode = HttpStatus.internalServerError;
-        await request.response.close();
-      } catch (_) {}
+  _previewBrowserServerTtl = Timer(const Duration(minutes: 10), () {
+    if (identical(_previewBrowserServer, server)) {
+      unawaited(closePreviewFileBrowserServer());
     }
   });
-  _previewBrowserServerTtl = Timer(const Duration(minutes: 10), () {
-    unawaited(closePreviewFileBrowserServer());
-  });
-  return Uri(
-    scheme: 'http',
-    host: '127.0.0.1',
-    port: server.port,
-    pathSegments: <String>[name],
-  );
+  return server.uri;
 }
 
 @visibleForTesting
 Future<void> closePreviewFileBrowserServer() async {
+  _previewBrowserGeneration++;
+  await _closePreviewFileBrowserServer();
+}
+
+Future<void> _closePreviewFileBrowserServer() async {
   _previewBrowserServerTtl?.cancel();
   _previewBrowserServerTtl = null;
   final server = _previewBrowserServer;
   _previewBrowserServer = null;
-  if (server != null) {
-    await server.close(force: true);
-  }
-}
-
-String _mimeForPreviewPath(String path) {
-  switch (p.extension(path).toLowerCase()) {
-    case '.html':
-    case '.htm':
-      return 'text/html; charset=utf-8';
-    case '.css':
-      return 'text/css; charset=utf-8';
-    case '.js':
-    case '.mjs':
-      return 'text/javascript; charset=utf-8';
-    case '.svg':
-      return 'image/svg+xml';
-    case '.png':
-      return 'image/png';
-    case '.jpg':
-    case '.jpeg':
-      return 'image/jpeg';
-    case '.gif':
-      return 'image/gif';
-    case '.webp':
-      return 'image/webp';
-    case '.json':
-      return 'application/json';
-    default:
-      return 'application/octet-stream';
-  }
+  await server?.close();
 }
 
 String revealInFileManagerLabel(AppLocalizations l10n) {
