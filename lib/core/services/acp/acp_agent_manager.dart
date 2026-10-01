@@ -14,6 +14,7 @@ import 'acp_agent_catalog.dart';
 import 'acp_mcp_stdio_bridge.dart';
 import 'acp_mcp_probe.dart';
 import 'acp_stdio_channel.dart';
+import 'acp_secret_redactor.dart';
 import 'acp_error_messages.dart';
 import 'acp_fs_compat.dart';
 import 'acp_agent_web_servers.dart';
@@ -104,7 +105,6 @@ class AcpAgentManager extends ChangeNotifier {
   String _nodeVersion = '';
   bool _nodeProbed = false;
   AcpAgentWebServers? _webServers;
-
   AcpAgentWebServers get webServers =>
       _webServers ??= (AcpAgentWebServers(prepare: _prepareWeb)
         ..addListener(notifyListeners));
@@ -400,13 +400,23 @@ class AcpAgentManager extends ChangeNotifier {
     AcpAgent? agent;
     AcpCheckResult result;
     var moruToolsAvailable = false;
+    var redactor = AcpSecretRedactor([
+      provider.apiKey,
+      ...provider.headers.values,
+    ]);
     try {
+      final variables = (await environment.loadExecutionConfig()).variables;
+      redactor = AcpSecretRedactor([
+        provider.apiKey,
+        ...provider.headers.values,
+        variables['OPENCODE_SERVER_PASSWORD'] ?? '',
+      ]);
       final runtime = _runtime;
       if (runtime != null) {
         moruToolsAvailable = await AcpMcpProbe.check(
           runtime,
           environment: {
-            ...(await environment.loadExecutionConfig()).variables,
+            ...variables,
             'PATH':
                 '$acpNpmPrefix/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
           },
@@ -419,10 +429,11 @@ class AcpAgentManager extends ChangeNotifier {
       );
       _states[spec.id] = AcpInstallState.installed;
     } catch (error) {
+      final safeError = redactor.error(error);
       result = AcpCheckResult(
         moruToolsAvailable: moruToolsAvailable,
-        error: error is AcpError ? error.message : error.toString(),
-        failureKind: classifyAcpFailure(error),
+        error: safeError.message,
+        failureKind: classifyAcpFailure(safeError),
         nodeIssue: nodeIssueFor(spec),
       );
       failure = AcpAgentFailure.check;
@@ -457,56 +468,78 @@ class AcpAgentManager extends ChangeNotifier {
         'The Linux environment is not ready',
       );
     }
-    final launch = spec.launch(provider);
-    await _requireNode(runtime, spec);
-    final variables = (await environment.loadExecutionConfig()).variables;
-    final env = _agentEnvironment(variables, launch);
-    {
-      final (code, output) = await _run(
-        runtime,
-        writeFilesScript([
-          ...launch.files,
-          AcpMcpStdioBridge.file,
-          AcpFsCompat.file,
-        ]),
-        capture: true,
-        environment: env,
-      );
-      if (code != 0) {
-        throw AcpError(
-          AcpError.internalError,
-          'Could not write the agent settings: $output',
+    var redactor = AcpSecretRedactor([
+      provider.apiKey,
+      ...provider.headers.values,
+    ]);
+    try {
+      final variables = (await environment.loadExecutionConfig()).variables;
+      redactor = AcpSecretRedactor([
+        provider.apiKey,
+        ...provider.headers.values,
+        variables['OPENCODE_SERVER_PASSWORD'] ?? '',
+      ]);
+      final launch = spec.launch(provider);
+      await _requireNode(runtime, spec, redactor: redactor);
+      final env = _agentEnvironment(variables, launch);
+      {
+        final (code, output) = await _run(
+          runtime,
+          writeFilesScript([
+            ...launch.files,
+            AcpMcpStdioBridge.file,
+            AcpFsCompat.file,
+          ]),
+          capture: true,
+          environment: env,
         );
+        if (code != 0) {
+          throw AcpError(
+            AcpError.internalError,
+            'Could not write the agent settings: $output',
+          );
+        }
       }
+      final transport = await WorkspaceStdioTransport.start(
+        runtime: runtime,
+        command: launch.command,
+        arguments: launch.arguments,
+        cwd: cwd,
+        mounts: mounts,
+        environment: env,
+        isCancelled: isCancelled,
+        emulateHardLinks: false,
+      );
+      return await AcpAgent.start(
+        AcpStdioChannel(transport),
+        clientVersion: clientVersion,
+        redactor: redactor,
+      );
+    } catch (error) {
+      throw redactor.error(error);
     }
-    final transport = await WorkspaceStdioTransport.start(
-      runtime: runtime,
-      command: launch.command,
-      arguments: launch.arguments,
-      cwd: cwd,
-      mounts: mounts,
-      environment: env,
-      isCancelled: isCancelled,
-      emulateHardLinks: false,
-    );
-    return AcpAgent.start(
-      AcpStdioChannel(transport),
-      clientVersion: clientVersion,
-    );
   }
 
-  void _recordNode(String output) {
+  void _recordNode(String output, {AcpSecretRedactor? redactor}) {
     final marker = RegExp(
       r'^__moru_node=([^\r\n]*)',
       multiLine: true,
     ).firstMatch(output);
-    _nodeVersion = marker?.group(1)?.trim() ?? '';
+    final version = marker?.group(1)?.trim() ?? '';
+    // Valid version numbers are control data; unexpected output is diagnostic.
+    _nodeVersion = RegExp(r'^v?\d+\.\d+\.\d+$').hasMatch(version)
+        ? version
+        : redactor?.text(version) ?? version;
     _nodeProbed = true;
   }
 
-  Future<void> _requireNode(WorkspaceRuntime runtime, AcpAgentSpec spec) async {
+  Future<void> _requireNode(
+    WorkspaceRuntime runtime,
+    AcpAgentSpec spec, {
+    AcpSecretRedactor? redactor,
+  }) async {
     if (spec.nodeMajor < 22) return;
-    await _probeNode(runtime);
+    await _probeNode(runtime, redactor: redactor);
     _throwNodeIssue(spec);
   }
 
@@ -526,13 +559,16 @@ class AcpAgentManager extends ChangeNotifier {
     _throwNodeIssue(spec);
   }
 
-  Future<void> _probeNode(WorkspaceRuntime runtime) async {
+  Future<void> _probeNode(
+    WorkspaceRuntime runtime, {
+    AcpSecretRedactor? redactor,
+  }) async {
     final (_, output) = await _run(
       runtime,
       "printf '__moru_node='; node --version 2>/dev/null || true; printf '\\n'",
       capture: true,
     );
-    _recordNode(output);
+    _recordNode(output, redactor: redactor);
     notifyListeners();
   }
 
@@ -565,17 +601,20 @@ class AcpAgentManager extends ChangeNotifier {
   ) async {
     final runtime = _runtime;
     if (runtime == null) throw const AcpWebException(AcpWebFailure.start);
-    await _requireNode(runtime, spec);
+    final variables = (await environment.loadExecutionConfig()).variables;
+    final redactor = AcpSecretRedactor([
+      provider.apiKey,
+      ...provider.headers.values,
+      variables['OPENCODE_SERVER_PASSWORD'] ?? '',
+    ]);
+    await _requireNode(runtime, spec, redactor: redactor);
     final launch = spec.webLaunch(
       provider,
       port: port,
       configDirectory: directory,
     );
     if (launch == null) throw const AcpWebException(AcpWebFailure.start);
-    final env = _agentEnvironment(
-      (await environment.loadExecutionConfig()).variables,
-      launch,
-    );
+    final env = _agentEnvironment(variables, launch);
     final (code, _) = await _run(
       runtime,
       writeFilesScript([...launch.files, AcpFsCompat.file]),

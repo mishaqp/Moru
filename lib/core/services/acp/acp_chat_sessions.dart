@@ -178,7 +178,7 @@ class AcpChatSessions extends ChangeNotifier {
     AcpMcpBinding? mcp;
     try {
       if (turn.moruTools case final tools?) {
-        mcp = await AcpMcpBinding.start(tools);
+        mcp = await AcpMcpBinding.start(tools, redactor: agent.redactor);
       }
       final mcpServers = [if (mcp != null) mcp.serverConfig(agent.info)];
       AcpSession? session;
@@ -210,8 +210,10 @@ class AcpChatSessions extends ChangeNotifier {
       }
       final chat = _ChatAgent(key, agent, session, mcp)
         ..needsHistory = needsHistory;
-      agent.onToolUpdate = (sessionId, update) {
-        if (sessionId == chat.sessionId) chat.mcp?.observe(update);
+      agent.onToolCorrelation = (sessionId, correlation) {
+        if (sessionId == chat.sessionId) {
+          chat.mcp?.observeCorrelation(correlation);
+        }
       };
       agent.onModeChanged = (sessionId, modeId) {
         if (sessionId != chat.sessionId ||

@@ -76,8 +76,11 @@ package name does not require building other platforms.
   the Agent Client Protocol over the Linux environment's STDIO pipes
   (`lib/core/services/acp/`). `AcpAgentManager` installs them with npm and
   checks them (Settings → Agents); `AcpAgentSpec.launch` maps a Moru provider
-  to each agent's variables/config (keys only in env). An assistant with
-  `agentId` answers through its agent: `AcpChatBridge` swaps the chunk
+  to each agent's variables/config (keys only in env). Known launch secrets are redacted before ACP display/error payloads leave
+  the boundary; private tool correlation must retain actual execution values.
+  Moru MCP approval cards and browser activity details inherit the launch's
+  display filter while handlers receive the original execution arguments.
+  An assistant with `agentId` answers through its agent: `AcpChatBridge` swaps the chunk
   source in `_executeGeneration`, `AcpTurnTranslator` turns `session/update`
   into `StreamChunk`s (workspace cards, plan strip), permission requests go
   to `ToolApprovalService` on the tool card, and `AcpChatSessions` keeps one

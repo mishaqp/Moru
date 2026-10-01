@@ -12,7 +12,9 @@ import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
 import 'package:Kelivo/core/services/acp/acp_chat_prompt.dart';
 import 'package:Kelivo/core/services/acp/acp_chat_sessions.dart';
 import 'package:Kelivo/core/services/acp/acp_mcp_binding.dart';
+import 'package:Kelivo/core/services/acp/acp_secret_redactor.dart';
 import 'package:Kelivo/core/services/api/stream/stream_chunk.dart';
+import 'package:Kelivo/core/services/api/tool_display_redaction.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/features/home/services/acp_chat_bridge.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
@@ -27,6 +29,8 @@ class _ScriptedAgent extends AcpChannel {
     this.resumeFails = false,
     this.images = false,
     this.mcpHttp = false,
+    this.toolArguments,
+    this.toolStyle = 'title',
   });
 
   final bool loadSession;
@@ -35,6 +39,9 @@ class _ScriptedAgent extends AcpChannel {
   final bool resumeFails;
   final bool images;
   final bool mcpHttp;
+  final Map<String, dynamic>? toolArguments;
+  final String toolStyle;
+  Map? toolResult;
   final _incoming = StreamController<dynamic>();
   final _closed = Completer<void>();
   final sent = <Map<String, Object?>>[];
@@ -107,6 +114,10 @@ class _ScriptedAgent extends AcpChannel {
       case 'session/set_mode':
         reply(<String, Object?>{});
       case 'session/prompt':
+        if (toolArguments != null) {
+          unawaited(_callMoruTool(copy, params));
+          break;
+        }
         final session = params['sessionId'];
         final text = [
           for (final block in params['prompt'] as List) (block as Map)['text'],
@@ -130,6 +141,81 @@ class _ScriptedAgent extends AcpChannel {
               'result': {'stopReason': 'end_turn'},
             });
         });
+    }
+  }
+
+  Future<void> _callMoruTool(Map<String, Object?> prompt, Map params) async {
+    final opening = sent.singleWhere(
+      (message) => message['method'] == 'session/new',
+    );
+    final config =
+        (((opening['params'] as Map)['mcpServers'] as List).single as Map);
+    final session = params['sessionId'];
+    _incoming.add({
+      'method': 'session/update',
+      'params': {
+        'sessionId': session,
+        'update': {
+          'sessionUpdate': 'tool_call',
+          'toolCallId': 'mcp-call',
+          'status': 'in_progress',
+          'title': toolStyle == 'title'
+              ? 'mcp__moru__browser_use'
+              : 'Safe title',
+          if (toolStyle == 'name') 'name': 'mcp__moru__browser_use',
+          if (toolStyle == 'meta')
+            '_meta': {
+              'claudeCode': {'toolName': 'mcp__moru__browser_use'},
+            },
+          'rawInput': toolStyle == 'wrapped'
+              ? {
+                  'server': 'moru',
+                  'tool': 'browser_use',
+                  'arguments': toolArguments,
+                }
+              : toolArguments,
+        },
+      },
+    });
+    final client = HttpClient();
+    try {
+      final request = await client.postUrl(Uri.parse(config['url'] as String));
+      request.headers.set(
+        'Authorization',
+        ((config['headers'] as List).single as Map)['value'],
+      );
+      request.write(
+        jsonEncode({
+          'jsonrpc': '2.0',
+          'id': 1,
+          'method': 'tools/call',
+          'params': {'name': 'browser_use', 'arguments': toolArguments},
+        }),
+      );
+      final response = await request.close();
+      final decoded =
+          jsonDecode(await utf8.decoder.bind(response).join()) as Map;
+      toolResult = decoded['result'] as Map;
+      if (_closed.isCompleted) return;
+      _incoming
+        ..add({
+          'method': 'session/update',
+          'params': {
+            'sessionId': session,
+            'update': {
+              'sessionUpdate': 'tool_call_update',
+              'toolCallId': 'mcp-call',
+              'status': 'completed',
+              'rawOutput': 'safe output',
+            },
+          },
+        })
+        ..add({
+          'id': prompt['id'],
+          'result': {'stopReason': 'end_turn'},
+        });
+    } finally {
+      client.close(force: true);
     }
   }
 
@@ -239,6 +325,73 @@ void main() {
     final chunks = await sessions.send(turn).toList();
     expect(chunks.last, isA<Finish>());
     return chunks.whereType<TextDelta>().map((c) => c.text).join();
+  }
+
+  for (final style in ['title', 'name', 'meta', 'wrapped']) {
+    test(
+      'private $style MCP correlation matches original HTTP args while ACP display is redacted',
+      () async {
+        const key = 'fake-api-key-sentinel';
+        const args = {'text': key, 'ordinary': 'text'};
+        const provider = AcpProviderInput(
+          baseUrl: 'https://example.invalid',
+          apiKey: key,
+          model: 'test',
+          headers: {'X-Short': 'text', 'X-Title': 'mcp__moru__browser_use'},
+        );
+        final channel = _ScriptedAgent(
+          mcpHttp: true,
+          toolArguments: args,
+          toolStyle: style,
+        );
+        final sessions = AcpChatSessions(
+          start: (_, provider, {required cwd, required mounts}) =>
+              AcpAgent.start(
+                channel,
+                clientVersion: 'test',
+                redactor: AcpSecretRedactor([
+                  provider.apiKey,
+                  ...provider.headers.values,
+                ]),
+              ),
+        );
+        addTearDown(sessions.closeAll);
+        final calls = <String>[];
+        final tools = AcpMcpTools(
+          key: 'test',
+          definitions: () => [
+            {
+              'name': 'browser_use',
+              'inputSchema': {'type': 'object'},
+            },
+          ],
+          execute: (name, actual, {required toolCallId}) async {
+            expect(name, 'browser_use');
+            expect(actual, args);
+            final display = ToolDisplayRedaction.current;
+            expect(display, isNotNull);
+            expect(display!.text(key), isNot(contains(key)));
+            expect(display.text('text'), isNot(contains('text')));
+            calls.add(toolCallId);
+            return {
+              'content': [
+                {'type': 'text', 'text': 'safe output'},
+              ],
+            };
+          },
+        );
+        final chunks = await sessions
+            .send(turn('hello', using: provider, moruTools: tools))
+            .toList()
+            .timeout(const Duration(seconds: 2));
+        expect(calls, ['acp-tool-mcp-call']);
+        expect(channel.toolResult!['isError'], isNot(true));
+        final card = chunks.whereType<ServerToolStart>().first;
+        expect(card.toolName, isNot(contains('mcp__moru__browser_use')));
+        expect(card.input.toString(), isNot(contains(key)));
+        expect(card.input.toString(), isNot(contains('text')));
+      },
+    );
   }
 
   for (final http in [true, false]) {

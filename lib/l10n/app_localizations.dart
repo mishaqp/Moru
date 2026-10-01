@@ -21587,6 +21587,12 @@ abstract class AppLocalizations {
   /// **'No network connection. Check your connection and try again.'**
   String get agentsErrorNetwork;
 
+  /// No description provided for @agentsErrorHeaders.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider headers contain an invalid name or a line break. Check the provider header settings.'**
+  String get agentsErrorHeaders;
+
   /// No description provided for @agentsDescKimiCode.
   ///
   /// In en, this message translates to:

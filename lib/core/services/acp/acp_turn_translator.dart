@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../api/stream/stream_chunk.dart';
+import 'acp_secret_redactor.dart';
 import '../workspace/task_plan.dart';
 import '../workspace/unified_diff.dart';
 import '../workspace/workspace_tool_metadata.dart';
@@ -14,7 +15,13 @@ import '../workspace/workspace_tool_metadata.dart';
 /// finishes. File reads, edits and commands use the workspace tool names,
 /// which gives them the same cards as Moru's own workspace tools.
 class AcpTurnTranslator {
-  AcpTurnTranslator({this.onPlan});
+  AcpTurnTranslator({this.onPlan, this.redactor})
+    : _message = redactor?.textBuffer(),
+      _thought = redactor?.textBuffer();
+
+  final AcpSecretRedactor? redactor;
+  final AcpSecretTextBuffer? _message;
+  final AcpSecretTextBuffer? _thought;
 
   /// The chat's id for the card of the agent's tool call [toolCallId].
   static String cardId(String toolCallId) => 'acp-tool-$toolCallId';
@@ -25,6 +32,8 @@ class AcpTurnTranslator {
   int _seq = 0;
   String? _textId;
   String? _reasoningId;
+  final Set<String> _deferredTextEnds = {};
+  final Set<String> _deferredThoughtEnds = {};
   final Map<String, _AcpTool> _tools = {};
 
   /// What the agent said this turn, for a notification or a title.
@@ -54,7 +63,11 @@ class AcpTurnTranslator {
   /// Closes what is still open; tools that never finished end as cancelled
   /// when the turn was stopped, failed otherwise.
   List<StreamChunk> finish(String? stopReason) {
-    final chunks = <StreamChunk>[..._closeText(), ..._closeReasoning()];
+    final chunks = <StreamChunk>[
+      ...flushText(),
+      ..._closeText(),
+      ..._closeReasoning(),
+    ];
     for (final tool in _tools.values) {
       if (tool.reported) continue;
       tool.status = stopReason == 'cancelled' ? 'cancelled' : 'failed';
@@ -90,7 +103,66 @@ class AcpTurnTranslator {
         ImageEnd(id),
       ];
     }
-    final value = _contentText(content);
+    final raw = _contentText(content);
+    final buffer = reasoning ? _thought : _message;
+    if (buffer == null) return _text(raw, reasoning: reasoning);
+    if (raw.isEmpty) return const [];
+    final chunks = <StreamChunk>[
+      ...(reasoning ? _closeText() : _closeReasoning()),
+    ];
+    final id = reasoning
+        ? (_reasoningId ??= 'acp-reasoning-${_seq++}')
+        : (_textId ??= 'acp-text-${_seq++}');
+    if (_started.add(id)) {
+      chunks.add(reasoning ? ReasoningStart(id: id) : TextStart(id));
+    }
+    chunks.addAll(_emit(buffer.add(raw, id: id), reasoning: reasoning));
+    chunks.addAll(_endResolved(buffer, reasoning: reasoning));
+    return chunks;
+  }
+
+  List<StreamChunk> flushText() => [
+    if (_message case final message?) ...[
+      ..._emit(message.finish(), reasoning: false),
+      ..._endResolved(message, reasoning: false),
+    ],
+    if (_thought case final thought?) ...[
+      ..._emit(thought.finish(), reasoning: true),
+      ..._endResolved(thought, reasoning: true),
+    ],
+  ];
+
+  List<StreamChunk> _emit(
+    List<({String id, String text})> parts, {
+    required bool reasoning,
+  }) => [
+    for (final part in parts)
+      if (part.text.isNotEmpty)
+        if (reasoning)
+          ReasoningDelta(id: part.id, text: part.text)
+        else
+          _messageDelta(part.id, part.text),
+  ];
+
+  TextDelta _messageDelta(String id, String value) {
+    text.write(value);
+    return TextDelta(id: id, text: value);
+  }
+
+  List<StreamChunk> _endResolved(
+    AcpSecretTextBuffer buffer, {
+    required bool reasoning,
+  }) {
+    final deferred = reasoning ? _deferredThoughtEnds : _deferredTextEnds;
+    final pending = buffer.pendingIds;
+    final resolved = deferred.where((id) => !pending.contains(id)).toList();
+    deferred.removeAll(resolved);
+    return [
+      for (final id in resolved) reasoning ? ReasoningEnd(id: id) : TextEnd(id),
+    ];
+  }
+
+  List<StreamChunk> _text(String value, {required bool reasoning}) {
     if (value.isEmpty) return const [];
     if (reasoning) {
       final chunks = <StreamChunk>[..._closeText()];
@@ -134,6 +206,10 @@ class AcpTurnTranslator {
     final id = _textId;
     if (id == null) return const [];
     _textId = null;
+    if (_message?.pendingIds.contains(id) == true) {
+      _deferredTextEnds.add(id);
+      return [];
+    }
     return [TextEnd(id)];
   }
 
@@ -141,6 +217,10 @@ class AcpTurnTranslator {
     final id = _reasoningId;
     if (id == null) return const [];
     _reasoningId = null;
+    if (_thought?.pendingIds.contains(id) == true) {
+      _deferredThoughtEnds.add(id);
+      return [];
+    }
     return [ReasoningEnd(id: id)];
   }
 
@@ -155,7 +235,7 @@ class AcpTurnTranslator {
       chunks
         ..addAll(_closeText())
         ..addAll(_closeReasoning());
-      tool = _tools[id] = _AcpTool(cardId(id));
+      tool = _tools[id] = _AcpTool(cardId(id), redactor);
       tool.merge(update);
       tool.announcedName = tool.name;
       chunks.add(
@@ -213,7 +293,9 @@ class AcpTurnTranslator {
 
 /// One tool call as the agent has described it so far.
 class _AcpTool {
-  _AcpTool(this.chunkId);
+  _AcpTool(this.chunkId, this.redactor);
+
+  final AcpSecretRedactor? redactor;
 
   final String chunkId;
   String title = '';
@@ -260,11 +342,14 @@ class _AcpTool {
       (locations.isEmpty ? null : locations.first) ??
       _inputString(const ['path', 'file_path', 'filePath', 'abs_path']);
 
-  String? get command =>
-      _inputString(const ['command', 'cmd']) ??
-      (rawInput is Map && (rawInput as Map)['command'] is List
-          ? ((rawInput as Map)['command'] as List).join(' ')
-          : null);
+  String? get command {
+    final assembled =
+        _inputString(const ['command', 'cmd']) ??
+        (rawInput is Map && (rawInput as Map)['command'] is List
+            ? ((rawInput as Map)['command'] as List).join(' ')
+            : null);
+    return assembled == null ? null : redactor?.text(assembled) ?? assembled;
+  }
 
   String? _inputString(List<String> keys) {
     final input = rawInput;
@@ -326,7 +411,8 @@ class _AcpTool {
       parts.add(raw is String ? raw : jsonEncode(raw));
     }
     if (parts.isEmpty) parts.add(status);
-    return parts.join('\n');
+    final text = parts.join('\n');
+    return redactor?.text(text) ?? text;
   }
 
   static UnifiedDiff? _unifiedDiff(Map item) {
@@ -378,7 +464,7 @@ class _AcpTool {
                   : WorkspaceFileRole.modified,
             ),
           ],
-          diff: diff?.text,
+          diff: diff == null ? null : redactor?.text(diff.text) ?? diff.text,
           added: diff?.added,
           removed: diff?.removed,
           diffTruncated: diff?.truncated,

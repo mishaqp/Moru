@@ -8,6 +8,8 @@ import 'package:mcp_client/mcp_client.dart' as mcp;
 import 'package:Kelivo/core/services/acp/acp_agent.dart';
 import 'package:Kelivo/core/services/acp/acp_mcp_binding.dart';
 import 'package:Kelivo/core/services/acp/acp_mcp_stdio_bridge.dart';
+import 'package:Kelivo/core/services/acp/acp_secret_redactor.dart';
+import 'package:Kelivo/core/services/api/tool_display_redaction.dart';
 
 AcpMcpTools source({
   required Future<Map<String, Object?>> Function(
@@ -30,6 +32,48 @@ AcpMcpTools source({
 );
 
 void main() {
+  test(
+    'concurrent MCP launches keep display filters scoped to their own call',
+    () async {
+      final gates = [Completer<void>(), Completer<void>()];
+      final tools = [
+        for (var index = 0; index < 2; index++)
+          source(
+            execute: (name, args, {required toolCallId}) async {
+              gates[index].complete();
+              await gates[1 - index].future;
+              return {
+                'display': ToolDisplayRedaction.current!.text('first second'),
+              };
+            },
+          ),
+      ];
+      final bindings = [
+        for (var index = 0; index < 2; index++)
+          await AcpMcpBinding.start(
+            tools[index],
+            redactor: AcpSecretRedactor([index == 0 ? 'first' : 'second']),
+          ),
+      ];
+      for (var index = 0; index < 2; index++) {
+        addTearDown(bindings[index].close);
+        bindings[index].beginTurn(tools[index]);
+        bindings[index].observe({
+          'toolCallId': 'call',
+          'title': 'moru_browser_use',
+          'rawInput': {'action': 'observe'},
+        });
+      }
+      final results = await Future.wait([
+        for (final binding in bindings)
+          binding.callTool('browser_use', {'action': 'observe'}),
+      ]).timeout(const Duration(seconds: 2));
+      expect(results[0]['display'], '[REDACTED] second');
+      expect(results[1]['display'], 'first [REDACTED]');
+      expect(ToolDisplayRedaction.current, isNull);
+    },
+  );
+
   test(
     'HTTP capability selects HTTP, otherwise secrets go only into stdio env',
     () async {

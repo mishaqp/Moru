@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 
 import '../../../core/services/browser/browser_agent_session.dart';
+import '../../../core/services/api/tool_display_redaction.dart';
 import '../../../core/services/browser/browser_handoffs.dart';
 import '../../../core/services/browser/browser_guard.dart';
 import '../../../core/services/browser/browser_research.dart';
@@ -48,7 +49,11 @@ class BrowserAgentTool {
     final activityId = BrowserAgentActions.isKnown(action)
         ? session.recordActivity(
             action: action,
-            detail: _activityDetail(action, args),
+            detail: switch (_activityDetail(action, args)) {
+              final String detail =>
+                ToolDisplayRedaction.current?.text(detail) ?? detail,
+              _ => null,
+            },
           )
         : null;
     session.beginAction();

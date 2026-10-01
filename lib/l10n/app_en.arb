@@ -5447,6 +5447,7 @@
   "agentsErrorApiKey": "Invalid API key for the provider.",
   "agentsErrorModel": "Model not found. Check the provider model settings.",
   "agentsErrorNetwork": "No network connection. Check your connection and try again.",
+  "agentsErrorHeaders": "Provider headers contain an invalid name or a line break. Check the provider header settings.",
   "agentsDescKimiCode": "Moonshot’s coding agent: edits files and runs commands.",
   "agentsDescDeepSeekHarness": "DeepSeek’s coding agent: works on files and commands in a workspace.",
   "agentsApiCompatible": "Uses the Moru provider with Anthropic, Chat Completions or Responses API.",
