@@ -29,7 +29,7 @@ in `AGENTS.md`.
   Termux keeps only one proot build in its pool, so the pinned version and the
   proot checksums (`libproot_exec.so`, `libproot_loader.so`) are bumped together
   when the old build disappears
-  (last bump: 5.1.107.95, v0.1.29).
+  (last bump: 5.1.107.96, v0.1.47).
 - Verify actual ZIP library paths **and ELF architecture**, not the APK filename.
 - Keep the existing full Dart analyzer/Flutter test PR gates and add Android JVM
   tests plus an actual arm64 build.
