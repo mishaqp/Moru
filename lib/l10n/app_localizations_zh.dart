@@ -11563,6 +11563,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentsErrorNetwork => '无法连接网络。请检查网络连接后重试。';
 
   @override
+  String get agentsErrorHeaders => '提供商请求头包含无效名称或换行符。请检查提供商的请求头设置。';
+
+  @override
   String get agentsDescKimiCode => 'Moonshot 编程代理：编辑文件并运行命令。';
 
   @override

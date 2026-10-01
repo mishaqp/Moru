@@ -3,8 +3,7 @@ import 'dart:io';
 import '../../../l10n/app_localizations.dart';
 import 'acp_agent.dart';
 
-/// Common provider failures reported as JSON-RPC errors or process stderr.
-enum AcpFailureKind { apiKey, model, network }
+export 'acp_connection.dart' show AcpFailureKind;
 
 /// The agent's command is not in the Linux environment: the shell's
 /// "command not found" status, e.g. after switching to a fresh distribution.
@@ -14,6 +13,7 @@ bool isAcpCommandMissing(Object error) {
 }
 
 AcpFailureKind? classifyAcpFailure(Object error) {
+  if (error is AcpError && error.failureKind != null) return error.failureKind;
   if (error is SocketException) return AcpFailureKind.network;
   if (error is AcpError && error.code == 401) {
     return AcpFailureKind.apiKey;
@@ -22,6 +22,7 @@ AcpFailureKind? classifyAcpFailure(Object error) {
       ? '${error.message}\n${error.data ?? ''}'
       : error.toString();
   final text = raw.toLowerCase().replaceAll(RegExp(r'[_-]'), ' ');
+  if (text.contains('invalid provider headers')) return AcpFailureKind.headers;
   if (RegExp(
     r'\b401\b|(?:invalid|incorrect) api\s*key|api\s*key.{0,40}(?:invalid|incorrect)',
   ).hasMatch(text)) {
@@ -46,6 +47,7 @@ String? acpFailureMessage(AcpFailureKind? kind, AppLocalizations l10n) =>
       AcpFailureKind.apiKey => l10n.agentsErrorApiKey,
       AcpFailureKind.model => l10n.agentsErrorModel,
       AcpFailureKind.network => l10n.agentsErrorNetwork,
+      AcpFailureKind.headers => l10n.agentsErrorHeaders,
       null => null,
     };
 
@@ -58,5 +60,6 @@ Object localizeAcpError(Object error, AppLocalizations l10n) {
     error is AcpError ? error.code : AcpError.internalError,
     message,
     error is AcpError ? error.data : null,
+    classifyAcpFailure(error),
   );
 }

@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
+import '../../../core/services/api/tool_display_redaction.dart';
+import 'browser_agent_actions.dart';
+
 /// Result of a tool approval request.
 class ToolApprovalResult {
   final bool approved;
@@ -137,10 +140,30 @@ class ToolApprovalService extends ChangeNotifier {
       return existing.future;
     }
     final completer = Completer<ToolApprovalResult>();
+    final display = ToolDisplayRedaction.current;
+    final displayArguments = display == null
+        ? arguments
+        : Map<String, dynamic>.from(display.value(arguments) as Map);
+    if (display != null && toolName == 'browser_use') {
+      // These keys and a recognized action route the browser approval card.
+      // Their payload values remain display copies, never execution inputs.
+      for (final field in ['code', 'element_id']) {
+        if (arguments.containsKey(field)) {
+          displayArguments[field] = display.value(arguments[field]);
+        }
+      }
+      final action = (arguments['action'] ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
+      displayArguments['action'] = BrowserAgentActions.isKnown(action)
+          ? action
+          : display.text(action);
+    }
     _pending[key] = ToolApprovalRequest(
       toolCallId: toolCallId,
       toolName: toolName,
-      arguments: arguments,
+      arguments: displayArguments,
       conversationId: _storedConversationId(conversationId),
       completer: completer,
     );

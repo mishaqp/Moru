@@ -266,7 +266,7 @@ grep -qx "$p" "$DIR/installed" && echo "install ok installed"''',
   ]) {
     test('DeepSeek Harness forwards custom headers for ${fixture.api}', () {
       const headers = {
-        'X-Gateway-Route': 'moru',
+        'X-Gateway-Route': 'gateway-header-sentinel',
         'X-Tenant': r'team "quoted"\route',
       };
       final input = AcpProviderInput(
@@ -282,7 +282,14 @@ grep -qx "$p" "$DIR/installed" && echo "install ok installed"''',
       final patch = jsonDecode(content) as List;
       final provider = (patch[0] as Map)['config']['providers']['moru'] as Map;
       expect(provider['api'], fixture.api);
-      expect(provider['headers'], headers);
+      expect(provider['headers'], {
+        for (final (index, entry) in headers.entries.indexed)
+          entry.key: {'__jsExpr': 'process.env.MORU_AGENT_HEADER_$index'},
+      });
+      for (final (index, entry) in headers.entries.indexed) {
+        expect(launch.environment['MORU_AGENT_HEADER_$index'], entry.value);
+        expect(content, isNot(contains(jsonEncode(entry.value))));
+      }
       expect(provider['apiKeyEnv'], 'MORU_AGENT_API_KEY');
       expect(launch.environment['MORU_AGENT_API_KEY'], input.apiKey);
       expect(content, isNot(contains(input.apiKey)));
@@ -407,7 +414,7 @@ grep -qx "$p" "$DIR/installed" && echo "install ok installed"''',
   );
 
   test(
-    'Kimi keeps a configured context limit and safely quotes custom headers',
+    'Kimi keeps its context limit and passes quoted headers only in env',
     () {
       final launch = AcpAgentSpec.byId('kimi-code')!.launch(
         const AcpProviderInput(
@@ -415,13 +422,17 @@ grep -qx "$p" "$DIR/installed" && echo "install ok installed"''',
           apiKey: 'secret-never-written',
           model: 'm',
           contextWindow: 65536,
-          headers: {'X-Team."quoted"': 'first\nnext\\value'},
+          headers: {'X-Team': r'first "quoted"\next\value'},
         ),
       );
       final config = launch.files.single.content;
       expect(config, contains('max_context_size = 65536'));
-      expect(config, contains('[providers.moru.custom_headers]'));
-      expect(config, contains(r'"X-Team.\"quoted\"" = "first\nnext\\value"'));
+      expect(config, isNot(contains('[providers.moru.custom_headers]')));
+      expect(
+        launch.environment['KIMI_CODE_CUSTOM_HEADERS'],
+        r'X-Team: first "quoted"\next\value',
+      );
+      expect(config, isNot(contains('quoted')));
       expect(config, isNot(contains('secret-never-written')));
     },
   );
@@ -615,7 +626,10 @@ grep -qx "$p" "$DIR/installed" && echo "install ok installed"''',
       ),
     );
     expect(responses, contains('wire_api = "responses"'));
-    expect(responses, contains('"OpenAI-Organization" = "org"'));
+    expect(
+      responses,
+      contains('"OpenAI-Organization" = "MORU_AGENT_HEADER_0"'),
+    );
   });
 
   test('OpenCode reads a Moru provider from its own config file', () {
@@ -628,7 +642,7 @@ grep -qx "$p" "$DIR/installed" && echo "install ok installed"''',
     final provider = config['provider']['moru'] as Map;
     expect(provider['npm'], '@ai-sdk/openai-compatible');
     expect(provider['options']['baseURL'], 'https://api.deepseek.com/v1');
-    expect(provider['options']['apiKey'], '{env:MORU_AGENT_API_KEY}');
+    expect(provider['options']['apiKey'], '{env:MORU_OPENCODE_API_KEY_JSON}');
     expect((provider['models'] as Map).keys, ['deepseek-chat']);
     expect(launch.files.single.content, isNot(contains('sk-ds')));
   });

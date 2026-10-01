@@ -5245,6 +5245,7 @@
   "agentsErrorApiKey": "Неверный API-ключ у провайдера.",
   "agentsErrorModel": "Модель не найдена. Проверьте модель в настройках провайдера.",
   "agentsErrorNetwork": "Нет сети. Проверьте подключение и попробуйте снова.",
+  "agentsErrorHeaders": "В заголовках провайдера есть недопустимое имя или перенос строки. Проверьте настройки заголовков провайдера.",
   "agentsDescKimiCode": "Агент Moonshot: правит файлы и запускает команды.",
   "agentsDescDeepSeekHarness": "Агент DeepSeek: работает с файлами и командами в рабочей папке.",
   "agentsApiCompatible": "Использует провайдера Moru через Anthropic, Chat Completions или Responses API.",

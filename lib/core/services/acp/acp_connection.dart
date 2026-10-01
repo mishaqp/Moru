@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'acp_secret_redactor.dart';
+import 'acp_tool_correlation.dart';
+
 /// The line-delimited JSON pipe to an agent process. The workspace STDIO
 /// transport is one; tests use an in-memory pair.
 abstract class AcpChannel {
@@ -17,13 +20,17 @@ abstract class AcpChannel {
   String describeError(Object error) => error.toString();
 }
 
+/// A safe category retained when redaction removes a recognized phrase.
+enum AcpFailureKind { apiKey, model, network, headers }
+
 /// A JSON-RPC error from the agent, or the pipe breaking under a request.
 class AcpError implements Exception {
-  const AcpError(this.code, this.message, [this.data]);
+  const AcpError(this.code, this.message, [this.data, this.failureKind]);
 
   final int code;
   final String message;
   final Object? data;
+  final AcpFailureKind? failureKind;
 
   /// ACP's "authentication required": the agent needs a login or a key.
   static const int authRequired = -32000;
@@ -54,6 +61,8 @@ class AcpConnection {
     this._channel, {
     required this.onRequest,
     required this.onNotification,
+    this.redactor,
+    this.onToolCorrelation,
   }) {
     _subscription = _channel.messages.listen(
       _receive,
@@ -64,6 +73,9 @@ class AcpConnection {
   }
 
   final AcpChannel _channel;
+  final AcpSecretRedactor? redactor;
+  final void Function(String sessionId, AcpToolCorrelation correlation)?
+  onToolCorrelation;
   final AcpRequestHandler onRequest;
   final AcpNotificationHandler onNotification;
   late final StreamSubscription<dynamic> _subscription;
@@ -105,7 +117,16 @@ class AcpConnection {
     Map<String, Object?> params = const {},
   ]) async {
     if (_failure != null) return;
-    await _channel.send({'jsonrpc': '2.0', 'method': method, 'params': params});
+    try {
+      await _channel.send({
+        'jsonrpc': '2.0',
+        'method': method,
+        'params': params,
+      });
+    } catch (error) {
+      _fail(error);
+      throw _failure!;
+    }
   }
 
   void close() {
@@ -119,8 +140,11 @@ class AcpConnection {
     final method = map['method'];
     final id = map['id'];
     if (method is String) {
+      _correlate(method, map['params']);
       final params = map['params'] is Map
-          ? Map<String, Object?>.from(map['params'] as Map)
+          ? Map<String, Object?>.from(
+              redactor?.protocol(map['params']) as Map? ?? map['params'] as Map,
+            )
           : <String, Object?>{};
       if (id == null) {
         onNotification(method, params);
@@ -134,19 +158,41 @@ class AcpConnection {
     if (completer == null) return;
     final error = map['error'];
     if (error is Map) {
-      completer.completeError(
-        AcpError(
-          (error['code'] as num?)?.toInt() ?? AcpError.internalError,
-          (error['message'] ?? 'agent error').toString(),
-          error['data'],
-        ),
+      final failure = AcpError(
+        (error['code'] as num?)?.toInt() ?? AcpError.internalError,
+        (error['message'] ?? 'agent error').toString(),
+        error['data'],
       );
+      completer.completeError(redactor?.error(failure) ?? failure);
       return;
     }
     final result = map['result'];
     completer.complete(
-      result is Map ? Map<String, Object?>.from(result) : <String, Object?>{},
+      result is Map
+          ? Map<String, Object?>.from(
+              redactor?.protocol(result) as Map? ?? result,
+            )
+          : <String, Object?>{},
     );
+  }
+
+  void _correlate(String method, Object? params) {
+    if (onToolCorrelation == null || params is! Map) return;
+    final sessionId = params['sessionId'];
+    if (sessionId is! String) return;
+    final update = switch (method) {
+      'session/update' => params['update'],
+      'session/request_permission' => params['toolCall'],
+      _ => null,
+    };
+    if (update is! Map) return;
+    if (method == 'session/update' &&
+        update['sessionUpdate'] != 'tool_call' &&
+        update['sessionUpdate'] != 'tool_call_update') {
+      return;
+    }
+    final correlation = AcpToolCorrelation.fromUpdate(update);
+    if (correlation != null) onToolCorrelation!(sessionId, correlation);
   }
 
   Future<void> _answer(
@@ -184,6 +230,7 @@ class AcpConnection {
     _failure = error is AcpError
         ? error
         : AcpError(AcpError.disconnected, _channel.describeError(error));
+    if (redactor != null) _failure = redactor!.error(_failure!);
     final pending = _pending.values.toList();
     _pending.clear();
     for (final completer in pending) {

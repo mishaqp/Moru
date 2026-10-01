@@ -12096,6 +12096,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'No network connection. Check your connection and try again.';
 
   @override
+  String get agentsErrorHeaders =>
+      'Provider headers contain an invalid name or a line break. Check the provider header settings.';
+
+  @override
   String get agentsDescKimiCode =>
       'Moonshot’s coding agent: edits files and runs commands.';
 

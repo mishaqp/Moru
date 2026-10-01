@@ -53,6 +53,7 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
   final Duration startTimeout;
   final Map<String, _WebRun> _runs = {};
   final Map<String, AcpWebFailure> _failures = {};
+  final Set<_WebRun> _closingRuns = {};
   bool _disposed = false;
 
   bool running(String id) => _runs[id]?.ready == true;
@@ -66,6 +67,7 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
     List<Mount> mounts = const [],
     required Future<void> Function(AcpWebTarget target) openBrowser,
   }) async {
+    if (_disposed) throw const AcpWebException(AcpWebFailure.stopped);
     var run = _runs[spec.id];
     while (run != null && !run.matches(provider, cwd, mounts)) {
       await _stopRun(spec.id, run);
@@ -74,6 +76,8 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
     if (run == null) {
       run = _WebRun(provider, cwd, mounts);
       _runs[spec.id] = run;
+      run.specId = spec.id;
+      _closingRuns.add(run);
       _failures.remove(spec.id);
       _changed();
       run.started = _start(spec, provider, cwd, mounts, run);
@@ -108,7 +112,13 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
         port,
         '$acpConfigDir/web-${spec.id}',
       );
-      if (run.stopped) return;
+      // Take ownership even if Stop happened while preparation was awaiting IO.
+      run.cleanup = launch.cleanup;
+      run.prepared = true;
+      if (run.stopped) {
+        await _cleanupRun(run);
+        return;
+      }
       // Preparation includes user variables. Always replace even an explicitly
       // configured password, once per actual Web process, after that merge.
       final environment = Map<String, String>.of(launch.environment);
@@ -242,8 +252,33 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
       await _stopRun(spec.id, run);
     } finally {
       timer?.cancel();
+      // A failed/cancelled preparation has no process. Manager preparation owns
+      // cleanup on failure; a late successful preparation transfers it above.
+      run.prepared = true;
+      if (run.stopped) {
+        await run.stopping;
+        await _cleanupRun(run);
+      }
     }
   }
+
+  Future<void> _cleanupRun(_WebRun run) async {
+    await (run.cleaning ??= () async {
+      try {
+        await run.cleanup?.call();
+      } catch (_) {
+        // Guest cleanup diagnostics can contain secrets; keep them private.
+      } finally {
+        _closingRuns.remove(run);
+        run.cleanupDone.complete();
+      }
+    }());
+  }
+
+  Future<void> waitForCleanup(String id) => Future.wait([
+    for (final run in _closingRuns.toList())
+      if (run.specId == id) run.cleanupDone.future,
+  ]);
 
   void _exited(String id, _WebRun run) {
     if (run.stopped || _runs[id] != run) return;
@@ -251,13 +286,7 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
     if (!run.address.isCompleted) {
       run.address.completeError(const AcpWebException(AcpWebFailure.exited));
     }
-    _runs.remove(id);
-    run.ready = false;
-    run.stopped = true;
-    run.authentication?.dispose();
-    run.authentication = null;
-    unawaited(run.events?.cancel());
-    _changed();
+    unawaited(_stopRun(id, run));
   }
 
   Future<void> stop(String id) async {
@@ -265,9 +294,10 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
     if (run != null) await _stopRun(id, run);
   }
 
-  Future<void> _stopRun(String id, _WebRun run) async {
-    if (run.stopped) return;
+  Future<void> _stopRun(String id, _WebRun run) {
+    if (run.stopped) return run.stopping ?? Future<void>.value();
     run.stopped = true;
+    run.ready = false;
     run.authentication?.dispose();
     run.authentication = null;
     if (!run.address.isCompleted) {
@@ -275,11 +305,18 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
     }
     if (_runs[id] == run) _runs.remove(id);
     _changed();
-    try {
-      await run.runtime?.cancel(run.runId);
-    } finally {
-      await run.events?.cancel();
-    }
+    return run.stopping = () async {
+      try {
+        await run.runtime?.cancel(run.runId);
+      } catch (_) {
+        // Stop still owns cleanup when the guest cancel operation fails.
+      } finally {
+        try {
+          await run.events?.cancel();
+        } catch (_) {}
+        if (run.prepared) await _cleanupRun(run);
+      }
+    }();
   }
 
   Future<void> stopAll() async {
@@ -297,6 +334,7 @@ class AcpAgentWebServers extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    if (_disposed) return;
     _disposed = true;
     WidgetsBinding.instance.removeObserver(this);
     unawaited(stopAll());
@@ -342,4 +380,10 @@ class _WebRun {
   StreamSubscription<CommandEvent>? events;
   bool ready = false;
   bool stopped = false;
+  bool prepared = false;
+  String? specId;
+  Future<void> Function()? cleanup;
+  Future<void>? cleaning;
+  Future<void>? stopping;
+  final cleanupDone = Completer<void>();
 }

@@ -102,24 +102,70 @@ void main() {
     }
   });
 
-  test('raw plain and encoded traversal or separators are forbidden', () async {
+  test('raw token escapes and encoded separators are forbidden', () async {
     final uri = await startPreviewFileBrowserServer(
       File('${root.path}/index.html'),
     );
     final token = uri.pathSegments.first;
     for (final path in [
       '/$token/../index.html',
-      '/$token/sub/../style.css',
       '/$token/%2e%2e/index.html',
-      '/$token/sub/%2E%2E/style.css',
       '/$token/%252e%252e/index.html',
       '/$token/images%2fpixel.png',
       '/$token/images%5cpixel.png',
-      '/$token/images\\pixel.png',
     ]) {
       final response = await _rawGet(uri, path);
       expect(response, startsWith('HTTP/1.1 403'), reason: path);
     }
+  });
+
+  test('normalization within the token serves exact page resources', () async {
+    final uri = await startPreviewFileBrowserServer(
+      File('${root.path}/index.html'),
+    );
+    final token = uri.pathSegments.first;
+    for (final path in [
+      '/$token/sub/../style.css',
+      '/$token/sub/%2E%2E/style.css',
+      '/$token/images\\pixel.png',
+    ]) {
+      final response = await _rawGet(uri, path);
+      expect(response, startsWith('HTTP/1.1 200'), reason: path);
+      final expected = path.endsWith('style.css')
+          ? File('${root.path}/style.css').readAsStringSync()
+          : latin1.decode(
+              File('${root.path}/images/pixel.png').readAsBytesSync(),
+            );
+      expect(response.split('\r\n\r\n').last, expected, reason: path);
+    }
+  });
+
+  test('normalized token escapes and alien Hosts are forbidden', () async {
+    final uri = await startPreviewFileBrowserServer(
+      File('${root.path}/index.html'),
+    );
+    final token = uri.pathSegments.first;
+    for (final path in [
+      '/$token/../$token/../index.html',
+      '/$token/%2e%2e/index.html?token=$token',
+      '/$token/../../$token-foreign/style.css',
+    ]) {
+      final response = await _rawGet(uri, path);
+      expect(response, startsWith('HTTP/1.1 403'), reason: path);
+    }
+    for (final host in ['attacker.example', 'localhost:${uri.port}']) {
+      final response = await _rawGet(uri, uri.path, host: host);
+      expect(response, startsWith('HTTP/1.1 403'), reason: host);
+    }
+  });
+
+  test('methods other than GET and HEAD are refused', () async {
+    final uri = await startPreviewFileBrowserServer(
+      File('${root.path}/index.html'),
+    );
+    final response = await (await client.postUrl(uri)).close();
+    expect(response.statusCode, HttpStatus.methodNotAllowed);
+    await response.drain<void>();
   });
 
   test(
@@ -188,7 +234,7 @@ void main() {
     },
   );
 
-  test('pipelined second requests cannot bypass the raw-line gate', () async {
+  test('each response closes before a pipelined second request', () async {
     final uri = await startPreviewFileBrowserServer(
       File('${root.path}/index.html'),
     );
@@ -210,7 +256,7 @@ void main() {
   });
 
   test(
-    'oversized first lines are refused and fragmented valid lines work',
+    'oversized resource paths are refused and fragmented valid lines work',
     () async {
       final uri = await startPreviewFileBrowserServer(
         File('${root.path}/index.html'),
@@ -283,14 +329,14 @@ void main() {
   });
 }
 
-Future<String> _rawGet(Uri origin, String path) async {
+Future<String> _rawGet(Uri origin, String path, {String? host}) async {
   final socket = await Socket.connect(origin.host, origin.port);
   socket.write(
-    'GET $path HTTP/1.1\r\nHost: ${origin.host}:${origin.port}\r\nConnection: close\r\n\r\n',
+    'GET $path HTTP/1.1\r\nHost: ${host ?? '${origin.host}:${origin.port}'}\r\nConnection: close\r\n\r\n',
   );
   await socket.flush();
   try {
-    return await socket.cast<List<int>>().transform(utf8.decoder).join();
+    return await socket.cast<List<int>>().transform(latin1.decoder).join();
   } finally {
     socket.destroy();
   }

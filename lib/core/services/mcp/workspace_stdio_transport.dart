@@ -142,6 +142,9 @@ class WorkspaceStdioTransport implements ClientTransport {
       return transport;
     } catch (_) {
       transport.close();
+      // Failed startup still owns a native process until cancellation finishes.
+      // Callers must be able to release process settings after this returns.
+      await transport.onClose;
       rethrow;
     }
   }

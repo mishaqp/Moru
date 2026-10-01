@@ -4,9 +4,11 @@ import '../../models/token_usage.dart';
 import '../api/stream/stream_chunk.dart';
 import '../workspace/task_plan.dart';
 import 'acp_connection.dart';
+import 'acp_secret_redactor.dart';
+import 'acp_tool_correlation.dart';
 import 'acp_turn_translator.dart';
 
-export 'acp_connection.dart' show AcpChannel, AcpError;
+export 'acp_connection.dart' show AcpChannel, AcpError, AcpFailureKind;
 
 /// ACP protocol version Moru speaks.
 const int acpProtocolVersion = 1;
@@ -158,11 +160,18 @@ typedef AcpPermissionHandler =
 /// inside the Linux environment next to the workspace and uses its own
 /// tools there, which keeps every agent's behaviour its authors' own.
 class AcpAgent {
-  AcpAgent._(AcpChannel channel) {
+  AcpAgent._(AcpChannel channel, AcpSecretRedactor? redactor) {
     _connection = AcpConnection(
       channel,
+      redactor: redactor,
       onRequest: _onRequest,
       onNotification: _onNotification,
+      onToolCorrelation: (sessionId, correlation) {
+        final turn = _turns[sessionId];
+        if (turn != null && !turn.cancelled) {
+          onToolCorrelation?.call(sessionId, correlation);
+        }
+      },
     );
   }
 
@@ -178,10 +187,15 @@ class AcpAgent {
   void Function(String sessionId, String modeId)? onModeChanged;
   void Function(String sessionId, Map<String, Object?> update)? onToolUpdate;
 
+  /// Private tool matching receives only safe identifiers and argument hashes.
+  void Function(String sessionId, AcpToolCorrelation correlation)?
+  onToolCorrelation;
+
   /// Completes when the process is gone.
   Future<void> get done => _connection.done;
   bool get isAlive => _connection.isOpen;
   AcpError? get failure => _connection.failure;
+  AcpSecretRedactor? get redactor => _connection.redactor;
 
   /// Starts talking to an agent on [channel]; fails with [AcpError] when
   /// the process does not answer `initialize` within [timeout].
@@ -189,8 +203,9 @@ class AcpAgent {
     AcpChannel channel, {
     required String clientVersion,
     Duration timeout = const Duration(seconds: 60),
+    AcpSecretRedactor? redactor,
   }) async {
-    final agent = AcpAgent._(channel);
+    final agent = AcpAgent._(channel, redactor);
     try {
       final result = await agent._connection
           .request('initialize', {
@@ -281,7 +296,9 @@ class AcpAgent {
     void Function(TaskPlan plan)? onPlan,
   }) {
     late final StreamController<StreamChunk> controller;
-    final turn = _Turn(AcpTurnTranslator(onPlan: onPlan));
+    final turn = _Turn(
+      AcpTurnTranslator(onPlan: onPlan, redactor: _connection.redactor),
+    );
     controller = StreamController<StreamChunk>(
       onListen: () async {
         // A stopped turn may still be winding down in the agent; the next
@@ -348,6 +365,7 @@ class AcpAgent {
     final turn = _turns[sessionId];
     if (turn != null) {
       turn.cancelled = true;
+      turn.add(turn.translator.flushText());
       turn.cancelPermissions();
     }
     await _connection.notify('session/cancel', {'sessionId': sessionId});
@@ -376,7 +394,7 @@ class AcpAgent {
       onModeChanged?.call(sessionId, modeId);
     }
     final turn = _turns[sessionId];
-    if (turn == null) return;
+    if (turn == null || turn.cancelled) return;
     if (update['sessionUpdate'] == 'tool_call' ||
         update['sessionUpdate'] == 'tool_call_update') {
       onToolUpdate?.call(
@@ -508,6 +526,7 @@ class _Turn {
   }
 
   void fail(Object error) {
+    add(translator.flushText());
     if (!closed) sink.addError(error);
     _close();
   }

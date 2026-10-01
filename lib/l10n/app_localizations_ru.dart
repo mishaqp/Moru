@@ -12228,6 +12228,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Нет сети. Проверьте подключение и попробуйте снова.';
 
   @override
+  String get agentsErrorHeaders =>
+      'В заголовках провайдера есть недопустимое имя или перенос строки. Проверьте настройки заголовков провайдера.';
+
+  @override
   String get agentsDescKimiCode =>
       'Агент Moonshot: правит файлы и запускает команды.';
 

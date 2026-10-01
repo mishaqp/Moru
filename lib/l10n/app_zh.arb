@@ -4328,6 +4328,7 @@
   "agentsErrorApiKey": "提供商的 API 密钥无效。",
   "agentsErrorModel": "未找到模型。请检查提供商的模型设置。",
   "agentsErrorNetwork": "无法连接网络。请检查网络连接后重试。",
+  "agentsErrorHeaders": "提供商请求头包含无效名称或换行符。请检查提供商的请求头设置。",
   "agentsDescKimiCode": "Moonshot 编程代理：编辑文件并运行命令。",
   "agentsDescDeepSeekHarness": "DeepSeek 编程代理：在工作目录中处理文件和命令。",
   "agentsApiCompatible": "通过 Anthropic、Chat Completions 或 Responses API 使用 Moru 服务商。",

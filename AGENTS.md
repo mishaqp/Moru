@@ -76,8 +76,15 @@ package name does not require building other platforms.
   the Agent Client Protocol over the Linux environment's STDIO pipes
   (`lib/core/services/acp/`). `AcpAgentManager` installs them with npm and
   checks them (Settings → Agents); `AcpAgentSpec.launch` maps a Moru provider
-  to each agent's variables/config (keys only in env). An assistant with
-  `agentId` answers through its agent: `AcpChatBridge` swaps the chunk
+  to each agent's variables/config (keys only in env). Provider headers use
+  backend-supported env references. Kimi's explicit User-Agent override needs
+  a process-owned temporary config, removed after native stop/exit or uninstall;
+  keep its persistent sessions/home and coordinate all active config owners.
+  Known launch secrets are redacted before ACP display/error payloads leave
+  the boundary; private tool correlation must retain actual execution values.
+  Moru MCP approval cards and browser activity details inherit the launch's
+  display filter while handlers receive the original execution arguments.
+  An assistant with `agentId` answers through its agent: `AcpChatBridge` swaps the chunk
   source in `_executeGeneration`, `AcpTurnTranslator` turns `session/update`
   into `StreamChunk`s (workspace cards, plan strip), permission requests go
   to `ToolApprovalService` on the tool card, and `AcpChatSessions` keeps one
@@ -110,8 +117,8 @@ package name does not require building other platforms.
   `AcpChatSessions` restores with load first, advertised resume second, then
   a new session with history; missing modes/plans are valid capabilities.
   `AcpAgentWebServers` owns the official Kimi/DSH/OpenCode Web processes in
-  the Linux runtime, with separate persistent configs and the assistant's
-  workspace. Bind only 127.0.0.1, wait for the printed authenticated address,
+  the Linux runtime, with separate persistent state, generated configs and the
+  assistant's workspace. Bind only 127.0.0.1, wait for the printed authenticated address,
   and send the login URL only to `openSharedBrowser`, never a log or chat.
   OpenCode Web instead gets a fresh cryptographically random password for
   every process, only in `OPENCODE_SERVER_PASSWORD`. Its clean URL must match
@@ -179,7 +186,10 @@ render checked bytes. HTML previews disable file/content access and use the
 same token-protected loopback server as the browser action, with the original
 source file and granted root retained separately from the private snapshot.
 Each bounded resource read must stay in both that root and the captured real
-page directory; reject raw and encoded traversal before URI normalization.
+page directory. After the standard HTTP parser normalizes the request URI, its
+path must still begin with that server’s token; normalization within the token
+is allowed. Validate each opened descriptor against both captured boundaries
+before reading, and reject encoded path separators or residual dot segments.
 Keep the standard HTTP parser, close each HTTP connection after its response,
 and close an embedded preview server when its widget is disposed, including
 a server that finishes starting after disposal. CSP permits the server origin

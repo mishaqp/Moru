@@ -1,11 +1,13 @@
 import 'dart:async';
-import 'dart:convert';
 
 import '../api/tool_call_cancellation.dart';
+import '../api/tool_display_redaction.dart';
 import 'acp_agent.dart';
 import 'acp_mcp_server.dart';
 import 'acp_mcp_stdio_bridge.dart';
 import 'acp_turn_translator.dart';
+import 'acp_tool_correlation.dart';
+import 'acp_secret_redactor.dart';
 
 /// Live tool policy and the existing model handler for one assistant/chat.
 class AcpMcpTools {
@@ -29,14 +31,18 @@ class AcpMcpTools {
 
 /// Matches HTTP calls to the cards the agent already streams over ACP.
 class AcpMcpBinding {
-  AcpMcpBinding._(this._tools);
+  AcpMcpBinding._(this._tools, this.redactor);
 
   AcpMcpTools _tools;
+  final AcpSecretRedactor? redactor;
   late final AcpMcpServer server;
   _McpTurn? _turn;
 
-  static Future<AcpMcpBinding> start(AcpMcpTools tools) async {
-    final binding = AcpMcpBinding._(tools);
+  static Future<AcpMcpBinding> start(
+    AcpMcpTools tools, {
+    AcpSecretRedactor? redactor,
+  }) async {
+    final binding = AcpMcpBinding._(tools, redactor);
     binding.server = await AcpMcpServer.start(
       tools: () => binding._tools.definitions(),
       callTool: binding.callTool,
@@ -81,13 +87,23 @@ class AcpMcpBinding {
   }
 
   void observe(Map<String, Object?> update) {
+    final correlation = AcpToolCorrelation.fromUpdate(update);
+    if (correlation != null) observeCorrelation(correlation);
+  }
+
+  void observeCorrelation(AcpToolCorrelation correlation) {
     final turn = _turn;
-    final id = update['toolCallId'];
-    if (turn == null || id is! String) return;
-    final card = turn.cards.putIfAbsent(id, () => _McpCard(id));
-    card.update.addAll(update);
+    if (turn == null) return;
+    final card = turn.cards.putIfAbsent(
+      correlation.id,
+      () => _McpCard(correlation.id),
+    );
     // Running updates can replace a machine-readable title with a human one.
-    card.name ??= _toolName(card.update);
+    card.name ??= correlation.name;
+    if (correlation.argumentsDigest != null) {
+      card.argumentsDigest = correlation.argumentsDigest;
+    }
+    if (correlation.status != null) card.status = correlation.status;
     turn.wake();
   }
 
@@ -118,6 +134,7 @@ class AcpMcpBinding {
   ) async {
     final turn = _turn;
     if (turn == null) return _error('No active agent turn.');
+    final digest = AcpToolCorrelation.digest(args);
     final deadline = DateTime.now().add(const Duration(seconds: 10));
     while (!turn.cancelled.isCompleted) {
       final card = turn.cards.values
@@ -125,11 +142,8 @@ class AcpMcpBinding {
             (card) =>
                 !card.claimed &&
                 card.name == name &&
-                !const [
-                  'completed',
-                  'failed',
-                ].contains(card.update['status']) &&
-                _canonical(_arguments(card.update)) == _canonical(args),
+                !const ['completed', 'failed'].contains(card.status) &&
+                card.argumentsDigest == digest,
           )
           .firstOrNull;
       if (card != null) {
@@ -139,14 +153,21 @@ class AcpMcpBinding {
           cancelled: turn.cancelled.future,
         );
         try {
-          return await Future.any([
-            cancellation.run(
-              () => turn.tools.execute(
-                name,
-                args,
-                toolCallId: AcpTurnTranslator.cardId(card.id),
-              ),
+          Future<Map<String, Object?>> execute() => cancellation.run(
+            () => turn.tools.execute(
+              name,
+              args,
+              toolCallId: AcpTurnTranslator.cardId(card.id),
             ),
+          );
+          return await Future.any([
+            if (redactor case final filter?)
+              ToolDisplayRedaction(
+                text: filter.text,
+                value: filter.value,
+              ).run(execute)
+            else
+              execute(),
             turn.cancelled.future.then(
               (_) => _error('The agent turn was cancelled.'),
             ),
@@ -181,49 +202,6 @@ class AcpMcpBinding {
       {'type': 'text', 'text': message},
     ],
   };
-
-  static String? _toolName(Map<String, Object?> update) {
-    final raw = update['rawInput'];
-    if (raw is Map &&
-        raw['server'] == 'moru' &&
-        AcpMcpServer.allowedNames.contains(raw['tool'])) {
-      return raw['tool'] as String;
-    }
-    final meta = update['_meta'];
-    final claude = meta is Map ? meta['claudeCode'] : null;
-    for (final candidate in [
-      update['name'],
-      update['title'],
-      if (claude is Map) claude['toolName'],
-    ]) {
-      for (final name in AcpMcpServer.allowedNames) {
-        if (candidate == 'mcp__moru__$name' ||
-            candidate == 'moru_$name' ||
-            candidate == 'Tool: moru/$name') {
-          return name;
-        }
-      }
-    }
-    return null;
-  }
-
-  static Object? _arguments(Map<String, Object?> update) {
-    final raw = update['rawInput'];
-    return raw is Map && raw['server'] == 'moru' ? raw['arguments'] : raw;
-  }
-
-  static String _canonical(Object? value) {
-    Object? sorted(Object? value) {
-      if (value is Map) {
-        final keys = value.keys.cast<String>().toList()..sort();
-        return {for (final key in keys) key: sorted(value[key])};
-      }
-      if (value is List) return value.map(sorted).toList();
-      return value;
-    }
-
-    return jsonEncode(sorted(value));
-  }
 }
 
 class _McpTurn {
@@ -241,7 +219,8 @@ class _McpTurn {
 class _McpCard {
   _McpCard(this.id);
   final String id;
-  final update = <String, Object?>{};
+  String? argumentsDigest;
+  String? status;
   String? name;
   bool claimed = false;
 }
