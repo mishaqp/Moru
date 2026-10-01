@@ -21593,6 +21593,24 @@ abstract class AppLocalizations {
   /// **'Provider headers contain an invalid name or a line break. Check the provider header settings.'**
   String get agentsErrorHeaders;
 
+  /// No description provided for @agentsErrorTemporaryDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'The agent cannot use its temporary directory. Check the Linux environment and try again.'**
+  String get agentsErrorTemporaryDirectory;
+
+  /// No description provided for @agentsShowDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Show details'**
+  String get agentsShowDetails;
+
+  /// No description provided for @agentsHideDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide details'**
+  String get agentsHideDetails;
+
   /// No description provided for @agentsDescKimiCode.
   ///
   /// In en, this message translates to:

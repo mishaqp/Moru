@@ -49,6 +49,7 @@ class CommandRequest {
     this.isCancelled,
     this.keepStdinOpen = false,
     this.emulateHardLinks = true,
+    this.expectedRootChroot,
   });
 
   final String runId;
@@ -61,6 +62,10 @@ class CommandRequest {
   /// files atomically (write, link into place, remove the temporary): coding
   /// agents turn off the fake and copy instead ([AcpFsCompat]).
   final bool emulateHardLinks;
+
+  /// Cancel an Android Linux launch if its prepared execution mode changed.
+  /// Null accepts the runtime's current mode for ordinary commands.
+  final bool? expectedRootChroot;
 
   /// Resolved path in the runtime's vocabulary (guest path when sandboxed,
   /// host path when native).

@@ -27,6 +27,21 @@ void main() {
     }
   });
 
+  test('Claude temporary paths stay below its Bash socket fallback limit', () {
+    final claude = AcpAgentSpec.byId(AcpAgentSpec.claudeCodeId)!;
+    final first = claude.launch(deepseek);
+    final second = claude.launch(deepseek);
+    final base = first.environment['CLAUDE_CODE_TMPDIR']!;
+    expect(utf8.encode('$base/claude-10575').length, lessThanOrEqualTo(44));
+    expect(first.temporaryDirectory, base);
+    expect(second.temporaryDirectory, isNot(base));
+    expect(first.environment['CLAUDE_CODE_CONTAINER_ID'], startsWith('moru-'));
+    expect(
+      second.environment['CLAUDE_CODE_CONTAINER_ID'],
+      isNot(first.environment['CLAUDE_CODE_CONTAINER_ID']),
+    );
+  });
+
   test(
     'built-ins explicitly own every npm package installed by their script',
     () {

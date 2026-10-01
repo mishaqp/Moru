@@ -1,12 +1,14 @@
 import '../mcp/workspace_stdio_transport.dart';
 import 'acp_connection.dart';
+import 'acp_secret_redactor.dart';
 
 /// An agent process in the Linux environment, spoken to over its raw pipes
 /// (the same newline-delimited JSON transport STDIO MCP servers use).
 class AcpStdioChannel extends AcpChannel {
-  AcpStdioChannel(this._transport);
+  AcpStdioChannel(this._transport, {this.diagnostics});
 
   final WorkspaceStdioTransport _transport;
+  final AcpStderrBuffer? diagnostics;
 
   @override
   Stream<dynamic> get messages => _transport.onMessage;
@@ -23,4 +25,10 @@ class AcpStdioChannel extends AcpChannel {
 
   @override
   String describeError(Object error) => _transport.describeError(error);
+
+  @override
+  String get stderrTail => _transport.stderrTail;
+
+  @override
+  AcpFailureKind? get stderrFailureKind => diagnostics?.failureKind;
 }

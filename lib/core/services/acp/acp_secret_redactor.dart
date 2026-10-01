@@ -27,6 +27,14 @@ class AcpSecretRedactor {
         : RegExp(ordered.map(RegExp.escape).join('|'));
     const marker = '[REDACTED]';
     final runes = values.expand((value) => value.runes).toSet();
+    // Separators at diagnostic cuts cannot join either side into a known
+    // secret. Include escaped representations when choosing this rune.
+    var scalar = 0x25a0;
+    while (runes.contains(scalar)) {
+      scalar++;
+      if (scalar == 0xd800) scalar = 0xe000;
+    }
+    _separator = String.fromCharCode(scalar);
     final markerContainsSecret = _pattern?.hasMatch(marker) == true;
     if (!markerContainsSecret &&
         !runes.contains(0x5b) &&
@@ -35,26 +43,26 @@ class AcpSecretRedactor {
     } else {
       // A visible separator absent from every secret prevents replacement
       // from joining ordinary fragments into another secret, even in streams.
-      var scalar = 0x25a0;
-      while (runes.contains(scalar)) {
-        scalar++;
-        if (scalar == 0xd800) scalar = 0xe000;
-      }
-      final separator = String.fromCharCode(scalar);
       _replacement = markerContainsSecret
-          ? separator
-          : '$separator$marker$separator';
+          ? _separator
+          : '$_separator$marker$_separator';
     }
   }
 
   late final List<String> _secrets;
   late final RegExp? _pattern;
   late final String _replacement;
+  late final String _separator;
+
+  String get _truncationMarker =>
+      '$_separator${text('\n[truncated]')}$_separator';
 
   String text(String value) =>
       _pattern == null ? value : value.replaceAll(_pattern, _replacement);
 
   AcpSecretTextBuffer textBuffer() => AcpSecretTextBuffer._(this);
+
+  AcpStderrBuffer stderrBuffer() => AcpStderrBuffer._(this);
 
   /// Arbitrary diagnostics and tool payloads have no protocol controls.
   Object? value(Object? input) => switch (input) {
@@ -69,15 +77,76 @@ class AcpSecretRedactor {
     _ => input,
   };
 
-  AcpError error(Object input, {int code = AcpError.internalError}) =>
-      input is AcpError
-      ? AcpError(
-          input.code,
-          text(input.message),
-          value(input.data),
-          classifyAcpFailure(input),
-        )
-      : AcpError(code, text(input.toString()), null, classifyAcpFailure(input));
+  AcpError error(
+    Object input, {
+    int code = AcpError.internalError,
+    String? stderr,
+    AcpFailureKind? failureKind,
+  }) {
+    // Decide from the complete current RPC payload before masking or size
+    // limits remove its only evidence. Process diagnostics are a fallback.
+    final kind =
+        classifyAcpFailure(input) ??
+        (input is! AcpError ||
+                input.code == AcpError.internalError ||
+                input.code == AcpError.disconnected
+            ? failureKind ??
+                  (stderr == null ? null : classifyAcpFailure(stderr))
+            : null);
+    final rawMessage = input is AcpError ? input.message : input.toString();
+    final safeReason = text(rawMessage);
+    final safeData = _boundedErrorData(
+      input is AcpError ? value(input.data) : null,
+    );
+    final safeDetails = text(
+      input is AcpError && input.details != null
+          ? input.details!
+          : [
+              safeReason,
+              if (safeData != null)
+                safeData is String
+                    ? safeData
+                    : const JsonEncoder.withIndent('  ').convert(safeData),
+            ].where((part) => part.trim().isNotEmpty).join('\n\n'),
+    );
+    final safeMarker = _truncationMarker;
+    // Reserve half the diagnostic budget for recent stderr, so large data
+    // cannot displace the process's explanation of an Internal error.
+    final details = stderr?.isNotEmpty == true
+        ? [
+            boundAcpDiagnostic(
+              safeDetails,
+              limit: acpErrorDetailsLimit ~/ 2 - 2,
+              marker: safeMarker,
+            ),
+            text(stderr!),
+          ].join('\n\n')
+        : safeDetails;
+    return AcpError(
+      input is AcpError ? input.code : code,
+      boundAcpDiagnostic(
+        safeReason,
+        limit: acpErrorMessageLimit,
+        marker: safeMarker,
+      ),
+      safeData,
+      kind,
+      boundAcpDiagnostic(text(details), marker: safeMarker),
+    );
+  }
+
+  Object? _boundedErrorData(Object? safeData) {
+    if (safeData == null) return null;
+    final encoded = jsonEncode(safeData);
+    if (utf8.encode(encoded).length <= acpErrorDataLimit) return safeData;
+    // JSON text has no unescaped control characters. Encoding this excerpt
+    // again can at most double its bytes, keeping the data payload bounded.
+    return boundAcpDiagnostic(
+      text(encoded),
+      limit: acpErrorDataLimit ~/ 2 - 2,
+      marker: _truncationMarker,
+    );
+  }
 
   /// Preserve wire identifiers and discriminators used to route replies,
   /// updates and permission choices. Only display/payload strings are redacted.
@@ -291,6 +360,60 @@ class AcpSecretRedactor {
   }
 }
 
+/// Launch stderr is decoded and filtered before the transport retains its
+/// bounded tail. No suffix of a secret can survive an earlier byte cut.
+class AcpStderrBuffer {
+  AcpStderrBuffer._(AcpSecretRedactor redactor)
+    : _text = redactor.textBuffer() {
+    _decoder = const Utf8Decoder(allowMalformed: true).startChunkedConversion(
+      StringConversionSink.from(_StderrTextSink(_decoded)),
+    );
+  }
+
+  final AcpSecretTextBuffer _text;
+  late final ByteConversionSink _decoder;
+  static const _rawTailLimit = 16 * 1024;
+  List<int> _rawTail = [];
+  StringBuffer _output = StringBuffer();
+  AcpFailureKind? failureKind;
+
+  String addBytes(List<int> bytes) {
+    if (bytes.length >= _rawTailLimit) {
+      _rawTail = bytes.sublist(bytes.length - _rawTailLimit);
+    } else {
+      _rawTail = [..._rawTail, ...bytes];
+      if (_rawTail.length > _rawTailLimit) {
+        _rawTail.removeRange(0, _rawTail.length - _rawTailLimit);
+      }
+    }
+    // Classification uses the same bounded raw evidence window as stderr,
+    // before masking removes its phrases. Old evidence expires with the tail.
+    failureKind = classifyAcpFailure(
+      utf8.decode(_rawTail, allowMalformed: true),
+    );
+    _output = StringBuffer();
+    _decoder.add(bytes);
+    return _output.toString();
+  }
+
+  void _decoded(String chunk) {
+    for (final part in _text.add(chunk, id: 'stderr')) {
+      _output.write(part.text);
+    }
+    // A possible unfinished secret prefix stays private even after exit.
+    // Flushing it to diagnostics would disclose a nearly complete key.
+  }
+}
+
+class _StderrTextSink implements Sink<String> {
+  _StderrTextSink(this.onText);
+  final void Function(String) onText;
+  @override
+  void add(String data) => onText(data);
+  @override
+  void close() {}
+}
+
 /// Incremental text replacement retains only a possible secret prefix. A tail
 /// that did not complete a secret is emitted when its turn ends.
 class AcpSecretTextBuffer {
@@ -301,7 +424,14 @@ class AcpSecretTextBuffer {
 
   Set<String> get pendingIds => _spans.map((span) => span.id).toSet();
 
-  List<({String id, String text})> add(String chunk, {required String id}) {
+  List<({String id, String text})> add(String chunk, {required String id}) =>
+      _add(chunk, id: id);
+
+  List<({String id, String text})> _add(
+    String chunk, {
+    required String id,
+    bool finishing = false,
+  }) {
     if (_redactor._secrets.isEmpty) {
       return chunk.isEmpty ? [] : [(id: id, text: chunk)];
     }
@@ -321,25 +451,16 @@ class AcpSecretTextBuffer {
         spanEnd += spans[++spanIndex].length;
       }
       final owner = spans[spanIndex].id;
-      String? matched;
-      for (final secret in _redactor._secrets) {
-        if (input.startsWith(secret, offset)) {
-          matched = secret;
-          break;
-        }
-      }
-      if (matched != null) {
-        output
-            .putIfAbsent(owner, StringBuffer.new)
-            .write(_redactor._replacement);
-        offset += matched.length;
-        continue;
-      }
       // Only the final max-secret-length characters can be an unfinished
       // prefix. Avoid allocating every suffix of a large ordinary chunk.
-      if (input.length - offset < _redactor._secrets.first.length) {
+      // A shorter complete secret may also begin a longer one: wait before
+      // masking it so the longer secret's suffix cannot escape next chunk.
+      if (!finishing &&
+          input.length - offset < _redactor._secrets.first.length) {
         final rest = input.substring(offset);
-        if (_redactor._secrets.any((secret) => secret.startsWith(rest))) {
+        if (_redactor._secrets.any(
+          (secret) => secret.length > rest.length && secret.startsWith(rest),
+        )) {
           _tail = rest;
           var begin = 0;
           for (final span in spans) {
@@ -355,6 +476,20 @@ class AcpSecretTextBuffer {
           break;
         }
       }
+      String? matched;
+      for (final secret in _redactor._secrets) {
+        if (input.startsWith(secret, offset)) {
+          matched = secret;
+          break;
+        }
+      }
+      if (matched != null) {
+        output
+            .putIfAbsent(owner, StringBuffer.new)
+            .write(_redactor._replacement);
+        offset += matched.length;
+        continue;
+      }
       output.putIfAbsent(owner, StringBuffer.new).write(input[offset++]);
     }
     return [
@@ -363,18 +498,6 @@ class AcpSecretTextBuffer {
     ];
   }
 
-  List<({String id, String text})> finish() {
-    final output = <({String id, String text})>[];
-    var offset = 0;
-    for (final span in _spans) {
-      output.add((
-        id: span.id,
-        text: _tail.substring(offset, offset + span.length),
-      ));
-      offset += span.length;
-    }
-    _tail = '';
-    _spans = [];
-    return output;
-  }
+  List<({String id, String text})> finish() =>
+      _add('', id: '', finishing: true);
 }

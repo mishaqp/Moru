@@ -212,6 +212,24 @@ void main() {
   });
 
   test(
+    'Claude rejects Node 20 before preparing or starting the adapter',
+    () async {
+      runtime.nodeVersion = 'v20.19.2';
+      final agents = manager();
+      addTearDown(agents.dispose);
+      await expectLater(
+        agents.start(AcpAgentSpec.byId('claude-code')!, provider),
+        throwsA(isA<Exception>()),
+      );
+      expect(runtime.requests.any((r) => r.keepStdinOpen), isFalse);
+      expect(
+        runtime.requests.any((r) => r.command.contains('base64 -d')),
+        isFalse,
+      );
+    },
+  );
+
+  test(
     'DSH rejects Node 23 and unreadable versions; Kimi accepts Node 23',
     () async {
       final agents = manager();

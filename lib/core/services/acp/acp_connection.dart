@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'acp_secret_redactor.dart';
 import 'acp_tool_correlation.dart';
@@ -18,19 +19,35 @@ abstract class AcpChannel {
 
   /// Why the pipe broke, with the agent's stderr when there is some.
   String describeError(Object error) => error.toString();
+
+  /// Raw bounded diagnostics, consumed and redacted inside the ACP boundary.
+  String? get stderrTail => null;
+
+  /// A diagnostic category observed before the launch's stderr was masked.
+  AcpFailureKind? get stderrFailureKind => null;
 }
 
 /// A safe category retained when redaction removes a recognized phrase.
-enum AcpFailureKind { apiKey, model, network, headers }
+enum AcpFailureKind { apiKey, model, network, headers, temporaryDirectory }
 
 /// A JSON-RPC error from the agent, or the pipe breaking under a request.
 class AcpError implements Exception {
-  const AcpError(this.code, this.message, [this.data, this.failureKind]);
+  const AcpError(
+    this.code,
+    this.message, [
+    this.data,
+    this.failureKind,
+    this.details,
+  ]);
 
   final int code;
   final String message;
   final Object? data;
   final AcpFailureKind? failureKind;
+
+  /// Safe original reason, diagnostic data and stderr for optional display.
+  /// The connection assembles this before redaction or localization.
+  final String? details;
 
   /// ACP's "authentication required": the agent needs a login or a key.
   static const int authRequired = -32000;
@@ -44,6 +61,44 @@ class AcpError implements Exception {
   /// Shown in the chat as it is, so only the agent's own words.
   @override
   String toString() => message;
+}
+
+const acpErrorMessageLimit = 4 * 1024;
+const acpErrorDataLimit = 16 * 1024;
+const acpErrorDetailsLimit = 32 * 1024;
+
+/// Cap an already-redacted diagnostic at a UTF-8 boundary.
+String boundAcpDiagnostic(
+  String safe, {
+  int limit = acpErrorDetailsLimit,
+  String marker = '\n[truncated]',
+}) {
+  final bytes = utf8.encode(safe);
+  if (bytes.length <= limit) return safe;
+  var end = limit - utf8.encode(marker).length;
+  while (end > 0 && bytes[end] & 0xc0 == 0x80) {
+    end--;
+  }
+  return '${utf8.decode(bytes.sublist(0, end))}$marker';
+}
+
+/// Render diagnostics from an error that has already crossed the secret
+/// boundary. Callers keep the short [AcpError.message] for notifications.
+String? acpErrorDetails(Object error) {
+  if (error is! AcpError) return boundAcpDiagnostic(error.toString());
+  if (error.details?.trim().isNotEmpty == true) {
+    return boundAcpDiagnostic(error.details!);
+  }
+  final data = error.data;
+  return boundAcpDiagnostic(
+    [
+      error.message,
+      if (data != null)
+        data is String
+            ? data
+            : const JsonEncoder.withIndent('  ').convert(data),
+    ].where((part) => part.trim().isNotEmpty).join('\n\n'),
+  );
 }
 
 /// Answers a request the agent sends to Moru (permission, file access).
@@ -158,12 +213,22 @@ class AcpConnection {
     if (completer == null) return;
     final error = map['error'];
     if (error is Map) {
-      final failure = AcpError(
+      final message = error['message'];
+      final rawFailure = AcpError(
         (error['code'] as num?)?.toInt() ?? AcpError.internalError,
-        (error['message'] ?? 'agent error').toString(),
+        message is String && message.trim().isNotEmpty
+            ? message
+            : 'agent error',
         error['data'],
       );
-      completer.completeError(redactor?.error(failure) ?? failure);
+      // Current protocol evidence takes precedence over this process's older
+      // stderr. Stderr supplies a category for generic Internal errors only.
+      final failure = (redactor ?? AcpSecretRedactor(const [])).error(
+        rawFailure,
+        stderr: _channel.stderrTail,
+        failureKind: _channel.stderrFailureKind,
+      );
+      completer.completeError(failure);
       return;
     }
     final result = map['result'];
@@ -230,7 +295,10 @@ class AcpConnection {
     _failure = error is AcpError
         ? error
         : AcpError(AcpError.disconnected, _channel.describeError(error));
-    if (redactor != null) _failure = redactor!.error(_failure!);
+    _failure = (redactor ?? AcpSecretRedactor(const [])).error(
+      _failure!,
+      failureKind: _channel.stderrFailureKind,
+    );
     final pending = _pending.values.toList();
     _pending.clear();
     for (final completer in pending) {

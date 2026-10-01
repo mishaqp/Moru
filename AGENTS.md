@@ -160,6 +160,23 @@ package name does not require building other platforms.
   package names from installation shell text or remove shared system packages.
   Guest launch preparation trusts only `/workspace` in
   system Git config to handle the Android UID/root-chroot ownership mismatch.
+  Claude needs Node >=22. Each launch owns a fresh mode-0700
+  `/tmp/mc/<22-character random id>` via `CLAUDE_CODE_TMPDIR`, with its own
+  `CLAUDE_CODE_CONTAINER_ID=moru-<id>`: the native root/container exception
+  handles PRoot's real Android file UID. Keep base + `/claude-UID` <=44 bytes
+  so Claude's Bash helper never falls back to shared `/tmp/claude-0`.
+  `AcpLaunchDirectories` leases cover preparation, close and failed startup;
+  recovery uses boot/PID/start identities and inherited SDK markers, keeps
+  live or uninspectable runs, and anchors cleanup to a managed directory fd.
+  Root Codex binds its fresh `/tmp/md/<id>` onto its fixed daemon leaf only
+  inside the run's private mount namespace; preparation and launch must use
+  the same runtime mode. Never chown existing daemon dirs, shim getuid globally
+  or weaken workspace permissions. See `docs/audits/*ownership.md` for scope
+  and remaining Codex/Bubblewrap device checks.
+  ACP failures retain bounded, redacted data/stderr in an `AgentErrorPart`,
+  shown as collapsed details in the chat and agent check. Filter stderr before
+  retaining its tail; keep current RPC classification ahead of older stderr.
+  Error parts are diagnostic history and must not become future model prompts.
 - **Mini apps**: published web apps (`MiniAppStore`, bridge `moru.*` in
   `MiniAppBridge`). They keep an error journal, the last 5 versions, and
   manifest game settings (`MiniAppDisplay`). Background jobs (`moru.jobs`,

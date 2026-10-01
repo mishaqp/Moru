@@ -52,7 +52,7 @@ class _ProbeRuntime extends FakeWorkspaceRuntime
 }
 
 class _CheckedManager extends AcpAgentManager {
-  _CheckedManager(this.available)
+  _CheckedManager(this.available, {this.result})
     : super(
         preferences: createBusinessTestPreferences(),
         runtimeProvider: WorkspaceRuntimeProvider()..register(_ProbeRuntime()),
@@ -61,11 +61,14 @@ class _CheckedManager extends AcpAgentManager {
         ),
       );
   final bool available;
+  final AcpCheckResult? result;
   @override
-  AcpCheckResult? lastCheck(String id) => AcpCheckResult(
-    info: const AcpAgentInfo(name: 'OpenCode', version: '1'),
-    moruToolsAvailable: available,
-  );
+  AcpCheckResult? lastCheck(String id) =>
+      result ??
+      AcpCheckResult(
+        info: const AcpAgentInfo(name: 'OpenCode', version: '1'),
+        moruToolsAvailable: available,
+      );
 }
 
 void main() {
@@ -164,6 +167,32 @@ void main() {
       locale: const Locale('ru'),
     );
     expect(find.text(codexWarning), findsNothing);
+  });
+
+  testWidgets('failed agent check keeps technical details collapsed', (
+    tester,
+  ) async {
+    manager.dispose();
+    manager = _CheckedManager(
+      false,
+      result: const AcpCheckResult(
+        error: 'Internal error',
+        errorDetails: 'safe check data\n\nstderr explanation',
+      ),
+    );
+    await tester.runAsync(() => manager.loaded);
+    await pumpPage(tester, const AgentDetailPage(agentId: 'opencode'));
+
+    expect(find.textContaining('Internal error'), findsOneWidget);
+    expect(find.text('safe check data\n\nstderr explanation'), findsNothing);
+    expect(find.text('Show details'), findsOneWidget);
+    await tester.tap(find.text('Show details'));
+    await tester.pumpAndSettle();
+    expect(find.text('safe check data\n\nstderr explanation'), findsOneWidget);
+    await tester.tap(find.text('Hide details'));
+    await tester.pumpAndSettle();
+    expect(find.text('safe check data\n\nstderr explanation'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('assistant agent picker warns using the assistant provider', (

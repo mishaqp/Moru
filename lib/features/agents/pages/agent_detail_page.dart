@@ -16,6 +16,7 @@ import '../../../shared/widgets/ios_settings_rows.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../shared/widgets/section_card.dart';
+import '../../../shared/widgets/error_details_card.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../agent_chat_start.dart';
 import '../agent_provider_compatibility.dart';
@@ -182,6 +183,11 @@ class AgentDetailPage extends StatelessWidget {
                   : l10n.agentsCheckFailed(check.errorMessage(l10n) ?? ''),
               error: !check.ok,
             ),
+            if (!check.ok && check.errorDetails?.trim().isNotEmpty == true)
+              ErrorDetailsCard(
+                key: ValueKey(('agent-check-details', spec.id, check)),
+                details: check.errorDetails,
+              ),
             _Notice(
               text: check.moruToolsAvailable
                   ? l10n.agentsMoruToolsAvailable

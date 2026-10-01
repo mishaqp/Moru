@@ -17,6 +17,7 @@ import '../../../core/models/token_usage.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
+import '../../../core/services/acp/acp_connection.dart';
 import '../../../core/services/api/retry_policy.dart';
 import '../../../core/services/api/stream/stream_chunk.dart';
 import '../../../core/services/chat/chat_service.dart';
@@ -3485,9 +3486,14 @@ class ChatActions {
       assistantPartsForStreamError(
         parts: _assistantPartsForState(state),
         partialContent: partialContent,
-        errorText: errorText,
+        errorText: e is AcpError ? '' : errorText,
       ),
     );
+    if (e is AcpError) {
+      errorParts.add(
+        AgentErrorPart(message: e.message, details: acpErrorDetails(e)),
+      );
+    }
     if (oauthFailure) {
       final providerId =
           e.providerId ?? _streamingMessageSnapshot(state).providerId;

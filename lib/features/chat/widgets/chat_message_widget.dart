@@ -43,6 +43,7 @@ import '../../../core/models/assistant_regex.dart';
 import '../../../shared/widgets/custom_bottom_sheet.dart';
 import '../../../shared/widgets/ios_checkbox.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import '../../../shared/widgets/error_details_card.dart';
 import '../../../shared/widgets/thinking_sheen.dart';
 import '../../../shared/widgets/emoji_text.dart';
 import '../../home/services/ask_user_interaction_service.dart';
@@ -3022,6 +3023,9 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
             for (final error
                 in widget.message.parts.whereType<ProviderAuthErrorPart>())
               OAuthMessageRecovery(error: error),
+            for (final error
+                in widget.message.parts.whereType<AgentErrorPart>())
+              ErrorDetailsCard(message: error.message, details: error.details),
             // Action buttons (hidden while generating)
             AnimatedSwitcher(
               // Completion previously remounted the row at its final height.

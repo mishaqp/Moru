@@ -54,6 +54,41 @@ void expectAbove(WidgetTester tester, Finder upper, Finder lower) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets('agent error details start collapsed and toggle in chat', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHarness(
+        child: ChatMessageWidget(
+          message: ChatMessage(
+            id: 'agent-error',
+            conversationId: 'c1',
+            role: 'assistant',
+            parts: [
+              const TextPart('Partial agent reply'),
+              MessagePart.fromRow(
+                'agent_error',
+                '{"message":"Internal error","details":"safe nested data\\n\\nstderr explanation"}',
+              ),
+            ],
+          ),
+          showModelIcon: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Partial agent reply'), findsOneWidget);
+    expect(find.text('Internal error'), findsOneWidget);
+    expect(find.text('safe nested data\n\nstderr explanation'), findsNothing);
+    await tester.tap(find.text('Show details'));
+    await tester.pumpAndSettle();
+    expect(find.text('safe nested data\n\nstderr explanation'), findsOneWidget);
+    await tester.tap(find.text('Hide details'));
+    await tester.pumpAndSettle();
+    expect(find.text('safe nested data\n\nstderr explanation'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'a terminal persisted tool without a result stays interrupted instead of spinning',
     (tester) async {

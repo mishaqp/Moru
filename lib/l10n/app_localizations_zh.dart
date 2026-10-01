@@ -11566,6 +11566,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentsErrorHeaders => '提供商请求头包含无效名称或换行符。请检查提供商的请求头设置。';
 
   @override
+  String get agentsErrorTemporaryDirectory => '代理无法使用临时目录。请检查 Linux 环境后重试。';
+
+  @override
+  String get agentsShowDetails => '显示详情';
+
+  @override
+  String get agentsHideDetails => '隐藏详情';
+
+  @override
   String get agentsDescKimiCode => 'Moonshot 编程代理：编辑文件并运行命令。';
 
   @override
@@ -23271,6 +23280,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get agentsErrorHeaders => '提供商请求头包含无效名称或换行符。请检查提供商的请求头设置。';
+
+  @override
+  String get agentsErrorTemporaryDirectory => '代理无法使用临时目录。请检查 Linux 环境后重试。';
+
+  @override
+  String get agentsShowDetails => '显示详情';
+
+  @override
+  String get agentsHideDetails => '隐藏详情';
 
   @override
   String get agentsDescKimiCode => 'Moonshot 编程代理：编辑文件并运行命令。';
@@ -35052,6 +35070,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentsErrorHeaders => '供應商請求標頭包含無效名稱或換行字元。請檢查供應商的請求標頭設定。';
+
+  @override
+  String get agentsErrorTemporaryDirectory => '代理無法使用暫存目錄。請檢查 Linux 環境後重試。';
+
+  @override
+  String get agentsShowDetails => '顯示詳細資訊';
+
+  @override
+  String get agentsHideDetails => '隱藏詳細資訊';
 
   @override
   String get agentsDescKimiCode => 'Moonshot 程式代理：編輯檔案並執行命令。';
