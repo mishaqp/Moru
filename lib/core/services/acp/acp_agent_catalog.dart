@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'acp_connection.dart';
+
 /// Where agents installed with npm live in the Linux environment.
 const String acpNpmPrefix = '/root/.npm-global';
 
@@ -54,10 +56,11 @@ class AcpProviderInput {
 
 /// A file an agent reads its settings from, written before it starts.
 class AcpConfigFile {
-  const AcpConfigFile(this.path, this.content);
+  const AcpConfigFile(this.path, this.content, {this.temporary = false});
 
   final String path;
   final String content;
+  final bool temporary;
 }
 
 /// How to start an agent for one provider and model.
@@ -67,12 +70,16 @@ class AcpLaunch {
     this.arguments = const [],
     this.environment = const {},
     this.files = const [],
+    this.cleanup,
   });
 
   final String command;
   final List<String> arguments;
   final Map<String, String> environment;
   final List<AcpConfigFile> files;
+
+  /// Releases app-owned temporary settings after the prepared process exits.
+  final Future<void> Function()? cleanup;
 }
 
 /// An agent Moru knows how to install and run.
@@ -126,12 +133,11 @@ class AcpAgentSpec {
       'MORU_AGENT_BASE_URL': provider.baseUrl,
       'MORU_AGENT_API_KEY': provider.apiKey,
       'MORU_AGENT_MODEL': provider.model,
+      ..._headerEnvironment(provider),
     };
     switch (id) {
       case claudeCodeId:
-        final headers = provider.headers.entries
-            .map((entry) => '${entry.key}: ${entry.value}')
-            .join('\n');
+        final headers = _customHeaders(provider);
         return AcpLaunch(
           command: command,
           arguments: arguments,
@@ -175,6 +181,8 @@ class AcpAgentSpec {
             ...common,
             'OPENCODE_CONFIG': path,
             'OPENCODE_DISABLE_AUTOUPDATE': 'true',
+            'MORU_OPENCODE_API_KEY_JSON': _jsonStringContent(provider.apiKey),
+            ..._headerEnvironment(provider, jsonStringContent: true),
           },
           files: [AcpConfigFile(path, openCodeConfig(provider))],
         );
@@ -183,8 +191,19 @@ class AcpAgentSpec {
         return AcpLaunch(
           command: command,
           arguments: arguments,
-          environment: {...common, 'KIMI_CODE_HOME': home},
-          files: [AcpConfigFile('$home/config.toml', kimiCodeConfig(provider))],
+          environment: {
+            ...common,
+            'KIMI_CODE_HOME': home,
+            if (provider.headers.isNotEmpty)
+              'KIMI_CODE_CUSTOM_HEADERS': _customHeaders(provider),
+          },
+          files: [
+            AcpConfigFile(
+              '$home/config.toml',
+              kimiCodeConfig(provider),
+              temporary: true,
+            ),
+          ],
         );
       case deepSeekHarnessId:
         final home = '$root/deepseek-harness';
@@ -207,6 +226,41 @@ class AcpAgentSpec {
           },
         );
     }
+  }
+
+  static Map<String, String> _headerEnvironment(
+    AcpProviderInput provider, {
+    bool jsonStringContent = false,
+  }) => {
+    for (final (index, entry) in provider.headers.entries.indexed)
+      'MORU_AGENT_HEADER_$index${jsonStringContent ? '_JSON' : ''}':
+          jsonStringContent ? _jsonStringContent(entry.value) : entry.value,
+  };
+
+  // OpenCode substitutes into JSON text before decoding, without escaping env.
+  static String _jsonStringContent(String value) {
+    final encoded = jsonEncode(value);
+    // Its subsequent file substitution must not reinterpret a header value.
+    return encoded
+        .substring(1, encoded.length - 1)
+        .replaceAll('{', r'\u007b')
+        .replaceAll('}', r'\u007d');
+  }
+
+  static String _customHeaders(AcpProviderInput provider) {
+    final fieldName = RegExp(r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$");
+    for (final entry in provider.headers.entries) {
+      if (!fieldName.hasMatch(entry.key) ||
+          entry.value.contains(RegExp(r'[\r\n]'))) {
+        throw const AcpError(
+          AcpError.invalidParams,
+          'Invalid provider headers: invalid name or line break',
+        );
+      }
+    }
+    return provider.headers.entries
+        .map((entry) => '${entry.key}: ${entry.value}')
+        .join('\n');
   }
 
   /// A built-in browser interface, available only to the Android client through
@@ -494,9 +548,9 @@ moru_packages() {
       'wire_api = "responses"',
       if (provider.headers.isNotEmpty) ...[
         '',
-        '[model_providers.moru.http_headers]',
-        for (final entry in provider.headers.entries)
-          '${toml(entry.key)} = ${toml(entry.value)}',
+        '[model_providers.moru.env_http_headers]',
+        for (final (index, entry) in provider.headers.entries.indexed)
+          '${toml(entry.key)} = "MORU_AGENT_HEADER_$index"',
       ],
     ];
     return '${lines.join('\n')}\n';
@@ -524,8 +578,12 @@ moru_packages() {
           'name': 'Moru',
           'options': {
             'baseURL': baseUrl,
-            'apiKey': '{env:MORU_AGENT_API_KEY}',
-            if (provider.headers.isNotEmpty) 'headers': provider.headers,
+            'apiKey': '{env:MORU_OPENCODE_API_KEY_JSON}',
+            if (provider.headers.isNotEmpty)
+              'headers': {
+                for (final (index, entry) in provider.headers.entries.indexed)
+                  entry.key: '{env:MORU_AGENT_HEADER_${index}_JSON}',
+              },
           },
           'models': {
             provider.model: {
@@ -565,11 +623,16 @@ moru_packages() {
       'type = "$type"',
       'base_url = ${jsonEncode(baseUrl)}',
       'api_key_env = "MORU_AGENT_API_KEY"',
-      if (provider.headers.isNotEmpty) ...[
+      // Kimi 2.1.1's host User-Agent overrides env custom headers. Preserve an
+      // explicit provider override only in this process-owned temporary file.
+      if (provider.headers.keys.any(
+        (key) => key.toLowerCase() == 'user-agent',
+      )) ...[
         '',
         '[providers.moru.custom_headers]',
         for (final entry in provider.headers.entries)
-          '${jsonEncode(entry.key)} = ${jsonEncode(entry.value)}',
+          if (entry.key.toLowerCase() == 'user-agent')
+            '${jsonEncode(entry.key)} = ${jsonEncode(entry.value)}',
       ],
       '',
       '[models.moru]',
@@ -601,7 +664,13 @@ moru_packages() {
               'apiKeyEnv': 'MORU_AGENT_API_KEY',
               'api': api,
               'baseURL': baseUrl,
-              if (provider.headers.isNotEmpty) 'headers': provider.headers,
+              if (provider.headers.isNotEmpty)
+                'headers': {
+                  for (final (index, entry) in provider.headers.entries.indexed)
+                    entry.key: {
+                      '__jsExpr': 'process.env.MORU_AGENT_HEADER_$index',
+                    },
+                },
               'models': [
                 {
                   'id': provider.model,

@@ -11,6 +11,7 @@ import '../sandbox/environment_dependencies.dart';
 import '../workspace/workspace_runtime.dart';
 import 'acp_agent.dart';
 import 'acp_agent_catalog.dart';
+import 'acp_config_leases.dart';
 import 'acp_mcp_stdio_bridge.dart';
 import 'acp_mcp_probe.dart';
 import 'acp_stdio_channel.dart';
@@ -105,6 +106,53 @@ class AcpAgentManager extends ChangeNotifier {
   String _nodeVersion = '';
   bool _nodeProbed = false;
   AcpAgentWebServers? _webServers;
+  final _configLeases = AcpConfigLeases();
+  final Set<_ManagedAgentRun> _agentRuns = {};
+  final Set<String> _removing = {};
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  Future<void> _removeConfigs(
+    WorkspaceRuntime runtime,
+    List<String> paths,
+  ) async {
+    if (paths.isEmpty) return;
+    await _run(
+      runtime,
+      'rm -f -- ${paths.map(_quote).join(' ')}',
+      capture: true,
+      environment: const {'PATH': '/usr/bin:/bin'},
+    );
+  }
+
+  Future<void> _stopAgentRuns(String specId) async {
+    await Future.wait([
+      for (final run in _agentRuns.toList())
+        if (run.specId == specId) run.stop(),
+    ]);
+  }
+
+  static List<String> _ownedConfigPaths(AcpAgentSpec spec) => switch (spec.id) {
+    AcpAgentSpec.codexId => ['$acpConfigDir/codex/config.toml'],
+    AcpAgentSpec.openCodeId => [
+      '$acpConfigDir/opencode.json',
+      '$acpConfigDir/web-opencode/opencode.json',
+    ],
+    AcpAgentSpec.kimiCodeId => [
+      '$acpConfigDir/kimi-code/config.toml',
+      '$acpConfigDir/web-kimi-code/kimi-code/config.toml',
+    ],
+    AcpAgentSpec.deepSeekHarnessId => [
+      '$acpConfigDir/deepseek-harness/moru.yaml',
+      '$acpConfigDir/web-deepseek-harness/deepseek-harness/moru.yaml',
+    ],
+    _ => [],
+  };
+
   AcpAgentWebServers get webServers =>
       _webServers ??= (AcpAgentWebServers(prepare: _prepareWeb)
         ..addListener(notifyListeners));
@@ -344,7 +392,7 @@ class AcpAgentManager extends ChangeNotifier {
   Future<void> uninstall(AcpAgentSpec spec) async {
     final runtime = _runtime;
     if (busy || runtime == null || spec.isCustom) return;
-    await _webServers?.stop(spec.id);
+    _removing.add(spec.id);
     final packages = spec.uninstallPackages.join(' ');
     busyAgentId = spec.id;
     failure = null;
@@ -353,11 +401,19 @@ class AcpAgentManager extends ChangeNotifier {
     _log.clear();
     notifyListeners();
     try {
+      final stoppingAgents = _stopAgentRuns(spec.id);
+      await _webServers?.stop(spec.id);
+      await _webServers?.waitForCleanup(spec.id);
+      await stoppingAgents;
       final (code, _) = await _run(
         runtime,
-        'set -e\n'
-        'npm uninstall -g --prefix $acpNpmPrefix $packages\n'
-        'rm -f $acpNpmPrefix/bin/${spec.command}\n',
+        [
+          'set -e',
+          'npm uninstall -g --prefix $acpNpmPrefix $packages',
+          if (_ownedConfigPaths(spec).isNotEmpty)
+            'rm -f -- ${_ownedConfigPaths(spec).map(_quote).join(' ')}',
+          'rm -f $acpNpmPrefix/bin/${spec.command}',
+        ].join('\n'),
         timeout: const Duration(minutes: 5),
       );
       if (code != 0) {
@@ -373,6 +429,7 @@ class AcpAgentManager extends ChangeNotifier {
       failure = AcpAgentFailure.remove;
       failureKind = classifyAcpFailure(error);
     } finally {
+      _removing.remove(spec.id);
       busyAgentId = null;
       _runId = null;
       notifyListeners();
@@ -468,12 +525,26 @@ class AcpAgentManager extends ChangeNotifier {
         'The Linux environment is not ready',
       );
     }
+    if (_disposed || _removing.contains(spec.id)) {
+      throw const AcpError(AcpError.disconnected, 'Agent startup cancelled');
+    }
+    final run = _ManagedAgentRun(spec.id);
+    _agentRuns.add(run);
+    unawaited(run.closed.future.then((_) => _agentRuns.remove(run)));
+    bool cancelled() => run.stopped || _disposed || isCancelled?.call() == true;
+    void requireActive() {
+      if (cancelled()) {
+        throw const AcpError(AcpError.disconnected, 'Agent startup cancelled');
+      }
+    }
+
     var redactor = AcpSecretRedactor([
       provider.apiKey,
       ...provider.headers.values,
     ]);
     try {
       final variables = (await environment.loadExecutionConfig()).variables;
+      requireActive();
       redactor = AcpSecretRedactor([
         provider.apiKey,
         ...provider.headers.values,
@@ -481,6 +552,13 @@ class AcpAgentManager extends ChangeNotifier {
       ]);
       final launch = spec.launch(provider);
       await _requireNode(runtime, spec, redactor: redactor);
+      requireActive();
+      run.cleanup = await _configLeases.acquire(
+        runtime,
+        launch.files,
+        (paths) => _removeConfigs(runtime, paths),
+      );
+      requireActive();
       final env = _agentEnvironment(variables, launch);
       {
         final (code, output) = await _run(
@@ -500,6 +578,7 @@ class AcpAgentManager extends ChangeNotifier {
           );
         }
       }
+      requireActive();
       final transport = await WorkspaceStdioTransport.start(
         runtime: runtime,
         command: launch.command,
@@ -507,16 +586,26 @@ class AcpAgentManager extends ChangeNotifier {
         cwd: cwd,
         mounts: mounts,
         environment: env,
-        isCancelled: isCancelled,
+        isCancelled: cancelled,
         emulateHardLinks: false,
       );
-      return await AcpAgent.start(
+      run.transport = transport;
+      unawaited(transport.onClose.then((_) => run.stop()));
+      requireActive();
+      final agent = await AcpAgent.start(
         AcpStdioChannel(transport),
         clientVersion: clientVersion,
         redactor: redactor,
       );
+      run.agent = agent;
+      requireActive();
+      return agent;
     } catch (error) {
+      if (!run.prepared.isCompleted) run.prepared.complete();
+      await run.stop();
       throw redactor.error(error);
+    } finally {
+      if (!run.prepared.isCompleted) run.prepared.complete();
     }
   }
 
@@ -614,29 +703,48 @@ class AcpAgentManager extends ChangeNotifier {
       configDirectory: directory,
     );
     if (launch == null) throw const AcpWebException(AcpWebFailure.start);
-    final env = _agentEnvironment(variables, launch);
-    final (code, _) = await _run(
+    if (_disposed || _removing.contains(spec.id)) {
+      throw const AcpWebException(AcpWebFailure.stopped);
+    }
+    final cleanup = await _configLeases.acquire(
       runtime,
-      writeFilesScript([...launch.files, AcpFsCompat.file]),
-      capture: true,
-      environment: env,
+      launch.files,
+      (paths) => _removeConfigs(runtime, paths),
     );
-    if (code != 0) throw const AcpWebException(AcpWebFailure.start);
-    return (
-      runtime,
-      AcpLaunch(
-        command: launch.command,
-        arguments: launch.arguments,
+    try {
+      final env = _agentEnvironment(variables, launch);
+      final (code, _) = await _run(
+        runtime,
+        writeFilesScript([...launch.files, AcpFsCompat.file]),
+        capture: true,
         environment: env,
-        files: launch.files,
-      ),
-    );
+      );
+      if (code != 0) throw const AcpWebException(AcpWebFailure.start);
+      return (
+        runtime,
+        AcpLaunch(
+          command: launch.command,
+          arguments: launch.arguments,
+          environment: env,
+          files: launch.files,
+          cleanup: cleanup,
+        ),
+      );
+    } catch (_) {
+      await cleanup();
+      rethrow;
+    }
   }
 
   @override
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
     _webServers?.removeListener(notifyListeners);
     _webServers?.dispose();
+    for (final run in _agentRuns.toList()) {
+      unawaited(run.stop());
+    }
     super.dispose();
   }
 
@@ -647,6 +755,10 @@ class AcpAgentManager extends ChangeNotifier {
     'umask 077',
     for (final file in files) ...[
       'mkdir -p ${_quote(_dirname(file.path))}',
+      if (file.temporary) ...[
+        'touch -- ${_quote(file.path)}',
+        'chmod 600 ${_quote(file.path)}',
+      ],
       "printf '%s' '${base64.encode(utf8.encode(file.content))}' | "
           'base64 -d > ${_quote(file.path)}',
     ],
@@ -707,5 +819,38 @@ class AcpAgentManager extends ChangeNotifier {
       }
     }
     return (code, utf8.decode(output, allowMalformed: true));
+  }
+}
+
+class _ManagedAgentRun {
+  _ManagedAgentRun(this.specId);
+  final String specId;
+  final prepared = Completer<void>();
+  final closed = Completer<void>();
+  WorkspaceStdioTransport? transport;
+  AcpAgent? agent;
+  Future<void> Function()? cleanup;
+  bool stopped = false;
+  Future<void>? _closing;
+
+  Future<void> stop() {
+    stopped = true;
+    agent?.close();
+    transport?.close();
+    return _closing ??= _close();
+  }
+
+  Future<void> _close() async {
+    try {
+      await prepared.future;
+      agent?.close();
+      transport?.close();
+      await transport?.onClose;
+      await cleanup?.call();
+    } catch (_) {
+      // Closing must not publish guest diagnostics or leave async errors.
+    } finally {
+      closed.complete();
+    }
   }
 }

@@ -463,6 +463,42 @@ void main() {
   });
 
   test(
+    'OpenCode JSON-escaped header environment values are also redacted',
+    () async {
+      const header = 'escaped-"header"\\sentinel {file:/no/such/file}';
+      const provider = AcpProviderInput(
+        baseUrl: 'https://example.invalid',
+        apiKey: 'fake-api-key-sentinel',
+        model: 'test',
+        headers: {'X-Sensitive': header},
+      );
+      runtime.failAt = 'initialize';
+      final result = await manager.check(
+        AcpAgentSpec.byId('opencode')!,
+        provider,
+      );
+      final jsonHeader = jsonEncode(header);
+      final encoded = jsonHeader
+          .replaceAll('{', r'\u007b')
+          .replaceAll('}', r'\u007d');
+      final launch = runtime.requests.singleWhere(
+        (request) => request.keepStdinOpen,
+      );
+      // Exercise the actual launch env, including the JSON form OpenCode sees.
+      expect(
+        launch.env.values,
+        contains(encoded.substring(1, encoded.length - 1)),
+      );
+      expect(result.error, isNot(contains(header)));
+      expect(
+        result.error,
+        isNot(contains(encoded.substring(1, encoded.length - 1))),
+      );
+      expect(result.error, contains('frobnicator'));
+    },
+  );
+
+  test(
     'Web failure never surfaces the generated OpenCode password or diagnostics',
     () async {
       runtime.failAt = 'stderr';
