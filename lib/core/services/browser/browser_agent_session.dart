@@ -262,8 +262,8 @@ class BrowserAgentSession {
   /// taskId -> conversationId for every browser Ask-AI request this
   /// session has started but whose `MobileBackgroundCoordinator.finish()`
   /// notification decision hasn't run yet. [taskId] matches
-  /// `MobileBackgroundCoordinator`'s own per-run id (`generationRunId`, or
-  /// the assistant message id when no run id exists) exactly, so a lookup
+  /// `MobileBackgroundCoordinator`'s captured execution id (the durable run id
+  /// or an opaque token for a temporary generation) exactly, so a lookup
   /// here can never partially match a different run for the same
   /// conversation.
   ///

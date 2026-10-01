@@ -10,6 +10,7 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:uuid/uuid.dart';
 
 import '../models/chat_message.dart';
+import '../models/chat_input_data.dart';
 import '../models/conversation.dart';
 import '../models/message_part.dart';
 import '../utils/multimodal_input_utils.dart';
@@ -178,6 +179,207 @@ class ChatDatabaseRepository {
 
   Future<GenerationRun?> getGenerationRun(String id) =>
       GenerationRunCommands(_db).get(id);
+
+  static const _queueKeyPrefix = 'pending_inputs_v1.';
+  static const _recoveryAckPrefix = 'interruption_ack_v1.';
+
+  Future<List<QueuedChatInput>> queuedInputsForConversation(String id) async {
+    final row = await (_db.select(
+      _db.chatStorageMetaRows,
+    )..where((row) => row.key.equals('$_queueKeyPrefix$id'))).getSingleOrNull();
+    if (row == null) return [];
+    final value = jsonDecode(row.value) as Map;
+    if (value['version'] != 1) {
+      throw const FormatException('unsupported_queued_input_version');
+    }
+    final items = [
+      for (final item in value['items'] as List)
+        QueuedChatInput.fromJson(Map<String, dynamic>.from(item as Map)),
+    ];
+    final identities = <String>{};
+    if (items.any(
+      (item) => item.conversationId != id || !identities.add(item.id),
+    )) {
+      throw const FormatException('invalid_queued_input_identity');
+    }
+    return items;
+  }
+
+  Future<List<QueuedChatInput>> allQueuedInputs() async {
+    final rows =
+        await (_db.select(_db.chatStorageMetaRows)
+              ..where(
+                (row) => row.key.like(
+                  '${_queueKeyPrefix.replaceAll('_', '!_')}%',
+                  escapeChar: '!',
+                ),
+              )
+              ..orderBy([(row) => OrderingTerm.asc(row.key)]))
+            .get();
+    return [
+      for (final row in rows)
+        ...await queuedInputsForConversation(
+          row.key.substring(_queueKeyPrefix.length),
+        ),
+    ];
+  }
+
+  Future<void> _writeQueuedInputs(
+    String id,
+    List<QueuedChatInput> items,
+  ) async {
+    final key = '$_queueKeyPrefix$id';
+    if (items.isEmpty) {
+      await (_db.delete(
+        _db.chatStorageMetaRows,
+      )..where((row) => row.key.equals(key))).go();
+      return;
+    }
+    final encoded = [
+      for (final item in items)
+        {
+          ...item.toJson(),
+          'imagePaths': [
+            for (final path in item.input.imagePaths)
+              SandboxPathResolver.canonicalize(path),
+          ],
+          'documents': [
+            for (final document in item.input.documents)
+              {
+                'path': SandboxPathResolver.canonicalize(document.path),
+                'fileName': document.fileName,
+                'mime': document.mime,
+              },
+          ],
+        },
+    ];
+    await _db
+        .into(_db.chatStorageMetaRows)
+        .insertOnConflictUpdate(
+          ChatStorageMetaRowsCompanion.insert(
+            key: key,
+            value: jsonEncode({'version': 1, 'items': encoded}),
+          ),
+        );
+  }
+
+  Future<void> putQueuedInput(QueuedChatInput item, {int? index}) =>
+      _db.transaction(() async {
+        final conversation =
+            await (_db.select(_db.conversationRows)
+                  ..where((row) => row.id.equals(item.conversationId)))
+                .getSingleOrNull();
+        if (conversation == null) throw StateError('conversation_not_found');
+        final items = await queuedInputsForConversation(item.conversationId);
+        final existing = items.indexWhere((value) => value.id == item.id);
+        if (existing >= 0) {
+          items[existing] = item;
+        } else {
+          items.insert(index?.clamp(0, items.length) ?? items.length, item);
+        }
+        await _writeQueuedInputs(item.conversationId, items);
+      });
+
+  Future<void> setQueuedInputEditing(
+    String conversationId,
+    String id,
+    bool editing,
+  ) => _db.transaction(() async {
+    final items = await queuedInputsForConversation(conversationId);
+    final index = items.indexWhere((item) => item.id == id);
+    if (index < 0) throw StateError('queued_input_missing');
+    items[index] = items[index].withEditing(editing);
+    await _writeQueuedInputs(conversationId, items);
+  });
+
+  Future<void> removeQueuedInput(String conversationId, String id) =>
+      _db.transaction(() async {
+        final items = await queuedInputsForConversation(conversationId);
+        items.removeWhere((item) => item.id == id);
+        await _writeQueuedInputs(conversationId, items);
+      });
+
+  Future<List<String>> getInterruptedRevisionIds() async =>
+      (await _db
+              .customSelect(
+                '''
+        SELECT interrupted.target_revision_id
+        FROM generation_run_rows AS interrupted
+        WHERE interrupted.state = 'interrupted' AND NOT EXISTS (
+          SELECT 1 FROM generation_run_rows AS newer
+          WHERE newer.target_revision_id = interrupted.target_revision_id
+            AND (newer.created_at > interrupted.created_at OR
+              (newer.created_at = interrupted.created_at AND
+                newer.rowid > interrupted.rowid))
+        )
+      ''',
+                readsFrom: {_db.generationRunRows},
+              )
+              .get())
+          .map((row) => row.read<String>('target_revision_id'))
+          .toList(growable: false);
+
+  Future<List<String>> unacknowledgedInterruptedConversationIds() async {
+    final runs = await (_db.select(
+      _db.generationRunRows,
+    )..where((run) => run.state.equals('interrupted'))).get();
+    final result = <String>{};
+    // The existing acknowledgement also records an explicit runtime Stop.
+    // It pauses FIFO recovery without changing a cancelled run to interrupted.
+    final stopped =
+        await (_db.select(_db.chatStorageMetaRows)..where(
+              (row) =>
+                  row.key.like(
+                    '${_recoveryAckPrefix.replaceAll('_', '!_')}%',
+                    escapeChar: '!',
+                  ) &
+                  row.value.equals('-1'),
+            ))
+            .get();
+    result.addAll(
+      stopped.map((row) => row.key.substring(_recoveryAckPrefix.length)),
+    );
+    for (final run in runs) {
+      final ack =
+          await (_db.select(_db.chatStorageMetaRows)..where(
+                (row) =>
+                    row.key.equals('$_recoveryAckPrefix${run.conversationId}'),
+              ))
+              .getSingleOrNull();
+      if (ack == null ||
+          int.parse(ack.value) < run.terminalAt!.microsecondsSinceEpoch) {
+        result.add(run.conversationId);
+      }
+    }
+    return result.toList(growable: false);
+  }
+
+  Future<void> holdQueuedInputsAfterRuntimeStop(String conversationId) =>
+      _db.transaction(() async {
+        final conversation = await (_db.select(
+          _db.conversationRows,
+        )..where((row) => row.id.equals(conversationId))).getSingleOrNull();
+        if (conversation == null) return;
+        await _db
+            .into(_db.chatStorageMetaRows)
+            .insertOnConflictUpdate(
+              ChatStorageMetaRowsCompanion.insert(
+                key: '$_recoveryAckPrefix$conversationId',
+                value: '-1',
+              ),
+            );
+      });
+
+  Future<void> acknowledgeInterruptedConversation(String conversationId) async {
+    await _db
+        .into(_db.chatStorageMetaRows)
+        .insertOnConflictUpdate(
+          ChatStorageMetaRowsCompanion.insert(
+            key: '$_recoveryAckPrefix$conversationId',
+            value: DateTime.now().toUtc().microsecondsSinceEpoch.toString(),
+          ),
+        );
+  }
 
   Future<GenerationRun> transitionGenerationRun({
     required String id,
@@ -3890,7 +4092,7 @@ class ChatDatabaseRepository {
     });
   }
 
-  /// Set-based dirty-part protection for a candidate page.
+  /// Set-based dirty-part and pending-input protection for a candidate page.
   ///
   /// A never-registered malformed attachment whose raw payload no longer
   /// contains its path (for example, a non-string `uri`) cannot be protected
@@ -3915,7 +4117,9 @@ class ChatDatabaseRepository {
         ..add(Variable<String>(jsonPathForm))
         ..add(Variable<String>(jsonAltForm));
     }
-    final rows = await _db.customSelect('''
+    final rows = await _db
+        .customSelect(
+          '''
           WITH candidates(
             asset_id, path_form, alt_form, json_path_form, json_alt_form
           ) AS (
@@ -3934,8 +4138,23 @@ class ChatDatabaseRepository {
                 OR instr(p.payload, c.json_path_form) > 0
                 OR instr(p.payload, c.json_alt_form) > 0
               )
+          ) OR EXISTS (
+            SELECT 1 FROM chat_storage_meta_rows q
+            WHERE q.key LIKE ? ESCAPE '!'
+              AND (
+                instr(q.value, c.path_form) > 0
+                OR instr(q.value, c.alt_form) > 0
+                OR instr(q.value, c.json_path_form) > 0
+                OR instr(q.value, c.json_alt_form) > 0
+              )
           );
-        ''', variables: variables).get();
+        ''',
+          variables: [
+            ...variables,
+            Variable<String>('${_queueKeyPrefix.replaceAll('_', '!_')}%'),
+          ],
+        )
+        .get();
     return {for (final row in rows) row.read<String>('asset_id')};
   }
 
@@ -3962,11 +4181,24 @@ class ChatDatabaseRepository {
                   OR instr(p.payload, ?) > 0 OR instr(p.payload, ?) > 0
                 )
             )
+            AND NOT EXISTS (
+              SELECT 1 FROM chat_storage_meta_rows q
+              WHERE q.key LIKE ? ESCAPE '!'
+                AND (
+                  instr(q.value, ?) > 0 OR instr(q.value, ?) > 0
+                  OR instr(q.value, ?) > 0 OR instr(q.value, ?) > 0
+                )
+            )
           LIMIT 1;
         ''',
           variables: [
             Variable<String>(candidate.assetId),
             Variable<int>(candidate.generation),
+            Variable<String>(pathForm),
+            Variable<String>(altForm),
+            Variable<String>(jsonPathForm),
+            Variable<String>(jsonAltForm),
+            Variable<String>('${_queueKeyPrefix.replaceAll('_', '!_')}%'),
             Variable<String>(pathForm),
             Variable<String>(altForm),
             Variable<String>(jsonPathForm),
@@ -4008,11 +4240,24 @@ class ChatDatabaseRepository {
                     OR instr(p.payload, ?) > 0 OR instr(p.payload, ?) > 0
                   )
               )
+              AND NOT EXISTS (
+                SELECT 1 FROM chat_storage_meta_rows q
+                WHERE q.key LIKE ? ESCAPE '!'
+                  AND (
+                    instr(q.value, ?) > 0 OR instr(q.value, ?) > 0
+                    OR instr(q.value, ?) > 0 OR instr(q.value, ?) > 0
+                  )
+              )
             LIMIT 1;
           ''',
             variables: [
               Variable<String>(assetId),
               Variable<int>(expectedGeneration),
+              Variable<String>(pathForm),
+              Variable<String>(altForm),
+              Variable<String>(jsonPathForm),
+              Variable<String>(jsonAltForm),
+              Variable<String>('${_queueKeyPrefix.replaceAll('_', '!_')}%'),
               Variable<String>(pathForm),
               Variable<String>(altForm),
               Variable<String>(jsonPathForm),
@@ -4598,6 +4843,7 @@ class ChatDatabaseRepository {
     required ChatMessage userMessage,
     required ChatMessage assistantMessage,
     required String runId,
+    String? queuedInputId,
   }) {
     _validateGenerationBeginMessages(
       conversation: conversation,
@@ -4607,6 +4853,13 @@ class ChatDatabaseRepository {
     return _observer.measure(
       ChatDatabaseOperation.commandAppendMessage,
       () => _db.transaction(() async {
+        if (queuedInputId != null) {
+          final queued = await queuedInputsForConversation(conversation.id);
+          final index = queued.indexWhere((item) => item.id == queuedInputId);
+          if (index < 0) throw StateError('queued_input_missing');
+          queued.removeAt(index);
+          await _writeQueuedInputs(conversation.id, queued);
+        }
         final afterUser = await _appendLinearMessageToConversation(
           conversation: conversation,
           message: userMessage,
@@ -4634,6 +4887,74 @@ class ChatDatabaseRepository {
       }),
     );
   }
+
+  Future<GenerationBeginResult> beginContinuationGeneration({
+    required String conversationId,
+    required String assistantMessageId,
+    required String runId,
+    required DateTime startedAt,
+    required String modelId,
+    required String providerId,
+  }) => _db.transaction(() async {
+    final message = await getMessage(assistantMessageId);
+    if (message == null ||
+        message.role != 'assistant' ||
+        message.conversationId != conversationId) {
+      throw StateError('message_not_found');
+    }
+    final active =
+        await (_db.select(_db.generationRunRows)
+              ..where(
+                (run) =>
+                    run.conversationId.equals(conversationId) &
+                    run.state.isIn(const [
+                      'preparing',
+                      'requesting',
+                      'streaming',
+                      'waiting_tool',
+                    ]),
+              )
+              ..limit(1))
+            .getSingleOrNull();
+    if (message.isStreaming || active != null) {
+      throw StateError('generation_active');
+    }
+    final changed =
+        await (_db.update(_db.messageRows)..where(
+              (row) =>
+                  row.id.equals(assistantMessageId) &
+                  row.conversationId.equals(conversationId) &
+                  row.isStreaming.equals(false),
+            ))
+            .write(
+              MessageRowsCompanion(
+                isStreaming: const Value(true),
+                modelId: Value(modelId),
+                providerId: Value(providerId),
+                updatedAt: Value(startedAt),
+              ),
+            );
+    if (changed != 1) throw StateError('message_changed');
+    final run = await GenerationRunCommands(_db).create(
+      id: runId,
+      conversationId: conversationId,
+      targetRevisionId: assistantMessageId,
+      createdAt: startedAt,
+    );
+    final conversationRow = await (_db.select(
+      _db.conversationRows,
+    )..where((row) => row.id.equals(conversationId))).getSingle();
+    return (
+      conversation: await _conversationFromRow(conversationRow),
+      userMessage: null,
+      assistantMessage: message.copyWith(
+        isStreaming: true,
+        modelId: modelId,
+        providerId: providerId,
+      ),
+      run: run,
+    );
+  });
 
   Future<GenerationBeginResult> beginRegeneration({
     required Conversation conversation,
@@ -6120,6 +6441,11 @@ class ChatDatabaseRepository {
   /// no tombstone is written for them.
   Future<void> deleteConversation(String id) async {
     await _db.transaction(() async {
+      await (_db.delete(_db.chatStorageMetaRows)..where(
+            (row) =>
+                row.key.isIn(['$_queueKeyPrefix$id', '$_recoveryAckPrefix$id']),
+          ))
+          .go();
       final deleted = await (_db.delete(
         _db.conversationRows,
       )..where((t) => t.id.equals(id))).go();
@@ -6353,9 +6679,19 @@ class ChatDatabaseRepository {
     // A bulk reset replaces the whole local state; stale tombstones would
     // otherwise mark freshly imported conversations as deleted elsewhere.
     await _db.delete(_db.tombstoneRows).go();
-    await (_db.delete(
-      _db.chatStorageMetaRows,
-    )..where((t) => t.key.equals(ChatStorageMetaKeys.activeStreamingIds))).go();
+    await (_db.delete(_db.chatStorageMetaRows)..where(
+          (t) =>
+              t.key.equals(ChatStorageMetaKeys.activeStreamingIds) |
+              t.key.like(
+                '${_queueKeyPrefix.replaceAll('_', '!_')}%',
+                escapeChar: '!',
+              ) |
+              t.key.like(
+                '${_recoveryAckPrefix.replaceAll('_', '!_')}%',
+                escapeChar: '!',
+              ),
+        ))
+        .go();
   }
 
   Future<List<Map<String, dynamic>>> getToolEvents(String messageId) async {

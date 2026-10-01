@@ -21812,6 +21812,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Codex only works with providers that support the OpenAI Responses API. Enable it in the provider settings or choose another agent.'**
   String get agentsCodexResponsesRequired;
+
+  /// No description provided for @backgroundReliabilityHintTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep this task running'**
+  String get backgroundReliabilityHintTitle;
+
+  /// No description provided for @backgroundReliabilityHintDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Background execution is off. Enable it to keep this task running when you switch apps or turn off the screen.'**
+  String get backgroundReliabilityHintDisabled;
+
+  /// No description provided for @backgroundReliabilityHintRestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Android restricts Moru in the background. Check the app’s battery settings before leaving this task.'**
+  String get backgroundReliabilityHintRestricted;
+
+  /// No description provided for @backgroundReliabilityHintStandby.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Power Standby can pause network access even while this task is running. Check your device’s power settings.'**
+  String get backgroundReliabilityHintStandby;
+
+  /// No description provided for @backgroundReliabilityHintVendor.
+  ///
+  /// In en, this message translates to:
+  /// **'Vivo and Xiaomi can stop background tasks. Allow background activity and autostart in system settings.'**
+  String get backgroundReliabilityHintVendor;
+
+  /// No description provided for @backgroundReliabilityHintInterrupted.
+  ///
+  /// In en, this message translates to:
+  /// **'A previous task stopped when Moru’s process ended. Check battery and background activity settings before leaving another task.'**
+  String get backgroundReliabilityHintInterrupted;
+
+  /// No description provided for @backgroundReliabilityHintSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Background settings'**
+  String get backgroundReliabilityHintSettings;
+
+  /// No description provided for @backgroundReliabilityHintDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss tip'**
+  String get backgroundReliabilityHintDismiss;
+
+  /// No description provided for @backgroundLowPowerStandby.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Power Standby'**
+  String get backgroundLowPowerStandby;
+
+  /// No description provided for @backgroundLowPowerStandbyDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'This device mode can restrict network access even with a foreground service. A battery optimization exception does not always disable it.'**
+  String get backgroundLowPowerStandbyDetail;
+
+  /// No description provided for @backgroundPowerRestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Restricted'**
+  String get backgroundPowerRestricted;
+
+  /// No description provided for @backgroundPowerUnrestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'No restriction reported'**
+  String get backgroundPowerUnrestricted;
+
+  /// No description provided for @backgroundShellRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running background command'**
+  String get backgroundShellRunning;
+
+  /// No description provided for @backgroundServerRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Mini app server running'**
+  String get backgroundServerRunning;
+
+  /// No description provided for @backgroundProtectionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Background protection could not start. Keep Moru open and try again.'**
+  String get backgroundProtectionUnavailable;
+
+  /// No description provided for @chatInterruptedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The app stopped before this reply finished. Your saved partial reply and queued messages are preserved. Continuing starts a new turn.'**
+  String get chatInterruptedBody;
+
+  /// No description provided for @chatContinueAfterInterruption.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get chatContinueAfterInterruption;
+
+  /// No description provided for @chatContinuePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue from the saved context after the interruption. Check what has already completed before taking further actions.'**
+  String get chatContinuePrompt;
+
+  /// No description provided for @queuedInputSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save the queued message. Your draft is still available.'**
+  String get queuedInputSaveFailed;
+
+  /// No description provided for @notificationApprovalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval needed'**
+  String get notificationApprovalTitle;
+
+  /// No description provided for @notificationApprovalBody.
+  ///
+  /// In en, this message translates to:
+  /// **'An agent is waiting for your decision.'**
+  String get notificationApprovalBody;
+
+  /// No description provided for @notificationApprovalAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get notificationApprovalAllow;
+
+  /// No description provided for @notificationApprovalDeny.
+  ///
+  /// In en, this message translates to:
+  /// **'Deny'**
+  String get notificationApprovalDeny;
+
+  /// No description provided for @notificationApprovalStaleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval no longer available'**
+  String get notificationApprovalStaleTitle;
+
+  /// No description provided for @notificationApprovalStaleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the chat to check this request.'**
+  String get notificationApprovalStaleBody;
+
+  /// No description provided for @notificationApprovalChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent approvals'**
+  String get notificationApprovalChannelName;
+
+  /// No description provided for @notificationApprovalChannelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Decisions requested by a running agent or tool.'**
+  String get notificationApprovalChannelDescription;
+
+  /// No description provided for @backgroundShellCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Background command finished'**
+  String get backgroundShellCompleted;
+
+  /// No description provided for @backgroundShellFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Background command failed'**
+  String get backgroundShellFailed;
 }
 
 class _AppLocalizationsDelegate

@@ -6,6 +6,7 @@ class MobileBackgroundSettings {
     this.privacyMode = false,
     this.overlayEnabled = false,
     this.liveUpdatesEnabled = false,
+    this.reliabilityHintDismissed = false,
     this.completionVisibility = BackgroundCompletionVisibility.oneMinute,
     this.overlayIconKind = 'app',
     this.overlayIconValue = '',
@@ -17,6 +18,7 @@ class MobileBackgroundSettings {
   final bool privacyMode;
   final bool overlayEnabled;
   final bool liveUpdatesEnabled;
+  final bool reliabilityHintDismissed;
   final BackgroundCompletionVisibility completionVisibility;
   final String overlayIconKind;
   final String overlayIconValue;
@@ -34,6 +36,7 @@ class MobileBackgroundSettings {
       privacyMode: json['privacyMode'] == true,
       overlayEnabled: json['overlayEnabled'] == true,
       liveUpdatesEnabled: json['liveUpdatesEnabled'] == true,
+      reliabilityHintDismissed: json['reliabilityHintDismissed'] == true,
       completionVisibility: visibility,
       overlayIconKind: kind == 'image' || kind == 'emoji' ? kind : 'app',
       overlayIconValue: json['overlayIconValue'] as String? ?? '',
@@ -50,6 +53,7 @@ class MobileBackgroundSettings {
     'privacyMode': privacyMode,
     'overlayEnabled': overlayEnabled,
     'liveUpdatesEnabled': liveUpdatesEnabled,
+    'reliabilityHintDismissed': reliabilityHintDismissed,
     'completionVisibility': completionVisibility.name,
     'overlayIconKind': overlayIconKind,
     'overlayIconValue': overlayIconValue,
@@ -62,6 +66,7 @@ class MobileBackgroundSettings {
     bool? privacyMode,
     bool? overlayEnabled,
     bool? liveUpdatesEnabled,
+    bool? reliabilityHintDismissed,
     BackgroundCompletionVisibility? completionVisibility,
     String? overlayIconKind,
     String? overlayIconValue,
@@ -72,6 +77,8 @@ class MobileBackgroundSettings {
     privacyMode: privacyMode ?? this.privacyMode,
     overlayEnabled: overlayEnabled ?? this.overlayEnabled,
     liveUpdatesEnabled: liveUpdatesEnabled ?? this.liveUpdatesEnabled,
+    reliabilityHintDismissed:
+        reliabilityHintDismissed ?? this.reliabilityHintDismissed,
     completionVisibility: completionVisibility ?? this.completionVisibility,
     overlayIconKind: overlayIconKind ?? this.overlayIconKind,
     overlayIconValue: overlayIconValue ?? this.overlayIconValue,

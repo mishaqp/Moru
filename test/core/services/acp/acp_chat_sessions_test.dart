@@ -302,7 +302,7 @@ void main() {
     String cwd = '/workspace',
     AcpProviderInput? using,
     AcpAgentSpec? agentSpec,
-    void Function(String)? onSession,
+    FutureOr<void> Function(String)? onSession,
     AcpMcpTools? moruTools,
   }) => AcpChatTurn(
     conversationId: conversation,
@@ -326,6 +326,53 @@ void main() {
     expect(chunks.last, isA<Finish>());
     return chunks.whereType<TextDelta>().map((c) => c.text).join();
   }
+
+  test('a new prompt waits for its session id to become durable', () async {
+    final sessions = sessionsWith();
+    addTearDown(sessions.closeAll);
+    final saving = Completer<void>();
+    final saved = Completer<void>();
+    final pending = answer(
+      sessions,
+      turn(
+        'new input',
+        onSession: (_) async {
+          saving.complete();
+          await saved.future;
+        },
+      ),
+    );
+    await saving.future;
+    await Future<void>.delayed(Duration.zero);
+    expect(
+      started.single.sent.where((m) => m['method'] == 'session/prompt'),
+      isEmpty,
+    );
+    saved.complete();
+    expect(await pending, 'new-1:new input');
+  });
+
+  test(
+    'restoring a saved context sends no prompt and keeps that session for the next new input',
+    () async {
+      final sessions = sessionsWith(loadSession: true);
+      addTearDown(sessions.closeAll);
+      final restored = await sessions.ensureSession(turn('', saved: 'old-7'));
+      expect(restored.id, 'old-7');
+      expect(
+        started.single.sent.where((m) => m['method'] == 'session/prompt'),
+        isEmpty,
+      );
+      expect(
+        await answer(sessions, turn('new continuation', saved: 'old-7')),
+        'old-7:new continuation',
+      );
+      expect(
+        started.single.sent.where((m) => m['method'] == 'session/load'),
+        hasLength(1),
+      );
+    },
+  );
 
   for (final style in ['title', 'name', 'meta', 'wrapped']) {
     test(

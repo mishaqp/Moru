@@ -57,7 +57,7 @@ class AcpChatTurn {
   /// The chat's session from an earlier run, reopened when the agent can.
   final String? savedSessionId;
   final String? savedModeId;
-  final void Function(String sessionId)? onSession;
+  final FutureOr<void> Function(String sessionId)? onSession;
   final AcpPermissionHandler? onPermission;
   final void Function(TaskPlan plan)? onPlan;
   final AcpMcpTools? moruTools;
@@ -82,6 +82,14 @@ class AcpChatSessions extends ChangeNotifier {
 
   AcpSession? sessionFor(String? conversationId) =>
       _chats[conversationId]?.session;
+
+  /// Reopen the existing context without sending or replaying any prompt.
+  Future<AcpSession> ensureSession(AcpChatTurn turn) async {
+    final chat = await _ensure(turn);
+    chat.idle?.cancel();
+    chat.idle = Timer(idleTimeout, () => close(turn.conversationId));
+    return chat.session;
+  }
 
   /// Streams the agent's answer to [turn] as chat chunks.
   Stream<StreamChunk> send(AcpChatTurn turn) async* {
@@ -206,7 +214,7 @@ class AcpChatSessions extends ChangeNotifier {
       }
       if (session == null) {
         session = await agent.newSession(cwd: turn.cwd, mcpServers: mcpServers);
-        turn.onSession?.call(session.id);
+        await turn.onSession?.call(session.id);
       }
       final chat = _ChatAgent(key, agent, session, mcp)
         ..needsHistory = needsHistory;

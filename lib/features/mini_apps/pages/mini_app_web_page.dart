@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/services/keep_alive.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_settings_rows.dart';
@@ -93,6 +94,7 @@ class _MiniAppWebPageState extends State<MiniAppWebPage> {
     return switch (_host.error) {
       null => null,
       MiniAppWebHost.errorNoPassword => l10n.miniAppsWebNoPassword,
+      ProcessKeepAliveException.code => l10n.backgroundProtectionUnavailable,
       MiniAppWebHost.errorPortInUse => l10n.miniAppsWebPortInUse(
         '${settings.miniAppWebPort}',
       ),

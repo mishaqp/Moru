@@ -8,6 +8,37 @@ import '../../../support/business_test_harness.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test(
+    'a restored terminal tool has an unknown result instead of an infinite spinner',
+    () {
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      final controller = StreamController(
+        onStateChanged: () {},
+        getSettingsProvider: () => settings,
+        getCurrentConversationId: () => 'chat',
+      );
+      addTearDown(controller.dispose);
+      controller.restoreMessageUiState(
+        ChatMessage(
+          id: 'partial',
+          conversationId: 'chat',
+          role: 'assistant',
+          content: 'saved',
+        ),
+        getToolEventsFromDb: (_) => [
+          {
+            'id': 'tool',
+            'name': 'shell',
+            'arguments': {'command': 'existing'},
+            'content': null,
+          },
+        ],
+      );
+      final tool = controller.toolParts['partial']!.single;
+      expect(tool.loading, isFalse);
+      expect(tool.content, isNull);
+    },
+  );
   for (final startsInBackground in [false, true]) {
     test(
       'background tool result refreshes the timeline (background start=$startsInBackground)',

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 
 import 'shell_output_buffer.dart';
 
@@ -15,7 +16,7 @@ class ToolRun extends ChangeNotifier {
     this.command,
     String? runtimeRunId,
     DateTime? startedAt,
-  }) : runtimeRunId = runtimeRunId ?? toolCallId,
+  }) : runtimeRunId = runtimeRunId ?? const Uuid().v4(),
        startedAt = startedAt ?? DateTime.now();
 
   final String toolCallId;
@@ -136,14 +137,15 @@ class _TailLine {
   String get text => completedText ?? output.currentLine;
 }
 
-/// Process-lifetime registry of tool runs. Finished runs are kept until the
-/// cap of 200 entries; least-recently-used finished runs are evicted first.
+/// Process-lifetime registry of tool runs. Active runtime identities always
+/// remain addressable; completed history is capped at 200 entries.
 typedef _RunKey = (String?, String);
 
 class ToolRunRegistry extends ChangeNotifier {
   static const int maxEntries = 200;
 
   final Map<_RunKey, ToolRun> _runs = {};
+  final Map<_RunKey, _RunKey> _latest = {};
   final List<_RunKey> _lru = [];
 
   ToolRun start(
@@ -153,26 +155,34 @@ class ToolRunRegistry extends ChangeNotifier {
     String? conversationId,
     String? runtimeRunId,
   }) {
-    final key = (conversationId, toolCallId);
-    final existing = _runs.remove(key);
-    existing?.dispose();
-    _lru.remove(key);
     final run = ToolRun(
       toolCallId: toolCallId,
       toolName: toolName,
       runtimeRunId: runtimeRunId,
       command: command,
     );
+    final key = (conversationId, run.runtimeRunId);
+    if (_runs.containsKey(key)) {
+      run.dispose();
+      throw ArgumentError.value(
+        runtimeRunId,
+        'runtimeRunId',
+        'already tracked',
+      );
+    }
     // Watchers of the registry (running strips, busy badges) must see a run
     // finish, not only its own listeners.
     void onRunChanged() {
       if (run.status == ToolRunStatus.running) return;
       run.removeListener(onRunChanged);
+      _touch(key);
+      _evictOverflow();
       notifyListeners();
     }
 
     run.addListener(onRunChanged);
     _runs[key] = run;
+    _latest[(conversationId, toolCallId)] = key;
     _lru.add(key);
     _evictOverflow();
     notifyListeners();
@@ -180,7 +190,8 @@ class ToolRunRegistry extends ChangeNotifier {
   }
 
   ToolRun? of(String toolCallId, {String? conversationId}) {
-    final key = (conversationId, toolCallId);
+    final key = _latest[(conversationId, toolCallId)];
+    if (key == null) return null;
     final run = _runs[key];
     if (run != null) _touch(key);
     return run;
@@ -189,20 +200,16 @@ class ToolRunRegistry extends ChangeNotifier {
   /// The run a background job id ([ToolRun.runtimeRunId]) names in
   /// [conversationId], if it is still tracked.
   ToolRun? byRuntimeRunId(String runtimeRunId, {String? conversationId}) {
-    for (final entry in _runs.entries) {
-      if (entry.key.$1 == conversationId &&
-          entry.value.runtimeRunId == runtimeRunId) {
-        return entry.value;
-      }
-    }
-    return null;
+    final key = (conversationId, runtimeRunId);
+    final run = _runs[key];
+    if (run != null) _touch(key);
+    return run;
   }
 
   void evict(String toolCallId, {String? conversationId}) {
-    final key = (conversationId, toolCallId);
-    final run = _runs.remove(key);
-    _lru.remove(key);
-    run?.dispose();
+    final key = _latest[(conversationId, toolCallId)];
+    if (key == null || _runs[key]?.status == ToolRunStatus.running) return;
+    _remove(key);
     notifyListeners();
   }
 
@@ -225,19 +232,24 @@ class ToolRunRegistry extends ChangeNotifier {
   }
 
   void _evictOverflow() {
-    while (_runs.length > maxEntries) {
-      _RunKey? victim;
-      for (final id in _lru) {
-        final run = _runs[id];
-        if (run != null && run.status != ToolRunStatus.running) {
-          victim = id;
-          break;
-        }
-      }
-      victim ??= _lru.first;
-      final run = _runs.remove(victim);
-      _lru.remove(victim);
-      run?.dispose();
+    var finished = _runs.values
+        .where((run) => run.status != ToolRunStatus.running)
+        .length;
+    while (finished > maxEntries) {
+      final victim = _lru.firstWhere(
+        (key) => _runs[key]?.status != ToolRunStatus.running,
+      );
+      _remove(victim);
+      finished--;
     }
+  }
+
+  void _remove(_RunKey key) {
+    final run = _runs.remove(key);
+    _lru.remove(key);
+    if (run == null) return;
+    final toolKey = (key.$1, run.toolCallId);
+    if (_latest[toolKey] == key) _latest.remove(toolKey);
+    run.dispose();
   }
 }

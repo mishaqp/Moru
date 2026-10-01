@@ -29,6 +29,29 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 
 void main() {
+  testWidgets(
+    'an interrupted partial keeps its content and continues only after a tap',
+    (tester) async {
+      final message = ChatMessage(
+        id: 'interrupted',
+        conversationId: 'conversation-1',
+        role: 'assistant',
+        content: 'Saved partial',
+      );
+      var continued = 0;
+      await _estimateExtent(
+        tester,
+        message: message,
+        interruptedMessageIds: {message.id},
+        onContinueInterruptedReply: (_) => continued++,
+      );
+      expect(find.textContaining('Saved partial'), findsWidgets);
+      expect(find.text('Generation interrupted'), findsOneWidget);
+      expect(continued, 0);
+      await tester.tap(find.text('Continue'));
+      expect(continued, 1);
+    },
+  );
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
@@ -1408,6 +1431,8 @@ Future<double> _estimateExtent(
   Assistant? assistant,
   Map<String, List<ToolUIPart>> toolParts = const {},
   ToolApprovalService? approval,
+  Set<String> interruptedMessageIds = const {},
+  OnRegenerateMessage? onContinueInterruptedReply,
 }) async {
   final settings = SettingsProvider(createBusinessTestPreferences());
   await settings.loaded;
@@ -1426,6 +1451,8 @@ Future<double> _estimateExtent(
       assistant: assistant,
       toolParts: toolParts,
       approval: approval,
+      interruptedMessageIds: interruptedMessageIds,
+      onContinueInterruptedReply: onContinueInterruptedReply,
     ),
   );
   await tester.pump();
@@ -1448,6 +1475,8 @@ class _CardVisibilityHarness extends StatefulWidget {
     this.toolParts = const {},
     this.approval,
     this.streamingContentNotifier,
+    this.interruptedMessageIds = const {},
+    this.onContinueInterruptedReply,
   });
 
   final SettingsProvider settings;
@@ -1463,6 +1492,8 @@ class _CardVisibilityHarness extends StatefulWidget {
   final Map<String, List<ToolUIPart>> toolParts;
   final ToolApprovalService? approval;
   final StreamingContentNotifier? streamingContentNotifier;
+  final Set<String> interruptedMessageIds;
+  final OnRegenerateMessage? onContinueInterruptedReply;
 
   @override
   State<_CardVisibilityHarness> createState() => _CardVisibilityHarnessState();
@@ -1523,6 +1554,8 @@ class _CardVisibilityHarnessState extends State<_CardVisibilityHarness> {
             scrollController: scrollController,
             listController: listController,
             messages: widget.messages,
+            interruptedMessageIds: widget.interruptedMessageIds,
+            onContinueInterruptedReply: widget.onContinueInterruptedReply,
             byGroup: const {},
             versionSelections: const {},
             reasoning: const <String, stream_ctrl.ReasoningData>{},

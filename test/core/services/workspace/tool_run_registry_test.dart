@@ -269,26 +269,90 @@ void main() {
       );
       expect(registry.of('call-0', conversationId: 'a'), same(a));
       expect(registry.of('call-0', conversationId: 'b'), same(b));
+      a.complete(status: ToolRunStatus.succeeded);
       registry.evict('call-0', conversationId: 'a');
       expect(registry.of('call-0', conversationId: 'b'), same(b));
     },
   );
 
-  test('evicts the least-recently-used finished run at 200 entries', () {
+  test('bounds finished history separately from active work', () {
     final registry = ToolRunRegistry();
     for (var i = 0; i < 200; i++) {
       registry
           .start('$i', 'shell', command: 'cmd$i')
           .complete(status: ToolRunStatus.succeeded, exitCode: 0);
     }
-    registry.start('200', 'shell');
-    expect(registry.of('0'), isNull);
-    expect(registry.of('1'), isNotNull);
+    final active = registry.start('200', 'shell');
+    expect(registry.all.where((run) => run.toolCallId == '0'), hasLength(1));
+    expect(registry.all.where((run) => run.toolCallId == '1'), hasLength(1));
     expect(registry.of('200'), isNotNull);
     expect(registry.running.length, 1);
 
     registry.evict('200');
+    expect(registry.of('200'), same(active));
+    expect(registry.running, [active]);
+    active.complete(status: ToolRunStatus.succeeded);
+    expect(registry.of('0'), isNull);
+    expect(registry.of('1'), isNotNull);
+    registry.evict('200');
     expect(registry.of('200'), isNull);
     expect(registry.running, isEmpty);
+  });
+
+  test('reused tool IDs preserve both active runtime identities', () {
+    final registry = ToolRunRegistry();
+    final first = registry.start(
+      'call',
+      'shell',
+      conversationId: 'chat',
+      runtimeRunId: 'first',
+    );
+    final second = registry.start(
+      'call',
+      'shell',
+      conversationId: 'chat',
+      runtimeRunId: 'second',
+    );
+    expect(registry.of('call', conversationId: 'chat'), same(second));
+    expect(
+      registry.byRuntimeRunId('first', conversationId: 'chat'),
+      same(first),
+    );
+    expect(registry.runningIn('chat'), [first, second]);
+    first.complete(status: ToolRunStatus.succeeded);
+    expect(
+      registry.byRuntimeRunId('first', conversationId: 'chat')!.status,
+      ToolRunStatus.succeeded,
+    );
+    expect(registry.running, [second]);
+    second.complete(status: ToolRunStatus.cancelled);
+  });
+
+  test('more than 200 overlapping runs stay addressable until completion', () {
+    final registry = ToolRunRegistry();
+    final runs = [
+      for (var i = 0; i < 205; i++)
+        registry.start(
+          'call',
+          'shell',
+          conversationId: 'chat',
+          runtimeRunId: 'run-$i',
+        ),
+    ];
+    expect(registry.runningIn('chat'), hasLength(205));
+    expect(
+      registry.byRuntimeRunId('run-0', conversationId: 'chat'),
+      same(runs[0]),
+    );
+    for (final run in runs) {
+      run.complete(status: ToolRunStatus.succeeded);
+    }
+    expect(registry.running, isEmpty);
+    expect(registry.all, hasLength(200));
+    expect(registry.byRuntimeRunId('run-0', conversationId: 'chat'), isNull);
+    expect(
+      registry.byRuntimeRunId('run-204', conversationId: 'chat'),
+      same(runs.last),
+    );
   });
 }

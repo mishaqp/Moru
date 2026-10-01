@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../keep_alive.dart';
 import 'mini_app_bridge.dart';
 import 'mini_app_fetch.dart';
 import 'mini_app_jobs.dart';
@@ -131,6 +132,7 @@ class MiniAppSandbox {
     MiniApp app, {
     MiniAppFetch? fetch,
     MiniAppServerEnvironment? serverEnvironment,
+    ProcessKeepAlive? keepAlive,
   }) async {
     final root = await Directory.systemTemp.createTemp('mini-app-check-');
     try {
@@ -149,6 +151,7 @@ class MiniAppSandbox {
         final servers = MiniAppServers(
           store: store,
           fetch: fetch,
+          keepAlive: keepAlive,
           startTimeout: serverStartTimeout,
         );
         server = (

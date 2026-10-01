@@ -28,6 +28,7 @@ class AcpMoruTools {
     required String modelId,
     required WorkspaceToolContext? workspace,
     required ToolApprovalService? approvals,
+    ToolApprovalOwner? approvalOwner,
   }) {
     final service = ToolHandlerService(contextProvider: context);
     Assistant? current() {
@@ -65,6 +66,9 @@ class AcpMoruTools {
         reason: 'cancelled',
       ),
       execute: (name, args, {required toolCallId}) async {
+        if (approvalOwner != null && !approvalOwner.isActive()) {
+          return error('The agent turn was cancelled.');
+        }
         final live = current();
         if (live == null ||
             !definitions().any((tool) => tool['name'] == name)) {
@@ -88,7 +92,13 @@ class AcpMoruTools {
         if (handler == null) {
           return error('The Moru tool handler is unavailable.');
         }
-        return result(await handler(name, args, toolCallId: toolCallId));
+        Future<Object?> execute() =>
+            handler(name, args, toolCallId: toolCallId);
+        return result(
+          await (approvalOwner == null
+              ? execute()
+              : approvalOwner.run(execute)),
+        );
       },
     );
   }

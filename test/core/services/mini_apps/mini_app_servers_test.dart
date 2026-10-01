@@ -12,6 +12,8 @@ import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/features/home/services/mini_app_data_tool.dart';
 
+import '../../../support/fake_process_keep_alive.dart';
+
 /// Runs nothing: each request gets a stream the test writes events to.
 class _Runtime extends WorkspaceRuntime {
   final requests = <CommandRequest>[];
@@ -65,6 +67,7 @@ void main() {
   late MiniAppServerEnvironment environment;
   var listening = false;
   late DateTime clock;
+  late FakeProcessKeepAlive keepAlive;
 
   setUp(() async {
     temp = await Directory.systemTemp.createTemp('mini-app-servers-');
@@ -72,6 +75,7 @@ void main() {
       root: () async => Directory(p.join(temp.path, 'installed')),
     );
     runtime = _Runtime();
+    keepAlive = FakeProcessKeepAlive();
     // Stands in for the app's server: it "listens" once the test says so.
     http = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     http.listen((request) async {
@@ -97,6 +101,7 @@ void main() {
     clock = DateTime(2026, 9, 28, 2);
     servers = MiniAppServers(
       store: store,
+      keepAlive: keepAlive,
       freePort: () async => http.port,
       probe: (_) async => listening,
       now: () => clock,
@@ -108,6 +113,7 @@ void main() {
     );
   });
   tearDown(() async {
+    await keepAlive.dispose();
     await http.close(force: true);
     await temp.delete(recursive: true);
   });
@@ -282,6 +288,7 @@ void main() {
   test('a server that never listens is stopped and reported', () async {
     servers = MiniAppServers(
       store: store,
+      keepAlive: keepAlive,
       freePort: () async => http.port,
       probe: (_) async => false,
       startTimeout: const Duration(milliseconds: 300),
@@ -477,6 +484,7 @@ void main() {
 
     final sandbox = await MiniAppSandbox.create(
       app,
+      keepAlive: keepAlive,
       serverEnvironment: MiniAppServerEnvironment(
         runtime: () async => check,
         variables: () async => {},
@@ -504,6 +512,7 @@ void main() {
     final check = _ListeningRuntime([], exitCode: 1);
     final sandbox = await MiniAppSandbox.create(
       app,
+      keepAlive: keepAlive,
       serverEnvironment: MiniAppServerEnvironment(
         runtime: () async => check,
         variables: () async => {},

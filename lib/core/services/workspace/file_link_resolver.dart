@@ -105,9 +105,12 @@ class KelivoLink {
     );
   }
 
-  static bool isPathSource(String source) =>
-      !RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(source.trim()) ||
-      source.trim().toLowerCase().startsWith('file:');
+  static bool isPathSource(String source) {
+    final raw = source.trim();
+    return !raw.startsWith('#') &&
+        (!RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(raw) ||
+            raw.toLowerCase().startsWith('file:'));
+  }
 
   static KelivoLink? tryParse(String url) {
     final raw = url.trim();

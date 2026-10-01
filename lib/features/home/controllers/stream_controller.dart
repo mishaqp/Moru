@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/message_part.dart';
 import '../../../core/models/token_usage.dart';
@@ -1508,7 +1509,9 @@ class StreamController {
                 metadata: e['metadata'] is Map
                     ? Map<String, dynamic>.from(e['metadata'] as Map)
                     : null,
-                loading: !(e['content']?.toString().isNotEmpty == true),
+                loading:
+                    message.isStreaming &&
+                    !(e['content']?.toString().isNotEmpty == true),
               ),
             )
             .toList();
@@ -1588,10 +1591,11 @@ class GenerationContext {
     this.ocrActive = false,
     this.generateTitleOnFinish = true,
     this.generationRunId,
+    String? executionId,
     this.scheduled = false,
     this.scheduledNotify = true,
     this.scheduledPreview = true,
-  });
+  }) : executionId = executionId ?? generationRunId ?? const Uuid().v4();
 
   final ChatMessage assistantMessage;
   final List<Map<String, dynamic>> apiMessages;
@@ -1612,6 +1616,9 @@ class GenerationContext {
   final bool ocrActive;
   final bool generateTitleOnFinish;
   final String? generationRunId;
+
+  /// Captured once for every actual execution, including legacy continuation.
+  final String executionId;
   final bool scheduled;
   final bool scheduledNotify, scheduledPreview;
 }
@@ -1623,6 +1630,7 @@ class StreamingState {
       partsHandler = StreamChunkHandler(seed: ctx.assistantMessage.parts);
 
   final GenerationContext ctx;
+  bool runtimeAttached = false;
   final StreamTextBuffer _content;
   String get fullContentRaw => _content.value;
   set fullContentRaw(String text) => _content.value = text;

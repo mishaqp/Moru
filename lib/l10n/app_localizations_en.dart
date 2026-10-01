@@ -12232,4 +12232,104 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get agentsCodexResponsesRequired =>
       'Codex only works with providers that support the OpenAI Responses API. Enable it in the provider settings or choose another agent.';
+
+  @override
+  String get backgroundReliabilityHintTitle => 'Keep this task running';
+
+  @override
+  String get backgroundReliabilityHintDisabled =>
+      'Background execution is off. Enable it to keep this task running when you switch apps or turn off the screen.';
+
+  @override
+  String get backgroundReliabilityHintRestricted =>
+      'Android restricts Moru in the background. Check the app’s battery settings before leaving this task.';
+
+  @override
+  String get backgroundReliabilityHintStandby =>
+      'Low Power Standby can pause network access even while this task is running. Check your device’s power settings.';
+
+  @override
+  String get backgroundReliabilityHintVendor =>
+      'Vivo and Xiaomi can stop background tasks. Allow background activity and autostart in system settings.';
+
+  @override
+  String get backgroundReliabilityHintInterrupted =>
+      'A previous task stopped when Moru’s process ended. Check battery and background activity settings before leaving another task.';
+
+  @override
+  String get backgroundReliabilityHintSettings => 'Background settings';
+
+  @override
+  String get backgroundReliabilityHintDismiss => 'Dismiss tip';
+
+  @override
+  String get backgroundLowPowerStandby => 'Low Power Standby';
+
+  @override
+  String get backgroundLowPowerStandbyDetail =>
+      'This device mode can restrict network access even with a foreground service. A battery optimization exception does not always disable it.';
+
+  @override
+  String get backgroundPowerRestricted => 'Restricted';
+
+  @override
+  String get backgroundPowerUnrestricted => 'No restriction reported';
+
+  @override
+  String get backgroundShellRunning => 'Running background command';
+
+  @override
+  String get backgroundServerRunning => 'Mini app server running';
+
+  @override
+  String get backgroundProtectionUnavailable =>
+      'Background protection could not start. Keep Moru open and try again.';
+
+  @override
+  String get chatInterruptedBody =>
+      'The app stopped before this reply finished. Your saved partial reply and queued messages are preserved. Continuing starts a new turn.';
+
+  @override
+  String get chatContinueAfterInterruption => 'Continue';
+
+  @override
+  String get chatContinuePrompt =>
+      'Continue from the saved context after the interruption. Check what has already completed before taking further actions.';
+
+  @override
+  String get queuedInputSaveFailed =>
+      'Could not save the queued message. Your draft is still available.';
+
+  @override
+  String get notificationApprovalTitle => 'Approval needed';
+
+  @override
+  String get notificationApprovalBody =>
+      'An agent is waiting for your decision.';
+
+  @override
+  String get notificationApprovalAllow => 'Allow';
+
+  @override
+  String get notificationApprovalDeny => 'Deny';
+
+  @override
+  String get notificationApprovalStaleTitle => 'Approval no longer available';
+
+  @override
+  String get notificationApprovalStaleBody =>
+      'Open the chat to check this request.';
+
+  @override
+  String get notificationApprovalChannelName => 'Agent approvals';
+
+  @override
+  String get notificationApprovalChannelDescription =>
+      'Decisions requested by a running agent or tool.';
+
+  @override
+  String get backgroundShellCompleted => 'Background command finished';
+
+  @override
+  String get backgroundShellFailed => 'Background command failed';
 }

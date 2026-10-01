@@ -12362,4 +12362,106 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get agentsCodexResponsesRequired =>
       'Codex работает только с провайдерами, которые поддерживают OpenAI Responses API. Включите его в настройках провайдера или выберите другого агента';
+
+  @override
+  String get backgroundReliabilityHintTitle => 'Чтобы задача завершилась';
+
+  @override
+  String get backgroundReliabilityHintDisabled =>
+      'Фоновая работа выключена. Включите её, чтобы задача продолжалась при сворачивании Moru и выключении экрана.';
+
+  @override
+  String get backgroundReliabilityHintRestricted =>
+      'Android ограничивает Moru в фоне. Проверьте настройки батареи для приложения, прежде чем свернуть его.';
+
+  @override
+  String get backgroundReliabilityHintStandby =>
+      'Режим ожидания с низким энергопотреблением может отключать сеть даже во время задачи. Проверьте настройки энергосбережения телефона.';
+
+  @override
+  String get backgroundReliabilityHintVendor =>
+      'Vivo и Xiaomi могут останавливать фоновые задачи. Разрешите работу в фоне и автозапуск в настройках телефона.';
+
+  @override
+  String get backgroundReliabilityHintInterrupted =>
+      'Предыдущая задача прервалась вместе с процессом Moru. Перед сворачиванием новой задачи проверьте настройки батареи и работы в фоне.';
+
+  @override
+  String get backgroundReliabilityHintSettings => 'Настройки фоновой работы';
+
+  @override
+  String get backgroundReliabilityHintDismiss =>
+      'Больше не показывать подсказку';
+
+  @override
+  String get backgroundLowPowerStandby =>
+      'Ожидание с низким энергопотреблением';
+
+  @override
+  String get backgroundLowPowerStandbyDetail =>
+      'Этот режим телефона может отключать сеть даже при активной фоновой службе. Исключение из оптимизации батареи не всегда снимает это ограничение.';
+
+  @override
+  String get backgroundPowerRestricted => 'Есть ограничение';
+
+  @override
+  String get backgroundPowerUnrestricted => 'Ограничений не обнаружено';
+
+  @override
+  String get backgroundShellRunning => 'Выполняется фоновая команда';
+
+  @override
+  String get backgroundServerRunning => 'Работает сервер мини-приложения';
+
+  @override
+  String get backgroundProtectionUnavailable =>
+      'Не удалось включить фоновую защиту. Оставьте Moru открытым и повторите попытку.';
+
+  @override
+  String get chatInterruptedBody =>
+      'Приложение остановилось до завершения ответа. Сохранённая часть ответа и очередь сообщений остались. Продолжение начнёт новый ход.';
+
+  @override
+  String get chatContinueAfterInterruption => 'Продолжить';
+
+  @override
+  String get chatContinuePrompt =>
+      'Продолжи с сохранённого контекста после прерывания. Перед дальнейшими действиями проверь, что уже выполнено.';
+
+  @override
+  String get queuedInputSaveFailed =>
+      'Не удалось сохранить сообщение в очереди. Черновик остался доступен.';
+
+  @override
+  String get notificationApprovalTitle => 'Нужно разрешение';
+
+  @override
+  String get notificationApprovalBody => 'Агент ждёт вашего решения.';
+
+  @override
+  String get notificationApprovalAllow => 'Разрешить';
+
+  @override
+  String get notificationApprovalDeny => 'Отклонить';
+
+  @override
+  String get notificationApprovalStaleTitle =>
+      'Запрос разрешения уже неактивен';
+
+  @override
+  String get notificationApprovalStaleBody =>
+      'Откройте чат, чтобы проверить этот запрос.';
+
+  @override
+  String get notificationApprovalChannelName => 'Разрешения агенту';
+
+  @override
+  String get notificationApprovalChannelDescription =>
+      'Запросы разрешения от работающего агента или инструмента.';
+
+  @override
+  String get backgroundShellCompleted => 'Фоновая команда завершена';
+
+  @override
+  String get backgroundShellFailed => 'Ошибка фоновой команды';
 }

@@ -49,6 +49,10 @@ class MiniAppWebHost extends ChangeNotifier {
   final List<MiniAppServerLease> _leases = [];
 
   bool _busy = false;
+  bool _disposed = false;
+  bool _held = false;
+  int _epoch = 0;
+  Future<void>? _stopping;
   String? _error;
   List<String> _urls = const [];
 
@@ -71,12 +75,14 @@ class MiniAppWebHost extends ChangeNotifier {
     required MiniAppServerEnvironment environment,
     required String Function(String url) notificationText,
   }) async {
-    if (_busy) return;
+    if (_busy || _disposed) return;
+    final epoch = ++_epoch;
     _busy = true;
     _error = null;
     notifyListeners();
     try {
       await _stopAll();
+      if (!_active(epoch)) return;
       final password = settings.miniAppWebPasswordEnabled
           ? settings.miniAppWebPassword
           : null;
@@ -88,6 +94,22 @@ class MiniAppWebHost extends ChangeNotifier {
       }
       final port = settings.miniAppWebPort;
       final localhostOnly = settings.miniAppWebLocalhostOnly;
+      final addresses = localhostOnly
+          ? const <InternetAddress>[]
+          : await _localAddresses();
+      if (!_active(epoch)) return;
+      final notificationUrl = addresses.isEmpty
+          ? 'http://127.0.0.1:$port'
+          : 'http://$mdnsName.local:$port';
+      _held = true;
+      await _keepAlive.hold(keepAliveId, notificationText(notificationUrl));
+      // Stop may already have released an in-flight hold. A late accepted
+      // acknowledgement still needs its own final release.
+      _held = true;
+      if (!_active(epoch)) {
+        await _stopAll();
+        return;
+      }
       final server = MiniAppWebServer(
         store: _store,
         bridgeFor: (app) {
@@ -110,13 +132,22 @@ class MiniAppWebHost extends ChangeNotifier {
         localhostOnly: localhostOnly,
         password: password,
       );
+      if (!_active(epoch)) {
+        await server.stop();
+        await _stopAll();
+        return;
+      }
       _server = server;
       final urls = <String>[];
       if (!localhostOnly) {
-        final addresses = await _localAddresses();
         if (addresses.isNotEmpty) {
           try {
             await _keepAlive.multicast(true);
+            if (!_active(epoch)) {
+              await _keepAlive.multicast(false);
+              await _stopAll();
+              return;
+            }
             final mdns = MdnsResponder(
               MdnsZone(
                 hostName: mdnsName,
@@ -125,6 +156,12 @@ class MiniAppWebHost extends ChangeNotifier {
               ),
             );
             await mdns.start();
+            if (!_active(epoch)) {
+              mdns.stop();
+              await _keepAlive.multicast(false);
+              await _stopAll();
+              return;
+            }
             _mdns = mdns;
             urls.add('http://${mdns.zone.host}:$port');
           } catch (e) {
@@ -135,8 +172,14 @@ class MiniAppWebHost extends ChangeNotifier {
         urls.addAll([for (final a in addresses) 'http://${a.address}:$port']);
       }
       urls.add('http://127.0.0.1:$port');
+      if (!_active(epoch)) {
+        await _stopAll();
+        return;
+      }
       _urls = urls;
-      await _keepAlive.hold(keepAliveId, notificationText(urls.first));
+    } on ProcessKeepAliveException {
+      if (_active(epoch)) _error = ProcessKeepAliveException.code;
+      await _stopAll();
     } on SocketException catch (e) {
       // EADDRINUSE: 98 on Linux/Android, 48 elsewhere; -1 when this
       // process already listens there.
@@ -150,7 +193,7 @@ class MiniAppWebHost extends ChangeNotifier {
       await _stopAll();
     } finally {
       _busy = false;
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     }
   }
 
@@ -169,31 +212,61 @@ class MiniAppWebHost extends ChangeNotifier {
   }
 
   Future<void> stop() async {
+    _epoch++;
     await _stopAll();
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
+  bool _active(int epoch) => !_disposed && epoch == _epoch;
+
   Future<void> _stopAll() async {
+    final pending = _stopping;
+    if (pending != null) {
+      await pending;
+      if (identical(_stopping, pending)) _stopping = null;
+      // A native hold or bind can complete while cleanup is awaiting I/O.
+      // Collect those late resources after the captured cleanup finishes.
+      if (_held || _server != null || _mdns != null || _leases.isNotEmpty) {
+        await _stopAll();
+      }
+      return;
+    }
+    final stopping = _stopping = _closeResources();
+    try {
+      await stopping;
+    } finally {
+      if (identical(_stopping, stopping)) _stopping = null;
+    }
+  }
+
+  Future<void> _closeResources() async {
     final server = _server;
+    final mdns = _mdns;
+    final leases = List.of(_leases);
+    final held = _held;
     _server = null;
+    _mdns = null;
+    _held = false;
+    _leases.clear();
     _urls = const [];
     await server?.stop();
-    if (_mdns != null) {
-      _mdns!.stop();
-      _mdns = null;
+    if (mdns != null) {
+      mdns.stop();
       await _keepAlive.multicast(false).catchError((_) {});
     }
-    for (final lease in List.of(_leases)) {
+    for (final lease in leases) {
       await lease.release();
     }
-    _leases.clear();
-    if (server != null) {
+    if (held) {
       await _keepAlive.release(keepAliveId).catchError((_) {});
     }
   }
 
   @override
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _epoch++;
     unawaited(_released.cancel());
     unawaited(_stopAll());
     super.dispose();

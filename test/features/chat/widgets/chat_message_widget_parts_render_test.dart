@@ -6,6 +6,7 @@ import 'package:Kelivo/core/providers/tts_provider.dart';
 import 'package:Kelivo/features/chat/pages/image_viewer_page.dart';
 import 'package:Kelivo/features/chat/widgets/chat_message_widget.dart';
 import 'package:Kelivo/features/chat/widgets/timeline_projection.dart';
+import 'package:Kelivo/features/chat/widgets/workspace_tool_ui.dart';
 import 'package:Kelivo/features/home/controllers/stream_controller.dart';
 import 'package:Kelivo/features/home/services/ask_user_interaction_service.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
@@ -52,6 +53,35 @@ void expectAbove(WidgetTester tester, Finder upper, Finder lower) {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets(
+    'a terminal persisted tool without a result stays interrupted instead of spinning',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildHarness(
+          child: ChatMessageWidget(
+            message: ChatMessage(
+              id: 'interrupted-tool',
+              conversationId: 'c1',
+              role: 'assistant',
+              parts: const [
+                ToolCallPart(
+                  '{"id":"unknown-shell","name":"shell","arguments":{"command":"touch result"}}',
+                ),
+                TextPart('saved partial'),
+              ],
+            ),
+            showModelIcon: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('saved partial'), findsOneWidget);
+      expect(find.byKey(WorkspaceStatusBadge.runningKey), findsNothing);
+      expect(find.byKey(WorkspaceStatusBadge.interruptedKey), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 
   for (final brightness in Brightness.values) {
     testWidgets(

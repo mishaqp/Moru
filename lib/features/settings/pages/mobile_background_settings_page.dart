@@ -266,6 +266,14 @@ class _MobileBackgroundSettingsPageState
                 subtitle: l.backgroundBatteryOptimizationDetail,
               ),
               _action(
+                Lucide.Battery,
+                l.backgroundLowPowerStandby,
+                '',
+                () => _open('power'),
+                subtitle:
+                    '${status.flag('lowPowerStandbyEnabled') && !status.flag('lowPowerStandbyExempt') ? l.backgroundPowerRestricted : l.backgroundPowerUnrestricted}\n${l.backgroundLowPowerStandbyDetail}',
+              ),
+              _action(
                 Lucide.Power,
                 l.backgroundAutostart,
                 l.backgroundPermissionUnknown,

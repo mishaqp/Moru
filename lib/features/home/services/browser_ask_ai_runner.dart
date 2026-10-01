@@ -151,7 +151,7 @@ Future<void> runBrowserAskAiRequest({
     // notification suppression) never races that later finish() call
     // against AskAiPanelController's own activeRequestId, which resets to
     // null the moment this run's outcome is reported below.
-    final taskId = result.generationRunId ?? messageId;
+    final taskId = result.executionId ?? result.generationRunId ?? messageId;
     if (taskId != null) onTaskStarted?.call(taskId, conversation.id);
     // send() only confirms the run started; result.assistantMessage is
     // still the empty placeholder ChatActions.sendMessage persists before

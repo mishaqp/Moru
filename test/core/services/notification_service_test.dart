@@ -2,6 +2,22 @@ import 'package:Kelivo/core/services/notification_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('native result targets preserve the captured chat and message', () {
+    expect(
+      NotificationService.openNativeConversationTarget({
+        'conversationId': 'chat-a',
+        'assistantMessageId': 'message-a',
+      }),
+      isTrue,
+    );
+    expect(NotificationService.takePendingConversationId(), 'chat-a');
+    expect(NotificationService.takePendingMessageId('chat-a'), 'message-a');
+    expect(
+      NotificationService.openNativeConversationTarget({'conversationId': 7}),
+      isFalse,
+    );
+    expect(NotificationService.openNativeConversationTarget('   '), isFalse);
+  });
   test(
     'chat completion payload accepts only non-empty conversation targets',
     () {
