@@ -66,6 +66,49 @@ class KelivoLink {
     return encoded.join('/');
   }
 
+  /// Raw Markdown paths are checked before a URI can normalize traversal.
+  /// Host image/artifact paths remain eligible for their existing checked grants.
+  static ({bool isWorkspacePath, String? link}) workspacePathSource(
+    String source,
+  ) {
+    var raw = source.trim();
+    if (!isPathSource(raw)) return (isWorkspacePath: false, link: null);
+    final end = raw.indexOf(RegExp(r'[?#]'));
+    if (end >= 0) raw = raw.substring(0, end);
+    if (raw.toLowerCase().startsWith('file:')) {
+      final file = RegExp(
+        r'^file:(?://([^/]*))?(/.*)$',
+        caseSensitive: false,
+      ).firstMatch(raw);
+      if (file == null ||
+          !['', 'localhost'].contains((file.group(1) ?? '').toLowerCase())) {
+        return (isWorkspacePath: true, link: null);
+      }
+      raw = file.group(2)!;
+    }
+    if (raw.startsWith('/')) {
+      final parts = raw.substring(1).split('/');
+      if (_decodePathSegment(parts.first) !=
+          WorkspacePaths.guestWorkspace.substring(1)) {
+        return (isWorkspacePath: false, link: null);
+      }
+      raw = parts.skip(1).join('/');
+    }
+    while (raw.startsWith('./')) {
+      raw = raw.substring(2);
+    }
+    final parts = _decodedRelativeSegments('/$raw');
+    if (parts == null) return (isWorkspacePath: true, link: null);
+    return (
+      isWorkspacePath: true,
+      link: 'kelivo://workspace/${encodePath(parts.join('/'))}',
+    );
+  }
+
+  static bool isPathSource(String source) =>
+      !RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(source.trim()) ||
+      source.trim().toLowerCase().startsWith('file:');
+
   static KelivoLink? tryParse(String url) {
     final raw = url.trim();
     if (raw.isEmpty) return null;

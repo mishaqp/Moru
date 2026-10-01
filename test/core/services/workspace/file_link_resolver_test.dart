@@ -168,6 +168,52 @@ void main() {
     });
   });
 
+  group('KelivoLink.workspacePathSource', () {
+    for (final source in [
+      '/workspace/site/index.html',
+      'file:///workspace/site/index.html',
+      'file://localhost/workspace/site/index.html',
+      'site/index.html',
+      './site/index.html',
+    ]) {
+      test('maps $source to the workspace link', () {
+        final result = KelivoLink.workspacePathSource(source);
+        expect(result.isWorkspacePath, isTrue);
+        expect(result.link, 'kelivo://workspace/site/index.html');
+      });
+    }
+    for (final source in [
+      '/workspace/../secret',
+      'file:///workspace/%2e%2e/secret',
+      '../secret',
+      '%2e%2e/secret',
+      '%2e%2e%2fsecret',
+      'site/%2fetc/passwd',
+      'file://foreign/workspace/site/index.html',
+    ]) {
+      test('rejects $source before URI normalization', () {
+        expect(KelivoLink.workspacePathSource(source).link, isNull);
+      });
+    }
+    for (final source in [
+      '/etc/passwd',
+      'file:///etc/passwd',
+      'https://example.com',
+    ]) {
+      test('does not map $source into the workspace', () {
+        final result = KelivoLink.workspacePathSource(source);
+        expect(result.isWorkspacePath, isFalse);
+        expect(result.link, isNull);
+      });
+    }
+    test('encodes raw and previously encoded names once', () {
+      for (final source in ['员工 表.csv', '员工%20表.csv']) {
+        final result = KelivoLink.workspacePathSource(source);
+        expect(KelivoLink.tryParse(result.link!)?.relativePath, '员工 表.csv');
+      }
+    });
+  });
+
   group('FileLinkResolver.resolveToHostFile', () {
     late Directory tempDir;
     late Directory workspaceRoot;

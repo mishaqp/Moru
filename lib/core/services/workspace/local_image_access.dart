@@ -9,6 +9,7 @@ import '../../providers/workspace_provider.dart';
 import '../../../utils/app_directories.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import 'workspace_file_access.dart';
+import 'file_link_resolver.dart';
 
 /// Model-written local image sources share the file tool's real-path/fd guard.
 /// Only explicit artifact and workspace zones are roots; app data as a whole is
@@ -21,6 +22,10 @@ Future<Uint8List?> readLocalImageBytes(
   ExternalMountsProvider? externalMounts,
 }) async {
   try {
+    final workspacePath = KelivoLink.workspacePathSource(source);
+    if (workspacePath.isWorkspacePath && workspacePath.link == null) {
+      return null;
+    }
     final roots = <_ImageRoot>[
       _ImageRoot(Directory.systemTemp.path, guest: '/tmp'),
     ];
@@ -65,10 +70,32 @@ Future<Uint8List?> readLocalImageBytes(
       }
     }
 
-    var hostPath = SandboxPathResolver.fix(source);
+    // Preserve explicit host grants and ACP workspace paths before the legacy
+    // artifact remapper can replace them with an unrelated same-name image.
+    var hostPath = source;
+    if (source.toLowerCase().startsWith('file:')) {
+      final decoded = SandboxPathResolver.tryDecodeLocalFileUri(source);
+      if (decoded == null) return null;
+      hostPath = decoded;
+    }
+    var matched = p.isAbsolute(hostPath)
+        ? roots.where((root) => _inside(root.host, hostPath)).toList()
+        : <_ImageRoot>[];
+    if (matched.isEmpty && workspacePath.isWorkspacePath) {
+      final workspaceRoot = roots
+          .where((root) => root.guest == '/workspace')
+          .firstOrNull;
+      if (workspaceRoot == null || workspacePath.link == null) return null;
+      hostPath = p.join(
+        workspaceRoot.host,
+        KelivoLink.tryParse(workspacePath.link!)!.relativePath,
+      );
+    } else if (matched.isEmpty) {
+      hostPath = SandboxPathResolver.fix(source);
+    }
     if (!p.isAbsolute(hostPath)) return null;
     hostPath = p.normalize(hostPath);
-    var matched = roots.where((root) => _inside(root.host, hostPath)).toList();
+    matched = roots.where((root) => _inside(root.host, hostPath)).toList();
     final guestRoot =
         roots
             .where(

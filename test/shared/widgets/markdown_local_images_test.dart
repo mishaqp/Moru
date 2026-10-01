@@ -9,6 +9,10 @@ import 'package:path/path.dart' as p;
 // ignore: depend_on_referenced_packages
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:provider/provider.dart';
+// ignore: depend_on_referenced_packages
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+// ignore: depend_on_referenced_packages
+import 'package:url_launcher_platform_interface/link.dart';
 
 import 'package:Kelivo/core/database/app_database.dart';
 import 'package:Kelivo/core/database/extension_entity_store.dart';
@@ -18,6 +22,7 @@ import 'package:Kelivo/core/models/workspace_binding.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/providers/workspace_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
+import 'package:Kelivo/core/services/workspace/local_image_access.dart';
 import 'package:Kelivo/features/chat/pages/image_viewer_page.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tool_metadata.dart';
 import 'package:Kelivo/features/chat/widgets/produced_files_row.dart';
@@ -40,6 +45,17 @@ class _Paths extends PathProviderPlatform {
   Future<String?> getApplicationDocumentsPath() async => root;
   @override
   Future<String?> getApplicationSupportPath() async => root;
+}
+
+class _Launcher extends UrlLauncherPlatform {
+  final launched = <String>[];
+  @override
+  LinkDelegate? get linkDelegate => null;
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async {
+    launched.add(url);
+    return true;
+  }
 }
 
 class _Chats extends ChatService {
@@ -133,9 +149,13 @@ void main() {
     ),
   );
 
-  Widget harness(String markdown) => container(
-    MarkdownWithCodeHighlight(text: markdown, conversationId: 'chat'),
-  );
+  Widget harness(String markdown, {String conversationId = 'chat'}) =>
+      container(
+        MarkdownWithCodeHighlight(
+          text: markdown,
+          conversationId: conversationId,
+        ),
+      );
 
   Future<void> completeReads(WidgetTester tester) async {
     final reads = tester
@@ -150,7 +170,13 @@ void main() {
       read.whenComplete(() => remaining--);
     }
     final deadline = Stopwatch()..start();
-    while (remaining > 0 && deadline.elapsed < const Duration(seconds: 10)) {
+    for (
+      var iteration = 0;
+      iteration < 500 &&
+          remaining > 0 &&
+          deadline.elapsed < const Duration(seconds: 10);
+      iteration++
+    ) {
       // Flush widget-zone continuations between actual IO event boundaries.
       // Neither sleeps nor a fixed number of frames decide readiness.
       await tester.runAsync(() => Future<void>(() {}));
@@ -161,8 +187,13 @@ void main() {
 
   Future<void> completeViewer(WidgetTester tester) async {
     final deadline = Stopwatch()..start();
-    while (find.byType(ImageViewerPage).evaluate().isEmpty &&
-        deadline.elapsed < const Duration(seconds: 10)) {
+    for (
+      var iteration = 0;
+      iteration < 500 &&
+          find.byType(ImageViewerPage).evaluate().isEmpty &&
+          deadline.elapsed < const Duration(seconds: 10);
+      iteration++
+    ) {
       await tester.runAsync(() => Future<void>(() {}));
       await tester.pump();
     }
@@ -195,13 +226,24 @@ void main() {
     });
   }
 
-  for (final mode in ['host', 'guest', 'inside-link', 'kelivo-link']) {
+  for (final mode in [
+    'host',
+    'guest',
+    'file-guest',
+    'relative',
+    'dot-relative',
+    'inside-link',
+    'kelivo-link',
+  ]) {
     testWidgets('local markdown keeps $mode images as checked bytes', (
       tester,
     ) async {
       final source = switch (mode) {
         'host' => p.join(workspace.path, 'inside.png'),
         'guest' => '/workspace/inside.png',
+        'file-guest' => 'file:///workspace/inside.png',
+        'relative' => 'inside.png',
+        'dot-relative' => './inside.png',
         'inside-link' => p.join(workspace.path, 'alias.png'),
         _ => 'kelivo://workspace/inside.png',
       };
@@ -216,6 +258,130 @@ void main() {
       final image = tester.widget<Image>(find.byType(Image));
       expect(_memoryProvider(image.image)?.bytes, base64Decode(_png));
     });
+  }
+
+  for (final source in [
+    '/workspace/../workspace/inside.png',
+    'file:///workspace/%2e%2e/workspace/inside.png',
+    '../workspace/inside.png',
+    '%2e%2e/workspace/inside.png',
+    '/workspace/escape.png',
+    'escape-dir/outside.png',
+  ]) {
+    testWidgets('local Markdown rejects guest/relative escape $source', (
+      tester,
+    ) async {
+      await tester.runAsync(() async {
+        await Link(
+          p.join(workspace.path, 'escape.png'),
+        ).create(p.join(outside.path, 'outside.png'));
+        await Link(p.join(workspace.path, 'escape-dir')).create(outside.path);
+      });
+      await tester.pumpWidget(harness('![24x24]($source)'));
+      await completeReads(tester);
+      expect(find.byType(Image), findsNothing);
+    });
+  }
+
+  for (final source in [
+    '/workspace/inside.png',
+    'file:///workspace/inside.png',
+    'inside.png',
+  ]) {
+    testWidgets('unbound Markdown cannot resolve workspace image $source', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        harness('![24x24]($source)', conversationId: 'unbound'),
+      );
+      await completeReads(tester);
+      expect(find.byType(Image), findsNothing);
+    });
+  }
+
+  for (final source in [
+    'site/images/logo.png',
+    '/workspace/images/logo.png',
+    'file:///workspace/images/logo.png',
+  ]) {
+    testWidgets(
+      'unbound colliding Markdown image $source cannot use app artifacts',
+      (tester) async {
+        final previousLauncher = UrlLauncherPlatform.instance;
+        final launcher = _Launcher();
+        UrlLauncherPlatform.instance = launcher;
+        addTearDown(() => UrlLauncherPlatform.instance = previousLauncher);
+        await tester.runAsync(() async {
+          for (final path in [
+            p.join(documents.path, 'images', 'logo.png'),
+            p.join(workspace.path, 'images', 'logo.png'),
+            p.join(workspace.path, 'site', 'images', 'logo.png'),
+          ]) {
+            final file = File(path);
+            await file.parent.create(recursive: true);
+            await file.writeAsBytes(base64Decode(_png));
+          }
+        });
+        await tester.pumpWidget(
+          harness('![24x24]($source)', conversationId: 'unbound'),
+        );
+        await completeReads(tester);
+        final bytes = await tester.runAsync(
+          () => readLocalImageBytes(
+            source,
+            conversationId: 'unbound',
+            workspaces: workspaces,
+          ),
+        );
+        expect(bytes, isNull);
+        expect(find.byType(Image), findsNothing);
+        expect(find.byType(ImageViewerPage), findsNothing);
+        expect(launcher.launched, isEmpty);
+      },
+    );
+  }
+
+  for (final mode in [
+    'relative',
+    'guest',
+    'file-guest',
+    'host',
+    'artifact-host',
+    'artifact-file',
+  ]) {
+    test(
+      'Markdown image $mode keeps its source when an artifact has the same name',
+      () async {
+        final workspaceFile = File(
+          p.join(workspace.path, 'site', 'images', 'logo.png'),
+        );
+        final artifactFile = File(p.join(documents.path, 'images', 'logo.png'));
+        await workspaceFile.parent.create(recursive: true);
+        await artifactFile.parent.create(recursive: true);
+        final workspaceBytes = base64Decode(_png);
+        final artifactBytes = [...workspaceBytes, 42];
+        await workspaceFile.writeAsBytes(workspaceBytes);
+        await artifactFile.writeAsBytes(artifactBytes);
+        final source = switch (mode) {
+          'relative' => 'site/images/logo.png',
+          'guest' => '/workspace/site/images/logo.png',
+          'file-guest' => 'file:///workspace/site/images/logo.png',
+          'host' => workspaceFile.path,
+          'artifact-host' => artifactFile.path,
+          _ => artifactFile.uri.toString(),
+        };
+        final bytes = await readLocalImageBytes(
+          source,
+          conversationId: 'chat',
+          binding: WorkspaceBinding.fromExtras(chats.conversation.extras),
+          workspaces: workspaces,
+        );
+        expect(
+          bytes,
+          mode.startsWith('artifact') ? artifactBytes : workspaceBytes,
+        );
+      },
+    );
   }
 
   testWidgets('known upload and session artifacts still load', (tester) async {
@@ -306,8 +472,13 @@ void main() {
       ),
     );
     final deadline = Stopwatch()..start();
-    while (find.byType(WorkspaceFileThumbnail).evaluate().isEmpty &&
-        deadline.elapsed < const Duration(seconds: 10)) {
+    for (
+      var iteration = 0;
+      iteration < 500 &&
+          find.byType(WorkspaceFileThumbnail).evaluate().isEmpty &&
+          deadline.elapsed < const Duration(seconds: 10);
+      iteration++
+    ) {
       await tester.runAsync(() => Future<void>(() {}));
       await tester.pump();
     }

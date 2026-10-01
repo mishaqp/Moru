@@ -466,7 +466,8 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
                   if (!p.isAbsolute(url) &&
                       !url.startsWith('file://') &&
                       !url.startsWith('kelivo-file://') &&
-                      KelivoLink.tryParse(url) == null) {
+                      KelivoLink.tryParse(url) == null &&
+                      !_hasMarkdownWorkspace(ctx, widget.conversationId)) {
                     return const Icon(Icons.broken_image);
                   }
                   return _KelivoMarkdownImage(
@@ -821,8 +822,17 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
       await MiniAppLauncher.open(context, miniApp);
       return;
     }
-    final kelivo = KelivoLink.tryParse(_stripFormatChars(url));
-    if (kelivo != null) {
+    final source = _stripFormatChars(url).trim();
+    if (_hasMarkdownWorkspace(context, widget.conversationId) &&
+        KelivoLink.isPathSource(source)) {
+      await openWorkspaceLinkedFile(
+        context,
+        KelivoLink.workspacePathSource(source).link,
+        conversationId: widget.conversationId,
+      );
+      return;
+    }
+    if (source.toLowerCase().startsWith('kelivo://')) {
       await openWorkspaceLinkedFile(
         context,
         _stripFormatChars(url),
@@ -2702,6 +2712,13 @@ ImageProvider? _imageProviderFor(String src) {
   }
   // Local sources are read asynchronously through the shared file boundary.
   return null;
+}
+
+bool _hasMarkdownWorkspace(BuildContext context, String? conversationId) {
+  final chat = context.read<ChatService?>();
+  final id = conversationId ?? chat?.currentConversationId;
+  final conversation = id == null ? null : chat?.getConversation(id);
+  return WorkspaceBinding.fromExtras(conversation?.extras ?? const {}).isBound;
 }
 
 Future<Uint8List?> _readMarkdownImage(
