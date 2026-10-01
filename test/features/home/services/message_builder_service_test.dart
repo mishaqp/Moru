@@ -579,6 +579,42 @@ void main() {
   });
 
   group('MessageBuilderService.buildApiMessages', () {
+    test('agent failure details are excluded from model history', () {
+      final service = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+      final apiMessages = service.buildApiMessages(
+        messages: [
+          ChatMessage(
+            id: 'partial-agent-turn',
+            role: 'assistant',
+            conversationId: 'c1',
+            parts: const [
+              TextPart('Partial agent reply'),
+              AgentErrorPart(
+                message: 'Internal error',
+                details: 'safe diagnostic that belongs only in the UI',
+              ),
+            ],
+          ),
+          ChatMessage(
+            id: 'failed-agent-turn',
+            role: 'assistant',
+            conversationId: 'c1',
+            parts: const [
+              AgentErrorPart(message: 'Agent failed', details: 'safe stderr'),
+            ],
+          ),
+        ],
+        versionSelections: const {},
+        currentConversation: Conversation(title: 'test'),
+      );
+      expect(apiMessages, [
+        {'role': 'assistant', 'content': 'Partial agent reply'},
+      ]);
+    });
+
     test('有工具调用时会把 reasoning_content 回填到 assistant tool 消息', () {
       final service = MessageBuilderService(
         chatService: _FakeChatService({

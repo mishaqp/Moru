@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:uuid/uuid.dart';
+
 import 'acp_connection.dart';
 
 /// Where agents installed with npm live in the Linux environment.
@@ -8,6 +10,12 @@ const String acpNpmPrefix = '/root/.npm-global';
 /// Moru's own settings files for agents, apart from anything the user keeps
 /// in the agents' default locations.
 const String acpConfigDir = '/root/.config/moru-agents';
+
+// Claude's Bash temp helper requires base/claude-UID <= 44 bytes. A UUID
+// encoded in 22 URL-safe characters keeps the normal root launch below that
+// limit and avoids its fallback to the shared /tmp/claude-0.
+const String acpClaudeTemporaryRoot = '/tmp/mc';
+const String acpCodexTemporaryRoot = '/tmp/md';
 
 /// The kind of model API an agent speaks.
 enum AcpModelApi {
@@ -70,6 +78,8 @@ class AcpLaunch {
     this.arguments = const [],
     this.environment = const {},
     this.files = const [],
+    this.temporaryDirectory,
+    this.isolateCodexDaemon = false,
     this.cleanup,
   });
 
@@ -77,6 +87,8 @@ class AcpLaunch {
   final List<String> arguments;
   final Map<String, String> environment;
   final List<AcpConfigFile> files;
+  final String? temporaryDirectory;
+  final bool isolateCodexDaemon;
 
   /// Releases app-owned temporary settings after the prepared process exits.
   final Future<void> Function()? cleanup;
@@ -123,7 +135,11 @@ class AcpAgentSpec {
   static const String customPrefix = 'custom:';
 
   /// The command and its settings for [provider].
-  AcpLaunch launch(AcpProviderInput provider, {String? configDirectory}) {
+  AcpLaunch launch(
+    AcpProviderInput provider, {
+    String? configDirectory,
+    bool isolateCodexDaemon = false,
+  }) {
     final root = configDirectory ?? acpConfigDir;
     final common = <String, String>{
       'PATH':
@@ -138,9 +154,17 @@ class AcpAgentSpec {
     switch (id) {
       case claudeCodeId:
         final headers = _customHeaders(provider);
+        final launchId = base64Url
+            .encode(const Uuid().v4buffer(List<int>.filled(16, 0)))
+            .replaceAll('=', '');
+        final temporaryRoot = configDirectory == null
+            ? acpClaudeTemporaryRoot
+            : '$root/run-tmp/claude';
+        final temporaryDirectory = '$temporaryRoot/$launchId';
         return AcpLaunch(
           command: command,
           arguments: arguments,
+          temporaryDirectory: temporaryDirectory,
           environment: {
             ...common,
             'ANTHROPIC_BASE_URL': anthropicBaseUrl(provider),
@@ -158,17 +182,33 @@ class AcpAgentSpec {
             // The Linux environment is Moru's sandbox; Claude Code allows
             // its "bypass permissions" mode as root only when told so.
             'IS_SANDBOX': '1',
+            // Claude's native temp guard explicitly accepts root container
+            // launches whose files have a different uid (PRoot --root-id).
+            // A fresh private base also isolates chats and old /tmp/claude-0.
+            'CLAUDE_CODE_TMPDIR': temporaryDirectory,
+            'CLAUDE_CODE_CONTAINER_ID': 'moru-$launchId',
+            'MORU_ACP_TEMP_DIR': temporaryDirectory,
           },
         );
       case codexId:
         final home = '$root/codex';
+        final temporaryRoot = configDirectory == null
+            ? acpCodexTemporaryRoot
+            : '$root/run-tmp/codex';
+        final temporaryDirectory = isolateCodexDaemon
+            ? '$temporaryRoot/${base64Url.encode(const Uuid().v4buffer(List<int>.filled(16, 0))).replaceAll('=', '')}'
+            : null;
         return AcpLaunch(
           command: command,
           arguments: arguments,
+          temporaryDirectory: temporaryDirectory,
+          isolateCodexDaemon: isolateCodexDaemon,
           environment: {
             ...common,
             'CODEX_HOME': home,
             'MORU_CODEX_API_KEY': provider.apiKey,
+            if (temporaryDirectory != null)
+              'MORU_ACP_TEMP_DIR': temporaryDirectory,
           },
           files: [AcpConfigFile('$home/config.toml', codexConfig(provider))],
         );
@@ -395,6 +435,7 @@ moru_packages() {
       ],
       api: AcpModelApi.anthropic,
       homepage: 'https://docs.anthropic.com/en/docs/claude-code',
+      nodeMajor: 22,
     ),
     AcpAgentSpec(
       id: codexId,

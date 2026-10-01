@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:Kelivo/core/database/generation_run.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/provider_oauth.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
+import 'package:Kelivo/core/services/acp/acp_connection.dart';
 import 'package:Kelivo/core/services/mobile_background.dart';
 import 'package:Kelivo/features/home/controllers/chat_actions.dart';
 import 'package:Kelivo/features/home/controllers/chat_controller.dart';
@@ -325,6 +328,57 @@ void main() {
     expect(event.succeeded, isFalse);
     expect(event.cancelled, isTrue);
   });
+
+  for (final partial in ['', 'Partial agent reply']) {
+    testWidgets('ACP errors retain diagnostics after "$partial"', (
+      tester,
+    ) async {
+      final service = _FakeChatService();
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      addTearDown(settings.dispose);
+      final background = MobileBackgroundCoordinator(
+        platform: TargetPlatform.linux,
+      );
+      addTearDown(background.dispose);
+      final actions = await pumpActions(
+        tester,
+        service,
+        settings,
+        background: background,
+      );
+      final events = <GenerationTerminalEvent>[];
+      final notifications = <String>[];
+      actions.generationTerminalEvents.listen(events.add);
+      actions.onStreamError = notifications.add;
+      final state = _stateFor(
+        settings,
+        messageId: 'agent-error',
+        content: partial,
+      );
+      await actions.debugHandleStreamError(
+        const AcpError(
+          -32603,
+          'Internal error',
+          {'nested': 'safe data'},
+          null,
+          'Internal error\n\nsafe data\n\nstderr explanation',
+        ),
+        state,
+      );
+      await tester.pump();
+
+      final message = events.single.message;
+      final part = message.parts.where((part) => part.kind == 'agent_error');
+      expect(part, hasLength(1));
+      expect(jsonDecode(part.single.encodePayload()), {
+        'message': 'Internal error',
+        'details': 'Internal error\n\nsafe data\n\nstderr explanation',
+      });
+      expect(message.content, partial);
+      expect(events.single.terminalState, GenerationRunState.failed);
+      expect(notifications, ['Internal error']);
+    });
+  }
 
   testWidgets(
     'a preparation failure before streaming ever started still emits',

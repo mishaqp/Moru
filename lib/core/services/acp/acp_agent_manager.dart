@@ -12,6 +12,7 @@ import '../workspace/workspace_runtime.dart';
 import 'acp_agent.dart';
 import 'acp_agent_catalog.dart';
 import 'acp_config_leases.dart';
+import 'acp_launch_directories.dart';
 import 'acp_mcp_stdio_bridge.dart';
 import 'acp_mcp_probe.dart';
 import 'acp_stdio_channel.dart';
@@ -43,6 +44,7 @@ class AcpCheckResult {
   const AcpCheckResult({
     this.info,
     this.error,
+    this.errorDetails,
     this.failureKind,
     this.moruToolsAvailable = false,
     this.nodeIssue,
@@ -50,6 +52,7 @@ class AcpCheckResult {
 
   final AcpAgentInfo? info;
   final String? error;
+  final String? errorDetails;
   final AcpFailureKind? failureKind;
   final bool moruToolsAvailable;
   final AcpNodeIssue? nodeIssue;
@@ -107,6 +110,7 @@ class AcpAgentManager extends ChangeNotifier {
   bool _nodeProbed = false;
   AcpAgentWebServers? _webServers;
   final _configLeases = AcpConfigLeases();
+  final _launchDirectories = AcpLaunchDirectories();
   final Set<_ManagedAgentRun> _agentRuns = {};
   final Set<String> _removing = {};
   bool _disposed = false;
@@ -490,6 +494,7 @@ class AcpAgentManager extends ChangeNotifier {
       result = AcpCheckResult(
         moruToolsAvailable: moruToolsAvailable,
         error: safeError.message,
+        errorDetails: acpErrorDetails(safeError),
         failureKind: classifyAcpFailure(safeError),
         nodeIssue: nodeIssueFor(spec),
       );
@@ -542,6 +547,7 @@ class AcpAgentManager extends ChangeNotifier {
       provider.apiKey,
       ...provider.headers.values,
     ]);
+    AcpStderrBuffer? stderrDiagnostics;
     try {
       final variables = (await environment.loadExecutionConfig()).variables;
       requireActive();
@@ -550,7 +556,17 @@ class AcpAgentManager extends ChangeNotifier {
         ...provider.headers.values,
         variables['OPENCODE_SERVER_PASSWORD'] ?? '',
       ]);
-      final launch = spec.launch(provider);
+      // Root runs already have their own private mount namespace. Keep
+      // Codex's fixed daemon path apart from the Android-owned PRoot copy.
+      final expectedRootChroot = spec.id == AcpAgentSpec.codexId
+          ? (await runtime.status()).rootChroot
+          : null;
+      final isolateCodexDaemon = expectedRootChroot == true;
+      requireActive();
+      final launch = spec.launch(
+        provider,
+        isolateCodexDaemon: isolateCodexDaemon,
+      );
       await _requireNode(runtime, spec, redactor: redactor);
       requireActive();
       run.cleanup = await _configLeases.acquire(
@@ -558,18 +574,46 @@ class AcpAgentManager extends ChangeNotifier {
         launch.files,
         (paths) => _removeConfigs(runtime, paths),
       );
+      final directory = launch.temporaryDirectory;
+      if (directory != null) {
+        final removeConfigs = run.cleanup!;
+        final removeDirectory = _launchDirectories.acquire(
+          runtime,
+          directory,
+          () async {
+            await _run(
+              runtime,
+              AcpLaunchDirectories.removeScript(directory),
+              capture: true,
+              environment: const {'PATH': '$acpNpmPrefix/bin:/usr/bin:/bin'},
+            );
+          },
+        );
+        run.cleanup = () async {
+          try {
+            await removeDirectory();
+          } finally {
+            await removeConfigs();
+            await launch.cleanup?.call();
+          }
+        };
+      }
       requireActive();
       final env = _agentEnvironment(variables, launch);
       {
         final (code, output) = await _run(
           runtime,
           writeFilesScript([
-            ...launch.files,
-            AcpMcpStdioBridge.file,
-            AcpFsCompat.file,
-          ]),
+                ...launch.files,
+                AcpMcpStdioBridge.file,
+                AcpFsCompat.file,
+              ]) +
+              (directory == null
+                  ? ''
+                  : '\n${_launchDirectories.prepareScript(runtime, directory)}'),
           capture: true,
           environment: env,
+          expectedRootChroot: expectedRootChroot,
         );
         if (code != 0) {
           throw AcpError(
@@ -579,21 +623,26 @@ class AcpAgentManager extends ChangeNotifier {
         }
       }
       requireActive();
+      stderrDiagnostics = redactor.stderrBuffer();
       final transport = await WorkspaceStdioTransport.start(
         runtime: runtime,
-        command: launch.command,
-        arguments: launch.arguments,
+        command: directory == null ? launch.command : '/bin/sh',
+        arguments: directory == null
+            ? launch.arguments
+            : AcpLaunchDirectories.arguments(launch),
         cwd: cwd,
         mounts: mounts,
         environment: env,
         isCancelled: cancelled,
         emulateHardLinks: false,
+        expectedRootChroot: expectedRootChroot,
+        stderrFilter: stderrDiagnostics.addBytes,
       );
       run.transport = transport;
       unawaited(transport.onClose.then((_) => run.stop()));
       requireActive();
       final agent = await AcpAgent.start(
-        AcpStdioChannel(transport),
+        AcpStdioChannel(transport, diagnostics: stderrDiagnostics),
         clientVersion: clientVersion,
         redactor: redactor,
       );
@@ -603,7 +652,7 @@ class AcpAgentManager extends ChangeNotifier {
     } catch (error) {
       if (!run.prepared.isCompleted) run.prepared.complete();
       await run.stop();
-      throw redactor.error(error);
+      throw redactor.error(error, failureKind: stderrDiagnostics?.failureKind);
     } finally {
       if (!run.prepared.isCompleted) run.prepared.complete();
     }
@@ -782,6 +831,7 @@ class AcpAgentManager extends ChangeNotifier {
     Duration timeout = const Duration(minutes: 1),
     bool capture = false,
     Map<String, String>? environment,
+    bool? expectedRootChroot,
   }) async {
     final id = 'acp-${const Uuid().v4()}';
     if (!capture) _runId = id;
@@ -802,6 +852,7 @@ class AcpAgentManager extends ChangeNotifier {
         cwd: '/root',
         timeout: timeout,
         env: env,
+        expectedRootChroot: expectedRootChroot,
       ),
     )) {
       switch (event) {

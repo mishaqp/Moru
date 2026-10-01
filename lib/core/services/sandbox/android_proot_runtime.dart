@@ -92,10 +92,11 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
   @override
   Stream<CommandEvent> run(CommandRequest request) async* {
     await _requireReady();
+    final immutableExecArgs = _execArgs(request);
     yield* runChannelCommand(
       channel: channel,
       request: request,
-      args: _execArgs(request),
+      args: immutableExecArgs,
     );
   }
 
@@ -159,6 +160,11 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
   }
 
   ExecArgs _execArgs(CommandRequest request) {
+    final rootChroot = env.rootChroot;
+    final expectedRootChroot = request.expectedRootChroot;
+    if (expectedRootChroot != null && expectedRootChroot != rootChroot) {
+      throw StateError('Agent startup cancelled: Linux runtime mode changed');
+    }
     return ExecArgs(
       runId: request.runId,
       rootfsDir: rootfsDir.path,
@@ -172,7 +178,7 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
       binds: _binds(request.mounts),
       prootArguments: env.prootArguments,
       shell: env.prootShell,
-      chroot: env.rootChroot,
+      chroot: rootChroot,
     );
   }
 

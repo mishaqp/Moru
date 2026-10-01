@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -255,6 +256,148 @@ void main() {
     ]);
   });
 
+  for (final expectedRootChroot in [false, true]) {
+    final mode = expectedRootChroot ? 'root-chroot' : 'PRoot';
+    test('run cancels when $mode changes during readiness check', () async {
+      await env.setRootChroot(expectedRootChroot);
+      expect((await runtime.status()).rootChroot, expectedRootChroot);
+      workspace.calls.clear();
+      final probeStarted = Completer<void>();
+      final probeResult = Completer<Map<String, Object?>>();
+      workspace.handler = (call) {
+        if (call.method == 'probe') {
+          probeStarted.complete();
+          return probeResult.future;
+        }
+        if (call.method == 'exec') {
+          workspace.emit(<String, Object?>{
+            'type': 'exit',
+            'runId': 'mode-change',
+            'exitCode': 0,
+            'timedOut': false,
+            'durationMs': 1,
+          });
+          return <String, Object?>{'started': true};
+        }
+        return null;
+      };
+
+      final result = expectLater(
+        runtime.run(
+          CommandRequest(
+            runId: 'mode-change',
+            command: 'true',
+            cwd: '/',
+            expectedRootChroot: expectedRootChroot,
+          ),
+        ),
+        emitsInOrder(<Object>[
+          emitsError(
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              'Agent startup cancelled: Linux runtime mode changed',
+            ),
+          ),
+          emitsDone,
+        ]),
+      );
+      await probeStarted.future;
+      await env.setRootChroot(!expectedRootChroot);
+      probeResult.complete(workspace.probeResult);
+      await result;
+      expect(workspace.methods, isNot(contains('exec')));
+    });
+
+    test('ordinary run accepts a change from $mode during readiness', () async {
+      await env.setRootChroot(expectedRootChroot);
+      final probeStarted = Completer<void>();
+      final probeResult = Completer<Map<String, Object?>>();
+      workspace.handler = (call) {
+        if (call.method == 'probe') {
+          probeStarted.complete();
+          return probeResult.future;
+        }
+        if (call.method == 'exec') {
+          workspace.emit(<String, Object?>{
+            'type': 'exit',
+            'runId': 'ordinary',
+            'exitCode': 0,
+            'timedOut': false,
+            'durationMs': 1,
+          });
+          return <String, Object?>{'started': true};
+        }
+        return null;
+      };
+
+      final events = runtime
+          .run(
+            const CommandRequest(
+              runId: 'ordinary',
+              command: 'true',
+              cwd: '/',
+              mounts: [Mount(host: '/host', guest: '/workspace')],
+            ),
+          )
+          .toList();
+      await probeStarted.future;
+      await env.setRootChroot(!expectedRootChroot);
+      probeResult.complete(workspace.probeResult);
+
+      expect(await events, [isA<CommandExited>()]);
+      final args = workspace.argsOf('exec')!;
+      expect(args['chroot'] ?? false, !expectedRootChroot);
+      expect(args['tmpDir'], tmpDir.path);
+      expect(args['binds'], [
+        {'host': '/host', 'guest': '/workspace'},
+      ]);
+    });
+
+    test('run preserves the matching $mode snapshot across startup', () async {
+      await env.setRootChroot(expectedRootChroot);
+      final delayedChannel = _DelayedExecChannel(workspace.channel);
+      runtime = AndroidProotRuntime(
+        channel: delayedChannel,
+        env: env,
+        rootfsDir: rootfsDir,
+        tmpDir: tmpDir,
+      );
+      workspace.handler = (call) {
+        if (call.method == 'probe') return workspace.probeResult;
+        if (call.method == 'exec') {
+          workspace.emit(<String, Object?>{
+            'type': 'exit',
+            'runId': 'snapshot',
+            'exitCode': 0,
+            'timedOut': false,
+            'durationMs': 1,
+          });
+          return <String, Object?>{'started': true};
+        }
+        return null;
+      };
+
+      final events = runtime
+          .run(
+            CommandRequest(
+              runId: 'snapshot',
+              command: 'true',
+              cwd: '/',
+              expectedRootChroot: expectedRootChroot,
+            ),
+          )
+          .toList();
+      await delayedChannel.execStarted.future;
+      expect(workspace.methods, isNot(contains('exec')));
+      await env.setRootChroot(!expectedRootChroot);
+      delayedChannel.resumeExec.complete();
+
+      expect(await events, [isA<CommandExited>()]);
+      expect(workspace.argsOf('exec')!['chroot'] ?? false, expectedRootChroot);
+    });
+  }
+
   test('run maps cancelled, timedOut, and closes once', () async {
     var exitEmits = 0;
     workspace.handler = (call) {
@@ -440,4 +583,25 @@ void main() {
     expect(workspace.argsOf('ptyResize')!['rows'], 30);
     expect(workspace.argsOf('ptyClose')!['sessionId'], open['sessionId']);
   });
+}
+
+class _DelayedExecChannel extends WorkspaceChannel {
+  _DelayedExecChannel(this.delegate);
+
+  final WorkspaceChannel delegate;
+  final execStarted = Completer<void>();
+  final resumeExec = Completer<void>();
+
+  @override
+  Stream<Map<String, Object?>> get events => delegate.events;
+
+  @override
+  Future<ProbeResult> probe() => delegate.probe();
+
+  @override
+  Future<void> exec(ExecArgs args) async {
+    execStarted.complete();
+    await resumeExec.future;
+    await delegate.exec(args);
+  }
 }

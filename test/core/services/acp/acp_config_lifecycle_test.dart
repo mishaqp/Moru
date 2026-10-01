@@ -9,8 +9,10 @@ import 'package:Kelivo/core/providers/environment_provider.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_manager.dart';
 import 'package:Kelivo/core/services/acp/acp_config_leases.dart';
+import 'package:Kelivo/core/services/acp/acp_error_messages.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 
+import '../../../support/acp_test_process_table.dart';
 import '../../../support/business_test_harness.dart';
 import '../../../support/fake_workspace_runtime.dart';
 
@@ -32,12 +34,17 @@ CommandExited _exit(int code) => CommandExited(
 
 class _LifecycleRuntime extends FakeWorkspaceRuntime
     implements WorkspaceStdioRuntime {
-  _LifecycleRuntime(this.directory);
+  _LifecycleRuntime(this.directory) {
+    processTable = File('${directory.path}/process-table.cjs')
+      ..writeAsStringSync(acpTestProcessTableScript);
+  }
   final Directory directory;
+  late final File processTable;
   final processes = <String, StreamController<CommandEvent>>{};
   bool failWrite = false;
   bool failStart = false;
   bool failUninstall = false;
+  bool rootChroot = false;
   Completer<void>? written;
   Completer<void>? releaseWrite;
   Completer<void>? cancelling;
@@ -45,7 +52,17 @@ class _LifecycleRuntime extends FakeWorkspaceRuntime
   String get configRoot => '${directory.path}/configs';
   String local(String path) => path
       .replaceAll(acpConfigDir, configRoot)
-      .replaceAll(acpNpmPrefix, '${directory.path}/npm');
+      .replaceAll(acpNpmPrefix, '${directory.path}/npm')
+      .replaceAll(acpClaudeTemporaryRoot, '${directory.path}/scratch-claude')
+      .replaceAll(acpCodexTemporaryRoot, '${directory.path}/scratch-codex');
+
+  @override
+  Future<RuntimeStatus> status() async => RuntimeStatus(
+    ready: true,
+    engine: 'fake',
+    sandboxed: true,
+    rootChroot: rootChroot,
+  );
 
   @override
   Stream<CommandEvent> run(CommandRequest request) {
@@ -90,11 +107,27 @@ class _LifecycleRuntime extends FakeWorkspaceRuntime
     final script = local(
       request.command,
     ).replaceAll(RegExp(r'npm uninstall[^\n]*\n'), 'true\n');
-    final result = await Process.run(
-      '/bin/sh',
-      ['-c', script],
-      environment: {...Platform.environment, ...request.env},
-    );
+    final environment = {
+      ...Platform.environment,
+      ...request.env.map((key, value) => MapEntry(key, local(value))),
+      // Guest paths are fixtures here; use the host's installed Node.
+      'PATH': Platform.environment['PATH']!,
+      'MORU_TEST_PROCESS_IDS': '[]',
+      'MORU_TEST_PID_FILES': '[]',
+    };
+    environment['NODE_OPTIONS'] =
+        '--require=${jsonEncode(processTable.path)} '
+        '${environment['NODE_OPTIONS'] ?? ''}';
+    final result = await Process.run('/bin/sh', [
+      '-c',
+      script,
+    ], environment: environment);
+    if ((result.stderr as String).isNotEmpty) {
+      yield CommandOutput(
+        OutputStreamKind.stderr,
+        Uint8List.fromList(utf8.encode(result.stderr as String)),
+      );
+    }
     if (request.command.contains('base64 -d')) {
       if (written?.isCompleted == false) written!.complete();
       await releaseWrite?.future;
@@ -217,6 +250,112 @@ void main() {
     expect(session().existsSync(), isTrue);
     agent.close();
   });
+
+  test('Claude launches own separate private temporary directories', () async {
+    final claude = AcpAgentSpec.byId(AcpAgentSpec.claudeCodeId)!;
+    final first = await manager.start(claude, _provider);
+    final firstRequest = runtime.requests.lastWhere((r) => r.keepStdinOpen);
+    final firstPath = firstRequest.env['CLAUDE_CODE_TMPDIR'];
+    expect(firstPath, isNotNull);
+    final firstDirectory = Directory(runtime.local(firstPath!));
+    expect(firstDirectory.existsSync(), isTrue);
+    expect(firstDirectory.statSync().mode & 0x1ff, 0x1c0);
+    final second = await manager.start(claude, _provider);
+    final secondRequest = runtime.requests.lastWhere((r) => r.keepStdinOpen);
+    final secondPath = secondRequest.env['CLAUDE_CODE_TMPDIR']!;
+    expect(secondPath, isNot(firstPath));
+    expect(secondRequest.env['CLAUDE_CODE_CONTAINER_ID'], isNotEmpty);
+    final secondDirectory = Directory(runtime.local(secondPath));
+    expect(secondDirectory.existsSync(), isTrue);
+    first.close();
+    await _until(() => !firstDirectory.existsSync());
+    expect(secondDirectory.existsSync(), isTrue);
+    second.close();
+    await _until(() => !secondDirectory.existsSync());
+  });
+
+  for (final phase in ['write', 'start']) {
+    test(
+      'failed Claude $phase removes its fresh temporary directory',
+      () async {
+        runtime.failWrite = phase == 'write';
+        runtime.failStart = phase == 'start';
+        await expectLater(
+          manager.start(
+            AcpAgentSpec.byId(AcpAgentSpec.claudeCodeId)!,
+            _provider,
+          ),
+          throwsA(anything),
+        );
+        final prepared = runtime.requests.firstWhere(
+          (r) => r.command.contains('base64 -d'),
+        );
+        final path = prepared.env['CLAUDE_CODE_TMPDIR'];
+        expect(path, isNotNull);
+        expect(Directory(runtime.local(path!)).existsSync(), isFalse);
+      },
+    );
+  }
+
+  test(
+    'Claude reports an inaccessible scratch namespace without changing it',
+    () async {
+      final root = Directory(runtime.local(acpClaudeTemporaryRoot))
+        ..createSync();
+      // Reach the missing-marker check regardless of the host's umask.
+      final mode = await Process.run('/bin/chmod', ['700', root.path]);
+      expect(mode.exitCode, 0);
+      final saved = File('${root.path}/user-file')..writeAsStringSync('keep');
+      await expectLater(
+        manager.start(AcpAgentSpec.byId(AcpAgentSpec.claudeCodeId)!, _provider),
+        throwsA(
+          predicate<Object>(
+            (error) =>
+                classifyAcpFailure(error) ==
+                    AcpFailureKind.temporaryDirectory &&
+                acpErrorDetails(error)!.contains('ENOENT') &&
+                !acpErrorDetails(error)!.contains(_secret),
+          ),
+        ),
+      );
+      expect(saved.readAsStringSync(), 'keep');
+      expect(root.listSync(), hasLength(1));
+    },
+  );
+
+  test('Codex root launch privately binds its own daemon directory', () async {
+    runtime.rootChroot = true;
+    final agent = await manager.start(
+      AcpAgentSpec.byId(AcpAgentSpec.codexId)!,
+      _provider,
+    );
+    final request = runtime.requests.lastWhere((r) => r.keepStdinOpen);
+    final path = request.env['MORU_ACP_TEMP_DIR'];
+    expect(path, isNotNull);
+    expect(request.expectedRootChroot, isTrue);
+    expect(request.command, contains('mount --bind'));
+    expect(request.command, contains('/tmp/codex-daemon-0'));
+    final scratch = Directory(runtime.local(path!));
+    expect(scratch.existsSync(), isTrue);
+    expect(scratch.statSync().mode & 0x1ff, 0x1c0);
+    agent.close();
+    await _until(() => !scratch.existsSync());
+  });
+
+  test(
+    'Codex PRoot launch retains its existing command without a mount',
+    () async {
+      final agent = await manager.start(
+        AcpAgentSpec.byId(AcpAgentSpec.codexId)!,
+        _provider,
+      );
+      final request = runtime.requests.lastWhere((r) => r.keepStdinOpen);
+      expect(request.env['MORU_ACP_TEMP_DIR'], isNull);
+      expect(request.expectedRootChroot, isFalse);
+      expect(request.command, isNot(contains('mount --bind')));
+      agent.close();
+    },
+  );
 
   test(
     'existing temporary files become mode 0600 before secret writes',

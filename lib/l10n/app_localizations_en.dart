@@ -12100,6 +12100,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Provider headers contain an invalid name or a line break. Check the provider header settings.';
 
   @override
+  String get agentsErrorTemporaryDirectory =>
+      'The agent cannot use its temporary directory. Check the Linux environment and try again.';
+
+  @override
+  String get agentsShowDetails => 'Show details';
+
+  @override
+  String get agentsHideDetails => 'Hide details';
+
+  @override
   String get agentsDescKimiCode =>
       'Moonshot’s coding agent: edits files and runs commands.';
 

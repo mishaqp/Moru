@@ -2,8 +2,9 @@ import 'dart:io';
 
 import '../../../l10n/app_localizations.dart';
 import 'acp_agent.dart';
+import 'acp_connection.dart' show acpErrorDetails;
 
-export 'acp_connection.dart' show AcpFailureKind;
+export 'acp_connection.dart' show AcpFailureKind, acpErrorDetails;
 
 /// The agent's command is not in the Linux environment: the shell's
 /// "command not found" status, e.g. after switching to a fresh distribution.
@@ -18,11 +19,32 @@ AcpFailureKind? classifyAcpFailure(Object error) {
   if (error is AcpError && error.code == 401) {
     return AcpFailureKind.apiKey;
   }
-  final raw = error is AcpError
-      ? '${error.message}\n${error.data ?? ''}'
-      : error.toString();
+  if (error is AcpError) {
+    final current = _classifyAcpFailureText(
+      '${error.message}\n${error.data ?? ''}',
+    );
+    if (current != null) return current;
+    if (error.code != AcpError.internalError &&
+        error.code != AcpError.disconnected) {
+      return null;
+    }
+    return _classifyAcpFailureText(error.details ?? '');
+  }
+  return _classifyAcpFailureText(error.toString());
+}
+
+AcpFailureKind? _classifyAcpFailureText(String raw) {
   final text = raw.toLowerCase().replaceAll(RegExp(r'[_-]'), ' ');
   if (text.contains('invalid provider headers')) return AcpFailureKind.headers;
+  if (RegExp(
+        r'\b(?:temp(?:orary)? (?:directory|folder)|mkdtemp|claude code tmpdir)\b',
+      ).hasMatch(text) &&
+      RegExp(
+        r'\b(?:refusing|eacces|eperm|erofs|enoent|enotdir|unavailable|inaccessible|not writable|permission denied|read only|does not exist|no such file|failed|cannot|could not)\b|owned.{0,160}expected',
+        dotAll: true,
+      ).hasMatch(text)) {
+    return AcpFailureKind.temporaryDirectory;
+  }
   if (RegExp(
     r'\b401\b|(?:invalid|incorrect) api\s*key|api\s*key.{0,40}(?:invalid|incorrect)',
   ).hasMatch(text)) {
@@ -48,6 +70,7 @@ String? acpFailureMessage(AcpFailureKind? kind, AppLocalizations l10n) =>
       AcpFailureKind.model => l10n.agentsErrorModel,
       AcpFailureKind.network => l10n.agentsErrorNetwork,
       AcpFailureKind.headers => l10n.agentsErrorHeaders,
+      AcpFailureKind.temporaryDirectory => l10n.agentsErrorTemporaryDirectory,
       null => null,
     };
 
@@ -61,5 +84,6 @@ Object localizeAcpError(Object error, AppLocalizations l10n) {
     message,
     error is AcpError ? error.data : null,
     classifyAcpFailure(error),
+    acpErrorDetails(error),
   );
 }

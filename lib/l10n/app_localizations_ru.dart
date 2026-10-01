@@ -12232,6 +12232,16 @@ class AppLocalizationsRu extends AppLocalizations {
       'В заголовках провайдера есть недопустимое имя или перенос строки. Проверьте настройки заголовков провайдера.';
 
   @override
+  String get agentsErrorTemporaryDirectory =>
+      'Агенту недоступна временная папка. Проверьте Linux-окружение и попробуйте снова.';
+
+  @override
+  String get agentsShowDetails => 'Показать подробности';
+
+  @override
+  String get agentsHideDetails => 'Скрыть подробности';
+
+  @override
   String get agentsDescKimiCode =>
       'Агент Moonshot: правит файлы и запускает команды.';
 
