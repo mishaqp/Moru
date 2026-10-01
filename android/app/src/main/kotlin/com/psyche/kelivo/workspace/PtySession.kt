@@ -31,6 +31,7 @@ class PtySessions(
         RootfsCertificates.ensureInstalled(rootfsDir)
         val launch = if (chroot != null) {
             RootfsProfile.ensureInstalled(rootfsDir)
+            RootfsNodeDns.ensureInstalled(rootfsDir)
             ChrootCommand.build(
                 nativeLibDir = nativeLibDir,
                 rootfsDir = rootfsDir,

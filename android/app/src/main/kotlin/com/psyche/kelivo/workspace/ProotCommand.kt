@@ -192,6 +192,9 @@ object ProotCommand {
         } else {
             env["PATH"]?.let { guestEnv[PATH_KEEP] = it }
         }
+        if (RootfsNodeDns.isInstalled(rootfsDir)) {
+            guestEnv["NODE_OPTIONS"] = RootfsNodeDns.nodeOptions(guestEnv["NODE_OPTIONS"])
+        }
         for ((key, value) in guestEnv) {
             argv += "$key=$value"
         }
@@ -211,6 +214,7 @@ object ProotCommand {
         File(rootfsDir, "tmp").mkdirs()
         stageProcStandIns(tmpDir)
         RootfsProfile.ensureInstalled(rootfsDir)
+        RootfsNodeDns.ensureInstalled(rootfsDir)
     }
 
     /**

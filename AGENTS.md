@@ -136,6 +136,13 @@ package name does not require building other platforms.
   Agent and agent-Web launches set `emulateHardLinks: false` (no PRoot
   `--link2symlink`, which leaves dangling links after atomic writes) and
   load `AcpFsCompat` via `NODE_OPTIONS` to copy when Android denies link(2).
+  Every guest process (terminal, tools, agents, MCP, mini-app servers, npm)
+  loads `RootfsNodeDns` first through `NODE_OPTIONS`, added in
+  `ProotCommand.guestCommand` only while `/etc/moru/node-dns.cjs` exists and
+  merged once with the user's or agent's options. musl fails a whole lookup
+  without a family with EAI_AGAIN when only AAAA goes unanswered (some
+  routers); the shim retries with IPv4, then IPv6, and asks IPv4 first for
+  five minutes after a rescue. Other errors and working IPv6 stay untouched.
   PRoot always binds `/dev/fd`, `/dev/shm`, `--sysvipc`, and stand-ins for
   unreadable `/proc/stat`/`/proc/vmstat` (`ProotCommand.stageGuest`). Root
   mode (`moru_chroot`) adds missing `/dev/fd` and `/dev/std*` links to the
