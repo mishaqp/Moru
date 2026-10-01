@@ -823,6 +823,8 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
       return;
     }
     final source = _stripFormatChars(url).trim();
+    // Pure fragments refer to this document and cannot be opened externally.
+    if (source.startsWith('#')) return;
     if (_hasMarkdownWorkspace(context, widget.conversationId) &&
         KelivoLink.isPathSource(source)) {
       await openWorkspaceLinkedFile(

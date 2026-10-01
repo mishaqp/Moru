@@ -21,6 +21,7 @@ import 'package:Kelivo/core/models/workspace_binding.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/providers/workspace_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
+import 'package:Kelivo/features/workspace/widgets/files/file_browser.dart';
 import 'package:Kelivo/features/workspace/widgets/preview/file_preview.dart';
 import 'package:Kelivo/features/workspace/widgets/preview/preview_states.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
@@ -42,10 +43,14 @@ class _Paths extends PathProviderPlatform {
 class _Chats extends ChatService {
   _Chats(this.conversations);
   final Map<String, Conversation> conversations;
+  int conversationLookups = 0;
   @override
   String? get currentConversationId => 'unbound';
   @override
-  Conversation? getConversation(String id) => conversations[id];
+  Conversation? getConversation(String id) {
+    conversationLookups++;
+    return conversations[id];
+  }
 }
 
 class _Launcher extends UrlLauncherPlatform {
@@ -80,6 +85,9 @@ void main() {
     ).create();
     final site = await Directory(p.join(workspace.path, 'site')).create();
     await File(p.join(site.path, 'note.txt')).writeAsString('workspace marker');
+    await File(
+      p.join(workspace.path, '#note.txt'),
+    ).writeAsString('hash marker');
     await File(
       p.join(site.path, 'index.html'),
     ).writeAsString('<h1>Workspace site</h1>');
@@ -184,6 +192,43 @@ void main() {
     );
   }
 
+  for (final id in ['bound', 'unbound']) {
+    for (final entry in const {
+      'empty': '#',
+      'ASCII': '#section',
+      'Russian': '#раздел',
+      'ZWSP': '\u200B#раздел',
+    }.entries) {
+      testWidgets('$id Markdown ignores ${entry.key} fragment', (tester) async {
+        await pumpLink(tester, entry.value, conversationId: id);
+        addTearDown(() => tester.pumpWidget(const SizedBox()));
+        final previousLookups = chats.conversationLookups;
+        await tester.tap(find.text('open file'));
+        // A file lookup starts synchronously. If it occurs, observe its UI
+        // result so unfinished real IO cannot masquerade as an ignored link.
+        await waitFor(
+          tester,
+          () =>
+              chats.conversationLookups == previousLookups ||
+              launcher.launched.isNotEmpty ||
+              find.byType(FileBrowser).evaluate().isNotEmpty ||
+              find.byType(FilePreviewFrame).evaluate().isNotEmpty ||
+              AppSnackBarManager().activeToasts.isNotEmpty,
+        );
+        expect(chats.conversationLookups, previousLookups);
+        expect(launcher.launched, isEmpty);
+        expect(find.byType(FileBrowser), findsNothing);
+        expect(find.byType(FilePreviewFrame), findsNothing);
+        expect(AppSnackBarManager().activeToasts, isEmpty);
+        expect(find.text('open file'), findsOneWidget);
+        expect(
+          Navigator.of(tester.element(find.text('open file'))).canPop(),
+          isFalse,
+        );
+      });
+    }
+  }
+
   for (final source in [
     '/workspace/site/note.txt',
     'file:///workspace/site/note.txt',
@@ -191,6 +236,10 @@ void main() {
     './site/note.txt',
     'site/hello%20world.txt',
     '/workspace/site/inside.txt',
+    'site/note.txt#раздел',
+    '/workspace/site/note.txt#section',
+    'file:///workspace/site/note.txt#раздел',
+    '%23note.txt',
   ]) {
     testWidgets('workspace Markdown opens $source with a checked preview', (
       tester,
@@ -210,7 +259,11 @@ void main() {
       expect(preview.accessRoot, workspace.path);
       expect(
         await tester.runAsync(preview.file.readAsString),
-        source.contains('hello') ? 'space marker' : 'workspace marker',
+        const {
+              'site/hello%20world.txt': 'space marker',
+              '%23note.txt': 'hash marker',
+            }[source] ??
+            'workspace marker',
       );
       expect(launcher.launched, isEmpty);
       Navigator.of(tester.element(find.byType(FilePreviewFrame))).pop();
@@ -281,6 +334,9 @@ void main() {
     '/workspace/site/escape.txt',
     'escape-dir/outside.txt',
     'kelivo://workspace/%2e%2e/outside.txt',
+    '../outside.txt#раздел',
+    '%2e%2e/outside.txt#section',
+    'file:///workspace/%2e%2e/outside.txt#section',
   ]) {
     testWidgets('workspace Markdown rejects $source in-app', (tester) async {
       final l10n = await pumpLink(tester, source);
@@ -303,6 +359,8 @@ void main() {
     for (final source in [
       'http://example.com/path',
       'https://example.com/path',
+      'http://example.com/path#section',
+      'https://example.com/path#section',
     ]) {
       testWidgets('$id Markdown retains external $source', (tester) async {
         await pumpLink(tester, source, conversationId: id);
@@ -318,6 +376,8 @@ void main() {
     'file:///workspace/site/note.txt',
     'site/note.txt',
     '/workspace/site/note.txt',
+    'file:///workspace/site/note.txt#section',
+    'site/note.txt#section',
   ]) {
     testWidgets('unbound chat retains existing $source behavior', (
       tester,

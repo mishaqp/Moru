@@ -169,12 +169,25 @@ void main() {
   });
 
   group('KelivoLink.workspacePathSource', () {
+    for (final source in ['#', '#section', '#раздел', '  #раздел  ']) {
+      test('pure fragment $source is not a workspace path', () {
+        expect(KelivoLink.isPathSource(source), isFalse);
+        final result = KelivoLink.workspacePathSource(source);
+        expect(result.isWorkspacePath, isFalse);
+        expect(result.link, isNull);
+      });
+    }
     for (final source in [
       '/workspace/site/index.html',
       'file:///workspace/site/index.html',
       'file://localhost/workspace/site/index.html',
       'site/index.html',
       './site/index.html',
+      '/workspace/site/index.html#section',
+      'file:///workspace/site/index.html#section',
+      'file://localhost/workspace/site/index.html#section',
+      'site/index.html#раздел',
+      './site/index.html?mode=preview#section',
     ]) {
       test('maps $source to the workspace link', () {
         final result = KelivoLink.workspacePathSource(source);
@@ -190,6 +203,9 @@ void main() {
       '%2e%2e%2fsecret',
       'site/%2fetc/passwd',
       'file://foreign/workspace/site/index.html',
+      '../secret#section',
+      '%2e%2e/secret#раздел',
+      'file:///workspace/%2e%2e/secret#section',
     ]) {
       test('rejects $source before URI normalization', () {
         expect(KelivoLink.workspacePathSource(source).link, isNull);
@@ -211,6 +227,14 @@ void main() {
         final result = KelivoLink.workspacePathSource(source);
         expect(KelivoLink.tryParse(result.link!)?.relativePath, '员工 表.csv');
       }
+    });
+    test('keeps an encoded hash as part of the filename', () {
+      const source = '%23note.txt';
+      expect(KelivoLink.isPathSource(source), isTrue);
+      final result = KelivoLink.workspacePathSource(source);
+      expect(result.isWorkspacePath, isTrue);
+      expect(result.link, 'kelivo://workspace/%23note.txt');
+      expect(KelivoLink.tryParse(result.link!)?.relativePath, '#note.txt');
     });
   });
 
