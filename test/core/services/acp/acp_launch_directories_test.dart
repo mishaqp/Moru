@@ -5,10 +5,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
 import 'package:Kelivo/core/services/acp/acp_launch_directories.dart';
 
+import '../../../support/acp_test_process_table.dart';
+
 void main() {
   late Directory fixture;
   late File helper;
+  late File processTable;
   final children = <Process>[];
+  Map<String, String> processEnvironment() => {
+    'MORU_TEST_PROCESS_IDS': jsonEncode(
+      children.map((child) => child.pid).toList(),
+    ),
+    'MORU_TEST_PID_FILES': jsonEncode(['${fixture.path}/successor.pid']),
+  };
   const provider = AcpProviderInput(
     baseUrl: 'https://example.test',
     apiKey: 'secret',
@@ -22,12 +31,14 @@ void main() {
     List<String> active = const [],
   ]) async {
     final result = await Process.run('node', [
+      '--require',
+      processTable.path,
       helper.path,
       'prepare',
       launch.temporaryDirectory!,
       '$pid',
       ...active,
-    ]);
+    ], environment: processEnvironment());
     expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
   }
 
@@ -36,13 +47,19 @@ void main() {
     AcpLaunch launch, {
     Map<String, String> environment = const {},
     String? preload,
-  }) => Process.run('node', [
-    if (preload != null) ...['--require', preload],
-    helper.path,
-    action,
-    launch.temporaryDirectory!,
-    '$pid',
-  ], environment: environment);
+  }) => Process.run(
+    'node',
+    [
+      '--require',
+      processTable.path,
+      if (preload != null) ...['--require', preload],
+      helper.path,
+      action,
+      launch.temporaryDirectory!,
+      '$pid',
+    ],
+    environment: {...processEnvironment(), ...environment},
+  );
   Future<Process> running(AcpLaunch launch) async {
     await prepare(launch);
     final wrapper = AcpLaunchDirectories.arguments(
@@ -84,6 +101,8 @@ void main() {
     fixture = Directory.systemTemp.createTempSync('moru_launch_dirs_');
     helper = File('${fixture.path}/helper.cjs')
       ..writeAsStringSync(AcpLaunchDirectories.script);
+    processTable = File('${fixture.path}/process-table.cjs')
+      ..writeAsStringSync(acpTestProcessTableScript);
   });
   tearDown(() async {
     for (final child in children) {
@@ -332,6 +351,46 @@ for (const method of ['lstatSync', 'openSync']) {
       );
     },
   );
+
+  test('an uninspectable registered process defers collection', () async {
+    final old = launch();
+    await prepare(old);
+    File('${old.temporaryDirectory}/.owner').writeAsStringSync(
+      jsonEncode({'pid': 999999999, 'start': '1', 'boot': null}),
+    );
+    final child = await Process.start('node', [
+      '-e',
+      "process.stdout.write('ready\\n'); setInterval(() => {}, 1000)",
+    ]);
+    children.add(child);
+    await child.stdout
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .first;
+    final preload = File('${fixture.path}/process-unreadable.cjs')
+      ..writeAsStringSync(r'''
+const fs = require('node:fs');
+const original = fs.readFileSync;
+fs.readFileSync = function(p, ...args) {
+  if (p === `/proc/${process.env.UNREADABLE_PROCESS}/environ`) {
+    throw Object.assign(new Error('denied'), { code: 'EACCES' });
+  }
+  return original.call(this, p, ...args);
+};
+''');
+    final result = await operate(
+      'prepare',
+      launch(),
+      preload: preload.path,
+      environment: {'UNREADABLE_PROCESS': '${child.pid}'},
+    );
+    expect(result.exitCode, 0, reason: '${result.stderr}');
+    expect(Directory(old.temporaryDirectory!).existsSync(), isTrue);
+    child.kill(ProcessSignal.sigkill);
+    await child.exitCode;
+    await prepare(launch());
+    expect(Directory(old.temporaryDirectory!).existsSync(), isFalse);
+  });
 
   test('unreadable owner records defer collection', () async {
     final old = launch();

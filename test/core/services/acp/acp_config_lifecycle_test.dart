@@ -12,6 +12,7 @@ import 'package:Kelivo/core/services/acp/acp_config_leases.dart';
 import 'package:Kelivo/core/services/acp/acp_error_messages.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 
+import '../../../support/acp_test_process_table.dart';
 import '../../../support/business_test_harness.dart';
 import '../../../support/fake_workspace_runtime.dart';
 
@@ -33,8 +34,12 @@ CommandExited _exit(int code) => CommandExited(
 
 class _LifecycleRuntime extends FakeWorkspaceRuntime
     implements WorkspaceStdioRuntime {
-  _LifecycleRuntime(this.directory);
+  _LifecycleRuntime(this.directory) {
+    processTable = File('${directory.path}/process-table.cjs')
+      ..writeAsStringSync(acpTestProcessTableScript);
+  }
   final Directory directory;
+  late final File processTable;
   final processes = <String, StreamController<CommandEvent>>{};
   bool failWrite = false;
   bool failStart = false;
@@ -102,16 +107,21 @@ class _LifecycleRuntime extends FakeWorkspaceRuntime
     final script = local(
       request.command,
     ).replaceAll(RegExp(r'npm uninstall[^\n]*\n'), 'true\n');
-    final result = await Process.run(
-      '/bin/sh',
-      ['-c', script],
-      environment: {
-        ...Platform.environment,
-        ...request.env.map((key, value) => MapEntry(key, local(value))),
-        // Guest paths are fixtures here; use the host's installed Node.
-        'PATH': Platform.environment['PATH']!,
-      },
-    );
+    final environment = {
+      ...Platform.environment,
+      ...request.env.map((key, value) => MapEntry(key, local(value))),
+      // Guest paths are fixtures here; use the host's installed Node.
+      'PATH': Platform.environment['PATH']!,
+      'MORU_TEST_PROCESS_IDS': '[]',
+      'MORU_TEST_PID_FILES': '[]',
+    };
+    environment['NODE_OPTIONS'] =
+        '--require=${jsonEncode(processTable.path)} '
+        '${environment['NODE_OPTIONS'] ?? ''}';
+    final result = await Process.run('/bin/sh', [
+      '-c',
+      script,
+    ], environment: environment);
     if ((result.stderr as String).isNotEmpty) {
       yield CommandOutput(
         OutputStreamKind.stderr,
@@ -292,6 +302,9 @@ void main() {
     () async {
       final root = Directory(runtime.local(acpClaudeTemporaryRoot))
         ..createSync();
+      // Reach the missing-marker check regardless of the host's umask.
+      final mode = await Process.run('/bin/chmod', ['700', root.path]);
+      expect(mode.exitCode, 0);
       final saved = File('${root.path}/user-file')..writeAsStringSync('keep');
       await expectLater(
         manager.start(AcpAgentSpec.byId(AcpAgentSpec.claudeCodeId)!, _provider),

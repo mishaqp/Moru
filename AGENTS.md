@@ -271,6 +271,12 @@ or loosen tests to get CI green.
 - Robolectric: declare custom shadows on the test class, not on single test
   methods. The sandbox is shared, and mixing shadows per method makes
   results depend on test order.
+- ACP lifecycle fixtures set permissions explicitly when a refusal depends on
+  directory mode. Scope `/proc` enumeration with `acp_test_process_table.dart`
+  to registered fixture PIDs (including surviving SDK children); keep their
+  actual identities, UIDs and environments. Unrelated host processes with
+  unreadable environments must not pin test directories under root or CI.
+  Exercise the production refusal for an uninspectable registered process.
 
 ## Releases
 
