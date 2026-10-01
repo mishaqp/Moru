@@ -306,6 +306,6 @@ If `flutter` is not on `PATH` (a fresh Codex/agent cloud container), run
 "${MORU_TOOLCHAINS:-$HOME/.moru-toolchains}/activate.sh"` in every shell. The
 script installs the Flutter version pinned in `.github/workflows/pr-check.yml`
 from the official archive, verifies its SHA-256 against the release manifest,
-keeps the SDK outside the repository and runs `flutter pub get
---enforce-lockfile`. It needs network access, not root. Then run the whole
+keeps the SDK outside the repository and runs `flutter pub get` like CI
+(`pubspec.lock` is not committed). It needs network access, not root. Then run the whole
 pre-commit checklist; APK builds are left to CI.

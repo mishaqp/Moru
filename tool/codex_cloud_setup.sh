@@ -2,7 +2,7 @@
 # Prepares a cloud coding container (no preinstalled Flutter, no root) to run
 # the pre-commit checklist from AGENTS.md. Installs the exact Flutter version
 # CI uses, verified against the official release manifest, outside the
-# repository, then resolves packages from the committed lockfile.
+# repository, then resolves packages the same way CI does.
 #
 #   bash tool/codex_cloud_setup.sh
 #   source "${MORU_TOOLCHAINS:-$HOME/.moru-toolchains}/activate.sh"
@@ -53,4 +53,4 @@ flutter config --no-analytics >/dev/null
 flutter --version
 
 cd "$repo"
-flutter pub get --enforce-lockfile
+flutter pub get
