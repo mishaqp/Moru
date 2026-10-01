@@ -32,7 +32,7 @@ package name does not require building other platforms.
 - **Desktop code**: the desktop app shell (window, tray, hotkeys, desktop home and settings panes) and `lib/desktop/` are removed. The shared context menu, pointer anchor and select dropdown live in `lib/shared/widgets/`. Wide Android screens (tablet, foldable, landscape) still use `HomeDesktopScaffold` from `home_desktop_layout.dart`; scheduled tasks and a few screens keep `isDesktop` branches that are removed in later steps. Use the Android/mobile path for Moru tasks and do not add new desktop code.
 - **State management**: Provider (`lib/core/providers/`).
 - **Database**: Drift (`lib/core/database/`). Schema versions tracked in `drift_schemas/`.
-- **Localization**: ARB-based (`lib/l10n/`), English template (`app_en.arb`). Edit source ARB, run `flutter gen-l10n`, and commit generated output. Preserve English and Chinese translations when adding Russian.
+- **Localization**: ARB-based (`lib/l10n/`), English template (`app_en.arb`). Edit source ARB, run `flutter gen-l10n`, and commit generated output. Preserve English and Chinese translations when adding Russian. Add new keys to every Chinese ARB, including `app_zh.arb`, `app_zh_Hans.arb` and `app_zh_Hant.arb`; inspect `desiredFileName.txt` for new untranslated messages before committing.
 
 ## Chat features that already exist — do not reimplement
 

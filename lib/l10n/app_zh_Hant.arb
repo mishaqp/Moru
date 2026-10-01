@@ -4328,6 +4328,7 @@
   "agentsErrorApiKey": "供應商的 API 金鑰無效。",
   "agentsErrorModel": "找不到模型。請檢查供應商的模型設定。",
   "agentsErrorNetwork": "無法連線網路。請檢查網路連線後重試。",
+  "agentsErrorHeaders": "供應商請求標頭包含無效名稱或換行字元。請檢查供應商的請求標頭設定。",
   "agentsDescKimiCode": "Moonshot 程式代理：編輯檔案並執行命令。",
   "agentsDescDeepSeekHarness": "DeepSeek 程式代理：在工作目錄中處理檔案和命令。",
   "agentsApiCompatible": "透過 Anthropic、Chat Completions 或 Responses API 使用 Moru 供應商。",

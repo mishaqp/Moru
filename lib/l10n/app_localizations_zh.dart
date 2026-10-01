@@ -23177,6 +23177,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get agentsErrorNetwork => '无法连接网络。请检查网络连接后重试。';
 
   @override
+  String get agentsErrorHeaders => '提供商请求头包含无效名称或换行符。请检查提供商的请求头设置。';
+
+  @override
   String get agentsDescKimiCode => 'Moonshot 编程代理：编辑文件并运行命令。';
 
   @override
@@ -34860,6 +34863,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentsErrorNetwork => '無法連線網路。請檢查網路連線後重試。';
+
+  @override
+  String get agentsErrorHeaders => '供應商請求標頭包含無效名稱或換行字元。請檢查供應商的請求標頭設定。';
 
   @override
   String get agentsDescKimiCode => 'Moonshot 程式代理：編輯檔案並執行命令。';
