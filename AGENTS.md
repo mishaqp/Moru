@@ -298,3 +298,14 @@ dart run build_runner build
 flutter build apk --debug --target-platform=android-arm64
 python3 tool/verify_apk_arm64.py build/app/outputs/flutter-apk/app-debug.apk
 ```
+
+## Cloud coding containers
+
+If `flutter` is not on `PATH` (a fresh Codex/agent cloud container), run
+`bash tool/codex_cloud_setup.sh` once, then `source
+"${MORU_TOOLCHAINS:-$HOME/.moru-toolchains}/activate.sh"` in every shell. The
+script installs the Flutter version pinned in `.github/workflows/pr-check.yml`
+from the official archive, verifies its SHA-256 against the release manifest,
+keeps the SDK outside the repository and runs `flutter pub get
+--enforce-lockfile`. It needs network access, not root. Then run the whole
+pre-commit checklist; APK builds are left to CI.
