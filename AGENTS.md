@@ -179,7 +179,10 @@ render checked bytes. HTML previews disable file/content access and use the
 same token-protected loopback server as the browser action, with the original
 source file and granted root retained separately from the private snapshot.
 Each bounded resource read must stay in both that root and the captured real
-page directory; reject raw and encoded traversal before URI normalization.
+page directory. After the standard HTTP parser normalizes the request URI, its
+path must still begin with that server’s token; normalization within the token
+is allowed. Validate each opened descriptor against both captured boundaries
+before reading, and reject encoded path separators or residual dot segments.
 Keep the standard HTTP parser, close each HTTP connection after its response,
 and close an embedded preview server when its widget is disposed, including
 a server that finishes starting after disposal. CSP permits the server origin
