@@ -47,6 +47,7 @@ class AcpChatBridge {
     required String modelId,
     required List<Map<String, dynamic>> apiMessages,
     List<String> userImagePaths = const [],
+    ToolApprovalOwner? approvalOwner,
   }) async {
     if (assistant is! Assistant || assistant.agentId?.isNotEmpty != true) {
       return null;
@@ -76,6 +77,7 @@ class AcpChatBridge {
         modelId: modelId,
         apiMessages: apiMessages,
         userImagePaths: userImagePaths,
+        approvalOwner: approvalOwner,
       );
       return stream?.handleError((Object error, StackTrace stackTrace) {
         Error.throwWithStackTrace(translate(error), stackTrace);
@@ -101,6 +103,7 @@ class AcpChatBridge {
     required String modelId,
     required List<Map<String, dynamic>> apiMessages,
     List<String> userImagePaths = const [],
+    ToolApprovalOwner? approvalOwner,
   }) async {
     if (assistant is! Assistant) return null;
     final agentId = assistant.agentId;
@@ -178,6 +181,7 @@ class AcpChatBridge {
           modelId: modelId,
           workspace: workspace,
           approvals: approvals,
+          approvalOwner: approvalOwner,
         ),
         userImagePaths: userImagePaths,
         imageNotSentMessage: l10n.agentsImageNotSent,
@@ -188,12 +192,10 @@ class AcpChatBridge {
         savedSessionId: saved is Map && saved['agent'] == spec.id
             ? saved['id'] as String?
             : null,
-        onSession: (id) => unawaited(
-          chats.updateConversationExtras(
-            conversationId,
-            (extras) => extras
-              ..[acpSessionKey] = <String, dynamic>{'agent': spec.id, 'id': id},
-          ),
+        onSession: (id) => chats.updateConversationExtras(
+          conversationId,
+          (extras) => extras
+            ..[acpSessionKey] = <String, dynamic>{'agent': spec.id, 'id': id},
         ),
         onPermission: approvals == null
             ? null
@@ -201,6 +203,7 @@ class AcpChatBridge {
                 approvals,
                 request,
                 conversationId: conversationId,
+                approvalOwner: approvalOwner,
               ),
         onPlan: plans == null
             ? null
@@ -254,6 +257,7 @@ class AcpChatBridge {
     ToolApprovalService approvals,
     AcpPermissionRequest request, {
     required String conversationId,
+    ToolApprovalOwner? approvalOwner,
   }) async {
     final result = await approvals.requestApproval(
       toolCallId: request.toolCallId.isEmpty
@@ -265,6 +269,7 @@ class AcpChatBridge {
           ...Map<String, dynamic>.from(request.input as Map),
       },
       conversationId: conversationId,
+      owner: approvalOwner,
     );
     String? pick(bool allow, String preferred) {
       for (final option in request.options) {

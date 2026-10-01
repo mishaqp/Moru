@@ -17,6 +17,7 @@ import '../../../core/models/assistant_regex.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../shared/widgets/ios_checkbox.dart';
+import 'interrupted_reply_notice.dart';
 import '../../chat/widgets/chat_message_widget.dart';
 import '../../chat/widgets/timeline_projection.dart';
 import '../../chat/widgets/timeline_visibility.dart';
@@ -106,6 +107,8 @@ class MessageListView extends StatefulWidget {
     this.removingSlotIds = const <String>{},
     this.onVersionChange,
     this.onRegenerateMessage,
+    this.interruptedMessageIds = const {},
+    this.onContinueInterruptedReply,
     this.onResendMessage,
     this.onTranslateMessage,
     this.onEditMessage,
@@ -203,6 +206,8 @@ class MessageListView extends StatefulWidget {
   // Callbacks
   final OnVersionChange? onVersionChange;
   final OnRegenerateMessage? onRegenerateMessage;
+  final Set<String> interruptedMessageIds;
+  final OnRegenerateMessage? onContinueInterruptedReply;
   final OnResendMessage? onResendMessage;
   final OnTranslateMessage? onTranslateMessage;
   final OnEditMessage? onEditMessage;
@@ -611,6 +616,9 @@ class _MessageListViewState extends State<MessageListView> {
     if (index < 0 || index >= models.length) return _estimateChrome;
 
     final message = models[index].message;
+    final interruptedExtent = widget.interruptedMessageIds.contains(message.id)
+        ? InterruptedReplyNotice.estimateExtent(context, crossAxisExtent)
+        : 0.0;
     final snapshot = _streamingSnapshot(message);
     final estimateParts = snapshot?.parts ?? message.parts;
     final text = snapshot != null && snapshot.content.isNotEmpty
@@ -638,7 +646,7 @@ class _MessageListViewState extends State<MessageListView> {
               part is ImagePart,
         );
     if (text.isEmpty && !hasReasoning && !hasTools && !hasStructuredTimeline) {
-      return _estimateChrome;
+      return _estimateChrome + interruptedExtent;
     }
 
     // Layout asks for the same item repeatedly (every resize, every window
@@ -659,6 +667,7 @@ class _MessageListViewState extends State<MessageListView> {
       snapshot?.timelineStructureSignature ?? 0,
       snapshot?.reasoningFinishedAt,
       message.isStreaming,
+      interruptedExtent,
     );
     final estimateContent = text;
     final cached = _extentEstimateCache[message.id];
@@ -788,9 +797,9 @@ class _MessageListViewState extends State<MessageListView> {
       toolSignature: toolSignature,
       partsSignature: partsSignature,
       streamingSignature: streamingSignature,
-      extent: extent,
+      extent: extent + interruptedExtent,
     );
-    return extent;
+    return extent + interruptedExtent;
   }
 
   /// Timeline height from the same projector the renderer uses.
@@ -871,6 +880,7 @@ class _MessageListViewState extends State<MessageListView> {
       toolCountAtSplit: toolCountAtSplit,
       transformText: _estimateVisualTransform,
       partsArrivalOrdered: message.isStreaming,
+      isStreaming: message.isStreaming,
       inlineThinkingExpanded: !settings.collapseThinking,
     );
     bool isPending(TimelineToolRef tool) => _isPendingApproval(
@@ -2330,7 +2340,7 @@ class _MessageListViewState extends State<MessageListView> {
     RetryStatus? retryStatus,
   }) {
     final currentIdx = availableVersions.indexOf(selectedVersion);
-    return ChatMessageWidget(
+    final chat = ChatMessageWidget(
       message: message,
       enableStreamingTextMotion: enableStreamingTextMotion,
       versionIndex: currentIdx < 0 ? selectedIdx : currentIdx,
@@ -2485,6 +2495,19 @@ class _MessageListViewState extends State<MessageListView> {
       onInlineImageAspect: (imageKey, aspectRatio) {
         _onInlineImageAspect(message.id, imageKey, aspectRatio);
       },
+    );
+    if (!widget.interruptedMessageIds.contains(message.id)) return chat;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InterruptedReplyNotice(
+          key: ValueKey('interrupted-${message.id}'),
+          onContinue: widget.onContinueInterruptedReply == null
+              ? null
+              : () => widget.onContinueInterruptedReply!(message),
+        ),
+        chat,
+      ],
     );
   }
 

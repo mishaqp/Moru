@@ -292,6 +292,7 @@ void main() {
       role: 'assistant',
       content: '让我帮你搜索一下',
       conversationId: 'conversation-1',
+      isStreaming: true,
       reasoningSegmentsJson:
           '{"v":2,"segments":[],"contentSplits":{"offsets":[],"reasoningCounts":[],"toolCounts":[]}}',
     );

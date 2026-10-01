@@ -982,6 +982,46 @@ void main() {
     expect(started, [('message-no-run-id', conversation.id)]);
   });
 
+  test(
+    'onTaskStarted uses the captured execution when no durable run exists',
+    () async {
+      final bridge = BrowserAskAiBridge();
+      addTearDown(bridge.dispose);
+      final terminal = StreamController<GenerationTerminalEvent>.broadcast();
+      addTearDown(terminal.close);
+      final started = <(String, String)>[];
+      final run = runBrowserAskAiRequest(
+        bridge: bridge,
+        request: const BrowserAskAiRequest(id: 'temporary-run', text: 'hi'),
+        currentConversationId: conversation.id,
+        getConversation: (id) => id == conversation.id ? conversation : null,
+        getAssistantById: (id) => id == assistant.id ? assistant : null,
+        currentAssistant: null,
+        terminalEvents: terminal.stream,
+        onTaskStarted: (taskId, conversationId) =>
+            started.add((taskId, conversationId)),
+        send:
+            ({
+              required input,
+              required conversation,
+              required assistant,
+              required onGenerationStarted,
+            }) async {
+              onGenerationStarted('same-assistant');
+              return ChatActionResult.success(
+                placeholderMessage('same-assistant'),
+                executionId: 'captured-execution',
+              );
+            },
+        cancel: (_, {expectedMessageId}) async {},
+      );
+      await pumpEventQueue();
+      expect(started, [('captured-execution', conversation.id)]);
+      terminal.add(completedEvent('same-assistant', 'done'));
+      await run;
+    },
+  );
+
   test('onTaskStarted is never called when send() fails synchronously -- no '
       'run ever started, so there is nothing to track', () async {
     final bridge = BrowserAskAiBridge();

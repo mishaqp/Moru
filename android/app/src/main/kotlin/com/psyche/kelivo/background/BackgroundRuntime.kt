@@ -2,6 +2,7 @@ package com.psyche.kelivo.background
 
 import android.Manifest
 import android.app.Activity
+import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -59,7 +60,9 @@ class BackgroundRuntime(private val context: Context) {
         const val NOTIFICATION_ID = 7
         const val NOTIFICATION_PERMISSION_REQUEST = 4301
         const val CONVERSATION_EXTRA = "kelivo.background.conversation"
+        const val MESSAGE_EXTRA = "kelivo.background.message"
         private const val PENDING_CONVERSATION = "pending_conversation"
+        private const val PENDING_MESSAGE = "pending_message"
     }
 
     private val prefs = context.getSharedPreferences("kelivo_background", Context.MODE_PRIVATE)
@@ -79,6 +82,7 @@ class BackgroundRuntime(private val context: Context) {
     var service: GenerationForegroundService? = null
         private set
     private val overlay by lazy { BackgroundOverlay(context, this, prefs) }
+    private val notifications = BackgroundNotifications(context, this)
 
     fun enabled(key: String) = settings[key] == true
     fun label(key: String, default: String) = labels[key] as? String ?: default
@@ -88,6 +92,7 @@ class BackgroundRuntime(private val context: Context) {
 
     /** Keep-alive holders (e.g. the mini app web server) and their notification text. */
     private val holds = linkedMapOf<String, String>()
+    private val pendingHolds = linkedMapOf<String, MutableList<MethodChannel.Result>>()
     private var keepAliveChannel: MethodChannel? = null
     private var multicastLock: android.net.wifi.WifiManager.MulticastLock? = null
     fun shouldRunService() =
@@ -99,15 +104,22 @@ class BackgroundRuntime(private val context: Context) {
             channel.setMethodCallHandler { call, result ->
                 when (call.method) {
                     "hold" -> {
-                        val id = call.argument<String>("id") ?: return@setMethodCallHandler result.error("args", "id", null)
+                        val id = call.argument<String>("id")?.takeIf { it.isNotBlank() }
+                            ?: return@setMethodCallHandler result.error("args", "id", null)
                         holds[id] = call.argument<String>("text") ?: ""
+                        pendingHolds.getOrPut(id) { mutableListOf() }.add(result)
                         blocked = false
                         reconcileService()
-                        result.success(service != null || serviceStarting)
+                        if (service != null && shouldRunService()) acknowledgeHold(id, true)
+                        notifyStatusChanged()
                     }
                     "release" -> {
-                        holds.remove(call.argument<String>("id"))
+                        call.argument<String>("id")?.let { id ->
+                            holds.remove(id)
+                            acknowledgeHold(id, false)
+                        }
                         reconcileService()
+                        notifyStatusChanged()
                         result.success(null)
                     }
                     "multicast" -> {
@@ -136,22 +148,28 @@ class BackgroundRuntime(private val context: Context) {
 
     /** The user stopped the service: holders stop too. */
     private fun releaseHolds() {
-        if (holds.isEmpty()) return
         val ids = holds.keys.toList()
         holds.clear()
-        keepAliveChannel?.invokeMethod("released", ids)
+        pendingHolds.keys.toList().forEach { acknowledgeHold(it, false) }
+        if (ids.isNotEmpty()) keepAliveChannel?.invokeMethod("released", ids)
+    }
+
+    private fun acknowledgeHold(id: String, accepted: Boolean) {
+        pendingHolds.remove(id)?.forEach { it.success(accepted) }
     }
 
     fun beginScheduledRun(id: String) {
         scheduledRuns.add(id)
         blocked = false
         reconcileService()
+        notifyStatusChanged()
         if (blocked) (context as KelivoApplication).scheduledTasks.stopAll("foreground_service_start_failed")
     }
 
     fun endScheduledRun(id: String) {
         scheduledRuns.remove(id)
         reconcileService()
+        notifyStatusChanged()
     }
 
     fun configure(messenger: BinaryMessenger) {
@@ -164,11 +182,21 @@ class BackgroundRuntime(private val context: Context) {
                             result.success(status())
                         }
                         "getStatus" -> result.success(status())
+                        "syncApprovals" -> {
+                            notifications.sync(call.arguments as? Map<*, *> ?: emptyMap<String, Any>())
+                            notifyStatusChanged()
+                            result.success(null)
+                        }
+                        "showResult" -> {
+                            notifications.showResult(call.arguments as? Map<*, *> ?: emptyMap<String, Any>())
+                            result.success(null)
+                        }
                         "takePendingConversation" -> {
                             dartReady = true
                             val id = prefs.getString(PENDING_CONVERSATION, null)
-                            prefs.edit().remove(PENDING_CONVERSATION).apply()
-                            result.success(id)
+                            val message = prefs.getString(PENDING_MESSAGE, null)
+                            prefs.edit().remove(PENDING_CONVERSATION).remove(PENDING_MESSAGE).apply()
+                            result.success(if (id == null) null else conversationTarget(id, message))
                         }
                         "requestPermission" -> {
                             requestPermission(call.arguments as? String ?: "")
@@ -227,6 +255,7 @@ class BackgroundRuntime(private val context: Context) {
             clearCompletionNotifications()
             overlay.clearCompleted()
         }
+        notifications.onSettingsChanged()
         val terminal = (args["terminal"] as? Map<*, *>)?.let(BackgroundTask::fromMap)
         overlay.sync(tasks, terminal)
         reconcileService()
@@ -243,9 +272,7 @@ class BackgroundRuntime(private val context: Context) {
                     ContextCompat.startForegroundService(context,
                         Intent(context, GenerationForegroundService::class.java))
                 } catch (error: RuntimeException) {
-                    serviceStarting = false
-                    blocked = true
-                    recordError("foreground_service_start_failed: ${error.message}")
+                    serviceFailed("foreground_service_start_failed")
                 }
             }
         } else {
@@ -258,7 +285,8 @@ class BackgroundRuntime(private val context: Context) {
         serviceStarting = false
         service = value
         prefs.edit().putBoolean("service_was_active", true).apply()
-        channel?.invokeMethod("statusChanged", null)
+        pendingHolds.keys.toList().forEach { acknowledgeHold(it, shouldRunService() && it in holds) }
+        notifyStatusChanged()
         // The system sets FLAG_PROMOTED_ONGOING after notify/startForeground.
         main.postDelayed({ overlay.refresh() }, 300)
     }
@@ -267,19 +295,21 @@ class BackgroundRuntime(private val context: Context) {
         if (service === value) service = null
         serviceStarting = false
         prefs.edit().putBoolean("service_was_active", false).apply()
-        channel?.invokeMethod("statusChanged", null)
+        notifyStatusChanged()
     }
 
     fun stopTasks(reason: String? = null) {
         val ids = tasks.map { it.id }
         releaseHolds()
         blocked = true
+        notifications.clearApprovals()
         if (reason != null) recordError(reason)
         (context as? KelivoApplication)?.scheduledTasks?.stopAll(reason ?: "cancelled")
         channel?.invokeMethod(if (reason == null) "cancelTasks" else "interrupted",
             mapOf("ids" to ids, "reason" to reason))
         overlay.dismissAll()
         service?.stopGenerationService()
+        notifyStatusChanged()
     }
 
     fun onTaskRemoved() {
@@ -290,17 +320,23 @@ class BackgroundRuntime(private val context: Context) {
 
     fun receiveConversation(intent: Intent?) {
         val id = intent?.getStringExtra(CONVERSATION_EXTRA)?.takeIf { it.isNotBlank() } ?: return
+        val message = intent.getStringExtra(MESSAGE_EXTRA)?.takeIf { it.isNotBlank() }
         intent.removeExtra(CONVERSATION_EXTRA)
-        if (!dartReady) prefs.edit().putString(PENDING_CONVERSATION, id).apply()
-        else channel?.invokeMethod("openConversation", id)
+        intent.removeExtra(MESSAGE_EXTRA)
+        if (!dartReady) prefs.edit().putString(PENDING_CONVERSATION, id).putString(PENDING_MESSAGE, message).apply()
+        else channel?.invokeMethod("openConversation", conversationTarget(id, message))
     }
+
+    private fun conversationTarget(id: String, message: String?): Any =
+        if (message.isNullOrBlank()) id else mapOf("conversationId" to id, "assistantMessageId" to message)
 
     fun openConversation(id: String) {
         context.startActivity(openIntent(id))
     }
 
-    fun openIntent(id: String) = Intent(context, MainActivity::class.java)
+    fun openIntent(id: String, message: String = "") = Intent(context, MainActivity::class.java)
         .putExtra(CONVERSATION_EXTRA, id)
+        .putExtra(MESSAGE_EXTRA, message)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
 
     fun buildNotification(): Notification {
@@ -363,15 +399,28 @@ class BackgroundRuntime(private val context: Context) {
 
     fun status(): Map<String, Any> {
         val manager = context.getSystemService(NotificationManager::class.java)
+        val power = context.getSystemService(PowerManager::class.java)
+        val standbyEnabled = Build.VERSION.SDK_INT >= 33 && power.isLowPowerStandbyEnabled
         fun channelEnabled(id: String) = Build.VERSION.SDK_INT < 26 ||
             manager?.getNotificationChannel(id)?.importance != NotificationManager.IMPORTANCE_NONE
         return mapOf(
             "foregroundServiceActive" to (service != null && shouldRunService()),
             "activeTasks" to tasks.size,
+            "keepAliveOwners" to holds.size,
+            "scheduledRuns" to scheduledRuns.size,
+            "pendingApprovals" to notifications.pendingCount,
+            "activeOwners" to if (blocked) 0 else holds.size + scheduledRuns.size +
+                (if (enabled("androidEnabled")) tasks.size else 0),
             "notificationsAuthorized" to NotificationManagerCompat.from(context).areNotificationsEnabled(),
             "ongoingChannelEnabled" to channelEnabled(CHANNEL_ID),
             "completionChannelEnabled" to channelEnabled("kelivo_bg_chat_v2"),
-            "batteryExempt" to context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName),
+            "approvalChannelEnabled" to channelEnabled(BackgroundNotifications.APPROVAL_CHANNEL),
+            "batteryExempt" to power.isIgnoringBatteryOptimizations(context.packageName),
+            "backgroundRestricted" to (Build.VERSION.SDK_INT >= 28 &&
+                context.getSystemService(ActivityManager::class.java).isBackgroundRestricted),
+            "powerSaveMode" to power.isPowerSaveMode,
+            "lowPowerStandbyEnabled" to standbyEnabled,
+            "lowPowerStandbyExempt" to (if (Build.VERSION.SDK_INT >= 34) power.isExemptFromLowPowerStandby else !standbyEnabled),
             "overlayAuthorized" to Settings.canDrawOverlays(context),
             "overlayVisible" to overlay.isVisible,
             "liveUpdatesSupported" to (Build.VERSION.SDK_INT >= 36),
@@ -383,11 +432,40 @@ class BackgroundRuntime(private val context: Context) {
     }
 
     fun serviceFailed(message: String) {
-        blocked = true
         serviceStarting = false
-        recordError(message)
-        (context as? KelivoApplication)?.scheduledTasks?.stopAll(message)
-        channel?.invokeMethod("statusChanged", null)
+        stopTasks(message)
+        notifications.showServiceFailure()
+    }
+
+    private fun notifyStatusChanged() { channel?.invokeMethod("statusChanged", null) }
+
+    internal fun canResolveApproval() = channel != null && dartReady && !blocked
+
+    internal fun handleApprovalAction(target: BackgroundNotifications.ApprovalTarget, action: String,
+        finished: () -> Unit) = notifications.handleAction(target, action, finished)
+
+    /** A bounded acknowledgement from the retained channel, with no engine creation or replay. */
+    internal fun dispatchApprovalAction(arguments: Map<String, String>, acknowledged: (Boolean) -> Unit) {
+        val live = channel
+        if (live == null || !canResolveApproval()) { acknowledged(false); return }
+        var finished = false
+        val timeout = Runnable {
+            if (!finished) { finished = true; acknowledged(false) }
+        }
+        fun complete(resolved: Boolean) {
+            if (finished) return
+            finished = true
+            main.removeCallbacks(timeout)
+            acknowledged(resolved)
+        }
+        main.postDelayed(timeout, 5_000)
+        try {
+            live.invokeMethod("approvalAction", arguments, object : MethodChannel.Result {
+                override fun success(result: Any?) { complete((result as? Map<*, *>)?.get("status") == "resolved") }
+                override fun error(code: String, message: String?, details: Any?) { complete(false) }
+                override fun notImplemented() { complete(false) }
+            })
+        } catch (_: RuntimeException) { complete(false) }
     }
 
     fun recordError(message: String) {
@@ -432,6 +510,7 @@ class BackgroundRuntime(private val context: Context) {
                 intents += Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
             }
             "overlay" -> intents += Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, packageUri)
+            "power" -> intents += Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS)
             "liveUpdates" -> if (Build.VERSION.SDK_INT >= 36) intents +=
                 Intent("android.settings.MANAGE_APP_PROMOTED_NOTIFICATIONS").putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
             "autostart" -> intents += vendorSettings().map { (pkg, name) -> Intent().setComponent(ComponentName(pkg, name)) }
@@ -462,7 +541,8 @@ class BackgroundRuntime(private val context: Context) {
     private fun clearCompletionNotifications() {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         for (entry in manager.activeNotifications) {
-            if (Build.VERSION.SDK_INT >= 26 && entry.notification.channelId == "kelivo_bg_chat_v2") {
+            if (Build.VERSION.SDK_INT >= 26 && entry.notification.channelId == "kelivo_bg_chat_v2" &&
+                !notifications.ownsResult(entry.tag)) {
                 manager.cancel(entry.tag, entry.id)
             }
         }

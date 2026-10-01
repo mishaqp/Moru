@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/services/api/tool_display_redaction.dart';
 import 'browser_agent_actions.dart';
@@ -19,19 +20,49 @@ class ToolApprovalResult {
 
 typedef _PendingKey = ({String scope, String toolCallId});
 
+enum ToolApprovalActionStatus { resolved, stale }
+
+/// Immutable execution ownership captured before a tool or ACP callback starts.
+class ToolApprovalOwner {
+  const ToolApprovalOwner({
+    required this.conversationId,
+    required this.generationRunId,
+    required this.assistantMessageId,
+    required this.isActive,
+  });
+
+  final String conversationId;
+  final String generationRunId;
+  final String assistantMessageId;
+  final bool Function() isActive;
+  static final Object _key = Object();
+  static ToolApprovalOwner? get current =>
+      Zone.current[_key] as ToolApprovalOwner?;
+
+  Future<T> run<T>(Future<T> Function() action) =>
+      runZoned(action, zoneValues: {_key: this});
+}
+
 /// A pending approval request for an MCP tool call.
 class ToolApprovalRequest {
+  final String approvalId;
   final String toolCallId;
   final String toolName;
   final Map<String, dynamic> arguments;
   final String? conversationId;
+  final ToolApprovalOwner? owner;
+  String? get generationRunId => owner?.generationRunId;
+  String? get assistantMessageId => owner?.assistantMessageId;
+  bool get hasLiveOwner => owner?.isActive() == true;
   final Completer<ToolApprovalResult> _completer;
 
   ToolApprovalRequest({
+    required this.approvalId,
     required this.toolCallId,
     required this.toolName,
     required this.arguments,
     this.conversationId,
+    this.owner,
     required this._completer,
   });
 
@@ -54,6 +85,7 @@ class ToolApprovalService extends ChangeNotifier {
   final Map<_PendingKey, ToolApprovalRequest> _pending = {};
   int _unscopedSeq = 0;
   bool _autoApproveAll = false;
+  bool _disposed = false;
 
   /// Global trusted mode. When enabled, tool calls never create approval cards.
   bool get autoApproveAll => _autoApproveAll;
@@ -72,7 +104,11 @@ class ToolApprovalService extends ChangeNotifier {
     _pending.clear();
     for (final req in waiting) {
       if (!req._completer.isCompleted) {
-        req._completer.complete(ToolApprovalResult.approved());
+        req._completer.complete(
+          req.owner != null && !req.hasLiveOwner
+              ? ToolApprovalResult.denied('cancelled')
+              : ToolApprovalResult.approved(),
+        );
       }
     }
     notifyListeners();
@@ -130,14 +166,29 @@ class ToolApprovalService extends ChangeNotifier {
     required String toolName,
     required Map<String, dynamic> arguments,
     String? conversationId,
+    ToolApprovalOwner? owner,
   }) {
+    owner ??= ToolApprovalOwner.current;
+    conversationId ??= owner?.conversationId;
+    if (_disposed ||
+        (owner != null &&
+            (!owner.isActive() ||
+                owner.conversationId !=
+                    _storedConversationId(conversationId)))) {
+      return Future.value(ToolApprovalResult.denied('cancelled'));
+    }
     if (_autoApproveAll) {
       return Future<ToolApprovalResult>.value(ToolApprovalResult.approved());
     }
     final key = _storageKey(conversationId, toolCallId);
     final existing = _pending[key];
     if (existing != null) {
-      return existing.future;
+      if (existing.generationRunId == owner?.generationRunId &&
+          existing.assistantMessageId == owner?.assistantMessageId) {
+        return existing.future;
+      }
+      _pending.remove(key);
+      existing._completer.complete(ToolApprovalResult.denied('cancelled'));
     }
     final completer = Completer<ToolApprovalResult>();
     final display = ToolDisplayRedaction.current;
@@ -161,14 +212,70 @@ class ToolApprovalService extends ChangeNotifier {
           : display.text(action);
     }
     _pending[key] = ToolApprovalRequest(
+      approvalId: const Uuid().v4(),
       toolCallId: toolCallId,
       toolName: toolName,
       arguments: displayArguments,
       conversationId: _storedConversationId(conversationId),
+      owner: owner,
       completer: completer,
     );
     notifyListeners();
     return completer.future;
+  }
+
+  /// External consent must identify the exact live request, without fallback.
+  ToolApprovalActionStatus resolveNotificationApproval({
+    required String approvalId,
+    required String conversationId,
+    required String generationRunId,
+    required String assistantMessageId,
+    required bool approved,
+  }) {
+    if (_disposed) return ToolApprovalActionStatus.stale;
+    final entries = _pending.entries.where(
+      (entry) => entry.value.approvalId == approvalId,
+    );
+    if (entries.isEmpty) return ToolApprovalActionStatus.stale;
+    final entry = entries.first;
+    final request = entry.value;
+    if (conversationId.isEmpty ||
+        generationRunId.isEmpty ||
+        assistantMessageId.isEmpty ||
+        request.conversationId != conversationId ||
+        request.generationRunId != generationRunId ||
+        request.assistantMessageId != assistantMessageId) {
+      return ToolApprovalActionStatus.stale;
+    }
+    final active = request.hasLiveOwner;
+    _pending.remove(entry.key);
+    request._completer.complete(
+      active
+          ? (approved
+                ? ToolApprovalResult.approved()
+                : ToolApprovalResult.denied())
+          : ToolApprovalResult.denied('cancelled'),
+    );
+    notifyListeners();
+    return active
+        ? ToolApprovalActionStatus.resolved
+        : ToolApprovalActionStatus.stale;
+  }
+
+  void cancelForRun(String conversationId, String generationRunId) {
+    final requests = _pending.values
+        .where(
+          (request) =>
+              request.conversationId == conversationId &&
+              request.generationRunId == generationRunId,
+        )
+        .toList();
+    if (requests.isEmpty) return;
+    for (final request in requests) {
+      _pending.removeWhere((_, value) => identical(request, value));
+      request._completer.complete(ToolApprovalResult.denied('cancelled'));
+    }
+    notifyListeners();
   }
 
   /// Approve a pending tool call.
@@ -178,7 +285,11 @@ class ToolApprovalService extends ChangeNotifier {
       conversationId: conversationId,
     );
     if (req != null && !req._completer.isCompleted) {
-      req._completer.complete(ToolApprovalResult.approved());
+      req._completer.complete(
+        req.owner != null && !req.hasLiveOwner
+            ? ToolApprovalResult.denied('cancelled')
+            : ToolApprovalResult.approved(),
+      );
     }
     notifyListeners();
   }
@@ -289,5 +400,12 @@ class ToolApprovalService extends ChangeNotifier {
   static String? _storedConversationId(String? conversationId) {
     final trimmed = conversationId?.trim() ?? '';
     return trimmed.isEmpty ? null : trimmed;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    cancelAll();
+    super.dispose();
   }
 }

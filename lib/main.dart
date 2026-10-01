@@ -591,6 +591,7 @@ class MyApp extends StatelessWidget {
           create: (_) => ToolApprovalService(),
           update: (_, settings, approval) {
             final service = approval ?? ToolApprovalService();
+            MobileBackgroundCoordinator.instance.bindApprovals(service);
             service.setAutoApproveAll(settings.toolAutoApproveAll);
             return service;
           },

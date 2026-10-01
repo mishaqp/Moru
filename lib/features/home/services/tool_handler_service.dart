@@ -469,6 +469,14 @@ class ToolHandlerService {
       return '${name}_${DateTime.now().microsecondsSinceEpoch}';
     }
 
+    void ensureLiveToolCall() {
+      ToolCallCancellation.current?.throwIfCancelled();
+      final owner = ToolApprovalOwner.current;
+      if (owner != null && !owner.isActive()) {
+        throw StateError('tool_call_cancelled');
+      }
+    }
+
     Future<Object?> approveAndExecuteMcp(
       String name,
       Map<String, dynamic> args, {
@@ -498,6 +506,7 @@ class ToolHandlerService {
         }
       }
 
+      ensureLiveToolCall();
       return toolSvc.callToolForAssistant(
         mcp,
         assistantProvider,
@@ -513,7 +522,7 @@ class ToolHandlerService {
 
     return (name, args, {toolCallId}) async {
       try {
-        ToolCallCancellation.current?.throwIfCancelled();
+        ensureLiveToolCall();
         if (workspaceContext != null &&
             workspaceTools != null &&
             WorkspaceToolsService.toolNames.contains(name)) {
@@ -545,7 +554,7 @@ class ToolHandlerService {
           assistant,
           conversationId: conversationId,
         );
-        ToolCallCancellation.current?.throwIfCancelled();
+        ensureLiveToolCall();
         if (memoryResult != null) {
           return memoryResult;
         }
@@ -583,7 +592,7 @@ class ToolHandlerService {
             arguments: args,
             conversationId: conversationId,
           );
-          ToolCallCancellation.current?.throwIfCancelled();
+          ensureLiveToolCall();
           if (!approval.approved) {
             return _toolError(
               error: 'approval_denied',

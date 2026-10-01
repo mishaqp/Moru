@@ -3,6 +3,17 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+/// The foreground service did not accept the work. Native exception details
+/// can contain private process data and are deliberately kept at the boundary.
+class ProcessKeepAliveException implements Exception {
+  const ProcessKeepAliveException();
+
+  static const code = 'background_protection_unavailable';
+
+  @override
+  String toString() => code;
+}
+
 /// Keeps Moru's process alive with its foreground service while something
 /// long-running needs it, e.g. the mini app web server. Its notification
 /// shows the holder's text; stopping it there releases every holder.
@@ -29,7 +40,17 @@ class ProcessKeepAlive {
 
   Future<void> hold(String id, String text) async {
     if (!_android) return;
-    await _channel.invokeMethod<void>('hold', {'id': id, 'text': text});
+    try {
+      final accepted = await _channel.invokeMethod<bool>('hold', {
+        'id': id,
+        'text': text,
+      });
+      if (accepted != true) throw const ProcessKeepAliveException();
+    } on PlatformException {
+      throw const ProcessKeepAliveException();
+    } on MissingPluginException {
+      throw const ProcessKeepAliveException();
+    }
   }
 
   Future<void> release(String id) async {

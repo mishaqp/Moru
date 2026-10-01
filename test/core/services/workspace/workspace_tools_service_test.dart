@@ -22,6 +22,7 @@ import 'package:Kelivo/features/home/services/tool_approval_service.dart';
 import 'package:Kelivo/utils/mcp_structured_image.dart';
 
 import '../../../support/fake_workspace_runtime.dart';
+import '../../../support/fake_process_keep_alive.dart';
 
 class _RecordingApproval extends ToolApprovalService {
   int calls = 0;
@@ -35,6 +36,7 @@ class _RecordingApproval extends ToolApprovalService {
     required String toolName,
     required Map<String, dynamic> arguments,
     String? conversationId,
+    ToolApprovalOwner? owner,
   }) async {
     calls++;
     lastName = toolName;
@@ -183,6 +185,9 @@ void main() {
     return WorkspaceToolsService(
       registry: registry,
       runtimeProvider: provider,
+      keepAlive: FakeProcessKeepAlive(),
+      reportBackgroundShellResult:
+          ({required id, required conversationId, required succeeded}) async {},
       onShellCompleted: onShellCompleted,
       loadEnvironment: loadEnvironment,
       updateConversationExtras: (id, update) async {
@@ -764,7 +769,7 @@ void main() {
         final jobId = started['job_id'] as String;
         expect(runtime.requests.single.timeout, const Duration(seconds: 3600));
         // A background job does not follow the reply's cancellation.
-        expect(runtime.requests.single.isCancelled, isNull);
+        expect(runtime.requests.single.isCancelled?.call(), isFalse);
 
         runtime.job.add(
           CommandOutput(

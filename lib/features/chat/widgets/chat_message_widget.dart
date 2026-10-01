@@ -2451,6 +2451,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         scope: AssistantRegexScope.assistant,
       ),
       partsArrivalOrdered: widget.message.isStreaming,
+      isStreaming: widget.message.isStreaming,
       parseInlineThinking: _legacyInlineThinkingFor(widget).hasThinking,
     );
   }

@@ -16,6 +16,8 @@ import '../../models/environment_variable.dart';
 import '../../providers/external_mounts_provider.dart';
 import '../../providers/workspace_provider.dart';
 import '../chat/chat_service.dart';
+import '../keep_alive.dart';
+import '../mobile_background.dart';
 import '../mini_apps/mini_app_store.dart';
 import '../mini_apps/mini_app_check.dart';
 import 'conversation_files.dart';
@@ -41,6 +43,13 @@ typedef ConversationExtrasUpdater =
       Map<String, dynamic> Function(Map<String, dynamic> extras) update,
     );
 
+typedef BackgroundShellResultReporter =
+    Future<void> Function({
+      required String id,
+      required String conversationId,
+      required bool succeeded,
+    });
+
 /// Per-generation workspace tool definitions, approval, and execution.
 class WorkspaceToolsService {
   WorkspaceToolsService({
@@ -55,8 +64,14 @@ class WorkspaceToolsService {
     this.plans,
     this.miniApps,
     this.checkMiniApp,
+    ProcessKeepAlive? keepAlive,
+    BackgroundShellResultReporter? reportBackgroundShellResult,
   }) : registry = registry ?? ToolRunRegistry(),
-       runtimeProvider = runtimeProvider ?? WorkspaceRuntimeProvider();
+       runtimeProvider = runtimeProvider ?? WorkspaceRuntimeProvider(),
+       _keepAliveOverride = keepAlive,
+       _reportBackgroundShellResult =
+           reportBackgroundShellResult ??
+           MobileBackgroundCoordinator.instance.reportBackgroundShellResult;
 
   static const Set<String> toolNames = {
     'shell',
@@ -107,6 +122,11 @@ class WorkspaceToolsService {
   final bool Function(String workspaceId, String tool)? isToolEnabled;
   final Future<EnvironmentExecutionConfig> Function()? loadEnvironment;
   final TaskPlanRegistry? plans;
+  final ProcessKeepAlive? _keepAliveOverride;
+  ProcessKeepAlive get _keepAlive =>
+      _keepAliveOverride ?? ProcessKeepAlive.instance;
+  final BackgroundShellResultReporter _reportBackgroundShellResult;
+  final Map<String, _BackgroundJob> _backgroundJobs = {};
 
   /// Where published mini apps go; [MiniAppStore.instance] when null.
   final MiniAppStore? miniApps;
@@ -920,9 +940,10 @@ class WorkspaceToolsService {
       conversationId: conversationId ?? ctx.conversationId,
       runtimeRunId: runtimeRunId,
     );
+    final job = background ? _BackgroundJob(runtime, run) : null;
     final request = CommandRequest(
       runId: runtimeRunId,
-      isCancelled: background ? null : cancellation?.isCancelled,
+      isCancelled: job == null ? cancellation?.isCancelled : () => job.stopped,
       command: command,
       cwd: cwd,
       timeout: Duration(seconds: timeoutSeconds),
@@ -930,15 +951,72 @@ class WorkspaceToolsService {
       mounts: ctx.paths.mounts,
     );
     if (background) {
+      _backgroundJobs[runtimeRunId] = job!;
+      // Observe Stop before awaiting service promotion. If Stop wins, no
+      // process may start when a late acknowledgement arrives.
+      job.released = _keepAlive.released.listen((id) {
+        if (id != runtimeRunId) return;
+        unawaited(job.stop().catchError((_) {}));
+      });
+      try {
+        await _keepAlive.hold(
+          runtimeRunId,
+          MobileBackgroundCoordinator.instance.backgroundShellRunningText,
+        );
+      } on ProcessKeepAliveException {
+        try {
+          run.complete(status: ToolRunStatus.failed);
+        } finally {
+          await _releaseBackgroundOwner(job);
+        }
+        return _errorResult(
+          tool: tool,
+          error: ProcessKeepAliveException.code,
+          message: MobileBackgroundCoordinator
+              .instance
+              .backgroundProtectionUnavailableText,
+          meta: const WorkspaceToolMetadata(
+            tool: tool,
+            status: 'error',
+            code: ProcessKeepAliveException.code,
+          ),
+        );
+      }
+      if (job.stopped) {
+        try {
+          run.complete(status: ToolRunStatus.cancelled);
+        } finally {
+          await _releaseBackgroundOwner(job);
+        }
+        return _errorResult(
+          tool: tool,
+          error: 'cancelled',
+          message: 'The background command was stopped.',
+          meta: const WorkspaceToolMetadata(
+            tool: tool,
+            status: 'cancelled',
+            cancelled: true,
+          ),
+        );
+      }
       // The job outlives this reply: ending or stopping the reply leaves it
       // running; the running strip and shell_output can stop it.
-      unawaited(_driveBackgroundJob(runtime, request, run));
+      job.executing = true;
+      unawaited(
+        _driveBackgroundJob(
+          runtime,
+          request,
+          run,
+          job,
+          conversationId ?? ctx.conversationId,
+        ),
+      );
       await _markToolsUsed(ctx, conversationId: conversationId, status: 'ok');
       return ClientToolResult(
         jsonEncode(<String, Object?>{
           'background': true,
           'job_id': runtimeRunId,
-          'status': 'running',
+          'status': run.status.name,
           'hint':
               'Call $shellOutputTool with this job_id to read output, wait '
               'for it or stop it.',
@@ -1117,43 +1195,77 @@ class WorkspaceToolsService {
     WorkspaceRuntime runtime,
     CommandRequest request,
     ToolRun run,
+    _BackgroundJob job,
+    String? conversationId,
   ) async {
     CommandExited? exited;
     try {
-      await for (final event in runtime.run(request)) {
-        switch (event) {
-          case CommandStarted():
-            break;
-          case CommandOutput(:final kind, :final bytes):
-            if (kind == OutputStreamKind.stdout) {
-              run.appendStdout(bytes);
-            } else {
-              run.appendStderr(bytes);
-            }
-          case CommandExited():
-            exited = event;
+      try {
+        await for (final event in runtime.run(request)) {
+          switch (event) {
+            case CommandStarted():
+              break;
+            case CommandOutput(:final kind, :final bytes):
+              if (kind == OutputStreamKind.stdout) {
+                run.appendStdout(bytes);
+              } else {
+                run.appendStderr(bytes);
+              }
+            case CommandExited():
+              exited = event;
+          }
         }
+      } catch (_) {
+        debugPrint('Background command failed.');
       }
-    } catch (error) {
-      debugPrint('Background job ${request.runId} failed: $error');
+      job.executing = false;
+      final done = exited;
+      run.complete(
+        status: job.stopped || done?.cancelled == true
+            ? ToolRunStatus.cancelled
+            : done == null
+            ? ToolRunStatus.failed
+            : done.timedOut
+            ? ToolRunStatus.timedOut
+            : done.exitCode == 0
+            ? ToolRunStatus.succeeded
+            : ToolRunStatus.failed,
+        exitCode: done?.exitCode,
+      );
+      try {
+        await onShellCompleted?.call();
+      } catch (error) {
+        debugPrint('Workspace post-command refresh failed: $error');
+      }
+      try {
+        if (conversationId != null && run.status != ToolRunStatus.cancelled) {
+          // The runtime identity, captured chat and generic result are the only
+          // values allowed into the notification boundary.
+          await _reportBackgroundShellResult(
+            id: request.runId,
+            conversationId: conversationId,
+            succeeded: run.status == ToolRunStatus.succeeded,
+          );
+        }
+      } catch (_) {
+        debugPrint('Background command result notification failed.');
+      }
+    } finally {
+      job.executing = false;
+      await _releaseBackgroundOwner(job);
     }
-    final done = exited;
-    run.complete(
-      status: done == null
-          ? ToolRunStatus.failed
-          : done.cancelled
-          ? ToolRunStatus.cancelled
-          : done.timedOut
-          ? ToolRunStatus.timedOut
-          : done.exitCode == 0
-          ? ToolRunStatus.succeeded
-          : ToolRunStatus.failed,
-      exitCode: done?.exitCode,
-    );
+  }
+
+  Future<void> _releaseBackgroundOwner(_BackgroundJob job) async {
     try {
-      await onShellCompleted?.call();
-    } catch (error) {
-      debugPrint('Workspace post-command refresh failed: $error');
+      await _keepAlive.release(job.run.runtimeRunId);
+    } catch (_) {
+      debugPrint('Background command owner release failed.');
+    } finally {
+      await job.released?.cancel();
+      if (identical(_backgroundJobs[job.run.runtimeRunId], job)) {
+        _backgroundJobs.remove(job.run.runtimeRunId);
+      }
     }
   }
 
@@ -1178,7 +1290,12 @@ class WorkspaceToolsService {
       );
     }
     if (_boolArg(args, 'stop') && run.status == ToolRunStatus.running) {
-      await runtimeProvider.runtime?.cancel(run.runtimeRunId);
+      final job = _backgroundJobs[run.runtimeRunId];
+      if (job != null) {
+        await job.stop();
+      } else {
+        await runtimeProvider.runtime?.cancel(run.runtimeRunId);
+      }
       await _waitForRun(run, const Duration(seconds: 5));
     }
     final waitSeconds = (_intArg(args, 'wait_seconds') ?? 0).clamp(
@@ -2065,5 +2182,23 @@ class WorkspaceToolsService {
     if (value is bool) return value;
     if (value is String) return value.toLowerCase() == 'true';
     return false;
+  }
+}
+
+/// Frozen runtime ownership: changing the registered runtime or the active
+/// reply cannot change which process a background job's Stop action cancels.
+class _BackgroundJob {
+  _BackgroundJob(this.runtime, this.run);
+
+  final WorkspaceRuntime runtime;
+  final ToolRun run;
+  StreamSubscription<String>? released;
+  bool stopped = false;
+  bool executing = false;
+
+  Future<void> stop() async {
+    if (stopped) return;
+    stopped = true;
+    if (executing) await runtime.cancel(run.runtimeRunId);
   }
 }

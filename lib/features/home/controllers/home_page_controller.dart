@@ -865,6 +865,7 @@ class HomePageController extends ChangeNotifier {
     try {
       // The two startups are independent of each other.
       await Future.wait([assistantProvider.loaded, _chatService.init()]);
+      await _viewModel.restoreQueuedInputs();
       if (prefs.newChatOnLaunch) {
         await _createNewConversation();
       } else {
@@ -905,6 +906,7 @@ class HomePageController extends ChangeNotifier {
         }
       }
       _chatInitialized = true;
+      unawaited(_viewModel.drainQueuedInputs());
       final executor = _scheduledExecutor =
           (task, cancellation, onConversation) => runScheduledTask(
             _context,
@@ -1025,7 +1027,6 @@ class HomePageController extends ChangeNotifier {
     _warmupSerial++;
     final queuedEdit = _queuedEditState;
     if (queuedEdit != null) {
-      _queuedEditState = null;
       final result = await _viewModel.submitEditedQueuedInput(
         id: queuedEdit.id,
         conversationId: queuedEdit.conversationId,
@@ -1033,16 +1034,9 @@ class HomePageController extends ChangeNotifier {
         input: input,
       );
       if (result == ChatInputSubmissionResult.rejected) {
-        // Nothing could be done with the edit: keep the original message so a
-        // failed send never deletes it silently.
-        _viewModel.insertQueuedInput(
-          id: queuedEdit.id,
-          conversationId: queuedEdit.conversationId,
-          index: queuedEdit.index,
-          input: queuedEdit.original,
-        );
         return result;
       }
+      _queuedEditState = null;
       _mediaController.clearDraft();
       notifyListeners();
       return result;
@@ -1101,8 +1095,8 @@ class HomePageController extends ChangeNotifier {
     await _viewModel.toggleTemporaryConversation();
   }
 
-  void cancelQueuedMessage() {
-    final restored = _viewModel.cancelCurrentQueuedInput();
+  Future<void> cancelQueuedMessage() async {
+    final restored = await _viewModel.cancelCurrentQueuedInput();
     if (restored == null) return;
 
     _loadDraftIntoComposer(restored);
@@ -1114,9 +1108,11 @@ class HomePageController extends ChangeNotifier {
   /// This is the "delete" half of the queue panel: the user explicitly asked
   /// for the message to be gone, so it is not restored anywhere. An edit of the
   /// same message is closed first, which also clears the composer.
-  void removeQueuedMessage(String id) {
-    if (_queuedEditState?.id == id) _exitQueuedMessageEdit(restore: false);
-    _viewModel.removeQueuedInput(id);
+  Future<void> removeQueuedMessage(String id) async {
+    if (await _viewModel.removeQueuedInput(id) == null) return;
+    if (_queuedEditState?.id == id) {
+      await _exitQueuedMessageEdit(restore: false);
+    }
     notifyListeners();
   }
 
@@ -1125,9 +1121,14 @@ class HomePageController extends ChangeNotifier {
   /// The item leaves the queue while it is being edited — otherwise a
   /// generation that finishes mid-edit would send the stale text — and goes
   /// back to its slot when the user sends or dismisses the edit.
-  void editQueuedMessage(QueuedChatInput item) {
+  Future<void> editQueuedMessage(QueuedChatInput item) async {
+    if (_queuedEditState != null &&
+        !await _exitQueuedMessageEdit(restore: true)) {
+      return;
+    }
     final index = _viewModel.queuedInputIndex(item.id);
     if (index < 0) return;
+    if (!await _viewModel.beginQueuedInputEdit(item)) return;
     if (_userMessageEditState != null) cancelUserMessageEdit();
     _queuedEditState = QueuedMessageEditState(
       id: item.id,
@@ -1140,7 +1141,6 @@ class HomePageController extends ChangeNotifier {
           ? item.input.imagePaths.first
           : item.input.documents.first.fileName,
     );
-    _viewModel.removeQueuedInput(item.id);
     _loadDraftIntoComposer(item.input);
     notifyListeners();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1150,13 +1150,15 @@ class HomePageController extends ChangeNotifier {
   }
 
   /// Cancels an in-progress queue edit and puts the message back untouched.
-  void cancelQueuedMessageEdit() => _exitQueuedMessageEdit(restore: true);
+  Future<void> cancelQueuedMessageEdit() async {
+    await _exitQueuedMessageEdit(restore: true);
+  }
 
   /// Saves the edit of a pending message without sending it right away.
   ///
   /// The message goes back to its slot in the queue with the new text, which is
   /// what "save only" means for something that has not been sent yet.
-  void saveQueuedMessageEditOnly() {
+  Future<void> saveQueuedMessageEditOnly() async {
     final state = _queuedEditState;
     if (state == null || _mediaController.hasUnreadyImages) return;
     final input = _mediaController.snapshotInput(_inputController.text);
@@ -1165,36 +1167,57 @@ class HomePageController extends ChangeNotifier {
         input.documents.isEmpty) {
       return;
     }
-    _queuedEditState = null;
-    _viewModel.insertQueuedInput(
+    if (!await _viewModel.insertQueuedInput(
       id: state.id,
       conversationId: state.conversationId,
       index: state.index,
       input: input,
-    );
+    )) {
+      return;
+    }
+    _queuedEditState = null;
     _mediaController.clearDraft();
     notifyListeners();
   }
 
-  void _exitQueuedMessageEdit({required bool restore}) {
+  Future<bool> _exitQueuedMessageEdit({required bool restore}) async {
     final state = _queuedEditState;
-    if (state == null) return;
-    _queuedEditState = null;
+    if (state == null) return true;
     if (restore) {
       // The message goes back to the queue untouched, so the composer must not
       // keep a second copy of it.
-      _viewModel.insertQueuedInput(
+      if (!await _viewModel.insertQueuedInput(
         id: state.id,
         conversationId: state.conversationId,
         index: state.index,
         input: state.original,
-      );
+      )) {
+        return false;
+      }
     }
+    _queuedEditState = null;
     // Both paths own the draft from here: an edit loaded it into the composer,
     // and leaving it there would duplicate a message that is now in the queue
     // (restore) or was just deleted (no restore).
     _mediaController.clearDraft();
     notifyListeners();
+    return true;
+  }
+
+  Set<String> get interruptedMessageIds => _viewModel.interruptedMessageIds;
+
+  Future<void> continueInterruptedReply(ChatMessage message) async {
+    if (currentConversation?.id != message.conversationId ||
+        !interruptedMessageIds.contains(message.id) ||
+        _chatController.isConversationLoading(message.conversationId)) {
+      return;
+    }
+    await _viewModel.sendMessage(
+      ChatInputData(
+        text: AppLocalizations.of(_context)!.chatContinuePrompt,
+        allowImagesApiRouting: false,
+      ),
+    );
   }
 
   /// Puts [input] into the composer and adopts its attachments.
@@ -1252,42 +1275,42 @@ class HomePageController extends ChangeNotifier {
     }
 
     final content = result.toJsonString();
-    await _chatService.upsertToolEvent(
-      message.id,
-      id: part.id,
-      name: part.toolName,
-      arguments: part.arguments,
-      content: content,
-    );
-
-    final parts = List<ToolUIPart>.of(
-      _streamController.getToolParts(message.id) ?? const <ToolUIPart>[],
-    );
-    final idx = parts.indexWhere(
-      (candidate) =>
-          candidate.id == part.id ||
-          (candidate.id.isEmpty && candidate.toolName == part.toolName),
-    );
-    final answeredPart = ToolUIPart(
-      id: part.id,
-      toolName: part.toolName,
-      arguments: part.arguments,
-      content: content,
-      metadata: part.metadata,
-      loading: false,
-    );
-    if (idx >= 0) {
-      parts[idx] = answeredPart;
-    } else {
-      parts.add(answeredPart);
-    }
-    _streamController.setToolParts(message.id, parts);
-    streamingContentNotifier.notifyToolHeightChanged(message.id);
-    notifyListeners();
-
     await _viewModel.continueAssistantMessageAfterToolAnswer(
       message,
       allowImagesApiRouting: _mediaController.allowImagesApiRouting,
+      beforePreparation: () async {
+        await _chatService.upsertToolEvent(
+          message.id,
+          id: part.id,
+          name: part.toolName,
+          arguments: part.arguments,
+          content: content,
+        );
+        final parts = List<ToolUIPart>.of(
+          _streamController.getToolParts(message.id) ?? const <ToolUIPart>[],
+        );
+        final idx = parts.indexWhere(
+          (candidate) =>
+              candidate.id == part.id ||
+              (candidate.id.isEmpty && candidate.toolName == part.toolName),
+        );
+        final answeredPart = ToolUIPart(
+          id: part.id,
+          toolName: part.toolName,
+          arguments: part.arguments,
+          content: content,
+          metadata: part.metadata,
+          loading: false,
+        );
+        if (idx >= 0) {
+          parts[idx] = answeredPart;
+        } else {
+          parts.add(answeredPart);
+        }
+        _streamController.setToolParts(message.id, parts);
+        streamingContentNotifier.notifyToolHeightChanged(message.id);
+        notifyListeners();
+      },
     );
   }
 
@@ -1336,6 +1359,7 @@ class HomePageController extends ChangeNotifier {
       return;
     }
     _viewModel.commitConversationSwitch(prepared);
+    MobileBackgroundCoordinator.instance.reconcileApprovals();
     _clearSelectionState();
     notifyListeners();
 
@@ -1400,6 +1424,7 @@ class HomePageController extends ChangeNotifier {
     _translations.clear();
     final previousId = currentConversation?.id;
     await _viewModel.createNewConversation();
+    MobileBackgroundCoordinator.instance.reconcileApprovals();
     if (currentConversation?.id != null &&
         currentConversation!.id != previousId) {
       _clearSelectionState();
@@ -2899,17 +2924,29 @@ class HomePageController extends ChangeNotifier {
     );
     if (state == AppLifecycleState.resumed) {
       ScreenWakelock.reassert();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      unawaited(
+        _viewModel.flushAllActiveGenerationProgress().catchError((
+          Object error,
+        ) {
+          debugPrint('Background progress flush failed: $error');
+        }),
+      );
     }
   }
 
   void onDidPopNext() {
     _homeRouteVisible = true;
+    MobileBackgroundCoordinator.instance.reconcileApprovals();
     unawaited(_openPendingNotificationConversation());
     WidgetsBinding.instance.addPostFrameCallback((_) => dismissKeyboard());
   }
 
   void onDidPushNext() {
     _homeRouteVisible = false;
+    MobileBackgroundCoordinator.instance.reconcileApprovals();
     dismissKeyboard();
   }
 

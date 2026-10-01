@@ -11687,6 +11687,99 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get agentsCodexResponsesRequired =>
       'Codex 仅支持提供 OpenAI Responses API 的服务商。请在服务商设置中启用，或选择其他智能体。';
+
+  @override
+  String get backgroundReliabilityHintTitle => '让任务持续运行';
+
+  @override
+  String get backgroundReliabilityHintDisabled =>
+      '后台执行已关闭。启用后，切换应用或关闭屏幕时任务可继续运行。';
+
+  @override
+  String get backgroundReliabilityHintRestricted =>
+      'Android 限制 Moru 的后台活动。离开此任务前，请检查应用的电池设置。';
+
+  @override
+  String get backgroundReliabilityHintStandby =>
+      '低功耗待机可能在任务运行期间暂停网络访问。请检查设备的节能设置。';
+
+  @override
+  String get backgroundReliabilityHintVendor =>
+      'Vivo 和小米可能停止后台任务。请在系统设置中允许后台活动和自启动。';
+
+  @override
+  String get backgroundReliabilityHintInterrupted =>
+      '上一个任务因 Moru 进程结束而中断。离开新任务前，请检查电池和后台活动设置。';
+
+  @override
+  String get backgroundReliabilityHintSettings => '后台设置';
+
+  @override
+  String get backgroundReliabilityHintDismiss => '关闭提示';
+
+  @override
+  String get backgroundLowPowerStandby => '低功耗待机';
+
+  @override
+  String get backgroundLowPowerStandbyDetail =>
+      '此设备模式即使在前台服务运行时也可能限制网络。电池优化豁免并不总能解除此限制。';
+
+  @override
+  String get backgroundPowerRestricted => '受限';
+
+  @override
+  String get backgroundPowerUnrestricted => '未报告限制';
+
+  @override
+  String get backgroundShellRunning => '正在运行后台命令';
+
+  @override
+  String get backgroundServerRunning => '小程序服务器正在运行';
+
+  @override
+  String get backgroundProtectionUnavailable => '无法启动后台保护。请保持 Moru 打开并重试。';
+
+  @override
+  String get chatInterruptedBody => '应用在回复完成前停止。已保存的部分回复和排队消息仍保留。继续将开始新的轮次。';
+
+  @override
+  String get chatContinueAfterInterruption => '继续';
+
+  @override
+  String get chatContinuePrompt => '中断后从已保存的上下文继续。采取进一步操作前，请检查已完成的工作。';
+
+  @override
+  String get queuedInputSaveFailed => '无法保存排队消息。草稿仍可使用。';
+
+  @override
+  String get notificationApprovalTitle => '需要批准';
+
+  @override
+  String get notificationApprovalBody => '智能体正在等待您的决定。';
+
+  @override
+  String get notificationApprovalAllow => '允许';
+
+  @override
+  String get notificationApprovalDeny => '拒绝';
+
+  @override
+  String get notificationApprovalStaleTitle => '批准请求已失效';
+
+  @override
+  String get notificationApprovalStaleBody => '打开聊天以查看此请求。';
+
+  @override
+  String get notificationApprovalChannelName => '智能体批准请求';
+
+  @override
+  String get notificationApprovalChannelDescription => '正在运行的智能体或工具请求您的决定。';
+
+  @override
+  String get backgroundShellCompleted => '后台命令已完成';
+
+  @override
+  String get backgroundShellFailed => '后台命令失败';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -23301,6 +23394,99 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get agentsCodexResponsesRequired =>
       'Codex 仅支持提供 OpenAI Responses API 的服务商。请在服务商设置中启用，或选择其他智能体。';
+
+  @override
+  String get backgroundReliabilityHintTitle => '让任务持续运行';
+
+  @override
+  String get backgroundReliabilityHintDisabled =>
+      '后台执行已关闭。启用后，切换应用或关闭屏幕时任务可继续运行。';
+
+  @override
+  String get backgroundReliabilityHintRestricted =>
+      'Android 限制 Moru 的后台活动。离开此任务前，请检查应用的电池设置。';
+
+  @override
+  String get backgroundReliabilityHintStandby =>
+      '低功耗待机可能在任务运行期间暂停网络访问。请检查设备的节能设置。';
+
+  @override
+  String get backgroundReliabilityHintVendor =>
+      'Vivo 和小米可能停止后台任务。请在系统设置中允许后台活动和自启动。';
+
+  @override
+  String get backgroundReliabilityHintInterrupted =>
+      '上一个任务因 Moru 进程结束而中断。离开新任务前，请检查电池和后台活动设置。';
+
+  @override
+  String get backgroundReliabilityHintSettings => '后台设置';
+
+  @override
+  String get backgroundReliabilityHintDismiss => '关闭提示';
+
+  @override
+  String get backgroundLowPowerStandby => '低功耗待机';
+
+  @override
+  String get backgroundLowPowerStandbyDetail =>
+      '此设备模式即使在前台服务运行时也可能限制网络。电池优化豁免并不总能解除此限制。';
+
+  @override
+  String get backgroundPowerRestricted => '受限';
+
+  @override
+  String get backgroundPowerUnrestricted => '未报告限制';
+
+  @override
+  String get backgroundShellRunning => '正在运行后台命令';
+
+  @override
+  String get backgroundServerRunning => '小程序服务器正在运行';
+
+  @override
+  String get backgroundProtectionUnavailable => '无法启动后台保护。请保持 Moru 打开并重试。';
+
+  @override
+  String get chatInterruptedBody => '应用在回复完成前停止。已保存的部分回复和排队消息仍保留。继续将开始新的轮次。';
+
+  @override
+  String get chatContinueAfterInterruption => '继续';
+
+  @override
+  String get chatContinuePrompt => '中断后从已保存的上下文继续。采取进一步操作前，请检查已完成的工作。';
+
+  @override
+  String get queuedInputSaveFailed => '无法保存排队消息。草稿仍可使用。';
+
+  @override
+  String get notificationApprovalTitle => '需要批准';
+
+  @override
+  String get notificationApprovalBody => '智能体正在等待您的决定。';
+
+  @override
+  String get notificationApprovalAllow => '允许';
+
+  @override
+  String get notificationApprovalDeny => '拒绝';
+
+  @override
+  String get notificationApprovalStaleTitle => '批准请求已失效';
+
+  @override
+  String get notificationApprovalStaleBody => '打开聊天以查看此请求。';
+
+  @override
+  String get notificationApprovalChannelName => '智能体批准请求';
+
+  @override
+  String get notificationApprovalChannelDescription => '正在运行的智能体或工具请求您的决定。';
+
+  @override
+  String get backgroundShellCompleted => '后台命令已完成';
+
+  @override
+  String get backgroundShellFailed => '后台命令失败';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -34989,4 +35175,97 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get agentsCodexResponsesRequired =>
       'Codex 僅支援提供 OpenAI Responses API 的服務商。請在服務商設定中啟用，或選擇其他代理。';
+
+  @override
+  String get backgroundReliabilityHintTitle => '讓工作持續執行';
+
+  @override
+  String get backgroundReliabilityHintDisabled =>
+      '背景執行已關閉。啟用後，切換應用程式或關閉螢幕時工作可繼續執行。';
+
+  @override
+  String get backgroundReliabilityHintRestricted =>
+      'Android 限制 Moru 的背景活動。離開此工作前，請檢查應用程式的電池設定。';
+
+  @override
+  String get backgroundReliabilityHintStandby =>
+      '低耗電待機可能在工作執行期間暫停網路存取。請檢查裝置的節能設定。';
+
+  @override
+  String get backgroundReliabilityHintVendor =>
+      'Vivo 和小米可能停止背景工作。請在系統設定中允許背景活動及自動啟動。';
+
+  @override
+  String get backgroundReliabilityHintInterrupted =>
+      '上一個工作因 Moru 程序結束而中斷。離開新工作前，請檢查電池和背景活動設定。';
+
+  @override
+  String get backgroundReliabilityHintSettings => '背景設定';
+
+  @override
+  String get backgroundReliabilityHintDismiss => '關閉提示';
+
+  @override
+  String get backgroundLowPowerStandby => '低耗電待機';
+
+  @override
+  String get backgroundLowPowerStandbyDetail =>
+      '此裝置模式即使在前景服務執行時也可能限制網路。電池最佳化豁免並不一定能解除此限制。';
+
+  @override
+  String get backgroundPowerRestricted => '受限';
+
+  @override
+  String get backgroundPowerUnrestricted => '未回報限制';
+
+  @override
+  String get backgroundShellRunning => '正在執行背景命令';
+
+  @override
+  String get backgroundServerRunning => '迷你應用程式伺服器執行中';
+
+  @override
+  String get backgroundProtectionUnavailable => '無法啟動背景保護。請保持 Moru 開啟並重試。';
+
+  @override
+  String get chatInterruptedBody => '應用程式在回覆完成前停止。已儲存的部分回覆和排隊訊息仍保留。繼續將開始新的回合。';
+
+  @override
+  String get chatContinueAfterInterruption => '繼續';
+
+  @override
+  String get chatContinuePrompt => '中斷後從已儲存的上下文繼續。採取進一步操作前，請檢查已完成的工作。';
+
+  @override
+  String get queuedInputSaveFailed => '無法儲存排隊訊息。草稿仍可使用。';
+
+  @override
+  String get notificationApprovalTitle => '需要批准';
+
+  @override
+  String get notificationApprovalBody => '代理程式正在等待您的決定。';
+
+  @override
+  String get notificationApprovalAllow => '允許';
+
+  @override
+  String get notificationApprovalDeny => '拒絕';
+
+  @override
+  String get notificationApprovalStaleTitle => '批准請求已失效';
+
+  @override
+  String get notificationApprovalStaleBody => '開啟聊天以查看此請求。';
+
+  @override
+  String get notificationApprovalChannelName => '代理程式批准請求';
+
+  @override
+  String get notificationApprovalChannelDescription => '執行中的代理程式或工具請求您的決定。';
+
+  @override
+  String get backgroundShellCompleted => '背景命令已完成';
+
+  @override
+  String get backgroundShellFailed => '背景命令失敗';
 }

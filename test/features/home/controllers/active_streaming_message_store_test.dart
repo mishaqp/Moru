@@ -63,5 +63,26 @@ void main() {
 
       expect(store.isActive(preparing), isFalse);
     });
+
+    test(
+      'same-message continuation keeps only its captured execution token',
+      () {
+        final store = ActiveStreamingMessageStore();
+        final message = _message(id: 'same-message', conversationId: 'chat');
+        store.put(message, executionId: 'first');
+        expect(store.isExecutionActive(message, 'first'), isTrue);
+
+        store.put(message.copyWith(content: 'next'), executionId: 'second');
+        store.invalidateExecution('chat', executionId: 'first');
+        expect(store.isExecutionActive(message, 'first'), isFalse);
+        expect(store.isExecutionActive(message, 'second'), isTrue);
+
+        store.put(message.copyWith(content: 'progress'));
+        expect(store.isExecutionActive(message, 'second'), isTrue);
+        store.invalidateExecution('chat', executionId: 'second');
+        expect(store.isExecutionActive(message, 'second'), isFalse);
+        expect(store.isActive(message), isTrue);
+      },
+    );
   });
 }

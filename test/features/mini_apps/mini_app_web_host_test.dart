@@ -37,7 +37,7 @@ void main() {
     calls.clear();
     messenger.setMockMethodCallHandler(channel, (call) async {
       calls.add(call);
-      return null;
+      return call.method == 'hold' ? true : null;
     });
     temp = await Directory.systemTemp.createTemp('mini-app-web-host-');
     settings = SettingsProvider(createBusinessTestPreferences());
@@ -77,6 +77,101 @@ void main() {
     assistants: assistants,
     environment: environment,
     notificationText: (url) => 'Web server: $url',
+  );
+
+  Future<void> until(bool Function() ready) async {
+    for (var attempt = 0; attempt < 200 && !ready(); attempt++) {
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+    }
+    expect(ready(), isTrue);
+  }
+
+  test('a rejected hold is explained and leaves the web port closed', () async {
+    final port = await freePort();
+    await settings.setMiniAppWeb(port: port, password: 'pw');
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      return call.method == 'hold' ? false : null;
+    });
+    await expectLater(start(), completes);
+    expect(host.running, isFalse);
+    expect(host.urls, isEmpty);
+    expect(host.error, ProcessKeepAliveException.code);
+    final unused = await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
+    await unused.close();
+  });
+
+  test('Stop during promotion prevents publication or a late holder', () async {
+    final port = await freePort();
+    await settings.setMiniAppWeb(port: port, password: 'pw');
+    final promoted = Completer<bool>();
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      return call.method == 'hold' ? promoted.future : null;
+    });
+    final starting = start();
+    await until(() => calls.any((call) => call.method == 'hold'));
+    final listenedBeforePromotion = host.running;
+    await host.stop();
+    final releasesBeforePromotion = calls
+        .where((call) => call.method == 'release')
+        .length;
+    promoted.complete(true);
+    await starting;
+    expect(listenedBeforePromotion, isFalse);
+    expect(host.running, isFalse);
+    expect(host.urls, isEmpty);
+    expect(
+      calls.where((call) => call.method == 'release').length,
+      releasesBeforePromotion + 1,
+    );
+    final unused = await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
+    await unused.close();
+  });
+
+  test('disposing a pending start closes a late accepted holder', () async {
+    await settings.setMiniAppWeb(port: await freePort(), password: 'pw');
+    final promoted = Completer<bool>();
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      return call.method == 'hold' ? promoted.future : null;
+    });
+    final starting = start();
+    await until(() => calls.any((call) => call.method == 'hold'));
+    host.dispose();
+    promoted.complete(true);
+    await expectLater(starting, completes);
+    expect(host.running, isFalse);
+    expect(host.urls, isEmpty);
+    expect(calls.last.method, 'release');
+  });
+
+  test(
+    'late acceptance is released after a concurrent cleanup finishes',
+    () async {
+      await settings.setMiniAppWeb(port: await freePort(), password: 'pw');
+      final promoted = Completer<bool>();
+      final releaseAcknowledged = Completer<void>();
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call);
+        if (call.method == 'hold') return promoted.future;
+        if (call.method == 'release' &&
+            calls.where((call) => call.method == 'release').length == 1) {
+          await releaseAcknowledged.future;
+        }
+        return null;
+      });
+      final starting = start();
+      await until(() => calls.any((call) => call.method == 'hold'));
+      final stopping = host.stop();
+      await until(() => calls.any((call) => call.method == 'release'));
+      promoted.complete(true);
+      await pumpEventQueue();
+      releaseAcknowledged.complete();
+      await Future.wait([starting, stopping]);
+      expect(calls.where((call) => call.method == 'release'), hasLength(2));
+      expect(host.running, isFalse);
+    },
   );
 
   test('starts with a password, keeps Moru alive and stops cleanly', () async {
@@ -140,6 +235,6 @@ void main() {
     await start();
     expect(host.running, isFalse);
     expect(host.error, MiniAppWebHost.errorPortInUse);
-    expect(calls, isEmpty);
+    expect(calls.map((call) => call.method), ['hold', 'release']);
   });
 }

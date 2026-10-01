@@ -52,6 +52,7 @@ import '../widgets/learning_prompt_sheet.dart';
 import '../widgets/scroll_nav_buttons.dart';
 import '../widgets/message_list_view.dart';
 import '../widgets/chat_input_section.dart';
+import '../widgets/background_reliability_hint.dart';
 import '../widgets/conversation_system_prompt_button.dart';
 import '../widgets/chat_input_overlay_layout.dart';
 import '../widgets/chat_selection_app_bar.dart';
@@ -1489,6 +1490,8 @@ class _HomePageState extends State<HomePage>
       },
       onRegenerateMessage: (message) =>
           _controller.regenerateAtMessage(message),
+      interruptedMessageIds: _controller.interruptedMessageIds,
+      onContinueInterruptedReply: _controller.continueInterruptedReply,
       onResendMessage: (message) => _controller.regenerateAtMessage(message),
       onTranslateMessage: (message) => _controller.translateMessage(message),
       onEditMessage: (message) => _controller.editMessage(message),
@@ -1537,7 +1540,7 @@ class _HomePageState extends State<HomePage>
       conversation: conversation,
       assistant: context.watch<AssistantProvider>().currentAssistant,
     );
-    return ChatInputSection(
+    final input = ChatInputSection(
       inputBarKey: _inputBarKey,
       chatModelProviderKey: chatModel.providerKey,
       chatModelId: chatModel.modelId,
@@ -1654,6 +1657,10 @@ class _HomePageState extends State<HomePage>
       onClearContext: _controller.clearContext,
       onCompressContext: _handleDesktopCompressContext,
       backgroundImageActive: _assistantBackgroundActive(context),
+    );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [const BackgroundReliabilityHint(), input],
     );
   }
 
