@@ -940,7 +940,9 @@ void main() {
 
         expect(find.byTooltip('Replay'), findsOneWidget);
 
-        await tester.tap(find.text('Speaking:'));
+        await tester.longPress(find.text('Speaking:'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Detailed result'));
         await tester.pumpAndSettle();
 
         expect(find.byKey(CustomBottomSheet.panelKey), findsOneWidget);

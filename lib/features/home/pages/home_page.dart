@@ -23,6 +23,9 @@ import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/compress_context_options.dart';
 import '../../../core/services/android_process_text.dart';
+import '../../../core/services/chat/chat_service.dart';
+import '../../chat/widgets/chat_message_widget.dart';
+import '../../chat/widgets/computer_response_scope.dart';
 import '../../../core/services/notification_service.dart';
 import '../../mini_apps/mini_app_launcher.dart';
 import '../../mini_apps/mini_app_web_host.dart';
@@ -1047,22 +1050,42 @@ class _HomePageState extends State<HomePage>
         ? _controller.currentConversation!.title
         : _controller.titleForLocale();
 
-    if (width >= AppBreakpoints.tablet) {
-      return _buildTabletLayout(
-        context,
-        title: title,
-        providerName: modelInfo.providerName,
-        modelDisplay: modelInfo.modelDisplay,
-        cs: cs,
-      );
-    }
-
-    return _buildMobileLayout(
-      context,
-      title: title,
-      providerName: modelInfo.providerName,
-      modelDisplay: modelInfo.modelDisplay,
-      cs: cs,
+    final layout = width >= AppBreakpoints.tablet
+        ? _buildTabletLayout(
+            context,
+            title: title,
+            providerName: modelInfo.providerName,
+            modelDisplay: modelInfo.modelDisplay,
+            cs: cs,
+          )
+        : _buildMobileLayout(
+            context,
+            title: title,
+            providerName: modelInfo.providerName,
+            modelDisplay: modelInfo.modelDisplay,
+            cs: cs,
+          );
+    return ComputerToolSource(
+      readMessages: () => _controller.messages,
+      readSteps: (id) {
+        final live = _controller.toolParts[id];
+        if (live != null && live.isNotEmpty) {
+          return computerStepsFromToolUi(live);
+        }
+        final message = _controller.messages
+            .where((m) => m.id == id)
+            .firstOrNull;
+        final stored = computerStepsFromEvents(
+          context.read<ChatService>().getToolEvents(id),
+          streaming: message?.isStreaming ?? false,
+        );
+        return stored.isNotEmpty || message == null
+            ? stored
+            : computerStepsFromMessage(message);
+      },
+      updates: _controller.streamingContentNotifier.toolHeightEvents,
+      onStop: () => unawaited(_controller.cancelStreaming()),
+      child: layout,
     );
   }
 

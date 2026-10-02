@@ -1,6 +1,7 @@
 import 'package:Kelivo/core/services/browser/browser_agent_session.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/pages/webview/webview_activity_log_sheet.dart';
+import 'package:Kelivo/shared/widgets/custom_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -75,4 +76,41 @@ void main() {
       expect(find.textContaining(longCode), findsNothing);
     },
   );
+
+  testWidgets('opens full width at 85 percent and stays reactive while open', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(640, 400);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showActivityLogSheet(context),
+              child: const Text('open log'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open log'));
+    await tester.pumpAndSettle();
+    final panel = find.byKey(CustomBottomSheet.panelKey);
+    expect(panel, findsOneWidget);
+    expect(tester.getSize(panel).width, 640);
+    expect(tester.getRect(panel).top, closeTo(60, 1));
+    expect(tester.getRect(panel).bottom, closeTo(400, 1));
+    expect(find.text('Recent actions'), findsOneWidget);
+    session.recordActivity(action: 'open', detail: 'https://example.com');
+    await tester.pump();
+    expect(find.textContaining('Open URL'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

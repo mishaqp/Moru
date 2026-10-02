@@ -19,6 +19,7 @@ import 'browser_page_scripts.dart';
 import 'browser_tabs.dart';
 import 'browser_userscripts.dart';
 import 'browser_research.dart';
+import 'browser_thumbnail_cache.dart';
 
 /// Lifecycle state of a [BrowserActivity]: [running] the moment it is
 /// recorded (before the call's own result is known), then one of the
@@ -394,8 +395,36 @@ class BrowserAgentSession {
   /// Saves a picture of the page as it shows now and returns its path with
   /// the viewport size in CSS pixels, so points in it map to click x/y.
   Future<Map<String, dynamic>> screenshot() async {
-    await waitUntilReady();
+    // Keep the originating controller/action through readiness and native
+    // capture. The next chat must never supply pixels to this chat's result.
     final controller = _requireController();
+    final thumbnailConversationId = ownerConversationId;
+    final thumbnailStepId = currentActivity.value?.id;
+    bool ownsCapture() =>
+        identical(controller, _controller) &&
+        ownerConversationId == thumbnailConversationId &&
+        currentActivity.value?.id == thumbnailStepId;
+    try {
+      await waitUntilReady();
+    } catch (_) {
+      if (!ownsCapture()) throw const BrowserStoppedException();
+      rethrow;
+    }
+    if (!ownsCapture() || _loading) throw const BrowserStoppedException();
+    // Redirects may finish while waiting, under the same owner and action.
+    // From this ready page onward every async read must share its identity.
+    final navigationSequence = _navigationSequence;
+    final thumbnailPageUrl = _pageUrl ?? _active?.url;
+    final thumbnailSequence = BrowserThumbnailCache.instance
+        .reserveCaptureSequence();
+    void verifyCapture() {
+      if (!ownsCapture() ||
+          _loading ||
+          navigationSequence != _navigationSequence) {
+        throw const BrowserStoppedException();
+      }
+    }
+
     final Uint8List bytes;
     try {
       bytes = await _interruptible(captureBytes(controller));
@@ -406,6 +435,18 @@ class BrowserAgentSession {
         'message': error.message ?? error.code,
       };
     }
+    verifyCapture();
+    Map<String, dynamic> viewport = const {};
+    try {
+      viewport = await _runJson(
+        'JSON.stringify({width: window.innerWidth, height: window.innerHeight})',
+      );
+    } catch (_) {}
+    verifyCapture();
+    final url = await controller.currentUrl();
+    verifyCapture();
+    // Bytes and their page metadata now form a consistent snapshot. Later
+    // disk/decode work retains this owner even if another chat takes over.
     final dir = await screenshotDirectory();
     await dir.create(recursive: true);
     final file = File(
@@ -413,16 +454,22 @@ class BrowserAgentSession {
     );
     await file.writeAsBytes(bytes, flush: true);
     await _pruneScreenshots(dir);
-    Map<String, dynamic> viewport = const {};
-    try {
-      viewport = await _runJson(
-        'JSON.stringify({width: window.innerWidth, height: window.innerHeight})',
+    if (thumbnailConversationId != null &&
+        BrowserThumbnailCache.canPreviewPage(thumbnailPageUrl) &&
+        BrowserThumbnailCache.canPreviewPage(url)) {
+      await BrowserThumbnailCache.instance.capture(
+        conversationId: thumbnailConversationId,
+        stepId: thumbnailStepId ?? file.path,
+        sourcePath: file.path,
+        sourceDirectory: dir,
+        pageUrl: url,
+        captureSequence: thumbnailSequence,
       );
-    } catch (_) {}
+    }
     return {
       'ok': true,
       'screenshot': file.path,
-      'url': await controller.currentUrl(),
+      'url': url,
       if (viewport.isNotEmpty) 'viewport': viewport,
     };
   }

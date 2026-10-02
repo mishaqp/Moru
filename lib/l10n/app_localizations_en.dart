@@ -12436,4 +12436,59 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get agentsErrorAccountBusy =>
       'Codex is already active in another chat. Finish or stop that reply before continuing.';
+
+  @override
+  String get computerTitle => 'Computer';
+
+  @override
+  String get computerWorking => 'AI is working…';
+
+  @override
+  String get computerDone => 'Done';
+
+  @override
+  String get computerError => 'Error';
+
+  @override
+  String get computerPreviousStep => 'Previous step';
+
+  @override
+  String get computerNextStep => 'Next step';
+
+  @override
+  String get computerLatest => 'Go to latest';
+
+  @override
+  String get computerOpenTerminal => 'Open terminal';
+
+  @override
+  String get computerOpenBrowser => 'Open live browser';
+
+  @override
+  String get computerOpenFile => 'Preview file';
+
+  @override
+  String get computerCopyResult => 'Copy result';
+
+  @override
+  String get computerNoResult => 'No result yet';
+
+  @override
+  String get computerParameters => 'Parameters';
+
+  @override
+  String get computerResult => 'Result';
+
+  @override
+  String get computerStop => 'Stop';
+
+  @override
+  String get browserFloatingWindowTitle => 'Floating browser window';
+
+  @override
+  String get browserFloatingWindowDescription =>
+      'Show a floating live browser when minimized. By default, AI actions appear in Computer above the composer.';
+
+  @override
+  String get computerMoreDetails => 'Detailed result';
 }

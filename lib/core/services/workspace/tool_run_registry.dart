@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
+import '../api/tool_display_redaction.dart';
 import 'shell_output_buffer.dart';
 
 enum ToolRunStatus { running, succeeded, failed, cancelled, timedOut }
@@ -16,7 +17,8 @@ class ToolRun extends ChangeNotifier {
     this.command,
     String? runtimeRunId,
     DateTime? startedAt,
-  }) : runtimeRunId = runtimeRunId ?? const Uuid().v4(),
+  }) : _displayFilter = ToolDisplayRedaction.current,
+       runtimeRunId = runtimeRunId ?? const Uuid().v4(),
        startedAt = startedAt ?? DateTime.now();
 
   final String toolCallId;
@@ -24,6 +26,14 @@ class ToolRun extends ChangeNotifier {
   final String toolName;
   final DateTime startedAt;
   final String? command;
+  final ToolDisplayRedaction? _displayFilter;
+
+  /// The launch's display filter travels with the run because UI snapshots
+  /// are usually built after execution leaves that launch's zone. Raw command
+  /// and output stay unchanged for execution and job control.
+  String displayText(String value) => _displayFilter?.text(value) ?? value;
+
+  Object? displayValue(Object? value) => _displayFilter?.value(value) ?? value;
 
   ToolRunStatus status = ToolRunStatus.running;
   int? exitCode;
@@ -217,6 +227,13 @@ class ToolRunRegistry extends ChangeNotifier {
       _runs.values.where((run) => run.status == ToolRunStatus.running);
 
   Iterable<ToolRun> get all => _runs.values;
+
+  /// All still-tracked runs in [conversationId], including completed jobs,
+  /// oldest first. Null means the unscoped bucket, never every conversation.
+  List<ToolRun> allIn(String? conversationId) => [
+    for (final entry in _runs.entries)
+      if (entry.key.$1 == conversationId) entry.value,
+  ]..sort((a, b) => a.startedAt.compareTo(b.startedAt));
 
   /// Runs still going in [conversationId], oldest first.
   List<ToolRun> runningIn(String? conversationId) => [

@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/features/home/widgets/composer_status_strip.dart';
-import 'package:Kelivo/features/home/widgets/running_tool_bar.dart';
+import 'package:Kelivo/features/home/widgets/computer_status_panel.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 
 import '../../../support/fake_workspace_runtime.dart';
@@ -58,7 +58,7 @@ void main() {
     registry.start('other', 'shell', command: 'sleep 9', conversationId: 'c2');
 
     await tester.pumpWidget(_host(registry: registry, runtime: runtime));
-    expect(find.byKey(RunningToolChip.stopKey), findsNothing);
+    expect(find.byKey(ComputerStatusPanel.stopKey), findsNothing);
 
     final run = registry.start(
       'call-1',
@@ -77,7 +77,9 @@ void main() {
     expect(find.text('npm install'), findsNothing);
   });
 
-  testWidgets('stop cancels the runtime run once', (tester) async {
+  testWidgets('stop cancels every owned runtime once with reused call IDs', (
+    tester,
+  ) async {
     final registry = ToolRunRegistry();
     final fake = _RecordingRuntime();
     final runtime = WorkspaceRuntimeProvider()..register(fake);
@@ -88,14 +90,30 @@ void main() {
       conversationId: 'c1',
       runtimeRunId: 'run-1',
     );
+    registry.start(
+      'call-1',
+      'shell',
+      command: 'second command',
+      conversationId: 'c1',
+      runtimeRunId: 'run-2',
+    );
+    registry.start(
+      'call-1',
+      'shell',
+      command: 'another chat',
+      conversationId: 'c2',
+      runtimeRunId: 'other-run',
+    );
 
     await tester.pumpWidget(_host(registry: registry, runtime: runtime));
-    await tester.tap(find.byKey(RunningToolChip.stopKey));
+    expect(find.text('second command'), findsOneWidget);
+    expect(find.text('2 / 2'), findsOneWidget);
+    await tester.tap(find.byKey(ComputerStatusPanel.stopKey));
     await tester.pump();
-    await tester.tap(find.byKey(RunningToolChip.stopKey));
+    await tester.tap(find.byKey(ComputerStatusPanel.stopKey));
     await tester.pump();
 
-    expect(fake.cancelled, ['run-1']);
+    expect(fake.cancelled, ['run-1', 'run-2']);
   });
 
   testWidgets('counts other runs of the same conversation', (tester) async {
@@ -106,7 +124,7 @@ void main() {
 
     await tester.pumpWidget(_host(registry: registry, runtime: runtime));
     expect(find.text('second'), findsOneWidget);
-    expect(find.textContaining('+1'), findsOneWidget);
+    expect(find.text('2 / 2'), findsOneWidget);
   });
 
   testWidgets('shows the latest output line live', (tester) async {
@@ -120,16 +138,25 @@ void main() {
     );
 
     await tester.pumpWidget(_host(registry: registry, runtime: runtime));
-    Text tail() => tester.widget<Text>(find.byKey(RunningToolChip.tailKey));
-    expect(tail().data, '…');
+    final thumbnail = find.byKey(
+      ValueKey('computer-step-thumbnail:${run.runtimeRunId}'),
+    );
+    expect(thumbnail, findsOneWidget);
+    String tail() => tester
+        .widgetList<Text>(
+          find.descendant(of: thumbnail, matching: find.byType(Text)),
+        )
+        .map((text) => text.data ?? '')
+        .join('\n');
+    expect(tail(), isEmpty);
 
     run.appendStdout(Uint8List.fromList(utf8.encode('step 16\nstep 17\n\n')));
     await tester.pump(ToolRun.notifyInterval);
-    expect(tail().data, 'step 17');
+    expect(tail(), contains('step 17'));
 
     run.appendStderr(Uint8List.fromList(utf8.encode('warn: slow')));
     await tester.pump(ToolRun.notifyInterval);
-    expect(tail().data, 'warn: slow');
+    expect(tail(), contains('warn: slow'));
 
     run.complete(status: ToolRunStatus.succeeded, exitCode: 0);
     await tester.pump(const Duration(milliseconds: 300));

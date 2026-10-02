@@ -58,18 +58,40 @@ package name does not require building other platforms.
   go through the tool approval prompt, and it cannot delete the assistant
   running the chat or the last one. Extend its settings schema when
   `Assistant` gains a user-facing field.
-- **Floating browser**: the agent `WebViewPage` can minimize into
-  `BrowserMiniWindow` (in `AppOverlays`). `BrowserAgentSession.minimize`
-  parks the live `WebViewController`, and the next agent `WebViewPage` adopts
-  it without reloading; `openSharedBrowser` opens or expands it. The chat
-  header's `ChatHeaderSwitcher` and the composer's `ComposerStatusStrip` are the
-  entry points for files, terminal, browser and running commands.
+- **Browser and Computer**: `BrowserAgentSession.minimize` parks the live
+  `WebViewController`; the next agent `WebViewPage` adopts it without reloading.
+  `openSharedBrowser` opens or expands it. `BrowserMiniWindow` in `AppOverlays`
+  retains the native host while parked, including when its visible card is off.
+  Settings → Browser → floating window is opt-in (`browser_floating_window_v1`,
+  default false). Keep a Material/text-style root and stable WebView ancestry
+  across floating/Glass changes; do not replace the controller to change UI.
+  The chat header's `ChatHeaderSwitcher` still opens files, terminal and browser.
+  Browser navigation uses 48dp targets; recent AI actions use the full-width
+  `CustomBottomSheet`, with history, console and approvals preserved.
 - **Background jobs and task plan**: workspace `shell` takes `background: true`
   and returns a `job_id`; `shell_output` reads, waits for or stops the job
   (its `ToolRun` stays in `ToolRunRegistry`, found by `byRuntimeRunId`). The
   `update_plan` workspace tool stores the checklist in `TaskPlanRegistry`.
-  `ComposerStatusStrip` shows the open plan (`TaskPlanChip`) and the running
-  command (`RunningToolChip`) side by side above the composer.
+  `ComposerStatusStrip` shows one `ComputerStatusPanel` for this reply's tools
+  and keeps the open plan (`TaskPlanChip`) nearby. It replaces the separate
+  running-command chip in the composer, follows the newest working step,
+  retains a manually selected working step and briefly shows the final result.
+  Background jobs remain accessible while running. `ComputerToolSource` and
+  `ComputerResponseScope` adapt existing live/persisted tool parts and registry
+  runs; tapping any tool card opens that reply's `ComputerSheet` (85% height).
+  Preserve original specialized details on long press, reruns and approvals.
+  Capture the chat/response identity when opening a sheet, normalize missing
+  tool IDs consistently and retain completed run references in an open sheet.
+  Identify orphan background steps by runtime ID; resolve saved `job_id` before
+  a reused tool-call ID so concurrent processes cannot collapse into one step.
+  `ComputerStep` display values apply existing launch-secret/auth-URL rules;
+  execution arguments and live runtime output stay intact. Use the captured
+  `ToolRun` display filter in every detail/copy surface.
+  `BrowserThumbnailCache` reads existing checked screenshots, reduces them to
+  JPEGs and bounds memory (24/chat, 8 chats, 256KiB/image). Computer widgets
+  never request native screenshots or reload a WebView. Screenshot ownership
+  must remain consistent across readiness/native capture. Dispose listeners,
+  timers and preview controllers; keep keyboard/landscape/1.3 scaling working.
 
 - **ACP agents**: coding agents (Claude Code, Codex, OpenCode, Kimi Code,
   DeepSeek Harness, custom) speak

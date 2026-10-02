@@ -10,6 +10,7 @@ import 'package:Kelivo/features/home/services/ask_user_interaction_service.dart'
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
+import 'package:Kelivo/shared/widgets/custom_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -33,6 +34,15 @@ T? _innerProvider<T extends ImageProvider>(Image image) {
 void _setToolImageView(WidgetTester tester, {double dpr = 3}) {
   tester.view.devicePixelRatio = dpr;
   addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+Future<void> _openOriginalToolDetail(WidgetTester tester) async {
+  await tester.longPress(find.byIcon(Lucide.ChevronRight).first);
+  await tester.pumpAndSettle();
+  expect(find.text('Detailed result'), findsOneWidget);
+  await tester.tap(find.text('Detailed result'));
+  await tester.pumpAndSettle();
+  expect(find.byKey(CustomBottomSheet.panelKey), findsOneWidget);
 }
 
 Widget _harness(Widget child, {SettingsProvider? settings}) {
@@ -231,10 +241,8 @@ more text
     );
     await tester.pump();
 
-    // Open the tool detail sheet from the timeline step.
-    await tester.tap(find.byIcon(Lucide.ChevronRight).first);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    // The timeline opens Computer on tap; long press retains the rich detail.
+    await _openOriginalToolDetail(tester);
 
     expect(find.textContaining('https://example.com/detail.png'), findsNothing);
     final sheetImages = tester.widgetList<Image>(find.byType(Image)).toList();
@@ -726,9 +734,7 @@ more text
     );
     await tester.pump();
 
-    await tester.tap(find.byIcon(Lucide.ChevronRight).first);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await _openOriginalToolDetail(tester);
 
     final expected = toolImageDecodePixels(
       logicalWidth: kToolImageDetailMaxWidth,
@@ -799,9 +805,7 @@ more text
         isFalse,
       );
 
-      await tester.tap(find.byIcon(Lucide.ChevronRight).first);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await _openOriginalToolDetail(tester);
 
       final detailImages = tester
           .widgetList<Image>(find.byType(Image))

@@ -144,7 +144,7 @@ String _detailCopyText(
     if (diff.isNotEmpty) diff,
     if (error.isNotEmpty) error,
   ].join('\n');
-  return isShell ? text : text.trim();
+  return workspaceDisplayText(isShell ? text : text.trim(), run: run);
 }
 
 class WorkspaceToolDetailBody extends StatelessWidget {
@@ -279,7 +279,10 @@ class _UnifiedDetailState extends State<_UnifiedDetail> {
 
   String get _textResult {
     if (widget.part.toolName == 'shell') return '';
-    return widget.part.content?.trim() ?? '';
+    return workspaceDisplayText(
+      widget.part.content ?? '',
+      run: widget.run,
+    ).trim();
   }
 
   String get _activeOutput {
@@ -296,9 +299,12 @@ class _UnifiedDetailState extends State<_UnifiedDetail> {
     final pattern = workspacePatternOf(widget.part);
     if ((widget.part.toolName == 'glob' || widget.part.toolName == 'grep') &&
         pattern.isNotEmpty) {
-      return pattern;
+      return workspaceDisplayText(pattern, run: widget.run);
     }
-    return workspacePathOf(widget.part, meta: _meta);
+    return workspaceDisplayText(
+      workspacePathOf(widget.part, meta: _meta),
+      run: widget.run,
+    );
   }
 
   String _primarySectionLabel(AppLocalizations l10n) {
@@ -389,8 +395,11 @@ class _UnifiedDetailState extends State<_UnifiedDetail> {
     final referenced = files
         .where((file) => file.role != WorkspaceFileRole.log)
         .toList();
-    final diff = _meta?.diff ?? '';
-    final error = workspaceErrorMessage(widget.part, _meta);
+    final diff = workspaceDisplayText(_meta?.diff ?? '', run: widget.run);
+    final rawError = workspaceErrorMessage(widget.part, _meta);
+    final error = rawError == null
+        ? null
+        : workspaceDisplayText(rawError, run: widget.run);
     final path = workspacePathOf(widget.part, meta: _meta);
     final isShell = widget.part.toolName == 'shell';
     final showOutput =

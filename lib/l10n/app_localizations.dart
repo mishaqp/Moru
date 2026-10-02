@@ -22172,6 +22172,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Codex is already active in another chat. Finish or stop that reply before continuing.'**
   String get agentsErrorAccountBusy;
+
+  /// No description provided for @computerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Computer'**
+  String get computerTitle;
+
+  /// No description provided for @computerWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'AI is working…'**
+  String get computerWorking;
+
+  /// No description provided for @computerDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get computerDone;
+
+  /// No description provided for @computerError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get computerError;
+
+  /// No description provided for @computerPreviousStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous step'**
+  String get computerPreviousStep;
+
+  /// No description provided for @computerNextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step'**
+  String get computerNextStep;
+
+  /// No description provided for @computerLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to latest'**
+  String get computerLatest;
+
+  /// No description provided for @computerOpenTerminal.
+  ///
+  /// In en, this message translates to:
+  /// **'Open terminal'**
+  String get computerOpenTerminal;
+
+  /// No description provided for @computerOpenBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open live browser'**
+  String get computerOpenBrowser;
+
+  /// No description provided for @computerOpenFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview file'**
+  String get computerOpenFile;
+
+  /// No description provided for @computerCopyResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy result'**
+  String get computerCopyResult;
+
+  /// No description provided for @computerNoResult.
+  ///
+  /// In en, this message translates to:
+  /// **'No result yet'**
+  String get computerNoResult;
+
+  /// No description provided for @computerParameters.
+  ///
+  /// In en, this message translates to:
+  /// **'Parameters'**
+  String get computerParameters;
+
+  /// No description provided for @computerResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Result'**
+  String get computerResult;
+
+  /// No description provided for @computerStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get computerStop;
+
+  /// No description provided for @browserFloatingWindowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Floating browser window'**
+  String get browserFloatingWindowTitle;
+
+  /// No description provided for @browserFloatingWindowDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Show a floating live browser when minimized. By default, AI actions appear in Computer above the composer.'**
+  String get browserFloatingWindowDescription;
+
+  /// No description provided for @computerMoreDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed result'**
+  String get computerMoreDetails;
 }
 
 class _AppLocalizationsDelegate

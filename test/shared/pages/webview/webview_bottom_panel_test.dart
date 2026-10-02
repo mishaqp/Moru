@@ -1,9 +1,15 @@
 import 'package:Kelivo/features/home/services/browser_ask_ai_bridge.dart';
+import 'package:Kelivo/icons/lucide_adapter.dart';
+import 'package:Kelivo/core/providers/settings_provider.dart';
+import 'package:Kelivo/features/chat/widgets/frosted/frosted_surface.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/pages/webview/webview_ask_ai_controller.dart';
 import 'package:Kelivo/shared/pages/webview/webview_bottom_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+
+import '../../../support/business_test_harness.dart';
 
 void main() {
   late BrowserAskAiBridge bridge;
@@ -217,5 +223,90 @@ void main() {
 
     expect(find.byType(TextField), findsOneWidget);
     expect(tester.getSize(find.byType(TextField)).height, greaterThan(0));
+  });
+
+  testWidgets(
+    'navigation stays 48dp under a compact theme and AI log is distinct',
+    (tester) async {
+      var backCalls = 0;
+      var forwardCalls = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(visualDensity: VisualDensity.compact),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: WebViewNavRow(
+              canGoBack: true,
+              canGoForward: false,
+              onBack: () => backCalls++,
+              onForward: () => forwardCalls++,
+              onReload: () {},
+              onShowActivityLog: () {},
+            ),
+          ),
+        ),
+      );
+      for (final icon in [
+        Lucide.ArrowLeft,
+        Lucide.ArrowRight,
+        Lucide.RefreshCw,
+      ]) {
+        final button = find.ancestor(
+          of: find.byIcon(icon),
+          matching: find.byType(IconButton),
+        );
+        expect(tester.getSize(button).width, greaterThanOrEqualTo(48));
+        expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
+      }
+      expect(find.byIcon(Lucide.History), findsNothing);
+      expect(find.byIcon(Lucide.Bot), findsOneWidget);
+      final backIcon = tester.widget<Icon>(find.byIcon(Lucide.ArrowLeft));
+      final forwardIcon = tester.widget<Icon>(find.byIcon(Lucide.ArrowRight));
+      expect(forwardIcon.color!.a, lessThan(backIcon.color!.a));
+      expect(forwardIcon.color!.a, closeTo(0.55, 0.001));
+      final semantics = tester.getSemantics(
+        find.ancestor(
+          of: find.byIcon(Lucide.ArrowRight),
+          matching: find.byType(IconButton),
+        ),
+      );
+      expect(
+        semantics,
+        matchesSemantics(
+          label: 'Forward',
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: false,
+        ),
+      );
+      await tester.tap(find.byIcon(Lucide.ArrowLeft));
+      await tester.tap(find.byIcon(Lucide.ArrowRight));
+      expect(backCalls, 1);
+      expect(forwardCalls, 0);
+    },
+  );
+
+  testWidgets('Glass bottom panel uses the app tint without live blur', (
+    tester,
+  ) async {
+    final settings = SettingsProvider(createBusinessTestPreferences());
+    addTearDown(settings.dispose);
+    await settings.loaded;
+    await settings.setGlassTheme(true);
+    await tester.pumpWidget(
+      ChangeNotifierProvider<SettingsProvider>.value(
+        value: settings,
+        child: wrap(),
+      ),
+    );
+    final surface = find.byType(FrostedSurface);
+    expect(surface, findsWidgets);
+    for (final widget in tester.widgetList<FrostedSurface>(surface)) {
+      expect(widget.style.background.a, closeTo(0.34, 0.001));
+      expect(widget.style.border.a, closeTo(0.2, 0.001));
+      expect(widget.style.blurSigma, 0);
+    }
+    expect(find.byType(BackdropFilter), findsNothing);
   });
 }

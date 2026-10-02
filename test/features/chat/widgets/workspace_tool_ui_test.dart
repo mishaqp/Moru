@@ -11,11 +11,14 @@ import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/providers/tts_provider.dart';
 import 'package:Kelivo/core/providers/user_provider.dart';
+import 'package:Kelivo/core/services/acp/acp_secret_redactor.dart';
+import 'package:Kelivo/core/services/api/tool_display_redaction.dart';
 import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tool_metadata.dart';
 import 'package:Kelivo/features/chat/widgets/chat_message_widget.dart';
 import 'package:Kelivo/features/home/services/ask_user_interaction_service.dart';
 import 'package:Kelivo/features/chat/widgets/workspace_tool_detail.dart';
+import 'package:Kelivo/features/chat/widgets/computer_sheet.dart';
 import 'package:Kelivo/features/chat/widgets/produced_files_row.dart';
 import 'package:Kelivo/features/chat/widgets/workspace_tool_ui.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
@@ -96,6 +99,119 @@ Finder get _timelineIconColumn =>
     find.byKey(const ValueKey('chatMessageTimelineIconColumn:true:true'));
 
 void main() {
+  const launchSecret = 'opaque-launch-credential-no-known-prefix';
+  const authenticationUrl =
+      'https://auth.openai.com/oauth/authorize?state=outside-zone-login';
+
+  for (final source in ['metadata', 'run', 'arguments']) {
+    test(
+      'shell command display filters the $source source outside launch',
+      () async {
+        const command = 'printf $launchSecret && open $authenticationUrl';
+        final redactor = AcpSecretRedactor([launchSecret]);
+        final run =
+            await ToolDisplayRedaction(
+              text: redactor.text,
+              value: redactor.value,
+            ).run(
+              () async => ToolRun(
+                toolCallId: 'display-command',
+                toolName: 'shell',
+                command: source == 'run' ? command : null,
+              ),
+            );
+        addTearDown(run.dispose);
+        final part = WorkspaceToolPart(
+          id: 'display-command',
+          toolName: 'shell',
+          arguments: source == 'arguments' ? {'command': command} : const {},
+        );
+        final meta = source == 'metadata'
+            ? const WorkspaceToolMetadata(
+                tool: 'shell',
+                status: 'ok',
+                command: command,
+              )
+            : null;
+
+        expect(ToolDisplayRedaction.current, isNull);
+        expect(
+          workspaceCommandOf(part, meta: meta, run: run),
+          'printf [REDACTED] && open [REDACTED]',
+        );
+        expect(run.command, source == 'run' ? command : isNull);
+        if (source == 'arguments') expect(part.arguments['command'], command);
+        if (source == 'metadata') expect(meta!.command, command);
+      },
+    );
+  }
+
+  test(
+    'live shell output and tail filter display copies without changing raw streams',
+    () async {
+      final redactor = AcpSecretRedactor([launchSecret]);
+      final run =
+          await ToolDisplayRedaction(
+            text: redactor.text,
+            value: redactor.value,
+          ).run(
+            () async =>
+                ToolRun(toolCallId: 'display-output', toolName: 'shell'),
+          );
+      addTearDown(run.dispose);
+      const stdout = 'ready $launchSecret\n$authenticationUrl\n';
+      const stderr = 'warning $launchSecret\n{"password":"private-value"}\n';
+      run.appendStdout(utf8.encode(stdout));
+      run.appendStderr(utf8.encode(stderr));
+      run.complete(status: ToolRunStatus.succeeded, exitCode: 0);
+
+      expect(ToolDisplayRedaction.current, isNull);
+      final display = [
+        workspaceShellOutput(run: run),
+        workspaceShellOutput(run: run, stderr: true),
+        ...workspaceOutputTailLines(
+          part: const WorkspaceToolPart(
+            id: 'display-output',
+            toolName: 'shell',
+          ),
+          run: run,
+        ),
+      ].join('\n');
+      expect(display, contains('ready [REDACTED]'));
+      expect(display, contains('warning [REDACTED]'));
+      expect(display, isNot(contains(launchSecret)));
+      expect(display, isNot(contains(authenticationUrl)));
+      expect(display, isNot(contains('private-value')));
+      expect(run.stdoutSoFar, stdout);
+      expect(run.stderrSoFar, stderr);
+      expect(run.tailLines.join('\n'), contains(launchSecret));
+    },
+  );
+
+  test(
+    'stored output and tail apply authentication and generic credential rules',
+    () {
+      const stdout = '$authenticationUrl\n{"password":"private-value"}\n';
+      const meta = WorkspaceToolMetadata(
+        tool: 'shell',
+        status: 'ok',
+        stdoutPreview: stdout,
+      );
+      final output = workspaceShellOutput(meta: meta);
+      expect(output, isNot(contains(authenticationUrl)));
+      expect(output, isNot(contains('private-value')));
+      for (final tool in ['shell', 'shell_output', 'read_file']) {
+        final tail = workspaceOutputTailLines(
+          part: WorkspaceToolPart(id: 'stored', toolName: tool),
+          meta: meta,
+        ).join('\n');
+        expect(tail, isNot(contains(authenticationUrl)));
+        expect(tail, isNot(contains('private-value')));
+      }
+      expect(meta.stdoutPreview, stdout);
+    },
+  );
+
   test(
     'stored shell tail folds stdout and stderr while file previews retain frames',
     () {
@@ -701,7 +817,7 @@ void main() {
     expect(find.text('uname'), findsWidgets);
   });
 
-  testWidgets('tapping a timeline shell step opens tool detail', (
+  testWidgets('tapping a timeline shell step opens Computer for its reply', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 800);
@@ -722,14 +838,28 @@ void main() {
               exitCode: 0,
             ),
           ),
+          _uiPart(
+            tool: 'read_file',
+            id: 'tc-file',
+            arguments: const {'path': '/workspace/notes.md'},
+            content: 'file contents',
+          ),
         ],
       ),
     );
     await tester.pump();
     await tester.tap(find.text('Run command'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
     expect(find.byKey(CustomBottomSheet.panelKey), findsOneWidget);
+    expect(find.byType(ComputerSheet), findsOneWidget);
+    expect(find.text('Computer'), findsOneWidget);
+    expect(find.text('1 / 2'), findsOneWidget);
+    expect(find.byTooltip('Open terminal'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('computer-next-step')));
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 2'), findsOneWidget);
+    expect(find.byTooltip('Preview file'), findsOneWidget);
+    expect(find.text('file contents'), findsOneWidget);
   });
 
   testWidgets('detail opens as a bottom sheet on mobile size', (tester) async {

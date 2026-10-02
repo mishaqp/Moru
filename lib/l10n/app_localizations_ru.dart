@@ -12568,4 +12568,59 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get agentsErrorAccountBusy =>
       'Codex уже работает в другом чате. Дождитесь завершения ответа или остановите его.';
+
+  @override
+  String get computerTitle => 'Компьютер';
+
+  @override
+  String get computerWorking => 'ИИ работает…';
+
+  @override
+  String get computerDone => 'Готово';
+
+  @override
+  String get computerError => 'Ошибка';
+
+  @override
+  String get computerPreviousStep => 'Предыдущий шаг';
+
+  @override
+  String get computerNextStep => 'Следующий шаг';
+
+  @override
+  String get computerLatest => 'К последнему';
+
+  @override
+  String get computerOpenTerminal => 'Открыть терминал';
+
+  @override
+  String get computerOpenBrowser => 'Открыть живой браузер';
+
+  @override
+  String get computerOpenFile => 'Открыть файл';
+
+  @override
+  String get computerCopyResult => 'Скопировать результат';
+
+  @override
+  String get computerNoResult => 'Результата пока нет';
+
+  @override
+  String get computerParameters => 'Параметры';
+
+  @override
+  String get computerResult => 'Результат';
+
+  @override
+  String get computerStop => 'Стоп';
+
+  @override
+  String get browserFloatingWindowTitle => 'Плавающее окно браузера';
+
+  @override
+  String get browserFloatingWindowDescription =>
+      'Показывать живой браузер в плавающем окне при сворачивании. По умолчанию действия ИИ отображаются в «Компьютере» над полем ввода.';
+
+  @override
+  String get computerMoreDetails => 'Подробный результат';
 }

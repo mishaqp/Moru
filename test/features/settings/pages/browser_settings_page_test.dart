@@ -47,14 +47,17 @@ void main() {
   ) async {
     await pumpPage(tester);
 
-    expect(find.byType(IosSwitch), findsNWidgets(15));
+    final actionSwitches = find.byWidgetPredicate(
+      (widget) => widget is IosSwitch && widget.key == null,
+    );
+    expect(actionSwitches, findsNWidgets(15));
     expect(find.text('Navigation'), findsOneWidget);
     expect(find.text('Read page'), findsOneWidget);
     expect(find.text('Interaction'), findsOneWidget);
     expect(find.text('Advanced'), findsOneWidget);
     expect(find.text('Run code on the page'), findsOneWidget);
     expect(find.text('Click'), findsOneWidget);
-    for (final s in tester.widgetList<IosSwitch>(find.byType(IosSwitch))) {
+    for (final s in tester.widgetList<IosSwitch>(actionSwitches)) {
       expect(s.value, isTrue);
     }
     // Every group starts fully enabled.
@@ -131,7 +134,19 @@ void main() {
     await pumpPage(tester);
 
     expect(find.textContaining('Full trust is currently OFF'), findsOneWidget);
-    // No switch on this page controls trust -- only the 15 per-action ones.
-    expect(find.byType(IosSwitch), findsNWidgets(15));
+    // Trust remains read-only; the added switch controls floating presentation.
+    expect(find.byType(IosSwitch), findsNWidgets(16));
+  });
+
+  testWidgets('floating browser is opt-in and the switch changes the setting', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    final toggle = find.byKey(const ValueKey('browser_floating_window_switch'));
+    expect(toggle, findsOneWidget);
+    expect(tester.widget<IosSwitch>(toggle).value, isFalse);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(tester.widget<IosSwitch>(toggle).value, isTrue);
   });
 }

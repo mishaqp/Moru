@@ -27,6 +27,7 @@ import 'package:Kelivo/shared/widgets/ios_tile_button.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
+import '../models/computer_step.dart' show sanitizeComputerDisplayText;
 import 'chat_surface.dart';
 
 export 'package:Kelivo/features/workspace/workspace_file_navigation.dart';
@@ -167,16 +168,28 @@ IconData workspaceToolIcon(String toolName) {
   };
 }
 
+/// A display/copy value. Runs retain their launch filter after its zone ends;
+/// execution and reruns continue to use the original arguments and run data.
+String workspaceDisplayText(String value, {ToolRun? run}) =>
+    sanitizeComputerDisplayText(run?.displayText(value) ?? value);
+
 String workspaceCommandOf(
   WorkspaceToolPart part, {
   WorkspaceToolMetadata? meta,
   ToolRun? run,
 }) {
-  final fromMeta = meta?.command?.trim() ?? '';
-  if (fromMeta.isNotEmpty) return fromMeta;
-  final fromRun = run?.command?.trim() ?? '';
-  if (fromRun.isNotEmpty) return fromRun;
-  return (part.arguments['command'] ?? '').toString();
+  final fromMeta = meta?.command ?? '';
+  if (fromMeta.trim().isNotEmpty) {
+    return workspaceDisplayText(fromMeta, run: run).trim();
+  }
+  final fromRun = run?.command ?? '';
+  if (fromRun.trim().isNotEmpty) {
+    return workspaceDisplayText(fromRun, run: run).trim();
+  }
+  return workspaceDisplayText(
+    (part.arguments['command'] ?? '').toString(),
+    run: run,
+  );
 }
 
 String workspacePathOf(WorkspaceToolPart part, {WorkspaceToolMetadata? meta}) {
@@ -247,7 +260,11 @@ List<String> workspaceOutputTailLines({
   ToolRun? run,
 }) {
   if (run != null) {
-    return run.tailLines;
+    final lines = run.tailLines;
+    if (lines.isEmpty) return const <String>[];
+    // Filter together so a known secret spanning lines cannot be exposed by
+    // independently filtering each line. Preserve the tail's empty lines.
+    return workspaceDisplayText(lines.join('\n'), run: run).split('\n');
   }
   final preview = part.toolName == 'shell'
       ? [
@@ -255,7 +272,9 @@ List<String> workspaceOutputTailLines({
           workspaceShellOutput(meta: meta, stderr: true),
         ].where((text) => text.isNotEmpty).join('\n')
       : meta?.stdoutPreview ?? '';
-  if (preview.isNotEmpty) return const LineSplitter().convert(preview);
+  if (preview.isNotEmpty) {
+    return const LineSplitter().convert(workspaceDisplayText(preview));
+  }
   return const <String>[];
 }
 
@@ -264,10 +283,14 @@ String workspaceShellOutput({
   ToolRun? run,
   bool stderr = false,
 }) {
-  if (run != null) return stderr ? run.stderrSoFar : run.stdoutSoFar;
-  return ShellOutputBuffer.normalize(
-    (stderr ? meta?.stderrPreview : meta?.stdoutPreview) ?? '',
-  );
+  final output = run != null
+      ? stderr
+            ? run.stderrSoFar
+            : run.stdoutSoFar
+      : ShellOutputBuffer.normalize(
+          (stderr ? meta?.stderrPreview : meta?.stdoutPreview) ?? '',
+        );
+  return workspaceDisplayText(output, run: run);
 }
 
 Color _workspaceQuietFill(BuildContext context) {

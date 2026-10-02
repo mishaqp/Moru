@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../widgets/ios_tactile.dart';
+import '../../widgets/ios_switch.dart';
 import '../../../theme/app_font_weights.dart';
+import 'browser_surface.dart';
 
 /// The single address surface for the browser page: a close button, one
 /// compact address area (domain, plus a short page title only when it says
@@ -138,75 +140,83 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
 
     // The address pill: lock, domain and title, with the load progress as a
     // thin line along its bottom edge.
-    final pill = Container(
-      height: 42,
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(21),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Material(
-              type: MaterialType.transparency,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: onTapAddress == null
-                        ? Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            child: addressContent,
-                          )
-                        : InkWell(
-                            key: const ValueKey('browser_address_tap_target'),
-                            onTap: onTapAddress,
-                            child: Padding(
+    final pill = SizedBox(
+      height: 48,
+      child: BrowserSurface(
+        defaultColor: cs.surfaceContainerHighest.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Material(
+                type: MaterialType.transparency,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: onTapAddress == null
+                          ? Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
                               ),
                               child: addressContent,
+                            )
+                          : InkWell(
+                              key: const ValueKey('browser_address_tap_target'),
+                              onTap: onTapAddress,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                ),
+                                child: addressContent,
+                              ),
+                            ),
+                    ),
+                    // Beside the address, not on it: a tap on the address
+                    // edits it.
+                    if (onToggleBookmark != null)
+                      InkWell(
+                        key: const ValueKey('browser_bookmark_star'),
+                        customBorder: const CircleBorder(),
+                        onTap: onToggleBookmark,
+                        child: SizedBox(
+                          width: 48,
+                          child: Center(
+                            child: Icon(
+                              Lucide.Star,
+                              size: 18,
+                              semanticLabel: l10n.browserBookmarks,
+                              color: bookmarked == true
+                                  ? cs.primary
+                                  : cs.onSurface.withValues(alpha: 0.45),
                             ),
                           ),
-                  ),
-                  // Beside the address, not on it: a tap on the address
-                  // edits it.
-                  if (onToggleBookmark != null)
-                    InkWell(
-                      key: const ValueKey('browser_bookmark_star'),
-                      customBorder: const CircleBorder(),
-                      onTap: onToggleBookmark,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(6, 8, 12, 8),
-                        child: Icon(
-                          Lucide.Star,
-                          size: 18,
-                          semanticLabel: l10n.browserBookmarks,
-                          color: bookmarked == true
-                              ? cs.primary
-                              : cs.onSurface.withValues(alpha: 0.45),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          if (progress != null)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: LinearProgressIndicator(
-                key: const ValueKey('browser_address_progress'),
-                minHeight: 2.5,
-                value: progress! > 0 ? progress : null,
-                backgroundColor: Colors.transparent,
+            if (progress != null)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: IgnorePointer(
+                  child: LinearProgressIndicator(
+                    key: const ValueKey('browser_address_progress'),
+                    minHeight: 2.5,
+                    value: progress! > 0 ? progress : null,
+                    backgroundColor: Colors.transparent,
+                  ),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
+
+    final menuStyle = browserSurfaceStyle(context, defaultColor: cs.surface);
 
     return AppBar(
       titleSpacing: 0,
@@ -216,7 +226,8 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
           icon: Lucide.X,
           color: cs.onSurface,
           size: 20,
-          minSize: 44,
+          minSize: 48,
+          padding: const EdgeInsets.all(14),
           semanticLabel: l10n.commonClose,
           onTap: onClose,
         ),
@@ -229,7 +240,8 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
             icon: Lucide.Minimize2,
             color: cs.onSurface,
             size: 20,
-            minSize: 44,
+            minSize: 48,
+            padding: const EdgeInsets.all(14),
             semanticLabel: l10n.browserMinimize,
             onTap: onMinimize,
           ),
@@ -237,6 +249,8 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
           IconButton(
             key: const ValueKey('browser_tabs_button'),
             tooltip: l10n.browserTabsTooltip,
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            visualDensity: VisualDensity.standard,
             onPressed: onShowTabs,
             icon: Container(
               width: 22,
@@ -260,6 +274,19 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
         PopupMenuButton<String>(
           tooltip: l10n.browserMenuTooltip,
           icon: Icon(Lucide.MoreVertical, color: cs.onSurface),
+          constraints: const BoxConstraints(minWidth: 240, maxWidth: 320),
+          color: Color.alphaBlend(
+            menuStyle.background,
+            cs.surface.withValues(alpha: 0.9),
+          ),
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: menuStyle.border,
+              width: menuStyle.borderWidth,
+            ),
+          ),
           onSelected: (value) {
             switch (value) {
               case 'copy':
@@ -311,6 +338,9 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
                   label: l10n.messageWebViewOpenInBrowser,
                 ),
               ),
+            if ((onCopyLink != null || onOpenExternally != null) &&
+                (onShowBookmarks != null || onShowHistory != null))
+              const PopupMenuDivider(),
             if (onShowBookmarks != null)
               PopupMenuItem<String>(
                 value: 'bookmarks',
@@ -327,19 +357,28 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
                   label: l10n.browserHistory,
                 ),
               ),
-            if (onShowUserscripts != null)
-              PopupMenuItem<String>(
-                value: 'userscripts',
-                child: _MenuRow(
-                  icon: Lucide.Code,
-                  label: l10n.userscriptsTitle,
-                ),
-              ),
+            if ((onCopyLink != null ||
+                    onOpenExternally != null ||
+                    onShowBookmarks != null ||
+                    onShowHistory != null) &&
+                (onDesktopModeChanged != null ||
+                    onClearSiteData != null ||
+                    onShowUserscripts != null ||
+                    onOpenSettings != null))
+              const PopupMenuDivider(),
             if (onDesktopModeChanged != null)
-              CheckedPopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'desktop',
-                checked: desktopMode ?? false,
-                child: Text(l10n.browserDesktopSite),
+                child: _MenuRow(
+                  icon: Lucide.Monitor,
+                  label: l10n.browserDesktopSite,
+                  trailing: IosSwitch(
+                    value: desktopMode ?? false,
+                    semanticLabel: l10n.browserDesktopSite,
+                    onChanged: (_) => Navigator.of(ctx).pop('desktop'),
+                    hitTestSize: 48,
+                  ),
+                ),
               ),
             if (onClearSiteData != null)
               PopupMenuItem<String>(
@@ -349,12 +388,12 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
                   label: l10n.browserClearSiteData,
                 ),
               ),
-            if (onShowActivityLog != null)
+            if (onShowUserscripts != null)
               PopupMenuItem<String>(
-                value: 'activity',
+                value: 'userscripts',
                 child: _MenuRow(
-                  icon: Lucide.History,
-                  label: l10n.browserMenuActivityLog,
+                  icon: Lucide.Code,
+                  label: l10n.userscriptsTitle,
                 ),
               ),
             if (onOpenSettings != null)
@@ -365,9 +404,23 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
                   label: l10n.browserMenuSettings,
                 ),
               ),
-            // Deprioritized: below a divider, last item -- the diagnostics
-            // console is a debugging tool, not a primary action.
-            const PopupMenuDivider(),
+            if (onCopyLink != null ||
+                onOpenExternally != null ||
+                onShowBookmarks != null ||
+                onShowHistory != null ||
+                onDesktopModeChanged != null ||
+                onClearSiteData != null ||
+                onShowUserscripts != null ||
+                onOpenSettings != null)
+              const PopupMenuDivider(),
+            if (onShowActivityLog != null)
+              PopupMenuItem<String>(
+                value: 'activity',
+                child: _MenuRow(
+                  icon: Lucide.Bot,
+                  label: l10n.browserMenuActivityLog,
+                ),
+              ),
             PopupMenuItem<String>(
               value: 'console',
               child: _MenuRow(
@@ -383,10 +436,11 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
 }
 
 class _MenuRow extends StatelessWidget {
-  const _MenuRow({required this.icon, required this.label});
+  const _MenuRow({required this.icon, required this.label, this.trailing});
 
   final IconData icon;
   final String label;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -395,7 +449,10 @@ class _MenuRow extends StatelessWidget {
       children: [
         Icon(icon, size: 17, color: cs.onSurface.withValues(alpha: 0.75)),
         const SizedBox(width: 10),
-        Text(label),
+        Expanded(
+          child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
+        ),
+        if (trailing != null) ...[const SizedBox(width: 8), trailing!],
       ],
     );
   }

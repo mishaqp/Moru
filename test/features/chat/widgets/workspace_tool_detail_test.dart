@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
+import 'package:Kelivo/core/services/acp/acp_secret_redactor.dart';
+import 'package:Kelivo/core/services/api/tool_display_redaction.dart';
 import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tool_metadata.dart';
@@ -13,6 +15,7 @@ import 'package:Kelivo/features/chat/widgets/workspace_tool_detail.dart';
 import 'package:Kelivo/features/chat/widgets/workspace_tool_ui.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
+import 'package:Kelivo/shared/widgets/custom_bottom_sheet.dart';
 
 import '../../../support/business_test_harness.dart';
 import '../../../support/fake_workspace_runtime.dart';
@@ -124,6 +127,124 @@ void main() {
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+    'original shell detail renders and copies safe live output outside launch',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      String? copied;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied = (call.arguments as Map)['text'] as String;
+          }
+          return null;
+        },
+      );
+      addTearDown(() {
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        );
+      });
+      const launchSecret = 'opaque-launch-credential-no-known-prefix';
+      const command = 'printf $launchSecret';
+      const authenticationUrl =
+          'https://auth.openai.com/oauth/authorize?state=outside-zone-login';
+      const stdout = 'ready $launchSecret\n$authenticationUrl\n';
+      const stderr = 'warning $launchSecret\n{"password":"private-value"}\n';
+      final registry = ToolRunRegistry();
+      final redactor = AcpSecretRedactor([launchSecret]);
+      final run =
+          await ToolDisplayRedaction(
+            text: redactor.text,
+            value: redactor.value,
+          ).run(
+            () async => registry.start(
+              'tc-shell',
+              'shell',
+              command: command,
+              conversationId: 'private-chat',
+            ),
+          );
+      addTearDown(() {
+        run.dispose();
+        registry.dispose();
+      });
+      // The original-detail route receives a safe snapshot, then resolves its
+      // live run after the launch's display-redaction zone has ended.
+      const safePart = WorkspaceToolPart(
+        id: 'tc-shell',
+        toolName: 'shell',
+        loading: true,
+      );
+      expect(ToolDisplayRedaction.current, isNull);
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: registry),
+            ChangeNotifierProvider(
+              create: (_) => SettingsProvider(createBusinessTestPreferences()),
+            ),
+          ],
+          child: _harness(
+            child: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showWorkspaceToolDetail(
+                  context,
+                  safePart,
+                  conversationId: 'private-chat',
+                ),
+                child: const Text('open-original-detail'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open-original-detail'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(CustomBottomSheet), findsOneWidget);
+      expect(find.text('No output'), findsOneWidget);
+      run.appendStdout(utf8.encode(stdout));
+      run.appendStderr(utf8.encode(stderr));
+      await tester.pump(const Duration(milliseconds: 60));
+
+      expect(find.text('\$ printf [REDACTED]'), findsOneWidget);
+      expect(find.textContaining('ready [REDACTED]'), findsOneWidget);
+      expect(find.textContaining(launchSecret), findsNothing);
+      expect(find.textContaining(authenticationUrl), findsNothing);
+      await tester.tap(find.byTooltip('Copy command'));
+      await tester.pump();
+      expect(copied, 'printf [REDACTED]');
+      await tester.tap(find.byTooltip('Copy output'));
+      await tester.pump();
+      expect(copied, contains('ready [REDACTED]'));
+      expect(copied, isNot(contains(launchSecret)));
+      expect(copied, isNot(contains(authenticationUrl)));
+
+      await tester.tap(find.text('stderr'));
+      await tester.pump();
+      expect(find.textContaining('warning [REDACTED]'), findsOneWidget);
+      expect(find.textContaining('private-value'), findsNothing);
+      await tester.tap(find.byTooltip('Copy output'));
+      await tester.pump();
+      expect(copied, contains('warning [REDACTED]'));
+      expect(copied, isNot(contains(launchSecret)));
+      expect(copied, isNot(contains('private-value')));
+      expect(run.command, command);
+      expect(run.stdoutSoFar, stdout);
+      expect(run.stderrSoFar, stderr);
+      run.complete(status: ToolRunStatus.succeeded, exitCode: 0);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('stored progress displays and copies its final line', (
     tester,
