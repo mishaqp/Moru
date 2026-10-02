@@ -67,6 +67,8 @@ import 'weather_tool_ui.dart';
 import 'tool_detail_text_section.dart';
 import 'tool_result_previews.dart';
 import 'produced_files_row.dart';
+import '../models/computer_step.dart';
+import 'computer_response_scope.dart';
 import 'workspace_tool_detail.dart';
 import 'workspace_tool_ui.dart';
 import '../../../theme/app_font_weights.dart';
@@ -2474,6 +2476,22 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     List<TimelineProjectedStep> steps,
     List<ReasoningSegment>? reasoningSegments,
   ) {
+    final cardSteps = _computerSteps()
+        .where((step) => step.toolName != kBuiltinSearchToolName)
+        .toList();
+    String computerId(TimelineProjectedStep step) {
+      final tool = step.tool!;
+      if (tool.providerId.trim().isNotEmpty) return tool.providerId.trim();
+      final index = step.toolCountAfter - 1;
+      return index >= 0 && index < cardSteps.length
+          ? cardSteps[index].id
+          : computerToolStepId(
+              tool.providerId,
+              tool.toolName,
+              tool.fallbackOrdinal,
+            );
+    }
+
     return [
       for (final step in steps)
         if (step.isReasoning)
@@ -2498,6 +2516,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
           _TimelineStepData.tool(
             tool: ToolUIPart(
               id: step.tool!.providerId,
+              computerStepId: computerId(step),
               toolName: step.tool!.toolName,
               arguments: step.tool!.arguments,
               content: step.tool!.content,
@@ -3490,6 +3509,26 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     );
   }
 
+  List<ToolUIPart>? _computerToolParts;
+  List<MessagePart>? _computerMessageParts;
+  List<ComputerStep> _computerStepCache = const [];
+
+  List<ComputerStep> _computerSteps() {
+    final tools = widget.toolParts;
+    if (tools != null) {
+      if (!identical(tools, _computerToolParts)) {
+        _computerToolParts = tools;
+        _computerStepCache = computerStepsFromToolUi(tools);
+        _computerMessageParts = null;
+      }
+    } else if (!identical(widget.message.parts, _computerMessageParts)) {
+      _computerToolParts = null;
+      _computerMessageParts = widget.message.parts;
+      _computerStepCache = computerStepsFromMessage(widget.message);
+    }
+    return _computerStepCache;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isUser = widget.message.role == 'user';
@@ -3502,7 +3541,13 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         : widget.message.role == 'tool'
         ? _buildToolMessage()
         : _buildAssistantMessage();
-    return ChatSurfaceTheme(palette: palette, child: child);
+    final steps = _computerSteps();
+    return ComputerResponseScope(
+      responseId: widget.message.id,
+      conversationId: widget.message.conversationId,
+      steps: steps,
+      child: ChatSurfaceTheme(palette: palette, child: child),
+    );
   }
 }
 
@@ -3847,11 +3892,8 @@ ToolUIPart? toolUiFromPayload(String payloadJson, {int fallbackOrdinal = 0}) {
   try {
     final decoded = jsonDecode(payloadJson);
     if (decoded is! Map) return null;
-    var id = (decoded['id'] ?? '').toString();
     final name = (decoded['name'] ?? '').toString();
-    if (id.isEmpty) {
-      id = '${name.isEmpty ? 'tool' : name}-$fallbackOrdinal';
-    }
+    final id = computerToolStepId(decoded['id'], name, fallbackOrdinal);
     final args = decoded['arguments'];
     final content = decoded['content']?.toString();
     final rawMeta = decoded['metadata'];
@@ -3873,6 +3915,9 @@ ToolUIPart? toolUiFromPayload(String payloadJson, {int fallbackOrdinal = 0}) {
 // UI data for MCP tool calls/results
 class ToolUIPart {
   final String id;
+
+  /// Computer selection identity; the protocol/approval ID stays untouched.
+  final String? computerStepId;
   final String toolName;
   final Map<String, dynamic> arguments;
   final String? content; // null means still loading/result not yet available
@@ -3884,6 +3929,7 @@ class ToolUIPart {
 
   const ToolUIPart({
     required this.id,
+    this.computerStepId,
     required this.toolName,
     required this.arguments,
     this.content,
@@ -3893,6 +3939,50 @@ class ToolUIPart {
   });
 
   int get cacheToken => memoToken ?? identityHashCode(this);
+}
+
+List<ComputerStep> computerStepsFromToolUi(List<ToolUIPart> parts) => [
+  for (var i = 0; i < parts.length; i++)
+    _computerStepFromUi(parts[i], fallbackOrdinal: i),
+];
+
+ComputerStep _computerStepFromUi(ToolUIPart part, {int fallbackOrdinal = 0}) =>
+    ComputerStep(
+      id:
+          part.computerStepId ??
+          computerToolStepId(part.id, part.toolName, fallbackOrdinal),
+      toolName: part.toolName,
+      arguments: part.arguments,
+      content: part.content,
+      metadata: part.metadata,
+      loading: part.loading,
+    );
+
+void _showOriginalToolDetail(
+  BuildContext context,
+  ToolUIPart part, {
+  String? conversationId,
+}) {
+  final safe = _computerStepFromUi(part);
+  final displayPart = ToolUIPart(
+    id: safe.id,
+    toolName: safe.toolName,
+    arguments: safe.arguments,
+    content: safe.content,
+    metadata: safe.metadata,
+    loading: safe.loading,
+  );
+  if (isWorkspaceToolName(safe.toolName)) {
+    unawaited(
+      showWorkspaceToolDetail(
+        context,
+        _workspacePartFromUi(displayPart),
+        conversationId: conversationId,
+      ),
+    );
+  } else {
+    _showToolDetail(context, displayPart);
+  }
 }
 
 WorkspaceToolPart _workspacePartFromUi(ToolUIPart part) {
@@ -3917,14 +4007,13 @@ List<WorkspaceToolPart> _producedWorkspaceParts(List<ToolUIPart>? parts) {
 /// A tool call and its result as one text, for pasting into a chat or a bug
 /// report.
 String toolDetailsForClipboard(ToolUIPart part) {
-  final arguments = part.arguments.isEmpty
-      ? '{}'
-      : const JsonEncoder.withIndent('  ').convert(part.arguments);
-  final result = part.content;
+  final safe = _computerStepFromUi(part);
+  final arguments = safe.parameters;
+  final result = safe.content;
   final buffer = StringBuffer()
     ..writeln('## Tool call')
-    ..writeln('name: ${part.toolName}')
-    ..writeln('id: ${part.id}')
+    ..writeln('name: ${safe.toolName}')
+    ..writeln('id: ${sanitizeComputerDisplayText(part.id)}')
     ..writeln('arguments:')
     ..writeln(arguments)
     ..writeln()
@@ -5156,17 +5245,13 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
   }
 
   void _showDetail(BuildContext context) {
-    if (shouldUseWorkspaceToolUi(_workspacePartFromUi(widget.part))) {
-      unawaited(
-        showWorkspaceToolDetail(
-          context,
-          _workspacePartFromUi(widget.part),
-          conversationId: widget.conversationId,
-        ),
-      );
-      return;
-    }
-    _showToolDetail(context, widget.part);
+    unawaited(
+      ComputerResponseScope.showForStep(
+        context,
+        _computerStepFromUi(widget.part),
+        conversationId: widget.conversationId,
+      ),
+    );
   }
 
   void _showMenu(BuildContext context) {
@@ -5185,6 +5270,15 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
           isResult: !widget.part.loading,
         ),
         items: [
+          ActionSheetItem(
+            icon: Lucide.ListChecks,
+            label: l10n.computerMoreDetails,
+            onTap: () => _showOriginalToolDetail(
+              context,
+              widget.part,
+              conversationId: widget.conversationId,
+            ),
+          ),
           ActionSheetItem(
             icon: Lucide.Copy,
             label: l10n.chatToolCopyDetails,
@@ -5588,6 +5682,13 @@ class _ToolCallItemState extends State<_ToolCallItem> {
       pressedScale: 1.0,
       duration: const Duration(milliseconds: 260),
       onTap: isPendingApproval ? null : () => _showDetail(context),
+      onLongPress: isPendingApproval
+          ? null
+          : () => _showOriginalToolDetail(
+              context,
+              widget.part,
+              conversationId: widget.conversationId,
+            ),
       padding: EdgeInsets.zero,
       child: buildSharedChatSurface(
         context,
@@ -5919,17 +6020,13 @@ class _ToolCallItemState extends State<_ToolCallItem> {
   }
 
   void _showDetail(BuildContext context) {
-    if (shouldUseWorkspaceToolUi(_workspacePartFromUi(widget.part))) {
-      unawaited(
-        showWorkspaceToolDetail(
-          context,
-          _workspacePartFromUi(widget.part),
-          conversationId: widget.conversationId,
-        ),
-      );
-      return;
-    }
-    _showToolDetail(context, widget.part);
+    unawaited(
+      ComputerResponseScope.showForStep(
+        context,
+        _computerStepFromUi(widget.part),
+        conversationId: widget.conversationId,
+      ),
+    );
   }
 
   /// Show full-size image using ImageViewerPage for save/share/copy support.

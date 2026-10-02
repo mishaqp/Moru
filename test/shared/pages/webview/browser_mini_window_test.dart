@@ -4,6 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:Kelivo/core/services/browser/browser_agent_session.dart';
+import 'package:Kelivo/core/providers/settings_provider.dart';
+import 'package:Kelivo/core/providers/tts_provider.dart';
+import 'package:Kelivo/core/services/tts/tts_playback_models.dart';
+import 'package:Kelivo/features/chat/widgets/frosted/frosted_surface.dart';
 import 'package:Kelivo/core/services/browser/browser_handoffs.dart';
 import 'package:Kelivo/core/services/browser/browser_http_auth.dart';
 import 'package:Kelivo/features/home/services/browser_ask_ai_bridge.dart';
@@ -14,11 +18,21 @@ import 'package:Kelivo/shared/pages/webview/browser_mini_window.dart';
 import 'package:Kelivo/shared/pages/webview/webview_page.dart';
 import 'package:Kelivo/shared/pages/webview/webview_status_banner.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart' show rootNavigatorKey;
+import 'package:Kelivo/shared/widgets/app_overlays.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../support/fake_webview_platform.dart';
+import '../../../support/business_test_harness.dart';
 
 const _minimize = ValueKey('browser_minimize');
+
+class _IdleTtsProvider extends ChangeNotifier implements TtsProvider {
+  @override
+  TtsPlaybackState get playbackState => const TtsPlaybackState();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   late int chatTaps;
@@ -34,8 +48,12 @@ void main() {
     if (session.minimized.value) await session.closeMinimized();
   });
 
-  Widget app() => MultiProvider(
+  Widget app({SettingsProvider? settings}) => MultiProvider(
     providers: [
+      if (settings != null)
+        ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+      if (settings != null)
+        ChangeNotifierProvider<TtsProvider>(create: (_) => _IdleTtsProvider()),
       ChangeNotifierProvider<BrowserAskAiBridge>(
         create: (_) => BrowserAskAiBridge(),
       ),
@@ -47,9 +65,11 @@ void main() {
       navigatorKey: rootNavigatorKey,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      builder: (context, child) => Overlay.wrap(
-        child: Stack(children: [child!, const BrowserMiniWindow()]),
-      ),
+      builder: (context, child) => settings == null
+          ? Overlay.wrap(
+              child: Stack(children: [child!, const BrowserMiniWindow()]),
+            )
+          : AppOverlays(child: child!),
       home: Scaffold(
         appBar: AppBar(actions: const [ChatHeaderSwitcher()]),
         body: Align(
@@ -357,6 +377,83 @@ void main() {
     await tester.pumpAndSettle();
     expect(session.isAttached, isFalse);
   });
+
+  testWidgets(
+    'the floating card provides Material above its interactive header',
+    (tester) async {
+      await tester.pumpWidget(app());
+      await openBrowser(tester);
+      await tester.tap(find.byKey(_minimize));
+      await tester.pumpAndSettle();
+      final button = tester.element(find.byKey(BrowserMiniWindow.closeKey));
+      expect(button.findAncestorWidgetOfExactType<Material>(), isNotNull);
+    },
+  );
+
+  testWidgets(
+    'default parked browser stays mounted and reopens without reload',
+    (tester) async {
+      tester.view.padding = const FakeViewPadding(top: 24, bottom: 24);
+      addTearDown(tester.view.resetPadding);
+      final harness = await createBusinessTestHarness();
+      final settings = SettingsProvider(harness.preferences);
+      addTearDown(settings.dispose);
+      await settings.loaded;
+      await tester.pumpWidget(app(settings: settings));
+      await openBrowser(tester);
+      final session = BrowserAgentSession.instance;
+      final controller = session.controller;
+      final fake = FakeWebViewPlatform.lastCreated!;
+      await tester.tap(find.byKey(_minimize));
+      await tester.pumpAndSettle();
+      expect(find.byKey(BrowserMiniWindow.windowKey), findsNothing);
+      final parked = find.byType(WebViewWidget, skipOffstage: false);
+      expect(parked, findsOneWidget);
+      expect(
+        tester.widget<WebViewWidget>(parked).platform.params.controller,
+        same(controller!.platform),
+      );
+      expect(tester.getSize(parked).width, greaterThan(0));
+      expect(tester.getSize(parked).height, greaterThan(0));
+      expect(session.minimized.value, isTrue);
+      final parkedElement = tester.element(parked);
+      await settings.setBrowserFloatingWindow(true);
+      await tester.pumpAndSettle();
+      expect(find.byKey(BrowserMiniWindow.windowKey), findsOneWidget);
+      expect(tester.element(parked), same(parkedElement));
+      expect(session.controller, same(controller));
+      await settings.setGlassTheme(true);
+      await tester.pumpAndSettle();
+      final surfaces = find.descendant(
+        of: find.byKey(BrowserMiniWindow.windowKey),
+        matching: find.byType(FrostedSurface),
+      );
+      expect(surfaces, findsWidgets);
+      for (final surface in tester.widgetList<FrostedSurface>(surfaces)) {
+        expect(surface.style.background.a, closeTo(0.34, 0.001));
+        expect(surface.style.blurSigma, 0);
+      }
+      expect(tester.element(parked), same(parkedElement));
+      await settings.setBrowserFloatingWindow(false);
+      await tester.pumpAndSettle();
+      expect(find.byKey(BrowserMiniWindow.windowKey), findsNothing);
+      expect(tester.element(parked), same(parkedElement));
+      expect(session.controller, same(controller));
+      await session.load(Uri.parse('https://example.com/while-parked'));
+      await tester.pumpAndSettle();
+      expect(session.pageUrl.value, 'https://example.com/while-parked');
+      await tester.tap(find.text('chat'));
+      expect(chatTaps, 1);
+      final opening = openSharedBrowser();
+      await tester.pumpAndSettle();
+      await opening;
+      expect(find.byType(WebViewPage), findsOneWidget);
+      expect(find.byType(WebViewWidget, skipOffstage: false), findsOneWidget);
+      expect(session.controller, same(controller));
+      expect(FakeWebViewPlatform.lastCreated, same(fake));
+      expect(fake.reloadCount, 0);
+    },
+  );
 
   testWidgets('closing the mini window ends the session', (tester) async {
     await tester.pumpWidget(app());

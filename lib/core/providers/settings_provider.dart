@@ -328,6 +328,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _toolAutoApproveAllKey = 'tool_auto_approve_all_v1';
   static const String _disabledBrowserActionsKey =
       'browser_disabled_actions_v1';
+  static const String _browserFloatingWindowKey = 'browser_floating_window_v1';
   static const String _sidebarShortcutsKey = 'sidebar_shortcuts_v1';
   static const String _mobileAssistantEditTabOrderKey =
       'mobile_assistant_edit_tab_order_v1';
@@ -1188,6 +1189,7 @@ class SettingsProvider extends ChangeNotifier {
     _disabledBrowserActions = Set.unmodifiable(
       prefs.getStringList(_disabledBrowserActionsKey) ?? const <String>[],
     );
+    _browserFloatingWindow = prefs.getBool(_browserFloatingWindowKey) ?? false;
     _sidebarShortcuts = List.unmodifiable({
       for (final raw
           in prefs.getStringList(_sidebarShortcutsKey) ?? const <String>[])
@@ -5595,6 +5597,18 @@ Requirements:
     );
   }
 
+  // Shared Browser: floating preview is an explicit opt-in. Turning it off
+  // only changes presentation; the parked browser session remains alive.
+  bool _browserFloatingWindow = false;
+  bool get browserFloatingWindow => _browserFloatingWindow;
+
+  Future<void> setBrowserFloatingWindow(bool value) async {
+    if (_browserFloatingWindow == value) return;
+    _browserFloatingWindow = value;
+    notifyListeners();
+    await _preferences.setBool(_browserFloatingWindowKey, value);
+  }
+
   // Sidebar: mini apps and web pages pinned as cards above the dock, in the
   // user's order.
   List<SidebarShortcut> _sidebarShortcuts = const <SidebarShortcut>[];
@@ -5945,6 +5959,7 @@ Requirements:
     copy._assistantBubbleSplitParagraphs = _assistantBubbleSplitParagraphs;
     copy._glassTheme = _glassTheme;
     copy._glassEconomy = _glassEconomy;
+    copy._browserFloatingWindow = _browserFloatingWindow;
     copy._chatMessageBackgroundStyle = _chatMessageBackgroundStyle;
     copy._chatBubbleStyleOverrides = _chatBubbleStyleOverrides;
     copy._userChatBubbleStyleOverrides = _userChatBubbleStyleOverrides;

@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:Kelivo/core/services/workspace/task_plan.dart';
 import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
 import 'package:Kelivo/features/home/widgets/composer_status_strip.dart';
-import 'package:Kelivo/features/home/widgets/running_tool_bar.dart';
+import 'package:Kelivo/features/home/widgets/computer_status_panel.dart';
 import 'package:Kelivo/features/home/widgets/task_plan_bar.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 
@@ -157,14 +157,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     final planBox = tester.getRect(find.byType(TaskPlanChip));
-    final runBox = tester.getRect(find.byType(RunningToolChip));
+    final runBox = tester.getRect(find.byType(ComputerStatusPanel));
     expect(planBox.top, runBox.top);
     expect(planBox.right, lessThan(runBox.left));
-    expect(planBox.width, closeTo(runBox.width, 1));
+    expect(runBox.width, greaterThan(planBox.width));
 
     run.complete(status: ToolRunStatus.succeeded, exitCode: 0);
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.byType(RunningToolChip), findsNothing);
+    expect(find.byType(ComputerStatusPanel), findsNothing);
     // Alone, the plan takes the whole row.
     expect(
       tester.getRect(find.byType(TaskPlanChip)).width,

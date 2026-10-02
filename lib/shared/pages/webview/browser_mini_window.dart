@@ -12,6 +12,7 @@ import '../../../theme/app_font_weights.dart';
 import 'webview_page.dart';
 import 'webview_site_handlers.dart';
 import 'webview_status_banner.dart';
+import 'browser_surface.dart';
 
 /// Opens the shared agent browser: expands the mini window when the browser
 /// is minimized, otherwise starts a new session at [startUrl]. With
@@ -123,7 +124,11 @@ Future<void> openSharedBrowser({
 /// picture-in-picture window: drag it by the header, tap to expand, close
 /// with ✕. The page underneath stays interactive.
 class BrowserMiniWindow extends StatefulWidget {
-  const BrowserMiniWindow({super.key});
+  const BrowserMiniWindow({super.key, this.floating = true});
+
+  /// Hides the card while retaining one laid-out native WebView for browser
+  /// actions and screenshots. Changing this never releases the controller.
+  final bool floating;
 
   static const Key windowKey = ValueKey<String>('browser-mini-window');
   static const Key expandKey = ValueKey<String>('browser-mini-expand');
@@ -152,59 +157,69 @@ class _BrowserMiniWindowState extends State<BrowserMiniWindow> {
         final controller = session.controller;
         if (!minimized || controller == null) return const SizedBox.shrink();
         final media = MediaQuery.of(context);
-        final width = (media.size.width * 0.46).clamp(150.0, 240.0);
-        final height = width * 1.4;
+        final miniWidth = (media.size.width * 0.46).clamp(150.0, 240.0);
+        final width = widget.floating ? miniWidth : media.size.width;
+        final height = widget.floating
+            ? miniWidth * 1.4
+            : media.size.height - media.padding.vertical;
         final maxRight = media.size.width - width - 8;
         final maxBottom = media.size.height - height - media.padding.top - 8;
+        final minBottom = media.padding.bottom + 8;
         Offset clamped(Offset o) => Offset(
           o.dx.clamp(8.0, maxRight < 8 ? 8.0 : maxRight),
-          o.dy.clamp(media.padding.bottom + 8, maxBottom < 8 ? 8.0 : maxBottom),
+          o.dy.clamp(minBottom, maxBottom < minBottom ? minBottom : maxBottom),
         );
         final offset = clamped(_fromBottomRight);
         return AnimatedPositioned(
-          duration: _dragging
+          duration: _dragging || !widget.floating
               ? Duration.zero
               : const Duration(milliseconds: 260),
           curve: Curves.easeOutCubic,
-          right: offset.dx,
-          bottom: offset.dy,
+          right: widget.floating ? offset.dx : 0,
+          bottom: widget.floating ? offset.dy : media.padding.bottom,
           width: width,
           height: height,
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.85, end: 1),
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutBack,
-            builder: (context, scale, child) => Transform.scale(
-              scale: scale,
-              alignment: Alignment.bottomRight,
-              child: Opacity(
-                opacity: ((scale - 0.85) / 0.15).clamp(0.0, 1.0),
-                child: child,
-              ),
-            ),
-            child: _MiniWindowCard(
-              key: BrowserMiniWindow.windowKey,
-              controller: controller,
-              // From the state, not from this build's offset: several moves
-              // (and the lift) may arrive before the next build.
-              onDrag: (delta) => setState(() {
-                _dragging = true;
-                _fromBottomRight = clamped(
-                  Offset(
-                    _fromBottomRight.dx - delta.dx,
-                    _fromBottomRight.dy - delta.dy,
+          child: Offstage(
+            offstage: !widget.floating,
+            child: TickerMode(
+              enabled: widget.floating,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.85, end: 1),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutBack,
+                builder: (context, scale, child) => Transform.scale(
+                  scale: scale,
+                  alignment: Alignment.bottomRight,
+                  child: Opacity(
+                    opacity: ((scale - 0.85) / 0.15).clamp(0.0, 1.0),
+                    child: child,
                   ),
-                );
-              }),
-              onDragEnd: () => setState(() {
-                _dragging = false;
-                final right = clamped(_fromBottomRight).dx;
-                final centre = media.size.width - right - width / 2;
-                _fromBottomRight = Offset(
-                  centre < media.size.width / 2 ? maxRight : 12,
-                  _fromBottomRight.dy,
-                );
-              }),
+                ),
+                child: _MiniWindowCard(
+                  key: BrowserMiniWindow.windowKey,
+                  controller: controller,
+                  // From the state, not from this build's offset: several moves
+                  // (and the lift) may arrive before the next build.
+                  onDrag: (delta) => setState(() {
+                    _dragging = true;
+                    _fromBottomRight = clamped(
+                      Offset(
+                        _fromBottomRight.dx - delta.dx,
+                        _fromBottomRight.dy - delta.dy,
+                      ),
+                    );
+                  }),
+                  onDragEnd: () => setState(() {
+                    _dragging = false;
+                    final right = clamped(_fromBottomRight).dx;
+                    final centre = media.size.width - right - width / 2;
+                    _fromBottomRight = Offset(
+                      centre < media.size.width / 2 ? maxRight : 12,
+                      _fromBottomRight.dy,
+                    );
+                  }),
+                ),
+              ),
             ),
           ),
         );
@@ -237,7 +252,6 @@ class _MiniWindowCard extends StatelessWidget {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           decoration: BoxDecoration(
-            color: cs.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: running
@@ -255,64 +269,72 @@ class _MiniWindowCard extends StatelessWidget {
               ),
             ],
           ),
-          child: ClipRRect(
+          child: BrowserSurface(
+            defaultColor: cs.surface,
             borderRadius: BorderRadius.circular(19),
-            child: Column(
-              children: [
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onPanUpdate: (details) => onDrag(details.delta),
-                  onPanEnd: (_) => onDragEnd(),
-                  onTap: () => unawaited(openSharedBrowser()),
-                  child: Container(
-                    height: 38,
-                    color: cs.surfaceContainerHigh,
-                    padding: const EdgeInsets.only(left: 10),
-                    child: Row(
-                      children: [
-                        Expanded(child: _MiniAddress(session: session)),
-                        _HeaderButton(
-                          key: BrowserMiniWindow.expandKey,
-                          icon: Lucide.Maximize2,
-                          tooltip: l10n.browserMiniExpand,
-                          onTap: () => unawaited(openSharedBrowser()),
-                        ),
-                        _HeaderButton(
-                          key: BrowserMiniWindow.closeKey,
-                          icon: Lucide.X,
-                          tooltip: l10n.commonClose,
-                          onTap: () => unawaited(session.closeMinimized()),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                ValueListenableBuilder<bool>(
-                  valueListenable: session.pageLoading,
-                  builder: (context, loading, _) => SizedBox(
-                    height: 2,
-                    child: loading
-                        ? const LinearProgressIndicator(minHeight: 2)
-                        : null,
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
+            child: Material(
+              type: MaterialType.transparency,
+              borderRadius: BorderRadius.circular(19),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  GestureDetector(
                     behavior: HitTestBehavior.opaque,
+                    onPanUpdate: (details) => onDrag(details.delta),
+                    onPanEnd: (_) => onDragEnd(),
                     onTap: () => unawaited(openSharedBrowser()),
-                    // The small preview is watch-only; interacting happens
-                    // in the expanded page.
-                    child: IgnorePointer(
-                      child: WebViewWidget(
-                        key: ObjectKey(controller),
-                        controller: controller,
+                    child: BrowserSurface(
+                      defaultColor: cs.surfaceContainerHigh,
+                      child: Container(
+                        height: 48,
+                        padding: const EdgeInsets.only(left: 10),
+                        child: Row(
+                          children: [
+                            Expanded(child: _MiniAddress(session: session)),
+                            _HeaderButton(
+                              key: BrowserMiniWindow.expandKey,
+                              icon: Lucide.Maximize2,
+                              tooltip: l10n.browserMiniExpand,
+                              onTap: () => unawaited(openSharedBrowser()),
+                            ),
+                            _HeaderButton(
+                              key: BrowserMiniWindow.closeKey,
+                              icon: Lucide.X,
+                              tooltip: l10n.commonClose,
+                              onTap: () => unawaited(session.closeMinimized()),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                if (running)
-                  BrowserActivityStrip(activity: activity!, compact: true),
-              ],
+                  ValueListenableBuilder<bool>(
+                    valueListenable: session.pageLoading,
+                    builder: (context, loading, _) => SizedBox(
+                      height: 2,
+                      child: loading
+                          ? const LinearProgressIndicator(minHeight: 2)
+                          : null,
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => unawaited(openSharedBrowser()),
+                      // The small preview is watch-only; interacting happens
+                      // in the expanded page.
+                      child: IgnorePointer(
+                        child: WebViewWidget(
+                          key: ObjectKey(controller),
+                          controller: controller,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (running)
+                    BrowserActivityStrip(activity: activity!, compact: true),
+                ],
+              ),
             ),
           ),
         );
@@ -402,7 +424,8 @@ class _HeaderButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       tooltip: tooltip,
-      visualDensity: VisualDensity.compact,
+      visualDensity: VisualDensity.standard,
+      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
       iconSize: 16,
       onPressed: onTap,
       icon: Icon(icon),

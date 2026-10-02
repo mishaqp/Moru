@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import 'webview_ask_ai_controller.dart';
+import 'browser_surface.dart';
 
 /// The merged bottom panel: one compact nav row (back/forward/reload/
 /// activity-log) plus, below it, exactly one of the Ask-AI composer, a
@@ -84,43 +85,45 @@ class _WebViewBottomPanelState extends State<WebViewBottomPanel> {
         final state = widget.controller.state;
         return SafeArea(
           top: false,
-          child: Container(
-            decoration: BoxDecoration(
-              color: cs.surface,
-              border: Border(
-                top: BorderSide(
-                  color: cs.outlineVariant.withValues(alpha: 0.35),
+          child: BrowserSurface(
+            defaultColor: cs.surface,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: cs.outlineVariant.withValues(alpha: 0.35),
+                  ),
                 ),
               ),
-            ),
-            padding: const EdgeInsets.fromLTRB(4, 4, 12, 6),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                WebViewNavRow(
-                  canGoBack: widget.canGoBack,
-                  canGoForward: widget.canGoForward,
-                  onBack: widget.onBack,
-                  onForward: widget.onForward,
-                  onReload: widget.onReload,
-                  onShowActivityLog: widget.onShowActivityLog,
-                ),
-                if (widget.approvalCard != null)
-                  widget.approvalCard!
-                else
-                  _AskAiArea(
-                    key: ValueKey('browser_ask_ai_area_${state.name}'),
-                    state: state,
-                    textController: _textController,
-                    onSubmit: _submit,
-                    onStop: widget.controller.stop,
-                    onDismiss: widget.controller.dismiss,
-                    errorMessage: state == AskAiPanelState.error
-                        ? widget.controller.lastOutcome?.error
-                        : null,
+              padding: const EdgeInsets.fromLTRB(4, 4, 12, 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  WebViewNavRow(
+                    canGoBack: widget.canGoBack,
+                    canGoForward: widget.canGoForward,
+                    onBack: widget.onBack,
+                    onForward: widget.onForward,
+                    onReload: widget.onReload,
+                    onShowActivityLog: widget.onShowActivityLog,
                   ),
-              ],
+                  if (widget.approvalCard != null)
+                    widget.approvalCard!
+                  else
+                    _AskAiArea(
+                      key: ValueKey('browser_ask_ai_area_${state.name}'),
+                      state: state,
+                      textController: _textController,
+                      onSubmit: _submit,
+                      onStop: widget.controller.stop,
+                      onDismiss: widget.controller.dismiss,
+                      errorMessage: state == AskAiPanelState.error
+                          ? widget.controller.lastOutcome?.error
+                          : null,
+                    ),
+                ],
+              ),
             ),
           ),
         );
@@ -173,7 +176,7 @@ class WebViewNavRow extends StatelessWidget {
         ),
         if (onShowActivityLog != null)
           _NavIconButton(
-            icon: Lucide.History,
+            icon: Lucide.Bot,
             tooltip: l10n.browserComposerActivityLogTooltip,
             onTap: onShowActivityLog,
           ),
@@ -199,17 +202,23 @@ class _NavIconButton extends StatelessWidget {
     final enabled = onTap != null;
     return Tooltip(
       message: tooltip,
+      excludeFromSemantics: true,
       child: Semantics(
         button: true,
         label: tooltip,
         enabled: enabled,
+        onTap: onTap,
+        excludeSemantics: true,
         child: IconButton(
           constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+          visualDensity: VisualDensity.standard,
           onPressed: onTap,
           icon: Icon(
             icon,
             size: 19,
-            color: enabled ? cs.onSurface : cs.onSurface.withValues(alpha: 0.3),
+            color: enabled
+                ? cs.onSurface
+                : cs.onSurface.withValues(alpha: 0.55),
           ),
         ),
       ),

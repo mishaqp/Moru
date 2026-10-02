@@ -462,6 +462,30 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  test('clipboard details redact credentials and authentication URLs', () {
+    final text = toolDetailsForClipboard(
+      const ToolUIPart(
+        id: 'call-safe',
+        toolName: 'custom',
+        arguments: {
+          'access_token': 'private-token',
+          'url': 'https://auth.openai.com/authorize?state=private-state',
+        },
+        content:
+            '{"password":"private-password","url":"https://example.com/callback?code=private-code"}',
+      ),
+    );
+    for (final secret in [
+      'private-token',
+      'private-state',
+      'private-password',
+      'private-code',
+    ]) {
+      expect(text, isNot(contains(secret)));
+    }
+    expect(text, contains('call-safe'));
+  });
+
   test('tool details for the clipboard hold the call and its result', () {
     expect(
       toolDetailsForClipboard(

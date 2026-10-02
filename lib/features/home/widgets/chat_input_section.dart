@@ -310,7 +310,6 @@ class ChatInputSection extends StatelessWidget {
     );
 
     final agentChat = a?.agentId?.isNotEmpty == true;
-    if (!workspaceBound && !agentChat) return bar;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,6 +319,7 @@ class ChatInputSection extends StatelessWidget {
         ComposerStatusStrip(
           conversationId: conversationId,
           generating: isLoading,
+          onStop: onStop,
         ),
         if (showEnvChip)
           Padding(

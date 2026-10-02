@@ -11875,6 +11875,61 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentsErrorAccountBusy => 'Codex 已在另一个聊天中运行。请等待回复完成或停止该回复。';
+
+  @override
+  String get computerTitle => '计算机';
+
+  @override
+  String get computerWorking => 'AI 正在工作…';
+
+  @override
+  String get computerDone => '完成';
+
+  @override
+  String get computerError => '错误';
+
+  @override
+  String get computerPreviousStep => '上一步';
+
+  @override
+  String get computerNextStep => '下一步';
+
+  @override
+  String get computerLatest => '跳到最新';
+
+  @override
+  String get computerOpenTerminal => '打开终端';
+
+  @override
+  String get computerOpenBrowser => '打开实时浏览器';
+
+  @override
+  String get computerOpenFile => '预览文件';
+
+  @override
+  String get computerCopyResult => '复制结果';
+
+  @override
+  String get computerNoResult => '暂无结果';
+
+  @override
+  String get computerParameters => '参数';
+
+  @override
+  String get computerResult => '结果';
+
+  @override
+  String get computerStop => '停止';
+
+  @override
+  String get browserFloatingWindowTitle => '浏览器悬浮窗';
+
+  @override
+  String get browserFloatingWindowDescription =>
+      '最小化时显示实时浏览器悬浮窗。默认在输入框上方的「计算机」中显示 AI 操作。';
+
+  @override
+  String get computerMoreDetails => '详细结果';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -23677,6 +23732,61 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get agentsErrorAccountBusy => 'Codex 已在另一个聊天中运行。请等待回复完成或停止该回复。';
+
+  @override
+  String get computerTitle => '计算机';
+
+  @override
+  String get computerWorking => 'AI 正在工作…';
+
+  @override
+  String get computerDone => '完成';
+
+  @override
+  String get computerError => '错误';
+
+  @override
+  String get computerPreviousStep => '上一步';
+
+  @override
+  String get computerNextStep => '下一步';
+
+  @override
+  String get computerLatest => '跳到最新';
+
+  @override
+  String get computerOpenTerminal => '打开终端';
+
+  @override
+  String get computerOpenBrowser => '打开实时浏览器';
+
+  @override
+  String get computerOpenFile => '预览文件';
+
+  @override
+  String get computerCopyResult => '复制结果';
+
+  @override
+  String get computerNoResult => '暂无结果';
+
+  @override
+  String get computerParameters => '参数';
+
+  @override
+  String get computerResult => '结果';
+
+  @override
+  String get computerStop => '停止';
+
+  @override
+  String get browserFloatingWindowTitle => '浏览器悬浮窗';
+
+  @override
+  String get browserFloatingWindowDescription =>
+      '最小化时显示实时浏览器悬浮窗。默认在输入框上方的「计算机」中显示 AI 操作。';
+
+  @override
+  String get computerMoreDetails => '详细结果';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -35553,4 +35663,59 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentsErrorAccountBusy => 'Codex 已在另一個聊天中執行。請等待回覆完成或停止該回覆。';
+
+  @override
+  String get computerTitle => '電腦';
+
+  @override
+  String get computerWorking => 'AI 正在工作…';
+
+  @override
+  String get computerDone => '完成';
+
+  @override
+  String get computerError => '錯誤';
+
+  @override
+  String get computerPreviousStep => '上一步';
+
+  @override
+  String get computerNextStep => '下一步';
+
+  @override
+  String get computerLatest => '跳到最新';
+
+  @override
+  String get computerOpenTerminal => '開啟終端機';
+
+  @override
+  String get computerOpenBrowser => '開啟即時瀏覽器';
+
+  @override
+  String get computerOpenFile => '預覽檔案';
+
+  @override
+  String get computerCopyResult => '複製結果';
+
+  @override
+  String get computerNoResult => '尚無結果';
+
+  @override
+  String get computerParameters => '參數';
+
+  @override
+  String get computerResult => '結果';
+
+  @override
+  String get computerStop => '停止';
+
+  @override
+  String get browserFloatingWindowTitle => '瀏覽器浮動視窗';
+
+  @override
+  String get browserFloatingWindowDescription =>
+      '縮小時顯示即時瀏覽器浮動視窗。預設在輸入框上方的「電腦」中顯示 AI 操作。';
+
+  @override
+  String get computerMoreDetails => '詳細結果';
 }
