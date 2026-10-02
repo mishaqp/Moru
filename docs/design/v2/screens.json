@@ -1,0 +1,338 @@
+[
+  {
+    "id": 1,
+    "key": "home",
+    "title": "Главная",
+    "theme": "light",
+    "html": "html/home-light.html",
+    "png": "png/home-light.png"
+  },
+  {
+    "id": 1,
+    "key": "home",
+    "title": "Главная",
+    "theme": "dark",
+    "html": "html/home-dark.html",
+    "png": "png/home-dark.png"
+  },
+  {
+    "id": 2,
+    "key": "chats",
+    "title": "Список чатов",
+    "theme": "light",
+    "html": "html/chats-light.html",
+    "png": "png/chats-light.png"
+  },
+  {
+    "id": 2,
+    "key": "chats",
+    "title": "Список чатов",
+    "theme": "dark",
+    "html": "html/chats-dark.html",
+    "png": "png/chats-dark.png"
+  },
+  {
+    "id": 3,
+    "key": "chat",
+    "title": "Чат с моделью",
+    "theme": "light",
+    "html": "html/chat-light.html",
+    "png": "png/chat-light.png"
+  },
+  {
+    "id": 3,
+    "key": "chat",
+    "title": "Чат с моделью",
+    "theme": "dark",
+    "html": "html/chat-dark.html",
+    "png": "png/chat-dark.png"
+  },
+  {
+    "id": 4,
+    "key": "agent",
+    "title": "Агент: ход работы",
+    "theme": "light",
+    "html": "html/agent-light.html",
+    "png": "png/agent-light.png"
+  },
+  {
+    "id": 4,
+    "key": "agent",
+    "title": "Агент: ход работы",
+    "theme": "dark",
+    "html": "html/agent-dark.html",
+    "png": "png/agent-dark.png"
+  },
+  {
+    "id": 5,
+    "key": "agent-files",
+    "title": "Агент: изменения файлов",
+    "theme": "light",
+    "html": "html/agent-files-light.html",
+    "png": "png/agent-files-light.png"
+  },
+  {
+    "id": 5,
+    "key": "agent-files",
+    "title": "Агент: изменения файлов",
+    "theme": "dark",
+    "html": "html/agent-files-dark.html",
+    "png": "png/agent-files-dark.png"
+  },
+  {
+    "id": 6,
+    "key": "permission",
+    "title": "Агент: запрос разрешения",
+    "theme": "light",
+    "html": "html/permission-light.html",
+    "png": "png/permission-light.png"
+  },
+  {
+    "id": 6,
+    "key": "permission",
+    "title": "Агент: запрос разрешения",
+    "theme": "dark",
+    "html": "html/permission-dark.html",
+    "png": "png/permission-dark.png"
+  },
+  {
+    "id": 7,
+    "key": "model",
+    "title": "Выбор модели и рассуждений",
+    "theme": "light",
+    "html": "html/model-light.html",
+    "png": "png/model-light.png"
+  },
+  {
+    "id": 7,
+    "key": "model",
+    "title": "Выбор модели и рассуждений",
+    "theme": "dark",
+    "html": "html/model-dark.html",
+    "png": "png/model-dark.png"
+  },
+  {
+    "id": 8,
+    "key": "files",
+    "title": "Работа: файлы",
+    "theme": "light",
+    "html": "html/files-light.html",
+    "png": "png/files-light.png"
+  },
+  {
+    "id": 8,
+    "key": "files",
+    "title": "Работа: файлы",
+    "theme": "dark",
+    "html": "html/files-dark.html",
+    "png": "png/files-dark.png"
+  },
+  {
+    "id": 9,
+    "key": "terminal",
+    "title": "Работа: терминал",
+    "theme": "light",
+    "html": "html/terminal-light.html",
+    "png": "png/terminal-light.png"
+  },
+  {
+    "id": 9,
+    "key": "terminal",
+    "title": "Работа: терминал",
+    "theme": "dark",
+    "html": "html/terminal-dark.html",
+    "png": "png/terminal-dark.png"
+  },
+  {
+    "id": 10,
+    "key": "browser",
+    "title": "Работа: плавающий браузер",
+    "theme": "light",
+    "html": "html/browser-light.html",
+    "png": "png/browser-light.png"
+  },
+  {
+    "id": 10,
+    "key": "browser",
+    "title": "Работа: плавающий браузер",
+    "theme": "dark",
+    "html": "html/browser-dark.html",
+    "png": "png/browser-dark.png"
+  },
+  {
+    "id": 11,
+    "key": "browser-mini",
+    "title": "Работа: браузер поверх чата",
+    "theme": "light",
+    "html": "html/browser-mini-light.html",
+    "png": "png/browser-mini-light.png"
+  },
+  {
+    "id": 11,
+    "key": "browser-mini",
+    "title": "Работа: браузер поверх чата",
+    "theme": "dark",
+    "html": "html/browser-mini-dark.html",
+    "png": "png/browser-mini-dark.png"
+  },
+  {
+    "id": 12,
+    "key": "settings",
+    "title": "Настройки: корень",
+    "theme": "light",
+    "html": "html/settings-light.html",
+    "png": "png/settings-light.png"
+  },
+  {
+    "id": 12,
+    "key": "settings",
+    "title": "Настройки: корень",
+    "theme": "dark",
+    "html": "html/settings-dark.html",
+    "png": "png/settings-dark.png"
+  },
+  {
+    "id": 13,
+    "key": "connections",
+    "title": "Настройки: модели и подключения",
+    "theme": "light",
+    "html": "html/connections-light.html",
+    "png": "png/connections-light.png"
+  },
+  {
+    "id": 13,
+    "key": "connections",
+    "title": "Настройки: модели и подключения",
+    "theme": "dark",
+    "html": "html/connections-dark.html",
+    "png": "png/connections-dark.png"
+  },
+  {
+    "id": 14,
+    "key": "chat-settings",
+    "title": "Настройки: чаты и ответы",
+    "theme": "light",
+    "html": "html/chat-settings-light.html",
+    "png": "png/chat-settings-light.png"
+  },
+  {
+    "id": 14,
+    "key": "chat-settings",
+    "title": "Настройки: чаты и ответы",
+    "theme": "dark",
+    "html": "html/chat-settings-dark.html",
+    "png": "png/chat-settings-dark.png"
+  },
+  {
+    "id": 15,
+    "key": "appearance",
+    "title": "Внешний вид: живое превью",
+    "theme": "light",
+    "html": "html/appearance-light.html",
+    "png": "png/appearance-light.png"
+  },
+  {
+    "id": 15,
+    "key": "appearance",
+    "title": "Внешний вид: живое превью",
+    "theme": "dark",
+    "html": "html/appearance-dark.html",
+    "png": "png/appearance-dark.png"
+  },
+  {
+    "id": 16,
+    "key": "onboard-language",
+    "title": "Первый запуск: язык",
+    "theme": "light",
+    "html": "html/onboard-language-light.html",
+    "png": "png/onboard-language-light.png"
+  },
+  {
+    "id": 16,
+    "key": "onboard-language",
+    "title": "Первый запуск: язык",
+    "theme": "dark",
+    "html": "html/onboard-language-dark.html",
+    "png": "png/onboard-language-dark.png"
+  },
+  {
+    "id": 17,
+    "key": "onboard-theme",
+    "title": "Первый запуск: тема",
+    "theme": "light",
+    "html": "html/onboard-theme-light.html",
+    "png": "png/onboard-theme-light.png"
+  },
+  {
+    "id": 17,
+    "key": "onboard-theme",
+    "title": "Первый запуск: тема",
+    "theme": "dark",
+    "html": "html/onboard-theme-dark.html",
+    "png": "png/onboard-theme-dark.png"
+  },
+  {
+    "id": 18,
+    "key": "onboard-model",
+    "title": "Первый запуск: подключение модели",
+    "theme": "light",
+    "html": "html/onboard-model-light.html",
+    "png": "png/onboard-model-light.png"
+  },
+  {
+    "id": 18,
+    "key": "onboard-model",
+    "title": "Первый запуск: подключение модели",
+    "theme": "dark",
+    "html": "html/onboard-model-dark.html",
+    "png": "png/onboard-model-dark.png"
+  },
+  {
+    "id": 19,
+    "key": "onboard-linux",
+    "title": "Первый запуск: Linux и агенты",
+    "theme": "light",
+    "html": "html/onboard-linux-light.html",
+    "png": "png/onboard-linux-light.png"
+  },
+  {
+    "id": 19,
+    "key": "onboard-linux",
+    "title": "Первый запуск: Linux и агенты",
+    "theme": "dark",
+    "html": "html/onboard-linux-dark.html",
+    "png": "png/onboard-linux-dark.png"
+  },
+  {
+    "id": 20,
+    "key": "apps",
+    "title": "Мини-приложения",
+    "theme": "light",
+    "html": "html/apps-light.html",
+    "png": "png/apps-light.png"
+  },
+  {
+    "id": 20,
+    "key": "apps",
+    "title": "Мини-приложения",
+    "theme": "dark",
+    "html": "html/apps-dark.html",
+    "png": "png/apps-dark.png"
+  },
+  {
+    "id": 21,
+    "key": "notification",
+    "title": "Android: агент ждёт разрешения",
+    "theme": "light",
+    "html": "html/notification-light.html",
+    "png": "png/notification-light.png"
+  },
+  {
+    "id": 21,
+    "key": "notification",
+    "title": "Android: агент ждёт разрешения",
+    "theme": "dark",
+    "html": "html/notification-dark.html",
+    "png": "png/notification-dark.png"
+  }
+]
