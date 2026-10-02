@@ -121,6 +121,8 @@ package name does not require building other platforms.
   applied before the next turn, model first, only while the agent still
   offers the value. With a Moru provider the provider keeps the model; only
   the other options apply. Option ids and values are redactor controls.
+  A chat whose agent has not started shows the options that agent (and auth
+  mode) offered last in this app run.
   Moru MCP approval cards and browser activity details inherit the launch's
   display filter while handlers receive the original execution arguments.
   An assistant with `agentId` answers through its agent: `AcpChatBridge` swaps the chunk

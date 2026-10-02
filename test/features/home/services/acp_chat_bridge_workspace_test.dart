@@ -570,6 +570,7 @@ void main() {
           ),
         ),
       );
+      expect(find.byKey(const ValueKey('acp-config-chip')), findsNothing);
       await tester.runAsync(() => sessions.send(turn()).drain<void>());
       await tester.pump();
       IosTileButton chip() => tester.widget<IosTileButton>(
@@ -623,6 +624,33 @@ void main() {
         )['params'],
         {'sessionId': 's1', 'configId': 'model', 'value': 'm2'},
       );
+      // A new chat of the assistant offers the choice before its agent runs.
+      final next = (await tester.runAsync(
+        () => chats.createConversation(assistantId: assistantId),
+      ))!;
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AcpChatSessions>.value(value: sessions),
+            ChangeNotifierProvider<ChatService>.value(value: chats),
+            ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+            ChangeNotifierProvider<AssistantProvider>.value(value: assistants),
+          ],
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: AcpModeChip(
+                conversationId: next.id,
+                assistantId: assistantId,
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(chip().label, 'Model two · Low');
+      expect(find.byKey(const ValueKey('acp-mode-chip')), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );

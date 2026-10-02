@@ -749,6 +749,47 @@ void main() {
       ]);
     });
 
+    test('a chat without its agent shows the options offered last', () async {
+      final sessions = sessionsWith();
+      addTearDown(sessions.closeAll);
+      expect(
+        sessions.configOptionsFor(
+          'c2',
+          agentId: spec.id,
+          authMode: AgentAuthMode.subscription,
+        ),
+        isEmpty,
+      );
+      await answer(
+        sessions,
+        turn(
+          'hi',
+          authMode: AgentAuthMode.subscription,
+          config: const {'model': 'm2'},
+        ),
+      );
+      final known = sessions.configOptionsFor(
+        'c2',
+        agentId: spec.id,
+        authMode: AgentAuthMode.subscription,
+      );
+      expect(known.map((o) => o.id), ['model', 'effort']);
+      expect(known.first.currentValue, 'm2');
+      expect(
+        sessions.configOptionsFor('c2', agentId: spec.id).map((o) => o.id),
+        isEmpty,
+        reason: 'the provider mode has not run yet',
+      );
+      expect(
+        sessions.configOptionsFor(
+          'c2',
+          agentId: 'other',
+          authMode: AgentAuthMode.subscription,
+        ),
+        isEmpty,
+      );
+    });
+
     test('an agent update replaces the known options', () async {
       final sessions = sessionsWith();
       addTearDown(sessions.closeAll);

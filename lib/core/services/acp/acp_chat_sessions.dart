@@ -84,6 +84,10 @@ class AcpChatSessions extends ChangeNotifier {
   final AcpAgentStarter start;
   final Duration idleTimeout;
   final Map<String, _ChatAgent> _chats = {};
+
+  /// The options each agent offered last, so a chat can show them before
+  /// its own agent starts. Kept for this app run only.
+  final Map<String, List<AcpConfigOption>> _knownOptions = {};
   Future<void> _codexRouting = Future<void>.value();
 
   bool hasAgent(String conversationId) =>
@@ -92,15 +96,35 @@ class AcpChatSessions extends ChangeNotifier {
   AcpSession? sessionFor(String? conversationId) =>
       _chats[conversationId]?.session;
 
-  /// The live session's options a chat may change. Modes have their own
-  /// control; with a Moru provider the provider decides the model.
-  List<AcpConfigOption> configOptionsFor(String? conversationId) {
+  /// The options a chat may change: its live session's, else the ones its
+  /// agent offered last in this app run. Modes have their own control; with
+  /// a Moru provider the provider decides the model.
+  List<AcpConfigOption> configOptionsFor(
+    String? conversationId, {
+    String? agentId,
+    AgentAuthMode authMode = AgentAuthMode.provider,
+  }) {
     final chat = _chats[conversationId];
-    if (chat == null) return const [];
+    final mode = chat?.authMode ?? authMode;
+    final options =
+        chat?.session.configOptions ??
+        (agentId == null ? null : _knownOptions[_optionsKey(agentId, mode)]) ??
+        const [];
     return [
-      for (final option in chat.session.configOptions)
-        if (acpConfigOptionEditable(option, chat.authMode)) option,
+      for (final option in options)
+        if (acpConfigOptionEditable(option, mode)) option,
     ];
+  }
+
+  static String _optionsKey(String agentId, AgentAuthMode authMode) =>
+      '$agentId\u0000${authMode.name}';
+
+  void _setSession(_ChatAgent chat, AcpSession session) {
+    chat.session = session;
+    if (session.configOptions.isNotEmpty) {
+      _knownOptions[_optionsKey(chat.specId, chat.authMode)] =
+          session.configOptions;
+    }
   }
 
   /// Reopen the existing context without sending or replaying any prompt.
@@ -152,7 +176,7 @@ class AcpChatSessions extends ChangeNotifier {
           mode != chat.session.currentModeId &&
           chat.session.modes.any((m) => m.id == mode)) {
         await chat.agent.setMode(chat.sessionId, mode);
-        chat.session = chat.session.copyWith(currentModeId: mode);
+        _setSession(chat, chat.session.copyWith(currentModeId: mode));
         notifyListeners();
       }
       if (!chat.activePrompts.contains(activity)) return;
@@ -324,7 +348,7 @@ class AcpChatSessions extends ChangeNotifier {
             !identical(_chats[turn.conversationId], chat)) {
           return;
         }
-        chat.session = chat.session.copyWith(currentModeId: modeId);
+        _setSession(chat, chat.session.copyWith(currentModeId: modeId));
         notifyListeners();
       };
       agent.onConfigOptionsChanged = (sessionId, options) {
@@ -332,9 +356,10 @@ class AcpChatSessions extends ChangeNotifier {
             !identical(_chats[turn.conversationId], chat)) {
           return;
         }
-        chat.session = chat.session.copyWith(configOptions: options);
+        _setSession(chat, chat.session.copyWith(configOptions: options));
         notifyListeners();
       };
+      _setSession(chat, session);
       _chats[turn.conversationId] = chat;
       notifyListeners();
       unawaited(
@@ -378,13 +403,16 @@ class AcpChatSessions extends ChangeNotifier {
         id,
         value,
       );
-      chat.session = chat.session.copyWith(
-        configOptions:
-            updated ??
-            [
-              for (final o in chat.session.configOptions)
-                o.id == id ? o.withValue(value) : o,
-            ],
+      _setSession(
+        chat,
+        chat.session.copyWith(
+          configOptions:
+              updated ??
+              [
+                for (final o in chat.session.configOptions)
+                  o.id == id ? o.withValue(value) : o,
+              ],
+        ),
       );
       notifyListeners();
     }

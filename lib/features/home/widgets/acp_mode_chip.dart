@@ -14,6 +14,8 @@ import '../services/acp_chat_bridge.dart';
 
 /// Modes and session options (model, reasoning effort) offered by the live
 /// agent. A choice is applied before the next turn.
+///
+/// [assistantId] is the chat's assistant, which keeps the option choices.
 class AcpModeChip extends StatelessWidget {
   const AcpModeChip({
     super.key,
@@ -33,27 +35,34 @@ class AcpModeChip extends StatelessWidget {
       listenable: sessions,
       builder: (context, _) {
         final id = conversationId;
+        if (id == null) return const SizedBox.shrink();
         final session = sessions.sessionFor(id);
-        if (id == null || session == null) return const SizedBox.shrink();
-        final options = sessions.configOptionsFor(id);
         final assistant = assistantId == null
             ? null
             : assistants.getById(assistantId!);
-        if (session.modes.isEmpty && (options.isEmpty || assistant == null)) {
-          return const SizedBox.shrink();
-        }
+        // Before its agent starts, a chat shows the options the agent
+        // offered last, so the model can be picked for the first message.
+        final options = assistant == null
+            ? const <AcpConfigOption>[]
+            : sessions.configOptionsFor(
+                id,
+                agentId: assistant.agentId,
+                authMode: assistant.agentAuthMode,
+              );
+        final modes = session?.modes ?? const <AcpMode>[];
+        if (modes.isEmpty && options.isEmpty) return const SizedBox.shrink();
         return Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
           child: Wrap(
             spacing: 6,
             runSpacing: 6,
             children: [
-              if (session.modes.isNotEmpty)
+              if (session != null && modes.isNotEmpty)
                 _ModeButton(conversationId: id, session: session, chats: chats),
-              if (options.isNotEmpty && assistant != null)
+              if (options.isNotEmpty)
                 _ConfigButton(
                   options: options,
-                  assistant: assistant,
+                  assistant: assistant!,
                   assistants: assistants,
                 ),
             ],
