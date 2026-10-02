@@ -53,4 +53,12 @@ Files: five ARB, generated output, docs/design/browser/*.png, AGENTS.md, docs/re
 - [x] Generate translations; capture dark/glass browser/menu/strip/sheet before-after PNGs.
 - [x] Review all changed code and fix substantive issues with regression tests.
 - [x] Format changed files and run full AGENTS.md checklist once.
-- [ ] Commit, push feature branch, create PR to specified base; report PR and phone checks.
+- [x] Commit, push feature branch, create PR to specified base; record PR and phone checks.
+
+Delivery: [PR #86](https://github.com/mishaqp/Moru/pull/86), branch
+`codex/computer-panel-browser-polish`, application commit `477f5d29`.
+Android release validation was dispatched with `publish=false`:
+[CI run](https://github.com/mishaqp/Moru/actions/runs/37057796214).
+Phone scenarios and actual local verification results are in
+`docs/releases/v0.1.47.md`; all 30 PNGs are listed in
+`docs/design/browser/README.md`.
