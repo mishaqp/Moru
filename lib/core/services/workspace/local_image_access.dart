@@ -20,6 +20,7 @@ Future<Uint8List?> readLocalImageBytes(
   WorkspaceBinding binding = const WorkspaceBinding(),
   WorkspaceProvider? workspaces,
   ExternalMountsProvider? externalMounts,
+  int? maxBytes,
 }) async {
   try {
     final workspacePath = KelivoLink.workspacePathSource(source);
@@ -113,9 +114,10 @@ Future<Uint8List?> readLocalImageBytes(
     // Keep the selected zone as the boundary. A workspace link cannot escape
     // into another allowed zone, and a broad tmp ancestor cannot widen a more
     // specific artifact/workspace root.
-    return await WorkspaceFileAccess(
+    final bytes = await WorkspaceFileAccess(
       roots: [matched.first.host],
-    ).readBytes(hostPath);
+    ).readBytes(hostPath, maxBytes: maxBytes == null ? null : maxBytes + 1);
+    return maxBytes != null && bytes.length > maxBytes ? null : bytes;
   } catch (_) {
     return null;
   }

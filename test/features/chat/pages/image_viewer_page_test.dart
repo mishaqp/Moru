@@ -1,5 +1,6 @@
 import 'package:Kelivo/features/chat/pages/image_viewer_page.dart';
 import 'package:Kelivo/utils/safe_resize_image.dart';
+import 'package:Kelivo/shared/widgets/markdown_image_provider.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -589,8 +590,8 @@ void main() {
     final displayed = tester.widget<Image>(find.byType(Image)).image;
     expect(displayed, isA<SafeResizeImage>());
     final resized = displayed as SafeResizeImage;
-    expect(resized.imageProvider, isA<NetworkImage>());
-    expect((resized.imageProvider as NetworkImage).url, url);
+    expect(resized.imageProvider, isA<MarkdownImageProvider>());
+    expect((resized.imageProvider as MarkdownImageProvider).source, url);
     expect(resized.width, lessThanOrEqualTo(kMaxViewerDecodeEdge));
     expect(resized.height, lessThanOrEqualTo(kMaxViewerDecodeEdge));
     expect(
@@ -654,7 +655,8 @@ void main() {
       final displayed = tester.widget<Image>(find.byType(Image)).image;
       expect(displayed, isA<SafeResizeImage>());
       expect(
-        ((displayed as SafeResizeImage).imageProvider as NetworkImage).url,
+        ((displayed as SafeResizeImage).imageProvider as MarkdownImageProvider)
+            .source,
         url,
       );
     },

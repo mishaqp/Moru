@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'package:Kelivo/core/services/haptics.dart';
+import 'package:Kelivo/core/services/workspace/workspace_file_access.dart';
 import 'package:Kelivo/features/chat/pages/image_viewer_page.dart';
 import 'package:Kelivo/features/settings/widgets/custom_theme_widgets.dart';
 import 'package:Kelivo/features/workspace/widgets/preview/code_file_preview.dart';
@@ -15,6 +16,7 @@ import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/features/workspace/workspace_layout.dart';
 import 'package:Kelivo/shared/widgets/ios_tactile.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart';
+import 'package:Kelivo/shared/widgets/markdown_image_provider.dart';
 
 import 'binary_file_preview.dart';
 import 'csv_file_preview.dart';
@@ -216,7 +218,19 @@ Future<void> _showImagePreview(
     );
     return;
   }
-  final page = ImageViewerPage(images: [file.path]);
+  // Files UI/picker explicitly grants this one file (usually a private
+  // snapshot). Carry checked bytes into the viewer, rather than broadening the
+  // roots that model-written image sources can read.
+  final bytes = await WorkspaceFileAccess(
+    roots: [file.path],
+  ).readBytes(file.path, maxBytes: kMaxMarkdownImageBytes + 1);
+  if (!context.mounted) return;
+  final page = ImageViewerPage(
+    images: [file.path],
+    imageProviders: {
+      file.path: markdownImageFromBytes(bytes, source: file.path),
+    },
+  );
   await Navigator.of(context).push(
     PageRouteBuilder<void>(
       pageBuilder: (_, __, ___) => page,

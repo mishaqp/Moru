@@ -219,8 +219,18 @@ Future<void> _openPreview(
     ),
   );
   await tester.tap(find.text('open-preview'));
-  await tester.pump();
-  await tester.pump();
+  final deadline = Stopwatch()..start();
+  while (find.byType(FilePreviewFrame).evaluate().isEmpty &&
+      find.byType(ImageViewerPage).evaluate().isEmpty &&
+      deadline.elapsed < const Duration(seconds: 10)) {
+    await tester.runAsync(() => Future<void>(() {}));
+    await tester.pump();
+  }
+  expect(
+    find.byType(FilePreviewFrame).evaluate().isNotEmpty ||
+        find.byType(ImageViewerPage).evaluate().isNotEmpty,
+    isTrue,
+  );
 }
 
 Widget _previewHarness({required Widget child}) {
@@ -344,6 +354,27 @@ void main() {
     await _loadMarkdownPreview(tester);
 
     expect(find.byType(MarkdownWithCodeHighlight), findsOneWidget);
+  });
+
+  testWidgets('a short markdown preview starts at the left content edge', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final markdown = File(p.join(tempDir.path, 'test.md'))
+      ..writeAsStringSync('привет');
+    await tester.pumpWidget(
+      _previewHarness(
+        child: MarkdownFilePreview(file: markdown, autoLoad: false),
+      ),
+    );
+    await _loadMarkdownPreview(tester);
+    final text = find.text('привет', findRichText: true).last;
+    expect(tester.getTopLeft(text).dx, closeTo(16, 0.01));
+    expect(tester.widget<RichText>(text).textAlign, TextAlign.start);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('large markdown bypasses parsing and uses lazy plain text', (
@@ -548,6 +579,21 @@ void main() {
 
     await _openPreview(tester, image, kind: FilePreviewKind.image);
     expect(find.byType(ImageViewerPage), findsOneWidget);
+  });
+
+  testWidgets('explicit image preview retains bytes outside model roots', (
+    tester,
+  ) async {
+    final selected = Directory(
+      p.join(Directory.current.path, '.dart_tool'),
+    ).createTempSync('selected_image_');
+    addTearDown(() => selected.deleteSync(recursive: true));
+    final file = File(p.join(selected.path, 'selected.png'))
+      ..writeAsBytesSync(_pngBytes);
+    await _openPreview(tester, file, kind: FilePreviewKind.image);
+    final viewer = tester.widget<ImageViewerPage>(find.byType(ImageViewerPage));
+    expect(viewer.imageProviders[file.path], isA<MemoryImage>());
+    expect((viewer.imageProviders[file.path] as MemoryImage).bytes, _pngBytes);
   });
 
   testWidgets('desktop image preview has a single close and no page counter', (

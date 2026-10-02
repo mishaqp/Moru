@@ -89,6 +89,7 @@ Future<Uint8List?> readWorkspaceLinkedFile(
   BuildContext context,
   String? link, {
   String? conversationId,
+  int? maxBytes,
 }) async {
   final resolved = await resolveWorkspaceLinkedEntry(
     context,
@@ -97,9 +98,12 @@ Future<Uint8List?> readWorkspaceLinkedFile(
   );
   if (resolved?.entry is! File) return null;
   try {
-    return await WorkspaceFileAccess(
-      roots: [resolved!.rootPath],
-    ).readBytes(resolved.entry.path);
+    final bytes = await WorkspaceFileAccess(roots: [resolved!.rootPath])
+        .readBytes(
+          resolved.entry.path,
+          maxBytes: maxBytes == null ? null : maxBytes + 1,
+        );
+    return maxBytes != null && bytes.length > maxBytes ? null : bytes;
   } catch (_) {
     return null;
   }
