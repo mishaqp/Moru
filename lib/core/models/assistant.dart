@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'agent_auth_mode.dart';
 import 'assistant_regex.dart';
 import 'health_data_type.dart';
 import 'preset_message.dart';
@@ -41,9 +42,11 @@ class Assistant {
   final String? chatModelProvider; // null -> use global default
   final String? chatModelId; // null -> use global default
 
-  /// An ACP agent (AcpAgentSpec id) that answers instead of the model; the
-  /// chat model then only supplies the provider, key and model it uses.
+  /// An ACP agent (AcpAgentSpec id) that answers instead of the model.
   final String? agentId;
+
+  /// Existing assistants keep using their Moru provider unless changed.
+  final AgentAuthMode agentAuthMode;
   final double? temperature; // null to disable; else 0.0 - 2.0
   final double? topP; // null to disable; else 0.0 - 1.0
   final int contextMessageSize; // number of previous messages to include
@@ -111,6 +114,7 @@ class Assistant {
     this.chatModelProvider,
     this.chatModelId,
     this.agentId,
+    this.agentAuthMode = AgentAuthMode.provider,
     this.temperature,
     this.topP,
     this.contextMessageSize = 64,
@@ -161,6 +165,7 @@ class Assistant {
     String? chatModelProvider,
     String? chatModelId,
     String? agentId,
+    AgentAuthMode? agentAuthMode,
     double? temperature,
     double? topP,
     int? contextMessageSize,
@@ -221,6 +226,9 @@ class Assistant {
           : (chatModelProvider ?? this.chatModelProvider),
       chatModelId: clearChatModel ? null : (chatModelId ?? this.chatModelId),
       agentId: clearAgent ? null : (agentId ?? this.agentId),
+      agentAuthMode: clearAgent
+          ? AgentAuthMode.provider
+          : (agentAuthMode ?? this.agentAuthMode),
       temperature: clearTemperature ? null : (temperature ?? this.temperature),
       topP: clearTopP ? null : (topP ?? this.topP),
       contextMessageSize: contextMessageSize ?? this.contextMessageSize,
@@ -298,6 +306,7 @@ class Assistant {
     'chatModelProvider': chatModelProvider,
     'chatModelId': chatModelId,
     if (agentId != null) 'agentId': agentId,
+    'agentAuthMode': agentAuthMode.name,
     'temperature': temperature,
     'topP': topP,
     'contextMessageSize': contextMessageSize,
@@ -352,6 +361,11 @@ class Assistant {
     chatModelProvider: json['chatModelProvider'] as String?,
     chatModelId: json['chatModelId'] as String?,
     agentId: json['agentId'] as String?,
+    agentAuthMode:
+        AgentAuthMode.values
+            .where((mode) => mode.name == json['agentAuthMode'])
+            .firstOrNull ??
+        AgentAuthMode.provider,
     temperature: (json['temperature'] as num?)?.toDouble(),
     topP: (json['topP'] as num?)?.toDouble(),
     contextMessageSize: (json['contextMessageSize'] as num?)?.toInt() ?? 64,

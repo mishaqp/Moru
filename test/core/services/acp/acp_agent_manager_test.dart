@@ -6,8 +6,11 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/providers/environment_provider.dart';
+import 'package:Kelivo/core/models/agent_auth_mode.dart';
+import 'package:Kelivo/core/services/acp/acp_agent_auth.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_manager.dart';
+import 'package:Kelivo/core/services/acp/acp_connection.dart';
 import 'package:Kelivo/core/services/acp/acp_error_messages.dart';
 import 'package:Kelivo/core/services/acp/acp_fs_compat.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
@@ -35,6 +38,9 @@ class _AgentRuntime extends FakeWorkspaceRuntime
   Object? uninstallError;
   bool moruAvailable = true;
   bool agentMissing = false;
+  bool subscriptionSignedIn = false;
+  Completer<void>? logoutGate;
+  final logoutStarted = Completer<void>();
   String nodeVersion = 'v24.0.0';
 
   /// The Node a NodeSource upgrade leaves behind; null when it fails.
@@ -67,7 +73,26 @@ class _AgentRuntime extends FakeWorkspaceRuntime
     final script = request.command;
     final String output;
     final int code;
-    if (request.env.containsKey('MORU_MCP_TOKEN')) {
+    if (script.contains("'login' 'status'")) {
+      output = subscriptionSignedIn
+          ? 'Logged in using ChatGPT\n'
+          : 'Not logged in\n';
+      code = subscriptionSignedIn ? 0 : 1;
+    } else if (script.contains("'auth' 'status'")) {
+      output = jsonEncode({
+        'loggedIn': subscriptionSignedIn,
+        'authMethod': subscriptionSignedIn ? 'claude.ai' : 'none',
+      });
+      code = subscriptionSignedIn ? 0 : 1;
+    } else if (script.contains("'logout'")) {
+      if (!logoutStarted.isCompleted) logoutStarted.complete();
+      if (logoutGate != null) {
+        return _delayedLogout(logoutGate!.future);
+      }
+      subscriptionSignedIn = false;
+      output = 'Logged out\n';
+      code = 0;
+    } else if (request.env.containsKey('MORU_MCP_TOKEN')) {
       output = moruAvailable ? '__moru_mcp_available__\n' : '';
       code = moruAvailable ? 0 : 1;
     } else if (script.contains('deb.nodesource.com')) {
@@ -102,11 +127,21 @@ class _AgentRuntime extends FakeWorkspaceRuntime
     ]);
   }
 
+  Stream<CommandEvent> _delayedLogout(Future<void> gate) async* {
+    yield const CommandStarted();
+    await gate;
+    subscriptionSignedIn = false;
+    yield _exit(0);
+  }
+
   @override
   Future<void> writeStdin(String runId, Uint8List data) async {
     for (final line in const LineSplitter().convert(utf8.decode(data))) {
       final message = jsonDecode(line) as Map;
-      if (message['method'] != 'initialize') continue;
+      if (message['method'] != 'initialize' &&
+          message['method'] != 'session/new') {
+        continue;
+      }
       _agents[runId]!.add(
         CommandOutput(
           OutputStreamKind.stdout,
@@ -115,10 +150,10 @@ class _AgentRuntime extends FakeWorkspaceRuntime
               '${jsonEncode({
                 'jsonrpc': '2.0',
                 'id': message['id'],
-                'result': {
-                  'protocolVersion': 1,
-                  'agentInfo': {'name': 'codex-acp', 'version': '1.10.0'},
-                },
+                'result': message['method'] == 'session/new' ? {'sessionId': 'checked-session'} : {
+                        'protocolVersion': 1,
+                        'agentInfo': {'name': 'codex-acp', 'version': '1.10.0'},
+                      },
               })}\n',
             ),
           ),
@@ -164,6 +199,149 @@ void main() {
     model: 'gpt-5',
     responsesApi: true,
   );
+
+  for (final id in ['claude-code', 'codex']) {
+    test('$id subscription check verifies login and keeps MCP probe', () async {
+      final agents = manager();
+      addTearDown(agents.dispose);
+      final spec = AcpAgentSpec.byId(id)!;
+      final signedOut = await agents.check(
+        spec,
+        null,
+        authMode: AgentAuthMode.subscription,
+      );
+      expect(signedOut.ok, isFalse);
+      expect(signedOut.authStatus, AcpAuthStatus.signedOut);
+      expect(signedOut.failureKind, AcpFailureKind.authRequired);
+      expect(signedOut.moruToolsAvailable, isTrue);
+      runtime.subscriptionSignedIn = true;
+      final signedIn = await agents.check(
+        spec,
+        null,
+        authMode: AgentAuthMode.subscription,
+      );
+      expect(signedIn.ok, isTrue);
+      expect(signedIn.authStatus, AcpAuthStatus.signedIn);
+      expect(signedIn.moruToolsAvailable, isTrue);
+      final launch = runtime.requests.where((r) => r.keepStdinOpen).last;
+      expect(
+        launch.env.keys.where(AcpAgentSpec.isSubscriptionEnvironmentVariable),
+        isEmpty,
+      );
+      expect(agents.log, isEmpty);
+    });
+  }
+
+  test(
+    'logout closes subscription ACP processes before clearing tokens',
+    () async {
+      final agents = manager();
+      addTearDown(agents.dispose);
+      final spec = AcpAgentSpec.byId('codex')!;
+      final agent = await agents.start(
+        spec,
+        null,
+        authMode: AgentAuthMode.subscription,
+      );
+      await agents.auth.signOut(spec);
+      expect(agent.isAlive, isFalse);
+      expect(agents.auth.status(spec.id), AcpAuthStatus.signedOut);
+      expect(agents.log, isEmpty);
+    },
+  );
+
+  test('subscription startup cannot overtake logout', () async {
+    final agents = manager();
+    addTearDown(agents.dispose);
+    final spec = AcpAgentSpec.byId('codex')!;
+    final gate = runtime.logoutGate = Completer<void>();
+    final logout = agents.auth.signOut(spec);
+    await runtime.logoutStarted.future;
+    try {
+      await expectLater(
+        agents.start(spec, null, authMode: AgentAuthMode.subscription),
+        throwsA(isA<AcpError>()),
+      );
+      expect(runtime.requests.where((r) => r.keepStdinOpen), isEmpty);
+    } finally {
+      gate.complete();
+      await logout;
+    }
+  });
+
+  test(
+    'subscription startup is blocked while native login awaits user',
+    () async {
+      final agents = manager();
+      addTearDown(agents.dispose);
+      final spec = AcpAgentSpec.byId('claude-code')!;
+      final waiting = Completer<void>();
+      final auth = agents.auth;
+      auth.addListener(() {
+        if (!waiting.isCompleted &&
+            runtime.requests.any(
+              (r) => r.keepStdinOpen && r.command.contains("'auth' 'login'"),
+            )) {
+          waiting.complete();
+        }
+      });
+      final login = auth.signIn(spec);
+      await waiting.future;
+      try {
+        await expectLater(
+          agents.start(spec, null, authMode: AgentAuthMode.subscription),
+          throwsA(isA<AcpError>()),
+        );
+        expect(runtime.requests.where((r) => r.keepStdinOpen), hasLength(1));
+        expect(agents.log, isEmpty);
+      } finally {
+        await auth.cancel(spec.id);
+        await login;
+      }
+    },
+  );
+
+  test('Codex subscription has one process and check reuses it', () async {
+    final agents = manager();
+    addTearDown(agents.dispose);
+    final spec = AcpAgentSpec.byId('codex')!;
+    runtime.subscriptionSignedIn = true;
+    final first = await agents.start(
+      spec,
+      null,
+      authMode: AgentAuthMode.subscription,
+    );
+    await expectLater(
+      agents.start(spec, null, authMode: AgentAuthMode.subscription),
+      throwsA(
+        isA<AcpError>().having(
+          (error) => error.failureKind,
+          'account busy',
+          AcpFailureKind.accountBusy,
+        ),
+      ),
+    );
+    final checked = await agents.check(
+      spec,
+      null,
+      authMode: AgentAuthMode.subscription,
+    );
+    expect(checked.ok, isTrue);
+    expect(first.isAlive, isTrue);
+    expect(runtime.requests.where((r) => r.keepStdinOpen), hasLength(1));
+    first.close();
+    final replacement = await agents.start(
+      spec,
+      null,
+      authMode: AgentAuthMode.subscription,
+    );
+    expect(first.isAlive, isFalse);
+    expect(runtime.cancelled, hasLength(1));
+    replacement.close();
+    final apiFirst = await agents.start(spec, provider);
+    final apiSecond = await agents.start(spec, provider);
+    expect(apiFirst.isAlive && apiSecond.isAlive, isTrue);
+  });
 
   test('new agents reject old Node before any npm installation', () async {
     runtime.nodeVersion = 'v18.19.1';

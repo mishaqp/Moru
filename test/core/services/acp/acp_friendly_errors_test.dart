@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:Kelivo/core/models/agent_auth_mode.dart';
 import 'package:Kelivo/core/providers/environment_provider.dart';
 import 'package:Kelivo/core/services/acp/acp_agent.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
@@ -80,7 +81,8 @@ class _CheckingManager extends AcpAgentManager {
   @override
   Future<AcpAgent> start(
     AcpAgentSpec spec,
-    AcpProviderInput provider, {
+    AcpProviderInput? provider, {
+    AgentAuthMode authMode = AgentAuthMode.provider,
     String cwd = '/root',
     List<Mount> mounts = const [],
     bool Function()? isCancelled,
@@ -88,6 +90,37 @@ class _CheckingManager extends AcpAgentManager {
 }
 
 void main() {
+  test(
+    'ACP authentication-required code takes priority over API-key wording',
+    () {
+      expect(
+        classifyAcpFailure(
+          const AcpError(AcpError.authRequired, 'Invalid API key (HTTP 401)'),
+        )?.name,
+        'authRequired',
+      );
+    },
+  );
+  test(
+    'missing subscription login is distinct from an invalid provider key',
+    () {
+      for (final error in [
+        const AcpError(-32603, 'auth_required'),
+        const AcpError(-32603, 'Authentication required'),
+        const AcpError(-1, 'You are not logged in. Please login.'),
+        const AcpError(-1, 'Login required'),
+        const AcpError(-1, 'Codex has no authentication configured'),
+        const AcpError(-1, 'Codex: no auth credentials found'),
+        const AcpError(-32603, 'Request failed', {'code': 'auth_required'}),
+      ]) {
+        expect(
+          classifyAcpFailure(error)?.name,
+          'authRequired',
+          reason: '$error',
+        );
+      }
+    },
+  );
   const cases = [
     (AcpError(-32603, 'HTTP 401 Unauthorized'), AcpFailureKind.apiKey),
     (AcpError(-32603, 'Invalid API key: secret'), AcpFailureKind.apiKey),
@@ -142,6 +175,52 @@ void main() {
   };
   for (final entry in translations.entries) {
     final l10n = lookupAppLocalizations(entry.key);
+    test(
+      '${entry.key}: busy subscription account keeps its explicit category',
+      () {
+        const kind = AcpFailureKind.accountBusy;
+        final original = AcpError(
+          AcpError.internalError,
+          'subscription process is busy',
+          null,
+          kind,
+        );
+        final localized = localizeAcpError(original, l10n) as AcpError;
+        expect(localized.message, l10n.agentsErrorAccountBusy);
+        expect(localized.code, original.code);
+        expect(localized.failureKind, kind);
+      },
+    );
+    test(
+      '${entry.key}: subscription login error uses the sign-in message',
+      () async {
+        final channel = _FailingChannel(
+          const AcpError(AcpError.authRequired, 'Invalid API key (HTTP 401)'),
+        );
+        final agent = await AcpAgent.start(channel, clientVersion: '1');
+        addTearDown(agent.close);
+        await expectLater(
+          AcpChatBridge.localizeStreamErrors(
+            agent.prompt('s1', const []),
+            l10n,
+          ).drain<void>(),
+          throwsA(
+            isA<AcpError>()
+                .having(
+                  (e) => e.message,
+                  'sign-in message',
+                  l10n.agentsErrorAuthRequired,
+                )
+                .having((e) => e.code, 'protocol code', AcpError.authRequired)
+                .having(
+                  (e) => e.failureKind,
+                  'classification',
+                  AcpFailureKind.authRequired,
+                ),
+          ),
+        );
+      },
+    );
     for (final (error, kind) in cases) {
       test('${entry.key}: protocol prompt error ${error.message}', () async {
         final channel = _FailingChannel(error);

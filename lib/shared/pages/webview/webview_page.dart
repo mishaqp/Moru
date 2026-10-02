@@ -7,6 +7,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/services/acp/acp_secret_redactor.dart';
 import '../../../core/services/browser/browser_agent_session.dart';
 import '../../../core/services/browser/browser_handoffs.dart';
 import '../../../core/services/browser/browser_library.dart';
@@ -123,6 +124,10 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
   bool _canGoForward = false;
   bool _forceAgentClose = false;
   WebResourceError? _mainFrameError;
+  static final _consoleRedactor = AcpSecretRedactor(
+    [],
+    protectAuthentication: true,
+  );
   final List<ConsoleMessage> _console = <ConsoleMessage>[];
 
   /// Bumped on every `onPageStarted`. Any async callback that started under
@@ -770,15 +775,16 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     int? line,
   }) {
     if (!mounted) return;
+    // Redirects and page scripts can introduce authentication links after
+    // navigation starts. Filter every field before the console retains it.
+    final entry = ConsoleMessage(
+      level: _consoleRedactor.text(level).toUpperCase(),
+      message: _consoleRedactor.text(message),
+      source: source == null ? null : _consoleRedactor.text(source),
+      line: line,
+    );
     setState(() {
-      _console.add(
-        ConsoleMessage(
-          level: level.toUpperCase(),
-          message: message,
-          source: source,
-          line: line,
-        ),
-      );
+      _console.add(entry);
       if (_console.length > 128) {
         _console.removeRange(0, _console.length - 128);
       }

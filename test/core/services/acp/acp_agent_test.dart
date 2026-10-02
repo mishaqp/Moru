@@ -128,6 +128,77 @@ List<Map<String, dynamic>> _tools(List<MessagePart> parts) => [
 
 void main() {
   const secret = 'fake-api-key-sentinel';
+  test(
+    'subscription permissions use the safe card ID while wire choices and correlation stay raw',
+    () async {
+      const wireId = 'sk-ant-oat01-malicious-wire-id-sentinel';
+      const choiceId = 'sk-ant-ort01-private-choice-sentinel';
+      final (agent, channel) = await _started(
+        redactor: AcpSecretRedactor(const [], protectAuthentication: true),
+      );
+      addTearDown(agent.close);
+      final correlations = <String>[];
+      final asked = Completer<AcpPermissionRequest>();
+      agent.onToolCorrelation = (_, correlation) =>
+          correlations.add(correlation.id);
+      agent.onPermission = (request) async {
+        asked.complete(request);
+        return request.options.single.id;
+      };
+      final done = agent.prompt('s1', const []).toList();
+      final prompt = await channel.next('session/prompt');
+      channel.update('s1', {
+        'sessionUpdate': 'tool_call',
+        'toolCallId': wireId,
+        'title': 'Safe command',
+        'kind': 'execute',
+        'status': 'pending',
+        'rawInput': {'command': 'echo safe'},
+      });
+      channel.emit({
+        'jsonrpc': '2.0',
+        'id': 'permission',
+        'method': 'session/request_permission',
+        'params': {
+          'sessionId': 's1',
+          'toolCall': {
+            'toolCallId': wireId,
+            'title': 'Safe command',
+            'kind': 'execute',
+          },
+          'options': [
+            {'optionId': choiceId, 'name': 'Allow', 'kind': 'allow_once'},
+          ],
+        },
+      });
+      final permission = await asked.future;
+      final answer = await channel.answerTo('permission');
+      channel.update('s1', {
+        'sessionUpdate': 'tool_call_update',
+        'toolCallId': wireId,
+        'status': 'completed',
+        'rawOutput': 'Done',
+      });
+      channel.reply(prompt, {'stopReason': 'end_turn'});
+      final chunks = await done;
+      final start = chunks.whereType<ServerToolStart>().single;
+      expect(permission.toolCallId, isNot(contains(wireId)));
+      expect(permission.toolCallId, start.id);
+      expect(chunks.whereType<ServerToolEnd>().single.id, start.id);
+      expect(
+        ((answer['result'] as Map)['outcome'] as Map)['optionId'],
+        choiceId,
+      );
+      expect(correlations, isNotEmpty);
+      expect(correlations.every((id) => id == wireId), isTrue);
+      for (final part in StreamChunkHandler.collect(
+        chunks,
+      ).parts.whereType<ToolCallPart>()) {
+        expect(part.payloadJson, isNot(contains(wireId)));
+        expect(part.payloadJson, isNot(contains(choiceId)));
+      }
+    },
+  );
   for (final kind in ['agent_message_chunk', 'agent_thought_chunk']) {
     for (final ending in ['complete', 'cancel', 'failure', 'close']) {
       test(

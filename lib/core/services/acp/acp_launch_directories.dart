@@ -44,6 +44,7 @@ class AcpLaunchDirectories {
   static List<String> arguments(AcpLaunch launch) => [
     '-c',
     'set -e\numask 077\n'
+        '${launch.unsetEnvironmentScript}'
         '${launch.isolateCodexDaemon ? '$_invoke codex-target ${quote(launch.temporaryDirectory!)} $pid\nmount --bind ${quote(launch.temporaryDirectory!)} /tmp/codex-daemon-0\n' : ''}'
         '$_invoke claim ${quote(launch.temporaryDirectory!)} "\$\$"\n'
         'exec ${[launch.command, ...launch.arguments].map(quote).join(' ')}',

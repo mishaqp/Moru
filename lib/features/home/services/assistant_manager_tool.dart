@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:uuid/uuid.dart';
 
+import '../../../core/models/agent_auth_mode.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/models/assistant_regex.dart';
 import '../../../core/models/preset_message.dart';
 import '../../../core/providers/assistant_provider.dart';
+import '../../../core/services/acp/acp_agent_catalog.dart';
 
 /// A chat provider and the models the user added to it.
 class AssistantManagerProvider {
@@ -227,8 +229,15 @@ class AssistantManagerTool {
       'type': 'string',
       'description':
           'A coding agent from "options" (agents) that answers in this '
-          "assistant's chats instead of the model, using the chat model for "
-          'its own requests. Clear it to let the model answer again.',
+          "assistant's chats. By default it uses the chat model provider. "
+          'Clear it to let the model answer again.',
+    },
+    'agentAuthMode': {
+      'type': 'string',
+      'enum': [for (final mode in AgentAuthMode.values) mode.name],
+      'description':
+          'provider uses the chat model provider. subscription uses the '
+          "agent's own account and requires claude-code or codex.",
     },
     'systemPrompt': {'type': 'string'},
     'messageTemplate': {
@@ -743,6 +752,25 @@ class AssistantManagerTool {
     if (agentId != null) {
       _checkIds('agentId', [agentId], {for (final o in catalog.agents) o.id});
     }
+    final requestedAuthMode = s.oneOf('agentAuthMode', [
+      for (final mode in AgentAuthMode.values) mode.name,
+    ]);
+    var agentAuthMode = requestedAuthMode == null
+        ? next.agentAuthMode
+        : AgentAuthMode.values.firstWhere(
+            (mode) => mode.name == requestedAuthMode,
+          );
+    final selectedAgent = AcpAgentSpec.byId(agentId ?? next.agentId ?? '');
+    if (agentAuthMode == AgentAuthMode.subscription &&
+        selectedAgent?.supportsSubscription != true) {
+      if (requestedAuthMode == AgentAuthMode.subscription.name) {
+        throw const _ToolFailure(
+          'invalid_settings',
+          'agentAuthMode subscription requires agentId claude-code or codex.',
+        );
+      }
+      agentAuthMode = AgentAuthMode.provider;
+    }
 
     final smartAdd = s.oneOf('memorySmartAddMode', _memorySmartAddModes.keys);
     final writeScope = s.oneOf('memoryWriteScope', _memoryWriteScopes.keys);
@@ -755,6 +783,7 @@ class AssistantManagerTool {
       chatModelProvider: providerKey,
       chatModelId: modelId,
       agentId: agentId,
+      agentAuthMode: agentAuthMode,
       systemPrompt: s.string('systemPrompt'),
       messageTemplate: s.string('messageTemplate'),
       temperature: s.number('temperature', min: 0, max: 2),

@@ -32,6 +32,181 @@ AcpMcpTools source({
 );
 
 void main() {
+  group('subscription browser authorization guard', () {
+    const privateValue = 'private-authorization-test-value';
+    const authUrl = 'https://login.example/callback?state=$privateValue';
+    final inputs = <String, Map<String, dynamic>>{
+      'authorization query': {'action': 'open', 'url': authUrl},
+      'fragment token': {
+        'action': 'new_tab',
+        'url': 'https://login.example/#access_token=$privateValue',
+      },
+      'fragment route callback': {
+        'action': 'open',
+        'url': 'https://login.example/#/callback?CoDe=$privateValue',
+      },
+      'percent-encoded query key': {
+        'action': 'open',
+        'url': 'https://login.example/?%73TaTe=$privateValue',
+      },
+      'encoded fragment fields': {
+        'action': 'open',
+        'url': 'https://login.example/#state%3D$privateValue%26theme%3Ddark',
+      },
+      'Codex device endpoint without query': {
+        'action': 'open',
+        'url': 'https://auth.openai.com/codex/device',
+      },
+      'Claude endpoint without query': {
+        'action': 'open',
+        'url': 'https://claude.com/oauth/authorize',
+      },
+      'authorization link inside JavaScript': {
+        'action': 'eval_js',
+        'script': 'location.href = "$authUrl";',
+      },
+      'JSON-escaped authorization link': {
+        'action': 'eval_js',
+        'script':
+            r'location.href = "https:\/\/login.example\/?state='
+            '$privateValue";',
+      },
+      'nested authorization link': {
+        'action': 'eval_js',
+        'payload': {
+          'links': [
+            {'href': authUrl},
+          ],
+        },
+      },
+    };
+
+    for (final entry in inputs.entries) {
+      test('rejects ${entry.key} before executing the handler', () async {
+        var executions = 0;
+        final tools = source(
+          execute: (name, args, {required toolCallId}) async {
+            executions++;
+            return {'content': []};
+          },
+        );
+        final binding = await AcpMcpBinding.start(
+          tools,
+          redactor: AcpSecretRedactor([], protectAuthentication: true),
+        );
+        addTearDown(binding.close);
+        binding.beginTurn(tools);
+        binding.observe({
+          'toolCallId': 'auth-page',
+          'title': 'moru_browser_use',
+          'rawInput': entry.value,
+        });
+
+        final result = await binding.callTool('browser_use', entry.value);
+
+        expect(executions, 0);
+        expect(result['isError'], isTrue);
+        expect(result['content'], [
+          {
+            'type': 'text',
+            'text':
+                'Open Settings > Agents to sign in. '
+                'Authentication pages cannot be opened by browser_use.',
+          },
+        ]);
+        final response = jsonEncode(result);
+        expect(response, isNot(contains(privateValue)));
+        expect(response, isNot(contains('https://')));
+      });
+    }
+
+    test('rejects an authorization link before waiting for a card', () async {
+      final tools = source(
+        execute: (name, args, {required toolCallId}) async => {'content': []},
+      );
+      final binding = await AcpMcpBinding.start(
+        tools,
+        redactor: AcpSecretRedactor([], protectAuthentication: true),
+      );
+      addTearDown(binding.close);
+      binding.beginTurn(tools);
+
+      final result = await binding
+          .callTool('browser_use', {'action': 'open', 'url': authUrl})
+          .timeout(const Duration(seconds: 1));
+
+      expect(result['isError'], isTrue);
+    });
+
+    test('ordinary browser arguments reach the handler unchanged', () async {
+      const input = <String, dynamic>{
+        'action': 'open',
+        'url': 'https://docs.example/article?stateful=true&codec=av1#section-2',
+        'options': {
+          'links': ['https://auth.openai.com/codex/device-help'],
+        },
+      };
+      Map<String, dynamic>? received;
+      final tools = source(
+        execute: (name, args, {required toolCallId}) async {
+          received = args;
+          return {'content': []};
+        },
+      );
+      final binding = await AcpMcpBinding.start(
+        tools,
+        redactor: AcpSecretRedactor([], protectAuthentication: true),
+      );
+      addTearDown(binding.close);
+      binding.beginTurn(tools);
+      binding.observe({
+        'toolCallId': 'normal-page',
+        'title': 'moru_browser_use',
+        'rawInput': input,
+      });
+
+      final result = await binding.callTool('browser_use', input);
+
+      expect(identical(received, input), isTrue);
+      expect(result['isError'], isNot(true));
+    });
+
+    for (final protected in [false, true]) {
+      test(
+        protected
+            ? 'other tools keep original arguments in subscription mode'
+            : 'API key mode keeps browser execution arguments unchanged',
+        () async {
+          final input = <String, dynamic>{'action': 'open', 'url': authUrl};
+          final name = protected ? 'mini_apps' : 'browser_use';
+          Map<String, dynamic>? received;
+          final tools = source(
+            execute: (name, args, {required toolCallId}) async {
+              received = args;
+              return {'content': []};
+            },
+          );
+          final binding = await AcpMcpBinding.start(
+            tools,
+            redactor: AcpSecretRedactor([], protectAuthentication: protected),
+          );
+          addTearDown(binding.close);
+          binding.beginTurn(tools);
+          binding.observe({
+            'toolCallId': 'unchanged-arguments',
+            'title': 'moru_$name',
+            'rawInput': input,
+          });
+
+          final result = await binding.callTool(name, input);
+
+          expect(identical(received, input), isTrue);
+          expect(result['isError'], isNot(true));
+        },
+      );
+    }
+  });
+
   test(
     'concurrent MCP launches keep display filters scoped to their own call',
     () async {

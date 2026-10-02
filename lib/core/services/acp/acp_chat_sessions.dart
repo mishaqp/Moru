@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import '../../models/agent_auth_mode.dart';
 
 import '../api/stream/stream_chunk.dart';
 import '../workspace/task_plan.dart';
@@ -14,9 +15,10 @@ import 'acp_mcp_binding.dart';
 typedef AcpAgentStarter =
     Future<AcpAgent> Function(
       AcpAgentSpec spec,
-      AcpProviderInput provider, {
+      AcpProviderInput? provider, {
       required String cwd,
       required List<Mount> mounts,
+      required AgentAuthMode authMode,
     });
 
 /// What a chat turn needs from the agent.
@@ -24,7 +26,8 @@ class AcpChatTurn {
   const AcpChatTurn({
     required this.conversationId,
     required this.spec,
-    required this.provider,
+    this.provider,
+    this.authMode = AgentAuthMode.provider,
     required this.cwd,
     this.mounts = const [],
     required this.prompt,
@@ -41,7 +44,8 @@ class AcpChatTurn {
 
   final String conversationId;
   final AcpAgentSpec spec;
-  final AcpProviderInput provider;
+  final AcpProviderInput? provider;
+  final AgentAuthMode authMode;
   final String cwd;
   final List<Mount> mounts;
 
@@ -76,6 +80,7 @@ class AcpChatSessions extends ChangeNotifier {
   final AcpAgentStarter start;
   final Duration idleTimeout;
   final Map<String, _ChatAgent> _chats = {};
+  Future<void> _codexRouting = Future<void>.value();
 
   bool hasAgent(String conversationId) =>
       _chats[conversationId]?.agent.isAlive == true;
@@ -86,43 +91,47 @@ class AcpChatSessions extends ChangeNotifier {
   /// Reopen the existing context without sending or replaying any prompt.
   Future<AcpSession> ensureSession(AcpChatTurn turn) async {
     final chat = await _ensure(turn);
-    chat.idle?.cancel();
-    chat.idle = Timer(idleTimeout, () => close(turn.conversationId));
+    _armIdle(turn.conversationId, chat);
     return chat.session;
   }
 
   /// Streams the agent's answer to [turn] as chat chunks.
   Stream<StreamChunk> send(AcpChatTurn turn) async* {
-    final chat = await _ensure(turn);
-    chat.idle?.cancel();
-    if (turn.moruTools case final tools?) chat.mcp?.beginTurn(tools);
-    chat.agent.onPermission = (request) async {
-      if (chat.mcp?.ownsPermission(request) == true) {
-        return chat.mcp!.permissionChoice(request);
-      }
-      return turn.onPermission?.call(request);
-    };
-    var prompt = turn.prompt;
-    if (chat.needsHistory && turn.history.trim().isNotEmpty) {
-      prompt = [
-        {
-          'type': 'text',
-          'text':
-              'Earlier in this chat (for context, already answered):\n\n'
-              '${turn.history.trim()}\n\n---\n',
-        },
-        ...prompt,
-      ];
-    }
+    final activity = Object();
+    final chat = await _ensure(turn, activity: activity);
     try {
+      chat.idle?.cancel();
+      if (turn.moruTools case final tools?) chat.mcp?.beginTurn(tools);
+      chat.agent.onPermission = (request) async {
+        if (chat.mcp?.ownsPermission(request) == true) {
+          return chat.mcp!.permissionChoice(request);
+        }
+        return turn.onPermission?.call(request);
+      };
+      var prompt = turn.prompt;
+      if (chat.needsHistory && turn.history.trim().isNotEmpty) {
+        prompt = [
+          {
+            'type': 'text',
+            'text':
+                'Earlier in this chat (for context, already answered):\n\n'
+                '${turn.history.trim()}\n\n---\n',
+          },
+          ...prompt,
+        ];
+      }
       prompt = [
         ...prompt,
         ...await acpImagePromptBlocks(
           turn.userImagePaths,
-          supported: chat.agent.info.imagePrompts && turn.provider.imageInput,
+          supported:
+              chat.agent.info.imagePrompts &&
+              (turn.authMode == AgentAuthMode.subscription ||
+                  turn.provider?.imageInput == true),
           notSentMessage: turn.imageNotSentMessage,
         ),
       ];
+      if (!chat.activePrompts.contains(activity)) return;
       final mode = turn.savedModeId;
       if (mode != null &&
           mode != chat.session.currentModeId &&
@@ -135,13 +144,15 @@ class AcpChatSessions extends ChangeNotifier {
         );
         notifyListeners();
       }
+      if (!chat.activePrompts.contains(activity)) return;
       chat.needsHistory = false;
       yield* chat.agent.prompt(chat.sessionId, prompt, onPlan: turn.onPlan);
     } finally {
+      chat.activePrompts.remove(activity);
       chat.mcp?.endTurn();
       if (chat.agent.isAlive) {
-        chat.idle = Timer(idleTimeout, () => close(turn.conversationId));
-      } else {
+        _armIdle(turn.conversationId, chat);
+      } else if (identical(_chats[turn.conversationId], chat)) {
         if (chat.mcp case final mcp?) unawaited(mcp.close());
         _chats.remove(turn.conversationId);
         notifyListeners();
@@ -152,16 +163,27 @@ class AcpChatSessions extends ChangeNotifier {
   Future<void> cancel(String conversationId) async {
     final chat = _chats[conversationId];
     if (chat == null || !chat.agent.isAlive) return;
+    final active = chat.activePrompts.toList();
     chat.mcp?.endTurn();
     await chat.agent.cancel(chat.sessionId);
+    chat.activePrompts.removeAll(active);
+    _armIdle(conversationId, chat);
   }
 
-  void close(String conversationId) {
+  void close(String conversationId) => unawaited(_closeChat(conversationId));
+
+  Future<void> _closeChat(String conversationId) {
     final chat = _chats.remove(conversationId);
-    chat?.idle?.cancel();
-    chat?.agent.close();
-    if (chat?.mcp case final mcp?) unawaited(mcp.close());
-    if (chat != null) notifyListeners();
+    if (chat == null) return Future<void>.value();
+    chat.idle?.cancel();
+    chat.activePrompts.clear();
+    chat.agent.close();
+    final stopped = Future.wait<void>([
+      chat.agent.done,
+      if (chat.mcp case final mcp?) mcp.close(),
+    ]).then((_) {});
+    notifyListeners();
+    return stopped;
   }
 
   void closeAll() {
@@ -170,18 +192,69 @@ class AcpChatSessions extends ChangeNotifier {
     }
   }
 
-  Future<_ChatAgent> _ensure(AcpChatTurn turn) async {
+  void _armIdle(String conversationId, _ChatAgent chat) {
+    if (!identical(_chats[conversationId], chat) ||
+        !chat.agent.isAlive ||
+        chat.activePrompts.isNotEmpty) {
+      return;
+    }
+    chat.idle?.cancel();
+    chat.idle = Timer(idleTimeout, () {
+      if (identical(_chats[conversationId], chat)) close(conversationId);
+    });
+  }
+
+  Future<_ChatAgent> _ensure(AcpChatTurn turn, {Object? activity}) {
+    Future<_ChatAgent> open() async {
+      final chat = await _open(turn);
+      if (activity != null) chat.activePrompts.add(activity);
+      return chat;
+    }
+
+    if (turn.spec.id != AcpAgentSpec.codexId ||
+        turn.authMode != AgentAuthMode.subscription) {
+      return open();
+    }
+    final routed = _codexRouting.then((_) async {
+      final others = _chats.entries
+          .where(
+            (entry) =>
+                entry.key != turn.conversationId &&
+                entry.value.isCodexSubscription,
+          )
+          .toList();
+      if (others.any((entry) => entry.value.activePrompts.isNotEmpty)) {
+        throw const AcpError(
+          AcpError.internalError,
+          'Codex is active in another chat',
+          null,
+          AcpFailureKind.accountBusy,
+        );
+      }
+      for (final entry in others) {
+        await _closeChat(entry.key);
+      }
+      return open();
+    });
+    // Hold the routing slot through initialize/restore and prompt reservation.
+    // A later request can neither start a competitor nor steal a new turn.
+    _codexRouting = routed.then<void>((_) {}, onError: (Object _) {});
+    return routed;
+  }
+
+  Future<_ChatAgent> _open(AcpChatTurn turn) async {
     final key = _launchKey(turn);
     final existing = _chats[turn.conversationId];
     if (existing != null && existing.key == key && existing.agent.isAlive) {
       return existing;
     }
-    if (existing != null) close(turn.conversationId);
+    if (existing != null) await _closeChat(turn.conversationId);
     final agent = await start(
       turn.spec,
-      turn.provider,
+      turn.authMode == AgentAuthMode.subscription ? null : turn.provider,
       cwd: turn.cwd,
       mounts: turn.mounts,
+      authMode: turn.authMode,
     );
     AcpMcpBinding? mcp;
     try {
@@ -207,7 +280,11 @@ class AcpChatSessions extends ChangeNotifier {
                   mcpServers: mcpServers,
                 );
           needsHistory = false;
-        } on AcpError {
+        } on AcpError catch (error) {
+          if (error.code == AcpError.authRequired ||
+              error.failureKind == AcpFailureKind.authRequired) {
+            rethrow;
+          }
           // The agent lost it (updated, cleaned up): start over with the
           // chat's history instead.
         }
@@ -216,8 +293,14 @@ class AcpChatSessions extends ChangeNotifier {
         session = await agent.newSession(cwd: turn.cwd, mcpServers: mcpServers);
         await turn.onSession?.call(session.id);
       }
-      final chat = _ChatAgent(key, agent, session, mcp)
-        ..needsHistory = needsHistory;
+      final chat = _ChatAgent(
+        key,
+        agent,
+        session,
+        mcp,
+        specId: turn.spec.id,
+        authMode: turn.authMode,
+      )..needsHistory = needsHistory;
       agent.onToolCorrelation = (sessionId, correlation) {
         if (sessionId == chat.sessionId) {
           chat.mcp?.observeCorrelation(correlation);
@@ -265,11 +348,14 @@ class AcpChatSessions extends ChangeNotifier {
     turn.spec.id,
     turn.spec.command,
     ...turn.spec.arguments,
-    turn.provider.baseUrl,
-    turn.provider.model,
-    turn.provider.imageInput,
-    turn.provider.contextWindow,
-    turn.provider.apiKey.hashCode,
+    turn.authMode.name,
+    if (turn.authMode == AgentAuthMode.provider) ...[
+      turn.provider?.baseUrl,
+      turn.provider?.model,
+      turn.provider?.imageInput,
+      turn.provider?.contextWindow,
+      turn.provider?.apiKey.hashCode,
+    ],
     turn.cwd,
     turn.moruTools?.key,
     for (final mount in turn.mounts) '${mount.host}>${mount.guest}',
@@ -277,11 +363,23 @@ class AcpChatSessions extends ChangeNotifier {
 }
 
 class _ChatAgent {
-  _ChatAgent(this.key, this.agent, this.session, this.mcp);
+  _ChatAgent(
+    this.key,
+    this.agent,
+    this.session,
+    this.mcp, {
+    required this.specId,
+    required this.authMode,
+  });
 
   final String key;
   final AcpAgent agent;
   final AcpMcpBinding? mcp;
+  final String specId;
+  final AgentAuthMode authMode;
+  final Set<Object> activePrompts = {};
+  bool get isCodexSubscription =>
+      specId == AcpAgentSpec.codexId && authMode == AgentAuthMode.subscription;
   AcpSession session;
   String get sessionId => session.id;
   bool needsHistory = true;

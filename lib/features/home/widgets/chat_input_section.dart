@@ -19,6 +19,7 @@ import '../../workspace/widgets/environment/environment_status_chip.dart';
 import '../../workspace/workspace_navigation.dart';
 import '../../../theme/design_tokens.dart';
 import 'chat_input_bar.dart';
+import '../utils/model_display_helper.dart';
 import 'model_icon.dart';
 import 'composer_status_strip.dart';
 import 'acp_mode_chip.dart';
@@ -380,7 +381,7 @@ class ChatInputSection extends StatelessWidget {
     String? pk,
     String? mid,
   ) {
-    if (pk == null || mid == null) return;
+    if (pk == null || mid == null || isAcpModelSource(pk)) return;
 
     final supportsTools = isToolModel(pk, mid);
     if (!supportsTools && (a?.mcpServerIds.isNotEmpty ?? false)) {
@@ -412,7 +413,7 @@ class ChatInputSection extends StatelessWidget {
   /// shows for every tool-capable model rather than only when MCP is set up.
   bool _shouldShowToolsButton(String? pk, String? mid) {
     if (pk == null || mid == null) return false;
-    return isToolModel(pk, mid);
+    return isAcpModelSource(pk) || isToolModel(pk, mid);
   }
 
   bool _isToolsActive(BuildContext context, Assistant? a, bool workspaceBound) {

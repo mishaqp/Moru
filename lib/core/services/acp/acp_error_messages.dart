@@ -14,15 +14,17 @@ bool isAcpCommandMissing(Object error) {
 }
 
 AcpFailureKind? classifyAcpFailure(Object error) {
+  if (error is AcpError && error.code == AcpError.authRequired) {
+    return AcpFailureKind.authRequired;
+  }
   if (error is AcpError && error.failureKind != null) return error.failureKind;
   if (error is SocketException) return AcpFailureKind.network;
-  if (error is AcpError && error.code == 401) {
-    return AcpFailureKind.apiKey;
-  }
   if (error is AcpError) {
     final current = _classifyAcpFailureText(
       '${error.message}\n${error.data ?? ''}',
     );
+    if (current == AcpFailureKind.authRequired) return current;
+    if (error.code == 401) return AcpFailureKind.apiKey;
     if (current != null) return current;
     if (error.code != AcpError.internalError &&
         error.code != AcpError.disconnected) {
@@ -35,6 +37,12 @@ AcpFailureKind? classifyAcpFailure(Object error) {
 
 AcpFailureKind? _classifyAcpFailureText(String raw) {
   final text = raw.toLowerCase().replaceAll(RegExp(r'[_-]'), ' ');
+  if (RegExp(
+    r'\bauth(?:entication)? required\b|\bnot (?:logged|signed) in\b|\bnot authenticated\b|\bplease (?:log ?in|sign ?in)\b|\b(?:log ?in|sign ?in) (?:is )?required\b|\bcodex\b.{0,80}\b(?:no|missing)\b.{0,40}\bauth(?:entication)?\b|\bno auth(?:entication)?(?: credentials)? (?:configured|found|available)\b',
+    dotAll: true,
+  ).hasMatch(text)) {
+    return AcpFailureKind.authRequired;
+  }
   if (text.contains('invalid provider headers')) return AcpFailureKind.headers;
   if (RegExp(
         r'\b(?:temp(?:orary)? (?:directory|folder)|mkdtemp|claude code tmpdir)\b',
@@ -71,6 +79,8 @@ String? acpFailureMessage(AcpFailureKind? kind, AppLocalizations l10n) =>
       AcpFailureKind.network => l10n.agentsErrorNetwork,
       AcpFailureKind.headers => l10n.agentsErrorHeaders,
       AcpFailureKind.temporaryDirectory => l10n.agentsErrorTemporaryDirectory,
+      AcpFailureKind.authRequired => l10n.agentsErrorAuthRequired,
+      AcpFailureKind.accountBusy => l10n.agentsErrorAccountBusy,
       null => null,
     };
 

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../utils/app_directories.dart';
+import '../../../utils/authentication_uri.dart';
 
 /// A page in the bookmarks or the history.
 @immutable
@@ -130,7 +131,12 @@ class BrowserLibrary {
 
   /// Notes a visit to [url]: it moves to the top of the history.
   Future<void> recordVisit(String url, String? title) async {
-    if (!_web(url)) return;
+    final uri = Uri.tryParse(url);
+    if (uri == null ||
+        (!uri.isScheme('http') && !uri.isScheme('https')) ||
+        isAuthenticationUri(uri)) {
+      return;
+    }
     await load();
     final now = _clock();
     final cutoff = now.subtract(const Duration(days: historyDays));

@@ -451,7 +451,10 @@ class AcpAgent {
           AcpPermissionRequest(
             sessionId: sessionId,
             toolCallId: toolCall['toolCallId'] is String
-                ? AcpTurnTranslator.cardId(toolCall['toolCallId'] as String)
+                ? AcpTurnTranslator.cardId(
+                    toolCall['toolCallId'] as String,
+                    redactor: redactor,
+                  )
                 : '',
             title: (toolCall['title'] ?? '').toString(),
             kind: (toolCall['kind'] ?? 'other').toString(),

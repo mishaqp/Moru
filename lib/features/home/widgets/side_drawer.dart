@@ -811,7 +811,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     );
     final provKey = settings.titleModelProvider ?? chatModel.providerKey;
     final mdlId = settings.titleModelId ?? chatModel.modelId;
-    if (provKey == null || mdlId == null) return;
+    if (provKey == null || mdlId == null || isAcpModelSource(provKey)) return;
     final cfg = settings.getProviderConfig(provKey);
     final budget = settings.titleGenerationThinkingBudgetFor(
       assistant?.thinkingBudget,

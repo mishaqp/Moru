@@ -294,7 +294,7 @@ void main() {
     (
       AcpError.authRequired,
       'Invalid API key: frobnicator failure',
-      AcpFailureKind.apiKey,
+      AcpFailureKind.authRequired,
     ),
     (
       AcpError.invalidParams,

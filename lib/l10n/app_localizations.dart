@@ -22004,6 +22004,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Background command failed'**
   String get backgroundShellFailed;
+
+  /// No description provided for @agentsAuthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with subscription'**
+  String get agentsAuthTitle;
+
+  /// No description provided for @agentsAuthMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication'**
+  String get agentsAuthMode;
+
+  /// No description provided for @agentsAuthProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'API provider'**
+  String get agentsAuthProvider;
+
+  /// No description provided for @agentsAuthSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription'**
+  String get agentsAuthSubscription;
+
+  /// No description provided for @agentsAuthProviderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this assistant’s API provider settings.'**
+  String get agentsAuthProviderHint;
+
+  /// No description provided for @agentsAuthSubscriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the agent’s own Claude or ChatGPT sign-in. API provider keys and model overrides are not used.'**
+  String get agentsAuthSubscriptionHint;
+
+  /// No description provided for @agentsAuthSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get agentsAuthSignIn;
+
+  /// No description provided for @agentsAuthCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check sign-in'**
+  String get agentsAuthCheck;
+
+  /// No description provided for @agentsAuthSignOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get agentsAuthSignOut;
+
+  /// No description provided for @agentsAuthSignedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in'**
+  String get agentsAuthSignedIn;
+
+  /// No description provided for @agentsAuthSignedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in required'**
+  String get agentsAuthSignedOut;
+
+  /// No description provided for @agentsAuthUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in not checked'**
+  String get agentsAuthUnknown;
+
+  /// No description provided for @agentsAuthWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete sign-in in your browser.'**
+  String get agentsAuthWaiting;
+
+  /// No description provided for @agentsAuthOpenBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open sign-in page'**
+  String get agentsAuthOpenBrowser;
+
+  /// No description provided for @agentsAuthDeviceCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Device code'**
+  String get agentsAuthDeviceCode;
+
+  /// No description provided for @agentsAuthCodexHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable device code login in ChatGPT Settings → Security before signing in.'**
+  String get agentsAuthCodexHint;
+
+  /// No description provided for @agentsAuthCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorization code'**
+  String get agentsAuthCode;
+
+  /// No description provided for @agentsAuthSubmitCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit code'**
+  String get agentsAuthSubmitCode;
+
+  /// No description provided for @agentsAuthCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If your browser asks you to copy a code, paste the complete code here, including the part after #.'**
+  String get agentsAuthCodeHint;
+
+  /// No description provided for @agentsAuthCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel sign-in'**
+  String get agentsAuthCancel;
+
+  /// No description provided for @agentsAuthFailureEnvironment.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up the Linux environment first.'**
+  String get agentsAuthFailureEnvironment;
+
+  /// No description provided for @agentsAuthFailureStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in could not be completed. Update the agent and try again.'**
+  String get agentsAuthFailureStart;
+
+  /// No description provided for @agentsAuthFailureNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in failed because of a network connection. Try again.'**
+  String get agentsAuthFailureNetwork;
+
+  /// No description provided for @agentsAuthFailureTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in timed out. Try again.'**
+  String get agentsAuthFailureTimeout;
+
+  /// No description provided for @agentsAuthBrowserFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The sign-in page could not be opened. You can copy the link below.'**
+  String get agentsAuthBrowserFailed;
+
+  /// No description provided for @agentsErrorAuthRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'The agent needs authentication. Sign in under Settings → Agents, or check the selected provider’s API key.'**
+  String get agentsErrorAuthRequired;
+
+  /// No description provided for @agentsErrorAccountBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Codex is already active in another chat. Finish or stop that reply before continuing.'**
+  String get agentsErrorAccountBusy;
 }
 
 class _AppLocalizationsDelegate

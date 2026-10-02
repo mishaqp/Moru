@@ -370,8 +370,14 @@ void main() {
     (tester) async {
       final channel = _ModeChannel();
       final sessions = AcpChatSessions(
-        start: (spec, provider, {required cwd, required mounts}) =>
-            AcpAgent.start(channel, clientVersion: '1'),
+        start:
+            (
+              spec,
+              provider, {
+              required cwd,
+              required mounts,
+              required authMode,
+            }) => AcpAgent.start(channel, clientVersion: '1'),
       );
       addTearDown(sessions.dispose);
       final conversation = (await tester.runAsync(

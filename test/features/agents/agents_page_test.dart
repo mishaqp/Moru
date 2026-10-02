@@ -8,15 +8,23 @@ import 'package:provider/provider.dart';
 
 import 'package:Kelivo/core/providers/environment_provider.dart';
 import 'package:Kelivo/core/models/assistant.dart';
+import 'package:Kelivo/core/models/agent_auth_mode.dart';
+import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_manager.dart';
 import 'package:Kelivo/core/services/acp/acp_agent.dart';
+import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
+import 'package:Kelivo/core/services/acp/acp_agent_auth.dart';
+import 'package:Kelivo/core/services/chat/chat_service.dart';
+import 'package:Kelivo/core/services/notification_service.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/features/agents/pages/agent_detail_page.dart';
 import 'package:Kelivo/features/agents/pages/agents_page.dart';
+import 'package:Kelivo/features/agents/agent_chat_start.dart';
 import 'package:Kelivo/features/agents/widgets/assistant_agent_card.dart';
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
+import 'package:Kelivo/shared/widgets/ios_tile_button.dart';
 
 import '../../support/business_test_harness.dart';
 import '../../support/fake_workspace_runtime.dart';
@@ -71,6 +79,68 @@ class _CheckedManager extends AcpAgentManager {
       );
 }
 
+class _InstalledSubscriptionManager extends AcpAgentManager {
+  _InstalledSubscriptionManager()
+    : super(
+        preferences: createBusinessTestPreferences(),
+        runtimeProvider: WorkspaceRuntimeProvider()..register(_ProbeRuntime()),
+        environment: EnvironmentProvider(
+          preferences: createBusinessTestPreferences(),
+        ),
+      );
+
+  @override
+  AcpInstallState state(String id) =>
+      id == AcpAgentSpec.claudeCodeId || id == AcpAgentSpec.codexId
+      ? AcpInstallState.installed
+      : super.state(id);
+
+  @override
+  AcpNodeIssue? nodeIssueFor(AcpAgentSpec spec) => null;
+
+  AgentAuthMode? checkedMode;
+  AcpProviderInput? checkedProvider;
+  AcpCheckResult? _checkResult;
+
+  @override
+  AcpCheckResult? lastCheck(String id) => _checkResult;
+
+  @override
+  Future<AcpCheckResult> check(
+    AcpAgentSpec spec,
+    AcpProviderInput? provider, {
+    AgentAuthMode authMode = AgentAuthMode.provider,
+  }) async {
+    checkedMode = authMode;
+    checkedProvider = provider;
+    final result = AcpCheckResult(
+      info: AcpAgentInfo(name: spec.name, version: 'test'),
+      authStatus: AcpAuthStatus.signedIn,
+    );
+    _checkResult = result;
+    notifyListeners();
+    return result;
+  }
+}
+
+class _AgentChatService extends ChatService {
+  final List<Conversation> created = [];
+
+  @override
+  Future<Conversation> createConversation({
+    String? title,
+    String? assistantId,
+    bool activate = true,
+  }) async {
+    final conversation = Conversation(
+      title: title ?? '',
+      assistantId: assistantId,
+    );
+    created.add(conversation);
+    return conversation;
+  }
+}
+
 void main() {
   late AcpAgentManager manager;
   late SettingsProvider settings;
@@ -79,12 +149,17 @@ void main() {
     WidgetTester tester,
     Widget page, {
     Locale locale = const Locale('en'),
+    AssistantProvider? assistants,
+    ChatService? chats,
   }) async {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
           ChangeNotifierProvider.value(value: manager),
           ChangeNotifierProvider.value(value: settings),
+          if (assistants != null)
+            ChangeNotifierProvider.value(value: assistants),
+          if (chats != null) ChangeNotifierProvider.value(value: chats),
         ],
         child: MaterialApp(
           locale: locale,
@@ -108,6 +183,110 @@ void main() {
     settings = SettingsProvider(createBusinessTestPreferences());
     await settings.loaded;
   });
+
+  testWidgets('subscription settings are explicit and opening them creates no '
+      'assistant', (tester) async {
+    manager.dispose();
+    late AssistantProvider assistants;
+    await tester.runAsync(() async {
+      manager = _InstalledSubscriptionManager();
+      assistants = AssistantProvider(
+        preferences: createBusinessTestPreferences(),
+      );
+      await assistants.loaded;
+      await manager.loaded;
+    });
+    addTearDown(assistants.dispose);
+
+    await pumpPage(
+      tester,
+      const AgentDetailPage(agentId: AcpAgentSpec.codexId),
+      assistants: assistants,
+    );
+
+    expect(find.text('Authentication'), findsOneWidget);
+    expect(find.text('Sign in with subscription'), findsOneWidget);
+    expect(find.text('API provider'), findsOneWidget);
+    expect(assistants.assistants, isEmpty);
+  });
+
+  for (final agentId in [AcpAgentSpec.claudeCodeId, AcpAgentSpec.codexId]) {
+    testWidgets('$agentId subscription enables chat and check without an API '
+        'provider', (tester) async {
+      manager.dispose();
+      late AssistantProvider assistants;
+      final chats = _AgentChatService();
+      addTearDown(chats.dispose);
+      await tester.runAsync(() async {
+        manager = _InstalledSubscriptionManager();
+        assistants = AssistantProvider(
+          preferences: createBusinessTestPreferences(),
+        );
+        await assistants.loaded;
+        await manager.loaded;
+      });
+      addTearDown(assistants.dispose);
+      await pumpPage(
+        tester,
+        AgentDetailPage(agentId: agentId),
+        assistants: assistants,
+        chats: chats,
+      );
+
+      await tester.runAsync(() => tester.tap(find.text('Authentication')));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Subscription').last);
+        await Future.doWhile(() async {
+          await Future<void>.delayed(Duration.zero);
+          return assistants.assistants.isEmpty ||
+              assistants.assistants.single.toJson()['agentAuthMode'] !=
+                  'subscription';
+        }).timeout(const Duration(seconds: 5));
+      });
+      await tester.pumpAndSettle();
+
+      expect(assistants.assistants.single.agentId, agentId);
+      expect(
+        tester
+            .widget<IosTileButton>(find.byKey(AgentDetailPage.chatKey))
+            .enabled,
+        isTrue,
+      );
+      expect(
+        tester
+            .widget<IosTileButton>(find.byKey(AgentDetailPage.checkKey))
+            .enabled,
+        isTrue,
+      );
+      expect(find.textContaining('Choose a default chat model'), findsNothing);
+
+      await tester.ensureVisible(find.byKey(AgentDetailPage.checkKey));
+      await tester.tap(find.byKey(AgentDetailPage.checkKey));
+      await tester.pumpAndSettle();
+      final checkedManager = manager as _InstalledSubscriptionManager;
+      expect(checkedManager.checkedMode, AgentAuthMode.subscription);
+      expect(checkedManager.checkedProvider, isNull);
+      expect(find.text('Signed in'), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(AgentDetailPage.chatKey));
+      await tester.runAsync(() async {
+        final opened = NotificationService.conversationTaps.first;
+        await tester.tap(find.byKey(AgentDetailPage.chatKey));
+        expect(
+          await opened.timeout(const Duration(seconds: 5)),
+          chats.created.single.id,
+        );
+      });
+      await tester.pumpAndSettle();
+      expect(chats.created.single.assistantId, assistants.assistants.single.id);
+      expect(assistants.currentAssistantId, assistants.assistants.single.id);
+      expect(
+        assistants.assistants.single.agentAuthMode,
+        AgentAuthMode.subscription,
+      );
+    });
+  }
 
   tearDown(() {
     settings.dispose();
@@ -422,5 +601,152 @@ void main() {
 
     await choose('None — the model answers', null);
     expect(assistants.getById(id)!.agentId, isNull);
+  });
+
+  test(
+    'agent assistant reuse preserves an explicit mode until selected again',
+    () async {
+      final assistants = AssistantProvider(
+        preferences: createBusinessTestPreferences(),
+      );
+      addTearDown(assistants.dispose);
+      final spec = manager.agent(AcpAgentSpec.codexId)!;
+      final subscribed = await assistantForAgent(
+        assistants,
+        spec,
+        authMode: AgentAuthMode.subscription,
+      );
+      await assistants.updateAssistant(
+        subscribed.copyWith(
+          chatModelProvider: 'saved-provider',
+          chatModelId: 'saved-model',
+        ),
+      );
+
+      final reused = await assistantForAgent(assistants, spec);
+      expect(reused.id, subscribed.id);
+      expect(reused.agentAuthMode, AgentAuthMode.subscription);
+
+      final restored = await assistantForAgent(
+        assistants,
+        spec,
+        authMode: AgentAuthMode.provider,
+      );
+      expect(restored.id, subscribed.id);
+      expect(restored.chatModelProvider, 'saved-provider');
+      expect(restored.chatModelId, 'saved-model');
+      expect(restored.agentAuthMode, AgentAuthMode.provider);
+      expect(assistants.assistants, hasLength(1));
+    },
+  );
+
+  testWidgets('assistant subscription mode is reversible and preserves API '
+      'settings', (tester) async {
+    late AssistantProvider assistants;
+    late String id;
+    await tester.runAsync(() async {
+      assistants = AssistantProvider(
+        preferences: createBusinessTestPreferences(),
+      );
+      await assistants.loaded;
+      id = await assistants.addAssistant(name: 'Coder');
+      await assistants.updateAssistant(
+        assistants
+            .getById(id)!
+            .copyWith(
+              agentId: AcpAgentSpec.codexId,
+              chatModelProvider: 'saved-provider',
+              chatModelId: 'saved-model',
+            ),
+      );
+      await configureProvider('saved-provider', false);
+    });
+    addTearDown(assistants.dispose);
+    await pumpPage(
+      tester,
+      Scaffold(
+        body: Consumer<AssistantProvider>(
+          builder: (_, provider, _) =>
+              AssistantAgentCard(assistant: provider.getById(id)!),
+        ),
+      ),
+      assistants: assistants,
+    );
+    expect(find.textContaining('Responses API'), findsOneWidget);
+
+    Future<void> chooseMode(String label, AgentAuthMode mode) async {
+      await tester.runAsync(
+        () => tester.tap(find.byKey(AssistantAgentCard.authModeKey)),
+      );
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        await tester.tap(find.text(label).last);
+        await Future.doWhile(() async {
+          await Future<void>.delayed(Duration.zero);
+          return assistants.getById(id)!.agentAuthMode != mode;
+        }).timeout(const Duration(seconds: 5));
+      });
+      await tester.pumpAndSettle();
+    }
+
+    await chooseMode('Subscription', AgentAuthMode.subscription);
+    expect(find.textContaining('Responses API'), findsNothing);
+    expect(assistants.getById(id)!.chatModelProvider, 'saved-provider');
+    expect(assistants.getById(id)!.chatModelId, 'saved-model');
+    expect(settings.getProviderConfig('saved-provider').apiKey, 'test-key');
+
+    await chooseMode('API provider', AgentAuthMode.provider);
+    expect(find.textContaining('Responses API'), findsOneWidget);
+    expect(assistants.getById(id)!.chatModelProvider, 'saved-provider');
+    expect(assistants.getById(id)!.chatModelId, 'saved-model');
+  });
+
+  testWidgets('selecting an agent without subscription uses API mode', (
+    tester,
+  ) async {
+    late AssistantProvider assistants;
+    late String id;
+    await tester.runAsync(() async {
+      assistants = AssistantProvider(
+        preferences: createBusinessTestPreferences(),
+      );
+      await assistants.loaded;
+      id = await assistants.addAssistant(name: 'Coder');
+      await assistants.updateAssistant(
+        assistants
+            .getById(id)!
+            .copyWith(
+              agentId: AcpAgentSpec.codexId,
+              agentAuthMode: AgentAuthMode.subscription,
+            ),
+      );
+      await manager.loaded;
+    });
+    addTearDown(assistants.dispose);
+    await pumpPage(
+      tester,
+      Scaffold(
+        body: Consumer<AssistantProvider>(
+          builder: (_, provider, _) =>
+              AssistantAgentCard(assistant: provider.getById(id)!),
+        ),
+      ),
+      assistants: assistants,
+    );
+
+    await tester.runAsync(
+      () => tester.tap(find.byKey(AssistantAgentCard.rowKey)),
+    );
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await tester.tap(find.text('OpenCode').last);
+      await Future.doWhile(() async {
+        await Future<void>.delayed(Duration.zero);
+        return assistants.getById(id)!.agentId != AcpAgentSpec.openCodeId;
+      }).timeout(const Duration(seconds: 5));
+    });
+    await tester.pumpAndSettle();
+    expect(assistants.getById(id)!.agentAuthMode, AgentAuthMode.provider);
+    expect(find.byKey(AssistantAgentCard.authModeKey), findsNothing);
   });
 }

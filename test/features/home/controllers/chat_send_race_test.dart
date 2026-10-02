@@ -15,6 +15,7 @@ import 'package:Kelivo/core/services/workspace/task_plan.dart';
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/database/app_database.dart';
 import 'package:Kelivo/core/database/generation_run.dart';
+import 'package:Kelivo/core/models/agent_auth_mode.dart';
 import 'package:Kelivo/core/models/chat_input_data.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/conversation.dart';
@@ -1986,6 +1987,129 @@ void main() {
     });
     expect(tester.takeException(), isNull);
   });
+
+  for (final action in ['send', 'regenerate']) {
+    testWidgets(
+      'subscription $action keeps agent metadata over a model override',
+      (tester) async {
+        final controller = await pumpHarness(tester);
+        await tester.runAsync(() async {
+          final target = await openConversation(controller);
+          await service.setConversationModel(
+            target.id,
+            providerKey: 'SiliconFlow',
+            modelId: 'pinned-model',
+          );
+          await settings.resetCurrentModel();
+          await assistantProvider.updateAssistant(
+            assistantProvider.currentAssistant!.copyWith(
+              agentId: 'codex',
+              agentAuthMode: AgentAuthMode.subscription,
+              chatModelProvider: 'SiliconFlow',
+              chatModelId: 'saved-api-model',
+            ),
+          );
+          final assistant = assistantProvider.currentAssistant!;
+          final savedAssistant = assistant.toJson();
+          Future<void>? stopped;
+          void stopBeforeNativeLaunch(String messageId) {
+            stopped = ChatActions.cancelActiveGenerationFor(
+              target.id,
+              expectedMessageId: messageId,
+            );
+          }
+
+          late ChatActionResult result;
+          if (action == 'send') {
+            result = await controller.debugViewModel.sendScheduledMessage(
+              input: ChatInputData(text: 'Subscription question'),
+              conversation: service.getConversation(target.id)!,
+              assistant: assistant,
+              modelOverride: (
+                providerKey: 'SiliconFlow',
+                modelId: 'override-model',
+              ),
+              onGenerationStarted: stopBeforeNativeLaunch,
+            );
+          } else {
+            final question = await service.addMessage(
+              conversationId: target.id,
+              role: 'user',
+              content: 'Previous question',
+            );
+            await service.addMessage(
+              conversationId: target.id,
+              role: 'assistant',
+              content: 'Previous answer',
+            );
+            result = await controller.debugViewModel.regenerateScheduledMessage(
+              message: question,
+              conversation: service.getConversation(target.id)!,
+              assistant: assistant,
+              modelOverride: (
+                providerKey: 'SiliconFlow',
+                modelId: 'override-model',
+              ),
+              onGenerationStarted: stopBeforeNativeLaunch,
+            );
+          }
+          expect(result.success, isTrue, reason: result.errorMessage);
+          expect(stopped, isNotNull);
+          await stopped;
+          final persisted = (await service.loadMessages(
+            target.id,
+          )).firstWhere((message) => message.id == result.assistantMessage!.id);
+          expect(persisted.providerId, 'acp:codex');
+          expect(persisted.modelId, 'codex');
+          expect(apiRequests, isEmpty);
+          expect(
+            service.getConversation(target.id)!.chatModelId,
+            'pinned-model',
+          );
+          expect(assistantProvider.currentAssistant!.toJson(), savedAssistant);
+          expect(settings.currentModelProvider, isNull);
+          expect(settings.currentModelId, isNull);
+        });
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'subscription suggestions honor an explicitly configured API model',
+    (tester) async {
+      final controller = await pumpHarness(tester, withSuggestions: true);
+      await tester.runAsync(() async {
+        final target = await openConversation(controller);
+        await assistantProvider.updateAssistant(
+          assistantProvider.currentAssistant!.copyWith(
+            agentId: 'codex',
+            agentAuthMode: AgentAuthMode.subscription,
+          ),
+        );
+        await settings.setSuggestionModel('SiliconFlow', 'suggestion-model');
+        await service.addMessage(
+          conversationId: target.id,
+          role: 'user',
+          content: 'Question',
+        );
+        await service.addMessage(
+          conversationId: target.id,
+          role: 'assistant',
+          content: 'Answer',
+        );
+        controller.debugViewModel.debugChatActions.onMaybeGenerateSuggestions!(
+          target.id,
+        );
+        await waitFor(
+          () => service.getConversation(target.id)!.chatSuggestions.isNotEmpty,
+          'configured subscription suggestions',
+        );
+        expect(suggestionRequests.single['model'], 'suggestion-model');
+      });
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'scheduled rerun preserves later messages and the foreground chat',
