@@ -15,8 +15,10 @@ const String acpConfigDir = '/root/.config/moru-agents';
 // Claude's Bash temp helper requires base/claude-UID <= 44 bytes. A UUID
 // encoded in 22 URL-safe characters keeps the normal root launch below that
 // limit and avoids its fallback to the shared /tmp/claude-0.
-const String acpClaudeTemporaryRoot = '/tmp/mc';
-const String acpCodexTemporaryRoot = '/tmp/md';
+// The roots stay outside every chat mount: a workspace chat binds its own
+// directory over /tmp, which the preparation run does not see.
+const String acpClaudeTemporaryRoot = '/var/mc';
+const String acpCodexTemporaryRoot = '/var/md';
 
 /// The kind of model API an agent speaks.
 enum AcpModelApi {

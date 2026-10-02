@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/models/agent_auth_mode.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
+import 'package:Kelivo/core/services/workspace/workspace_paths.dart';
 
 void main() {
   const deepseek = AcpProviderInput(
@@ -278,6 +279,26 @@ void main() {
         expect(launch.unsetEnvironmentScript, isEmpty, reason: spec.id);
       }
     });
+  });
+
+  test('agent temporary roots stay outside every chat mount', () {
+    // Preparation runs without the chat's mounts and the agent with them: a
+    // root below a mounted guest path would exist for one and not the other.
+    for (final root in [acpClaudeTemporaryRoot, acpCodexTemporaryRoot]) {
+      for (final guest in [
+        WorkspacePaths.guestWorkspace,
+        WorkspacePaths.guestChat,
+        WorkspacePaths.guestSkills,
+        WorkspacePaths.guestTmp,
+        WorkspacePaths.guestDownloads,
+      ]) {
+        expect(
+          root == guest || root.startsWith('$guest/'),
+          isFalse,
+          reason: '$root is inside the chat mount $guest',
+        );
+      }
+    }
   });
 
   test(

@@ -73,10 +73,23 @@ login: в деталях агента создаётся/используетс�
   и прежнего provider launch. Подписка не получает ключи, endpoint/model
   overrides и cloud-provider флаги из Moru или guest login profile.
 - Каждый Claude login/status/logout/ACP сохраняет отдельные
-  `CLAUDE_CODE_TMPDIR=/tmp/mc/<id>` и `CLAUDE_CODE_CONTAINER_ID`.
-  Root Codex по-прежнему изолирует daemon leaf через `/tmp/md/<id>`.
+  `CLAUDE_CODE_TMPDIR=/var/mc/<id>` и `CLAUDE_CODE_CONTAINER_ID`.
+  Root Codex по-прежнему изолирует daemon leaf через `/var/md/<id>`.
   Подготовка и запуск используют один проверенный режим runtime, leases
   завершаются после native stop. Общие владельцы и права workspace не меняются.
+
+В PR включено обновление базы `8fd6815d` после проверки на телефоне: корни
+служебных папок вынесены из `/tmp`, которую чат с workspace перекрывает своим
+mount. Сохраняются проверка длины Claude path и отдельные случайные ID; новый
+тест базы проверяет, что оба корня лежат вне всех chat mounts.
+
+Проверены также остальные артефакты подготовки: native auth homes, provider
+configs, `moru-mcp.cjs` и `fs-compat.cjs` лежат под
+`/root/.config/moru-agents`, per-run scratch — под `/var/mc` или `/var/md`.
+Они находятся вне `/workspace`, `/chat`, `/skills`, `/tmp`, `/downloads`,
+которые чат подключает отдельно. Фиксированный `/tmp/codex-daemon-0` служит
+только точкой bind внутри реального root-запуска после подключения mounts;
+подготовка создаёт его source под `/var/md`, а не в `/tmp`.
 
 Login/logout останавливают процессы соответствующей подписки и блокируют
 новые запуски до завершения операции. Отмена, dispose и удаление агента
@@ -156,15 +169,16 @@ credential-change startup race, единственный Codex-процесс и
 Flutter-чеклиста и физический Android в текущем cloud-сеансе не проверялись.
 APK собирает CI; host-тесты не подменяют эту проверку.
 
-Итоговый `flutter test --concurrency=4` под UID 1000: **7232 passed**, exit 0;
+Итоговый `flutter test --concurrency=4` после слияния базы `8fd6815d`
+под UID 1000: **7233 passed**, 0 failed, 0 skipped, exit 0;
 полный fatal-info analyzer, format/l10n и три Python-gate также успешны.
-ACP/model/agent UI: **498 passed** с UID 1000/`umask 000` и **498 passed**
-с UID 0 в user namespace/`umask 027`; auth/temp-dir с `umask 077`: **104 passed**.
-После финальной правки интерфейса его **26 тестов**, а history/console
-**64 теста** также прошли с UID 0/`umask 077`. Host UID 1000 отображён в UID 0
-через `unshare --user --map-root-user`; это не проба физического Android root.
-Native исследование выполнялось под обычным UID 1000. SHA-256 всех 54
-изменённых Dart-файлов совпал до и после полного итогового прогона.
-
-Дополнительно с UID 0/`umask 077` прошли **89 тестов** AssistantManagerTool,
-model source, вспомогательных title, capability settings, send и chat bridge.
+ACP/model/agent UI: **506 passed** с UID 1000/`umask 000` и **506 passed**
+с UID 0 в user namespace/`umask 027`. С UID 0/`umask 077` прошли
+**659 тестов**: весь ACP/agent UI и все изменённые browser/assistant integration
+тесты, включая auth/temp-dir, history/console, AssistantManagerTool, model
+source, title, capability settings, send и chat bridge.
+Host UID 1000 отображён в UID 0 через `unshare --user --map-root-user`;
+это не проба физического Android root. Native исследование выполнялось под
+обычным UID 1000. SHA-256 всех 54 изменённых Dart-файлов совпал до и после
+полного итогового прогона. Независимое ревью включения хотфикса базы
+не обнаружило замечаний.

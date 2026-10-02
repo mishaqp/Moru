@@ -191,14 +191,22 @@ package name does not require building other platforms.
   Guest launch preparation trusts only `/workspace` in
   system Git config to handle the Android UID/root-chroot ownership mismatch.
   Claude needs Node >=22. Each launch owns a fresh mode-0700
-  `/tmp/mc/<22-character random id>` via `CLAUDE_CODE_TMPDIR`, with its own
+  `/var/mc/<22-character random id>` via `CLAUDE_CODE_TMPDIR`, with its own
   `CLAUDE_CODE_CONTAINER_ID=moru-<id>`: the native root/container exception
   handles PRoot's real Android file UID. Keep base + `/claude-UID` <=44 bytes
-  so Claude's Bash helper never falls back to shared `/tmp/claude-0`.
+  so Claude's Bash helper never falls back to shared `/tmp/claude-0`. The
+  roots stay outside every chat mount: a workspace chat binds its own `/tmp`,
+  which the preparation run does not see.
+  All artifacts written during preparation and used by a subsequent agent
+  or native-auth run (configs, auth homes, MCP/FS helpers and scratch dirs)
+  must stay outside `/workspace`, `/chat`, `/skills`, `/tmp` and `/downloads`.
+  Preparation runs without the chat mounts. Codex's fixed daemon mountpoint
+  is created only inside the actual launch namespace after mounts are applied;
+  its prepared source remains under `/var/md`.
   `AcpLaunchDirectories` leases cover preparation, close and failed startup;
   recovery uses boot/PID/start identities and inherited SDK markers, keeps
   live or uninspectable runs, and anchors cleanup to a managed directory fd.
-  Root Codex binds its fresh `/tmp/md/<id>` onto its fixed daemon leaf only
+  Root Codex binds its fresh `/var/md/<id>` onto its fixed daemon leaf only
   inside the run's private mount namespace; preparation and launch must use
   the same runtime mode. Never chown existing daemon dirs, shim getuid globally
   or weaken workspace permissions. See `docs/audits/*ownership.md` for scope
