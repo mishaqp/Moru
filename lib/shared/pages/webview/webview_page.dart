@@ -229,7 +229,10 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
     if (!mounted || _minimizing || active == null) return;
     if (identical(active, _controller)) {
       // The count or the active tab's mode changed.
-      setState(() {});
+      final url = _activeTabInfo?.url;
+      setState(() {
+        if (url != null) _currentUrl = url;
+      });
       return;
     }
     _navGeneration++;
@@ -725,7 +728,7 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
   Future<void> _restoreAdoptedState() async {
     final generation = _navGeneration;
     final url = await _controller.currentUrl();
-    if (!mounted || generation != _navGeneration) return;
+    if (!mounted || generation != _navGeneration || url == null) return;
     _shownUrl = url;
     setState(() => _currentUrl = url);
     await _refreshCanGoStates(generation);
@@ -813,10 +816,50 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
   /// Closes the browser page. Cancels any Ask-AI request this page's own
   /// composer started (a no-op when there is none) so nothing keeps
   /// running invisibly after the UI is gone, then pops the route. Used by
-  /// both the manual close button and `BrowserAgentSession`'s `onClose`
+  /// both the overflow close action and `BrowserAgentSession`'s `onClose`
   /// handler (`browser_use: close`) -- [reason] only distinguishes them for
   /// internal bookkeeping/tests, the behavior is otherwise identical.
   Future<void> _closeAgentSession(WebViewCloseReason reason) async {
+    if (reason == WebViewCloseReason.manual) {
+      final approvals = context.read<ToolApprovalService>();
+      final pendingApproval = _pendingBrowserApproval(approvals);
+      final busy =
+          (_askAiController?.isBusy ?? false) ||
+          pendingApproval != null ||
+          BrowserAgentSession.instance.currentActivity.value?.outcome ==
+              BrowserActivityOutcome.running;
+      if (busy) {
+        final l10n = AppLocalizations.of(context)!;
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(l10n.browserCloseWhileAiTitle),
+            content: Text(l10n.browserCloseWhileAiMessage),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(l10n.homePageCancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(l10n.browserCloseBrowser),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true || !mounted) return;
+        if (pendingApproval != null &&
+            approvals.pendingRequests.any(
+              (request) => request.approvalId == pendingApproval.approvalId,
+            )) {
+          approvals.deny(
+            pendingApproval.toolCallId,
+            conversationId: pendingApproval.conversationId,
+          );
+        }
+        BrowserAgentSession.instance.requestStop();
+      }
+    }
     lastCloseReason = reason;
     _askAiController?.cancelForClose();
     if (!mounted) return;
@@ -1039,36 +1082,46 @@ class _WebViewPageState extends State<WebViewPage> with RouteAware {
                 ),
               ),
             if (!contentMode && widget.agentSession && _askAiController != null)
-              WebViewBottomPanel(
-                controller: _askAiController!,
-                canGoBack: _canGoBack,
-                canGoForward: _canGoForward,
-                onBack: () => _controller.goBack(),
-                onForward: () => _controller.goForward(),
-                onReload: () => _controller.reload(),
-                onShowActivityLog: () => showActivityLogSheet(context),
-                currentUrl: _currentUrl,
-                approvalCard: browserApproval == null
-                    ? null
-                    : BrowserApprovalCard(
-                        request: browserApproval,
-                        siteUrl: _currentUrl,
-                        ru: ru,
-                        onApprove: () =>
-                            context.read<ToolApprovalService>().approve(
-                              browserApproval.toolCallId,
-                              conversationId: browserApproval.conversationId,
-                            ),
-                        onDeny: () => context.read<ToolApprovalService>().deny(
-                          browserApproval.toolCallId,
-                          conversationId: browserApproval.conversationId,
+              ValueListenableBuilder<List<BrowserActivity>>(
+                valueListenable:
+                    BrowserAgentSession.instance.recentActivityNotifier,
+                builder: (context, _, __) => WebViewBottomPanel(
+                  controller: _askAiController!,
+                  showCompletedStatus: _resultOutcome == null,
+                  actionCount: BrowserAgentSession.instance
+                      .activityCountForPage(_currentUrl),
+                  canGoBack: _canGoBack,
+                  canGoForward: _canGoForward,
+                  onBack: () => _controller.goBack(),
+                  onForward: () => _controller.goForward(),
+                  onReload: () => _controller.reload(),
+                  onShowActivityLog: () => showActivityLogSheet(context),
+                  currentUrl: _currentUrl,
+                  approvalCard: browserApproval == null
+                      ? null
+                      : BrowserApprovalCard(
+                          request: browserApproval,
+                          siteUrl: _currentUrl,
+                          ru: ru,
+                          onApprove: () =>
+                              context.read<ToolApprovalService>().approve(
+                                browserApproval.toolCallId,
+                                conversationId: browserApproval.conversationId,
+                              ),
+                          onDeny: () =>
+                              context.read<ToolApprovalService>().deny(
+                                browserApproval.toolCallId,
+                                conversationId: browserApproval.conversationId,
+                              ),
+                          onChangeTrustSettings: () =>
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      const ToolSchemaSettingsPage(),
+                                ),
+                              ),
                         ),
-                        onChangeTrustSettings: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const ToolSchemaSettingsPage(),
-                          ),
-                        ),
-                      ),
+                ),
               ),
             if (!contentMode && !widget.agentSession)
               SafeArea(

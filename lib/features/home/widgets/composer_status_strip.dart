@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/services/browser/browser_agent_session.dart';
+import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/workspace/task_plan.dart';
 import '../../../core/services/workspace/tool_run_registry.dart';
-import '../../../core/services/workspace/workspace_runtime.dart';
 import '../../chat/models/computer_step.dart';
 import '../../chat/widgets/computer_response_scope.dart';
 import 'computer_status_panel.dart';
@@ -41,8 +41,8 @@ class _ComposerStatusStripState extends State<ComposerStatusStrip> {
   bool _planOpen = false;
   bool _showCompleted = false;
   bool _stopping = false;
-  Set<String> _stoppedRunIds = const {};
   String? _responseId;
+  bool? _wasGenerating;
   Timer? _collapse;
 
   static T? _watch<T>(BuildContext context) {
@@ -59,6 +59,7 @@ class _ComposerStatusStripState extends State<ComposerStatusStrip> {
     if (oldWidget.conversationId != widget.conversationId) {
       _collapse?.cancel();
       _responseId = null;
+      _wasGenerating = null;
       _showCompleted = false;
       _planOpen = false;
       _stopping = false;
@@ -81,28 +82,15 @@ class _ComposerStatusStripState extends State<ComposerStatusStrip> {
     super.dispose();
   }
 
-  void _stop(ComputerToolSource? source, List<ToolRun> runs) {
+  void _stop(ComputerToolSource? source) {
     if (_stopping) return;
     setState(() {
       _stopping = true;
-      _stoppedRunIds = {for (final run in runs) run.runtimeRunId};
     });
-    if (widget.generating) (widget.onStop ?? source?.onStop)?.call();
+    (widget.onStop ?? source?.onStop)?.call();
     final browser = BrowserAgentSession.instance;
     if (browser.ownerConversationId == widget.conversationId) {
       browser.requestStop();
-    }
-    WorkspaceRuntimeProvider? provider;
-    try {
-      provider = context.read<WorkspaceRuntimeProvider>();
-    } on ProviderNotFoundException {
-      provider = null;
-    }
-    final runtime = provider?.runtime;
-    if (runtime != null) {
-      for (final run in runs) {
-        unawaited(runtime.cancel(run.runtimeRunId));
-      }
     }
   }
 
@@ -111,9 +99,6 @@ class _ComposerStatusStripState extends State<ComposerStatusStrip> {
     final source = ComputerToolSource.maybeOf(context);
     final registry = _watch<ToolRunRegistry>(context);
     final plan = _watch<TaskPlanRegistry>(context)?.of(widget.conversationId);
-    final openPlan = widget.generating && plan != null && !plan.isDone
-        ? plan
-        : null;
     final browser = BrowserAgentSession.instance;
 
     return ListenableBuilder(
@@ -130,42 +115,94 @@ class _ComposerStatusStripState extends State<ComposerStatusStrip> {
                 : latestComputerResponseId(source.readMessages()));
         if (_responseId != responseId) {
           _responseId = responseId;
+          _wasGenerating = null;
           _showCompleted = false;
           _stopping = false;
           _collapse?.cancel();
         }
-        final runs =
-            registry?.runningIn(widget.conversationId) ?? const <ToolRun>[];
-        if (_stopping &&
-            !widget.generating &&
-            runs.any((run) => !_stoppedRunIds.contains(run.runtimeRunId))) {
-          _stopping = false;
-        }
+        bool belongsToResponse(ToolRun run) =>
+            run.background ||
+            (responseId != null && run.responseId == responseId);
+        final runs = [
+          for (final run
+              in registry?.runningIn(widget.conversationId) ??
+                  const <ToolRun>[])
+            if (belongsToResponse(run)) run,
+        ];
         // These identities belong to the response that opens the sheet.
         // The composer may switch chats while that route is still visible.
         final conversationId = widget.conversationId;
         final suppliedSteps = widget.steps;
-        final suppliedResponseId = widget.responseId;
+        bool isSameResponse() =>
+            widget.conversationId == conversationId &&
+            (widget.responseId ??
+                    (source == null
+                        ? null
+                        : latestComputerResponseId(source.readMessages()))) ==
+                responseId;
+        ChatService? chat;
+        try {
+          chat = context.read<ChatService>();
+        } on ProviderNotFoundException {
+          chat = null;
+        }
+        bool readResponseRunning() {
+          final capturedMessages =
+              chat?.getMessages(conversationId ?? '') ??
+              source?.readMessages() ??
+              const [];
+          final response = capturedMessages
+              .where(
+                (message) =>
+                    message.id == responseId &&
+                    message.conversationId == conversationId,
+              )
+              .firstOrNull;
+          return response?.isStreaming ??
+              (isSameResponse() && widget.generating);
+        }
+
         final retainedRuns = {for (final run in runs) run.runtimeRunId: run};
+        var retainedResponseSteps = suppliedSteps ?? const <ComputerStep>[];
         List<ComputerStep> readSteps() {
-          final sameResponse =
-              widget.conversationId == conversationId &&
-              widget.responseId == suppliedResponseId;
+          final live = responseId == null
+              ? null
+              : source?.readSteps(responseId);
+          var responseSteps = isSameResponse()
+              ? widget.steps ?? live ?? const <ComputerStep>[]
+              : (live?.isNotEmpty == true ? live : suppliedSteps) ??
+                    const <ComputerStep>[];
+          if (responseSteps.isEmpty && responseId != null) {
+            responseSteps = computerStepsFromEvents(
+              chat?.getToolEvents(responseId) ?? const [],
+            );
+          }
+          if (responseSteps.isEmpty) {
+            responseSteps = retainedResponseSteps;
+          }
+          final previousRuns = {
+            for (final step in retainedResponseSteps)
+              if (step.run != null) step.id: step.run,
+          };
           var steps = withComputerRuns(
-            (sameResponse ? widget.steps : suppliedSteps) ??
-                (responseId == null
-                    ? const []
-                    : source?.readSteps(responseId) ?? const []),
+            [
+              for (final step in responseSteps)
+                step.run == null && previousRuns[step.id] != null
+                    ? step.withRun(previousRuns[step.id])
+                    : step,
+            ],
             registry,
             conversationId,
+            responseId: responseId,
           );
+          retainedResponseSteps = steps;
           final ids = steps.map((step) => step.id).toSet();
           final representedRuns = steps
               .map((step) => step.run?.runtimeRunId)
               .toSet();
           for (final run
               in registry?.runningIn(conversationId) ?? const <ToolRun>[]) {
-            retainedRuns[run.runtimeRunId] = run;
+            if (belongsToResponse(run)) retainedRuns[run.runtimeRunId] = run;
           }
           final background = retainedRuns.values.toList()
             ..sort((a, b) => a.startedAt.compareTo(b.startedAt));
@@ -206,9 +243,22 @@ class _ComposerStatusStripState extends State<ComposerStatusStrip> {
         }
 
         final steps = readSteps();
+        final generating =
+            readResponseRunning() && !steps.any((step) => step.responseStopped);
+        if (_wasGenerating == true && !generating) {
+          _showCompleted = true;
+          _collapse?.cancel();
+          _collapse = Timer(ComposerStatusStrip.resultDuration, () {
+            if (mounted) setState(() => _showCompleted = false);
+          });
+        }
+        _wasGenerating = generating;
+        final openPlan = generating && plan != null && !plan.isDone
+            ? plan
+            : null;
         final showComputer =
             steps.isNotEmpty &&
-            (widget.generating ||
+            (generating ||
                 _showCompleted ||
                 runs.isNotEmpty ||
                 (responseId == null && browser.minimized.value));
@@ -219,14 +269,15 @@ class _ComposerStatusStripState extends State<ComposerStatusStrip> {
               ? ComputerStatusPanel(
                   key: ValueKey((widget.conversationId, responseId)),
                   steps: steps,
-                  generating: widget.generating,
+                  generating: generating,
                   conversationId: widget.conversationId,
-                  onStop: _stopping ? null : () => _stop(source, runs),
+                  onStop: _stopping ? null : () => _stop(source),
                   updates: Listenable.merge([
                     if (source != null) source.updates,
                     if (registry != null) registry,
                   ]),
                   readSteps: readSteps,
+                  readResponseRunning: readResponseRunning,
                 )
               : null;
           final chip = openPlan == null

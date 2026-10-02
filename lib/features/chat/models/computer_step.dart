@@ -1,12 +1,14 @@
 import 'dart:convert';
 
 import 'package:flutter/widgets.dart' show IconData;
+import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/services/acp/acp_secret_redactor.dart';
 import '../../../core/services/api/tool_display_redaction.dart';
 import '../../../core/services/logging/log_redactor.dart';
 import '../../../core/services/workspace/output_buffer.dart' show utf16SafeCut;
+import '../../../core/services/workspace/task_plan.dart';
 import '../../../core/services/workspace/tool_run_registry.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
@@ -200,13 +202,52 @@ class ComputerStep {
   }
 
   bool get isRunning {
+    if (isStopped) return false;
     if (run != null) return run!.status == ToolRunStatus.running;
     return loading ||
         _workspace['status'] == 'running' ||
         _decodedResult['status'] == 'running';
   }
 
+  /// Cancellation belongs to the response even if a completed/background
+  /// step itself retains its original outcome.
+  bool get responseStopped =>
+      metadata?['computer'] is Map &&
+      (metadata!['computer'] as Map)['responseStopped'] == true;
+
+  bool get isStopped =>
+      run?.status == ToolRunStatus.cancelled ||
+      (metadata?['computer'] is Map &&
+          (metadata!['computer'] as Map)['status'] == 'stopped') ||
+      _workspace['cancelled'] == true ||
+      const {
+        'stopped',
+        'cancelled',
+        'canceled',
+      }.contains(_workspace['status'] ?? _decodedResult['status']);
+
+  bool get isBackground =>
+      run?.background == true ||
+      arguments['background'] == true ||
+      _decodedResult['background'] == true ||
+      (_commandTools.contains(_toolKey) &&
+          (arguments['job_id'] != null || _decodedResult['job_id'] != null));
+
+  bool get isPlan => _toolKey == 'update_plan';
+
+  TaskPlan? get plan => isPlan ? TaskPlan.fromArguments(arguments) : null;
+
+  String? get browserDomain {
+    if (!allowsBrowserPreview) return null;
+    for (final raw in [_decodedResult['url'], arguments['url']]) {
+      final uri = computerActionUri(raw is String ? raw : null);
+      if (uri != null) return uri.host;
+    }
+    return null;
+  }
+
   bool get isError {
+    if (isStopped) return false;
     if (run != null) {
       return run!.status == ToolRunStatus.failed ||
           run!.status == ToolRunStatus.timedOut;
@@ -243,12 +284,18 @@ class ComputerStep {
   ]);
 
   String get result {
-    if (run != null && run!.tailLines.isNotEmpty) {
-      return utf16SafeCut(
-        _text(run!.tailLines.join('\n')),
-        4096,
-        keepTail: true,
-      );
+    if (run case final ToolRun active) {
+      // Detail/copy use both bounded stream buffers, not the 200-line live
+      // thumbnail window. The run's captured launch filter remains applied.
+      final stdout = active.stdoutSoFar;
+      final stderr = active.stderrSoFar;
+      if (stdout.isNotEmpty || stderr.isNotEmpty) {
+        final separator =
+            stdout.isNotEmpty && stderr.isNotEmpty && !stdout.endsWith('\n')
+            ? '\n'
+            : '';
+        return _text('$stdout$separator$stderr');
+      }
     }
     if (_commandTools.contains(_toolKey)) {
       final output = _firstText([
@@ -264,6 +311,13 @@ class ComputerStep {
           if (output != null) output,
           if (error != null) error,
         ].join('\n');
+      }
+      if (_isResultMap) {
+        return _firstText([
+              _decodedResult['message'],
+              _decodedResult['error'],
+            ]) ??
+            '';
       }
     }
     return _resultText;
@@ -281,19 +335,33 @@ class ComputerStep {
                 _decodedResult['content'],
                 _decodedResult['text'],
                 _workspace['stdoutPreview'],
-                result,
+                if (!_isResultMap) result,
               ]) ??
               ''
+        : run != null && run!.tailLines.isNotEmpty
+        ? _text(run!.tailLines.join('\n'))
         : result;
     final lines = const LineSplitter().convert(text);
     if (_commandTools.contains(_toolKey)) {
+      if (text.trim().isEmpty) {
+        final value = command;
+        return value == null ? '' : '\$ $value';
+      }
       return utf16SafeCut(
-        lines.skip((lines.length - 12).clamp(0, lines.length)).join('\n'),
-        1024,
+        lines.skip((lines.length - 4).clamp(0, lines.length)).join('\n'),
+        512,
         keepTail: true,
       );
     }
-    return utf16SafeCut(lines.take(6).join('\n'), 1024);
+    return utf16SafeCut(lines.take(3).join('\n'), 1024);
+  }
+
+  bool get _isResultMap {
+    try {
+      return jsonDecode(_resultText) is Map;
+    } on FormatException {
+      return false;
+    }
   }
 
   /// A filtered reference, never a grant to read an arbitrary host file.
@@ -324,8 +392,39 @@ class ComputerStep {
   }
 
   String title(AppLocalizations l10n) {
-    if (kind == ComputerStepKind.browser) return l10n.settingsPageBrowser;
-    if (kind == ComputerStepKind.file || kind == ComputerStepKind.image) {
+    if (kind == ComputerStepKind.browser) {
+      final domain = browserDomain;
+      return domain == null
+          ? l10n.settingsPageBrowser
+          : l10n.computerBrowserStep(domain);
+    }
+    if (plan case final TaskPlan checklist) {
+      return l10n.computerPlanProgress(
+        checklist.completed,
+        checklist.steps.length,
+      );
+    }
+    if (_toolKey == 'shell_output') return l10n.computerBackgroundOutput;
+    if (kind == ComputerStepKind.command && command != null) {
+      return command!.trim().split('\n').first;
+    }
+    if (kind == ComputerStepKind.file) {
+      final filePath = path;
+      if (filePath != null) {
+        final label = l10n.computerFileStep(
+          actionLabel(l10n),
+          p.basename(filePath),
+        );
+        final content = arguments['content'];
+        if ((_toolKey == 'write' || _toolKey == 'write_file') &&
+            content is String &&
+            content.isNotEmpty) {
+          return '$label ${l10n.computerAddedLines(const LineSplitter().convert(content).length)}';
+        }
+        return label;
+      }
+    }
+    if (kind == ComputerStepKind.image) {
       final filePath = path ?? imagePath;
       if (filePath != null) return p.basename(filePath);
     }
@@ -343,13 +442,98 @@ class ComputerStep {
     };
   }
 
-  IconData get icon => switch (kind) {
-    ComputerStepKind.browser => Lucide.Globe,
-    ComputerStepKind.command => Lucide.Terminal,
-    ComputerStepKind.file => Lucide.FileText,
-    ComputerStepKind.image => Lucide.Image,
-    ComputerStepKind.tool => Lucide.Wrench,
-  };
+  String actionLabel(AppLocalizations l10n) {
+    if (isPlan) return l10n.computerActionPlan;
+    if (kind == ComputerStepKind.command) return l10n.computerActionCommand;
+    if (kind == ComputerStepKind.browser) {
+      return switch (arguments['action']) {
+        'navigate' || 'open' || 'new_tab' => l10n.computerActionOpen,
+        'click' || 'tap' => l10n.computerActionClick,
+        'type' || 'fill' => l10n.computerActionType,
+        'screenshot' => l10n.computerActionScreenshot,
+        'read' => l10n.computerActionRead,
+        _ => l10n.computerBrowserAction((arguments['action'] ?? '').toString()),
+      };
+    }
+    return switch (_toolKey) {
+      'read_file' || 'read' => l10n.computerActionRead,
+      'write_file' || 'write' => l10n.computerActionWrite,
+      'edit_file' ||
+      'edit' ||
+      'multiedit' ||
+      'apply_patch' => l10n.computerActionEdit,
+      'list_dir' || 'ls' || 'glob' || 'grep' => l10n.computerActionList,
+      _ => toolName,
+    };
+  }
+
+  String subtitle(AppLocalizations l10n) {
+    if (isStopped) return l10n.computerStopped;
+    if (isError && kind != ComputerStepKind.command) return l10n.computerError;
+    if (_toolKey == 'shell_output' && command != null) return command!;
+    if (isPlan) return plan?.current?.text ?? l10n.computerDone;
+    if (kind == ComputerStepKind.browser) {
+      if (!isRunning) return actionLabel(l10n);
+      return switch (arguments['action']) {
+        'navigate' || 'open' || 'new_tab' => l10n.computerBrowserOpening,
+        'click' || 'tap' => l10n.computerBrowserClicking,
+        'type' || 'fill' => l10n.computerBrowserTyping,
+        'screenshot' => l10n.computerActionScreenshot,
+        'read' || 'observe' || 'outline' => l10n.computerBrowserReading,
+        _ => actionLabel(l10n),
+      };
+    }
+    if (kind == ComputerStepKind.command) {
+      if (isRunning && isBackground) return l10n.computerBackground;
+      final elapsed = _elapsed;
+      if (isRunning) {
+        final seconds = elapsed.inSeconds;
+        return l10n.computerRunningElapsed(
+          '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}',
+        );
+      }
+      final code =
+          run?.exitCode ??
+          _workspace['exitCode'] ??
+          _decodedResult['exit_code'];
+      if (code is num) {
+        return l10n.computerExitElapsed(
+          code.toInt(),
+          NumberFormat(
+            '0.0',
+            l10n.localeName,
+          ).format(elapsed.inMilliseconds / 1000),
+        );
+      }
+    }
+    return isRunning
+        ? l10n.computerWorking
+        : isError
+        ? l10n.computerError
+        : l10n.computerDone;
+  }
+
+  Duration get _elapsed {
+    final milliseconds = _workspace['durationMs'];
+    if (milliseconds is num) {
+      return Duration(milliseconds: milliseconds.toInt());
+    }
+    final seconds = _decodedResult['elapsed_seconds'];
+    if (seconds is num) return Duration(milliseconds: (seconds * 1000).round());
+    final active = run;
+    if (active == null) return Duration.zero;
+    return (active.finishedAt ?? DateTime.now()).difference(active.startedAt);
+  }
+
+  IconData get icon => isPlan
+      ? Lucide.ListChecks
+      : switch (kind) {
+          ComputerStepKind.browser => Lucide.Globe,
+          ComputerStepKind.command => Lucide.Terminal,
+          ComputerStepKind.file => Lucide.FileText,
+          ComputerStepKind.image => Lucide.Image,
+          ComputerStepKind.tool => Lucide.Wrench,
+        };
 }
 
 ToolDisplayRedaction? _runDisplayFilter(

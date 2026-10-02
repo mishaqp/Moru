@@ -7,6 +7,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
 
 void main() {
+  test(
+    'queued native output after cancellation leaves the terminal run intact',
+    () {
+      final run = ToolRun(toolCallId: 'late-output', toolName: 'shell');
+      addTearDown(run.dispose);
+      run.appendStdout(Uint8List.fromList(utf8.encode('before stop\n')));
+      run.complete(status: ToolRunStatus.cancelled);
+      final finishedAt = run.finishedAt;
+      run.appendStdout(Uint8List.fromList(utf8.encode('queued stdout\n')));
+      run.appendStderr(Uint8List.fromList(utf8.encode('queued stderr\n')));
+      run.complete(status: ToolRunStatus.succeeded, exitCode: 0);
+      expect(run.status, ToolRunStatus.cancelled);
+      expect(run.stdoutSoFar, 'before stop\n');
+      expect(run.stderrSoFar, isEmpty);
+      expect(run.tailLines, ['before stop']);
+      expect(run.finishedAt, finishedAt);
+      expect(run.exitCode, isNull);
+    },
+  );
   test('unobserved pending lines freeze correctly when streams interleave', () {
     final run = ToolRun(toolCallId: 'lazy-tail', toolName: 'shell');
     addTearDown(run.dispose);

@@ -228,34 +228,69 @@ class _ComputerStepThumbnailState extends State<ComputerStepThumbnail> {
 
   Widget _fallback(BuildContext context, ComputerStep step) {
     final cs = Theme.of(context).colorScheme;
-    if (step.kind == ComputerStepKind.command ||
-        step.kind == ComputerStepKind.file) {
+    if (step.kind == ComputerStepKind.command) {
       final lines = const LineSplitter().convert(step.preview);
-      final preview = step.kind == ComputerStepKind.command
-          ? lines.skip(lines.length > 3 ? lines.length - 3 : 0).join('\n')
-          : lines.take(3).join('\n');
-      return Padding(
-        padding: const EdgeInsets.all(6),
+      final preview = lines
+          .skip(lines.length > 4 ? lines.length - 4 : 0)
+          .join('\n');
+      return Container(
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: const Color(0xFF11161E),
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          border: Border.all(color: const Color(0xFF46505E)),
+        ),
+        alignment: Alignment.topLeft,
+        child: Text(
+          preview,
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 7,
+            height: 1.15,
+            fontFamily: 'monospace',
+            color: Color(0xFFDDE6EE),
+          ),
+        ),
+      );
+    }
+    if (step.kind == ComputerStepKind.file) {
+      final preview = const LineSplitter()
+          .convert(step.preview)
+          .take(3)
+          .join('\n');
+      return Container(
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          border: Border.all(color: cs.outlineVariant),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (step.kind == ComputerStepKind.file && step.path != null)
+            if (step.path != null)
               Text(
                 p.posix.basename(step.path!),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 8,
+                  height: 1.1,
+                  color: cs.onSurfaceVariant,
+                ),
               ),
+            const SizedBox(height: 3),
             if (preview.isNotEmpty)
               Expanded(
                 child: Align(
                   alignment: Alignment.topLeft,
                   child: Text(
                     preview,
-                    maxLines: 3,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 9,
+                      fontSize: 7,
+                      height: 1.15,
                       fontFamily: 'monospace',
                       color: chatSurfacePlainTextColor(context),
                     ),
@@ -264,19 +299,63 @@ class _ComputerStepThumbnailState extends State<ComputerStepThumbnail> {
               )
             else
               Expanded(
-                child: Center(
-                  child: Icon(step.icon, size: 20, color: cs.onSurfaceVariant),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final factor in [0.9, 0.65, 0.8])
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: FractionallySizedBox(
+                          widthFactor: factor,
+                          child: Container(
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: cs.onSurfaceVariant.withValues(
+                                alpha: 0.25,
+                              ),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
           ],
         ),
       );
     }
-    return Center(
-      child: Icon(
-        step.icon,
-        size: widget.height >= 100 ? 36 : 22,
-        color: cs.onSurfaceVariant,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(widget.borderRadius),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            step.icon,
+            size: widget.height >= 100 ? 36 : 22,
+            color: cs.onSurfaceVariant,
+          ),
+          if (step.kind == ComputerStepKind.browser &&
+              step.browserDomain != null) ...[
+            const SizedBox(height: 3),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                step.browserDomain!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: widget.height >= 100 ? 11 : 7,
+                  height: 1.1,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

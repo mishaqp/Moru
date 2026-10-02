@@ -99,6 +99,89 @@ Finder get _timelineIconColumn =>
     find.byKey(const ValueKey('chatMessageTimelineIconColumn:true:true'));
 
 void main() {
+  testWidgets(
+    'old foreground status ignores a newer response reusing its call id',
+    (tester) async {
+      final registry = ToolRunRegistry();
+      final newer = registry.start(
+        'tc-1',
+        'shell',
+        conversationId: 'c1',
+        responseId: 'm2',
+      );
+      newer.appendStdout(utf8.encode('new response output\n'));
+      newer.complete(status: ToolRunStatus.cancelled);
+      await tester.pumpWidget(
+        _harness(
+          registry: registry,
+          toolParts: [
+            _uiPart(
+              tool: 'shell',
+              content: 'old output',
+              meta: const WorkspaceToolMetadata(
+                tool: 'shell',
+                status: 'ok',
+                command: 'old command',
+                exitCode: 0,
+                stdoutPreview: 'old output',
+              ),
+            ),
+          ],
+        ),
+      );
+      await tester.pump();
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(ChatMessageWidget)),
+      )!;
+      expect(find.text(l10n.workspaceToolCancelled), findsNothing);
+      expect(find.text(l10n.workspaceToolExitCode(0)), findsOneWidget);
+      await tester.longPress(find.text('Run command'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.computerMoreDetails));
+      await tester.pumpAndSettle();
+      expect(find.byType(WorkspaceToolDetailBody), findsOneWidget);
+      expect(find.textContaining('new response output'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(WorkspaceToolDetailBody),
+          matching: find.textContaining('old output'),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+  for (final tool in ['update_plan', 'lookup']) {
+    testWidgets('stopped $tool uses a neutral square terminal status', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _harness(
+          toolParts: [
+            _uiPart(
+              tool: tool,
+              extraMetadata: {
+                'computer': {'status': 'stopped', 'responseStopped': true},
+                if (tool == 'update_plan')
+                  'workspace': {
+                    'tool': 'update_plan',
+                    'status': 'cancelled',
+                    'cancelled': true,
+                  },
+              },
+            ),
+          ],
+        ),
+      );
+      await tester.pump();
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(ChatMessageWidget)),
+      )!;
+      expect(find.text(l10n.computerStopped), findsOneWidget);
+      expect(find.byIcon(Lucide.Square), findsOneWidget);
+      expect(find.byKey(WorkspaceStatusBadge.runningKey), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
   const launchSecret = 'opaque-launch-credential-no-known-prefix';
   const authenticationUrl =
       'https://auth.openai.com/oauth/authorize?state=outside-zone-login';

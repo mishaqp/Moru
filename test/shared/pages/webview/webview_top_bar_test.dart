@@ -105,6 +105,35 @@ void main() {
     expect(closed, isTrue);
   });
 
+  testWidgets('agent browser leads with minimize and closes from the menu', (
+    tester,
+  ) async {
+    var minimized = 0;
+    var closed = 0;
+    await tester.pumpWidget(
+      wrap(
+        WebViewTopBar(
+          currentUrl: 'https://example.com',
+          title: null,
+          onClose: () => closed++,
+          onMinimize: () => minimized++,
+          onShowConsole: () {},
+        ),
+      ),
+    );
+    expect(find.byIcon(Lucide.X), findsNothing);
+    final minimize = find.byKey(const ValueKey('browser_minimize'));
+    expect(find.byIcon(Lucide.ChevronDown), findsOneWidget);
+    expect(tester.getRect(minimize).left, 0);
+    await tester.tap(minimize);
+    expect(minimized, 1);
+    expect(closed, 0);
+    await tester.tap(find.byTooltip('More options'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Close browser'));
+    expect(closed, 1);
+  });
+
   testWidgets(
     'agent-only menu items (activity log, settings) are absent when their '
     'callbacks are null',

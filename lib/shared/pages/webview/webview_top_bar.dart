@@ -7,7 +7,7 @@ import '../../widgets/ios_switch.dart';
 import '../../../theme/app_font_weights.dart';
 import 'browser_surface.dart';
 
-/// The single address surface for the browser page: a close button, one
+/// The single address surface for the browser page: a minimize button, one
 /// compact address area (domain, plus a short page title only when it says
 /// something the domain doesn't), and an overflow menu. No second,
 /// separately-visible address bar exists anywhere else in the page.
@@ -71,7 +71,7 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
   final VoidCallback onClose;
 
-  /// Shrinks the page into the floating mini window; agent sessions only.
+  /// Parks the live page in the chat; agent sessions only.
   final VoidCallback? onMinimize;
   final VoidCallback? onTapAddress;
   final VoidCallback? onCopyLink;
@@ -220,31 +220,24 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
 
     return AppBar(
       titleSpacing: 0,
+      leadingWidth: 48,
       leading: Tooltip(
-        message: l10n.commonClose,
+        message: onMinimize == null ? l10n.commonClose : l10n.browserMinimize,
         child: IosIconButton(
-          icon: Lucide.X,
+          key: onMinimize == null ? null : const ValueKey('browser_minimize'),
+          icon: onMinimize == null ? Lucide.X : Lucide.ChevronDown,
           color: cs.onSurface,
           size: 20,
           minSize: 48,
           padding: const EdgeInsets.all(14),
-          semanticLabel: l10n.commonClose,
-          onTap: onClose,
+          semanticLabel: onMinimize == null
+              ? l10n.commonClose
+              : l10n.browserMinimize,
+          onTap: onMinimize ?? onClose,
         ),
       ),
       title: pill,
       actions: [
-        if (onMinimize != null)
-          IosIconButton(
-            key: const ValueKey('browser_minimize'),
-            icon: Lucide.Minimize2,
-            color: cs.onSurface,
-            size: 20,
-            minSize: 48,
-            padding: const EdgeInsets.all(14),
-            semanticLabel: l10n.browserMinimize,
-            onTap: onMinimize,
-          ),
         if (onShowTabs != null)
           IconButton(
             key: const ValueKey('browser_tabs_button'),
@@ -289,6 +282,9 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           onSelected: (value) {
             switch (value) {
+              case 'close':
+                onClose();
+                break;
               case 'copy':
                 onCopyLink?.call();
                 break;
@@ -428,6 +424,16 @@ class WebViewTopBar extends StatelessWidget implements PreferredSizeWidget {
                 label: l10n.messageWebViewConsoleLogs,
               ),
             ),
+            if (onMinimize != null) ...[
+              const PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: 'close',
+                child: _MenuRow(
+                  icon: Lucide.X,
+                  label: l10n.browserCloseBrowser,
+                ),
+              ),
+            ],
           ],
         ),
       ],

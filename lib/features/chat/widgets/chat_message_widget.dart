@@ -11,6 +11,7 @@ import 'dart:io';
 import 'package:open_filex/open_filex.dart';
 // import 'package:easy_image_viewer/easy_image_viewer.dart';
 import 'dart:convert';
+import '../../../core/models/tool_call_status.dart';
 import '../../home/widgets/file_processing_indicator.dart';
 import '../pages/image_viewer_page.dart';
 import 'bounded_large_text_view.dart';
@@ -3905,7 +3906,14 @@ ToolUIPart? toolUiFromPayload(String payloadJson, {int fallbackOrdinal = 0}) {
           : const <String, dynamic>{},
       content: content,
       metadata: rawMeta is Map ? Map<String, dynamic>.from(rawMeta) : null,
-      loading: content == null || content.isEmpty,
+      loading:
+          !toolCallWasStopped(
+            rawMeta is Map ? Map<String, dynamic>.from(rawMeta) : null,
+          ) &&
+          !toolCallResponseWasStopped(
+            rawMeta is Map ? Map<String, dynamic>.from(rawMeta) : null,
+          ) &&
+          (content == null || content.isEmpty),
     );
   } catch (_) {
     return null;
@@ -5219,7 +5227,9 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
   }
 
   IconData _iconFor(String name, Map<String, dynamic> args) {
-    return _toolIconFor(name, args);
+    return toolCallWasStopped(widget.part.metadata)
+        ? Lucide.Square
+        : _toolIconFor(name, args);
   }
 
   String _titleFor(
@@ -5487,7 +5497,12 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
             ],
           );
 
-    final extra = approvalRequest != null
+    final extra = toolCallWasStopped(widget.part.metadata)
+        ? Text(
+            AppLocalizations.of(context)!.computerStopped,
+            style: TextStyle(fontSize: 11, color: fg.muted),
+          )
+        : approvalRequest != null
         ? Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -5616,7 +5631,9 @@ class _ToolCallItemState extends State<_ToolCallItem> {
   }
 
   IconData _iconFor(String name, Map<String, dynamic> args) {
-    return _toolIconFor(name, args);
+    return toolCallWasStopped(widget.part.metadata)
+        ? Lucide.Square
+        : _toolIconFor(name, args);
   }
 
   String _titleFor(
@@ -5781,6 +5798,14 @@ class _ToolCallItemState extends State<_ToolCallItem> {
                             fontWeight: AppFontWeights.medium,
                             color: fg.medium,
                           ),
+                        ),
+                      ],
+                      if (toolCallWasStopped(widget.part.metadata) &&
+                          !isWorkspace) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          l10n.computerStopped,
+                          style: TextStyle(fontSize: 11, color: fg.muted),
                         ),
                       ],
                     ],

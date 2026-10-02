@@ -10731,7 +10731,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserAddressEditorGo => '前往';
 
   @override
-  String get browserMinimize => '最小化';
+  String get browserMinimize => '收起至聊天';
 
   @override
   String get browserMiniExpand => '展开';
@@ -11930,6 +11930,185 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get computerMoreDetails => '详细结果';
+
+  @override
+  String get computerStopped => '已停止';
+
+  @override
+  String computerActionsCount(int count) {
+    return '$count 项操作';
+  }
+
+  @override
+  String get computerViewAction => '查看';
+
+  @override
+  String get computerBackgroundOutput => '后台任务输出';
+
+  @override
+  String get computerBackground => '后台运行';
+
+  @override
+  String computerRunningElapsed(String elapsed) {
+    return '运行中 · $elapsed';
+  }
+
+  @override
+  String computerExitElapsed(int code, String seconds) {
+    return '退出码 $code · $seconds 秒';
+  }
+
+  @override
+  String computerBrowserStep(String domain) {
+    return '浏览器 · $domain';
+  }
+
+  @override
+  String computerPlanProgress(int completed, int total) {
+    return '计划 · $completed/$total';
+  }
+
+  @override
+  String computerFileStep(String action, String name) {
+    return '$action · $name';
+  }
+
+  @override
+  String computerAddedLines(int count) {
+    return '（+$count 行）';
+  }
+
+  @override
+  String get computerActionCommand => '命令';
+
+  @override
+  String get computerActionOpen => '打开';
+
+  @override
+  String get computerActionClick => '点击';
+
+  @override
+  String get computerActionType => '输入';
+
+  @override
+  String get computerActionRead => '读取';
+
+  @override
+  String get computerActionWrite => '写入';
+
+  @override
+  String get computerActionEdit => '编辑';
+
+  @override
+  String get computerActionList => '列出';
+
+  @override
+  String get computerActionPlan => '计划';
+
+  @override
+  String get computerActionScreenshot => '截图';
+
+  @override
+  String get computerBrowserOpening => '正在打开…';
+
+  @override
+  String get computerBrowserClicking => '正在点击…';
+
+  @override
+  String get computerBrowserTyping => '正在输入…';
+
+  @override
+  String get computerBrowserReading => '正在读取…';
+
+  @override
+  String get computerAllParameters => '所有参数（JSON）';
+
+  @override
+  String get computerParameterDirectory => '目录';
+
+  @override
+  String get computerParameterBackground => '后台';
+
+  @override
+  String get computerParameterTimeout => '超时';
+
+  @override
+  String get computerParameterUrl => '网址';
+
+  @override
+  String get computerParameterSelector => '选择器';
+
+  @override
+  String get computerParameterText => '文本';
+
+  @override
+  String get computerParameterPath => '路径';
+
+  @override
+  String get computerParameterRange => '范围';
+
+  @override
+  String computerStepPosition(int current, int total) {
+    return '第 $current 步，共 $total 步';
+  }
+
+  @override
+  String get browserActions => '操作';
+
+  @override
+  String browserActionsCount(int count) {
+    return '操作 · $count';
+  }
+
+  @override
+  String get browserCloseBrowser => '关闭浏览器';
+
+  @override
+  String get browserCloseWhileAiTitle => '关闭浏览器？';
+
+  @override
+  String get browserCloseWhileAiMessage => 'AI 操作将停止。';
+
+  @override
+  String get computerParameterYes => '是';
+
+  @override
+  String get computerParameterNo => '否';
+
+  @override
+  String computerBrowserAction(String action) {
+    String _temp0 = intl.Intl.selectLogic(action, {
+      'open': '打开',
+      'observe': '查看',
+      'screenshot': '截图',
+      'read': '读取',
+      'collect': '收集列表',
+      'outline': '页面结构',
+      'wait_stable': '等待加载',
+      'wait_for': '等待元素',
+      'back': '后退',
+      'forward': '前进',
+      'reload': '刷新',
+      'scroll': '滚动',
+      'tabs': '标签页',
+      'new_tab': '新标签页',
+      'switch_tab': '切换标签页',
+      'close_tab': '关闭标签页',
+      'set_mode': '网站模式',
+      'close': '关闭浏览器',
+      'done': '完成',
+      'click': '点击',
+      'hover': '悬停',
+      'type': '输入',
+      'submit': '提交表单',
+      'press_key': '按键',
+      'eval_js': '执行页面代码',
+      'fetch': '页面请求',
+      'export_cookies': '导出 Cookie',
+      'other': '浏览器操作',
+    });
+    return '$_temp0';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -22588,7 +22767,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get browserAddressEditorGo => '前往';
 
   @override
-  String get browserMinimize => '最小化';
+  String get browserMinimize => '收起至聊天';
 
   @override
   String get browserMiniExpand => '展开';
@@ -23787,6 +23966,185 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get computerMoreDetails => '详细结果';
+
+  @override
+  String get computerStopped => '已停止';
+
+  @override
+  String computerActionsCount(int count) {
+    return '$count 项操作';
+  }
+
+  @override
+  String get computerViewAction => '查看';
+
+  @override
+  String get computerBackgroundOutput => '后台任务输出';
+
+  @override
+  String get computerBackground => '后台运行';
+
+  @override
+  String computerRunningElapsed(String elapsed) {
+    return '运行中 · $elapsed';
+  }
+
+  @override
+  String computerExitElapsed(int code, String seconds) {
+    return '退出码 $code · $seconds 秒';
+  }
+
+  @override
+  String computerBrowserStep(String domain) {
+    return '浏览器 · $domain';
+  }
+
+  @override
+  String computerPlanProgress(int completed, int total) {
+    return '计划 · $completed/$total';
+  }
+
+  @override
+  String computerFileStep(String action, String name) {
+    return '$action · $name';
+  }
+
+  @override
+  String computerAddedLines(int count) {
+    return '（+$count 行）';
+  }
+
+  @override
+  String get computerActionCommand => '命令';
+
+  @override
+  String get computerActionOpen => '打开';
+
+  @override
+  String get computerActionClick => '点击';
+
+  @override
+  String get computerActionType => '输入';
+
+  @override
+  String get computerActionRead => '读取';
+
+  @override
+  String get computerActionWrite => '写入';
+
+  @override
+  String get computerActionEdit => '编辑';
+
+  @override
+  String get computerActionList => '列出';
+
+  @override
+  String get computerActionPlan => '计划';
+
+  @override
+  String get computerActionScreenshot => '截图';
+
+  @override
+  String get computerBrowserOpening => '正在打开…';
+
+  @override
+  String get computerBrowserClicking => '正在点击…';
+
+  @override
+  String get computerBrowserTyping => '正在输入…';
+
+  @override
+  String get computerBrowserReading => '正在读取…';
+
+  @override
+  String get computerAllParameters => '所有参数（JSON）';
+
+  @override
+  String get computerParameterDirectory => '目录';
+
+  @override
+  String get computerParameterBackground => '后台';
+
+  @override
+  String get computerParameterTimeout => '超时';
+
+  @override
+  String get computerParameterUrl => '网址';
+
+  @override
+  String get computerParameterSelector => '选择器';
+
+  @override
+  String get computerParameterText => '文本';
+
+  @override
+  String get computerParameterPath => '路径';
+
+  @override
+  String get computerParameterRange => '范围';
+
+  @override
+  String computerStepPosition(int current, int total) {
+    return '第 $current 步，共 $total 步';
+  }
+
+  @override
+  String get browserActions => '操作';
+
+  @override
+  String browserActionsCount(int count) {
+    return '操作 · $count';
+  }
+
+  @override
+  String get browserCloseBrowser => '关闭浏览器';
+
+  @override
+  String get browserCloseWhileAiTitle => '关闭浏览器？';
+
+  @override
+  String get browserCloseWhileAiMessage => 'AI 操作将停止。';
+
+  @override
+  String get computerParameterYes => '是';
+
+  @override
+  String get computerParameterNo => '否';
+
+  @override
+  String computerBrowserAction(String action) {
+    String _temp0 = intl.Intl.selectLogic(action, {
+      'open': '打开',
+      'observe': '查看',
+      'screenshot': '截图',
+      'read': '读取',
+      'collect': '收集列表',
+      'outline': '页面结构',
+      'wait_stable': '等待加载',
+      'wait_for': '等待元素',
+      'back': '后退',
+      'forward': '前进',
+      'reload': '刷新',
+      'scroll': '滚动',
+      'tabs': '标签页',
+      'new_tab': '新标签页',
+      'switch_tab': '切换标签页',
+      'close_tab': '关闭标签页',
+      'set_mode': '网站模式',
+      'close': '关闭浏览器',
+      'done': '完成',
+      'click': '点击',
+      'hover': '悬停',
+      'type': '输入',
+      'submit': '提交表单',
+      'press_key': '按键',
+      'eval_js': '执行页面代码',
+      'fetch': '页面请求',
+      'export_cookies': '导出 Cookie',
+      'other': '浏览器操作',
+    });
+    return '$_temp0';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -34519,7 +34877,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get browserAddressEditorGo => '前往';
 
   @override
-  String get browserMinimize => '最小化';
+  String get browserMinimize => '收合至聊天';
 
   @override
   String get browserMiniExpand => '展開';
@@ -35718,4 +36076,183 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get computerMoreDetails => '詳細結果';
+
+  @override
+  String get computerStopped => '已停止';
+
+  @override
+  String computerActionsCount(int count) {
+    return '$count 項操作';
+  }
+
+  @override
+  String get computerViewAction => '檢視';
+
+  @override
+  String get computerBackgroundOutput => '背景工作輸出';
+
+  @override
+  String get computerBackground => '背景執行';
+
+  @override
+  String computerRunningElapsed(String elapsed) {
+    return '執行中 · $elapsed';
+  }
+
+  @override
+  String computerExitElapsed(int code, String seconds) {
+    return '結束代碼 $code · $seconds 秒';
+  }
+
+  @override
+  String computerBrowserStep(String domain) {
+    return '瀏覽器 · $domain';
+  }
+
+  @override
+  String computerPlanProgress(int completed, int total) {
+    return '計畫 · $completed/$total';
+  }
+
+  @override
+  String computerFileStep(String action, String name) {
+    return '$action · $name';
+  }
+
+  @override
+  String computerAddedLines(int count) {
+    return '（+$count 行）';
+  }
+
+  @override
+  String get computerActionCommand => '命令';
+
+  @override
+  String get computerActionOpen => '開啟';
+
+  @override
+  String get computerActionClick => '點擊';
+
+  @override
+  String get computerActionType => '輸入';
+
+  @override
+  String get computerActionRead => '讀取';
+
+  @override
+  String get computerActionWrite => '寫入';
+
+  @override
+  String get computerActionEdit => '編輯';
+
+  @override
+  String get computerActionList => '列出';
+
+  @override
+  String get computerActionPlan => '計畫';
+
+  @override
+  String get computerActionScreenshot => '截圖';
+
+  @override
+  String get computerBrowserOpening => '正在開啟…';
+
+  @override
+  String get computerBrowserClicking => '正在點擊…';
+
+  @override
+  String get computerBrowserTyping => '正在輸入…';
+
+  @override
+  String get computerBrowserReading => '正在讀取…';
+
+  @override
+  String get computerAllParameters => '所有參數（JSON）';
+
+  @override
+  String get computerParameterDirectory => '目錄';
+
+  @override
+  String get computerParameterBackground => '背景';
+
+  @override
+  String get computerParameterTimeout => '逾時';
+
+  @override
+  String get computerParameterUrl => '網址';
+
+  @override
+  String get computerParameterSelector => '選擇器';
+
+  @override
+  String get computerParameterText => '文字';
+
+  @override
+  String get computerParameterPath => '路徑';
+
+  @override
+  String get computerParameterRange => '範圍';
+
+  @override
+  String computerStepPosition(int current, int total) {
+    return '第 $current 步，共 $total 步';
+  }
+
+  @override
+  String get browserActions => '操作';
+
+  @override
+  String browserActionsCount(int count) {
+    return '操作 · $count';
+  }
+
+  @override
+  String get browserCloseBrowser => '關閉瀏覽器';
+
+  @override
+  String get browserCloseWhileAiTitle => '關閉瀏覽器？';
+
+  @override
+  String get browserCloseWhileAiMessage => 'AI 操作將停止。';
+
+  @override
+  String get computerParameterYes => '是';
+
+  @override
+  String get computerParameterNo => '否';
+
+  @override
+  String computerBrowserAction(String action) {
+    String _temp0 = intl.Intl.selectLogic(action, {
+      'open': '開啟',
+      'observe': '檢視',
+      'screenshot': '截圖',
+      'read': '讀取',
+      'collect': '收集清單',
+      'outline': '頁面結構',
+      'wait_stable': '等待載入',
+      'wait_for': '等待元素',
+      'back': '返回',
+      'forward': '前進',
+      'reload': '重新整理',
+      'scroll': '捲動',
+      'tabs': '分頁',
+      'new_tab': '新增分頁',
+      'switch_tab': '切換分頁',
+      'close_tab': '關閉分頁',
+      'set_mode': '網站模式',
+      'close': '關閉瀏覽器',
+      'done': '完成',
+      'click': '點擊',
+      'hover': '游標移入',
+      'type': '輸入',
+      'submit': '送出表單',
+      'press_key': '按鍵',
+      'eval_js': '執行頁面程式碼',
+      'fetch': '頁面請求',
+      'export_cookies': '匯出 Cookie',
+      'other': '瀏覽器操作',
+    });
+    return '$_temp0';
+  }
 }

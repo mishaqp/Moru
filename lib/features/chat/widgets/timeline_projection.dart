@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../core/models/message_part.dart';
+import '../../../core/models/tool_call_status.dart';
 import '../../home/services/ask_user_interaction_service.dart';
 import '../utils/thinking_tag_parser.dart';
 import 'timeline_visibility.dart';
@@ -289,7 +290,11 @@ TimelineToolRef? parseTimelineToolPayload(
     final arguments = args is Map
         ? args.cast<String, dynamic>()
         : const <String, dynamic>{};
-    final loading = isStreaming && (content == null || content.isEmpty);
+    final loading =
+        isStreaming &&
+        !toolCallWasStopped(metadata) &&
+        !toolCallResponseWasStopped(metadata) &&
+        (content == null || content.isEmpty);
     return TimelineToolRef(
       providerId: providerId,
       fallbackOrdinal: fallbackOrdinal,

@@ -53,34 +53,227 @@ Widget _host({
 
 void main() {
   testWidgets(
-    'Stop becomes available for a new background job in the same chat',
+    'a source response can be stopped before generating props refresh',
     (tester) async {
       final registry = ToolRunRegistry();
-      final first = registry.start('first', 'shell', conversationId: 'chat');
+      final updates = ChangeNotifier();
+      final step = ComputerStep(
+        id: 'plan',
+        toolName: 'update_plan',
+        arguments: {'plan': []},
+        loading: true,
+      );
+      final source = ComputerToolSource(
+        readMessages: () => [
+          ChatMessage(
+            id: 'reply',
+            role: 'assistant',
+            content: '',
+            conversationId: 'chat',
+            isStreaming: true,
+          ),
+        ],
+        readSteps: (_) => [step],
+        updates: updates,
+        child: const SizedBox(),
+      );
+      var stopped = 0;
       await tester.pumpWidget(
-        _host(registry: registry, generating: false, responseId: null),
+        _host(
+          registry: registry,
+          source: source,
+          generating: false,
+          onStop: () => stopped++,
+        ),
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(ComputerStatusPanel.stopKey));
       await tester.pumpAndSettle();
+      expect(stopped, 1);
+      await tester.pumpWidget(const SizedBox());
+      registry.dispose();
+      updates.dispose();
+    },
+  );
+
+  testWidgets(
+    'source cancellation clears response activity before the composer props refresh',
+    (tester) async {
+      final registry = ToolRunRegistry();
+      final updates = ChangeNotifier();
+      var messages = [
+        ChatMessage(
+          id: 'reply',
+          role: 'assistant',
+          content: '',
+          conversationId: 'chat',
+          isStreaming: true,
+        ),
+      ];
+      var steps = [
+        ComputerStep(
+          id: 'plan',
+          toolName: 'update_plan',
+          arguments: {'plan': []},
+          loading: true,
+        ),
+      ];
+      final source = ComputerToolSource(
+        readMessages: () => messages,
+        readSteps: (_) => steps,
+        updates: updates,
+        child: const SizedBox(),
+      );
+      await tester.pumpWidget(
+        _host(
+          registry: registry,
+          source: source,
+          onStop: () {
+            messages = [
+              ChatMessage(
+                id: 'reply',
+                role: 'assistant',
+                content: '',
+                conversationId: 'chat',
+              ),
+            ];
+            steps = [
+              ComputerStep(
+                id: 'plan',
+                toolName: 'update_plan',
+                arguments: {'plan': []},
+                metadata: {
+                  'computer': {'status': 'stopped', 'responseStopped': true},
+                },
+              ),
+            ];
+            updates.notifyListeners();
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ComputerStatusPanel.stopKey));
+      await tester.pumpAndSettle();
+      expect(find.text('Stopped · 1 action'), findsOneWidget);
       expect(
         tester
-            .widget<TextButton>(find.byKey(ComputerStatusPanel.stopKey))
+            .widget<ComputerStatusPanel>(find.byType(ComputerStatusPanel))
+            .generating,
+        isFalse,
+      );
+      expect(find.byKey(ComputerStatusPanel.stopKey), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      registry.dispose();
+      updates.dispose();
+    },
+  );
+
+  testWidgets(
+    'generation Stop preserves the background job and its output controls',
+    (tester) async {
+      final registry = ToolRunRegistry();
+      final job = registry.start(
+        'background',
+        'shell',
+        command: 'serve project',
+        conversationId: 'chat',
+        responseId: 'previous',
+        background: true,
+      );
+      var stopped = 0;
+      final pending = ComputerStep(
+        id: 'plan',
+        toolName: 'update_plan',
+        arguments: {'plan': []},
+        loading: true,
+      );
+      await tester.pumpWidget(
+        _host(registry: registry, steps: [pending], onStop: () => stopped++),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ComputerStatusPanel.stopKey));
+      await tester.pumpAndSettle();
+      expect(stopped, 1);
+      expect(job.status, ToolRunStatus.running);
+      expect(
+        tester
+            .widget<IconButton>(find.byKey(ComputerStatusPanel.stopKey))
             .onPressed,
         isNull,
       );
-      first.complete(status: ToolRunStatus.cancelled);
-      final second = registry.start('second', 'shell', conversationId: 'chat');
+      final cancelled = ComputerStep(
+        id: 'plan',
+        toolName: 'update_plan',
+        arguments: {'plan': []},
+        metadata: {
+          'computer': {'status': 'stopped', 'responseStopped': true},
+        },
+      );
+      final output = ComputerStep(
+        id: 'output',
+        toolName: 'shell_output',
+        arguments: {'job_id': job.runtimeRunId},
+        content: jsonEncode({'job_id': job.runtimeRunId, 'status': 'running'}),
+        metadata: {
+          'computer': {'responseStopped': true},
+        },
+      );
+      await tester.pumpWidget(
+        _host(
+          registry: registry,
+          steps: [cancelled, output],
+          generating: false,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(ComputerStatusPanel.stopKey), findsNothing);
+      expect(
+        tester.getSize(find.byKey(ComputerStatusPanel.panelKey)).height,
+        48,
+      );
+      expect(find.textContaining('Stopped ·'), findsOneWidget);
+      await tester.tap(find.byKey(ComputerStatusPanel.panelKey));
+      await tester.pumpAndSettle();
+      job.appendStdout(
+        Uint8List.fromList(utf8.encode('background still live')),
+      );
+      await tester.pump(ToolRun.notifyInterval);
+      expect(
+        find.descendant(
+          of: find.byType(ComputerSheet),
+          matching: find.textContaining('background still live'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(ComputerSheet),
+          matching: find.byTooltip('Open terminal'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('AI is working…'), findsNothing);
+      Navigator.of(tester.element(find.byType(ComputerSheet))).pop();
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        _host(
+          registry: registry,
+          steps: [pending],
+          responseId: 'next',
+          onStop: () => stopped++,
+        ),
+      );
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<TextButton>(find.byKey(ComputerStatusPanel.stopKey))
+            .widget<IconButton>(find.byKey(ComputerStatusPanel.stopKey))
             .onPressed,
         isNotNull,
       );
       await tester.pumpWidget(const SizedBox());
-      first.dispose();
-      second.dispose();
+      job.complete(status: ToolRunStatus.succeeded);
+      job.dispose();
       registry.dispose();
     },
   );
@@ -94,6 +287,8 @@ void main() {
         'shell',
         command: 'old server',
         conversationId: 'chat',
+        background: true,
+        responseId: 'previous',
       );
       final browser = ComputerStep(
         id: 'current-browser',
@@ -103,12 +298,274 @@ void main() {
       );
       await tester.pumpWidget(_host(registry: registry, steps: [browser]));
       await tester.pumpAndSettle();
-      expect(find.text('Browser'), findsOneWidget);
+      expect(find.textContaining('Browser'), findsOneWidget);
       expect(find.text('2 / 2'), findsOneWidget);
       oldRun.complete(status: ToolRunStatus.succeeded);
       await tester.pumpAndSettle();
       await tester.pumpWidget(const SizedBox());
       oldRun.dispose();
+      registry.dispose();
+    },
+  );
+
+  testWidgets(
+    'open sheet retains supplied steps when a source-only response changes in the same chat',
+    (tester) async {
+      final registry = ToolRunRegistry();
+      final updates = ChangeNotifier();
+      var messages = [
+        ChatMessage(
+          id: 'first-reply',
+          role: 'assistant',
+          content: '',
+          conversationId: 'chat',
+          isStreaming: true,
+        ),
+      ];
+      final source = ComputerToolSource(
+        readMessages: () => messages,
+        readSteps: (_) => [],
+        updates: updates,
+        child: const SizedBox(),
+      );
+      final first = ComputerStep(
+        id: 'first',
+        toolName: 'read_file',
+        arguments: {'path': 'first.md'},
+        content: 'first response content',
+      );
+      await tester.pumpWidget(
+        _host(
+          registry: registry,
+          steps: [first],
+          source: source,
+          responseId: null,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ComputerStatusPanel.panelKey));
+      await tester.pumpAndSettle();
+      messages = [
+        ChatMessage(
+          id: 'second-reply',
+          role: 'assistant',
+          content: '',
+          conversationId: 'chat',
+          isStreaming: true,
+        ),
+      ];
+      final second = ComputerStep(
+        id: 'second',
+        toolName: 'read_file',
+        arguments: {'path': 'second.md'},
+        content: 'second response private content',
+      );
+      await tester.pumpWidget(
+        _host(
+          registry: registry,
+          steps: [second],
+          source: source,
+          responseId: null,
+        ),
+      );
+      updates.notifyListeners();
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(ComputerSheet),
+          matching: find.textContaining('first response content'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(ComputerSheet),
+          matching: find.textContaining('second response private content'),
+        ),
+        findsNothing,
+      );
+      await tester.pumpWidget(const SizedBox());
+      registry.dispose();
+      updates.dispose();
+    },
+  );
+
+  testWidgets(
+    'open sheet retains original live steps after its response leaves the source',
+    (tester) async {
+      final registry = ToolRunRegistry();
+      final updates = ChangeNotifier();
+      var response = 'first-reply';
+      var steps = [
+        ComputerStep(
+          id: 'first',
+          toolName: 'read_file',
+          arguments: {'path': 'first.md'},
+          content: 'first live content',
+        ),
+      ];
+      List<ChatMessage> messages() => [
+        ChatMessage(
+          id: response,
+          role: 'assistant',
+          content: '',
+          conversationId: 'chat',
+          isStreaming: true,
+        ),
+      ];
+      final source = ComputerToolSource(
+        readMessages: messages,
+        readSteps: (id) => id == response ? steps : [],
+        updates: updates,
+        child: const SizedBox(),
+      );
+      await tester.pumpWidget(
+        _host(registry: registry, source: source, responseId: null),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ComputerStatusPanel.panelKey));
+      await tester.pumpAndSettle();
+      response = 'second-reply';
+      steps = [
+        ComputerStep(
+          id: 'second',
+          toolName: 'read_file',
+          arguments: {'path': 'second.md'},
+          content: 'second private content',
+        ),
+      ];
+      updates.notifyListeners();
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(ComputerSheet),
+          matching: find.textContaining('first live content'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(ComputerSheet),
+          matching: find.textContaining('second private content'),
+        ),
+        findsNothing,
+      );
+      await tester.pumpWidget(const SizedBox());
+      registry.dispose();
+      updates.dispose();
+    },
+  );
+
+  testWidgets(
+    'open sheet retains completed foreground output after registry eviction',
+    (tester) async {
+      final registry = ToolRunRegistry();
+      final updates = ChangeNotifier();
+      final run = registry.start(
+        'command',
+        'shell',
+        command: 'echo ready',
+        conversationId: 'chat',
+        responseId: 'reply',
+      );
+      run.appendStdout(
+        Uint8List.fromList(utf8.encode('retained foreground output')),
+      );
+      var complete = false;
+      final source = ComputerToolSource(
+        readMessages: () => [
+          ChatMessage(
+            id: 'reply',
+            role: 'assistant',
+            content: '',
+            conversationId: 'chat',
+            isStreaming: true,
+          ),
+        ],
+        readSteps: (_) => [
+          ComputerStep(
+            id: 'command',
+            toolName: 'shell',
+            arguments: {'command': 'echo ready'},
+            loading: !complete,
+            content: complete ? 'saved summary' : null,
+          ),
+        ],
+        updates: updates,
+        child: const SizedBox(),
+      );
+      await tester.pumpWidget(_host(registry: registry, source: source));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ComputerStatusPanel.panelKey));
+      await tester.pumpAndSettle();
+      complete = true;
+      run.complete(status: ToolRunStatus.succeeded, exitCode: 0);
+      updates.notifyListeners();
+      await tester.pumpAndSettle();
+      registry.evict('command', conversationId: 'chat');
+      updates.notifyListeners();
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(ComputerSheet),
+          matching: find.textContaining('retained foreground output'),
+        ),
+        findsOneWidget,
+      );
+      await tester.pumpWidget(const SizedBox());
+      registry.dispose();
+      updates.dispose();
+    },
+  );
+
+  testWidgets(
+    'open sheet never adopts a successor foreground run in the same chat',
+    (tester) async {
+      final registry = ToolRunRegistry();
+      final first = ComputerStep(
+        id: 'first',
+        toolName: 'read_file',
+        arguments: {'path': 'first.md'},
+        content: 'original response result',
+      );
+      await tester.pumpWidget(_host(registry: registry, steps: [first]));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ComputerStatusPanel.panelKey));
+      await tester.pumpAndSettle();
+      final next = registry.start(
+        'next',
+        'shell',
+        command: 'successor private command',
+        conversationId: 'chat',
+        responseId: 'reply-2',
+      );
+      final second = ComputerStep(
+        id: 'next',
+        toolName: 'shell',
+        arguments: {'command': 'successor private command'},
+        loading: true,
+      );
+      await tester.pumpWidget(
+        _host(registry: registry, steps: [second], responseId: 'reply-2'),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(ComputerSheet),
+          matching: find.textContaining('successor private command'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(ComputerSheet),
+          matching: find.textContaining('original response result'),
+        ),
+        findsOneWidget,
+      );
+      await tester.pumpWidget(const SizedBox());
+      next.complete(status: ToolRunStatus.succeeded);
+      next.dispose();
       registry.dispose();
     },
   );
@@ -122,12 +579,14 @@ void main() {
         'shell',
         command: 'original server',
         conversationId: 'chat',
+        background: true,
+        responseId: 'reply',
       );
       await tester.pumpWidget(
         _host(registry: registry, steps: [], generating: false),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Computer'));
+      await tester.tap(find.byKey(ComputerStatusPanel.panelKey));
       await tester.pumpAndSettle();
       expect(find.byType(ComputerSheet), findsOneWidget);
       await tester.pumpWidget(
@@ -144,6 +603,8 @@ void main() {
         'shell',
         command: 'other private command',
         conversationId: 'other-chat',
+        background: true,
+        responseId: 'other-reply',
       );
       await tester.pumpAndSettle();
       expect(
@@ -188,10 +649,11 @@ void main() {
       'shell',
       command: 'echo ready',
       conversationId: 'chat',
+      responseId: 'reply',
     );
     await tester.pumpWidget(_host(registry: registry));
     await tester.pumpAndSettle();
-    expect(find.text('Computer'), findsOneWidget);
+    expect(find.byKey(ComputerStatusPanel.panelKey), findsOneWidget);
     expect(find.text('1 / 1'), findsOneWidget);
     expect(find.text('echo ready'), findsOneWidget);
     run.appendStdout(Uint8List.fromList(utf8.encode('first\nlatest line')));
@@ -220,7 +682,7 @@ void main() {
       );
       await tester.pumpWidget(_host(registry: registry, steps: [step]));
       await tester.pumpAndSettle();
-      expect(find.text('Computer'), findsOneWidget);
+      expect(find.byKey(ComputerStatusPanel.panelKey), findsOneWidget);
       expect(
         find.byKey(const ValueKey('computer-step-thumbnail:step')),
         findsOneWidget,
@@ -229,7 +691,7 @@ void main() {
         expect(find.text('notes.md'), findsWidgets);
         expect(find.textContaining('Opening lines'), findsOneWidget);
       } else {
-        expect(find.text('Browser'), findsOneWidget);
+        expect(find.textContaining('Browser'), findsOneWidget);
       }
       await tester.pumpWidget(const SizedBox());
       registry.dispose();
@@ -311,8 +773,8 @@ void main() {
         _host(registry: registry, steps: [done], generating: false),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Computer'), findsOneWidget);
-      expect(find.text('Done'), findsOneWidget);
+      expect(find.byKey(ComputerStatusPanel.panelKey), findsOneWidget);
+      expect(find.text('Done · 1 action'), findsOneWidget);
       await tester.pump(ComposerStatusStrip.resultDuration);
       await tester.pumpAndSettle();
       expect(find.byType(ComputerStatusPanel), findsNothing);
@@ -320,7 +782,7 @@ void main() {
         _host(registry: registry, steps: [active], responseId: 'reply-2'),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Computer'), findsOneWidget);
+      expect(find.byKey(ComputerStatusPanel.panelKey), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
       registry.dispose();
     },
@@ -357,7 +819,7 @@ void main() {
         _host(registry: registry, source: source, responseId: null),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Computer'), findsNothing);
+      expect(find.byKey(ComputerStatusPanel.panelKey), findsNothing);
       steps = [
         ComputerStep(
           id: 'browser',
@@ -368,7 +830,7 @@ void main() {
       ];
       updates.notifyListeners();
       await tester.pumpAndSettle();
-      expect(find.text('Computer'), findsOneWidget);
+      expect(find.byKey(ComputerStatusPanel.panelKey), findsOneWidget);
       messages = [
         ...messages,
         ChatMessage(
@@ -380,7 +842,7 @@ void main() {
       ];
       updates.notifyListeners();
       await tester.pumpAndSettle();
-      expect(find.text('Computer'), findsNothing);
+      expect(find.byKey(ComputerStatusPanel.panelKey), findsNothing);
       await tester.pumpWidget(const SizedBox());
       registry.dispose();
       updates.dispose();
@@ -388,7 +850,7 @@ void main() {
   );
 
   testWidgets(
-    'narrow scaled strip has 48dp controls and Stop stops the response once',
+    'narrow scaled strip has compact controls and 44dp response Stop',
     (tester) async {
       tester.view.physicalSize = const Size(360, 740);
       tester.view.devicePixelRatio = 1;
@@ -411,12 +873,15 @@ void main() {
       for (final key in [
         ComputerStatusPanel.previousKey,
         ComputerStatusPanel.nextKey,
-        ComputerStatusPanel.stopKey,
       ]) {
         final size = tester.getSize(find.byKey(key));
         expect(size.width, greaterThanOrEqualTo(48));
         expect(size.height, greaterThanOrEqualTo(48));
       }
+      expect(
+        tester.getSize(find.byKey(ComputerStatusPanel.stopKey)),
+        const Size(44, 44),
+      );
       await tester.tap(find.byKey(ComputerStatusPanel.stopKey));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(ComputerStatusPanel.stopKey));

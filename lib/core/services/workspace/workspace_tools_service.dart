@@ -939,6 +939,8 @@ class WorkspaceToolsService {
       command: command,
       conversationId: conversationId ?? ctx.conversationId,
       runtimeRunId: runtimeRunId,
+      responseId: ToolApprovalOwner.current?.assistantMessageId,
+      background: background,
     );
     final job = background ? _BackgroundJob(runtime, run) : null;
     final request = CommandRequest(

@@ -75,6 +75,8 @@ Future<void> _open(
   String? initialStepId,
   Listenable? updates,
   List<ComputerStep> Function()? readSteps,
+  bool Function()? readResponseRunning,
+  Locale locale = const Locale('en'),
   double scale = 1,
   double keyboard = 0,
   Widget Function(Widget)? wrap,
@@ -90,7 +92,7 @@ Future<void> _open(
     ],
     child: MaterialApp(
       navigatorKey: rootNavigatorKey,
-      locale: const Locale('en'),
+      locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => MediaQuery(
@@ -110,6 +112,7 @@ Future<void> _open(
               initialStepId: initialStepId,
               updates: updates,
               readSteps: readSteps,
+              readResponseRunning: readResponseRunning,
             ),
             child: const Text('open'),
           ),
@@ -126,6 +129,374 @@ void main() {
   setUp(() {
     installFakeWebViewPlatform();
     WorkspaceNavigation.onOpenTerminal = null;
+  });
+
+  testWidgets('header is centered with a close target on the left', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await _open(
+      tester,
+      steps: [
+        _step('shell', toolName: 'shell', arguments: {'command': 'pwd'}),
+      ],
+      scale: 1.3,
+    );
+    final title = tester.getCenter(find.text('Computer'));
+    final panel = tester.getRect(find.byKey(CustomBottomSheet.panelKey));
+    final close = tester.getRect(find.byKey(CustomBottomSheet.closeButtonKey));
+    expect(title.dx, closeTo(panel.center.dx, 1));
+    expect(close.width, greaterThanOrEqualTo(44));
+    expect(close.height, greaterThanOrEqualTo(44));
+    expect(close.center.dx, lessThan(title.dx));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('long MCP action label stays on one row at 320dp and scale 1.3', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    const toolName =
+        'mcp__server__tool_with_many_descriptive_words_and_a_very_long_name';
+    await _open(
+      tester,
+      scale: 1.3,
+      steps: [_step('long-tool', toolName: toolName)],
+    );
+    final label = tester.getRect(find.text(toolName));
+    final panel = tester.getRect(find.byKey(CustomBottomSheet.panelKey));
+    expect(label.left, greaterThanOrEqualTo(panel.left + 16));
+    expect(label.right, lessThanOrEqualTo(panel.right - 16));
+    expect(label.height, lessThanOrEqualTo(24));
+    expect(
+      find.byKey(const ValueKey('computer-copy-result')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('pending update_plan renders the real checklist', (tester) async {
+    await _open(
+      tester,
+      steps: [
+        ComputerStep(
+          id: 'plan',
+          toolName: 'update_plan',
+          loading: true,
+          arguments: {
+            'plan': [
+              {'step': 'Inspect', 'status': 'completed'},
+              {'step': 'Implement', 'status': 'in_progress'},
+              {'step': 'Verify', 'status': 'pending'},
+            ],
+          },
+        ),
+      ],
+    );
+    expect(find.text('Inspect'), findsOneWidget);
+    expect(find.text('Implement'), findsOneWidget);
+    expect(find.text('Verify'), findsOneWidget);
+    expect(find.text('No result yet'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('computer-plan-checklist')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('unknown parameters stay in a filtered collapsed JSON section', (
+    tester,
+  ) async {
+    await _open(
+      tester,
+      steps: [
+        _step(
+          'shell',
+          toolName: 'shell',
+          arguments: {
+            'command': 'pwd',
+            'cwd': '/workspace',
+            'custom': 'only in expanded JSON',
+            'access_token': 'private-token',
+          },
+        ),
+      ],
+    );
+    expect(find.text('Directory'), findsOneWidget);
+    expect(find.text('/workspace'), findsOneWidget);
+    expect(find.textContaining('only in expanded JSON'), findsNothing);
+    await tester.tap(find.text('All parameters (JSON)'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('only in expanded JSON'), findsOneWidget);
+    expect(find.textContaining('private-token'), findsNothing);
+  });
+
+  testWidgets('stopped plan never says AI is working', (tester) async {
+    await _open(
+      tester,
+      steps: [
+        ComputerStep(
+          id: 'stopped',
+          toolName: 'update_plan',
+          metadata: {
+            'computer': {'status': 'stopped'},
+          },
+          arguments: {
+            'plan': [
+              {'step': 'Verify', 'status': 'pending'},
+            ],
+          },
+        ),
+      ],
+    );
+    expect(find.text('Stopped'), findsOneWidget);
+    expect(find.text('AI is working…'), findsNothing);
+    expect(find.text('No result yet'), findsNothing);
+  });
+
+  testWidgets('shell output follows the bottom and pauses after scrolling up', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final run = ToolRun(
+      toolCallId: 'follow-output',
+      toolName: 'shell',
+      command: 'npm test',
+    );
+    addTearDown(run.dispose);
+    run.appendStdout(
+      utf8.encode(List.generate(100, (n) => 'line $n').join('\n')),
+    );
+    await _open(
+      tester,
+      steps: [_step('follow-output', toolName: 'shell', run: run)],
+    );
+    final scroll = find.byKey(
+      const ValueKey('computer-step-body:follow-output'),
+    );
+    final controller = tester.widget<CustomScrollView>(scroll).controller!;
+    expect(controller.offset, closeTo(controller.position.maxScrollExtent, 1));
+    final terminal = tester.getRect(
+      find.byKey(const ValueKey('computer-terminal-output')),
+    );
+    final viewport = tester.getRect(scroll);
+    expect(terminal.height, greaterThanOrEqualTo(viewport.height - 50));
+
+    await tester.drag(scroll, const Offset(0, 150));
+    await tester.pumpAndSettle();
+    final pinnedOffset = controller.offset;
+    expect(pinnedOffset, lessThan(controller.position.maxScrollExtent - 50));
+    run.appendStdout(
+      utf8.encode('\n${List.generate(10, (n) => 'more $n').join('\n')}'),
+    );
+    await tester.pump(const Duration(milliseconds: 60));
+    await tester.pumpAndSettle();
+    expect(controller.offset, closeTo(pinnedOffset, 1));
+
+    await tester.drag(scroll, const Offset(0, -1500));
+    await tester.pumpAndSettle();
+    run.appendStdout(utf8.encode('\nlast line'));
+    await tester.pump(const Duration(milliseconds: 60));
+    await tester.pumpAndSettle();
+    expect(controller.offset, closeTo(controller.position.maxScrollExtent, 1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('shell argument stays below the header during output following', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final run = ToolRun(
+      toolCallId: 'header-geometry',
+      toolName: 'shell',
+      command: 'flutter test test/shared',
+    );
+    addTearDown(run.dispose);
+    run.appendStdout(utf8.encode('24 tests passed\nRunning browser checks'));
+    await _open(
+      tester,
+      scale: 1.3,
+      steps: [_step('header-geometry', toolName: 'shell', run: run)],
+    );
+    void expectVisibleArgument() {
+      final headerBottom = tester
+          .getRect(find.byKey(CustomBottomSheet.closeButtonKey))
+          .bottom;
+      final argument = tester.getRect(
+        find.byKey(const ValueKey('computer-step-action')),
+      );
+      expect(argument.top, greaterThanOrEqualTo(headerBottom));
+      expect(
+        find.byKey(const ValueKey('computer-step-action')).hitTestable(),
+        findsOneWidget,
+      );
+    }
+
+    expectVisibleArgument();
+    run.appendStdout(
+      utf8.encode(
+        '\n${List.generate(100, (index) => 'line $index').join('\n')}',
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 60));
+    await tester.pumpAndSettle();
+    expectVisibleArgument();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('completed response suppresses working status for a live run', (
+    tester,
+  ) async {
+    final run = ToolRun(
+      toolCallId: 'finished-response',
+      toolName: 'shell',
+      command: 'pwd',
+    );
+    addTearDown(run.dispose);
+    await _open(
+      tester,
+      steps: [_step('finished-response', toolName: 'shell', run: run)],
+      readResponseRunning: () => false,
+    );
+    expect(find.text('AI is working…'), findsNothing);
+    expect(find.text('Done'), findsOneWidget);
+  });
+
+  testWidgets('shell detail and copy retain over 200 filtered output lines', (
+    tester,
+  ) async {
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied = (call.arguments as Map)['text'] as String;
+        }
+        return null;
+      },
+    );
+    addTearDown(() {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      );
+    });
+    const secret = 'private-provider-output';
+    final redactor = AcpSecretRedactor([secret]);
+    final run =
+        await ToolDisplayRedaction(
+          text: redactor.text,
+          value: redactor.value,
+        ).run(
+          () async => ToolRun(
+            toolCallId: 'long-copy',
+            toolName: 'shell',
+            command: 'npm test',
+          ),
+        );
+    addTearDown(run.dispose);
+    run.appendStdout(
+      utf8.encode(
+        List.generate(
+          250,
+          (index) => index == 25 ? 'line $index $secret' : 'line $index',
+        ).join('\n'),
+      ),
+    );
+    run.appendStderr(utf8.encode('stderr last $secret'));
+    await _open(
+      tester,
+      steps: [_step('long-copy', toolName: 'shell', run: run)],
+    );
+    final shown = tester
+        .widget<Text>(find.byKey(const ValueKey('computer-step-result')))
+        .data!;
+    expect(shown, startsWith('line 0\n'));
+    expect(shown, contains('line 249'));
+    expect(shown, contains('stderr last'));
+    expect(shown, isNot(contains(secret)));
+    await tester.tap(find.byKey(const ValueKey('computer-copy-result')));
+    await tester.pump();
+    expect(copied, shown);
+  });
+
+  testWidgets(
+    'stopped response keeps background output alive without working status',
+    (tester) async {
+      final run = ToolRun(
+        toolCallId: 'background',
+        toolName: 'shell',
+        command: 'npm run dev',
+        background: true,
+      );
+      addTearDown(run.dispose);
+      await _open(
+        tester,
+        steps: [
+          _step(
+            'background',
+            toolName: 'shell',
+            run: run,
+            metadata: {
+              'computer': {'responseStopped': true},
+            },
+          ),
+        ],
+        readResponseRunning: () => false,
+      );
+      expect(find.text('Stopped'), findsOneWidget);
+      expect(find.text('AI is working…'), findsNothing);
+      run.appendStdout(utf8.encode('server ready'));
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(find.text('server ready'), findsOneWidget);
+      expect(run.status, ToolRunStatus.running);
+      expect(find.byTooltip('Open terminal'), findsOneWidget);
+    },
+  );
+
+  testWidgets('Russian stopped sheet fits narrow scaled keyboard layout', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await _open(
+      tester,
+      locale: const Locale('ru'),
+      scale: 1.3,
+      keyboard: 100,
+      initialStepId: '1',
+      steps: [
+        _step(
+          '1',
+          metadata: {
+            'computer': {'status': 'stopped', 'responseStopped': true},
+          },
+        ),
+        _step('2'),
+      ],
+    );
+    expect(find.text('Остановлено'), findsOneWidget);
+    expect(find.text('ИИ работает…'), findsNothing);
+    expect(find.byKey(_previous).hitTestable(), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('computer-copy-result')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(find.byKey(_latest).hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
   tearDown(() async {
     FakeWebViewPlatform.onCreated = null;
@@ -234,7 +605,7 @@ void main() {
     expect(find.text('AI is working…'), findsOneWidget);
     run.appendStdout(utf8.encode('live output\n'));
     await tester.pump(const Duration(milliseconds: 60));
-    expect(find.text('live output'), findsOneWidget);
+    expect(find.text('live output\n'), findsOneWidget);
     run.complete(status: ToolRunStatus.succeeded, exitCode: 0);
     await tester.pumpAndSettle();
     expect(find.text('Done'), findsOneWidget);
@@ -277,9 +648,13 @@ void main() {
     );
     expect(find.textContaining('private-token'), findsNothing);
     expect(find.textContaining('auth-secret'), findsNothing);
+    expect(find.textContaining('safe query'), findsNothing);
+    await tester.tap(find.text('All parameters (JSON)'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('safe query'), findsOneWidget);
     expect(find.textContaining('safe result'), findsOneWidget);
-    await tester.tap(find.byKey(_action));
+    expect(find.byKey(_action), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('computer-copy-result')));
     await tester.pump();
     expect(copied, contains('safe result'));
     expect(copied, isNot(contains('private-token')));

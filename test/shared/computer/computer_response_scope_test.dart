@@ -52,6 +52,112 @@ Widget _host(ChatMessage message, {List<ToolUIPart>? live}) => MultiProvider(
 );
 
 void main() {
+  testWidgets('an open response retains completed run output after eviction', (
+    tester,
+  ) async {
+    final registry = ToolRunRegistry();
+    final updates = ValueNotifier<int>(0);
+    addTearDown(registry.dispose);
+    addTearDown(updates.dispose);
+    final run = registry.start(
+      'call',
+      'shell',
+      conversationId: 'chat',
+      responseId: 'reply',
+    );
+    run.appendStdout(utf8.encode('retained output'));
+    run.complete(status: ToolRunStatus.succeeded);
+    List<Map<String, dynamic>> events() => [
+      {
+        'id': 'call',
+        'name': 'shell',
+        'arguments': {'command': 'echo'},
+        'content': 'saved fallback',
+      },
+    ];
+    final message = ChatMessage(
+      id: 'reply',
+      role: 'assistant',
+      conversationId: 'chat',
+      content: '',
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: registry,
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ComputerToolSource(
+            readMessages: () => [message],
+            readSteps: (_) => computerStepsFromEvents(events()),
+            updates: updates,
+            child: ComputerResponseScope(
+              responseId: 'reply',
+              conversationId: 'chat',
+              steps: computerStepsFromEvents(events()),
+              child: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => ComputerResponseScope.showForStep(
+                    context,
+                    computerStepsFromEvents(events()).single,
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(find.text('retained output'), findsOneWidget);
+    registry.evict('call', conversationId: 'chat');
+    updates.value++;
+    await tester.pump();
+    expect(find.text('retained output'), findsOneWidget);
+    expect(find.text('saved fallback'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  test('a reused foreground call only attaches its response-owned run', () {
+    final registry = ToolRunRegistry();
+    addTearDown(registry.dispose);
+    final old = registry.start(
+      'same-call',
+      'shell',
+      conversationId: 'chat',
+      responseId: 'old',
+    );
+    old.complete(status: ToolRunStatus.succeeded);
+    final newer = registry.start(
+      'same-call',
+      'shell',
+      conversationId: 'chat',
+      responseId: 'new',
+    );
+    final saved = computerStepsFromEvents([
+      {'id': 'same-call', 'name': 'shell', 'content': 'old output'},
+    ]);
+    expect(
+      withComputerRuns(saved, registry, 'chat', responseId: 'old').single.run,
+      isNull,
+    );
+    expect(
+      withComputerRuns(saved, registry, 'chat', responseId: 'new').single.run,
+      same(newer),
+    );
+    final retained = [saved.single.withRun(old)];
+    expect(
+      withComputerRuns(
+        retained,
+        registry,
+        'chat',
+        responseId: 'old',
+      ).single.run,
+      same(old),
+    );
+    newer.complete(status: ToolRunStatus.cancelled);
+  });
   test('an expired explicit job never binds an unrelated reused call ID', () {
     final registry = ToolRunRegistry();
     final newer = registry.start(

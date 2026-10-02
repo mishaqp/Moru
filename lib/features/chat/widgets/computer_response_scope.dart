@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/message_part.dart';
+import '../../../core/models/tool_call_status.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/workspace/tool_run_registry.dart';
 import '../models/computer_step.dart';
@@ -69,7 +70,19 @@ List<ComputerStep> computerStepsFromEvents(
       metadata: events[i]['metadata'] is Map
           ? Map<String, dynamic>.from(events[i]['metadata'] as Map)
           : null,
-      loading: streaming && events[i]['content'] == null,
+      loading:
+          streaming &&
+          events[i]['content'] == null &&
+          !toolCallWasStopped(
+            events[i]['metadata'] is Map
+                ? Map<String, dynamic>.from(events[i]['metadata'] as Map)
+                : null,
+          ) &&
+          !toolCallResponseWasStopped(
+            events[i]['metadata'] is Map
+                ? Map<String, dynamic>.from(events[i]['metadata'] as Map)
+                : null,
+          ),
     ),
 ];
 
@@ -97,13 +110,18 @@ ToolRunRegistry? _registry(BuildContext context) {
 List<ComputerStep> withComputerRuns(
   List<ComputerStep> steps,
   ToolRunRegistry? registry,
-  String? conversationId,
-) => [for (final step in steps) _withRun(step, registry, conversationId)];
+  String? conversationId, {
+  String? responseId,
+}) => [
+  for (final step in steps)
+    _withRun(step, registry, conversationId, responseId),
+];
 
 ComputerStep _withRun(
   ComputerStep step,
   ToolRunRegistry? registry,
   String? conversationId,
+  String? responseId,
 ) {
   String? jobId = step.arguments['job_id']?.toString();
   if (jobId == null && step.content != null) {
@@ -114,10 +132,17 @@ ComputerStep _withRun(
       // Plain text is also a valid tool result.
     }
   }
-  final run = jobId == null
+  jobId ??= toolCallBackgroundRuntimeId(step.metadata);
+  var run = jobId == null
       ? step.run ?? registry?.of(step.id, conversationId: conversationId)
       : registry?.byRuntimeRunId(jobId, conversationId: conversationId) ??
             (step.run?.runtimeRunId == jobId ? step.run : null);
+  if (jobId == null &&
+      responseId != null &&
+      run?.responseId != null &&
+      run!.responseId != responseId) {
+    run = null;
+  }
   if (identical(run, step.run)) return step;
   return step.withRun(run);
 }
@@ -161,6 +186,7 @@ class ComputerResponseScope extends InheritedWidget {
     } on ProviderNotFoundException {
       chat = null;
     }
+    var retainedSteps = <ComputerStep>[];
     List<ComputerStep> read() {
       var steps = scope == null
           ? fallback
@@ -174,7 +200,42 @@ class ComputerResponseScope extends InheritedWidget {
       if (!steps.any((step) => step.id == selected.id)) {
         steps = [...steps, selected];
       }
-      return withComputerRuns(steps, registry, id);
+      steps = [
+        for (final step in steps)
+          step.run == null
+              ? step.withRun(
+                  retainedSteps
+                      .where((prior) => prior.id == step.id)
+                      .firstOrNull
+                      ?.run,
+                )
+              : step,
+      ];
+      retainedSteps = withComputerRuns(
+        steps,
+        registry,
+        id,
+        responseId: scope?.responseId,
+      );
+      return retainedSteps;
+    }
+
+    bool readResponseRunning() {
+      final responseId = scope?.responseId;
+      if (responseId == null) {
+        return read().any((step) => step.isRunning && !step.isBackground);
+      }
+      final messages =
+          source?.readMessages() ??
+          chat?.getMessages(id ?? '') ??
+          const <ChatMessage>[];
+      final response = messages
+          .where(
+            (message) =>
+                message.id == responseId && message.conversationId == id,
+          )
+          .firstOrNull;
+      return response?.isStreaming ?? false;
     }
 
     return showComputerSheet(
@@ -188,6 +249,7 @@ class ComputerResponseScope extends InheritedWidget {
         if (chat != null) chat,
       ]),
       readSteps: read,
+      readResponseRunning: readResponseRunning,
     );
   }
 }

@@ -1,6 +1,7 @@
 import '../../../core/services/auth/provider_oauth_service.dart';
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -9,6 +10,7 @@ import '../../../core/models/assistant.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/message_part.dart';
+import '../../../core/models/tool_call_status.dart';
 import '../../../shared/widgets/markdown_line_lexer.dart';
 import '../../../utils/app_directories.dart';
 import '../../../utils/sandbox_path_resolver.dart';
@@ -22,6 +24,8 @@ import '../../../core/services/api/retry_policy.dart';
 import '../../../core/services/api/stream/stream_chunk.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/workspace/task_plan.dart';
+import '../../../core/services/workspace/tool_run_registry.dart';
+import '../../../core/services/workspace/workspace_tools_service.dart';
 import '../../../core/services/mobile_background.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../l10n/app_localizations.dart';
@@ -30,6 +34,7 @@ import '../../../core/models/assistant_regex.dart';
 import '../services/acp_chat_bridge.dart';
 import '../services/ask_user_interaction_service.dart';
 import '../../chat/utils/thinking_tag_parser.dart';
+import '../../chat/widgets/chat_message_widget.dart' show ToolUIPart;
 import '../services/message_generation_service.dart';
 import '../services/tool_approval_service.dart';
 import '../utils/model_display_helper.dart';
@@ -691,6 +696,174 @@ class ChatActions {
     return (_streamingToolEvents[messageId] ?? const <Map<String, dynamic>>[])
         .map((event) => Map<String, dynamic>.from(event))
         .toList(growable: false);
+  }
+
+  /// Stop this response's foreground display state before waiting for native
+  /// teardown. Background jobs keep their independent runtime and controls.
+  ChatMessage _stopResponseTools(ChatMessage message) {
+    ToolRunRegistry? registry;
+    try {
+      registry = contextProvider.read<ToolRunRegistry>();
+    } catch (_) {}
+    final runs = registry?.allIn(message.conversationId) ?? const <ToolRun>[];
+    for (final run in runs) {
+      if (run.responseId == message.id && !run.background) {
+        run.complete(status: ToolRunStatus.cancelled);
+      }
+    }
+
+    Map<String, dynamic> settle(Map<String, dynamic> event) {
+      final name = (event['name'] ?? '').toString();
+      final arguments = event['arguments'] is Map
+          ? Map<String, dynamic>.from(event['arguments'] as Map)
+          : const <String, dynamic>{};
+      final metadata = event['metadata'] is Map
+          ? Map<String, dynamic>.from(event['metadata'] as Map)
+          : null;
+      final workspace = metadata?['workspace'];
+      final content = event['content']?.toString();
+      String? jobId = arguments['job_id']?.toString();
+      if (jobId == null && content != null) {
+        try {
+          final result = jsonDecode(content);
+          if (result is Map) jobId = result['job_id']?.toString();
+        } on FormatException {
+          // Plain output is a valid tool result.
+        }
+      }
+      jobId ??= toolCallBackgroundRuntimeId(metadata);
+      var run = jobId == null
+          ? registry?.of(
+              (event['id'] ?? '').toString(),
+              conversationId: message.conversationId,
+            )
+          : registry?.byRuntimeRunId(
+              jobId,
+              conversationId: message.conversationId,
+            );
+      if (jobId == null && run?.responseId != message.id) {
+        run =
+            runs
+                .where(
+                  (candidate) =>
+                      candidate.responseId == message.id &&
+                      candidate.toolCallId == (event['id'] ?? '').toString(),
+                )
+                .lastOrNull ??
+            run;
+      }
+      final ownedRun =
+          run != null &&
+          (run.responseId == null || run.responseId == message.id);
+      final background =
+          name == 'shell' &&
+          ((ownedRun && run.background) ||
+              (arguments['background'] == true && jobId != null));
+      final terminalStatus = workspace is Map ? workspace['status'] : null;
+      final livePart = streamController
+          .getToolParts(message.id)
+          ?.where(
+            (part) =>
+                part.id == (event['id'] ?? '').toString() &&
+                part.toolName == name,
+          )
+          .firstOrNull;
+      final previouslyStopped =
+          toolCallWasStopped(metadata) ||
+          toolCallWasStopped(livePart?.metadata);
+      final completed =
+          !previouslyStopped &&
+          (content?.isNotEmpty == true ||
+              livePart?.loading == false ||
+              (livePart == null &&
+                  {
+                    'ok',
+                    'error',
+                    'denied',
+                    'timeout',
+                    'cancelled',
+                    'interrupted',
+                  }.contains(terminalStatus)));
+      final stopped = !background && !completed;
+      if (stopped &&
+          ownedRun &&
+          !run.background &&
+          name != WorkspaceToolsService.shellOutputTool) {
+        run.complete(status: ToolRunStatus.cancelled);
+      }
+      final updatedMetadata = stoppedResponseToolMetadata(
+        metadata,
+        stopped: stopped,
+      );
+      if (background && ownedRun) {
+        (updatedMetadata['computer'] as Map<String, dynamic>)['runtimeRunId'] =
+            run.runtimeRunId;
+      }
+      if (stopped && WorkspaceToolsService.toolNames.contains(name)) {
+        updatedMetadata['workspace'] = {
+          if (workspace is Map) ...Map<String, dynamic>.from(workspace),
+          'tool': name,
+          'status': 'cancelled',
+          'cancelled': true,
+        };
+      }
+      return {...event, 'metadata': updatedMetadata};
+    }
+
+    final parts = <MessagePart>[];
+    final persistedEvents = <Map<String, dynamic>>[];
+    for (final part in message.parts) {
+      if (part is! ToolCallPart) {
+        parts.add(part);
+        continue;
+      }
+      try {
+        final decoded = jsonDecode(part.payloadJson);
+        if (decoded is Map) {
+          final event = settle(Map<String, dynamic>.from(decoded));
+          parts.add(ToolCallPart(jsonEncode(event)));
+          persistedEvents.add(event);
+          continue;
+        }
+      } on FormatException {
+        // Preserve malformed legacy payloads verbatim.
+      }
+      parts.add(part);
+    }
+    final toolEvents = _copyToolEvents(message.id);
+    _streamingToolEvents[message.id] = toolEvents.isEmpty
+        ? persistedEvents
+        : toolEvents.map(settle).toList();
+    final live = streamController.getToolParts(message.id);
+    if (live != null) {
+      streamController.setToolParts(message.id, [
+        for (final part in live)
+          (() {
+            final event = settle({
+              'id': part.id,
+              'name': part.toolName,
+              'arguments': part.arguments,
+              'content': part.content,
+              'metadata': part.metadata,
+            });
+            final metadata = event['metadata'] as Map<String, dynamic>;
+            return ToolUIPart(
+              id: part.id,
+              computerStepId: part.computerStepId,
+              toolName: part.toolName,
+              arguments: part.arguments,
+              content: part.content,
+              metadata: metadata,
+              loading: false,
+              memoToken: part.memoToken,
+            );
+          })(),
+      ]);
+      streamController.streamingContentNotifier.notifyToolPartsUpdated(
+        message.id,
+      );
+    }
+    return message.copyWith(parts: parts, isStreaming: false);
   }
 
   ChatMessage _messageWithCurrentReasoning(ChatMessage message) {
@@ -2666,7 +2839,10 @@ class ChatActions {
       final cancelState = _streamingStates[visibleStreaming.id];
       if (cancelState != null) _setRetryStatus(cancelState, null);
       final index = _messages.indexWhere((m) => m.id == visibleStreaming.id);
-      final visibleMessage = index == -1 ? visibleStreaming : _messages[index];
+      final cancelStateSnapshot = cancelState == null
+          ? (index == -1 ? visibleStreaming : _messages[index])
+          : _streamingMessageSnapshot(cancelState);
+      final visibleMessage = _stopResponseTools(cancelStateSnapshot);
       if (chatController.publishTerminalMessage(visibleMessage)) {
         onMessagesChanged?.call();
       }
@@ -2708,11 +2884,12 @@ class ChatActions {
       final assistantParts = await _sanitizeAssistantImageParts(
         state == null ? latestStreaming.parts : _assistantPartsForState(state),
       );
-      final finalizedMessage =
-          (state == null
-                  ? _messageWithCurrentReasoning(latestStreaming)
-                  : _streamingMessageSnapshot(state))
-              .copyWith(parts: assistantParts, isStreaming: false);
+      final finalizedMessage = _stopResponseTools(
+        (state == null
+                ? _messageWithCurrentReasoning(latestStreaming)
+                : _streamingMessageSnapshot(state))
+            .copyWith(parts: assistantParts, isStreaming: false),
+      );
       var cancellationPersisted = false;
       try {
         await _finalizeStreamingCheckpoint(

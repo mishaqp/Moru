@@ -22,6 +22,7 @@ class _Runtime extends WorkspaceRuntime {
   final streams = <String, StreamController<CommandEvent>>{};
   StreamController<CommandEvent> get events => streams.values.last;
   bool failLaunch = false;
+  Completer<void>? cancelAcknowledgement;
 
   @override
   Future<RuntimeStatus> status() async =>
@@ -37,6 +38,7 @@ class _Runtime extends WorkspaceRuntime {
   @override
   Future<void> cancel(String runId) async {
     cancelled.add(runId);
+    await cancelAcknowledgement?.future;
     if (streams[runId]?.isClosed == false) {
       await finish(cancelled: true, runId: runId);
     }
@@ -307,7 +309,61 @@ void main() {
       expect(runtime.cancelled, isEmpty);
       expect(runtime.requests.single.isCancelled?.call(), isFalse);
       expect(registry.all.single.status, ToolRunStatus.running);
-      await runtime.finish();
+      final id = runtime.requests.single.runId;
+      final output = ClientToolResult.fromHandler(
+        await tools.handle(context, 'shell_output', {
+          'job_id': id,
+        }, toolCallId: 'after-generation-stop'),
+      );
+      expect(jsonDecode(output.content)['job_id'], id);
+      await tools.handle(context, 'shell_output', {
+        'job_id': id,
+        'stop': true,
+      }, toolCallId: 'stop-preserved-job');
+      expect(runtime.cancelled, [id]);
+      expect(
+        registry.byRuntimeRunId(id, conversationId: 'chat')!.status,
+        ToolRunStatus.cancelled,
+      );
+    },
+  );
+
+  test(
+    'queued foreground output while Stop awaits native ack stays cancelled',
+    () async {
+      var stopped = false;
+      final ended = Completer<void>();
+      runtime.cancelAcknowledgement = Completer<void>();
+      final execution =
+          ToolCallCancellation(
+            isCancelled: () => stopped,
+            cancelled: ended.future,
+          ).run(
+            () => tools.handle(context, 'shell', {
+              'command': 'printf progress',
+            }, toolCallId: 'foreground'),
+          );
+      await until(() => runtime.requests.isNotEmpty);
+      final run = registry.all.single;
+      run.complete(status: ToolRunStatus.cancelled);
+      stopped = true;
+      ended.complete();
+      await until(() => runtime.cancelled.isNotEmpty);
+      runtime.events.add(
+        CommandOutput(
+          OutputStreamKind.stdout,
+          utf8.encode('queued after stop\n'),
+        ),
+      );
+      runtime.events.add(
+        CommandOutput(OutputStreamKind.stderr, utf8.encode('queued error\n')),
+      );
+      await pumpEventQueue();
+      expect(run.status, ToolRunStatus.cancelled);
+      runtime.cancelAcknowledgement!.complete();
+      final result = ClientToolResult.fromHandler(await execution);
+      expect(result.content, isNot(contains('shell_failed')));
+      expect(run.status, ToolRunStatus.cancelled);
     },
   );
 

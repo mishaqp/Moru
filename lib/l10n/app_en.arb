@@ -5060,7 +5060,7 @@
   "browserAddressEditorHint": "https://example.com",
   "browserAddressEditorInvalid": "Enter a valid http or https address.",
   "browserAddressEditorGo": "Go",
-  "browserMinimize": "Minimize",
+  "browserMinimize": "Minimize to chat",
   "browserMiniExpand": "Expand",
   "browserMiniTitle": "Browser",
   "userscriptsTitle": "User scripts",
@@ -5580,5 +5580,130 @@
   "computerStop": "Stop",
   "browserFloatingWindowTitle": "Floating browser window",
   "browserFloatingWindowDescription": "Show a floating live browser when minimized. By default, AI actions appear in Computer above the composer.",
-  "computerMoreDetails": "Detailed result"
+  "computerMoreDetails": "Detailed result",
+  "computerStopped": "Stopped",
+  "computerActionsCount": "{count, plural, =1{{count} action} other{{count} actions}}",
+  "@computerActionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "computerViewAction": "View",
+  "computerBackgroundOutput": "Background job output",
+  "computerBackground": "In background",
+  "computerRunningElapsed": "Running · {elapsed}",
+  "@computerRunningElapsed": {
+    "placeholders": {
+      "elapsed": {
+        "type": "String"
+      }
+    }
+  },
+  "computerExitElapsed": "Exit code {code} · {seconds} s",
+  "@computerExitElapsed": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "computerBrowserStep": "Browser · {domain}",
+  "@computerBrowserStep": {
+    "placeholders": {
+      "domain": {
+        "type": "String"
+      }
+    }
+  },
+  "computerPlanProgress": "Plan · {completed}/{total}",
+  "@computerPlanProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "computerFileStep": "{action} · {name}",
+  "@computerFileStep": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "computerAddedLines": "(+{count} lines)",
+  "@computerAddedLines": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "computerActionCommand": "Command",
+  "computerActionOpen": "Open",
+  "computerActionClick": "Click",
+  "computerActionType": "Type",
+  "computerActionRead": "Read",
+  "computerActionWrite": "Write",
+  "computerActionEdit": "Edit",
+  "computerActionList": "List",
+  "computerActionPlan": "Plan",
+  "computerActionScreenshot": "Screenshot",
+  "computerBrowserOpening": "Opening…",
+  "computerBrowserClicking": "Clicking…",
+  "computerBrowserTyping": "Typing…",
+  "computerBrowserReading": "Reading…",
+  "computerAllParameters": "All parameters (JSON)",
+  "computerParameterDirectory": "Directory",
+  "computerParameterBackground": "Background",
+  "computerParameterTimeout": "Timeout",
+  "computerParameterUrl": "URL",
+  "computerParameterSelector": "Selector",
+  "computerParameterText": "Text",
+  "computerParameterPath": "Path",
+  "computerParameterRange": "Range",
+  "computerStepPosition": "Step {current} of {total}",
+  "@computerStepPosition": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "browserActions": "Actions",
+  "browserActionsCount": "Actions · {count}",
+  "@browserActionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browserCloseBrowser": "Close browser",
+  "browserCloseWhileAiTitle": "Close browser?",
+  "browserCloseWhileAiMessage": "The AI action will stop.",
+  "computerParameterYes": "Yes",
+  "computerParameterNo": "No",
+  "computerBrowserAction": "{action, select, open{Open} observe{Inspect} screenshot{Screenshot} read{Read} collect{Collect} outline{Page outline} wait_stable{Wait until loaded} wait_for{Wait for element} back{Back} forward{Forward} reload{Reload} scroll{Scroll} tabs{Tabs} new_tab{New tab} switch_tab{Switch tab} close_tab{Close tab} set_mode{Site mode} close{Close browser} done{Done} click{Click} hover{Hover} type{Type} submit{Submit form} press_key{Press key} eval_js{Run page code} fetch{Page request} export_cookies{Export cookies} other{Browser action}}",
+  "@computerBrowserAction": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  }
 }

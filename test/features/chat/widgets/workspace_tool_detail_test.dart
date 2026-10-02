@@ -12,6 +12,7 @@ import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tool_metadata.dart';
 import 'package:Kelivo/features/chat/widgets/workspace_tool_detail.dart';
+import 'package:Kelivo/features/chat/widgets/computer_response_scope.dart';
 import 'package:Kelivo/features/chat/widgets/workspace_tool_ui.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
@@ -61,6 +62,41 @@ Widget _harness({required Widget child}) {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets(
+    'old scoped detail ignores newer response output with a reused id',
+    (tester) async {
+      final registry = ToolRunRegistry();
+      addTearDown(registry.dispose);
+      final newer = registry.start(
+        'tc-shell',
+        'shell',
+        conversationId: 'chat',
+        responseId: 'new',
+      );
+      newer.appendStdout(utf8.encode('new response output\n'));
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: registry,
+          child: _harness(
+            child: ComputerResponseScope(
+              responseId: 'old',
+              conversationId: 'chat',
+              steps: const [],
+              child: WorkspaceToolDetailBody(
+                conversationId: 'chat',
+                part: _shellPart(command: 'old command', stdout: 'old output'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.textContaining('new response output'), findsNothing);
+      expect(find.textContaining('old output'), findsOneWidget);
+      newer.complete(status: ToolRunStatus.succeeded);
+    },
+  );
 
   testWidgets('long shell output lives in a single scrollable', (tester) async {
     final stdout = List<String>.generate(

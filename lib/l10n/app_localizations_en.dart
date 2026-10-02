@@ -11227,7 +11227,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserAddressEditorGo => 'Go';
 
   @override
-  String get browserMinimize => 'Minimize';
+  String get browserMinimize => 'Minimize to chat';
 
   @override
   String get browserMiniExpand => 'Expand';
@@ -12491,4 +12491,189 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get computerMoreDetails => 'Detailed result';
+
+  @override
+  String get computerStopped => 'Stopped';
+
+  @override
+  String computerActionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count actions',
+      one: '$count action',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get computerViewAction => 'View';
+
+  @override
+  String get computerBackgroundOutput => 'Background job output';
+
+  @override
+  String get computerBackground => 'In background';
+
+  @override
+  String computerRunningElapsed(String elapsed) {
+    return 'Running · $elapsed';
+  }
+
+  @override
+  String computerExitElapsed(int code, String seconds) {
+    return 'Exit code $code · $seconds s';
+  }
+
+  @override
+  String computerBrowserStep(String domain) {
+    return 'Browser · $domain';
+  }
+
+  @override
+  String computerPlanProgress(int completed, int total) {
+    return 'Plan · $completed/$total';
+  }
+
+  @override
+  String computerFileStep(String action, String name) {
+    return '$action · $name';
+  }
+
+  @override
+  String computerAddedLines(int count) {
+    return '(+$count lines)';
+  }
+
+  @override
+  String get computerActionCommand => 'Command';
+
+  @override
+  String get computerActionOpen => 'Open';
+
+  @override
+  String get computerActionClick => 'Click';
+
+  @override
+  String get computerActionType => 'Type';
+
+  @override
+  String get computerActionRead => 'Read';
+
+  @override
+  String get computerActionWrite => 'Write';
+
+  @override
+  String get computerActionEdit => 'Edit';
+
+  @override
+  String get computerActionList => 'List';
+
+  @override
+  String get computerActionPlan => 'Plan';
+
+  @override
+  String get computerActionScreenshot => 'Screenshot';
+
+  @override
+  String get computerBrowserOpening => 'Opening…';
+
+  @override
+  String get computerBrowserClicking => 'Clicking…';
+
+  @override
+  String get computerBrowserTyping => 'Typing…';
+
+  @override
+  String get computerBrowserReading => 'Reading…';
+
+  @override
+  String get computerAllParameters => 'All parameters (JSON)';
+
+  @override
+  String get computerParameterDirectory => 'Directory';
+
+  @override
+  String get computerParameterBackground => 'Background';
+
+  @override
+  String get computerParameterTimeout => 'Timeout';
+
+  @override
+  String get computerParameterUrl => 'URL';
+
+  @override
+  String get computerParameterSelector => 'Selector';
+
+  @override
+  String get computerParameterText => 'Text';
+
+  @override
+  String get computerParameterPath => 'Path';
+
+  @override
+  String get computerParameterRange => 'Range';
+
+  @override
+  String computerStepPosition(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String get browserActions => 'Actions';
+
+  @override
+  String browserActionsCount(int count) {
+    return 'Actions · $count';
+  }
+
+  @override
+  String get browserCloseBrowser => 'Close browser';
+
+  @override
+  String get browserCloseWhileAiTitle => 'Close browser?';
+
+  @override
+  String get browserCloseWhileAiMessage => 'The AI action will stop.';
+
+  @override
+  String get computerParameterYes => 'Yes';
+
+  @override
+  String get computerParameterNo => 'No';
+
+  @override
+  String computerBrowserAction(String action) {
+    String _temp0 = intl.Intl.selectLogic(action, {
+      'open': 'Open',
+      'observe': 'Inspect',
+      'screenshot': 'Screenshot',
+      'read': 'Read',
+      'collect': 'Collect',
+      'outline': 'Page outline',
+      'wait_stable': 'Wait until loaded',
+      'wait_for': 'Wait for element',
+      'back': 'Back',
+      'forward': 'Forward',
+      'reload': 'Reload',
+      'scroll': 'Scroll',
+      'tabs': 'Tabs',
+      'new_tab': 'New tab',
+      'switch_tab': 'Switch tab',
+      'close_tab': 'Close tab',
+      'set_mode': 'Site mode',
+      'close': 'Close browser',
+      'done': 'Done',
+      'click': 'Click',
+      'hover': 'Hover',
+      'type': 'Type',
+      'submit': 'Submit form',
+      'press_key': 'Press key',
+      'eval_js': 'Run page code',
+      'fetch': 'Page request',
+      'export_cookies': 'Export cookies',
+      'other': 'Browser action',
+    });
+    return '$_temp0';
+  }
 }

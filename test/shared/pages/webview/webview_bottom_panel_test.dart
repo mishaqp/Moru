@@ -193,7 +193,7 @@ void main() {
     expect(find.byType(TextField), findsNothing);
   });
 
-  testWidgets('nav buttons and send have real tooltips and 48dp targets', (
+  testWidgets('navigation has 48dp targets and send is 40dp inside the field', (
     tester,
   ) async {
     await tester.pumpWidget(wrap());
@@ -203,14 +203,28 @@ void main() {
       expect(finder, findsOneWidget, reason: 'missing tooltip: $tooltip');
     }
 
-    final sizes = tester
-        .widgetList<IconButton>(find.byType(IconButton))
-        .map((b) => b.constraints)
-        .whereType<BoxConstraints>();
-    for (final c in sizes) {
-      expect(c.minWidth, greaterThanOrEqualTo(48));
-      expect(c.minHeight, greaterThanOrEqualTo(48));
+    for (final tooltip in const ['Refresh', 'Forward']) {
+      final button = find.descendant(
+        of: find.byTooltip(tooltip),
+        matching: find.byType(IconButton),
+      );
+      expect(tester.getSize(button).width, greaterThanOrEqualTo(48));
+      expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
     }
+    final send = find.descendant(
+      of: find.byTooltip('Send'),
+      matching: find.byType(IconButton),
+    );
+    final field = find.byType(TextField);
+    final pill = find
+        .ancestor(of: field, matching: find.byType(Container))
+        .first;
+    expect(tester.getSize(send), const Size(40, 40));
+    expect(tester.getRect(pill).contains(tester.getRect(send).topLeft), isTrue);
+    expect(
+      tester.getRect(pill).contains(tester.getRect(send).bottomRight),
+      isTrue,
+    );
   });
 
   testWidgets('composer and Stop stay reachable when the keyboard opens', (
@@ -260,7 +274,8 @@ void main() {
         expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
       }
       expect(find.byIcon(Lucide.History), findsNothing);
-      expect(find.byIcon(Lucide.Bot), findsOneWidget);
+      expect(find.byIcon(Lucide.Sparkles), findsOneWidget);
+      expect(find.text('Actions'), findsOneWidget);
       final backIcon = tester.widget<Icon>(find.byIcon(Lucide.ArrowLeft));
       final forwardIcon = tester.widget<Icon>(find.byIcon(Lucide.ArrowRight));
       expect(forwardIcon.color!.a, lessThan(backIcon.color!.a));
@@ -286,6 +301,36 @@ void main() {
       expect(forwardCalls, 0);
     },
   );
+
+  testWidgets('navigation distributes controls across 320dp at 1.3 scale', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(wrap());
+    expect(tester.takeException(), isNull);
+    final row = tester.widget<Row>(
+      find
+          .descendant(
+            of: find.byType(WebViewNavRow),
+            matching: find.byType(Row),
+          )
+          .first,
+    );
+    expect(row.mainAxisAlignment, MainAxisAlignment.spaceAround);
+    final action = find.text('Actions');
+    expect(action, findsOneWidget);
+    final refresh = tester.getCenter(find.byTooltip('Refresh'));
+    expect(tester.getCenter(action).dx, greaterThan(refresh.dx));
+    expect(
+      tester.getRect(find.byType(WebViewNavRow)).right,
+      greaterThanOrEqualTo(tester.getRect(action).right),
+    );
+  });
 
   testWidgets('Glass bottom panel uses the app tint without live blur', (
     tester,

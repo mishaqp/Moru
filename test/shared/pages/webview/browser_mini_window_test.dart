@@ -22,6 +22,7 @@ import 'package:Kelivo/shared/widgets/app_overlays.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../support/fake_webview_platform.dart';
+import 'browser_test_actions.dart';
 import '../../../support/business_test_harness.dart';
 
 const _minimize = ValueKey('browser_minimize');
@@ -103,7 +104,7 @@ void main() {
           await tester.tap(find.byKey(_minimize));
           await tester.pumpAndSettle();
         } else if (state == 'reopened') {
-          await tester.tap(find.byTooltip('Close'));
+          await closeBrowserFromMenu(tester);
           await tester.pumpAndSettle();
         }
       }
@@ -193,7 +194,7 @@ void main() {
           in session.tabs.value.where((tab) => !tab.active).toList()) {
         await session.closeTab(tab.id);
       }
-      await tester.tap(find.byTooltip('Close'));
+      await closeBrowserFromMenu(tester);
       await tester.pumpAndSettle();
     });
   }
@@ -247,7 +248,7 @@ void main() {
             in session.tabs.value.where((tab) => !tab.active).toList()) {
           await session.closeTab(tab.id);
         }
-        await tester.tap(find.byTooltip('Close'));
+        await closeBrowserFromMenu(tester);
         await tester.pumpAndSettle();
       },
     );
@@ -338,7 +339,7 @@ void main() {
       expect(session.tabs.value, hasLength(failureMode == 'stop' ? 1 : 0));
       if (failureMode == 'stop') expect(session.controller, same(previous));
       FakeWebViewPlatform.onCreated = null;
-      await tester.tap(find.byTooltip('Close'));
+      await closeBrowserFromMenu(tester);
       await tester.pumpAndSettle();
     });
   }
@@ -373,7 +374,7 @@ void main() {
     expect(await session.controller!.currentUrl(), loadedUrl);
     expect(session.minimized.value, isFalse);
 
-    await tester.tap(find.byTooltip('Close'));
+    await closeBrowserFromMenu(tester);
     await tester.pumpAndSettle();
     expect(session.isAttached, isFalse);
   });

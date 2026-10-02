@@ -183,6 +183,9 @@ List<ComputerStep> _steps(ToolRun run) => [
     toolName: 'shell',
     arguments: const {'command': 'flutter test test/shared'},
     content: '24 tests passed\nRunning browser checks',
+    metadata: const {
+      'workspace': {'durationMs': 12000},
+    },
     loading: true,
     run: run,
   ),

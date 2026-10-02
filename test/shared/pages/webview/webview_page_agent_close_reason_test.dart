@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import '../../../support/fake_webview_platform.dart';
+import 'browser_test_actions.dart';
 
 void main() {
   setUp(() {
@@ -32,7 +33,7 @@ void main() {
     ),
   );
 
-  testWidgets('a manual close (the top bar\'s close button) records the manual '
+  testWidgets('a manual close from the menu records the manual '
       'close reason', (tester) async {
     final key = GlobalKey();
     await tester.pumpWidget(
@@ -43,7 +44,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    await tester.tap(find.byTooltip('Close'));
+    await closeBrowserFromMenu(tester);
     await tester.pump();
     await tester.pumpAndSettle();
 

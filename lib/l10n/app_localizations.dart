@@ -20078,7 +20078,7 @@ abstract class AppLocalizations {
   /// No description provided for @browserMinimize.
   ///
   /// In en, this message translates to:
-  /// **'Minimize'**
+  /// **'Minimize to chat'**
   String get browserMinimize;
 
   /// No description provided for @browserMiniExpand.
@@ -22280,6 +22280,264 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Detailed result'**
   String get computerMoreDetails;
+
+  /// No description provided for @computerStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped'**
+  String get computerStopped;
+
+  /// No description provided for @computerActionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} action} other{{count} actions}}'**
+  String computerActionsCount(int count);
+
+  /// No description provided for @computerViewAction.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get computerViewAction;
+
+  /// No description provided for @computerBackgroundOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'Background job output'**
+  String get computerBackgroundOutput;
+
+  /// No description provided for @computerBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'In background'**
+  String get computerBackground;
+
+  /// No description provided for @computerRunningElapsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Running · {elapsed}'**
+  String computerRunningElapsed(String elapsed);
+
+  /// No description provided for @computerExitElapsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit code {code} · {seconds} s'**
+  String computerExitElapsed(int code, String seconds);
+
+  /// No description provided for @computerBrowserStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser · {domain}'**
+  String computerBrowserStep(String domain);
+
+  /// No description provided for @computerPlanProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan · {completed}/{total}'**
+  String computerPlanProgress(int completed, int total);
+
+  /// No description provided for @computerFileStep.
+  ///
+  /// In en, this message translates to:
+  /// **'{action} · {name}'**
+  String computerFileStep(String action, String name);
+
+  /// No description provided for @computerAddedLines.
+  ///
+  /// In en, this message translates to:
+  /// **'(+{count} lines)'**
+  String computerAddedLines(int count);
+
+  /// No description provided for @computerActionCommand.
+  ///
+  /// In en, this message translates to:
+  /// **'Command'**
+  String get computerActionCommand;
+
+  /// No description provided for @computerActionOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get computerActionOpen;
+
+  /// No description provided for @computerActionClick.
+  ///
+  /// In en, this message translates to:
+  /// **'Click'**
+  String get computerActionClick;
+
+  /// No description provided for @computerActionType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get computerActionType;
+
+  /// No description provided for @computerActionRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Read'**
+  String get computerActionRead;
+
+  /// No description provided for @computerActionWrite.
+  ///
+  /// In en, this message translates to:
+  /// **'Write'**
+  String get computerActionWrite;
+
+  /// No description provided for @computerActionEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get computerActionEdit;
+
+  /// No description provided for @computerActionList.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get computerActionList;
+
+  /// No description provided for @computerActionPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get computerActionPlan;
+
+  /// No description provided for @computerActionScreenshot.
+  ///
+  /// In en, this message translates to:
+  /// **'Screenshot'**
+  String get computerActionScreenshot;
+
+  /// No description provided for @computerBrowserOpening.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening…'**
+  String get computerBrowserOpening;
+
+  /// No description provided for @computerBrowserClicking.
+  ///
+  /// In en, this message translates to:
+  /// **'Clicking…'**
+  String get computerBrowserClicking;
+
+  /// No description provided for @computerBrowserTyping.
+  ///
+  /// In en, this message translates to:
+  /// **'Typing…'**
+  String get computerBrowserTyping;
+
+  /// No description provided for @computerBrowserReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading…'**
+  String get computerBrowserReading;
+
+  /// No description provided for @computerAllParameters.
+  ///
+  /// In en, this message translates to:
+  /// **'All parameters (JSON)'**
+  String get computerAllParameters;
+
+  /// No description provided for @computerParameterDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'Directory'**
+  String get computerParameterDirectory;
+
+  /// No description provided for @computerParameterBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get computerParameterBackground;
+
+  /// No description provided for @computerParameterTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeout'**
+  String get computerParameterTimeout;
+
+  /// No description provided for @computerParameterUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'URL'**
+  String get computerParameterUrl;
+
+  /// No description provided for @computerParameterSelector.
+  ///
+  /// In en, this message translates to:
+  /// **'Selector'**
+  String get computerParameterSelector;
+
+  /// No description provided for @computerParameterText.
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get computerParameterText;
+
+  /// No description provided for @computerParameterPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Path'**
+  String get computerParameterPath;
+
+  /// No description provided for @computerParameterRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Range'**
+  String get computerParameterRange;
+
+  /// No description provided for @computerStepPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String computerStepPosition(int current, int total);
+
+  /// No description provided for @browserActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions'**
+  String get browserActions;
+
+  /// No description provided for @browserActionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions · {count}'**
+  String browserActionsCount(int count);
+
+  /// No description provided for @browserCloseBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Close browser'**
+  String get browserCloseBrowser;
+
+  /// No description provided for @browserCloseWhileAiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Close browser?'**
+  String get browserCloseWhileAiTitle;
+
+  /// No description provided for @browserCloseWhileAiMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The AI action will stop.'**
+  String get browserCloseWhileAiMessage;
+
+  /// No description provided for @computerParameterYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get computerParameterYes;
+
+  /// No description provided for @computerParameterNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get computerParameterNo;
+
+  /// No description provided for @computerBrowserAction.
+  ///
+  /// In en, this message translates to:
+  /// **'{action, select, open{Open} observe{Inspect} screenshot{Screenshot} read{Read} collect{Collect} outline{Page outline} wait_stable{Wait until loaded} wait_for{Wait for element} back{Back} forward{Forward} reload{Reload} scroll{Scroll} tabs{Tabs} new_tab{New tab} switch_tab{Switch tab} close_tab{Close tab} set_mode{Site mode} close{Close browser} done{Done} click{Click} hover{Hover} type{Type} submit{Submit form} press_key{Press key} eval_js{Run page code} fetch{Page request} export_cookies{Export cookies} other{Browser action}}'**
+  String computerBrowserAction(String action);
 }
 
 class _AppLocalizationsDelegate

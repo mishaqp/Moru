@@ -11352,7 +11352,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserAddressEditorGo => 'Перейти';
 
   @override
-  String get browserMinimize => 'Свернуть';
+  String get browserMinimize => 'Свернуть в чат';
 
   @override
   String get browserMiniExpand => 'Развернуть';
@@ -12623,4 +12623,191 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get computerMoreDetails => 'Подробный результат';
+
+  @override
+  String get computerStopped => 'Остановлено';
+
+  @override
+  String computerActionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count действия',
+      many: '$count действий',
+      few: '$count действия',
+      one: '$count действие',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get computerViewAction => 'Посмотреть';
+
+  @override
+  String get computerBackgroundOutput => 'Вывод фоновой задачи';
+
+  @override
+  String get computerBackground => 'В фоне';
+
+  @override
+  String computerRunningElapsed(String elapsed) {
+    return 'Выполняется · $elapsed';
+  }
+
+  @override
+  String computerExitElapsed(int code, String seconds) {
+    return 'Код выхода $code · $seconds с';
+  }
+
+  @override
+  String computerBrowserStep(String domain) {
+    return 'Браузер · $domain';
+  }
+
+  @override
+  String computerPlanProgress(int completed, int total) {
+    return 'План · $completed/$total';
+  }
+
+  @override
+  String computerFileStep(String action, String name) {
+    return '$action · $name';
+  }
+
+  @override
+  String computerAddedLines(int count) {
+    return '(+$count строк)';
+  }
+
+  @override
+  String get computerActionCommand => 'Команда';
+
+  @override
+  String get computerActionOpen => 'Открыть';
+
+  @override
+  String get computerActionClick => 'Нажать';
+
+  @override
+  String get computerActionType => 'Ввод';
+
+  @override
+  String get computerActionRead => 'Чтение';
+
+  @override
+  String get computerActionWrite => 'Запись';
+
+  @override
+  String get computerActionEdit => 'Изменение';
+
+  @override
+  String get computerActionList => 'Список';
+
+  @override
+  String get computerActionPlan => 'План';
+
+  @override
+  String get computerActionScreenshot => 'Скриншот';
+
+  @override
+  String get computerBrowserOpening => 'Открывает…';
+
+  @override
+  String get computerBrowserClicking => 'Нажимает…';
+
+  @override
+  String get computerBrowserTyping => 'Вводит…';
+
+  @override
+  String get computerBrowserReading => 'Читает…';
+
+  @override
+  String get computerAllParameters => 'Все параметры (JSON)';
+
+  @override
+  String get computerParameterDirectory => 'Папка';
+
+  @override
+  String get computerParameterBackground => 'Фон';
+
+  @override
+  String get computerParameterTimeout => 'Таймаут';
+
+  @override
+  String get computerParameterUrl => 'Адрес';
+
+  @override
+  String get computerParameterSelector => 'Селектор';
+
+  @override
+  String get computerParameterText => 'Текст';
+
+  @override
+  String get computerParameterPath => 'Путь';
+
+  @override
+  String get computerParameterRange => 'Диапазон';
+
+  @override
+  String computerStepPosition(int current, int total) {
+    return 'Шаг $current из $total';
+  }
+
+  @override
+  String get browserActions => 'Действия';
+
+  @override
+  String browserActionsCount(int count) {
+    return 'Действия · $count';
+  }
+
+  @override
+  String get browserCloseBrowser => 'Закрыть браузер';
+
+  @override
+  String get browserCloseWhileAiTitle => 'Закрыть браузер?';
+
+  @override
+  String get browserCloseWhileAiMessage => 'Действие ИИ будет остановлено.';
+
+  @override
+  String get computerParameterYes => 'Да';
+
+  @override
+  String get computerParameterNo => 'Нет';
+
+  @override
+  String computerBrowserAction(String action) {
+    String _temp0 = intl.Intl.selectLogic(action, {
+      'open': 'Открыть',
+      'observe': 'Осмотр',
+      'screenshot': 'Скриншот',
+      'read': 'Чтение',
+      'collect': 'Сбор списка',
+      'outline': 'Структура страницы',
+      'wait_stable': 'Ожидание загрузки',
+      'wait_for': 'Ожидание элемента',
+      'back': 'Назад',
+      'forward': 'Вперёд',
+      'reload': 'Обновить',
+      'scroll': 'Прокрутка',
+      'tabs': 'Вкладки',
+      'new_tab': 'Новая вкладка',
+      'switch_tab': 'Смена вкладки',
+      'close_tab': 'Закрыть вкладку',
+      'set_mode': 'Режим сайта',
+      'close': 'Закрыть браузер',
+      'done': 'Готово',
+      'click': 'Нажать',
+      'hover': 'Наведение',
+      'type': 'Ввод',
+      'submit': 'Отправить форму',
+      'press_key': 'Нажать клавишу',
+      'eval_js': 'Выполнить код',
+      'fetch': 'Запрос со страницы',
+      'export_cookies': 'Экспорт куки',
+      'other': 'Действие браузера',
+    });
+    return '$_temp0';
+  }
 }

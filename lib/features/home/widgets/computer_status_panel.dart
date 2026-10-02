@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../../../shared/animations/widgets.dart';
-import 'package:path/path.dart' as p;
 
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
@@ -22,6 +21,7 @@ class ComputerStatusPanel extends StatefulWidget {
     this.onStop,
     this.updates,
     this.readSteps,
+    this.readResponseRunning,
   });
 
   static const panelKey = ValueKey('computer-status-panel');
@@ -35,6 +35,7 @@ class ComputerStatusPanel extends StatefulWidget {
   final VoidCallback? onStop;
   final Listenable? updates;
   final List<ComputerStep> Function()? readSteps;
+  final bool Function()? readResponseRunning;
 
   @override
   State<ComputerStatusPanel> createState() => _ComputerStatusPanelState();
@@ -42,17 +43,66 @@ class ComputerStatusPanel extends StatefulWidget {
 
 class _ComputerStatusPanelState extends State<ComputerStatusPanel> {
   final _selection = ComputerStepSelection();
+  Timer? _elapsed;
+  List<Listenable> _runUpdates = const [];
 
   @override
   void initState() {
     super.initState();
     _selection.update(widget.steps);
+    _listenToRuns();
   }
 
   @override
   void didUpdateWidget(ComputerStatusPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     _selection.update(widget.steps);
+    _listenToRuns();
+  }
+
+  void _listenToRuns() {
+    for (final run in _runUpdates) {
+      run.removeListener(_refresh);
+    }
+    _runUpdates = widget.steps
+        .map((step) => step.run)
+        .nonNulls
+        .toSet()
+        .toList();
+    for (final run in _runUpdates) {
+      run.addListener(_refresh);
+    }
+    _syncElapsed();
+  }
+
+  void _syncElapsed() {
+    final running =
+        widget.generating &&
+        !widget.steps.any((step) => step.responseStopped) &&
+        widget.steps.any((step) => step.run != null && step.isRunning);
+    if (running) {
+      _elapsed ??= Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    } else {
+      _elapsed?.cancel();
+      _elapsed = null;
+    }
+  }
+
+  void _refresh() {
+    if (!mounted) return;
+    setState(() => _selection.update(widget.steps));
+    _syncElapsed();
+  }
+
+  @override
+  void dispose() {
+    _elapsed?.cancel();
+    for (final run in _runUpdates) {
+      run.removeListener(_refresh);
+    }
+    super.dispose();
   }
 
   void _open() {
@@ -64,19 +114,10 @@ class _ComputerStatusPanelState extends State<ComputerStatusPanel> {
         conversationId: widget.conversationId,
         updates: widget.updates,
         readSteps: widget.readSteps,
+        readResponseRunning: widget.readResponseRunning,
       ),
     );
   }
-
-  String _label(ComputerStep step, AppLocalizations l10n) =>
-      switch (step.kind) {
-        ComputerStepKind.command when step.command?.isNotEmpty == true =>
-          step.command!.trim().split('\n').first,
-        ComputerStepKind.file when step.path?.isNotEmpty == true => p.basename(
-          step.path!,
-        ),
-        _ => step.title(l10n),
-      };
 
   @override
   Widget build(BuildContext context) {
@@ -84,11 +125,16 @@ class _ComputerStatusPanelState extends State<ComputerStatusPanel> {
     if (step == null) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final busy = widget.generating || widget.steps.any((s) => s.isRunning);
-    final status = step.isRunning
-        ? l10n.computerWorking
-        : step.isError
+    final active =
+        widget.generating && !widget.steps.any((s) => s.responseStopped);
+    final stopped = widget.steps.any((s) => s.isStopped || s.responseStopped);
+    final error = widget.steps.any((s) => s.isError);
+    final summary = stopped
+        ? l10n.computerStopped
+        : error
         ? l10n.computerError
+        : widget.steps.every((s) => s.isBackground && s.isRunning)
+        ? l10n.computerBackground
         : l10n.computerDone;
 
     return Material(
@@ -102,118 +148,196 @@ class _ComputerStatusPanelState extends State<ComputerStatusPanel> {
         child: InkWell(
           onTap: _open,
           borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 4, 4),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(9),
-                  child: SizedBox(
-                    width: 60,
-                    height: 76,
-                    child: AnimatedIconSwap(
-                      child: ComputerStepThumbnail(
-                        key: ValueKey(step.id),
-                        step: step,
-                        conversationId: widget.conversationId,
-                      ),
+          child: !active
+              ? SizedBox(
+                  height: 48,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        Icon(
+                          stopped
+                              ? Lucide.Square
+                              : error
+                              ? Lucide.TriangleAlert
+                              : Lucide.Check,
+                          size: 18,
+                          color: error && !stopped
+                              ? cs.error
+                              : cs.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '$summary · ${l10n.computerActionsCount(widget.steps.length)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: error && !stopped
+                                  ? cs.error
+                                  : cs.onSurface,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          l10n.computerViewAction,
+                          style: TextStyle(fontSize: 12, color: cs.primary),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 88),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    child: Row(
+                      children: [
+                        AnimatedIconSwap(
+                          child: ComputerStepThumbnail(
+                            key: ValueKey(step.id),
+                            step: step,
+                            conversationId: widget.conversationId,
+                            width: 76,
+                            height: 56,
+                            borderRadius: 10,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                step.title(l10n),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1,
+                                  fontFamily:
+                                      step.kind == ComputerStepKind.command
+                                      ? 'monospace'
+                                      : null,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                step.subtitle(l10n),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  height: 1,
+                                  color: step.isError
+                                      ? cs.error
+                                      : cs.onSurfaceVariant,
+                                ),
+                              ),
+                              SizedBox(
+                                width: 148,
+                                height: 48,
+                                child: Row(
+                                  children: [
+                                    IconButton(
+                                      key: ComputerStatusPanel.previousKey,
+                                      tooltip: l10n.computerPreviousStep,
+                                      icon: const Icon(
+                                        Lucide.ChevronLeft,
+                                        size: 18,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints:
+                                          const BoxConstraints.tightFor(
+                                            width: 48,
+                                            height: 48,
+                                          ),
+                                      style: IconButton.styleFrom(
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      onPressed: _selection.index > 0
+                                          ? () => setState(
+                                              () => _selection.select(
+                                                _selection.index - 1,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                    Expanded(
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          '${_selection.index + 1} / ${widget.steps.length}',
+                                          maxLines: 1,
+                                          textAlign: TextAlign.center,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.labelSmall,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      key: ComputerStatusPanel.nextKey,
+                                      tooltip: l10n.computerNextStep,
+                                      icon: const Icon(
+                                        Lucide.ChevronRight,
+                                        size: 18,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints:
+                                          const BoxConstraints.tightFor(
+                                            width: 48,
+                                            height: 48,
+                                          ),
+                                      style: IconButton.styleFrom(
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      onPressed:
+                                          _selection.index <
+                                              widget.steps.length - 1
+                                          ? () => setState(
+                                              () => _selection.select(
+                                                _selection.index + 1,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (active) ...[
+                          const SizedBox(width: 4),
+                          IconButton.filledTonal(
+                            key: ComputerStatusPanel.stopKey,
+                            tooltip: l10n.computerStop,
+                            onPressed: widget.onStop,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints.tightFor(
+                              width: 44,
+                              height: 44,
+                            ),
+                            style: IconButton.styleFrom(
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              foregroundColor: cs.onSurface,
+                            ),
+                            icon: const Icon(Lucide.Square, size: 18),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            l10n.computerTitle,
-                            style: Theme.of(context).textTheme.labelLarge,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              status,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: step.isError
-                                    ? cs.error
-                                    : cs.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        _label(step, l10n),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontFamily: step.kind == ComputerStepKind.command
-                              ? 'monospace'
-                              : null,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          IconButton(
-                            key: ComputerStatusPanel.previousKey,
-                            tooltip: l10n.computerPreviousStep,
-                            icon: const Icon(Lucide.ChevronLeft, size: 18),
-                            onPressed: _selection.index > 0
-                                ? () => setState(
-                                    () =>
-                                        _selection.select(_selection.index - 1),
-                                  )
-                                : null,
-                          ),
-                          Expanded(
-                            child: Text(
-                              '${_selection.index + 1} / ${widget.steps.length}',
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              style: Theme.of(context).textTheme.labelSmall,
-                            ),
-                          ),
-                          IconButton(
-                            key: ComputerStatusPanel.nextKey,
-                            tooltip: l10n.computerNextStep,
-                            icon: const Icon(Lucide.ChevronRight, size: 18),
-                            onPressed:
-                                _selection.index < widget.steps.length - 1
-                                ? () => setState(
-                                    () =>
-                                        _selection.select(_selection.index + 1),
-                                  )
-                                : null,
-                          ),
-                          if (busy)
-                            TextButton(
-                              key: ComputerStatusPanel.stopKey,
-                              onPressed: widget.onStop,
-                              style: TextButton.styleFrom(
-                                minimumSize: const Size(48, 48),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                ),
-                                foregroundColor: cs.error,
-                              ),
-                              child: Text(l10n.computerStop),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );

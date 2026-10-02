@@ -15,6 +15,8 @@ class ToolRun extends ChangeNotifier {
     required this.toolCallId,
     required this.toolName,
     this.command,
+    this.responseId,
+    this.background = false,
     String? runtimeRunId,
     DateTime? startedAt,
   }) : _displayFilter = ToolDisplayRedaction.current,
@@ -26,6 +28,9 @@ class ToolRun extends ChangeNotifier {
   final String toolName;
   final DateTime startedAt;
   final String? command;
+  final String? responseId;
+  final bool background;
+  DateTime? finishedAt;
   final ToolDisplayRedaction? _displayFilter;
 
   /// The launch's display filter travels with the run because UI snapshots
@@ -65,6 +70,7 @@ class ToolRun extends ChangeNotifier {
   bool get stderrTruncated => _stderr.truncated;
 
   void appendStdout(Uint8List bytes) {
+    if (status != ToolRunStatus.running) return;
     final emittedText = _stdout.add(bytes);
     totalBytes += bytes.length;
     if (emittedText) _updatePendingTail(stderr: false);
@@ -72,6 +78,7 @@ class ToolRun extends ChangeNotifier {
   }
 
   void appendStderr(Uint8List bytes) {
+    if (status != ToolRunStatus.running) return;
     final emittedText = _stderr.add(bytes);
     totalBytes += bytes.length;
     if (emittedText) _updatePendingTail(stderr: true);
@@ -79,12 +86,14 @@ class ToolRun extends ChangeNotifier {
   }
 
   void complete({required ToolRunStatus status, int? exitCode}) {
+    if (this.status != ToolRunStatus.running) return;
     // Only newly decoded text can bring an evicted progress line back.
     if (_stdout.close()) _updatePendingTail(stderr: false);
     if (_stderr.close()) _updatePendingTail(stderr: true);
     _notifyTimer?.cancel();
     _notifyTimer = null;
     this.status = status;
+    finishedAt = DateTime.now();
     this.exitCode = exitCode;
     notifyListeners();
   }
@@ -164,12 +173,16 @@ class ToolRunRegistry extends ChangeNotifier {
     String? command,
     String? conversationId,
     String? runtimeRunId,
+    String? responseId,
+    bool background = false,
   }) {
     final run = ToolRun(
       toolCallId: toolCallId,
       toolName: toolName,
       runtimeRunId: runtimeRunId,
       command: command,
+      responseId: responseId,
+      background: background,
     );
     final key = (conversationId, run.runtimeRunId);
     if (_runs.containsKey(key)) {

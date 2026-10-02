@@ -1,6 +1,7 @@
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/pages/webview/webview_result_card.dart';
+import 'package:Kelivo/shared/widgets/custom_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -56,6 +57,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Full long answer text'), findsOneWidget);
+    expect(find.byType(CustomBottomSheet), findsOneWidget);
+    final close = find.byKey(CustomBottomSheet.closeButtonKey);
+    expect(tester.getSize(close).width, greaterThanOrEqualTo(44));
+    expect(tester.getSize(close).height, greaterThanOrEqualTo(44));
   });
 
   testWidgets('copy action invokes the clipboard', (tester) async {
@@ -89,7 +94,7 @@ void main() {
 
   testWidgets(
     'the preview shows plain text -- no Markdown markers -- clamped to '
-    'three lines',
+    'two lines',
     (tester) async {
       await tester.pumpWidget(
         wrap(
@@ -108,10 +113,36 @@ void main() {
       final preview = tester.widget<Text>(
         find.text('Bold and code and\nHeading\nitem'),
       );
-      expect(preview.maxLines, 3);
+      expect(preview.maxLines, 2);
       expect(preview.overflow, TextOverflow.ellipsis);
     },
   );
+
+  testWidgets('expand text aligns with the preview and actions remain 44dp', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      wrap(
+        BrowserAskAiResultCard(
+          answerText: 'A short answer',
+          onExpand: () {},
+          onCopy: () {},
+          onDismiss: () {},
+        ),
+      ),
+    );
+    expect(
+      tester.getTopLeft(find.text('View full answer')).dx,
+      tester.getTopLeft(find.text('A short answer')).dx,
+    );
+    for (final tooltip in ['Copy answer', 'Dismiss answer']) {
+      final button = find.descendant(
+        of: find.byTooltip(tooltip),
+        matching: find.byType(IconButton),
+      );
+      expect(tester.getSize(button), const Size(44, 44));
+    }
+  });
 
   testWidgets(
     'the full-answer sheet renders Markdown as formatted text, not the '
@@ -200,9 +231,15 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.byType(SingleChildScrollView), findsWidgets);
+      expect(
+        find.descendant(
+          of: find.byType(CustomBottomSheet),
+          matching: find.byType(Scrollable),
+        ),
+        findsWidgets,
+      );
       final sheetHeight = tester
-          .getRect(find.byType(ConstrainedBox).first)
+          .getRect(find.byKey(CustomBottomSheet.panelKey))
           .height;
       final screenHeight =
           tester.view.physicalSize.height / tester.view.devicePixelRatio;

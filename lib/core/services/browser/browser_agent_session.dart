@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show WidgetsBinding;
@@ -45,6 +46,7 @@ class BrowserActivity {
     this.outcome = BrowserActivityOutcome.running,
     required this.startedAt,
     this.finishedAt,
+    this.pageKey,
   });
 
   final String id;
@@ -54,11 +56,16 @@ class BrowserActivity {
   final DateTime startedAt;
   final DateTime? finishedAt;
 
+  /// Opaque identity of the tab and public page, never a retained URL.
+  final String? pageKey;
+
   Duration? get duration => finishedAt?.difference(startedAt);
 
   BrowserActivity withOutcome(
     BrowserActivityOutcome outcome, {
     DateTime? finishedAt,
+    String? pageKey,
+    bool replacePageKey = false,
   }) => BrowserActivity(
     id: id,
     action: action,
@@ -66,6 +73,7 @@ class BrowserActivity {
     outcome: outcome,
     startedAt: startedAt,
     finishedAt: finishedAt ?? this.finishedAt,
+    pageKey: replacePageKey ? pageKey : this.pageKey,
   );
 }
 
@@ -312,18 +320,63 @@ class BrowserAgentSession {
   /// for anything that should stay live while visible.
   List<BrowserActivity> get recentActivity => recentActivityNotifier.value;
 
+  // Keep lifetime counts for at most the same number of public pages as the
+  // recent log has entries. Repeated actions on one page do not lose its count
+  // when old detail rows age out.
+  final Map<String, int> _pageActionCounts = {};
+
+  void _countActivity(String? key) {
+    if (key == null) return;
+    final count = _pageActionCounts.remove(key) ?? 0;
+    _pageActionCounts[key] = count + 1;
+    while (_pageActionCounts.length > _maxRecentActivity) {
+      _pageActionCounts.remove(_pageActionCounts.keys.first);
+    }
+  }
+
+  void _uncountActivity(String? key) {
+    if (key == null) return;
+    final count = _pageActionCounts[key];
+    if (count == null) return;
+    if (count == 1) {
+      _pageActionCounts.remove(key);
+    } else {
+      _pageActionCounts[key] = count - 1;
+    }
+  }
+
+  /// Captures display-safe page identity using an already captured tab ID.
+  String? activityPageKey(String? url, {required String? tabId}) {
+    if (url == null ||
+        url.isEmpty ||
+        !BrowserThumbnailCache.canPreviewPage(url)) {
+      return null;
+    }
+    return sha256.convert(utf8.encode('${tabId ?? ''}\n$url')).toString();
+  }
+
+  /// Number of AI actions on this exact page of the active tab.
+  int activityCountForPage(String? url) {
+    final key = activityPageKey(url, tabId: _active?.id);
+    if (key == null) return 0;
+    return _pageActionCounts[key] ?? 0;
+  }
+
   /// Starts a new activity and returns its id, to later resolve via
   /// [resolveActivity]. ids are unique for the process lifetime (never
   /// reused across sessions), so a late resolution can never land on a
   /// newer, unrelated call that happens to be "last" by the time it arrives.
   String recordActivity({required String action, String? detail}) {
+    if (recentActivity.isEmpty) _pageActionCounts.clear();
     final id = 'browser-activity-${_nextActivityId++}';
     final activity = BrowserActivity(
       id: id,
       action: action,
       detail: detail,
       startedAt: DateTime.now(),
+      pageKey: activityPageKey(_pageUrl ?? _active?.url, tabId: _active?.id),
     );
+    _countActivity(activity.pageKey);
     currentActivity.value = activity;
     final next = <BrowserActivity>[...recentActivityNotifier.value, activity];
     recentActivityNotifier.value = next.length > _maxRecentActivity
@@ -338,13 +391,33 @@ class BrowserAgentSession {
   /// entirely, so no id from a previous session can ever match again), the
   /// entry aged out of the bounded log, or it was already resolved — a late
   /// or duplicate result must never overwrite a newer outcome.
-  void resolveActivity(String id, BrowserActivityOutcome outcome) {
+  void resolveActivity(
+    String id,
+    BrowserActivityOutcome outcome, {
+    String? destinationPageKey,
+    bool destinationCaptured = false,
+  }) {
     final list = recentActivityNotifier.value;
     final index = list.indexWhere((activity) => activity.id == id);
     if (index == -1) return;
     final existing = list[index];
     if (existing.outcome != BrowserActivityOutcome.running) return;
-    final resolved = existing.withOutcome(outcome, finishedAt: DateTime.now());
+    // Use only action-owned evidence, captured before later awaits. The user
+    // may have navigated or switched tabs while this call was completing.
+    final destinationKey =
+        destinationCaptured && outcome == BrowserActivityOutcome.ok
+        ? destinationPageKey
+        : existing.pageKey;
+    if (destinationKey != existing.pageKey) {
+      _uncountActivity(existing.pageKey);
+      _countActivity(destinationKey);
+    }
+    final resolved = existing.withOutcome(
+      outcome,
+      finishedAt: DateTime.now(),
+      pageKey: destinationKey,
+      replacePageKey: true,
+    );
     final next = List<BrowserActivity>.of(list);
     next[index] = resolved;
     recentActivityNotifier.value = next;
@@ -354,6 +427,9 @@ class BrowserAgentSession {
   }
 
   bool get isAttached => _controller != null;
+  String? get activeTabId => _active?.id;
+  String? pageUrlForTab(String? tabId) =>
+      tabId == null ? null : _tabById(tabId)?.url;
 
   // ---------------------------------------------------------------------------
   // Screenshots
@@ -779,6 +855,7 @@ class BrowserAgentSession {
     _dialogs.clear();
     dialogPresenter = null;
     currentActivity.value = null;
+    _pageActionCounts.clear();
     recentActivityNotifier.value = const <BrowserActivity>[];
     final ready = _readyCompleter;
     if (ready != null && !ready.isCompleted) {
@@ -1225,6 +1302,7 @@ class BrowserAgentSession {
       onPageLoaded(tab.controller, url);
     }
     _loading = false;
+    _pageUrl = url;
     pageLoading.value = false;
     pageUrl.value = url;
     // The single, central reconciliation point for every committed

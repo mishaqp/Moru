@@ -58,8 +58,18 @@ class BrowserAgentTool {
         : null;
     session.beginAction();
     String result;
+    String? destinationPageKey;
+    var destinationCaptured = false;
     try {
-      result = await _guarded(action, args, session);
+      result = await _guarded(
+        action,
+        args,
+        session,
+        onNavigated: (tabId, url) {
+          destinationCaptured = true;
+          destinationPageKey = session.activityPageKey(url, tabId: tabId);
+        },
+      );
     } finally {
       session.endAction();
     }
@@ -69,7 +79,12 @@ class BrowserAgentTool {
       final outcome = ok && action == 'wait_for' && decoded['found'] == false
           ? BrowserActivityOutcome.notFound
           : (ok ? BrowserActivityOutcome.ok : BrowserActivityOutcome.failed);
-      session.resolveActivity(activityId, outcome);
+      session.resolveActivity(
+        activityId,
+        outcome,
+        destinationPageKey: destinationPageKey,
+        destinationCaptured: destinationCaptured,
+      );
     }
     return result;
   }
@@ -121,8 +136,9 @@ class BrowserAgentTool {
   static Future<String> _guarded(
     String action,
     Map<String, dynamic> args,
-    BrowserAgentSession session,
-  ) async {
+    BrowserAgentSession session, {
+    required void Function(String? tabId, String? url) onNavigated,
+  }) async {
     try {
       if (BrowserGuard.blockedByChallenge.contains(action) &&
           session.isAttached &&
@@ -145,7 +161,12 @@ class BrowserAgentTool {
               : null,
         );
       }
-      final raw = await _dispatch(action, args, session);
+      final raw = await _dispatch(
+        action,
+        args,
+        session,
+        onNavigated: onNavigated,
+      );
       if (!session.isAttached) return raw;
       final result = jsonDecode(raw) as Map<String, dynamic>;
       if (_navigating.contains(action) || action == 'observe') {
@@ -179,13 +200,14 @@ class BrowserAgentTool {
   static Future<String> _dispatch(
     String action,
     Map<String, dynamic> args,
-    BrowserAgentSession session,
-  ) async {
+    BrowserAgentSession session, {
+    required void Function(String? tabId, String? url) onNavigated,
+  }) async {
     try {
       switch (action) {
         case 'open':
           final url = (args['url'] ?? '').toString();
-          return jsonEncode(await _open(url));
+          return jsonEncode(await _open(url, onNavigated: onNavigated));
         case 'observe':
           return jsonEncode(
             await session.observe(
@@ -301,7 +323,16 @@ class BrowserAgentTool {
               });
             }
           }
-          return jsonEncode(await session.newTab(url: url, byAgent: true));
+          final opened = await session.newTab(url: url, byAgent: true);
+          if (opened['ok'] == true) {
+            final tabId = opened['tab_id'] as String;
+            String? pageUrl;
+            for (final tab in opened['tabs'] as List) {
+              if (tab['tab_id'] == tabId) pageUrl = tab['url'] as String?;
+            }
+            onNavigated(tabId, pageUrl);
+          }
+          return jsonEncode(opened);
         case 'switch_tab':
         case 'close_tab':
           final tabId = _stringArg(args, 'tab_id');
@@ -313,7 +344,11 @@ class BrowserAgentTool {
             });
           }
           if (action == 'switch_tab') {
-            return jsonEncode(await session.switchTab(tabId!));
+            final switched = await session.switchTab(tabId!);
+            if (switched['ok'] == true) {
+              onNavigated(tabId, switched['url'] as String?);
+            }
+            return jsonEncode(switched);
           }
           final active = [
             for (final tab in session.tabs.value)
@@ -485,7 +520,10 @@ class BrowserAgentTool {
     return {'ok': !result.containsKey('error'), ...result};
   }
 
-  static Future<Map<String, dynamic>> _open(String rawUrl) async {
+  static Future<Map<String, dynamic>> _open(
+    String rawUrl, {
+    required void Function(String? tabId, String? url) onNavigated,
+  }) async {
     final uri = Uri.tryParse(rawUrl.trim());
     if (uri == null ||
         !uri.hasScheme ||
@@ -495,7 +533,9 @@ class BrowserAgentTool {
 
     final session = BrowserAgentSession.instance;
     if (session.isAttached) {
+      final tabId = session.activeTabId;
       await session.load(uri);
+      onNavigated(tabId, session.pageUrlForTab(tabId));
       return {'ok': true, 'url': uri.toString(), 'reused': true};
     }
 
@@ -513,8 +553,10 @@ class BrowserAgentTool {
       ),
     );
     await session.waitUntilAttached();
+    final tabId = session.activeTabId;
     await session.waitUntilReady();
     await session.recordInitialPage();
+    onNavigated(tabId, session.pageUrlForTab(tabId));
     return {'ok': true, 'url': uri.toString(), 'reused': false};
   }
 

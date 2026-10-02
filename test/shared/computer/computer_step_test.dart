@@ -4,7 +4,9 @@ import 'package:Kelivo/core/services/acp/acp_secret_redactor.dart';
 import 'package:Kelivo/core/services/api/tool_display_redaction.dart';
 import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
 import 'package:Kelivo/features/chat/models/computer_step.dart';
+import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations_en.dart';
+import 'package:Kelivo/l10n/app_localizations_ru.dart';
 import 'package:Kelivo/utils/mcp_structured_image.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -198,8 +200,128 @@ void main() {
       expect(step.path, '/workspace/lib/main.dart');
       expect(step.actionPath, '/workspace/lib/main.dart');
       expect(step.preview, 'first\nsecond\nthird');
-      expect(step.title(AppLocalizationsEn()), 'main.dart');
+      expect(step.title(AppLocalizationsEn()), 'Write · main.dart (+3 lines)');
       expect(step.parameters, contains('"path"'));
+    },
+  );
+
+  test(
+    'command titles show the filtered command rather than the tool name',
+    () {
+      final step = ComputerStep(
+        id: 'shell-title',
+        toolName: 'shell',
+        arguments: {'command': 'npm run build'},
+      );
+      expect(step.title(AppLocalizationsEn()), 'npm run build');
+    },
+  );
+
+  test('background shell previews show output or command without job JSON', () {
+    final step = ComputerStep(
+      id: 'background-preview',
+      toolName: 'shell',
+      arguments: {'command': 'npm run dev', 'background': true},
+      content: '{"background":true,"job_id":"job","status":"running"}',
+    );
+    expect(step.preview, r'$ npm run dev');
+  });
+
+  test('file previews omit bookkeeping JSON when no content is available', () {
+    final step = ComputerStep(
+      id: 'file-preview',
+      toolName: 'read_file',
+      arguments: {'path': '/workspace/file.md'},
+      content: '{"ok":true,"size":42}',
+    );
+    expect(step.preview, isEmpty);
+  });
+
+  test('command detail and copy retain the full bounded live output', () {
+    final run = ToolRun(toolCallId: 'full-output', toolName: 'shell');
+    addTearDown(run.dispose);
+    final output = List.generate(
+      100,
+      (index) => '$index ${'x' * 60}',
+    ).join('\n');
+    run.appendStdout(utf8.encode(output));
+    final step = ComputerStep(id: 'full-output', toolName: 'shell', run: run);
+    expect(step.result, output);
+    expect(step.preview.split('\n'), hasLength(4));
+  });
+
+  test(
+    'command detail keeps all retained output beyond the live tail window',
+    () {
+      final run = ToolRun(toolCallId: 'many-lines', toolName: 'shell');
+      addTearDown(run.dispose);
+      final output = List.generate(300, (index) => 'line $index').join('\n');
+      run.appendStdout(utf8.encode(output));
+      run.appendStderr(utf8.encode('stderr retained'));
+      final step = ComputerStep(id: 'many-lines', toolName: 'shell', run: run);
+      expect(run.stdoutSoFar, output);
+      expect(step.result, '$output\nstderr retained');
+      expect(step.result, startsWith('line 0\n'));
+      expect(step.result, contains('line 299'));
+    },
+  );
+
+  test('command thumbnail preserves the chronology of stdout and stderr', () {
+    final run = ToolRun(toolCallId: 'mixed-tail', toolName: 'shell');
+    addTearDown(run.dispose);
+    run.appendStderr(utf8.encode('older error\n'));
+    run.appendStdout(utf8.encode('newer output\nlatest output'));
+    final step = ComputerStep(id: 'mixed-tail', toolName: 'shell', run: run);
+    expect(step.preview, 'older error\nnewer output\nlatest output');
+  });
+
+  test('plan titles show checklist progress and a checklist icon', () {
+    final step = ComputerStep(
+      id: 'plan-title',
+      toolName: 'update_plan',
+      arguments: {
+        'plan': [
+          {'step': 'Inspect', 'status': 'completed'},
+          {'step': 'Build', 'status': 'in_progress'},
+        ],
+      },
+    );
+    expect(step.title(AppLocalizationsEn()), 'Plan · 1/2');
+    expect(step.icon, Lucide.ListChecks);
+  });
+
+  test('browser title includes only the safe domain', () {
+    final step = ComputerStep(
+      id: 'browser-title',
+      toolName: 'browser_use',
+      arguments: {'action': 'navigate', 'url': 'https://example.com/docs'},
+    );
+    expect(step.title(AppLocalizationsEn()), 'Browser · example.com');
+  });
+
+  test('failed shell subtitle keeps its exit code and localized duration', () {
+    final step = ComputerStep(
+      id: 'exit-subtitle',
+      toolName: 'shell',
+      metadata: {
+        'workspace': {'status': 'error', 'exitCode': 2, 'durationMs': 3400},
+      },
+    );
+    expect(step.subtitle(AppLocalizationsRu()), 'Код выхода 2 · 3,4 с');
+  });
+
+  test(
+    'persisted stopped metadata takes precedence over a pending snapshot',
+    () {
+      final step = ComputerStep(
+        id: 'stopped-plan',
+        toolName: 'update_plan',
+        loading: true,
+        metadata: {
+          'computer': {'status': 'stopped'},
+        },
+      );
+      expect(step.isRunning, isFalse);
     },
   );
 

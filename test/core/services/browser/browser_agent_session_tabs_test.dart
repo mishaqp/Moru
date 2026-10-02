@@ -55,6 +55,23 @@ void main() {
 
   List<String?> urls() => [for (final t in session.tabs.value) t.url];
 
+  test('AI opening a redirect counts the committed destination page', () async {
+    first.onLoadRequest = (request) async {
+      if (request.uri.path == '/redirect') {
+        await firstController.loadRequest(
+          Uri.parse('https://first.example/home'),
+        );
+      }
+    };
+    final result = await run({
+      'action': 'open',
+      'url': 'https://first.example/redirect',
+    });
+    expect(result['ok'], isTrue);
+    expect(session.activityCountForPage('https://first.example/home'), 1);
+    expect(session.activityCountForPage('https://first.example/redirect'), 0);
+  });
+
   test('a new tab opens alongside and the old one keeps its page', () async {
     final opened = await run({
       'action': 'new_tab',

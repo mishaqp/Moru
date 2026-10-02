@@ -20,6 +20,7 @@ import 'package:Kelivo/shared/widgets/snackbar.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 
 import 'chat_surface.dart';
+import 'computer_response_scope.dart';
 import 'tool_detail_text_section.dart';
 import 'unified_diff_view.dart';
 import 'workspace_tool_ui.dart';
@@ -32,7 +33,13 @@ Future<void> showWorkspaceToolDetail(
   BuildContext context,
   WorkspaceToolPart part, {
   String? conversationId,
+  String? responseId,
 }) {
+  final capturedResponseId =
+      responseId ??
+      context
+          .dependOnInheritedWidgetOfExactType<ComputerResponseScope>()
+          ?.responseId;
   final l10n = AppLocalizations.of(context)!;
   final title = workspaceToolTitle(l10n, part.toolName);
   if (useDesktopWorkspaceLayout(context)) {
@@ -49,13 +56,18 @@ Future<void> showWorkspaceToolDetail(
             AppDialogHeader(
               title: title,
               actions: [
-                _HeaderCopyButton(part: part, conversationId: conversationId),
+                _HeaderCopyButton(
+                  part: part,
+                  conversationId: conversationId,
+                  responseId: capturedResponseId,
+                ),
               ],
             ),
             Expanded(
               child: WorkspaceToolDetailBody(
                 part: part,
                 conversationId: conversationId,
+                responseId: capturedResponseId,
               ),
             ),
           ],
@@ -73,15 +85,21 @@ Future<void> showWorkspaceToolDetail(
         part: part,
         scrollController: scrollController,
         conversationId: conversationId,
+        responseId: capturedResponseId,
       );
     },
   );
 }
 
 class _HeaderCopyButton extends StatelessWidget {
-  const _HeaderCopyButton({required this.part, this.conversationId});
+  const _HeaderCopyButton({
+    required this.part,
+    this.conversationId,
+    this.responseId,
+  });
 
   final String? conversationId;
+  final String? responseId;
 
   final WorkspaceToolPart part;
 
@@ -95,7 +113,12 @@ class _HeaderCopyButton extends StatelessWidget {
         semanticLabel: l10n.workspaceToolCopy,
         icon: Lucide.Copy,
         onTap: () async {
-          final text = _detailCopyText(context, part, conversationId);
+          final text = _detailCopyText(
+            context,
+            part,
+            conversationId,
+            responseId,
+          );
           if (text.isEmpty) return;
           await Clipboard.setData(ClipboardData(text: text));
           if (!context.mounted) return;
@@ -114,12 +137,15 @@ String _detailCopyText(
   BuildContext context,
   WorkspaceToolPart part,
   String? conversationId,
+  String? responseId,
 ) {
   ToolRun? run;
   try {
-    run = context.read<ToolRunRegistry>().of(
-      part.id,
-      conversationId: conversationId,
+    run = workspaceRunForPart(
+      part,
+      context.read<ToolRunRegistry>(),
+      conversationId,
+      responseId: responseId,
     );
   } on ProviderNotFoundException {
     run = null;
@@ -153,11 +179,13 @@ class WorkspaceToolDetailBody extends StatelessWidget {
     required this.part,
     this.scrollController,
     this.conversationId,
+    this.responseId,
   });
 
   final WorkspaceToolPart part;
   final ScrollController? scrollController;
   final String? conversationId;
+  final String? responseId;
 
   @override
   Widget build(BuildContext context) {
@@ -167,13 +195,24 @@ class WorkspaceToolDetailBody extends StatelessWidget {
     } on ProviderNotFoundException {
       registry = null;
     }
-    final run = registry?.of(part.id, conversationId: conversationId);
+    final capturedResponseId =
+        responseId ??
+        context
+            .dependOnInheritedWidgetOfExactType<ComputerResponseScope>()
+            ?.responseId;
+    final run = workspaceRunForPart(
+      part,
+      registry,
+      conversationId,
+      responseId: capturedResponseId,
+    );
     final body = run == null
         ? _UnifiedDetail(
             part: part,
             run: run,
             scrollController: scrollController,
             conversationId: conversationId,
+            responseId: capturedResponseId,
           )
         : ListenableBuilder(
             listenable: run,
@@ -182,6 +221,7 @@ class WorkspaceToolDetailBody extends StatelessWidget {
               run: run,
               scrollController: scrollController,
               conversationId: conversationId,
+              responseId: capturedResponseId,
             ),
           );
     return Padding(
@@ -248,12 +288,14 @@ class _UnifiedDetail extends StatefulWidget {
     required this.run,
     this.scrollController,
     this.conversationId,
+    this.responseId,
   });
 
   final WorkspaceToolPart part;
   final ToolRun? run;
   final ScrollController? scrollController;
   final String? conversationId;
+  final String? responseId;
 
   @override
   State<_UnifiedDetail> createState() => _UnifiedDetailState();
@@ -506,6 +548,7 @@ class _UnifiedDetailState extends State<_UnifiedDetail> {
           part: widget.part,
           run: widget.run,
           conversationId: widget.conversationId,
+          responseId: widget.responseId,
           running: _running,
           onStop: _running ? _stop : null,
           sections: terminal,
@@ -658,6 +701,7 @@ class _TerminalWindow extends StatefulWidget {
     required this.part,
     required this.run,
     required this.conversationId,
+    this.responseId,
     required this.running,
     required this.onStop,
     required this.sections,
@@ -671,6 +715,7 @@ class _TerminalWindow extends StatefulWidget {
   final WorkspaceToolPart part;
   final ToolRun? run;
   final String? conversationId;
+  final String? responseId;
   final bool running;
   final VoidCallback? onStop;
   final List<Widget> sections;
@@ -792,6 +837,7 @@ class _TerminalWindowState extends State<_TerminalWindow> {
                       part: _settledPart,
                       run: widget.run,
                       conversationId: widget.conversationId,
+                      responseId: widget.responseId,
                     ),
                   ),
           ),

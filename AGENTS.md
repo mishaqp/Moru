@@ -66,8 +66,13 @@ package name does not require building other platforms.
   default false). Keep a Material/text-style root and stable WebView ancestry
   across floating/Glass changes; do not replace the controller to change UI.
   The chat header's `ChatHeaderSwitcher` still opens files, terminal and browser.
-  Browser navigation uses 48dp targets; recent AI actions use the full-width
-  `CustomBottomSheet`, with history, console and approvals preserved.
+  Browser navigation uses evenly spaced 48dp targets and a labeled Actions
+  pill counted for the captured public page identity. Send stays inside the
+  composer pill; the compact two-line AI answer is a sibling that reduces the
+  WebView height, never an overlay. Its full answer and recent AI actions use
+  `CustomBottomSheet`, with history, console and approvals preserved. The
+  primary header action minimizes to chat; Close lives in the menu and asks
+  confirmation during AI work. Keep WebView directly below the safe header.
 - **Background jobs and task plan**: workspace `shell` takes `background: true`
   and returns a `job_id`; `shell_output` reads, waits for or stops the job
   (its `ToolRun` stays in `ToolRunRegistry`, found by `byRuntimeRunId`). The
@@ -76,14 +81,29 @@ package name does not require building other platforms.
   and keeps the open plan (`TaskPlanChip`) nearby. It replaces the separate
   running-command chip in the composer, follows the newest working step,
   retains a manually selected working step and briefly shows the final result.
+  The working card is at most 88dp at text scale 1.0 (76x56 preview); its 44dp
+  square-icon Stop exists only while the response generates. A terminal reply
+  uses a 48dp summary with action count and View. Previews never show argument
+  JSON: commands show the filtered live/saved output tail or `$ command`,
+  files their name/content, plans ListChecks, other tools a framed icon.
   Background jobs remain accessible while running. `ComputerToolSource` and
   `ComputerResponseScope` adapt existing live/persisted tool parts and registry
   runs; tapping any tool card opens that reply's `ComputerSheet` (85% height).
   Preserve original specialized details on long press, reruns and approvals.
+  The sheet centers its title between equal 44dp close/action slots, shows
+  known parameters as labeled rows and hides other filtered JSON in a collapsed
+  section. Commands fill the result area and follow output until the user
+  scrolls up; update_plan shows its actual checklist. Terminal response status
+  always overrides "AI is working", including when its background job lives on.
+  Cancellation durably marks unfinished response tools as stopped, clears live
+  loading and ends only foreground response-owned ToolRuns. Generation Stop
+  preserves explicit background shell jobs; use shell_output to stop those.
   Capture the chat/response identity when opening a sheet, normalize missing
   tool IDs consistently and retain completed run references in an open sheet.
   Identify orphan background steps by runtime ID; resolve saved `job_id` before
   a reused tool-call ID so concurrent processes cannot collapse into one step.
+  If Stop precedes a background result, persist its known runtime identity and
+  clear tool-card loading while retaining the independent job.
   `ComputerStep` display values apply existing launch-secret/auth-URL rules;
   execution arguments and live runtime output stay intact. Use the captured
   `ToolRun` display filter in every detail/copy surface.

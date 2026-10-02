@@ -130,6 +130,7 @@ void main() {
       'shell',
       command: 'python3 -m http.server',
       conversationId: 'c1',
+      responseId: 'reply',
     );
     await tester.pumpWidget(
       MultiProvider(
@@ -147,6 +148,7 @@ void main() {
               child: ComposerStatusStrip(
                 conversationId: 'c1',
                 generating: true,
+                responseId: 'reply',
               ),
             ),
           ),
