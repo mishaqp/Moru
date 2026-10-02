@@ -114,6 +114,48 @@ void main() {
     });
   }
 
+  test('agent session options are set, validated and cleared', () async {
+    final created = await _run(tool, {
+      'action': 'create',
+      'settings': {
+        'name': 'Options',
+        'agentId': 'codex',
+        'agentConfig': {'model': 'gpt-6-astra', 'reasoning_effort': 'high'},
+      },
+    });
+    expect(created['ok'], isTrue, reason: '$created');
+    final id = created['created']['id'] as String;
+    expect(assistants.getById(id)!.agentConfig, {
+      'model': 'gpt-6-astra',
+      'reasoning_effort': 'high',
+    });
+
+    for (final invalid in [
+      'high',
+      {'model': 1},
+      {'': 'x'},
+      {for (var i = 0; i < 17; i++) 'k$i': 'v'},
+    ]) {
+      final result = await _run(tool, {
+        'action': 'update',
+        'assistant_id': id,
+        'settings': {'agentConfig': invalid},
+      });
+      expect(result['ok'], isFalse, reason: '$invalid');
+      expect(result['error'], 'invalid_settings');
+    }
+    expect(assistants.getById(id)!.agentConfig, hasLength(2));
+
+    final cleared = await _run(tool, {
+      'action': 'update',
+      'assistant_id': id,
+      'clear': ['agentConfig'],
+    });
+    expect(cleared['ok'], isTrue, reason: '$cleared');
+    expect(assistants.getById(id)!.agentConfig, isEmpty);
+    expect(assistants.getById(id)!.agentId, 'codex');
+  });
+
   test(
     'rejects unsupported or invalid subscription requests atomically',
     () async {

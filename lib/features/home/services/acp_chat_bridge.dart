@@ -197,6 +197,9 @@ class AcpChatBridge {
         savedModeId:
             chats.getConversation(conversationId)?.extras[acpModeKey]
                 as String?,
+        savedConfig:
+            assistants.getById(assistant.id)?.agentConfig ??
+            assistant.agentConfig,
         history: message.history,
         savedSessionId: saved is Map && saved['agent'] == spec.id
             ? saved['id'] as String?

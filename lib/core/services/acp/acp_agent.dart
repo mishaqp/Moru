@@ -80,11 +80,94 @@ class AcpMode {
   final String? description;
 }
 
+/// One value of an [AcpConfigOption].
+class AcpConfigValue {
+  const AcpConfigValue({
+    required this.value,
+    required this.name,
+    this.description,
+  });
+
+  final String value;
+  final String name;
+  final String? description;
+}
+
+/// A session setting the agent offers as a list of values (ACP session
+/// config options): its model, reasoning effort and the like.
+class AcpConfigOption {
+  const AcpConfigOption({
+    required this.id,
+    required this.name,
+    required this.currentValue,
+    required this.values,
+    this.description,
+    this.category,
+  });
+
+  final String id;
+  final String name;
+  final String? description;
+
+  /// `mode`, `model`, `thought_level` or an agent-specific category.
+  final String? category;
+  final String currentValue;
+  final List<AcpConfigValue> values;
+
+  static const String modelCategory = 'model';
+  static const String modeCategory = 'mode';
+
+  AcpConfigValue? get current =>
+      values.where((v) => v.value == currentValue).firstOrNull;
+
+  AcpConfigOption withValue(String value) => AcpConfigOption(
+    id: id,
+    name: name,
+    description: description,
+    category: category,
+    currentValue: value,
+    values: values,
+  );
+
+  /// Select options only; grouped values are flattened. Anything else
+  /// (booleans, unknown types) has no control in Moru and is left out.
+  static List<AcpConfigOption> listFrom(Object? raw) => [
+    if (raw is List)
+      for (final item in raw)
+        if (item is Map &&
+            item['type'] == 'select' &&
+            item['id'] is String &&
+            item['currentValue'] is String)
+          AcpConfigOption(
+            id: item['id'] as String,
+            name: (item['name'] ?? item['id']).toString(),
+            description: item['description'] as String?,
+            category: item['category'] as String?,
+            currentValue: item['currentValue'] as String,
+            values: _values(item['options']),
+          ),
+  ];
+
+  static List<AcpConfigValue> _values(Object? raw) => [
+    if (raw is List)
+      for (final item in raw)
+        if (item is Map && item['options'] is List)
+          ..._values(item['options'])
+        else if (item is Map && item['value'] is String)
+          AcpConfigValue(
+            value: item['value'] as String,
+            name: (item['name'] ?? item['value']).toString(),
+            description: item['description'] as String?,
+          ),
+  ];
+}
+
 class AcpSession {
   const AcpSession({
     required this.id,
     this.modes = const [],
     this.currentModeId,
+    this.configOptions = const [],
   });
 
   factory AcpSession.fromResult(String id, Map<String, Object?> result) {
@@ -101,12 +184,24 @@ class AcpSession {
               description: mode['description'] as String?,
             ),
       ],
+      configOptions: AcpConfigOption.listFrom(result['configOptions']),
     );
   }
 
   final String id;
   final List<AcpMode> modes;
   final String? currentModeId;
+  final List<AcpConfigOption> configOptions;
+
+  AcpSession copyWith({
+    String? currentModeId,
+    List<AcpConfigOption>? configOptions,
+  }) => AcpSession(
+    id: id,
+    modes: modes,
+    currentModeId: currentModeId ?? this.currentModeId,
+    configOptions: configOptions ?? this.configOptions,
+  );
 }
 
 /// One choice the agent offers when it asks to run something.
@@ -185,6 +280,10 @@ class AcpAgent {
 
   /// Session mode updates also arrive while no prompt is running.
   void Function(String sessionId, String modeId)? onModeChanged;
+
+  /// The agent changed its session config options (`config_option_update`).
+  void Function(String sessionId, List<AcpConfigOption> options)?
+  onConfigOptionsChanged;
   void Function(String sessionId, Map<String, Object?> update)? onToolUpdate;
 
   /// Private tool matching receives only safe identifiers and argument hashes.
@@ -285,6 +384,22 @@ class AcpAgent {
     'session/set_mode',
     {'sessionId': sessionId, 'modeId': modeId},
   );
+
+  /// Returns the agent's complete updated options, or null when it sent none.
+  Future<List<AcpConfigOption>?> setConfigOption(
+    String sessionId,
+    String configId,
+    String value,
+  ) async {
+    final result = await _connection.request('session/set_config_option', {
+      'sessionId': sessionId,
+      'configId': configId,
+      'value': value,
+    });
+    return result['configOptions'] is List
+        ? AcpConfigOption.listFrom(result['configOptions'])
+        : null;
+  }
 
   /// Sends [prompt] content blocks and streams the answer as chat chunks.
   ///
@@ -392,6 +507,14 @@ class AcpAgent {
         sessionId is String &&
         modeId is String) {
       onModeChanged?.call(sessionId, modeId);
+    }
+    if (update['sessionUpdate'] == 'config_option_update' &&
+        sessionId is String &&
+        update['configOptions'] is List) {
+      onConfigOptionsChanged?.call(
+        sessionId,
+        AcpConfigOption.listFrom(update['configOptions']),
+      );
     }
     final turn = _turns[sessionId];
     if (turn == null || turn.cancelled) return;

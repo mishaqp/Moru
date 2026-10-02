@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:Kelivo/core/models/agent_auth_mode.dart';
 import 'package:Kelivo/core/services/acp/acp_agent.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
 import 'package:Kelivo/core/services/acp/acp_chat_sessions.dart';
@@ -74,6 +75,30 @@ class _ModeChannel extends AcpChannel {
           'initialize' => {'protocolVersion': 1},
           'session/new' => {
             'sessionId': 's1',
+            'configOptions': [
+              {
+                'id': 'model',
+                'name': 'Model',
+                'category': 'model',
+                'type': 'select',
+                'currentValue': 'm1',
+                'options': [
+                  {'value': 'm1', 'name': 'Model one'},
+                  {'value': 'm2', 'name': 'Model two'},
+                ],
+              },
+              {
+                'id': 'effort',
+                'name': 'Reasoning effort',
+                'category': 'thought_level',
+                'type': 'select',
+                'currentValue': 'low',
+                'options': [
+                  {'value': 'low', 'name': 'Low'},
+                  {'value': 'high', 'name': 'High'},
+                ],
+              },
+            ],
             'modes': {
               'currentModeId': 'ask',
               'availableModes': [
@@ -403,12 +428,18 @@ void main() {
             ChangeNotifierProvider<AcpChatSessions>.value(value: sessions),
             ChangeNotifierProvider<ChatService>.value(value: chats),
             ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+            ChangeNotifierProvider<AssistantProvider>.value(value: assistants),
           ],
           child: MaterialApp(
             locale: const Locale('en'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: AcpModeChip(conversationId: conversation.id)),
+            home: Scaffold(
+              body: AcpModeChip(
+                conversationId: conversation.id,
+                assistantId: null,
+              ),
+            ),
           ),
         ),
       );
@@ -472,6 +503,125 @@ void main() {
           (m) => m['method'] == 'session/set_mode',
         )['params'],
         {'sessionId': 's1', 'modeId': 'code'},
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'option sheet saves the model on the assistant for the next turns',
+    (tester) async {
+      final channel = _ModeChannel();
+      final sessions = AcpChatSessions(
+        start:
+            (
+              spec,
+              provider, {
+              required cwd,
+              required mounts,
+              required authMode,
+            }) => AcpAgent.start(channel, clientVersion: '1'),
+      );
+      addTearDown(sessions.dispose);
+      final assistantId = (await tester.runAsync(
+        () => assistants.addAssistant(name: 'Claude'),
+      ))!;
+      await tester.runAsync(
+        () => assistants.updateAssistant(
+          assistants
+              .getById(assistantId)!
+              .copyWith(
+                agentId: 'claude-code',
+                agentAuthMode: AgentAuthMode.subscription,
+              ),
+        ),
+      );
+      final conversation = (await tester.runAsync(
+        () => chats.createConversation(assistantId: assistantId),
+      ))!;
+      AcpChatTurn turn() => AcpChatTurn(
+        conversationId: conversation.id,
+        spec: AcpAgentSpec.byId('claude-code')!,
+        authMode: AgentAuthMode.subscription,
+        cwd: '/root',
+        prompt: const [
+          {'type': 'text', 'text': 'hi'},
+        ],
+        savedConfig: assistants.getById(assistantId)!.agentConfig,
+      );
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AcpChatSessions>.value(value: sessions),
+            ChangeNotifierProvider<ChatService>.value(value: chats),
+            ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+            ChangeNotifierProvider<AssistantProvider>.value(value: assistants),
+          ],
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: AcpModeChip(
+                conversationId: conversation.id,
+                assistantId: assistantId,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.runAsync(() => sessions.send(turn()).drain<void>());
+      await tester.pump();
+      IosTileButton chip() => tester.widget<IosTileButton>(
+        find.byKey(const ValueKey('acp-config-chip')),
+      );
+      expect(chip().label, 'Model one · Low');
+
+      // Register the sheet continuation in the real async zone without
+      // waiting for the sheet: it completes only when a value is picked.
+      await tester.runAsync(() async {
+        chip().onTap();
+      });
+      await tester.pumpAndSettle();
+      expect(find.text('Agent options'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('acp-config-model')));
+      await tester.pumpAndSettle();
+      // The value sheet opens from the first sheet's continuation, which
+      // runs in the real async zone.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Model two'), findsOneWidget);
+      final saved = (await tester.runAsync(() async => Completer<void>()))!;
+      void onChanged() {
+        if (assistants.getById(assistantId)?.agentConfig['model'] == 'm2' &&
+            !saved.isCompleted) {
+          saved.complete();
+        }
+      }
+
+      assistants.addListener(onChanged);
+      addTearDown(() => assistants.removeListener(onChanged));
+      await tester.tap(find.byKey(const ValueKey('acp-config-value-m2')));
+      await tester.pumpAndSettle();
+      await tester.runAsync(
+        () => saved.future.timeout(const Duration(seconds: 2)),
+      );
+      await tester.pumpAndSettle();
+      expect(chip().label, 'Model two · Low');
+      expect(
+        channel.sent.where((m) => m['method'] == 'session/set_config_option'),
+        isEmpty,
+        reason: 'applied before the next turn',
+      );
+
+      await tester.runAsync(() => sessions.send(turn()).drain<void>());
+      expect(
+        channel.sent.singleWhere(
+          (m) => m['method'] == 'session/set_config_option',
+        )['params'],
+        {'sessionId': 's1', 'configId': 'model', 'value': 'm2'},
       );
       await tester.pumpWidget(const SizedBox.shrink());
     },

@@ -21563,6 +21563,12 @@ abstract class AppLocalizations {
   /// **'Agent mode'**
   String get agentsMode;
 
+  /// Chip and sheet title for the live agent session options such as its model and reasoning effort.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent options'**
+  String get agentsSessionOptions;
+
   /// No description provided for @agentsImageNotSent.
   ///
   /// In en, this message translates to:

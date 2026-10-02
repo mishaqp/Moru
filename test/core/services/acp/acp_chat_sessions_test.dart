@@ -56,6 +56,54 @@ class _ScriptedAgent extends AcpChannel {
   final _closed = Completer<void>();
   final sent = <Map<String, Object?>>[];
   int sessions = 0;
+  final config = <String, String>{
+    'mode': 'ask',
+    'model': 'm1',
+    'effort': 'low',
+  };
+
+  List<Map<String, Object?>> configOptions() => [
+    {
+      'id': 'mode',
+      'name': 'Mode',
+      'category': 'mode',
+      'type': 'select',
+      'currentValue': config['mode'],
+      'options': [
+        {'value': 'ask', 'name': 'Ask'},
+        {'value': 'code', 'name': 'Code'},
+      ],
+    },
+    {
+      'id': 'model',
+      'name': 'Model',
+      'category': 'model',
+      'type': 'select',
+      'currentValue': config['model'],
+      'options': [
+        {'value': 'm1', 'name': 'Model one'},
+        {
+          'group': 'newer',
+          'name': 'Newer',
+          'options': [
+            {'value': 'm2', 'name': 'Model two'},
+          ],
+        },
+      ],
+    },
+    {
+      'id': 'effort',
+      'name': 'Reasoning effort',
+      'category': 'thought_level',
+      'type': 'select',
+      'currentValue': config['effort'],
+      'options': [
+        {'value': 'low', 'name': 'Low'},
+        {'value': 'high', 'name': 'High'},
+      ],
+    },
+    {'id': 'trace', 'name': 'Trace', 'type': 'boolean', 'currentValue': false},
+  ];
 
   @override
   Stream<dynamic> get messages => _incoming.stream;
@@ -95,6 +143,7 @@ class _ScriptedAgent extends AcpChannel {
       case 'session/new':
         reply({
           'sessionId': 'new-${++sessions}',
+          'configOptions': configOptions(),
           'modes': {
             'currentModeId': 'ask',
             'availableModes': [
@@ -115,6 +164,7 @@ class _ScriptedAgent extends AcpChannel {
           );
         } else {
           reply({
+            'configOptions': configOptions(),
             'modes': {
               'currentModeId': 'ask',
               'availableModes': [
@@ -126,6 +176,9 @@ class _ScriptedAgent extends AcpChannel {
         }
       case 'session/set_mode':
         reply(<String, Object?>{});
+      case 'session/set_config_option':
+        config[params['configId'] as String] = params['value'] as String;
+        reply({'configOptions': configOptions()});
       case 'session/prompt':
         if (toolArguments != null) {
           unawaited(_callMoruTool(copy, params));
@@ -333,6 +386,7 @@ void main() {
     String conversation = 'c1',
     String? saved,
     String? mode,
+    Map<String, String> config = const {},
     List<String> images = const [],
     String history = '',
     String cwd = '/workspace',
@@ -353,6 +407,7 @@ void main() {
     history: history,
     savedSessionId: saved,
     savedModeId: mode,
+    savedConfig: config,
     userImagePaths: images,
     imageNotSentMessage: "Image was not sent.",
     onSession: onSession,
@@ -587,6 +642,144 @@ void main() {
       ]);
     },
   );
+
+  group('session config options', () {
+    List<Map<String, Object?>> configCalls(_ScriptedAgent agent) => [
+      for (final m in agent.sent)
+        if (m['method'] == 'session/set_config_option')
+          Map<String, Object?>.from(m['params'] as Map)..remove('sessionId'),
+    ];
+
+    test('select options are parsed with grouped values flattened', () async {
+      final sessions = sessionsWith();
+      addTearDown(sessions.closeAll);
+      await answer(sessions, turn('hi', authMode: AgentAuthMode.subscription));
+      final options = sessions.sessionFor('c1')!.configOptions;
+      expect(options.map((o) => o.id), ['mode', 'model', 'effort']);
+      expect(options[1].values.map((v) => v.value), ['m1', 'm2']);
+      expect(options[1].current?.name, 'Model one');
+      expect(
+        sessions.configOptionsFor('c1').map((o) => o.id),
+        ['model', 'effort'],
+        reason: 'modes keep their own control',
+      );
+    });
+
+    test('saved choices apply before the prompt, the model first', () async {
+      final sessions = sessionsWith();
+      addTearDown(sessions.closeAll);
+      await answer(
+        sessions,
+        turn(
+          'hi',
+          authMode: AgentAuthMode.subscription,
+          config: const {'effort': 'high', 'model': 'm2'},
+        ),
+      );
+      final agent = started.single;
+      expect(configCalls(agent), [
+        {'configId': 'model', 'value': 'm2'},
+        {'configId': 'effort', 'value': 'high'},
+      ]);
+      final lastConfig = agent.sent.lastIndexWhere(
+        (m) => m['method'] == 'session/set_config_option',
+      );
+      final prompt = agent.sent.indexWhere(
+        (m) => m['method'] == 'session/prompt',
+      );
+      expect(lastConfig, lessThan(prompt));
+      final options = sessions.sessionFor('c1')!.configOptions;
+      expect(options.firstWhere((o) => o.id == 'model').currentValue, 'm2');
+
+      await answer(
+        sessions,
+        turn(
+          'again',
+          authMode: AgentAuthMode.subscription,
+          config: const {'effort': 'high', 'model': 'm2'},
+        ),
+      );
+      expect(configCalls(agent), hasLength(2), reason: 'already applied');
+    });
+
+    test('values the agent no longer offers are skipped silently', () async {
+      final sessions = sessionsWith();
+      addTearDown(sessions.closeAll);
+      final text = await answer(
+        sessions,
+        turn(
+          'hi',
+          authMode: AgentAuthMode.subscription,
+          config: const {'model': 'retired', 'gone': 'x', 'trace': 'true'},
+        ),
+      );
+      expect(text, isNotEmpty);
+      expect(configCalls(started.single), isEmpty);
+    });
+
+    test('with a Moru provider the provider keeps the model', () async {
+      final sessions = sessionsWith();
+      addTearDown(sessions.closeAll);
+      await answer(
+        sessions,
+        turn('hi', config: const {'model': 'm2', 'effort': 'high'}),
+      );
+      expect(configCalls(started.single), [
+        {'configId': 'effort', 'value': 'high'},
+      ]);
+      expect(sessions.configOptionsFor('c1').map((o) => o.id), ['effort']);
+    });
+
+    test('saved choices also apply to a restored session', () async {
+      final sessions = sessionsWith(loadSession: true);
+      addTearDown(sessions.closeAll);
+      await answer(
+        sessions,
+        turn(
+          'hi',
+          saved: 'old',
+          authMode: AgentAuthMode.subscription,
+          config: const {'model': 'm2'},
+        ),
+      );
+      final agent = started.single;
+      expect(agent.sent.any((m) => m['method'] == 'session/load'), isTrue);
+      expect(configCalls(agent), [
+        {'configId': 'model', 'value': 'm2'},
+      ]);
+    });
+
+    test('an agent update replaces the known options', () async {
+      final sessions = sessionsWith();
+      addTearDown(sessions.closeAll);
+      await answer(sessions, turn('hi', authMode: AgentAuthMode.subscription));
+      final agent = started.single;
+      final changed = Completer<void>();
+      sessions.addListener(() {
+        final model = sessions
+            .sessionFor('c1')
+            ?.configOptions
+            .where((o) => o.id == 'model')
+            .firstOrNull;
+        if (model?.currentValue == 'm2' && !changed.isCompleted) {
+          changed.complete();
+        }
+      });
+      agent.config['model'] = 'm2';
+      agent._incoming.add({
+        'jsonrpc': '2.0',
+        'method': 'session/update',
+        'params': {
+          'sessionId': 'new-1',
+          'update': {
+            'sessionUpdate': 'config_option_update',
+            'configOptions': agent.configOptions(),
+          },
+        },
+      });
+      await changed.future.timeout(const Duration(seconds: 2));
+    });
+  });
 
   test(
     'a mode update refreshes state and reapplies the saved mode next turn',

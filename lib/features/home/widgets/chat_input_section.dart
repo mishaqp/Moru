@@ -315,7 +315,8 @@ class ChatInputSection extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (agentChat) AcpModeChip(conversationId: conversationId),
+        if (agentChat)
+          AcpModeChip(conversationId: conversationId, assistantId: a?.id),
         ComposerStatusStrip(
           conversationId: conversationId,
           generating: isLoading,

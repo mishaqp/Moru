@@ -12214,6 +12214,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get agentsMode => 'Режим агента';
 
   @override
+  String get agentsSessionOptions => 'Настройки агента';
+
+  @override
   String get agentsImageNotSent => 'Картинка не передана агенту.';
 
   @override

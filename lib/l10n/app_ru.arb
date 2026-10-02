@@ -5241,6 +5241,7 @@
   "chatInputHintToolMenu": "Долгое нажатие на шаг инструмента: копировать или перезапустить",
   "messageMoreSheetCopyFormatted": "Копировать с форматированием",
   "agentsMode": "Режим агента",
+  "agentsSessionOptions": "Настройки агента",
   "agentsImageNotSent": "Картинка не передана агенту.",
   "agentsErrorApiKey": "Неверный API-ключ у провайдера.",
   "agentsErrorModel": "Модель не найдена. Проверьте модель в настройках провайдера.",

@@ -120,6 +120,7 @@ class AssistantManagerTool {
     'skillIds',
     'avatar',
     'agentId',
+    'agentConfig',
   ];
 
   static const Map<String, String> _memorySmartAddModes = {
@@ -238,6 +239,15 @@ class AssistantManagerTool {
       'description':
           'provider uses the chat model provider. subscription uses the '
           "agent's own account and requires claude-code or codex.",
+    },
+    'agentConfig': {
+      'type': 'object',
+      'additionalProperties': {'type': 'string'},
+      'description':
+          "The agent's own session options by option id, for example its "
+          'model or reasoning effort, as the agent names them in the chat. '
+          'Values the agent does not offer are ignored. Changing agentId '
+          'resets them.',
     },
     'systemPrompt': {'type': 'string'},
     'messageTemplate': {
@@ -678,6 +688,7 @@ class AssistantManagerTool {
       clearSkillIds: clear.contains('skillIds'),
       clearAvatar: clear.contains('avatar'),
       clearAgent: clear.contains('agentId'),
+      clearAgentConfig: clear.contains('agentConfig'),
     );
 
     final name = s.string('name');
@@ -784,6 +795,7 @@ class AssistantManagerTool {
       chatModelId: modelId,
       agentId: agentId,
       agentAuthMode: agentAuthMode,
+      agentConfig: s.stringMap('agentConfig'),
       systemPrompt: s.string('systemPrompt'),
       messageTemplate: s.string('messageTemplate'),
       temperature: s.number('temperature', min: 0, max: 2),
@@ -1040,6 +1052,28 @@ class _SettingsReader {
   }
 
   /// Header/body pairs stored as `{nameKey: ..., 'value': ...}`.
+  /// At most 16 short entries: option ids and values are agent identifiers.
+  Map<String, String>? stringMap(String key) {
+    if (!_settings.containsKey(key)) return null;
+    final value = _settings[key];
+    if (value is Map &&
+        value.length <= 16 &&
+        value.entries.every(
+          (e) =>
+              e.key is String &&
+              e.value is String &&
+              (e.key as String).trim().isNotEmpty &&
+              (e.key as String).length <= 128 &&
+              (e.value as String).length <= 128,
+        )) {
+      return {
+        for (final e in value.entries)
+          (e.key as String).trim(): (e.value as String).trim(),
+      };
+    }
+    _invalid(key, 'an object of at most 16 short string values');
+  }
+
   List<Map<String, String>>? pairs(String key, String nameKey) {
     if (!_settings.containsKey(key)) return null;
     final value = _settings[key];

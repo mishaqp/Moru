@@ -53,4 +53,25 @@ void main() {
     expect(cleared.chatModelProvider, 'openai');
     expect(cleared.chatModelId, 'gpt-5');
   });
+
+  test('agent session options survive export and reset with the agent', () {
+    final assistant = Assistant.fromJson({
+      'id': 'a',
+      'name': 'A',
+      'agentId': 'codex',
+      'agentConfig': {'model': 'gpt-6-astra', 'bad': 1, 'effort': 'high'},
+    });
+    expect(assistant.agentConfig, {'model': 'gpt-6-astra', 'effort': 'high'});
+    final restored = Assistant.fromJson(
+      assistant.copyWith(name: 'Renamed').toJson(),
+    );
+    expect(restored.agentConfig, assistant.agentConfig);
+    expect(restored.copyWith(agentId: 'codex').agentConfig, hasLength(2));
+    expect(restored.copyWith(agentId: 'claude-code').agentConfig, isEmpty);
+    expect(restored.copyWith(clearAgent: true).agentConfig, isEmpty);
+    expect(
+      const Assistant(id: 'n', name: 'N').toJson().containsKey('agentConfig'),
+      isFalse,
+    );
+  });
 }

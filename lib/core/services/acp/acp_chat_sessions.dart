@@ -36,6 +36,7 @@ class AcpChatTurn {
     this.history = '',
     this.savedSessionId,
     this.savedModeId,
+    this.savedConfig = const {},
     this.onSession,
     this.onPermission,
     this.onPlan,
@@ -61,6 +62,9 @@ class AcpChatTurn {
   /// The chat's session from an earlier run, reopened when the agent can.
   final String? savedSessionId;
   final String? savedModeId;
+
+  /// The assistant's chosen session config options (id → value).
+  final Map<String, String> savedConfig;
   final FutureOr<void> Function(String sessionId)? onSession;
   final AcpPermissionHandler? onPermission;
   final void Function(TaskPlan plan)? onPlan;
@@ -87,6 +91,17 @@ class AcpChatSessions extends ChangeNotifier {
 
   AcpSession? sessionFor(String? conversationId) =>
       _chats[conversationId]?.session;
+
+  /// The live session's options a chat may change. Modes have their own
+  /// control; with a Moru provider the provider decides the model.
+  List<AcpConfigOption> configOptionsFor(String? conversationId) {
+    final chat = _chats[conversationId];
+    if (chat == null) return const [];
+    return [
+      for (final option in chat.session.configOptions)
+        if (acpConfigOptionEditable(option, chat.authMode)) option,
+    ];
+  }
 
   /// Reopen the existing context without sending or replaying any prompt.
   Future<AcpSession> ensureSession(AcpChatTurn turn) async {
@@ -137,13 +152,11 @@ class AcpChatSessions extends ChangeNotifier {
           mode != chat.session.currentModeId &&
           chat.session.modes.any((m) => m.id == mode)) {
         await chat.agent.setMode(chat.sessionId, mode);
-        chat.session = AcpSession(
-          id: chat.sessionId,
-          modes: chat.session.modes,
-          currentModeId: mode,
-        );
+        chat.session = chat.session.copyWith(currentModeId: mode);
         notifyListeners();
       }
+      if (!chat.activePrompts.contains(activity)) return;
+      await _applyConfig(chat, turn);
       if (!chat.activePrompts.contains(activity)) return;
       chat.needsHistory = false;
       yield* chat.agent.prompt(chat.sessionId, prompt, onPlan: turn.onPlan);
@@ -311,11 +324,15 @@ class AcpChatSessions extends ChangeNotifier {
             !identical(_chats[turn.conversationId], chat)) {
           return;
         }
-        chat.session = AcpSession(
-          id: sessionId,
-          modes: chat.session.modes,
-          currentModeId: modeId,
-        );
+        chat.session = chat.session.copyWith(currentModeId: modeId);
+        notifyListeners();
+      };
+      agent.onConfigOptionsChanged = (sessionId, options) {
+        if (sessionId != chat.sessionId ||
+            !identical(_chats[turn.conversationId], chat)) {
+          return;
+        }
+        chat.session = chat.session.copyWith(configOptions: options);
         notifyListeners();
       };
       _chats[turn.conversationId] = chat;
@@ -337,6 +354,44 @@ class AcpChatSessions extends ChangeNotifier {
       rethrow;
     }
   }
+
+  /// Applies the saved choices the agent still offers, the model first:
+  /// the other options (reasoning levels) may depend on it.
+  Future<void> _applyConfig(_ChatAgent chat, AcpChatTurn turn) async {
+    final ids = turn.savedConfig.keys.toList()
+      ..sort(
+        (a, b) => (_isModel(chat, b) ? 1 : 0) - (_isModel(chat, a) ? 1 : 0),
+      );
+    for (final id in ids) {
+      final value = turn.savedConfig[id]!;
+      final option = chat.session.configOptions
+          .where((o) => o.id == id)
+          .firstOrNull;
+      if (option == null ||
+          option.currentValue == value ||
+          !acpConfigOptionEditable(option, chat.authMode) ||
+          !option.values.any((v) => v.value == value)) {
+        continue;
+      }
+      final updated = await chat.agent.setConfigOption(
+        chat.sessionId,
+        id,
+        value,
+      );
+      chat.session = chat.session.copyWith(
+        configOptions:
+            updated ??
+            [
+              for (final o in chat.session.configOptions)
+                o.id == id ? o.withValue(value) : o,
+            ],
+      );
+      notifyListeners();
+    }
+  }
+
+  static bool _isModel(_ChatAgent chat, String id) => chat.session.configOptions
+      .any((o) => o.id == id && o.category == AcpConfigOption.modelCategory);
 
   @override
   void dispose() {
@@ -361,6 +416,13 @@ class AcpChatSessions extends ChangeNotifier {
     for (final mount in turn.mounts) '${mount.host}>${mount.guest}',
   ].join('\u0000');
 }
+
+/// Modes have their own control; a Moru provider decides the model itself.
+bool acpConfigOptionEditable(AcpConfigOption option, AgentAuthMode authMode) =>
+    option.category != AcpConfigOption.modeCategory &&
+    option.values.length > 1 &&
+    (authMode == AgentAuthMode.subscription ||
+        option.category != AcpConfigOption.modelCategory);
 
 class _ChatAgent {
   _ChatAgent(

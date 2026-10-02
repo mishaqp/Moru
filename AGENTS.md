@@ -112,6 +112,15 @@ package name does not require building other platforms.
   the browser library must skip auth URLs, including title-refresh writes.
   See `docs/audits/acp-subscription.md` and its versioned native probes for
   supported methods, provider-policy limitations and remaining phone checks.
+  Session config options (ACP `configOptions`, `session/set_config_option`,
+  `config_option_update`) drive the chat's agent options chip next to the
+  mode chip: codex-acp 2.1.1 offers model, reasoning_effort, fast-mode and
+  collaboration_mode; claude-agent-acp 0.85 offers model and effort. Both
+  also list a `mode` option, which stays with the mode chip. Choices are kept
+  in `Assistant.agentConfig` (id → value, reset when the agent changes) and
+  applied before the next turn, model first, only while the agent still
+  offers the value. With a Moru provider the provider keeps the model; only
+  the other options apply. Option ids and values are redactor controls.
   Moru MCP approval cards and browser activity details inherit the launch's
   display filter while handlers receive the original execution arguments.
   An assistant with `agentId` answers through its agent: `AcpChatBridge` swaps the chunk

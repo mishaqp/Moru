@@ -4324,6 +4324,7 @@
   "chatInputHintToolMenu": "長按工具步驟可複製或重新執行",
   "messageMoreSheetCopyFormatted": "帶格式複製",
   "agentsMode": "代理模式",
+  "agentsSessionOptions": "代理選項",
   "agentsImageNotSent": "圖片未傳送給代理。",
   "agentsErrorApiKey": "供應商的 API 金鑰無效。",
   "agentsErrorModel": "找不到模型。請檢查供應商的模型設定。",

@@ -11551,6 +11551,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentsMode => '代理模式';
 
   @override
+  String get agentsSessionOptions => '代理选项';
+
+  @override
   String get agentsImageNotSent => '图片未发送给代理。';
 
   @override
@@ -23348,6 +23351,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get agentsMode => '代理模式';
+
+  @override
+  String get agentsSessionOptions => '代理选项';
 
   @override
   String get agentsImageNotSent => '图片未发送给代理。';
@@ -35221,6 +35227,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentsMode => '代理模式';
+
+  @override
+  String get agentsSessionOptions => '代理選項';
 
   @override
   String get agentsImageNotSent => '圖片未傳送給代理。';

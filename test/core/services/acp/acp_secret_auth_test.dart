@@ -34,6 +34,52 @@ AcpSecretRedactor _redactor() =>
     AcpSecretRedactor(const [], protectAuthentication: true);
 
 void main() {
+  test('config option ids and values stay routable, labels are redacted', () {
+    final option = {
+      'id': 'model',
+      'name': 'Model $_access',
+      'description': 'Uses $_opaque',
+      'category': 'model',
+      'type': 'select',
+      'currentValue': 'gpt-6.1-sol',
+      'options': [
+        {'value': 'gpt-6.1-sol', 'name': '6.1 Sol'},
+        {
+          'group': 'older',
+          'name': 'Older',
+          'options': [
+            {'value': 'gpt-5.5', 'description': 'Token $_refresh'},
+          ],
+        },
+      ],
+    };
+    for (final safe in [
+      _redactor().protocol({
+            'sessionId': 's',
+            'configOptions': [option],
+          })
+          as Map,
+      (_redactor().protocol({
+                'update': {
+                  'sessionUpdate': 'config_option_update',
+                  'configOptions': [option],
+                },
+              })
+              as Map)['update']
+          as Map,
+    ]) {
+      final parsed = AcpConfigOption.listFrom(safe['configOptions']).single;
+      expect(parsed.id, 'model');
+      expect(parsed.category, 'model');
+      expect(parsed.currentValue, 'gpt-6.1-sol');
+      expect(parsed.values.map((v) => v.value), ['gpt-6.1-sol', 'gpt-5.5']);
+      expect(parsed.values.first.name, '6.1 Sol');
+      expect(safe.toString(), isNot(contains('access-sentinel')));
+      expect(safe.toString(), isNot(contains('signature-sentinel')));
+      expect(safe.toString(), isNot(contains('refresh-sentinel')));
+    }
+  });
+
   const artifacts = <(String, String)>[
     (_access, 'access-sentinel'),
     (_refresh, 'refresh-sentinel'),

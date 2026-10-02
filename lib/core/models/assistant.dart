@@ -47,6 +47,11 @@ class Assistant {
 
   /// Existing assistants keep using their Moru provider unless changed.
   final AgentAuthMode agentAuthMode;
+
+  /// The agent's own session settings chosen in chat (config option id →
+  /// value, e.g. its model or reasoning effort). Values the agent no longer
+  /// offers are ignored.
+  final Map<String, String> agentConfig;
   final double? temperature; // null to disable; else 0.0 - 2.0
   final double? topP; // null to disable; else 0.0 - 1.0
   final int contextMessageSize; // number of previous messages to include
@@ -115,6 +120,7 @@ class Assistant {
     this.chatModelId,
     this.agentId,
     this.agentAuthMode = AgentAuthMode.provider,
+    this.agentConfig = const {},
     this.temperature,
     this.topP,
     this.contextMessageSize = 64,
@@ -166,6 +172,8 @@ class Assistant {
     String? chatModelId,
     String? agentId,
     AgentAuthMode? agentAuthMode,
+    Map<String, String>? agentConfig,
+    bool clearAgentConfig = false,
     double? temperature,
     double? topP,
     int? contextMessageSize,
@@ -229,6 +237,13 @@ class Assistant {
       agentAuthMode: clearAgent
           ? AgentAuthMode.provider
           : (agentAuthMode ?? this.agentAuthMode),
+      // Option ids belong to one agent; another agent starts from its defaults.
+      agentConfig: clearAgent || clearAgentConfig
+          ? const {}
+          : agentConfig ??
+                (agentId != null && agentId != this.agentId
+                    ? const {}
+                    : this.agentConfig),
       temperature: clearTemperature ? null : (temperature ?? this.temperature),
       topP: clearTopP ? null : (topP ?? this.topP),
       contextMessageSize: contextMessageSize ?? this.contextMessageSize,
@@ -307,6 +322,7 @@ class Assistant {
     'chatModelId': chatModelId,
     if (agentId != null) 'agentId': agentId,
     'agentAuthMode': agentAuthMode.name,
+    if (agentConfig.isNotEmpty) 'agentConfig': agentConfig,
     'temperature': temperature,
     'topP': topP,
     'contextMessageSize': contextMessageSize,
@@ -366,6 +382,12 @@ class Assistant {
             .where((mode) => mode.name == json['agentAuthMode'])
             .firstOrNull ??
         AgentAuthMode.provider,
+    agentConfig: {
+      if (json['agentConfig'] case final Map config)
+        for (final entry in config.entries)
+          if (entry.key is String && entry.value is String)
+            entry.key as String: entry.value as String,
+    },
     temperature: (json['temperature'] as num?)?.toDouble(),
     topP: (json['topP'] as num?)?.toDouble(),
     contextMessageSize: (json['contextMessageSize'] as num?)?.toInt() ?? 64,

@@ -5443,6 +5443,8 @@
   "messageMoreSheetCopyFormatted": "Copy with formatting",
   "@messageMoreSheetCopyFormatted": {"description": "Copies the message as rich text (HTML) that keeps headings, lists and tables when pasted."},
   "agentsMode": "Agent mode",
+  "agentsSessionOptions": "Agent options",
+  "@agentsSessionOptions": {"description": "Chip and sheet title for the live agent session options such as its model and reasoning effort."},
   "agentsImageNotSent": "An image was not sent to the agent.",
   "agentsErrorApiKey": "Invalid API key for the provider.",
   "agentsErrorModel": "Model not found. Check the provider model settings.",
