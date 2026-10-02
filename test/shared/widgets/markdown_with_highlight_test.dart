@@ -797,7 +797,7 @@ Inline ***strong emphasis*** text.
       await tester.pumpWidget(_markdownHarness('![42x24](missing-image.png)'));
       await tester.pump();
 
-      expect(find.byIcon(Icons.broken_image), findsOneWidget);
+      expect(find.byIcon(Lucide.ImageOff), findsOneWidget);
       expect(find.byType(Image), findsNothing);
     },
   );

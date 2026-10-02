@@ -153,10 +153,10 @@ class _MarkdownRenderedView extends StatelessWidget {
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 760),
-                child: markdown,
+                child: SizedBox(width: double.infinity, child: markdown),
               ),
             )
-          : markdown,
+          : SizedBox(width: double.infinity, child: markdown),
     );
   }
 }

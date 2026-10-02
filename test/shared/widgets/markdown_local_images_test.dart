@@ -30,6 +30,7 @@ import 'package:Kelivo/features/chat/widgets/workspace_tool_ui.dart';
 import 'package:Kelivo/features/workspace/widgets/files/workspace_file_thumbnail.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/markdown_with_highlight.dart';
+import 'package:Kelivo/shared/widgets/markdown_image_provider.dart';
 import 'package:Kelivo/utils/sandbox_path_resolver.dart';
 
 import '../../support/business_test_harness.dart';
@@ -37,6 +38,9 @@ import '../../support/business_test_harness.dart';
 const _png =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/Kz0AAAAASUVORK5CYII=';
 const _dataImage = 'data:image/png;base64,$_png';
+const _svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80">'
+    '<circle cx="40" cy="40" r="35" fill="orange"/></svg>';
 
 class _Paths extends PathProviderPlatform {
   _Paths(this.root);
@@ -221,6 +225,66 @@ void main() {
       await tester.pumpWidget(harness('![24x24]($source)'));
       await completeReads(tester);
 
+      expect(find.byType(Image), findsNothing);
+      expect(find.byType(ImageViewerPage), findsNothing);
+    });
+  }
+
+  for (final mode in ['host', 'relative', 'kelivo-link', 'long-preamble']) {
+    testWidgets('local SVG uses checked bytes through $mode', (tester) async {
+      final file = File(p.join(workspace.path, 'inside.svg'));
+      final svg = mode == 'long-preamble'
+          ? '<!--${'padding' * 200}-->$_svg'
+          : _svg;
+      await tester.runAsync(() => file.writeAsString(svg));
+      final source = switch (mode) {
+        'host' => file.path,
+        'relative' => 'inside.svg',
+        'kelivo-link' => 'kelivo://workspace/inside.svg',
+        _ => file.path,
+      };
+      await tester.pumpWidget(harness('![80x80]($source)'));
+      await completeReads(tester);
+      final image = tester.widget<Image>(find.byType(Image));
+      final provider =
+          (image.image as ResizeImage).imageProvider as MarkdownImageProvider;
+      expect(provider.bytes, utf8.encode(svg));
+      await tester.runAsync(() async {
+        await file.delete();
+        await Link(file.path).create(p.join(outside.path, 'outside.png'));
+      });
+      await tester.runAsync(() => tester.tap(find.byType(Image)));
+      await completeViewer(tester);
+      final viewer = tester.widget<ImageViewerPage>(
+        find.byType(ImageViewerPage),
+      );
+      expect(viewer.images.single, startsWith('data:image/svg+xml;base64,'));
+      expect(
+        base64Decode(viewer.images.single.split(',').last),
+        utf8.encode(svg),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final mode in ['outside', 'file-link', 'middle-link']) {
+    testWidgets('local SVG rejects $mode paths', (tester) async {
+      final outsideSvg = File(p.join(outside.path, 'secret.svg'));
+      final source = switch (mode) {
+        'outside' => outsideSvg.path,
+        'file-link' => p.join(workspace.path, 'escape.svg'),
+        _ => p.join(workspace.path, 'escape-dir', 'secret.svg'),
+      };
+      await tester.runAsync(() async {
+        await outsideSvg.writeAsString(_svg);
+        if (mode == 'file-link') {
+          await Link(source).create(outsideSvg.path);
+        } else if (mode == 'middle-link') {
+          await Link(p.dirname(source)).create(outside.path);
+        }
+      });
+      await tester.pumpWidget(harness('![80x80]($source)'));
+      await completeReads(tester);
       expect(find.byType(Image), findsNothing);
       expect(find.byType(ImageViewerPage), findsNothing);
     });
@@ -443,6 +507,25 @@ void main() {
       );
     });
   }
+
+  testWidgets('local SVG keeps its decoded provider after a layout rebuild', (
+    tester,
+  ) async {
+    final image = File(p.join(workspace.path, 'layout.svg'))
+      ..writeAsStringSync(_svg);
+    await tester.pumpWidget(harness('![](${image.path})'));
+    await completeReads(tester);
+    ImageProvider provider() {
+      final image = tester.widget<Image>(find.byType(Image)).image;
+      return image is ResizeImage ? image.imageProvider : image;
+    }
+
+    final before = provider();
+    addTearDown(tester.view.resetPhysicalSize);
+    tester.view.physicalSize = const Size(600, 1000);
+    await tester.pump();
+    expect(provider(), same(before));
+  });
 
   testWidgets('produced image thumbnails retain their owning root', (
     tester,

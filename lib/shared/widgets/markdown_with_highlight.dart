@@ -30,6 +30,7 @@ import 'export_capture_scope.dart';
 import 'mermaid_image_cache.dart';
 import 'diagram_exporter.dart';
 import 'plantuml_block.dart';
+import 'markdown_image_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
@@ -167,6 +168,7 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
   bool? _metadataAppended;
   String _sanitizedText = '';
   List<String> _imageUrls = const [];
+  final _imageProviders = <String, ImageProvider?>{};
   List<String> _documentCitationIds = const [];
   static final ByteLruCache<String, String> _normalizedBlockCache =
       ByteLruCache<String, String>(
@@ -230,6 +232,10 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
         _sanitizedText = _renderText;
         _imageUrls = const [];
       }
+      final imageSources = _imageUrls.toSet();
+      _imageProviders.removeWhere(
+        (source, _) => !imageSources.contains(source),
+      );
       _documentCitationIds = _sourceScan.hasCitationPrefix
           ? _citationIds(_sanitizedText)
           : const [];
@@ -468,7 +474,7 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
                       !url.startsWith('kelivo-file://') &&
                       KelivoLink.tryParse(url) == null &&
                       !_hasMarkdownWorkspace(ctx, widget.conversationId)) {
-                    return const Icon(Icons.broken_image);
+                    return const Icon(Lucide.ImageOff);
                   }
                   return _KelivoMarkdownImage(
                     url: url,
@@ -478,7 +484,10 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
                     conversationId: widget.conversationId,
                   );
                 }
-                final provider = _imageProviderFor(url);
+                final provider = _imageProviders.putIfAbsent(
+                  url,
+                  () => _imageProviderFor(url),
+                );
                 return GestureDetector(
                   onTap: () {
                     unawaited(
@@ -497,7 +506,7 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
                         child: () {
                           if (provider == null) {
                             // Missing or unsupported source: show a broken image indicator
-                            return const Icon(Icons.broken_image);
+                            return const Icon(Lucide.ImageOff);
                           }
                           final displayWidth = width ?? constraints.maxWidth;
                           final devicePixelRatio =
@@ -522,7 +531,7 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
                             height: height,
                             fit: BoxFit.contain,
                             errorBuilder: (context, error, stack) =>
-                                const Icon(Icons.broken_image),
+                                const Icon(Lucide.ImageOff),
                           );
                         }(),
                       );
@@ -918,6 +927,8 @@ class _KelivoMarkdownImage extends StatefulWidget {
 
 class _KelivoMarkdownImageState extends State<_KelivoMarkdownImage> {
   Future<Uint8List?>? _future;
+  Uint8List? _providerBytes;
+  ImageProvider? _provider;
 
   @override
   void didChangeDependencies() {
@@ -931,6 +942,8 @@ class _KelivoMarkdownImageState extends State<_KelivoMarkdownImage> {
     if (oldWidget.url != widget.url ||
         oldWidget.conversationId != widget.conversationId) {
       _future = _resolve();
+      _providerBytes = null;
+      _provider = null;
     }
   }
 
@@ -977,6 +990,11 @@ class _KelivoMarkdownImageState extends State<_KelivoMarkdownImage> {
         }
         final bytes = snapshot.data;
         if (bytes == null) return _broken(context);
+        if (!identical(_providerBytes, bytes)) {
+          _providerBytes = bytes;
+          _provider = markdownImageFromBytes(bytes, source: widget.url);
+        }
+        final provider = _provider!;
         return GestureDetector(
           onTap: () {
             unawaited(
@@ -984,7 +1002,10 @@ class _KelivoMarkdownImageState extends State<_KelivoMarkdownImage> {
                 context,
                 widget.images.isEmpty ? [widget.url] : widget.images,
                 widget.url,
-                checkedSource: 'data:image/*;base64,${base64Encode(bytes)}',
+                checkedSource: checkedMarkdownImageDataUri(
+                  bytes,
+                  source: widget.url,
+                ),
                 conversationId: widget.conversationId,
               ),
             );
@@ -995,16 +1016,18 @@ class _KelivoMarkdownImageState extends State<_KelivoMarkdownImage> {
               builder: (context, constraints) {
                 final displayWidth = widget.width ?? constraints.maxWidth;
                 final dpr = MediaQuery.devicePixelRatioOf(context);
-                return Image.memory(
-                  bytes,
+                return Image(
+                  image: ResizeImage.resizeIfNeeded(
+                    displayWidth.isFinite
+                        ? math.max(1, (displayWidth * dpr).ceil())
+                        : null,
+                    widget.height == null
+                        ? null
+                        : math.max(1, (widget.height! * dpr).ceil()),
+                    provider,
+                  ),
                   width: displayWidth,
                   height: widget.height,
-                  cacheWidth: displayWidth.isFinite
-                      ? math.max(1, (displayWidth * dpr).ceil())
-                      : null,
-                  cacheHeight: widget.height == null
-                      ? null
-                      : math.max(1, (widget.height! * dpr).ceil()),
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stack) => _broken(context),
                 );
@@ -2649,13 +2672,14 @@ List<String> _citationIds(String md) {
 
 String _sanitizeImageLinks(String input) {
   if (!_imageStart.hasMatch(input)) return input;
+  input = _encodeSvgImageDataUris(input);
   final re = RegExp(r'!\[([^\]]*)\]\(([^)]+)\)', multiLine: true);
   return input.replaceAllMapped(re, (m) {
     final alt = m.group(1) ?? '';
     final inside = (m.group(2) ?? '').trim();
     if (inside.isEmpty) return m[0]!;
 
-    // Leave remote URLs and data URLs untouched.
+    // Leave other remote URLs and data URLs untouched.
     if (inside.startsWith('http://') ||
         inside.startsWith('https://') ||
         inside.startsWith('data:')) {
@@ -2693,22 +2717,65 @@ String _sanitizeImageLinks(String input) {
   });
 }
 
+// Encode SVG data destinations before HTML/Markdown parsing. XML events keep
+// raw parentheses/comments inside the destination; encoded data uses a scan.
+String _encodeSvgImageDataUris(String input) {
+  final matches = _svgImageStart.allMatches(input);
+  final buffer = StringBuffer();
+  var copied = 0;
+  for (final match in matches) {
+    if (match.start < copied) continue;
+    var depth = 0;
+    var end = match.end;
+    final svgLength = rawSvgDocumentLength(input.substring(match.end));
+    if (svgLength != null) {
+      end += svgLength;
+      while (end < input.length && input[end].trim().isEmpty) {
+        end++;
+      }
+      if (end == input.length || input.codeUnitAt(end) != 0x29) continue;
+    } else {
+      for (; end < input.length; end++) {
+        final unit = input.codeUnitAt(end);
+        if (unit == 0x28) depth++;
+        if (unit != 0x29) continue;
+        if (depth == 0) break;
+        depth--;
+      }
+    }
+    if (end == input.length) break;
+    final start = match.end - match.group(2)!.length;
+    String encoded;
+    try {
+      final bytes = decodeMarkdownImageData(input.substring(start, end));
+      encoded = base64Encode(bytes);
+    } catch (_) {
+      encoded = '';
+    }
+    buffer
+      ..write(input.substring(copied, match.start))
+      ..write('![${match.group(1)}](data:image/svg+xml;base64,$encoded)');
+    copied = end + 1;
+  }
+  if (copied == 0) return input;
+  buffer.write(input.substring(copied));
+  return buffer.toString();
+}
+
 // String.indexOf(String) tries every position in Dart on two-byte strings.
 // The regex engine's literal search avoids that hot loop on long CJK replies.
 final _imageStart = RegExp(r'!\[');
+final _svgImageStart = RegExp(
+  r'!\[([^\]\r\n]*)\]\((data:image/svg\+xml[^,\r\n]*,)',
+);
 
 ImageProvider? _imageProviderFor(String src) {
   if (src.startsWith('http://') || src.startsWith('https://')) {
-    return NetworkImage(src);
+    return MarkdownImageProvider(src);
   }
   if (src.startsWith('data:')) {
     try {
-      final base64Marker = 'base64,';
-      final idx = src.indexOf(base64Marker);
-      if (idx != -1) {
-        final b64 = src.substring(idx + base64Marker.length);
-        return MemoryImage(base64Decode(b64));
-      }
+      return markdownImageFromBytes(decodeMarkdownImageData(src), source: src);
     } catch (_) {}
     return null;
   }
@@ -2733,6 +2800,7 @@ Future<Uint8List?> _readMarkdownImage(
       context,
       source,
       conversationId: conversationId,
+      maxBytes: kMaxMarkdownImageBytes,
     );
   }
   final chat = context.read<ChatService?>();
@@ -2744,6 +2812,7 @@ Future<Uint8List?> _readMarkdownImage(
     binding: WorkspaceBinding.fromExtras(conversation?.extras ?? const {}),
     workspaces: context.read<WorkspaceProvider?>(),
     externalMounts: context.read<ExternalMountsProvider?>(),
+    maxBytes: kMaxMarkdownImageBytes,
   );
 }
 
@@ -2771,7 +2840,9 @@ Future<void> _openMarkdownImages(
         source,
         conversationId: conversationId,
       );
-      if (bytes != null) safe = 'data:image/*;base64,${base64Encode(bytes)}';
+      if (bytes != null) {
+        safe = checkedMarkdownImageDataUri(bytes, source: source);
+      }
     }
     if (safe == null) continue;
     if (source == selected) initial = safeSources.length;
