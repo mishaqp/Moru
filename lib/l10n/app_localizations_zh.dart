@@ -11789,6 +11789,89 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get backgroundShellFailed => '后台命令失败';
+
+  @override
+  String get agentsAuthTitle => '使用订阅登录';
+
+  @override
+  String get agentsAuthMode => '身份验证';
+
+  @override
+  String get agentsAuthProvider => 'API 服务商';
+
+  @override
+  String get agentsAuthSubscription => '订阅';
+
+  @override
+  String get agentsAuthProviderHint => '使用此助手的 API 服务商设置。';
+
+  @override
+  String get agentsAuthSubscriptionHint =>
+      '使用代理自己的 Claude 或 ChatGPT 登录。不传入 API 服务商的密钥或模型设置。';
+
+  @override
+  String get agentsAuthSignIn => '登录';
+
+  @override
+  String get agentsAuthCheck => '检查登录';
+
+  @override
+  String get agentsAuthSignOut => '退出登录';
+
+  @override
+  String get agentsAuthSignedIn => '已登录';
+
+  @override
+  String get agentsAuthSignedOut => '需要登录';
+
+  @override
+  String get agentsAuthUnknown => '尚未检查登录';
+
+  @override
+  String get agentsAuthWaiting => '请在浏览器中完成登录。';
+
+  @override
+  String get agentsAuthOpenBrowser => '打开登录页面';
+
+  @override
+  String get agentsAuthDeviceCode => '设备代码';
+
+  @override
+  String get agentsAuthCodexHint => '登录前，请在 ChatGPT 设置 → 安全中启用设备代码登录。';
+
+  @override
+  String get agentsAuthCode => '授权代码';
+
+  @override
+  String get agentsAuthSubmitCode => '提交代码';
+
+  @override
+  String get agentsAuthCodeHint => '如果浏览器要求复制代码，请粘贴完整代码，包括 # 后面的部分。';
+
+  @override
+  String get agentsAuthCancel => '取消登录';
+
+  @override
+  String get agentsAuthFailureEnvironment => '请先设置 Linux 环境。';
+
+  @override
+  String get agentsAuthFailureStart => '无法完成登录。请更新代理后重试。';
+
+  @override
+  String get agentsAuthFailureNetwork => '因网络连接问题登录失败。请重试。';
+
+  @override
+  String get agentsAuthFailureTimeout => '登录超时。请重试。';
+
+  @override
+  String get agentsAuthBrowserFailed => '无法打开登录页面。可以复制下方链接。';
+
+  @override
+  String get agentsErrorAuthRequired =>
+      '代理需要身份验证。请通过设置 → 代理登录，或检查所选提供商的 API 密钥。';
+
+  @override
+  String get agentsErrorAccountBusy => 'Codex 已在另一个聊天中运行。请等待回复完成或停止该回复。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -23505,6 +23588,89 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get backgroundShellFailed => '后台命令失败';
+
+  @override
+  String get agentsAuthTitle => '使用订阅登录';
+
+  @override
+  String get agentsAuthMode => '身份验证';
+
+  @override
+  String get agentsAuthProvider => 'API 服务商';
+
+  @override
+  String get agentsAuthSubscription => '订阅';
+
+  @override
+  String get agentsAuthProviderHint => '使用此助手的 API 服务商设置。';
+
+  @override
+  String get agentsAuthSubscriptionHint =>
+      '使用代理自己的 Claude 或 ChatGPT 登录。不传入 API 服务商的密钥或模型设置。';
+
+  @override
+  String get agentsAuthSignIn => '登录';
+
+  @override
+  String get agentsAuthCheck => '检查登录';
+
+  @override
+  String get agentsAuthSignOut => '退出登录';
+
+  @override
+  String get agentsAuthSignedIn => '已登录';
+
+  @override
+  String get agentsAuthSignedOut => '需要登录';
+
+  @override
+  String get agentsAuthUnknown => '尚未检查登录';
+
+  @override
+  String get agentsAuthWaiting => '请在浏览器中完成登录。';
+
+  @override
+  String get agentsAuthOpenBrowser => '打开登录页面';
+
+  @override
+  String get agentsAuthDeviceCode => '设备代码';
+
+  @override
+  String get agentsAuthCodexHint => '登录前，请在 ChatGPT 设置 → 安全中启用设备代码登录。';
+
+  @override
+  String get agentsAuthCode => '授权代码';
+
+  @override
+  String get agentsAuthSubmitCode => '提交代码';
+
+  @override
+  String get agentsAuthCodeHint => '如果浏览器要求复制代码，请粘贴完整代码，包括 # 后面的部分。';
+
+  @override
+  String get agentsAuthCancel => '取消登录';
+
+  @override
+  String get agentsAuthFailureEnvironment => '请先设置 Linux 环境。';
+
+  @override
+  String get agentsAuthFailureStart => '无法完成登录。请更新代理后重试。';
+
+  @override
+  String get agentsAuthFailureNetwork => '因网络连接问题登录失败。请重试。';
+
+  @override
+  String get agentsAuthFailureTimeout => '登录超时。请重试。';
+
+  @override
+  String get agentsAuthBrowserFailed => '无法打开登录页面。可以复制下方链接。';
+
+  @override
+  String get agentsErrorAuthRequired =>
+      '代理需要身份验证。请通过设置 → 代理登录，或检查所选提供商的 API 密钥。';
+
+  @override
+  String get agentsErrorAccountBusy => 'Codex 已在另一个聊天中运行。请等待回复完成或停止该回复。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -35295,4 +35461,87 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backgroundShellFailed => '背景命令失敗';
+
+  @override
+  String get agentsAuthTitle => '使用訂閱登入';
+
+  @override
+  String get agentsAuthMode => '身分驗證';
+
+  @override
+  String get agentsAuthProvider => 'API 服務商';
+
+  @override
+  String get agentsAuthSubscription => '訂閱';
+
+  @override
+  String get agentsAuthProviderHint => '使用此助手的 API 服務商設定。';
+
+  @override
+  String get agentsAuthSubscriptionHint =>
+      '使用代理自己的 Claude 或 ChatGPT 登入。不傳入 API 服務商的金鑰或模型設定。';
+
+  @override
+  String get agentsAuthSignIn => '登入';
+
+  @override
+  String get agentsAuthCheck => '檢查登入';
+
+  @override
+  String get agentsAuthSignOut => '登出';
+
+  @override
+  String get agentsAuthSignedIn => '已登入';
+
+  @override
+  String get agentsAuthSignedOut => '需要登入';
+
+  @override
+  String get agentsAuthUnknown => '尚未檢查登入';
+
+  @override
+  String get agentsAuthWaiting => '請在瀏覽器中完成登入。';
+
+  @override
+  String get agentsAuthOpenBrowser => '開啟登入頁面';
+
+  @override
+  String get agentsAuthDeviceCode => '裝置代碼';
+
+  @override
+  String get agentsAuthCodexHint => '登入前，請在 ChatGPT 設定 → 安全性中啟用裝置代碼登入。';
+
+  @override
+  String get agentsAuthCode => '授權代碼';
+
+  @override
+  String get agentsAuthSubmitCode => '提交代碼';
+
+  @override
+  String get agentsAuthCodeHint => '如果瀏覽器要求複製代碼，請貼上完整代碼，包括 # 後面的部分。';
+
+  @override
+  String get agentsAuthCancel => '取消登入';
+
+  @override
+  String get agentsAuthFailureEnvironment => '請先設定 Linux 環境。';
+
+  @override
+  String get agentsAuthFailureStart => '無法完成登入。請更新代理後重試。';
+
+  @override
+  String get agentsAuthFailureNetwork => '因網路連線問題登入失敗。請重試。';
+
+  @override
+  String get agentsAuthFailureTimeout => '登入逾時。請重試。';
+
+  @override
+  String get agentsAuthBrowserFailed => '無法開啟登入頁面。可以複製下方連結。';
+
+  @override
+  String get agentsErrorAuthRequired =>
+      '代理需要身分驗證。請透過設定 → 代理登入，或檢查所選提供者的 API 金鑰。';
+
+  @override
+  String get agentsErrorAccountBusy => 'Codex 已在另一個聊天中執行。請等待回覆完成或停止該回覆。';
 }

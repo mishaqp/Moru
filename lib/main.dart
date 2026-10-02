@@ -712,8 +712,20 @@ class MyApp extends StatelessWidget {
           create: (ctx) {
             final manager = ctx.read<AcpAgentManager>();
             return AcpChatSessions(
-              start: (spec, provider, {required cwd, required mounts}) =>
-                  manager.start(spec, provider, cwd: cwd, mounts: mounts),
+              start:
+                  (
+                    spec,
+                    provider, {
+                    required cwd,
+                    required mounts,
+                    required authMode,
+                  }) => manager.start(
+                    spec,
+                    provider,
+                    cwd: cwd,
+                    mounts: mounts,
+                    authMode: authMode,
+                  ),
             );
           },
         ),

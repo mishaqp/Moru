@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/models/assistant.dart';
+import '../../core/models/agent_auth_mode.dart';
 import '../../core/providers/assistant_provider.dart';
 import '../../core/services/acp/acp_agent_catalog.dart';
 import '../../core/services/chat/chat_service.dart';
@@ -10,14 +11,23 @@ import '../../core/services/notification_service.dart';
 /// The assistant that talks through [spec], created on first use.
 Future<Assistant> assistantForAgent(
   AssistantProvider assistants,
-  AcpAgentSpec spec,
-) async {
+  AcpAgentSpec spec, {
+  AgentAuthMode? authMode,
+}) async {
   await assistants.loaded;
   for (final assistant in assistants.assistants) {
-    if (assistant.agentId == spec.id) return assistant;
+    if (assistant.agentId != spec.id) continue;
+    if (authMode == null || assistant.agentAuthMode == authMode) {
+      return assistant;
+    }
+    final updated = assistant.copyWith(agentAuthMode: authMode);
+    await assistants.updateAssistant(updated);
+    return updated;
   }
   final id = await assistants.addAssistant(name: spec.name);
-  final assistant = assistants.getById(id)!.copyWith(agentId: spec.id);
+  final assistant = assistants
+      .getById(id)!
+      .copyWith(agentId: spec.id, agentAuthMode: authMode);
   await assistants.updateAssistant(assistant);
   return assistant;
 }

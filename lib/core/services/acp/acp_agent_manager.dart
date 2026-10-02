@@ -5,11 +5,13 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../database/business_preferences.dart';
+import '../../models/agent_auth_mode.dart';
 import '../../providers/environment_provider.dart';
 import '../mcp/workspace_stdio_transport.dart';
 import '../sandbox/environment_dependencies.dart';
 import '../workspace/workspace_runtime.dart';
 import 'acp_agent.dart';
+import 'acp_agent_auth.dart';
 import 'acp_agent_catalog.dart';
 import 'acp_config_leases.dart';
 import 'acp_launch_directories.dart';
@@ -48,6 +50,7 @@ class AcpCheckResult {
     this.failureKind,
     this.moruToolsAvailable = false,
     this.nodeIssue,
+    this.authStatus,
   });
 
   final AcpAgentInfo? info;
@@ -56,9 +59,10 @@ class AcpCheckResult {
   final AcpFailureKind? failureKind;
   final bool moruToolsAvailable;
   final AcpNodeIssue? nodeIssue;
+  final AcpAuthStatus? authStatus;
   String? errorMessage(AppLocalizations l10n) =>
       nodeIssue?.message(l10n) ?? acpFailureMessage(failureKind, l10n) ?? error;
-  bool get ok => info != null;
+  bool get ok => info != null && error == null;
 }
 
 class AcpNodeIssue {
@@ -109,6 +113,7 @@ class AcpAgentManager extends ChangeNotifier {
   String _nodeVersion = '';
   bool _nodeProbed = false;
   AcpAgentWebServers? _webServers;
+  AcpAgentAuth? _auth;
   final _configLeases = AcpConfigLeases();
   final _launchDirectories = AcpLaunchDirectories();
   final Set<_ManagedAgentRun> _agentRuns = {};
@@ -133,10 +138,12 @@ class AcpAgentManager extends ChangeNotifier {
     );
   }
 
-  Future<void> _stopAgentRuns(String specId) async {
+  Future<void> _stopAgentRuns(String specId, {AgentAuthMode? authMode}) async {
     await Future.wait([
       for (final run in _agentRuns.toList())
-        if (run.specId == specId) run.stop(),
+        if (run.specId == specId &&
+            (authMode == null || run.authMode == authMode))
+          run.stop(),
     ]);
   }
 
@@ -160,6 +167,12 @@ class AcpAgentManager extends ChangeNotifier {
   AcpAgentWebServers get webServers =>
       _webServers ??= (AcpAgentWebServers(prepare: _prepareWeb)
         ..addListener(notifyListeners));
+
+  AcpAgentAuth get auth => _auth ??= (AcpAgentAuth(
+    prepare: _prepareAuth,
+    stopAgents: (id) =>
+        _stopAgentRuns(id, authMode: AgentAuthMode.subscription),
+  )..addListener(notifyListeners));
 
   AcpNodeIssue? nodeIssueFor(AcpAgentSpec spec) {
     if (!_nodeProbed) return null;
@@ -406,6 +419,7 @@ class AcpAgentManager extends ChangeNotifier {
     notifyListeners();
     try {
       final stoppingAgents = _stopAgentRuns(spec.id);
+      await _auth?.cancelOperations(spec.id);
       await _webServers?.stop(spec.id);
       await _webServers?.waitForCleanup(spec.id);
       await stoppingAgents;
@@ -450,8 +464,9 @@ class AcpAgentManager extends ChangeNotifier {
   /// Starts [spec] for [provider], greets it and stops it again.
   Future<AcpCheckResult> check(
     AcpAgentSpec spec,
-    AcpProviderInput provider,
-  ) async {
+    AcpProviderInput? provider, {
+    AgentAuthMode authMode = AgentAuthMode.provider,
+  }) async {
     if (busy) return const AcpCheckResult(error: 'busy');
     busyAgentId = spec.id;
     failure = null;
@@ -459,19 +474,21 @@ class AcpAgentManager extends ChangeNotifier {
     failedAgentId = null;
     notifyListeners();
     AcpAgent? agent;
+    var ownsAgent = false;
     AcpCheckResult result;
     var moruToolsAvailable = false;
     var redactor = AcpSecretRedactor([
-      provider.apiKey,
-      ...provider.headers.values,
-    ]);
+      provider?.apiKey ?? '',
+      ...?provider?.headers.values,
+    ], protectAuthentication: authMode == AgentAuthMode.subscription);
+    AcpAuthStatus? authStatus;
     try {
       final variables = (await environment.loadExecutionConfig()).variables;
       redactor = AcpSecretRedactor([
-        provider.apiKey,
-        ...provider.headers.values,
+        provider?.apiKey ?? '',
+        ...?provider?.headers.values,
         variables['OPENCODE_SERVER_PASSWORD'] ?? '',
-      ]);
+      ], protectAuthentication: authMode == AgentAuthMode.subscription);
       final runtime = _runtime;
       if (runtime != null) {
         moruToolsAvailable = await AcpMcpProbe.check(
@@ -483,26 +500,64 @@ class AcpAgentManager extends ChangeNotifier {
           },
         );
       }
-      agent = await start(spec, provider);
+      if (authMode == AgentAuthMode.subscription) {
+        authStatus = await auth.check(spec);
+      }
+      if (spec.id == AcpAgentSpec.codexId &&
+          authMode == AgentAuthMode.subscription) {
+        for (final run in _agentRuns) {
+          if (run.specId == spec.id &&
+              run.authMode == authMode &&
+              !run.stopped &&
+              run.agent?.isAlive == true) {
+            agent = run.agent;
+            break;
+          }
+        }
+      }
+      if (agent == null) {
+        agent = await start(spec, provider, authMode: authMode);
+        ownsAgent = true;
+      }
+      if (authStatus == AcpAuthStatus.signedOut) {
+        throw const AcpError(AcpError.authRequired, 'Authentication required');
+      }
+      if (authMode == AgentAuthMode.subscription) {
+        if (authStatus != AcpAuthStatus.signedIn) {
+          throw const AcpError(
+            AcpError.internalError,
+            'Could not check authentication',
+          );
+        }
+        if (ownsAgent) await agent.newSession(cwd: '/root');
+      }
       result = AcpCheckResult(
         info: agent.info,
+        authStatus: authStatus,
         moruToolsAvailable: moruToolsAvailable,
       );
       _states[spec.id] = AcpInstallState.installed;
     } catch (error) {
       final safeError = redactor.error(error);
+      final kind = classifyAcpFailure(safeError);
+      if (authMode == AgentAuthMode.subscription &&
+          kind == AcpFailureKind.authRequired) {
+        authStatus = AcpAuthStatus.signedOut;
+        auth.requireSignIn(spec.id);
+      }
       result = AcpCheckResult(
+        authStatus: authStatus,
         moruToolsAvailable: moruToolsAvailable,
         error: safeError.message,
         errorDetails: acpErrorDetails(safeError),
-        failureKind: classifyAcpFailure(safeError),
+        failureKind: kind,
         nodeIssue: nodeIssueFor(spec),
       );
       failure = AcpAgentFailure.check;
       failureKind = result.failureKind;
       failedAgentId = spec.id;
     } finally {
-      agent?.close();
+      if (ownsAgent) agent?.close();
       busyAgentId = null;
     }
     _checks[spec.id] = result;
@@ -518,7 +573,8 @@ class AcpAgentManager extends ChangeNotifier {
   /// agent and closes it.
   Future<AcpAgent> start(
     AcpAgentSpec spec,
-    AcpProviderInput provider, {
+    AcpProviderInput? provider, {
+    AgentAuthMode authMode = AgentAuthMode.provider,
     String cwd = '/root',
     List<Mount> mounts = const [],
     bool Function()? isCancelled,
@@ -530,13 +586,39 @@ class AcpAgentManager extends ChangeNotifier {
         'The Linux environment is not ready',
       );
     }
-    if (_disposed || _removing.contains(spec.id)) {
+    bool credentialsChanging() =>
+        authMode == AgentAuthMode.subscription &&
+        _auth?.changingCredentials(spec.id) == true;
+    if (_disposed || _removing.contains(spec.id) || credentialsChanging()) {
       throw const AcpError(AcpError.disconnected, 'Agent startup cancelled');
     }
-    final run = _ManagedAgentRun(spec.id);
+    final previousRuns =
+        spec.id == AcpAgentSpec.codexId &&
+            authMode == AgentAuthMode.subscription
+        ? _agentRuns
+              .where((run) => run.specId == spec.id && run.authMode == authMode)
+              .toList()
+        : const <_ManagedAgentRun>[];
+    if (previousRuns.any(
+      (run) => !run.stopped && run.agent?.isAlive != false,
+    )) {
+      throw const AcpError(
+        AcpError.internalError,
+        'Codex is active in another chat',
+        null,
+        AcpFailureKind.accountBusy,
+      );
+    }
+    // Reserve before any await. Another startup cannot overtake teardown and
+    // refresh the same native auth.json while the old process is still alive.
+    final run = _ManagedAgentRun(spec.id, authMode);
     _agentRuns.add(run);
     unawaited(run.closed.future.then((_) => _agentRuns.remove(run)));
-    bool cancelled() => run.stopped || _disposed || isCancelled?.call() == true;
+    bool cancelled() =>
+        run.stopped ||
+        _disposed ||
+        credentialsChanging() ||
+        isCancelled?.call() == true;
     void requireActive() {
       if (cancelled()) {
         throw const AcpError(AcpError.disconnected, 'Agent startup cancelled');
@@ -544,18 +626,20 @@ class AcpAgentManager extends ChangeNotifier {
     }
 
     var redactor = AcpSecretRedactor([
-      provider.apiKey,
-      ...provider.headers.values,
-    ]);
+      provider?.apiKey ?? '',
+      ...?provider?.headers.values,
+    ], protectAuthentication: authMode == AgentAuthMode.subscription);
     AcpStderrBuffer? stderrDiagnostics;
     try {
+      await Future.wait(previousRuns.map((run) => run.stop()));
+      requireActive();
       final variables = (await environment.loadExecutionConfig()).variables;
       requireActive();
       redactor = AcpSecretRedactor([
-        provider.apiKey,
-        ...provider.headers.values,
+        provider?.apiKey ?? '',
+        ...?provider?.headers.values,
         variables['OPENCODE_SERVER_PASSWORD'] ?? '',
-      ]);
+      ], protectAuthentication: authMode == AgentAuthMode.subscription);
       // Root runs already have their own private mount namespace. Keep
       // Codex's fixed daemon path apart from the Android-owned PRoot copy.
       final expectedRootChroot = spec.id == AcpAgentSpec.codexId
@@ -565,6 +649,7 @@ class AcpAgentManager extends ChangeNotifier {
       requireActive();
       final launch = spec.launch(
         provider,
+        authMode: authMode,
         isolateCodexDaemon: isolateCodexDaemon,
       );
       await _requireNode(runtime, spec, redactor: redactor);
@@ -603,11 +688,13 @@ class AcpAgentManager extends ChangeNotifier {
       {
         final (code, output) = await _run(
           runtime,
-          writeFilesScript([
+          launch.unsetEnvironmentScript +
+              writeFilesScript([
                 ...launch.files,
                 AcpMcpStdioBridge.file,
                 AcpFsCompat.file,
               ]) +
+              _subscriptionHomeScript(launch) +
               (directory == null
                   ? ''
                   : '\n${_launchDirectories.prepareScript(runtime, directory)}'),
@@ -626,10 +713,17 @@ class AcpAgentManager extends ChangeNotifier {
       stderrDiagnostics = redactor.stderrBuffer();
       final transport = await WorkspaceStdioTransport.start(
         runtime: runtime,
-        command: directory == null ? launch.command : '/bin/sh',
-        arguments: directory == null
+        command: directory == null && launch.unsetEnvironment.isEmpty
+            ? launch.command
+            : '/bin/sh',
+        arguments: directory == null && launch.unsetEnvironment.isEmpty
             ? launch.arguments
-            : AcpLaunchDirectories.arguments(launch),
+            : directory != null
+            ? AcpLaunchDirectories.arguments(launch)
+            : [
+                '-c',
+                'set -e\numask 077\n${launch.unsetEnvironmentScript}exec ${[launch.command, ...launch.arguments].map(_quote).join(' ')}',
+              ],
         cwd: cwd,
         mounts: mounts,
         environment: env,
@@ -726,9 +820,97 @@ class AcpAgentManager extends ChangeNotifier {
     Map<String, String> variables,
     AcpLaunch launch,
   ) {
-    final env = {...variables, ...launch.environment};
+    final env = {
+      for (final entry in variables.entries)
+        if (launch.unsetEnvironment.isEmpty ||
+            !AcpAgentSpec.isSubscriptionEnvironmentVariable(entry.key))
+          entry.key: entry.value,
+      ...launch.environment,
+    };
     env['NODE_OPTIONS'] = AcpFsCompat.nodeOptions(env['NODE_OPTIONS']);
     return env;
+  }
+
+  /// Native login and ACP share only persistent credentials. Every native
+  /// command still owns its temporary files and the prepared runtime mode.
+  Future<AcpAuthContext> _prepareAuth(AcpAgentSpec spec) async {
+    final runtime = _runtime;
+    if (runtime == null || _disposed || _removing.contains(spec.id)) {
+      throw const AcpError(
+        AcpError.disconnected,
+        'The Linux environment is not ready',
+      );
+    }
+    final variables = (await environment.loadExecutionConfig()).variables;
+    final redactor = AcpSecretRedactor(const [], protectAuthentication: true);
+    await _requireNode(runtime, spec, redactor: redactor);
+    final expectedRootChroot = (await runtime.status()).rootChroot;
+    final launch = spec.launch(
+      null,
+      authMode: AgentAuthMode.subscription,
+      isolateCodexDaemon: spec.id == AcpAgentSpec.codexId && expectedRootChroot,
+    );
+    final directory = launch.temporaryDirectory;
+    final env = _agentEnvironment(variables, launch);
+    final cleanup = directory == null
+        ? () async {}
+        : _launchDirectories.acquire(runtime, directory, () async {
+            await _run(
+              runtime,
+              AcpLaunchDirectories.removeScript(directory),
+              capture: true,
+              environment: const {'PATH': '$acpNpmPrefix/bin:/usr/bin:/bin'},
+            );
+          });
+    try {
+      final (code, _) = await _run(
+        runtime,
+        launch.unsetEnvironmentScript +
+            writeFilesScript([AcpFsCompat.file]) +
+            _subscriptionHomeScript(launch) +
+            (directory == null
+                ? ''
+                : '\n${_launchDirectories.prepareScript(runtime, directory)}'),
+        capture: true,
+        environment: env,
+        expectedRootChroot: expectedRootChroot,
+      );
+      if (code != 0) {
+        throw const AcpError(
+          AcpError.internalError,
+          'Could not prepare authentication',
+        );
+      }
+      if (_disposed || _removing.contains(spec.id)) {
+        throw const AcpError(AcpError.disconnected, 'Authentication cancelled');
+      }
+      return AcpAuthContext(
+        runtime: runtime,
+        expectedRootChroot: expectedRootChroot,
+        launch: AcpLaunch(
+          command: launch.command,
+          arguments: launch.arguments,
+          environment: env,
+          temporaryDirectory: directory,
+          isolateCodexDaemon: launch.isolateCodexDaemon,
+          unsetEnvironment: launch.unsetEnvironment,
+          cleanup: cleanup,
+        ),
+      );
+    } catch (_) {
+      await cleanup();
+      rethrow;
+    }
+  }
+
+  static String _subscriptionHomeScript(AcpLaunch launch) {
+    if (launch.unsetEnvironment.isEmpty) return '';
+    final home =
+        launch.environment['CLAUDE_CONFIG_DIR'] ??
+        launch.environment['CODEX_HOME'];
+    return home == null
+        ? ''
+        : '\nmkdir -p -- ${_quote(home)}\nchmod 700 -- ${_quote(home)}';
   }
 
   Future<(WorkspaceRuntime, AcpLaunch)> _prepareWeb(
@@ -791,6 +973,8 @@ class AcpAgentManager extends ChangeNotifier {
     _disposed = true;
     _webServers?.removeListener(notifyListeners);
     _webServers?.dispose();
+    _auth?.removeListener(notifyListeners);
+    _auth?.dispose();
     for (final run in _agentRuns.toList()) {
       unawaited(run.stop());
     }
@@ -874,8 +1058,9 @@ class AcpAgentManager extends ChangeNotifier {
 }
 
 class _ManagedAgentRun {
-  _ManagedAgentRun(this.specId);
+  _ManagedAgentRun(this.specId, this.authMode);
   final String specId;
+  final AgentAuthMode authMode;
   final prepared = Completer<void>();
   final closed = Completer<void>();
   WorkspaceStdioTransport? transport;

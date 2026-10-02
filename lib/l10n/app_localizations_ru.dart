@@ -12474,4 +12474,95 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get backgroundShellFailed => 'Ошибка фоновой команды';
+
+  @override
+  String get agentsAuthTitle => 'Войти по подписке';
+
+  @override
+  String get agentsAuthMode => 'Авторизация';
+
+  @override
+  String get agentsAuthProvider => 'API-провайдер';
+
+  @override
+  String get agentsAuthSubscription => 'Подписка';
+
+  @override
+  String get agentsAuthProviderHint =>
+      'Использовать настройки API-провайдера этого ассистента.';
+
+  @override
+  String get agentsAuthSubscriptionHint =>
+      'Использовать собственный вход агента в Claude или ChatGPT. Ключи и настройки модели API-провайдера не передаются.';
+
+  @override
+  String get agentsAuthSignIn => 'Войти';
+
+  @override
+  String get agentsAuthCheck => 'Проверить вход';
+
+  @override
+  String get agentsAuthSignOut => 'Выйти';
+
+  @override
+  String get agentsAuthSignedIn => 'Вход выполнен';
+
+  @override
+  String get agentsAuthSignedOut => 'Нужен вход';
+
+  @override
+  String get agentsAuthUnknown => 'Вход не проверен';
+
+  @override
+  String get agentsAuthWaiting => 'Завершите вход в браузере.';
+
+  @override
+  String get agentsAuthOpenBrowser => 'Открыть страницу входа';
+
+  @override
+  String get agentsAuthDeviceCode => 'Код устройства';
+
+  @override
+  String get agentsAuthCodexHint =>
+      'Перед входом включите вход по коду устройства в ChatGPT: Настройки → Безопасность.';
+
+  @override
+  String get agentsAuthCode => 'Код авторизации';
+
+  @override
+  String get agentsAuthSubmitCode => 'Отправить код';
+
+  @override
+  String get agentsAuthCodeHint =>
+      'Если браузер предлагает скопировать код, вставьте его целиком, включая часть после #.';
+
+  @override
+  String get agentsAuthCancel => 'Отменить вход';
+
+  @override
+  String get agentsAuthFailureEnvironment => 'Сначала настройте Linux-среду.';
+
+  @override
+  String get agentsAuthFailureStart =>
+      'Не удалось завершить вход. Обновите агента и попробуйте снова.';
+
+  @override
+  String get agentsAuthFailureNetwork =>
+      'Вход не выполнен из-за ошибки сети. Попробуйте снова.';
+
+  @override
+  String get agentsAuthFailureTimeout =>
+      'Время ожидания входа истекло. Попробуйте снова.';
+
+  @override
+  String get agentsAuthBrowserFailed =>
+      'Не удалось открыть страницу входа. Можно скопировать ссылку ниже.';
+
+  @override
+  String get agentsErrorAuthRequired =>
+      'Агенту нужна авторизация. Войдите через Настройки → Агенты или проверьте API-ключ выбранного провайдера.';
+
+  @override
+  String get agentsErrorAccountBusy =>
+      'Codex уже работает в другом чате. Дождитесь завершения ответа или остановите его.';
 }

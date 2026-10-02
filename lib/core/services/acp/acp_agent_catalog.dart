@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:uuid/uuid.dart';
 
+import '../../models/agent_auth_mode.dart';
 import 'acp_connection.dart';
 
 /// Where agents installed with npm live in the Linux environment.
@@ -71,12 +72,13 @@ class AcpConfigFile {
   final bool temporary;
 }
 
-/// How to start an agent for one provider and model.
+/// How to start an agent using a Moru provider or its own account.
 class AcpLaunch {
   const AcpLaunch({
     required this.command,
     this.arguments = const [],
     this.environment = const {},
+    this.unsetEnvironment = const [],
     this.files = const [],
     this.temporaryDirectory,
     this.isolateCodexDaemon = false,
@@ -86,6 +88,31 @@ class AcpLaunch {
   final String command;
   final List<String> arguments;
   final Map<String, String> environment;
+
+  /// Inherited variables to remove after the guest's login profile runs.
+  /// Entries are exact names or prefixes ending in `*`.
+  final List<String> unsetEnvironment;
+
+  /// A POSIX shell prefix; runtime-variable maps need the same filtering.
+  String get unsetEnvironmentScript {
+    if (unsetEnvironment.isEmpty) return '';
+    final validPattern = RegExp(r'^[A-Za-z_][A-Za-z0-9_]*\*?$');
+    for (final pattern in unsetEnvironment) {
+      if (!validPattern.hasMatch(pattern)) {
+        throw ArgumentError.value(pattern, 'unsetEnvironment');
+      }
+    }
+    return r'''
+for moru_unset_name in $(env | sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p'); do
+  case "$moru_unset_name" in
+    __MORU_UNSET_PATTERNS__) unset "$moru_unset_name" ;;
+  esac
+done
+unset moru_unset_name
+'''
+        .replaceFirst('__MORU_UNSET_PATTERNS__', unsetEnvironment.join('|'));
+  }
+
   final List<AcpConfigFile> files;
   final String? temporaryDirectory;
   final bool isolateCodexDaemon;
@@ -131,20 +158,87 @@ class AcpAgentSpec {
   String get minimumNodeVersion => '$nodeMajor.$nodeMinor.0';
 
   bool get isCustom => id.startsWith(customPrefix);
+  bool get supportsSubscription => id == claudeCodeId || id == codexId;
+
+  /// Subscription mode must not inherit provider credentials, endpoint/model
+  /// overrides, or OAuth tokens that bypass the account in its dedicated home.
+  static const List<String> subscriptionUnsetEnvironment = [
+    'ANTHROPIC_*',
+    'OPENAI_*',
+    'AZURE_OPENAI_*',
+    'MORU_AGENT_*',
+    'MORU_CODEX_*',
+    'CODEX_API_KEY',
+    'CODEX_BASE_URL',
+    'CODEX_MODEL',
+    'CODEX_MODEL_PROVIDER',
+    'CODEX_CONFIG',
+    'CODEX_PATH',
+    'DEFAULT_AUTH_REQUEST',
+    'MODEL_PROVIDER',
+    'CLAUDE_CODE_OAUTH_*',
+    'CLAUDE_SECURESTORAGE_CONFIG_DIR',
+    'CLAUDE_CODE_EXECUTABLE',
+    'CLAUDE_CODE_API_KEY_HELPER',
+    'CLAUDE_CODE_USE_BEDROCK',
+    'CLAUDE_CODE_USE_VERTEX',
+    'CLAUDE_CODE_USE_FOUNDRY',
+    'CLAUDE_CODE_SUBAGENT_MODEL',
+  ];
+
+  static bool isSubscriptionEnvironmentVariable(String name) =>
+      subscriptionUnsetEnvironment.any(
+        (pattern) => pattern.endsWith('*')
+            ? name.startsWith(pattern.substring(0, pattern.length - 1))
+            : name == pattern,
+      );
+
+  static String get subscriptionEnvironmentScript => const AcpLaunch(
+    command: '',
+    unsetEnvironment: subscriptionUnsetEnvironment,
+  ).unsetEnvironmentScript;
+
+  static const _pathEnvironment = <String, String>{
+    'PATH':
+        '$acpNpmPrefix/bin:/usr/local/sbin:/usr/local/bin:'
+        '/usr/sbin:/usr/bin:/sbin:/bin',
+  };
 
   static const String customPrefix = 'custom:';
 
-  /// The command and its settings for [provider].
+  /// Subscription mode ignores [provider] and keeps the agent's native defaults.
   AcpLaunch launch(
-    AcpProviderInput provider, {
+    AcpProviderInput? provider, {
+    AgentAuthMode authMode = AgentAuthMode.provider,
     String? configDirectory,
     bool isolateCodexDaemon = false,
   }) {
     final root = configDirectory ?? acpConfigDir;
+    if (authMode == AgentAuthMode.subscription) {
+      if (!supportsSubscription) {
+        throw ArgumentError.value(
+          authMode,
+          'authMode',
+          'Subscription authentication is unavailable for $id',
+        );
+      }
+      final common = {..._pathEnvironment, 'HOME': '/root'};
+      return id == claudeCodeId
+          ? _claudeLaunch(
+              {...common, 'CLAUDE_CONFIG_DIR': '$root/subscription/claude'},
+              configDirectory: configDirectory,
+              unsetEnvironment: subscriptionUnsetEnvironment,
+            )
+          : _codexLaunch(
+              {...common, 'CODEX_HOME': '$root/subscription/codex'},
+              configDirectory: configDirectory,
+              isolateCodexDaemon: isolateCodexDaemon,
+              unsetEnvironment: subscriptionUnsetEnvironment,
+            );
+    }
+    if (provider == null) throw ArgumentError.notNull('provider');
     final common = <String, String>{
-      'PATH':
-          '$acpNpmPrefix/bin:/usr/local/sbin:/usr/local/bin:'
-          '/usr/sbin:/usr/bin:/sbin:/bin',
+      ..._pathEnvironment,
       // For custom agents and for scripts the agent runs itself.
       'MORU_AGENT_BASE_URL': provider.baseUrl,
       'MORU_AGENT_API_KEY': provider.apiKey,
@@ -154,62 +248,28 @@ class AcpAgentSpec {
     switch (id) {
       case claudeCodeId:
         final headers = _customHeaders(provider);
-        final launchId = base64Url
-            .encode(const Uuid().v4buffer(List<int>.filled(16, 0)))
-            .replaceAll('=', '');
-        final temporaryRoot = configDirectory == null
-            ? acpClaudeTemporaryRoot
-            : '$root/run-tmp/claude';
-        final temporaryDirectory = '$temporaryRoot/$launchId';
-        return AcpLaunch(
-          command: command,
-          arguments: arguments,
-          temporaryDirectory: temporaryDirectory,
-          environment: {
-            ...common,
-            'ANTHROPIC_BASE_URL': anthropicBaseUrl(provider),
-            'ANTHROPIC_API_KEY': provider.apiKey,
-            'ANTHROPIC_AUTH_TOKEN': provider.apiKey,
-            // Without these Claude Code asks for its own Claude models,
-            // which another provider rejects.
-            'ANTHROPIC_MODEL': provider.model,
-            'ANTHROPIC_SMALL_FAST_MODEL': provider.model,
-            'ANTHROPIC_DEFAULT_HAIKU_MODEL': provider.model,
-            if (headers.isNotEmpty) 'ANTHROPIC_CUSTOM_HEADERS': headers,
-            'DISABLE_AUTOUPDATER': '1',
-            'DISABLE_TELEMETRY': '1',
-            'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1',
-            // The Linux environment is Moru's sandbox; Claude Code allows
-            // its "bypass permissions" mode as root only when told so.
-            'IS_SANDBOX': '1',
-            // Claude's native temp guard explicitly accepts root container
-            // launches whose files have a different uid (PRoot --root-id).
-            // A fresh private base also isolates chats and old /tmp/claude-0.
-            'CLAUDE_CODE_TMPDIR': temporaryDirectory,
-            'CLAUDE_CODE_CONTAINER_ID': 'moru-$launchId',
-            'MORU_ACP_TEMP_DIR': temporaryDirectory,
-          },
-        );
+        return _claudeLaunch({
+          ...common,
+          'ANTHROPIC_BASE_URL': anthropicBaseUrl(provider),
+          'ANTHROPIC_API_KEY': provider.apiKey,
+          'ANTHROPIC_AUTH_TOKEN': provider.apiKey,
+          // Without these Claude Code asks for its own Claude models,
+          // which another provider rejects.
+          'ANTHROPIC_MODEL': provider.model,
+          'ANTHROPIC_SMALL_FAST_MODEL': provider.model,
+          'ANTHROPIC_DEFAULT_HAIKU_MODEL': provider.model,
+          if (headers.isNotEmpty) 'ANTHROPIC_CUSTOM_HEADERS': headers,
+        }, configDirectory: configDirectory);
       case codexId:
         final home = '$root/codex';
-        final temporaryRoot = configDirectory == null
-            ? acpCodexTemporaryRoot
-            : '$root/run-tmp/codex';
-        final temporaryDirectory = isolateCodexDaemon
-            ? '$temporaryRoot/${base64Url.encode(const Uuid().v4buffer(List<int>.filled(16, 0))).replaceAll('=', '')}'
-            : null;
-        return AcpLaunch(
-          command: command,
-          arguments: arguments,
-          temporaryDirectory: temporaryDirectory,
-          isolateCodexDaemon: isolateCodexDaemon,
-          environment: {
+        return _codexLaunch(
+          {
             ...common,
             'CODEX_HOME': home,
             'MORU_CODEX_API_KEY': provider.apiKey,
-            if (temporaryDirectory != null)
-              'MORU_ACP_TEMP_DIR': temporaryDirectory,
           },
+          configDirectory: configDirectory,
+          isolateCodexDaemon: isolateCodexDaemon,
           files: [AcpConfigFile('$home/config.toml', codexConfig(provider))],
         );
       case openCodeId:
@@ -266,6 +326,69 @@ class AcpAgentSpec {
           },
         );
     }
+  }
+
+  static String _newLaunchId() => base64Url
+      .encode(const Uuid().v4buffer(List<int>.filled(16, 0)))
+      .replaceAll('=', '');
+
+  AcpLaunch _claudeLaunch(
+    Map<String, String> environment, {
+    String? configDirectory,
+    List<String> unsetEnvironment = const [],
+  }) {
+    final launchId = _newLaunchId();
+    final temporaryRoot = configDirectory == null
+        ? acpClaudeTemporaryRoot
+        : '$configDirectory/run-tmp/claude';
+    final temporaryDirectory = '$temporaryRoot/$launchId';
+    return AcpLaunch(
+      command: command,
+      arguments: arguments,
+      temporaryDirectory: temporaryDirectory,
+      unsetEnvironment: unsetEnvironment,
+      environment: {
+        ...environment,
+        'DISABLE_AUTOUPDATER': '1',
+        'DISABLE_TELEMETRY': '1',
+        'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1',
+        // The Linux environment is Moru's sandbox; Claude Code allows
+        // its "bypass permissions" mode as root only when told so.
+        'IS_SANDBOX': '1',
+        // Claude's native temp guard accepts root/container launches whose
+        // files have a different uid (PRoot --root-id). Every run owns its base.
+        'CLAUDE_CODE_TMPDIR': temporaryDirectory,
+        'CLAUDE_CODE_CONTAINER_ID': 'moru-$launchId',
+        'MORU_ACP_TEMP_DIR': temporaryDirectory,
+      },
+    );
+  }
+
+  AcpLaunch _codexLaunch(
+    Map<String, String> environment, {
+    String? configDirectory,
+    bool isolateCodexDaemon = false,
+    List<String> unsetEnvironment = const [],
+    List<AcpConfigFile> files = const [],
+  }) {
+    final temporaryRoot = configDirectory == null
+        ? acpCodexTemporaryRoot
+        : '$configDirectory/run-tmp/codex';
+    final temporaryDirectory = isolateCodexDaemon
+        ? '$temporaryRoot/${_newLaunchId()}'
+        : null;
+    return AcpLaunch(
+      command: command,
+      arguments: arguments,
+      temporaryDirectory: temporaryDirectory,
+      isolateCodexDaemon: isolateCodexDaemon,
+      unsetEnvironment: unsetEnvironment,
+      environment: {
+        ...environment,
+        if (temporaryDirectory != null) 'MORU_ACP_TEMP_DIR': temporaryDirectory,
+      },
+      files: files,
+    );
   }
 
   static Map<String, String> _headerEnvironment(

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
+
 import '../api/stream/stream_chunk.dart';
 import 'acp_secret_redactor.dart';
 import '../workspace/task_plan.dart';
@@ -23,8 +25,21 @@ class AcpTurnTranslator {
   final AcpSecretTextBuffer? _message;
   final AcpSecretTextBuffer? _thought;
 
-  /// The chat's id for the card of the agent's tool call [toolCallId].
-  static String cardId(String toolCallId) => 'acp-tool-$toolCallId';
+  /// Stable local identity for a card. Subscription wire IDs can contain
+  /// credentials, so they stay private while all local consumers use a digest.
+  static String cardId(String toolCallId, {AcpSecretRedactor? redactor}) {
+    final localId = redactor?.protectAuthentication == true
+        ? sha256.convert([
+            // Encode code units losslessly: malformed surrogate IDs must not
+            // collapse into the same UTF-8 replacement character and card.
+            for (final unit in toolCallId.codeUnits) ...[
+              unit >> 8,
+              unit & 0xff,
+            ],
+          ]).toString()
+        : toolCallId;
+    return 'acp-tool-$localId';
+  }
 
   /// The agent's checklist, for the plan strip above the composer.
   final void Function(TaskPlan plan)? onPlan;
@@ -235,7 +250,7 @@ class AcpTurnTranslator {
       chunks
         ..addAll(_closeText())
         ..addAll(_closeReasoning());
-      tool = _tools[id] = _AcpTool(cardId(id), redactor);
+      tool = _tools[id] = _AcpTool(cardId(id, redactor: redactor), redactor);
       tool.merge(update);
       tool.announcedName = tool.name;
       chunks.add(

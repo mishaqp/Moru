@@ -82,6 +82,36 @@ package name does not require building other platforms.
   keep its persistent sessions/home and coordinate all active config owners.
   Known launch secrets are redacted before ACP display/error payloads leave
   the boundary; private tool correlation must retain actual execution values.
+  Claude Code and Codex also support assistant `agentAuthMode: subscription`
+  (missing/unknown saved values mean `provider`). Keep `manage_assistants`
+  validation and imported/duplicated assistants in sync with this field.
+  Subscription launches ignore provider/model overrides and scrub inherited
+  provider credentials after the guest login profile; their persistent homes
+  are `/root/.config/moru-agents/subscription/{claude,codex}`. Native CLI
+  login/status/logout and ACP must share that home, identity and runtime mode.
+  `AcpAgentAuth` keeps login output private and bounded; only its dedicated
+  settings page may show an allowlisted auth URL/device code or submit Claude's
+  full `code#state` to stdin. Open sign-in links in the external browser.
+  Explicit Sign In selects subscription mode for the intended assistant before
+  native login; inspecting the page or checking status must not change settings.
+  Never copy Moru OAuth tokens, read agent token files, or log native auth output.
+  Stop subscription processes before login/logout, block new starts throughout
+  credential changes, and cancel all auth commands on disposal/uninstall.
+  Codex subscription allows one native ACP process per manager because its
+  refresh lock is process-local. Switching from an idle chat stops it before
+  restoring the next context; another active reply reports `accountBusy`.
+  Provider-mode concurrency stays available. `Check` reuses a live Codex
+  subscription process and does not send a paid model prompt. Auth-required
+  RPC errors invalidate the cached status. Logical `acp:` model sources must
+  not enter ordinary API capability/title/suggestion paths; explicit auxiliary
+  API models still apply. Preserve pinned provider settings when modes change.
+  Subscription `AcpSecretRedactor` also masks unknown OAuth tokens, device
+  codes and auth URLs across stream chunks before persistence. Hash local
+  subscription tool-card IDs while retaining raw IDs privately for protocol
+  routing. Reject agent browser tools containing auth URLs before execution;
+  the browser library must skip auth URLs, including title-refresh writes.
+  See `docs/audits/acp-subscription.md` and its versioned native probes for
+  supported methods, provider-policy limitations and remaining phone checks.
   Moru MCP approval cards and browser activity details inherit the launch's
   display filter while handlers receive the original execution arguments.
   An assistant with `agentId` answers through its agent: `AcpChatBridge` swaps the chunk

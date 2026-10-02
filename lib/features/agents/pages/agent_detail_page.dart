@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/models/agent_auth_mode.dart';
+import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/acp/acp_agent_manager.dart';
 import '../../../core/services/acp/acp_agent_catalog.dart';
@@ -22,8 +24,10 @@ import '../agent_chat_start.dart';
 import '../agent_provider_compatibility.dart';
 import '../agent_web_start.dart';
 import '../widgets/agent_labels.dart';
+import '../widgets/agent_auth_mode_row.dart';
 import '../widgets/agent_log_view.dart';
 import 'agents_page.dart';
+import 'agent_subscription_page.dart';
 
 /// One agent: what it is, install / update / remove, and a connection check
 /// with the default chat model.
@@ -38,6 +42,8 @@ class AgentDetailPage extends StatelessWidget {
   static const Key removeKey = ValueKey('agent-remove');
   static const Key webOpenKey = ValueKey('agent-web-open');
   static const Key webStopKey = ValueKey('agent-web-stop');
+  static const Key authModeKey = ValueKey('agent-auth-mode');
+  static const Key subscriptionKey = ValueKey('agent-subscription');
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +51,7 @@ class AgentDetailPage extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final manager = context.watch<AcpAgentManager>();
     final settings = context.watch<SettingsProvider>();
+    final assistants = context.watch<AssistantProvider?>();
     final spec = manager.agent(agentId);
     if (spec == null) {
       // A custom agent that was just deleted.
@@ -52,9 +59,20 @@ class AgentDetailPage extends StatelessWidget {
     }
     final state = manager.state(spec.id);
     final busyHere = manager.busyAgentId == spec.id;
-    final idle = !manager.busy && manager.environmentAvailable;
-    final providerKey = settings.currentModelProvider;
-    final modelId = settings.currentModelId;
+    final idle =
+        !manager.busy &&
+        manager.environmentAvailable &&
+        !manager.auth.busy(spec.id);
+    final assistant = assistants?.assistants
+        .where((assistant) => assistant.agentId == spec.id)
+        .firstOrNull;
+    final authMode = spec.supportsSubscription
+        ? assistant?.agentAuthMode ?? AgentAuthMode.provider
+        : AgentAuthMode.provider;
+    final subscription = authMode == AgentAuthMode.subscription;
+    final providerKey =
+        assistant?.chatModelProvider ?? settings.currentModelProvider;
+    final modelId = assistant?.chatModelId ?? settings.currentModelId;
     final provider = providerKey == null || modelId == null
         ? null
         : acpProviderInputFor(settings, providerKey, modelId);
@@ -104,13 +122,66 @@ class AgentDetailPage extends StatelessWidget {
               ),
             ],
           ),
-          IosSectionFooter(text: agentModelHint(l10n, spec)),
-          if (agentNeedsResponsesApiWarning(
-            spec.id,
-            providerKey == null
-                ? null
-                : settings.getProviderConfig(providerKey),
-          ))
+          IosSectionFooter(
+            text: subscription
+                ? l10n.agentsAuthSubscriptionHint
+                : agentModelHint(l10n, spec),
+          ),
+          if (spec.supportsSubscription) ...[
+            SectionCard(
+              children: [
+                AgentAuthModeRow(
+                  key: authModeKey,
+                  mode: authMode,
+                  onSelected: assistants == null
+                      ? null
+                      : (mode) async {
+                          await assistantForAgent(
+                            assistants,
+                            spec,
+                            authMode: mode,
+                          );
+                        },
+                ),
+                if (state == AcpInstallState.installed) ...[
+                  const IosRowDivider(),
+                  IosNavRow(
+                    key: subscriptionKey,
+                    icon: LucideIcons.userRound,
+                    label: l10n.agentsAuthTitle,
+                    subtitle: agentAuthStatusLabel(
+                      l10n,
+                      manager.auth.status(spec.id),
+                    ),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => AgentSubscriptionPage(
+                          agentId: spec.id,
+                          onSignIn: assistants == null
+                              ? null
+                              : () async {
+                                  await assistantForAgent(
+                                    assistants,
+                                    spec,
+                                    authMode: AgentAuthMode.subscription,
+                                  );
+                                },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (!subscription &&
+              agentNeedsResponsesApiWarning(
+                spec.id,
+                providerKey == null
+                    ? null
+                    : settings.getProviderConfig(providerKey),
+              ))
             _Notice(text: l10n.agentsCodexResponsesRequired, error: true),
           if (!manager.environmentAvailable)
             _Notice(text: l10n.agentsNeedEnvironment, error: true),
@@ -174,6 +245,8 @@ class AgentDetailPage extends StatelessWidget {
               case final text?)
             _Notice(text: text, error: true),
           if (check != null) ...[
+            if (check.authStatus case final authStatus?)
+              _Notice(text: agentAuthStatusLabel(l10n, authStatus)),
             _Notice(
               text: check.ok
                   ? l10n.agentsCheckOk(
@@ -226,7 +299,7 @@ class AgentDetailPage extends StatelessWidget {
                 key: chatKey,
                 icon: LucideIcons.messageCirclePlus,
                 label: l10n.agentsStartChat,
-                enabled: provider != null,
+                enabled: subscription || provider != null,
                 backgroundColor: cs.primary,
                 onTap: () => unawaited(startAgentChat(context, spec)),
               ),
@@ -235,11 +308,15 @@ class AgentDetailPage extends StatelessWidget {
                 key: checkKey,
                 icon: LucideIcons.plugZap,
                 label: l10n.agentsCheck,
-                enabled: idle && provider != null,
-                onTap: () => unawaited(manager.check(spec, provider!)),
+                enabled: idle && (subscription || provider != null),
+                onTap: () => unawaited(
+                  manager.check(spec, provider, authMode: authMode),
+                ),
               ),
               IosSectionFooter(
-                text: provider == null
+                text: subscription
+                    ? agentAuthStatusLabel(l10n, manager.auth.status(spec.id))
+                    : provider == null
                     ? l10n.agentsNoModel
                     : l10n.agentsCheckModel(modelId!),
               ),

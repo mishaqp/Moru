@@ -28,7 +28,15 @@ abstract class AcpChannel {
 }
 
 /// A safe category retained when redaction removes a recognized phrase.
-enum AcpFailureKind { apiKey, model, network, headers, temporaryDirectory }
+enum AcpFailureKind {
+  apiKey,
+  model,
+  network,
+  headers,
+  temporaryDirectory,
+  authRequired,
+  accountBusy,
+}
 
 /// A JSON-RPC error from the agent, or the pipe breaking under a request.
 class AcpError implements Exception {

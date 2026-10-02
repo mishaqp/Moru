@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:Kelivo/core/models/agent_auth_mode.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
 
 void main() {
@@ -40,6 +41,243 @@ void main() {
       second.environment['CLAUDE_CODE_CONTAINER_ID'],
       isNot(first.environment['CLAUDE_CODE_CONTAINER_ID']),
     );
+  });
+
+  group('subscription authentication', () {
+    test('only Claude Code and Codex support their own account', () {
+      expect(
+        AcpAgentSpec.builtIn
+            .where((spec) => spec.supportsSubscription)
+            .map((spec) => spec.id),
+        [AcpAgentSpec.claudeCodeId, AcpAgentSpec.codexId],
+      );
+      expect(
+        AcpAgentSpec.custom(
+          id: 'mine',
+          name: 'Mine',
+          command: 'my-agent',
+        ).supportsSubscription,
+        isFalse,
+      );
+    });
+
+    for (final id in [AcpAgentSpec.claudeCodeId, AcpAgentSpec.codexId]) {
+      test('$id ignores a provider and its malformed headers', () {
+        final spec = AcpAgentSpec.byId(id)!;
+        final launch = spec.launch(
+          const AcpProviderInput(
+            baseUrl: 'https://provider-sentinel.invalid/v1',
+            apiKey: 'provider-key-sentinel',
+            model: 'provider-model-sentinel',
+            headers: {'X-Bad': 'invalid\r\nprovider-header-sentinel'},
+          ),
+          authMode: AgentAuthMode.subscription,
+        );
+        expect(launch.command, spec.command);
+        expect(launch.arguments, spec.arguments);
+        expect(launch.environment['HOME'], '/root');
+        expect(launch.files, isEmpty);
+        expect(
+          launch.environment.keys.where(
+            AcpAgentSpec.isSubscriptionEnvironmentVariable,
+          ),
+          isEmpty,
+        );
+        expect(launch.environment.toString(), isNot(contains('sentinel')));
+        expect(launch.unsetEnvironment, isNotEmpty);
+        expect(launch.unsetEnvironmentScript, isNotEmpty);
+      });
+
+      test('$id can launch without a Moru provider', () {
+        final launch = AcpAgentSpec.byId(
+          id,
+        )!.launch(null, authMode: AgentAuthMode.subscription);
+        expect(launch.environment['HOME'], '/root');
+        expect(launch.files, isEmpty);
+      });
+    }
+
+    test(
+      'Claude has a persistent account home and fresh safe temporary bases',
+      () {
+        final spec = AcpAgentSpec.byId(AcpAgentSpec.claudeCodeId)!;
+        final first = spec.launch(null, authMode: AgentAuthMode.subscription);
+        final second = spec.launch(null, authMode: AgentAuthMode.subscription);
+        expect(
+          first.environment['CLAUDE_CONFIG_DIR'],
+          '$acpConfigDir/subscription/claude',
+        );
+        final base = first.temporaryDirectory!;
+        expect(base, startsWith('$acpClaudeTemporaryRoot/'));
+        expect(utf8.encode('$base/claude-10575').length, lessThanOrEqualTo(44));
+        expect(first.environment['CLAUDE_CODE_TMPDIR'], base);
+        expect(first.environment['MORU_ACP_TEMP_DIR'], base);
+        expect(second.temporaryDirectory, isNot(base));
+        expect(
+          first.environment['CLAUDE_CODE_CONTAINER_ID'],
+          startsWith('moru-'),
+        );
+        expect(
+          second.environment['CLAUDE_CODE_CONTAINER_ID'],
+          isNot(first.environment['CLAUDE_CODE_CONTAINER_ID']),
+        );
+        expect(first.environment['IS_SANDBOX'], '1');
+        expect(first.environment['DISABLE_AUTOUPDATER'], '1');
+        expect(first.environment['DISABLE_TELEMETRY'], '1');
+        expect(
+          first.environment['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'],
+          '1',
+        );
+        expect(first.environment['PATH'], startsWith('$acpNpmPrefix/bin:'));
+      },
+    );
+
+    test('Codex writes no config and preserves root daemon isolation', () {
+      final spec = AcpAgentSpec.byId(AcpAgentSpec.codexId)!;
+      final first = spec.launch(
+        null,
+        authMode: AgentAuthMode.subscription,
+        isolateCodexDaemon: true,
+      );
+      final second = spec.launch(
+        null,
+        authMode: AgentAuthMode.subscription,
+        isolateCodexDaemon: true,
+      );
+      expect(
+        first.environment['CODEX_HOME'],
+        '$acpConfigDir/subscription/codex',
+      );
+      expect(first.files, isEmpty);
+      expect(first.isolateCodexDaemon, isTrue);
+      expect(first.temporaryDirectory, startsWith('$acpCodexTemporaryRoot/'));
+      expect(first.environment['MORU_ACP_TEMP_DIR'], first.temporaryDirectory);
+      expect(second.temporaryDirectory, isNot(first.temporaryDirectory));
+      final proot = spec.launch(null, authMode: AgentAuthMode.subscription);
+      expect(proot.isolateCodexDaemon, isFalse);
+      expect(proot.temporaryDirectory, isNull);
+    });
+
+    test(
+      'custom config roots keep subscription and provider homes separate',
+      () {
+        const root = '/tmp/subscription-fixture';
+        final claude = AcpAgentSpec.byId(AcpAgentSpec.claudeCodeId)!.launch(
+          null,
+          authMode: AgentAuthMode.subscription,
+          configDirectory: root,
+        );
+        final codex = AcpAgentSpec.byId(AcpAgentSpec.codexId)!.launch(
+          null,
+          authMode: AgentAuthMode.subscription,
+          configDirectory: root,
+          isolateCodexDaemon: true,
+        );
+        expect(
+          claude.environment['CLAUDE_CONFIG_DIR'],
+          '$root/subscription/claude',
+        );
+        expect(claude.temporaryDirectory, startsWith('$root/run-tmp/claude/'));
+        expect(codex.environment['CODEX_HOME'], '$root/subscription/codex');
+        expect(codex.temporaryDirectory, startsWith('$root/run-tmp/codex/'));
+        expect(
+          AcpAgentSpec.byId(
+            AcpAgentSpec.codexId,
+          )!.launch(deepseek, configDirectory: root).environment['CODEX_HOME'],
+          '$root/codex',
+        );
+      },
+    );
+
+    test('rejects unsupported agents and missing provider mode input', () {
+      for (final spec in [
+        ...AcpAgentSpec.builtIn.where((spec) => !spec.supportsSubscription),
+        AcpAgentSpec.custom(id: 'mine', name: 'Mine', command: 'my-agent'),
+      ]) {
+        expect(
+          () => spec.launch(null, authMode: AgentAuthMode.subscription),
+          throwsArgumentError,
+          reason: spec.id,
+        );
+      }
+      for (final spec in AcpAgentSpec.builtIn) {
+        expect(() => spec.launch(null), throwsArgumentError, reason: spec.id);
+      }
+    });
+
+    test(
+      'scrubs inherited provider settings while preserving runtime state',
+      () async {
+        final launch = AcpAgentSpec.byId(
+          AcpAgentSpec.claudeCodeId,
+        )!.launch(null, authMode: AgentAuthMode.subscription);
+        final inherited = {
+          'ANTHROPIC_API_KEY': 'anthropic-key',
+          'ANTHROPIC_DEFAULT_SONNET_MODEL': 'provider-model',
+          'ANTHROPIC_CUSTOM_HEADERS': 'X-Team: provider-team',
+          'OPENAI_API_KEY': 'openai-key',
+          'OPENAI_BASE_URL': 'https://provider.invalid/v1',
+          'MORU_AGENT_API_KEY': 'moru-key',
+          'MORU_AGENT_HEADER_92': 'dynamic-header',
+          'MORU_CODEX_API_KEY': 'codex-key',
+          'CLAUDE_CODE_OAUTH_TOKEN': 'inherited-oauth',
+          'CLAUDE_CODE_OAUTH_TOKEN_FILE': '/tmp/provider-token',
+          'CLAUDE_CODE_OAUTH_TOKEN_FD': '9',
+          'CLAUDE_SECURESTORAGE_CONFIG_DIR': '/tmp/provider-storage',
+          'CLAUDE_CODE_EXECUTABLE': '/tmp/provider-claude',
+          'CLAUDE_CODE_USE_BEDROCK': '1',
+          'CLAUDE_CODE_USE_VERTEX': '1',
+          'CLAUDE_CODE_USE_FOUNDRY': '1',
+          'CODEX_API_KEY': 'inherited-codex-key',
+          'CODEX_PATH': '/tmp/provider-codex',
+          'CODEX_CONFIG': '/tmp/provider-config',
+          'DEFAULT_AUTH_REQUEST': '{"type":"apiKey","apiKey":"private-key"}',
+          'MODEL_PROVIDER': 'custom-gateway',
+        };
+        expect(
+          inherited.keys.every(AcpAgentSpec.isSubscriptionEnvironmentVariable),
+          isTrue,
+        );
+        final result = await Process.run(
+          '/bin/sh',
+          ['-c', '${launch.unsetEnvironmentScript}exec /usr/bin/env'],
+          environment: {
+            ...inherited,
+            ...launch.environment,
+            'MORU_MCP_TOKEN': 'mcp-sentinel',
+            'UNRELATED_SETTING': 'keep-sentinel',
+          },
+          includeParentEnvironment: false,
+        );
+        expect(result.exitCode, 0, reason: '${result.stderr}');
+        final environment = (result.stdout as String).split('\n');
+        for (final name in inherited.keys) {
+          expect(
+            environment.where((entry) => entry.startsWith('$name=')),
+            isEmpty,
+          );
+        }
+        expect(environment, contains('MORU_MCP_TOKEN=mcp-sentinel'));
+        expect(environment, contains('UNRELATED_SETTING=keep-sentinel'));
+        expect(environment, contains('HOME=/root'));
+        expect(
+          environment,
+          contains('CLAUDE_CONFIG_DIR=$acpConfigDir/subscription/claude'),
+        );
+        expect(
+          environment,
+          contains('MORU_ACP_TEMP_DIR=${launch.temporaryDirectory}'),
+        );
+      },
+    );
+
+    test('provider launches do not clear inherited environment', () {
+      for (final spec in AcpAgentSpec.builtIn) {
+        final launch = spec.launch(deepseek);
+        expect(launch.unsetEnvironment, isEmpty, reason: spec.id);
+        expect(launch.unsetEnvironmentScript, isEmpty, reason: spec.id);
+      }
+    });
   });
 
   test(

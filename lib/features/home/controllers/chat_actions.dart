@@ -32,6 +32,7 @@ import '../services/ask_user_interaction_service.dart';
 import '../../chat/utils/thinking_tag_parser.dart';
 import '../services/message_generation_service.dart';
 import '../services/tool_approval_service.dart';
+import '../utils/model_display_helper.dart';
 import 'active_streaming_message_store.dart';
 import 'chat_controller.dart';
 import 'generation_controller.dart';
@@ -1541,13 +1542,14 @@ class ChatActions {
     }
     final assistant = assistantOverride ?? assistantProvider.currentAssistant;
     final assistantId = assistant?.id;
-    final modelConfig =
-        modelOverride ??
-        messageGenerationService.getModelConfig(
-          settings,
-          assistant,
-          conversation: conversation,
-        );
+    final chatModel = messageGenerationService.getModelConfig(
+      settings,
+      assistant,
+      conversation: conversation,
+    );
+    final modelConfig = isAcpModelSource(chatModel.providerKey)
+        ? chatModel
+        : (modelOverride ?? chatModel);
 
     if (modelConfig.providerKey == null || modelConfig.modelId == null) {
       return ChatActionResult.noModel();
@@ -2056,13 +2058,14 @@ class ChatActions {
 
     // Get model config
     final assistantId = assistant?.id;
-    final modelConfig =
-        modelOverride ??
-        messageGenerationService.getModelConfig(
-          settings,
-          assistant,
-          conversation: conversation,
-        );
+    final chatModel = messageGenerationService.getModelConfig(
+      settings,
+      assistant,
+      conversation: conversation,
+    );
+    final modelConfig = isAcpModelSource(chatModel.providerKey)
+        ? chatModel
+        : (modelOverride ?? chatModel);
 
     if (modelConfig.providerKey == null || modelConfig.modelId == null) {
       return ChatActionResult.noModel();

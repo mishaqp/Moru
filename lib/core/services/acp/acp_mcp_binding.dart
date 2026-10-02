@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../../utils/authentication_uri.dart';
 import '../api/tool_call_cancellation.dart';
 import '../api/tool_display_redaction.dart';
 import 'acp_agent.dart';
@@ -82,7 +83,9 @@ class AcpMcpBinding {
     turn.cancelled.complete();
     turn.wake();
     for (final card in turn.cards.values.where((card) => card.claimed)) {
-      turn.tools.cancelApproval?.call(AcpTurnTranslator.cardId(card.id));
+      turn.tools.cancelApproval?.call(
+        AcpTurnTranslator.cardId(card.id, redactor: redactor),
+      );
     }
   }
 
@@ -111,7 +114,8 @@ class AcpMcpBinding {
       _turn?.cards.values.any(
         (card) =>
             card.name != null &&
-            AcpTurnTranslator.cardId(card.id) == request.toolCallId,
+            AcpTurnTranslator.cardId(card.id, redactor: redactor) ==
+                request.toolCallId,
       ) ==
       true;
 
@@ -134,6 +138,16 @@ class AcpMcpBinding {
   ) async {
     final turn = _turn;
     if (turn == null) return _error('No active agent turn.');
+    if (name == 'browser_use' &&
+        redactor?.protectAuthentication == true &&
+        _containsAuthenticationUri(args)) {
+      // Authorization belongs to the Settings flow's external browser. Do
+      // not let WebView navigation, console or activity journals see its URL.
+      return _error(
+        'Open Settings > Agents to sign in. '
+        'Authentication pages cannot be opened by browser_use.',
+      );
+    }
     final digest = AcpToolCorrelation.digest(args);
     final deadline = DateTime.now().add(const Duration(seconds: 10));
     while (!turn.cancelled.isCompleted) {
@@ -157,7 +171,7 @@ class AcpMcpBinding {
             () => turn.tools.execute(
               name,
               args,
-              toolCallId: AcpTurnTranslator.cardId(card.id),
+              toolCallId: AcpTurnTranslator.cardId(card.id, redactor: redactor),
             ),
           );
           return await Future.any([
@@ -194,6 +208,29 @@ class AcpMcpBinding {
   Future<void> close() {
     endTurn();
     return server.close();
+  }
+
+  static final _webAddress = RegExp(
+    r'''https?://[^\s<>"'`\\]+''',
+    caseSensitive: false,
+  );
+  static final _addressPunctuation = RegExp(r'[)\]},.;!?]+$');
+
+  static bool _containsAuthenticationUri(Object? value) {
+    if (value is Map) {
+      return value.values.any(_containsAuthenticationUri);
+    }
+    if (value is Iterable) {
+      return value.any(_containsAuthenticationUri);
+    }
+    if (value is! String) return false;
+    final text = value.replaceAll(r'\/', '/');
+    for (final match in _webAddress.allMatches(text)) {
+      final address = match.group(0)!.replaceFirst(_addressPunctuation, '');
+      final uri = Uri.tryParse(address);
+      if (uri != null && isAuthenticationUri(uri)) return true;
+    }
+    return false;
   }
 
   static Map<String, Object?> _error(String message) => {

@@ -8,6 +8,7 @@ import 'package:Kelivo/utils/sandbox_path_resolver.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/services/acp/acp_agent.dart';
+import 'package:Kelivo/core/models/agent_auth_mode.dart';
 import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
 import 'package:Kelivo/core/services/acp/acp_chat_prompt.dart';
 import 'package:Kelivo/core/services/acp/acp_chat_sessions.dart';
@@ -31,6 +32,9 @@ class _ScriptedAgent extends AcpChannel {
     this.mcpHttp = false,
     this.toolArguments,
     this.toolStyle = 'title',
+    this.initializeAfter,
+    this.holdPrompts = false,
+    this.completeOnCancel = true,
   });
 
   final bool loadSession;
@@ -41,6 +45,12 @@ class _ScriptedAgent extends AcpChannel {
   final bool mcpHttp;
   final Map<String, dynamic>? toolArguments;
   final String toolStyle;
+  final Future<void>? initializeAfter;
+  final bool holdPrompts;
+  final bool completeOnCancel;
+  final initializeStarted = Completer<void>();
+  final promptStarted = Completer<void>();
+  (Map<String, Object?>, Map)? _pendingPrompt;
   Map? toolResult;
   final _incoming = StreamController<dynamic>();
   final _closed = Completer<void>();
@@ -68,6 +78,9 @@ class _ScriptedAgent extends AcpChannel {
     );
     switch (copy['method']) {
       case 'initialize':
+        initializeStarted.complete();
+        await initializeAfter;
+        if (isClosed) return;
         reply({
           'protocolVersion': 1,
           'agentCapabilities': {
@@ -118,30 +131,43 @@ class _ScriptedAgent extends AcpChannel {
           unawaited(_callMoruTool(copy, params));
           break;
         }
-        final session = params['sessionId'];
-        final text = [
-          for (final block in params['prompt'] as List) (block as Map)['text'],
-        ].join('|');
-        scheduleMicrotask(() {
-          _incoming
-            ..add({
-              'jsonrpc': '2.0',
-              'method': 'session/update',
-              'params': {
-                'sessionId': session,
-                'update': {
-                  'sessionUpdate': 'agent_message_chunk',
-                  'content': {'type': 'text', 'text': '$session:$text'},
-                },
-              },
-            })
-            ..add({
-              'jsonrpc': '2.0',
-              'id': id,
-              'result': {'stopReason': 'end_turn'},
-            });
-        });
+        _pendingPrompt = (copy, params);
+        if (!promptStarted.isCompleted) promptStarted.complete();
+        if (!holdPrompts) finishPrompt();
+      case 'session/cancel':
+        if (completeOnCancel) finishPrompt(stopReason: 'cancelled');
     }
+  }
+
+  void finishPrompt({String stopReason = 'end_turn'}) {
+    final pending = _pendingPrompt;
+    if (pending == null) return;
+    _pendingPrompt = null;
+    final (message, params) = pending;
+    final session = params['sessionId'];
+    final text = [
+      for (final block in params['prompt'] as List) (block as Map)['text'],
+    ].join('|');
+    scheduleMicrotask(() {
+      if (isClosed) return;
+      _incoming
+        ..add({
+          'jsonrpc': '2.0',
+          'method': 'session/update',
+          'params': {
+            'sessionId': session,
+            'update': {
+              'sessionUpdate': 'agent_message_chunk',
+              'content': {'type': 'text', 'text': '$session:$text'},
+            },
+          },
+        })
+        ..add({
+          'jsonrpc': '2.0',
+          'id': message['id'],
+          'result': {'stopReason': stopReason},
+        });
+    });
   }
 
   Future<void> _callMoruTool(Map<String, Object?> prompt, Map params) async {
@@ -261,6 +287,7 @@ void main() {
     imageInput: true,
   );
   final spec = AcpAgentSpec.byId('opencode')!;
+  final codex = AcpAgentSpec.byId(AcpAgentSpec.codexId)!;
 
   late List<_ScriptedAgent> started;
   late List<({String cwd, List<Mount> mounts})> launches;
@@ -272,23 +299,32 @@ void main() {
     bool resumeFails = false,
     bool images = false,
     bool mcpHttp = false,
+    Future<void>? firstInitializeAfter,
+    bool holdFirstPrompt = false,
+    bool completeOnCancel = true,
+    void Function(_ScriptedAgent)? onStarted,
   }) {
     started = [];
     launches = [];
     return AcpChatSessions(
-      start: (spec, provider, {required cwd, required mounts}) {
-        launches.add((cwd: cwd, mounts: mounts));
-        final channel = _ScriptedAgent(
-          loadSession: loadSession,
-          loadFails: loadFails,
-          resumeSession: resumeSession,
-          resumeFails: resumeFails,
-          images: images,
-          mcpHttp: mcpHttp,
-        );
-        started.add(channel);
-        return AcpAgent.start(channel, clientVersion: '1');
-      },
+      start:
+          (spec, provider, {required cwd, required mounts, required authMode}) {
+            launches.add((cwd: cwd, mounts: mounts));
+            final channel = _ScriptedAgent(
+              loadSession: loadSession,
+              loadFails: loadFails,
+              resumeSession: resumeSession,
+              resumeFails: resumeFails,
+              images: images,
+              mcpHttp: mcpHttp,
+              initializeAfter: started.isEmpty ? firstInitializeAfter : null,
+              holdPrompts: started.isEmpty && holdFirstPrompt,
+              completeOnCancel: completeOnCancel,
+            );
+            started.add(channel);
+            onStarted?.call(channel);
+            return AcpAgent.start(channel, clientVersion: '1');
+          },
     );
   }
 
@@ -304,10 +340,12 @@ void main() {
     AcpAgentSpec? agentSpec,
     FutureOr<void> Function(String)? onSession,
     AcpMcpTools? moruTools,
+    AgentAuthMode authMode = AgentAuthMode.provider,
   }) => AcpChatTurn(
     conversationId: conversation,
     spec: agentSpec ?? spec,
     provider: using ?? provider,
+    authMode: authMode,
     cwd: cwd,
     prompt: [
       if (text.isNotEmpty) {'type': 'text', 'text': text},
@@ -392,13 +430,19 @@ void main() {
           toolStyle: style,
         );
         final sessions = AcpChatSessions(
-          start: (_, provider, {required cwd, required mounts}) =>
-              AcpAgent.start(
+          start:
+              (
+                _,
+                provider, {
+                required cwd,
+                required mounts,
+                required authMode,
+              }) => AcpAgent.start(
                 channel,
                 clientVersion: 'test',
                 redactor: AcpSecretRedactor([
-                  provider.apiKey,
-                  ...provider.headers.values,
+                  provider?.apiKey ?? '',
+                  ...?provider?.headers.values,
                 ]),
               ),
         );
@@ -978,15 +1022,341 @@ void main() {
     );
   }
 
+  test(
+    'subscription sessions ignore API settings and restart when mode changes',
+    () async {
+      final channels = <_ScriptedAgent>[];
+      final modes = <AgentAuthMode>[];
+      final inputs = <AcpProviderInput?>[];
+      final sessions = AcpChatSessions(
+        start:
+            (
+              spec,
+              provider, {
+              required cwd,
+              required mounts,
+              required authMode,
+            }) async {
+              modes.add(authMode);
+              inputs.add(provider);
+              final channel = _ScriptedAgent(loadSession: true);
+              channels.add(channel);
+              return AcpAgent.start(channel, clientVersion: 'test');
+            },
+      );
+      addTearDown(sessions.closeAll);
+      AcpChatTurn subscription([AcpProviderInput? ignored]) => AcpChatTurn(
+        conversationId: 'subscription',
+        spec: AcpAgentSpec.byId('codex')!,
+        provider: ignored,
+        authMode: AgentAuthMode.subscription,
+        cwd: '/workspace',
+        prompt: const [
+          {'type': 'text', 'text': 'hi'},
+        ],
+      );
+      await answer(sessions, subscription());
+      await answer(sessions, subscription(provider));
+      expect(channels, hasLength(1));
+      expect(inputs, [null]);
+      final savedId = sessions.sessionFor('subscription')!.id;
+      await answer(
+        sessions,
+        AcpChatTurn(
+          conversationId: 'subscription',
+          spec: AcpAgentSpec.byId('codex')!,
+          provider: provider,
+          cwd: '/workspace',
+          prompt: const [
+            {'type': 'text', 'text': 'provider'},
+          ],
+          savedSessionId: savedId,
+        ),
+      );
+      expect(modes, [AgentAuthMode.subscription, AgentAuthMode.provider]);
+      expect(channels.first.isClosed, isTrue);
+      expect(inputs.last, provider);
+      expect(
+        channels.last.sent.any((r) => r['method'] == 'session/load'),
+        isTrue,
+      );
+    },
+  );
+
+  test(
+    'idle Codex subscription chats hand off and restore saved sessions',
+    () async {
+      final sessions = sessionsWith(loadSession: true);
+      addTearDown(sessions.closeAll);
+      String? firstSession;
+      await answer(
+        sessions,
+        turn(
+          'first input',
+          conversation: 'first',
+          agentSpec: codex,
+          authMode: AgentAuthMode.subscription,
+          onSession: (id) => firstSession = id,
+        ),
+      );
+      final first = started.single;
+
+      final restoredSecond = await sessions.ensureSession(
+        turn(
+          '',
+          conversation: 'second',
+          agentSpec: codex,
+          authMode: AgentAuthMode.subscription,
+          saved: 'saved-second',
+        ),
+      );
+      expect(restoredSecond.id, 'saved-second');
+      expect(first.isClosed, isTrue);
+      expect(sessions.hasAgent('first'), isFalse);
+      expect(sessions.hasAgent('second'), isTrue);
+      final second = started.last;
+      expect(
+        second.sent.where((m) => m['method'] == 'session/prompt'),
+        isEmpty,
+      );
+
+      expect(
+        await answer(
+          sessions,
+          turn(
+            'continue first',
+            conversation: 'first',
+            agentSpec: codex,
+            authMode: AgentAuthMode.subscription,
+            saved: firstSession,
+            history: 'already answered first input',
+          ),
+        ),
+        '$firstSession:continue first',
+      );
+      expect(second.isClosed, isTrue);
+      expect(sessions.hasAgent('second'), isFalse);
+      final restored = started.last;
+      expect(
+        (restored.sent.singleWhere(
+              (m) => m['method'] == 'session/load',
+            )['params']
+            as Map)['sessionId'],
+        firstSession,
+      );
+      expect(restored.sent.where((m) => m['method'] == 'session/new'), isEmpty);
+      expect(started.where((channel) => !channel.isClosed), hasLength(1));
+    },
+  );
+
+  test(
+    'a concurrent Codex subscription restore refuses an active startup turn',
+    () async {
+      final initialized = Completer<void>();
+      final created = Completer<_ScriptedAgent>();
+      final sessions = sessionsWith(
+        firstInitializeAfter: initialized.future,
+        holdFirstPrompt: true,
+        onStarted: (channel) {
+          if (!created.isCompleted) created.complete(channel);
+        },
+      );
+      addTearDown(sessions.closeAll);
+      final firstAnswer = answer(
+        sessions,
+        turn(
+          'still answering',
+          conversation: 'first',
+          agentSpec: codex,
+          authMode: AgentAuthMode.subscription,
+        ),
+      );
+      final first = await created.future;
+      await first.initializeStarted.future;
+      final rejected = expectLater(
+        sessions.ensureSession(
+          turn(
+            '',
+            conversation: 'second',
+            agentSpec: codex,
+            authMode: AgentAuthMode.subscription,
+            saved: 'saved-second',
+          ),
+        ),
+        throwsA(
+          isA<AcpError>()
+              .having((error) => error.code, 'code', AcpError.internalError)
+              .having(
+                (error) => error.failureKind,
+                'failure kind',
+                AcpFailureKind.accountBusy,
+              ),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(started, hasLength(1));
+
+      initialized.complete();
+      await first.promptStarted.future;
+      await rejected;
+      expect(first.isClosed, isFalse);
+      first.finishPrompt();
+      expect(await firstAnswer, 'new-1:still answering');
+      await sessions.ensureSession(
+        turn(
+          '',
+          conversation: 'second',
+          agentSpec: codex,
+          authMode: AgentAuthMode.subscription,
+        ),
+      );
+      expect(first.isClosed, isTrue);
+      expect(started, hasLength(2));
+    },
+  );
+
+  test(
+    'stopping a held Codex subscription prompt releases chat handoff',
+    () async {
+      final created = Completer<_ScriptedAgent>();
+      final sessions = sessionsWith(
+        holdFirstPrompt: true,
+        completeOnCancel: false,
+        onStarted: (channel) {
+          if (!created.isCompleted) created.complete(channel);
+        },
+      );
+      addTearDown(sessions.closeAll);
+      final firstAnswer = sessions
+          .send(
+            turn(
+              'stop this reply',
+              conversation: 'first',
+              agentSpec: codex,
+              authMode: AgentAuthMode.subscription,
+            ),
+          )
+          .toList();
+      final first = await created.future;
+      await first.promptStarted.future;
+      final stopped = expectLater(firstAnswer, throwsA(isA<AcpError>()));
+
+      await sessions.cancel('first');
+      await sessions.ensureSession(
+        turn(
+          '',
+          conversation: 'second',
+          agentSpec: codex,
+          authMode: AgentAuthMode.subscription,
+        ),
+      );
+      expect(first.isClosed, isTrue);
+      expect(started, hasLength(2));
+      expect(sessions.hasAgent('second'), isTrue);
+      await stopped;
+    },
+  );
+
+  for (final (agentSpec, mode) in [
+    (codex, AgentAuthMode.provider),
+    (AcpAgentSpec.byId(AcpAgentSpec.claudeCodeId)!, AgentAuthMode.subscription),
+  ]) {
+    test(
+      '${agentSpec.name} ${mode.name} keeps concurrent chat contexts',
+      () async {
+        final created = Completer<_ScriptedAgent>();
+        final sessions = sessionsWith(
+          holdFirstPrompt: true,
+          onStarted: (channel) {
+            if (!created.isCompleted) created.complete(channel);
+          },
+        );
+        addTearDown(sessions.closeAll);
+        final firstAnswer = answer(
+          sessions,
+          turn(
+            'first reply',
+            conversation: 'first',
+            agentSpec: agentSpec,
+            authMode: mode,
+          ),
+        );
+        final first = await created.future;
+        await first.promptStarted.future;
+
+        await sessions.ensureSession(
+          turn(
+            '',
+            conversation: 'second',
+            agentSpec: agentSpec,
+            authMode: mode,
+          ),
+        );
+        expect(started, hasLength(2));
+        expect(first.isClosed, isFalse);
+        expect(sessions.hasAgent('first'), isTrue);
+        expect(sessions.hasAgent('second'), isTrue);
+        first.finishPrompt();
+        expect(await firstAnswer, 'new-1:first reply');
+      },
+    );
+  }
+
+  test(
+    'canceling a Codex subscription stream releases the active context',
+    () async {
+      final created = Completer<_ScriptedAgent>();
+      final sessions = sessionsWith(
+        holdFirstPrompt: true,
+        onStarted: (channel) {
+          if (!created.isCompleted) created.complete(channel);
+        },
+      );
+      addTearDown(sessions.closeAll);
+      final errors = <Object>[];
+      final stream = sessions
+          .send(
+            turn(
+              'cancel this stream',
+              conversation: 'first',
+              agentSpec: codex,
+              authMode: AgentAuthMode.subscription,
+            ),
+          )
+          .listen((_) {}, onError: errors.add);
+      final first = await created.future;
+      await first.promptStarted.future;
+
+      await stream.cancel();
+      expect(
+        first.sent.where((m) => m['method'] == 'session/cancel'),
+        hasLength(1),
+      );
+      await sessions.ensureSession(
+        turn(
+          '',
+          conversation: 'second',
+          agentSpec: codex,
+          authMode: AgentAuthMode.subscription,
+        ),
+      );
+      expect(first.isClosed, isTrue);
+      expect(started, hasLength(2));
+      expect(sessions.hasAgent('second'), isTrue);
+      expect(errors, isEmpty);
+    },
+  );
+
   test('an idle agent is stopped to free memory', () async {
     started = [];
     final sessions = AcpChatSessions(
       idleTimeout: const Duration(milliseconds: 20),
-      start: (spec, provider, {required cwd, required mounts}) {
-        final channel = _ScriptedAgent();
-        started.add(channel);
-        return AcpAgent.start(channel, clientVersion: '1');
-      },
+      start:
+          (spec, provider, {required cwd, required mounts, required authMode}) {
+            final channel = _ScriptedAgent();
+            started.add(channel);
+            return AcpAgent.start(channel, clientVersion: '1');
+          },
     );
     await answer(sessions, turn('hi'));
     expect(sessions.hasAgent('c1'), isTrue);

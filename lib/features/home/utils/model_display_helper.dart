@@ -1,6 +1,14 @@
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/models/agent_auth_mode.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/models/conversation.dart';
+import '../../../core/services/acp/acp_agent_catalog.dart';
+
+/// Logical ACP identities are stored as message metadata, never API providers.
+const String acpModelSourcePrefix = 'acp:';
+
+bool isAcpModelSource(String? providerKey) =>
+    providerKey?.startsWith(acpModelSourcePrefix) ?? false;
 
 /// Helper class for extracting model display information.
 ///
@@ -20,24 +28,25 @@ class ModelDisplayInfo {
   /// Display name of the model (from override, apiModelId, or raw modelId)
   final String? modelDisplay;
 
-  /// Raw provider key used in settings
+  /// Provider key from settings, or a logical ACP source identity.
   final String? providerKey;
 
   /// Raw model ID
   final String? modelId;
 
-  /// Check if both provider and model are configured
+  /// Whether the chat has a selected source.
   bool get isConfigured => providerKey != null && modelId != null;
 
   /// Get the ProviderConfig for this model (if configured)
   ProviderConfig? getConfig(SettingsProvider settings) {
-    if (providerKey == null) return null;
+    if (providerKey == null || isAcpModelSource(providerKey)) return null;
     return settings.getProviderConfig(providerKey!);
   }
 }
 
-/// Resolves the model a chat sends with, in priority order:
-/// conversation override, then assistant default, then global default.
+/// Resolves the chat source. Supported subscription agents own their model
+/// choice and resolve to a logical ACP identity, independent of API selections.
+/// Provider mode uses conversation override, assistant default, global default.
 ///
 /// The conversation layer is skipped entirely when
 /// [SettingsProvider.perChatModelEnabled] is off; pins stay in the database so
@@ -50,6 +59,12 @@ class ModelDisplayInfo {
   Conversation? conversation,
   Assistant? assistant,
 }) {
+  final agentId = assistant?.agentId;
+  if (assistant?.agentAuthMode == AgentAuthMode.subscription &&
+      agentId != null &&
+      AcpAgentSpec.byId(agentId)?.supportsSubscription == true) {
+    return (providerKey: '$acpModelSourcePrefix$agentId', modelId: agentId);
+  }
   final pinned = settings.perChatModelEnabled ? conversation : null;
   for (final selection in [
     (providerKey: pinned?.chatModelProvider, modelId: pinned?.chatModelId),
@@ -95,6 +110,18 @@ ModelDisplayInfo getModelDisplayInfo(
     return const ModelDisplayInfo();
   }
 
+  if (isAcpModelSource(providerKey)) {
+    final spec = AcpAgentSpec.byId(modelId);
+    if (spec != null) {
+      return ModelDisplayInfo(
+        providerName: spec.name,
+        modelDisplay: spec.name,
+        providerKey: providerKey,
+        modelId: modelId,
+      );
+    }
+  }
+
   final cfg = settings.getProviderConfig(providerKey);
   final providerName = cfg.name.isNotEmpty ? cfg.name : providerKey;
 
@@ -122,9 +149,9 @@ ModelDisplayInfo getModelDisplayInfo(
   );
 }
 
-/// Gets just the provider key and model ID without display formatting.
+/// Gets the chat source identifiers without display formatting.
 ///
-/// Use this when you only need the raw identifiers for API calls.
+/// A logical ACP identity is metadata and must not be passed to API calls.
 ({String? providerKey, String? modelId}) getActiveModelIds(
   SettingsProvider settings, {
   Conversation? conversation,

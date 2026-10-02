@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/models/assistant.dart';
+import '../../../core/models/agent_auth_mode.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/acp/acp_agent_catalog.dart';
@@ -15,7 +16,9 @@ import '../../../shared/widgets/option_sheet.dart';
 import '../../../shared/widgets/section_card.dart';
 import '../agent_provider_compatibility.dart';
 import '../pages/agents_page.dart';
+import '../pages/agent_subscription_page.dart';
 import 'agent_labels.dart';
+import 'agent_auth_mode_row.dart';
 
 /// Picks the ACP agent that answers for [assistant], or none (the model
 /// answers itself).
@@ -25,6 +28,8 @@ class AssistantAgentCard extends StatelessWidget {
   final Assistant assistant;
 
   static const Key rowKey = ValueKey('assistant-agent-row');
+  static const Key authModeKey = ValueKey('assistant-agent-auth-mode');
+  static const Key subscriptionKey = ValueKey('assistant-agent-subscription');
 
   ProviderConfig? _provider(SettingsProvider settings) {
     final key = assistant.chatModelProvider ?? settings.currentModelProvider;
@@ -62,10 +67,11 @@ class AssistantAgentCard extends StatelessWidget {
         ),
       ],
       footer:
-          agentNeedsResponsesApiWarning(
-            AcpAgentSpec.codexId,
-            _provider(context.read<SettingsProvider>()),
-          )
+          assistant.agentAuthMode == AgentAuthMode.provider &&
+              agentNeedsResponsesApiWarning(
+                AcpAgentSpec.codexId,
+                _provider(context.read<SettingsProvider>()),
+              )
           ? IosSectionFooter(text: l10n.agentsCodexResponsesRequired)
           : null,
     );
@@ -81,7 +87,12 @@ class AssistantAgentCard extends StatelessWidget {
     await assistants.updateAssistant(
       choice == none
           ? current.copyWith(clearAgent: true)
-          : current.copyWith(agentId: choice),
+          : current.copyWith(
+              agentId: choice,
+              agentAuthMode: manager.agent(choice)?.supportsSubscription == true
+                  ? current.agentAuthMode
+                  : AgentAuthMode.provider,
+            ),
     );
   }
 
@@ -106,10 +117,65 @@ class AssistantAgentCard extends StatelessWidget {
                   : (spec?.name ?? id),
               onTap: () => unawaited(_choose(context)),
             ),
+            if (spec?.supportsSubscription == true) ...[
+              const IosRowDivider(),
+              AgentAuthModeRow(
+                key: authModeKey,
+                mode: assistant.agentAuthMode,
+                onSelected: (mode) async {
+                  final assistants = context.read<AssistantProvider>();
+                  final current = assistants.getById(assistant.id);
+                  if (current == null) return;
+                  await assistants.updateAssistant(
+                    current.copyWith(agentAuthMode: mode),
+                  );
+                },
+              ),
+              if (manager.state(spec!.id) == AcpInstallState.installed) ...[
+                const IosRowDivider(),
+                IosNavRow(
+                  key: subscriptionKey,
+                  icon: LucideIcons.userRound,
+                  label: l10n.agentsAuthTitle,
+                  subtitle: agentAuthStatusLabel(
+                    l10n,
+                    manager.auth.status(spec.id),
+                  ),
+                  onTap: () {
+                    final assistants = context.read<AssistantProvider>();
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => AgentSubscriptionPage(
+                          agentId: spec.id,
+                          onSignIn: () async {
+                            final current = assistants.getById(assistant.id);
+                            if (current == null || current.agentId != spec.id) {
+                              throw StateError('Agent assistant unavailable');
+                            }
+                            await assistants.updateAssistant(
+                              current.copyWith(
+                                agentAuthMode: AgentAuthMode.subscription,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ],
           ],
         ),
-        IosSectionFooter(text: l10n.assistantAgentHint),
-        if (agentNeedsResponsesApiWarning(id, _provider(settings)))
+        IosSectionFooter(
+          text:
+              spec?.supportsSubscription == true &&
+                  assistant.agentAuthMode == AgentAuthMode.subscription
+              ? l10n.agentsAuthSubscriptionHint
+              : l10n.assistantAgentHint,
+        ),
+        if (assistant.agentAuthMode == AgentAuthMode.provider &&
+            agentNeedsResponsesApiWarning(id, _provider(settings)))
           IosSectionFooter(text: l10n.agentsCodexResponsesRequired),
       ],
     );

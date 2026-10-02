@@ -5,6 +5,8 @@ import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/mcp_provider.dart';
 import 'package:Kelivo/core/providers/quick_phrase_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
+import 'package:Kelivo/core/services/acp/acp_chat_sessions.dart';
+import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/features/home/widgets/chat_input_bar.dart';
 import 'package:Kelivo/features/home/widgets/chat_input_section.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
@@ -30,7 +32,10 @@ void main() {
 
   /// Loads the provider outside the fake clock: it reads through drift, and a
   /// widget test's timers never advance on their own.
-  Future<AssistantProvider> loadAssistantWithMcp(WidgetTester tester) async {
+  Future<AssistantProvider> loadAssistantWithMcp(
+    WidgetTester tester, {
+    bool subscription = false,
+  }) async {
     late AssistantProvider provider;
     await tester.runAsync(() async {
       await preferences.setString(
@@ -40,6 +45,8 @@ void main() {
             'id': 'assistant-1',
             'name': 'Assistant',
             'mcpServerIds': ['server-1'],
+            if (subscription) 'agentId': 'codex',
+            if (subscription) 'agentAuthMode': 'subscription',
           },
         ]),
       );
@@ -57,6 +64,7 @@ void main() {
     WidgetTester tester, {
     required AssistantProvider assistants,
     required bool isConversationOverride,
+    String providerKey = 'SomeProvider',
   }) async {
     final settings = SettingsProvider(preferences);
     await tester.pumpWidget(
@@ -64,6 +72,21 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: settings),
           ChangeNotifierProvider.value(value: assistants),
+          ChangeNotifierProvider(create: (_) => ChatService()),
+          ChangeNotifierProvider(
+            create: (_) => AcpChatSessions(
+              start:
+                  (
+                    spec,
+                    provider, {
+                    required cwd,
+                    required mounts,
+                    required authMode,
+                  }) async => throw StateError(
+                    'This composer fixture never launches an agent',
+                  ),
+            ),
+          ),
           ChangeNotifierProvider(create: (_) => AsrProvider()),
           ChangeNotifierProvider(
             create: (_) => McpProvider(preferences: preferences),
@@ -78,7 +101,7 @@ void main() {
           home: Scaffold(
             body: ChatInputSection(
               inputBarKey: GlobalKey(),
-              chatModelProviderKey: 'SomeProvider',
+              chatModelProviderKey: providerKey,
               chatModelId: 'no-tools-model',
               chatModelIsConversationOverride: isConversationOverride,
               inputFocus: FocusNode(),
@@ -99,6 +122,25 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
   }
+
+  testWidgets('subscription source preserves API capability settings', (
+    tester,
+  ) async {
+    final assistants = await loadAssistantWithMcp(tester, subscription: true);
+    final before = assistants.currentAssistant!;
+    await pumpComposer(
+      tester,
+      assistants: assistants,
+      isConversationOverride: false,
+      providerKey: 'acp:codex',
+    );
+    expect(assistants.currentAssistant!.mcpServerIds, before.mcpServerIds);
+    expect(assistants.currentAssistant!.thinkingBudget, before.thinkingBudget);
+    expect(
+      tester.widget<ChatInputBar>(find.byType(ChatInputBar)).showToolsButton,
+      isTrue,
+    );
+  });
 
   testWidgets('a conversation-pinned model leaves the assistant alone', (
     tester,

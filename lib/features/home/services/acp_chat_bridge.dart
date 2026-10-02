@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/models/assistant.dart';
+import '../../../core/models/agent_auth_mode.dart';
 import '../../../core/models/workspace_binding.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/external_mounts_provider.dart';
@@ -58,6 +59,10 @@ class AcpChatBridge {
     // A command the environment lacks (a fresh or switched distribution)
     // means "install it", not a raw shell status; the list re-checks too.
     Object translate(Object error) {
+      if (assistant.agentAuthMode == AgentAuthMode.subscription &&
+          classifyAcpFailure(error) == AcpFailureKind.authRequired) {
+        manager.auth.requireSignIn(assistant.agentId!);
+      }
       if (name != null && isAcpCommandMissing(error)) {
         unawaited(manager.refresh());
         return AcpError(
@@ -136,8 +141,11 @@ class AcpChatBridge {
         l10n.agentsChatNotInstalled(spec.name),
       );
     }
-    final provider = acpProviderInputFor(settings, providerKey, modelId);
-    if (provider == null) {
+    final authMode = assistant.agentAuthMode;
+    final provider = authMode == AgentAuthMode.subscription
+        ? null
+        : acpProviderInputFor(settings, providerKey, modelId);
+    if (provider == null && authMode == AgentAuthMode.provider) {
       throw AcpError(AcpError.internalError, l10n.agentsChatNoKey);
     }
 
@@ -167,6 +175,7 @@ class AcpChatBridge {
         conversationId: conversationId,
         spec: spec,
         provider: provider,
+        authMode: authMode,
         cwd: workspace?.cwd ?? '/root',
         mounts: workspace?.paths.mounts ?? const [],
         prompt: message.prompt,

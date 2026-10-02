@@ -12342,4 +12342,95 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backgroundShellFailed => 'Background command failed';
+
+  @override
+  String get agentsAuthTitle => 'Sign in with subscription';
+
+  @override
+  String get agentsAuthMode => 'Authentication';
+
+  @override
+  String get agentsAuthProvider => 'API provider';
+
+  @override
+  String get agentsAuthSubscription => 'Subscription';
+
+  @override
+  String get agentsAuthProviderHint =>
+      'Use this assistant’s API provider settings.';
+
+  @override
+  String get agentsAuthSubscriptionHint =>
+      'Use the agent’s own Claude or ChatGPT sign-in. API provider keys and model overrides are not used.';
+
+  @override
+  String get agentsAuthSignIn => 'Sign in';
+
+  @override
+  String get agentsAuthCheck => 'Check sign-in';
+
+  @override
+  String get agentsAuthSignOut => 'Sign out';
+
+  @override
+  String get agentsAuthSignedIn => 'Signed in';
+
+  @override
+  String get agentsAuthSignedOut => 'Sign-in required';
+
+  @override
+  String get agentsAuthUnknown => 'Sign-in not checked';
+
+  @override
+  String get agentsAuthWaiting => 'Complete sign-in in your browser.';
+
+  @override
+  String get agentsAuthOpenBrowser => 'Open sign-in page';
+
+  @override
+  String get agentsAuthDeviceCode => 'Device code';
+
+  @override
+  String get agentsAuthCodexHint =>
+      'Enable device code login in ChatGPT Settings → Security before signing in.';
+
+  @override
+  String get agentsAuthCode => 'Authorization code';
+
+  @override
+  String get agentsAuthSubmitCode => 'Submit code';
+
+  @override
+  String get agentsAuthCodeHint =>
+      'If your browser asks you to copy a code, paste the complete code here, including the part after #.';
+
+  @override
+  String get agentsAuthCancel => 'Cancel sign-in';
+
+  @override
+  String get agentsAuthFailureEnvironment =>
+      'Set up the Linux environment first.';
+
+  @override
+  String get agentsAuthFailureStart =>
+      'Sign-in could not be completed. Update the agent and try again.';
+
+  @override
+  String get agentsAuthFailureNetwork =>
+      'Sign-in failed because of a network connection. Try again.';
+
+  @override
+  String get agentsAuthFailureTimeout => 'Sign-in timed out. Try again.';
+
+  @override
+  String get agentsAuthBrowserFailed =>
+      'The sign-in page could not be opened. You can copy the link below.';
+
+  @override
+  String get agentsErrorAuthRequired =>
+      'The agent needs authentication. Sign in under Settings → Agents, or check the selected provider’s API key.';
+
+  @override
+  String get agentsErrorAccountBusy =>
+      'Codex is already active in another chat. Finish or stop that reply before continuing.';
 }

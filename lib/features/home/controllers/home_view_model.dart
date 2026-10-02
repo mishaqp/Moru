@@ -2026,7 +2026,7 @@ class HomeViewModel extends ChangeNotifier {
     );
     final provKey = settings.titleModelProvider ?? chatModel.providerKey;
     final mdlId = settings.titleModelId ?? chatModel.modelId;
-    if (provKey == null || mdlId == null) return;
+    if (provKey == null || mdlId == null || isAcpModelSource(provKey)) return;
     final cfg = settings.getProviderConfig(provKey);
     final budget = settings.titleGenerationThinkingBudgetFor(
       assistant?.thinkingBudget,
@@ -2296,7 +2296,7 @@ class HomeViewModel extends ChangeNotifier {
     );
     final provKey = settings.suggestionModelProvider ?? chatModel.providerKey;
     final mdlId = settings.suggestionModelId ?? chatModel.modelId;
-    if (provKey == null || mdlId == null) return;
+    if (provKey == null || mdlId == null || isAcpModelSource(provKey)) return;
     final locale = Localizations.localeOf(_contextProvider).toLanguageTag();
     final budget = settings.suggestionGenerationThinkingBudgetFor(
       assistant?.thinkingBudget,
