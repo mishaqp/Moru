@@ -12480,9 +12480,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get computerResult => 'Result';
 
   @override
-  String get computerStop => 'Stop';
-
-  @override
   String get browserFloatingWindowTitle => 'Floating browser window';
 
   @override

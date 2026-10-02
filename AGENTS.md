@@ -81,8 +81,12 @@ package name does not require building other platforms.
   and keeps the open plan (`TaskPlanChip`) nearby. It replaces the separate
   running-command chip in the composer, follows the newest working step,
   retains a manually selected working step and briefly shows the final result.
-  The working card is at most 88dp at text scale 1.0 (76x56 preview); its 44dp
-  square-icon Stop exists only while the response generates. A terminal reply
+  The working card is at most 88dp at text scale 1.0 (76x56 preview) and has
+  no Stop of its own: the composer's Stop cancels the reply and, through
+  `cancelStreamingById`, the shared browser action of that chat. A running
+  browser step without a URL yet is named from that chat's live browser page
+  and current action. Browser tool cards read "Browser · site/action", never
+  the raw `browser_use` name. A terminal reply
   uses a 48dp summary with action count and View. Previews never show argument
   JSON: commands show the filtered live/saved output tail or `$ command`,
   files their name/content, plans ListChecks, other tools a framed icon.

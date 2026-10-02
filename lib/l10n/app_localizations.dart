@@ -22257,12 +22257,6 @@ abstract class AppLocalizations {
   /// **'Result'**
   String get computerResult;
 
-  /// No description provided for @computerStop.
-  ///
-  /// In en, this message translates to:
-  /// **'Stop'**
-  String get computerStop;
-
   /// No description provided for @browserFloatingWindowTitle.
   ///
   /// In en, this message translates to:

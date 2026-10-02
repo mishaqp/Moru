@@ -11919,9 +11919,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get computerResult => '结果';
 
   @override
-  String get computerStop => '停止';
-
-  @override
   String get browserFloatingWindowTitle => '浏览器悬浮窗';
 
   @override
@@ -23953,9 +23950,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get computerResult => '结果';
-
-  @override
-  String get computerStop => '停止';
 
   @override
   String get browserFloatingWindowTitle => '浏览器悬浮窗';
@@ -36063,9 +36057,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get computerResult => '結果';
-
-  @override
-  String get computerStop => '停止';
 
   @override
   String get browserFloatingWindowTitle => '瀏覽器浮動視窗';

@@ -5369,7 +5369,6 @@
   "computerNoResult": "Результата пока нет",
   "computerParameters": "Параметры",
   "computerResult": "Результат",
-  "computerStop": "Стоп",
   "browserFloatingWindowTitle": "Плавающее окно браузера",
   "browserFloatingWindowDescription": "Показывать живой браузер в плавающем окне при сворачивании. По умолчанию действия ИИ отображаются в «Компьютере» над полем ввода.",
   "computerMoreDetails": "Подробный результат",

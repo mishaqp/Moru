@@ -20,13 +20,11 @@ class ComputerToolSource extends InheritedWidget {
     required this.readSteps,
     required this.updates,
     required super.child,
-    this.onStop,
   });
 
   final List<ChatMessage> Function() readMessages;
   final List<ComputerStep> Function(String responseId) readSteps;
   final Listenable updates;
-  final VoidCallback? onStop;
 
   static ComputerToolSource? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<ComputerToolSource>();

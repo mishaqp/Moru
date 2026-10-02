@@ -4452,7 +4452,6 @@
   "computerNoResult": "尚無結果",
   "computerParameters": "參數",
   "computerResult": "結果",
-  "computerStop": "停止",
   "browserFloatingWindowTitle": "瀏覽器浮動視窗",
   "browserFloatingWindowDescription": "縮小時顯示即時瀏覽器浮動視窗。預設在輸入框上方的「電腦」中顯示 AI 操作。",
   "computerMoreDetails": "詳細結果",

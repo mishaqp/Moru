@@ -22,7 +22,6 @@ class ComposerStatusStrip extends StatefulWidget {
     required this.generating,
     this.steps,
     this.responseId,
-    this.onStop,
   });
 
   static const resultDuration = Duration(seconds: 4);
@@ -31,7 +30,6 @@ class ComposerStatusStrip extends StatefulWidget {
   final bool generating;
   final List<ComputerStep>? steps;
   final String? responseId;
-  final VoidCallback? onStop;
 
   @override
   State<ComposerStatusStrip> createState() => _ComposerStatusStripState();
@@ -40,7 +38,6 @@ class ComposerStatusStrip extends StatefulWidget {
 class _ComposerStatusStripState extends State<ComposerStatusStrip> {
   bool _planOpen = false;
   bool _showCompleted = false;
-  bool _stopping = false;
   String? _responseId;
   bool? _wasGenerating;
   Timer? _collapse;
@@ -62,7 +59,6 @@ class _ComposerStatusStripState extends State<ComposerStatusStrip> {
       _wasGenerating = null;
       _showCompleted = false;
       _planOpen = false;
-      _stopping = false;
     } else if (oldWidget.generating && !widget.generating) {
       _showCompleted = true;
       _collapse?.cancel();
@@ -72,7 +68,6 @@ class _ComposerStatusStripState extends State<ComposerStatusStrip> {
     } else if (!oldWidget.generating && widget.generating) {
       _collapse?.cancel();
       _showCompleted = false;
-      _stopping = false;
     }
   }
 
@@ -80,18 +75,6 @@ class _ComposerStatusStripState extends State<ComposerStatusStrip> {
   void dispose() {
     _collapse?.cancel();
     super.dispose();
-  }
-
-  void _stop(ComputerToolSource? source) {
-    if (_stopping) return;
-    setState(() {
-      _stopping = true;
-    });
-    (widget.onStop ?? source?.onStop)?.call();
-    final browser = BrowserAgentSession.instance;
-    if (browser.ownerConversationId == widget.conversationId) {
-      browser.requestStop();
-    }
   }
 
   @override
@@ -117,7 +100,6 @@ class _ComposerStatusStripState extends State<ComposerStatusStrip> {
           _responseId = responseId;
           _wasGenerating = null;
           _showCompleted = false;
-          _stopping = false;
           _collapse?.cancel();
         }
         bool belongsToResponse(ToolRun run) =>
@@ -271,7 +253,6 @@ class _ComposerStatusStripState extends State<ComposerStatusStrip> {
                   steps: steps,
                   generating: generating,
                   conversationId: widget.conversationId,
-                  onStop: _stopping ? null : () => _stop(source),
                   updates: Listenable.merge([
                     if (source != null) source.updates,
                     if (registry != null) registry,

@@ -19,7 +19,6 @@ Widget _host({
   bool generating = true,
   String? conversationId = 'chat',
   String? responseId = 'reply',
-  VoidCallback? onStop,
   ComputerToolSource? source,
 }) {
   final strip = ComposerStatusStrip(
@@ -27,7 +26,6 @@ Widget _host({
     generating: generating,
     steps: steps,
     responseId: responseId,
-    onStop: onStop,
   );
   return ChangeNotifierProvider.value(
     value: registry,
@@ -52,50 +50,6 @@ Widget _host({
 }
 
 void main() {
-  testWidgets(
-    'a source response can be stopped before generating props refresh',
-    (tester) async {
-      final registry = ToolRunRegistry();
-      final updates = ChangeNotifier();
-      final step = ComputerStep(
-        id: 'plan',
-        toolName: 'update_plan',
-        arguments: {'plan': []},
-        loading: true,
-      );
-      final source = ComputerToolSource(
-        readMessages: () => [
-          ChatMessage(
-            id: 'reply',
-            role: 'assistant',
-            content: '',
-            conversationId: 'chat',
-            isStreaming: true,
-          ),
-        ],
-        readSteps: (_) => [step],
-        updates: updates,
-        child: const SizedBox(),
-      );
-      var stopped = 0;
-      await tester.pumpWidget(
-        _host(
-          registry: registry,
-          source: source,
-          generating: false,
-          onStop: () => stopped++,
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(ComputerStatusPanel.stopKey));
-      await tester.pumpAndSettle();
-      expect(stopped, 1);
-      await tester.pumpWidget(const SizedBox());
-      registry.dispose();
-      updates.dispose();
-    },
-  );
-
   testWidgets(
     'source cancellation clears response activity before the composer props refresh',
     (tester) async {
@@ -124,35 +78,32 @@ void main() {
         updates: updates,
         child: const SizedBox(),
       );
-      await tester.pumpWidget(
-        _host(
-          registry: registry,
-          source: source,
-          onStop: () {
-            messages = [
-              ChatMessage(
-                id: 'reply',
-                role: 'assistant',
-                content: '',
-                conversationId: 'chat',
-              ),
-            ];
-            steps = [
-              ComputerStep(
-                id: 'plan',
-                toolName: 'update_plan',
-                arguments: {'plan': []},
-                metadata: {
-                  'computer': {'status': 'stopped', 'responseStopped': true},
-                },
-              ),
-            ];
-            updates.notifyListeners();
-          },
-        ),
-      );
+      void cancel() {
+        messages = [
+          ChatMessage(
+            id: 'reply',
+            role: 'assistant',
+            content: '',
+            conversationId: 'chat',
+          ),
+        ];
+        steps = [
+          ComputerStep(
+            id: 'plan',
+            toolName: 'update_plan',
+            arguments: {'plan': []},
+            metadata: {
+              'computer': {'status': 'stopped', 'responseStopped': true},
+            },
+          ),
+        ];
+        updates.notifyListeners();
+      }
+
+      await tester.pumpWidget(_host(registry: registry, source: source));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(ComputerStatusPanel.stopKey));
+      // The composer's Stop cancels the reply; the strip follows the source.
+      cancel();
       await tester.pumpAndSettle();
       expect(find.text('Stopped · 1 action'), findsOneWidget);
       expect(
@@ -161,7 +112,6 @@ void main() {
             .generating,
         isFalse,
       );
-      expect(find.byKey(ComputerStatusPanel.stopKey), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsNothing);
       await tester.pumpWidget(const SizedBox());
       registry.dispose();
@@ -181,27 +131,15 @@ void main() {
         responseId: 'previous',
         background: true,
       );
-      var stopped = 0;
       final pending = ComputerStep(
         id: 'plan',
         toolName: 'update_plan',
         arguments: {'plan': []},
         loading: true,
       );
-      await tester.pumpWidget(
-        _host(registry: registry, steps: [pending], onStop: () => stopped++),
-      );
+      await tester.pumpWidget(_host(registry: registry, steps: [pending]));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(ComputerStatusPanel.stopKey));
-      await tester.pumpAndSettle();
-      expect(stopped, 1);
       expect(job.status, ToolRunStatus.running);
-      expect(
-        tester
-            .widget<IconButton>(find.byKey(ComputerStatusPanel.stopKey))
-            .onPressed,
-        isNull,
-      );
       final cancelled = ComputerStep(
         id: 'plan',
         toolName: 'update_plan',
@@ -227,7 +165,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.byKey(ComputerStatusPanel.stopKey), findsNothing);
+      expect(job.status, ToolRunStatus.running);
       expect(
         tester.getSize(find.byKey(ComputerStatusPanel.panelKey)).height,
         48,
@@ -257,20 +195,12 @@ void main() {
       Navigator.of(tester.element(find.byType(ComputerSheet))).pop();
       await tester.pumpAndSettle();
       await tester.pumpWidget(
-        _host(
-          registry: registry,
-          steps: [pending],
-          responseId: 'next',
-          onStop: () => stopped++,
-        ),
+        _host(registry: registry, steps: [pending], responseId: 'next'),
       );
       await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<IconButton>(find.byKey(ComputerStatusPanel.stopKey))
-            .onPressed,
-        isNotNull,
-      );
+      // The next reply is live again, not left in the stopped state.
+      expect(find.textContaining('Stopped ·'), findsNothing);
+      expect(find.byKey(ComputerStatusPanel.previousKey), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
       job.complete(status: ToolRunStatus.succeeded);
       job.dispose();
@@ -849,46 +779,34 @@ void main() {
     },
   );
 
-  testWidgets(
-    'narrow scaled strip has compact controls and 44dp response Stop',
-    (tester) async {
-      tester.view.physicalSize = const Size(360, 740);
-      tester.view.devicePixelRatio = 1;
-      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
-      addTearDown(tester.view.reset);
-      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      final registry = ToolRunRegistry();
-      var stopped = 0;
-      final step = ComputerStep(
-        id: 'a',
-        toolName: 'shell',
-        arguments: {'command': 'a very long command with arguments'},
-        loading: true,
-      );
-      await tester.pumpWidget(
-        _host(registry: registry, steps: [step], onStop: () => stopped++),
-      );
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      for (final key in [
-        ComputerStatusPanel.previousKey,
-        ComputerStatusPanel.nextKey,
-      ]) {
-        final size = tester.getSize(find.byKey(key));
-        expect(size.width, greaterThanOrEqualTo(48));
-        expect(size.height, greaterThanOrEqualTo(48));
-      }
-      expect(
-        tester.getSize(find.byKey(ComputerStatusPanel.stopKey)),
-        const Size(44, 44),
-      );
-      await tester.tap(find.byKey(ComputerStatusPanel.stopKey));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(ComputerStatusPanel.stopKey));
-      await tester.pumpAndSettle();
-      expect(stopped, 1);
-      await tester.pumpWidget(const SizedBox());
-      registry.dispose();
-    },
-  );
+  testWidgets('narrow scaled strip has compact 48dp pager controls', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 740);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final registry = ToolRunRegistry();
+    final step = ComputerStep(
+      id: 'a',
+      toolName: 'shell',
+      arguments: {'command': 'a very long command with arguments'},
+      loading: true,
+    );
+    await tester.pumpWidget(_host(registry: registry, steps: [step]));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    for (final key in [
+      ComputerStatusPanel.previousKey,
+      ComputerStatusPanel.nextKey,
+    ]) {
+      final size = tester.getSize(find.byKey(key));
+      expect(size.width, greaterThanOrEqualTo(48));
+      expect(size.height, greaterThanOrEqualTo(48));
+    }
+    expect(find.byTooltip('Stop'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    registry.dispose();
+  });
 }

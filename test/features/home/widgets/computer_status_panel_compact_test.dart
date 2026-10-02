@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:Kelivo/core/services/browser/browser_agent_session.dart';
 import 'package:Kelivo/core/services/workspace/tool_run_registry.dart';
 import 'package:Kelivo/features/chat/models/computer_step.dart';
 import 'package:Kelivo/features/chat/widgets/computer_step_thumbnail.dart';
@@ -16,7 +17,7 @@ Widget _host({
   double scale = 1,
   double width = 320,
   Locale locale = const Locale('en'),
-  VoidCallback? onStop,
+  String? conversationId,
 }) => MaterialApp(
   localizationsDelegates: AppLocalizations.localizationsDelegates,
   supportedLocales: AppLocalizations.supportedLocales,
@@ -36,7 +37,7 @@ Widget _host({
           child: ComputerStatusPanel(
             steps: steps,
             generating: generating,
-            onStop: onStop,
+            conversationId: conversationId,
           ),
         ),
       ),
@@ -53,10 +54,40 @@ ComputerStep _command({bool loading = true, String? content}) => ComputerStep(
 );
 
 void main() {
+  testWidgets('a running browser step names the live page and action', (
+    tester,
+  ) async {
+    final browser = BrowserAgentSession.instance;
+    addTearDown(() {
+      browser.setOwnerConversationId(null);
+      browser.pageUrl.value = null;
+      browser.currentActivity.value = null;
+    });
+    browser.setOwnerConversationId('chat');
+    browser.pageStarted('https://dzen.ru/feed');
+    browser.recordActivity(action: 'read');
+    final step = ComputerStep(
+      id: 'browser',
+      toolName: 'browser_use',
+      arguments: const {},
+      loading: true,
+    );
+    await tester.pumpWidget(_host(steps: [step], conversationId: 'chat'));
+    await tester.pump();
+    expect(find.text('Browser · dzen.ru'), findsOneWidget);
+    expect(find.text('Read'), findsOneWidget);
+    expect(find.text('Browser action'), findsNothing);
+
+    // Another chat's browser never names this chat's step.
+    await tester.pumpWidget(_host(steps: [step], conversationId: 'other'));
+    await tester.pump();
+    expect(find.text('Browser · dzen.ru'), findsNothing);
+  });
+
   testWidgets('active panel fits 88dp with a 76 by 56 thumbnail', (
     tester,
   ) async {
-    await tester.pumpWidget(_host(steps: [_command()], onStop: () {}));
+    await tester.pumpWidget(_host(steps: [_command()]));
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byKey(ComputerStatusPanel.panelKey)).height,
@@ -68,12 +99,9 @@ void main() {
       ),
       const Size(76, 56),
     );
-    final stop = find.byKey(ComputerStatusPanel.stopKey);
-    expect(tester.getSize(stop), const Size(44, 44));
-    expect(
-      find.descendant(of: stop, matching: find.byIcon(Lucide.Square)),
-      findsOneWidget,
-    );
+    // The composer's own Stop ends the reply; the panel has no second one.
+    expect(find.byTooltip('Stop'), findsNothing);
+    expect(find.byIcon(Lucide.Square), findsNothing);
   });
 
   testWidgets('active panel fits narrow landscape with scaled text', (
@@ -82,9 +110,7 @@ void main() {
     tester.view.physicalSize = const Size(320, 240);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      _host(steps: [_command()], scale: 1.3, onStop: () {}),
-    );
+    await tester.pumpWidget(_host(steps: [_command()], scale: 1.3));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
@@ -96,24 +122,13 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-      _host(
-        steps: [_command()],
-        scale: 1.3,
-        locale: const Locale('ru'),
-        onStop: () {},
-      ),
+      _host(steps: [_command()], scale: 1.3, locale: const Locale('ru')),
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(
-      tester.getSize(find.byKey(ComputerStatusPanel.stopKey)),
-      const Size(44, 44),
-    );
   });
 
-  testWidgets('completed response becomes a 48dp row without Stop', (
-    tester,
-  ) async {
+  testWidgets('completed response becomes a 48dp row', (tester) async {
     await tester.pumpWidget(
       _host(
         steps: [_command(loading: false, content: 'done')],
@@ -122,13 +137,13 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.getSize(find.byKey(ComputerStatusPanel.panelKey)).height, 48);
-    expect(find.byKey(ComputerStatusPanel.stopKey), findsNothing);
+    expect(find.byTooltip('Stop'), findsNothing);
     expect(find.text('Done · 1 action'), findsOneWidget);
     expect(find.text('View'), findsOneWidget);
     expect(find.byType(ComputerStepThumbnail), findsNothing);
   });
 
-  testWidgets('background-only response has no generation Stop', (
+  testWidgets('background-only response collapses to a 48dp row', (
     tester,
   ) async {
     final registry = ToolRunRegistry();
@@ -152,7 +167,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byKey(ComputerStatusPanel.stopKey), findsNothing);
+    expect(find.byTooltip('Stop'), findsNothing);
     expect(find.byType(ComputerStepThumbnail), findsNothing);
     expect(tester.getSize(find.byKey(ComputerStatusPanel.panelKey)).height, 48);
     await tester.pumpWidget(const SizedBox());
@@ -177,7 +192,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Stopped · 1 action'), findsOneWidget);
     expect(find.textContaining('AI working'), findsNothing);
-    expect(find.byKey(ComputerStatusPanel.stopKey), findsNothing);
+    expect(find.byTooltip('Stop'), findsNothing);
   });
 
   for (final stopped in [false, true]) {

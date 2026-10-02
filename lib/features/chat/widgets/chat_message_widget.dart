@@ -501,6 +501,7 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
     LocalToolNames.scheduledTasks => Lucide.CalendarClock,
     LocalToolNames.miniApps => Lucide.LayoutGrid,
     LocalToolNames.rootShell => Lucide.ShieldAlert,
+    LocalToolNames.browserUse => Lucide.Globe,
     _ => null,
   };
 }
@@ -563,8 +564,20 @@ String? _localToolTitleFor(
       _ => l10n.miniAppsToolTitle,
     },
     LocalToolNames.rootShell => l10n.rootShellToolTitle,
+    LocalToolNames.browserUse => _browserToolTitleFor(l10n, args),
     _ => null,
   };
+}
+
+/// "Browser · site" when the action names a public address, otherwise
+/// "Browser · action"; never the raw `browser_use` tool name.
+String _browserToolTitleFor(AppLocalizations l10n, Map<String, dynamic> args) {
+  final url = args['url'];
+  final host = computerActionUri(url is String ? url : null)?.host;
+  if (host != null) return l10n.computerBrowserStep(host);
+  final action = (args['action'] ?? '').toString();
+  if (action.isEmpty) return l10n.settingsPageBrowser;
+  return '${l10n.settingsPageBrowser} · ${l10n.computerBrowserAction(action)}';
 }
 
 String _assistantManagerTitleFor(

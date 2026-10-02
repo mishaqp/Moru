@@ -12612,9 +12612,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get computerResult => 'Результат';
 
   @override
-  String get computerStop => 'Стоп';
-
-  @override
   String get browserFloatingWindowTitle => 'Плавающее окно браузера';
 
   @override

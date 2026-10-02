@@ -32,7 +32,6 @@ Widget _host({
   String? responseId = 'reply',
   bool generating = true,
   List<ComputerStep>? steps,
-  VoidCallback? onStop,
 }) {
   return MultiProvider(
     providers: [
@@ -50,7 +49,6 @@ Widget _host({
             responseId: responseId,
             generating: generating,
             steps: steps,
-            onStop: onStop,
           ),
         ),
       ),
@@ -89,7 +87,7 @@ void main() {
     );
 
     await tester.pumpWidget(_host(registry: registry, runtime: runtime));
-    expect(find.byKey(ComputerStatusPanel.stopKey), findsNothing);
+    expect(find.byTooltip('Stop'), findsNothing);
 
     final run = registry.start(
       'call-1',
@@ -125,77 +123,8 @@ void main() {
     expect(find.text('npm install'), findsNothing);
     expect(find.text('Done · 1 action'), findsOneWidget);
     expect(tester.getSize(find.byKey(ComputerStatusPanel.panelKey)).height, 48);
-    expect(find.byKey(ComputerStatusPanel.stopKey), findsNothing);
+    expect(find.byTooltip('Stop'), findsNothing);
   });
-
-  testWidgets(
-    'generation Stop delegates once without cancelling runtime jobs',
-    (tester) async {
-      final registry = ToolRunRegistry();
-      final fake = _RecordingRuntime();
-      final runtime = WorkspaceRuntimeProvider()..register(fake);
-      _disposeAfterTest(tester, registry, runtime);
-      final background = registry.start(
-        'call-1',
-        'shell',
-        command: 'background server',
-        conversationId: 'c1',
-        responseId: 'previous-reply',
-        background: true,
-        runtimeRunId: 'background-run',
-      );
-      final first = registry.start(
-        'call-1',
-        'shell',
-        command: 'make',
-        conversationId: 'c1',
-        responseId: 'reply',
-        runtimeRunId: 'run-1',
-      );
-      final second = registry.start(
-        'call-1',
-        'shell',
-        command: 'second command',
-        conversationId: 'c1',
-        responseId: 'reply',
-        runtimeRunId: 'run-2',
-      );
-      final other = registry.start(
-        'call-1',
-        'shell',
-        command: 'another chat',
-        conversationId: 'c2',
-        responseId: 'reply',
-        runtimeRunId: 'other-run',
-      );
-
-      var stopped = 0;
-      await tester.pumpWidget(
-        _host(registry: registry, runtime: runtime, onStop: () => stopped++),
-      );
-      expect(find.text('second command'), findsOneWidget);
-      expect(find.text('3 / 3'), findsOneWidget);
-      await tester.tap(find.byKey(ComputerStatusPanel.stopKey));
-      await tester.pump();
-      await tester.tap(find.byKey(ComputerStatusPanel.stopKey));
-      await tester.pump();
-
-      expect(stopped, 1);
-      expect(fake.cancelled, isEmpty);
-      expect(
-        tester
-            .widget<IconButton>(find.byKey(ComputerStatusPanel.stopKey))
-            .onPressed,
-        isNull,
-      );
-      // Runtime cancellation belongs to generation/job control, rather than the
-      // compositor enumerating every process sharing a conversation.
-      expect(first.status, ToolRunStatus.running);
-      expect(second.status, ToolRunStatus.running);
-      expect(other.status, ToolRunStatus.running);
-      expect(background.status, ToolRunStatus.running);
-    },
-  );
 
   testWidgets('counts other runs of the same conversation', (tester) async {
     final registry = ToolRunRegistry();
@@ -282,7 +211,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Done · 1 action'), findsOneWidget);
     expect(thumbnail, findsNothing);
-    expect(find.byKey(ComputerStatusPanel.stopKey), findsNothing);
+    expect(find.byTooltip('Stop'), findsNothing);
     await tester.tap(find.byKey(ComputerStatusPanel.panelKey));
     await tester.pumpAndSettle();
     final result = find.descendant(

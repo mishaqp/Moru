@@ -319,7 +319,6 @@ class ChatInputSection extends StatelessWidget {
         ComposerStatusStrip(
           conversationId: conversationId,
           generating: isLoading,
-          onStop: onStop,
         ),
         if (showEnvChip)
           Padding(

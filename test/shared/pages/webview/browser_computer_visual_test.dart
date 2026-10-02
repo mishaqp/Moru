@@ -152,7 +152,6 @@ Widget _composerFixture({List<ComputerStep> steps = const []}) => Builder(
                   generating: true,
                   responseId: 'visual-response',
                   steps: steps,
-                  onStop: () {},
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),

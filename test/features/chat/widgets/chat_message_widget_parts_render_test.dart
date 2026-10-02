@@ -338,6 +338,35 @@ void main() {
     },
   );
 
+  testWidgets('browser tool cards read as browser actions, not tool names', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHarness(
+        child: ChatMessageWidget(
+          message: ChatMessage(
+            id: 'browser-parts',
+            role: 'assistant',
+            conversationId: 'c1',
+            parts: const [
+              ToolCallPart(
+                '{"id":"b1","name":"browser_use","arguments":{"action":"open","url":"https://dzen.ru/feed"},"content":"{}"}',
+              ),
+              ToolCallPart(
+                '{"id":"b2","name":"browser_use","arguments":{"action":"read"},"content":"{}"}',
+              ),
+            ],
+          ),
+          showModelIcon: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.textContaining('browser_use'), findsNothing);
+    expect(find.text('Browser · dzen.ru'), findsOneWidget);
+    expect(find.text('Browser · Read'), findsOneWidget);
+  });
+
   testWidgets('structured parts render reasoning, text, and tool in order', (
     tester,
   ) async {

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../shared/animations/widgets.dart';
 
+import '../../../core/services/browser/browser_agent_session.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../chat/models/computer_step.dart';
@@ -18,7 +19,6 @@ class ComputerStatusPanel extends StatefulWidget {
     required this.steps,
     required this.generating,
     this.conversationId,
-    this.onStop,
     this.updates,
     this.readSteps,
     this.readResponseRunning,
@@ -27,12 +27,10 @@ class ComputerStatusPanel extends StatefulWidget {
   static const panelKey = ValueKey('computer-status-panel');
   static const previousKey = ValueKey('computer-status-previous');
   static const nextKey = ValueKey('computer-status-next');
-  static const stopKey = ValueKey('computer-status-stop');
 
   final List<ComputerStep> steps;
   final bool generating;
   final String? conversationId;
-  final VoidCallback? onStop;
   final Listenable? updates;
   final List<ComputerStep> Function()? readSteps;
   final bool Function()? readResponseRunning;
@@ -117,6 +115,35 @@ class _ComputerStatusPanelState extends State<ComputerStatusPanel> {
         readResponseRunning: widget.readResponseRunning,
       ),
     );
+  }
+
+  /// A running browser step may not name its page yet (the URL arrives with
+  /// its result), so the shared browser of this chat supplies it meanwhile.
+  bool _ownsLiveBrowser(ComputerStep step) =>
+      step.kind == ComputerStepKind.browser &&
+      step.isRunning &&
+      widget.conversationId != null &&
+      BrowserAgentSession.instance.ownerConversationId == widget.conversationId;
+
+  String _title(ComputerStep step, AppLocalizations l10n) {
+    if (step.browserDomain == null && _ownsLiveBrowser(step)) {
+      final host = computerActionUri(
+        BrowserAgentSession.instance.pageUrl.value,
+      )?.host;
+      if (host != null) return l10n.computerBrowserStep(host);
+    }
+    return step.title(l10n);
+  }
+
+  String _subtitle(ComputerStep step, AppLocalizations l10n) {
+    if (_ownsLiveBrowser(step)) {
+      final activity = BrowserAgentSession.instance.currentActivity.value;
+      if (activity != null &&
+          activity.outcome == BrowserActivityOutcome.running) {
+        return l10n.computerBrowserAction(activity.action);
+      }
+    }
+    return step.subtitle(l10n);
   }
 
   @override
@@ -215,7 +242,7 @@ class _ComputerStatusPanelState extends State<ComputerStatusPanel> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                step.title(l10n),
+                                _title(step, l10n),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -229,7 +256,7 @@ class _ComputerStatusPanelState extends State<ComputerStatusPanel> {
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                step.subtitle(l10n),
+                                _subtitle(step, l10n),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -316,24 +343,6 @@ class _ComputerStatusPanelState extends State<ComputerStatusPanel> {
                             ],
                           ),
                         ),
-                        if (active) ...[
-                          const SizedBox(width: 4),
-                          IconButton.filledTonal(
-                            key: ComputerStatusPanel.stopKey,
-                            tooltip: l10n.computerStop,
-                            onPressed: widget.onStop,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints.tightFor(
-                              width: 44,
-                              height: 44,
-                            ),
-                            style: IconButton.styleFrom(
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              foregroundColor: cs.onSurface,
-                            ),
-                            icon: const Icon(Lucide.Square, size: 18),
-                          ),
-                        ],
                       ],
                     ),
                   ),

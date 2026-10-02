@@ -4452,7 +4452,6 @@
   "computerNoResult": "暂无结果",
   "computerParameters": "参数",
   "computerResult": "结果",
-  "computerStop": "停止",
   "browserFloatingWindowTitle": "浏览器悬浮窗",
   "browserFloatingWindowDescription": "最小化时显示实时浏览器悬浮窗。默认在输入框上方的「计算机」中显示 AI 操作。",
   "computerMoreDetails": "详细结果",

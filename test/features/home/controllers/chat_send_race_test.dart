@@ -11,6 +11,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:provider/provider.dart';
 
 import '../../../support/business_test_harness.dart';
+import 'package:Kelivo/core/services/browser/browser_agent_session.dart';
 import 'package:Kelivo/core/services/workspace/task_plan.dart';
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/database/app_database.dart';
@@ -1492,6 +1493,31 @@ void main() {
         isFalse,
       );
       await source.close();
+    });
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Stop interrupts the shared browser only for its own chat', (
+    tester,
+  ) async {
+    final controller = await pumpHarness(tester);
+    final browser = BrowserAgentSession.instance;
+    addTearDown(() {
+      browser.endAction();
+      browser.setOwnerConversationId(null);
+    });
+    await tester.runAsync(() async {
+      final convo = await openConversation(controller);
+      browser.setOwnerConversationId('another-chat');
+      browser.beginAction();
+      await controller.cancelStreaming();
+      expect(browser.stopRequested, isFalse);
+      browser.endAction();
+
+      browser.setOwnerConversationId(convo.id);
+      browser.beginAction();
+      await controller.cancelStreaming();
+      expect(browser.stopRequested, isTrue);
     });
     expect(tester.takeException(), isNull);
   });

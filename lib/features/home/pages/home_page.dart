@@ -1084,7 +1084,6 @@ class _HomePageState extends State<HomePage>
             : computerStepsFromMessage(message);
       },
       updates: _controller.streamingContentNotifier.toolHeightEvents,
-      onStop: () => unawaited(_controller.cancelStreaming()),
       child: layout,
     );
   }

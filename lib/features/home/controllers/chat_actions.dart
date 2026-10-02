@@ -22,6 +22,7 @@ import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/acp/acp_connection.dart';
 import '../../../core/services/api/retry_policy.dart';
 import '../../../core/services/api/stream/stream_chunk.dart';
+import '../../../core/services/browser/browser_agent_session.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/workspace/task_plan.dart';
 import '../../../core/services/workspace/tool_run_registry.dart';
@@ -2794,6 +2795,10 @@ class ChatActions {
     } catch (_) {
       // AskUserInteractionService may not be registered yet
     }
+    // Stop interrupts the shared browser's current action at its next wait,
+    // so a page action of this reply does not finish after the reply ends.
+    final browser = BrowserAgentSession.instance;
+    if (browser.ownerConversationId == cid) browser.requestStop();
 
     if (preparation != null && !preparation.registered.isCompleted) {
       preparation.interrupted = _background.wasInterrupted(preparation.id);

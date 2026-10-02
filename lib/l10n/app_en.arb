@@ -5577,7 +5577,6 @@
   "computerNoResult": "No result yet",
   "computerParameters": "Parameters",
   "computerResult": "Result",
-  "computerStop": "Stop",
   "browserFloatingWindowTitle": "Floating browser window",
   "browserFloatingWindowDescription": "Show a floating live browser when minimized. By default, AI actions appear in Computer above the composer.",
   "computerMoreDetails": "Detailed result",
