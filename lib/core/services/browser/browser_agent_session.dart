@@ -491,6 +491,11 @@ class BrowserAgentSession {
     // From this ready page onward every async read must share its identity.
     final navigationSequence = _navigationSequence;
     final thumbnailPageUrl = _pageUrl ?? _active?.url;
+    final thumbnailCapturedAt = DateTime.now();
+    final thumbnailPageKey = activityPageKey(
+      thumbnailPageUrl,
+      tabId: _active?.id,
+    );
     final thumbnailSequence = BrowserThumbnailCache.instance
         .reserveCaptureSequence();
     void verifyCapture() {
@@ -540,6 +545,8 @@ class BrowserAgentSession {
         sourceDirectory: dir,
         pageUrl: url,
         captureSequence: thumbnailSequence,
+        capturedAt: thumbnailCapturedAt,
+        pageKey: thumbnailPageKey,
       );
     }
     return {

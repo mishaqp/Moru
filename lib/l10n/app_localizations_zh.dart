@@ -12015,7 +12015,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get computerBrowserTyping => '正在输入…';
 
   @override
-  String get computerBrowserReading => '正在读取…';
+  String get computerBrowserReading => '正在读取页面';
 
   @override
   String get computerAllParameters => '所有参数（JSON）';
@@ -12065,6 +12065,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get browserCloseWhileAiMessage => 'AI 操作将停止。';
+
+  @override
+  String get computerActionSummary => '总结';
+
+  @override
+  String get computerBrowserResultStatus => '状态';
+
+  @override
+  String get computerBrowserResultTitle => '标题';
 
   @override
   String get computerParameterYes => '是';
@@ -24048,7 +24057,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get computerBrowserTyping => '正在输入…';
 
   @override
-  String get computerBrowserReading => '正在读取…';
+  String get computerBrowserReading => '正在读取页面';
 
   @override
   String get computerAllParameters => '所有参数（JSON）';
@@ -24098,6 +24107,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get browserCloseWhileAiMessage => 'AI 操作将停止。';
+
+  @override
+  String get computerActionSummary => '总结';
+
+  @override
+  String get computerBrowserResultStatus => '状态';
+
+  @override
+  String get computerBrowserResultTitle => '标题';
 
   @override
   String get computerParameterYes => '是';
@@ -36155,7 +36173,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get computerBrowserTyping => '正在輸入…';
 
   @override
-  String get computerBrowserReading => '正在讀取…';
+  String get computerBrowserReading => '正在讀取頁面';
 
   @override
   String get computerAllParameters => '所有參數（JSON）';
@@ -36205,6 +36223,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get browserCloseWhileAiMessage => 'AI 操作將停止。';
+
+  @override
+  String get computerActionSummary => '總結';
+
+  @override
+  String get computerBrowserResultStatus => '狀態';
+
+  @override
+  String get computerBrowserResultTitle => '標題';
 
   @override
   String get computerParameterYes => '是';

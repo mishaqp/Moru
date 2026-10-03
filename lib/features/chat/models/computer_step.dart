@@ -98,6 +98,10 @@ class ComputerStep {
     this.metadata = metadata == null
         ? null
         : _safeValue(metadata, _displayFilter) as Map<String, dynamic>;
+    final rawBrowser = metadata?['browser'];
+    _browserPageKey = _safeBrowserPageKey(
+      rawBrowser is Map ? rawBrowser['pageKey'] : null,
+    );
     final rawWorkspace = metadata?['workspace'];
     final rawPath = _firstText([
       if (rawWorkspace is Map) rawWorkspace['path'],
@@ -113,17 +117,10 @@ class ComputerStep {
       arguments['url'],
       _decodeMap(_resultBody(content, metadata))['url'],
     ];
-    allowsBrowserPreview = pageUrls.every((value) {
-      if (value is! String || value.isEmpty) return true;
-      final uri = Uri.tryParse(value);
-      return uri != null &&
-          (uri.isScheme('http') || uri.isScheme('https')) &&
-          uri.host.isNotEmpty &&
-          uri.userInfo.isEmpty &&
-          !isAuthenticationUri(uri) &&
-          _text(value) == value &&
-          !_hasRedaction(value);
-    });
+    allowsBrowserPreview = pageUrls.every(
+      (value) =>
+          value is! String || value.isEmpty || canPreviewBrowserPage(value),
+    );
   }
 
   ComputerStep._withRun(ComputerStep step, this.run)
@@ -138,6 +135,7 @@ class ComputerStep {
     metadata = step.metadata == null
         ? null
         : _safeValue(step.metadata, _displayFilter) as Map<String, dynamic>;
+    _browserPageKey = _safeBrowserPageKey(step._browserPageKey);
     final originalPath = step.actionPath;
     actionPath = originalPath != null && _text(originalPath) == originalPath
         ? originalPath
@@ -167,6 +165,7 @@ class ComputerStep {
   final ToolRun? run;
   final ToolDisplayRedaction? _displayFilter;
   final String _toolKey;
+  late final String? _browserPageKey;
 
   /// Original file reference only when it survived display filtering intact.
   /// Opening or reading it still requires the workspace file-access boundary.
@@ -176,6 +175,13 @@ class ComputerStep {
   late final bool allowsBrowserPreview;
 
   String _text(String value) => _safeText(value, _displayFilter);
+
+  String? _safeBrowserPageKey(Object? value) =>
+      value is String &&
+          RegExp(r'^[0-9a-f]{64}$').hasMatch(value) &&
+          _text(value) == value
+      ? value
+      : null;
 
   Map get _workspace => switch (metadata?['workspace']) {
     Map workspace => workspace,
@@ -237,13 +243,56 @@ class ComputerStep {
 
   TaskPlan? get plan => isPlan ? TaskPlan.fromArguments(arguments) : null;
 
-  String? get browserDomain {
-    if (!allowsBrowserPreview) return null;
-    for (final raw in [_decodedResult['url'], arguments['url']]) {
-      final uri = computerActionUri(raw is String ? raw : null);
-      if (uri != null) return uri.host;
+  /// Validates a live page against this step's captured launch display filter.
+  bool canPreviewBrowserPage(String? value) {
+    if (value == null || value.isEmpty) return false;
+    final uri = Uri.tryParse(value);
+    return uri != null &&
+        (uri.isScheme('http') || uri.isScheme('https')) &&
+        uri.host.isNotEmpty &&
+        uri.userInfo.isEmpty &&
+        !isAuthenticationUri(uri) &&
+        _text(value) == value &&
+        !_hasRedaction(value);
+  }
+
+  /// Cached sources must also survive this step's captured launch filter.
+  bool canPreviewBrowserSource(String value) =>
+      value.trim().isNotEmpty && _text(value) == value && !_hasRedaction(value);
+
+  String? get browserPageUrl {
+    if (kind != ComputerStepKind.browser || !allowsBrowserPreview) return null;
+    for (final value in [_decodedResult['url'], arguments['url']]) {
+      if (value is String && canPreviewBrowserPage(value)) return value;
     }
     return null;
+  }
+
+  Map get _browser => switch (metadata?['browser']) {
+    Map browser => browser,
+    _ => const {},
+  };
+
+  String? get browserPageKey {
+    if (kind != ComputerStepKind.browser || !allowsBrowserPreview) return null;
+    return _browserPageKey;
+  }
+
+  /// Historical steps without a captured time cannot borrow newer previews.
+  DateTime? get browserStartedAt {
+    if (kind != ComputerStepKind.browser) return null;
+    final value = _browser['startedAt'];
+    return (value is DateTime
+            ? value
+            : value is String
+            ? DateTime.tryParse(value)
+            : null) ??
+        run?.startedAt;
+  }
+
+  String? get browserDomain {
+    final value = browserPageUrl;
+    return value == null ? null : Uri.parse(value).host;
   }
 
   bool get isError {
@@ -452,6 +501,7 @@ class ComputerStep {
         'type' || 'fill' => l10n.computerActionType,
         'screenshot' => l10n.computerActionScreenshot,
         'read' => l10n.computerActionRead,
+        'done' => l10n.computerActionSummary,
         _ => l10n.computerBrowserAction((arguments['action'] ?? '').toString()),
       };
     }
@@ -473,6 +523,7 @@ class ComputerStep {
     if (_toolKey == 'shell_output' && command != null) return command!;
     if (isPlan) return plan?.current?.text ?? l10n.computerDone;
     if (kind == ComputerStepKind.browser) {
+      if (!isRunning && arguments['action'] == 'done') return l10n.computerDone;
       if (!isRunning) return actionLabel(l10n);
       return switch (arguments['action']) {
         'navigate' || 'open' || 'new_tab' => l10n.computerBrowserOpening,

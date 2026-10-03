@@ -12716,7 +12716,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get computerBrowserTyping => 'Вводит…';
 
   @override
-  String get computerBrowserReading => 'Читает…';
+  String get computerBrowserReading => 'Читает страницу';
 
   @override
   String get computerAllParameters => 'Все параметры (JSON)';
@@ -12766,6 +12766,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get browserCloseWhileAiMessage => 'Действие ИИ будет остановлено.';
+
+  @override
+  String get computerActionSummary => 'Итог';
+
+  @override
+  String get computerBrowserResultStatus => 'Статус';
+
+  @override
+  String get computerBrowserResultTitle => 'Заголовок';
 
   @override
   String get computerParameterYes => 'Да';

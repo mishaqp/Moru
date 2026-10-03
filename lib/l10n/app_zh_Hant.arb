@@ -4479,7 +4479,7 @@
   "computerBrowserOpening": "正在開啟…",
   "computerBrowserClicking": "正在點擊…",
   "computerBrowserTyping": "正在輸入…",
-  "computerBrowserReading": "正在讀取…",
+  "computerBrowserReading": "正在讀取頁面",
   "computerAllParameters": "所有參數（JSON）",
   "computerParameterDirectory": "目錄",
   "computerParameterBackground": "背景",
@@ -4495,6 +4495,9 @@
   "browserCloseBrowser": "關閉瀏覽器",
   "browserCloseWhileAiTitle": "關閉瀏覽器？",
   "browserCloseWhileAiMessage": "AI 操作將停止。",
+  "computerActionSummary": "總結",
+  "computerBrowserResultStatus": "狀態",
+  "computerBrowserResultTitle": "標題",
   "computerParameterYes": "是",
   "computerParameterNo": "否",
   "computerBrowserAction": "{action, select, open{開啟} observe{檢視} screenshot{截圖} read{讀取} collect{收集清單} outline{頁面結構} wait_stable{等待載入} wait_for{等待元素} back{返回} forward{前進} reload{重新整理} scroll{捲動} tabs{分頁} new_tab{新增分頁} switch_tab{切換分頁} close_tab{關閉分頁} set_mode{網站模式} close{關閉瀏覽器} done{完成} click{點擊} hover{游標移入} type{輸入} submit{送出表單} press_key{按鍵} eval_js{執行頁面程式碼} fetch{頁面請求} export_cookies{匯出 Cookie} other{瀏覽器操作}}"

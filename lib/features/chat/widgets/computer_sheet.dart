@@ -6,20 +6,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter/services.dart';
 
-import '../../../core/services/browser/browser_agent_session.dart';
 import '../../../core/services/workspace/task_plan.dart';
 import '../../../core/services/workspace/file_link_resolver.dart';
 import '../../../core/services/workspace/workspace_tool_metadata.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/animations/widgets.dart';
-import '../../../shared/pages/webview/browser_mini_window.dart';
 import '../../../shared/widgets/custom_bottom_sheet.dart';
 import '../../workspace/workspace_file_navigation.dart';
 import '../../workspace/workspace_navigation.dart';
 import '../models/computer_step.dart';
 import '../models/computer_step_selection.dart';
 import 'chat_surface.dart';
+import 'computer_browser_action.dart';
 import 'computer_step_thumbnail.dart';
 import 'unified_diff_view.dart';
 
@@ -292,6 +291,8 @@ class _ComputerSheetState extends State<ComputerSheet> {
                           ),
                         if (step.isPlan && step.plan != null)
                           _ComputerPlan(plan: step.plan!)
+                        else if (step.kind == ComputerStepKind.browser)
+                          _browserResult(context, step, l10n)
                         else if (step.kind != ComputerStepKind.command)
                           _ComputerSection(
                             label: l10n.computerResult,
@@ -558,7 +559,7 @@ class _ComputerSheetState extends State<ComputerSheet> {
       field(l10n.computerParameterUrl, ['url'], primary: true);
       field(l10n.computerParameterSelector, ['selector', 'ref']);
       field(l10n.computerParameterText, ['text', 'value']);
-      known.add('action');
+      known.addAll(['action', 'summary']);
     } else if (step.kind == ComputerStepKind.file) {
       field(l10n.computerParameterPath, [
         'path',
@@ -580,42 +581,31 @@ class _ComputerSheetState extends State<ComputerSheet> {
       known.add('plan');
     }
     final hasUnknown = args.keys.any((key) => !known.contains(key));
-    if (fields.isEmpty && !hasUnknown) return const SizedBox.shrink();
+    final browserResult = step.kind == ComputerStepKind.browser
+        ? _jsonResult(step).$2
+        : null;
+    final showBrowserJson = switch (browserResult) {
+      Map() =>
+        browserResult.isNotEmpty &&
+            (args['action'] != 'done' ||
+                browserResult.keys.any(
+                  (key) => !const {'ok', 'action', 'summary'}.contains(key),
+                )),
+      List() => browserResult.isNotEmpty,
+      String() => browserResult.trim().isNotEmpty,
+      num() || bool() => true,
+      _ => false,
+    };
+    if (fields.isEmpty && !hasUnknown && !showBrowserJson) {
+      return const SizedBox.shrink();
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final field in fields)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 86,
-                    child: Text(
-                      field.$1,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      field.$2,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: chatSurfacePlainTextColor(context),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          if (hasUnknown)
+          _labeledFields(context, fields),
+          if (hasUnknown || showBrowserJson)
             Material(
               type: MaterialType.transparency,
               child: ExpansionTile(
@@ -626,15 +616,66 @@ class _ComputerSheetState extends State<ComputerSheet> {
                   style: const TextStyle(fontSize: 12),
                 ),
                 children: [
-                  _ComputerSection(
-                    label: l10n.computerParameters,
-                    text: step.parameters,
-                  ),
+                  if (hasUnknown)
+                    _ComputerSection(
+                      label: l10n.computerParameters,
+                      text: step.parameters,
+                    ),
+                  if (showBrowserJson)
+                    _ComputerSection(
+                      label: l10n.computerResult,
+                      text: const JsonEncoder.withIndent(
+                        '  ',
+                      ).convert(browserResult),
+                    ),
                 ],
               ),
             ),
         ],
       ),
+    );
+  }
+
+  Widget _browserResult(
+    BuildContext context,
+    ComputerStep step,
+    AppLocalizations l10n,
+  ) {
+    final (isJson, decoded) = _jsonResult(step);
+    final result = decoded is Map ? decoded : const {};
+    final summary = result['summary'] ?? step.arguments['summary'];
+    if (step.arguments['action'] == 'done' || result.isEmpty) {
+      final text = summary is String && summary.trim().isNotEmpty
+          ? summary
+          : !isJson && step.result.isNotEmpty
+          ? step.result
+          : l10n.computerNoResult;
+      return _ComputerSection(
+        label: l10n.computerResult,
+        text: text,
+        monospace: false,
+        textKey: const ValueKey('computer-step-result'),
+      );
+    }
+    final fields = <(String, String)>[
+      if (result['ok'] case final bool ok)
+        (
+          l10n.computerBrowserResultStatus,
+          ok ? l10n.computerParameterYes : l10n.computerParameterNo,
+        ),
+      if (summary is String && summary.trim().isNotEmpty)
+        (l10n.computerActionSummary, summary),
+      if (result['title'] case final String title when title.isNotEmpty)
+        (l10n.computerBrowserResultTitle, title),
+      if (result['url'] case final String url when url.isNotEmpty)
+        (l10n.computerParameterUrl, url),
+      if (result['message'] ?? result['error'] case final String message
+          when message.isNotEmpty)
+        (l10n.computerResult, message),
+    ];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: _labeledFields(context, fields),
     );
   }
 
@@ -682,37 +723,45 @@ class _ComputerSheetState extends State<ComputerSheet> {
     }
   }
 
-  Future<void> _openBrowser(ComputerStep step) async {
-    final session = BrowserAgentSession.instance;
-    final result = _resultMap(step);
-    final target = computerActionUri(
-      (result['url'] ?? step.arguments['url'])?.toString(),
-    );
-    if (session.isAttached) {
-      // Switching tabs reuses the saved controller; never reload a live page
-      // merely because its historical Computer step was opened.
-      if (session.ownerConversationId == null ||
-          session.ownerConversationId == widget.conversationId) {
-        final tabId = result['tab_id'] ?? step.arguments['tab_id'];
-        final tab = session.tabs.value
-            .where(
-              (tab) =>
-                  (tabId != null && tab.id == tabId.toString()) ||
-                  (target != null && computerActionUri(tab.url) == target),
-            )
-            .firstOrNull;
-        if (tab != null && !tab.active && computerActionUri(tab.url) != null) {
-          await session.switchTab(tab.id);
-        }
-      }
-      await openSharedBrowser();
-    } else if (target != null) {
-      await openSharedBrowser(startUrl: target.toString());
-    } else {
-      await openSharedBrowser();
-    }
-  }
+  Future<void> _openBrowser(ComputerStep step) =>
+      openComputerStepBrowser(step, conversationId: widget.conversationId);
 }
+
+Widget _labeledFields(BuildContext context, List<(String, String)> fields) =>
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final field in fields)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 86,
+                  child: Text(
+                    field.$1,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    field.$2,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: chatSurfacePlainTextColor(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
 
 String _actionLabel(ComputerStep step, AppLocalizations l10n) =>
     switch (step.kind) {
@@ -731,11 +780,15 @@ IconData _actionIcon(ComputerStepKind kind) => switch (kind) {
 };
 
 Map<String, dynamic> _resultMap(ComputerStep step) {
+  final decoded = _jsonResult(step).$2;
+  return decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+}
+
+(bool, Object?) _jsonResult(ComputerStep step) {
   try {
-    final decoded = jsonDecode(step.content ?? '');
-    return decoded is Map ? Map<String, dynamic>.from(decoded) : {};
-  } catch (_) {
-    return {};
+    return (true, jsonDecode(step.result));
+  } on FormatException {
+    return (false, null);
   }
 }
 
@@ -793,11 +846,13 @@ class _ComputerSection extends StatelessWidget {
     required this.label,
     required this.text,
     this.textKey,
+    this.monospace = true,
   });
 
   final String label;
   final String text;
   final Key? textKey;
+  final bool monospace;
 
   @override
   Widget build(BuildContext context) {
@@ -822,7 +877,7 @@ class _ComputerSection extends StatelessWidget {
               key: textKey,
               style: TextStyle(
                 fontSize: 12,
-                fontFamily: 'monospace',
+                fontFamily: monospace ? 'monospace' : null,
                 color: chatSurfacePlainTextColor(context),
               ),
             ),

@@ -236,6 +236,130 @@ void main() {
     expect(find.textContaining('private-token'), findsNothing);
   });
 
+  testWidgets(
+    'browser done renders a filtered plain summary without empty JSON',
+    (tester) async {
+      const secret = 'browser-summary-private-value';
+      final redactor = AcpSecretRedactor([secret]);
+      final step =
+          await ToolDisplayRedaction(
+            text: redactor.text,
+            value: redactor.value,
+          ).run(
+            () async => _step(
+              'browser-done',
+              toolName: 'browser_use',
+              arguments: {'action': 'done', 'summary': 'Answer: $secret'},
+              content: '{"ok":true,"summary":"Answer: $secret"}',
+            ),
+          );
+      await _open(tester, locale: const Locale('ru'), steps: [step]);
+      expect(find.text('Итог'), findsOneWidget);
+      final result = tester.widget<Text>(
+        find.byKey(const ValueKey('computer-step-result')),
+      );
+      expect(result.data, 'Answer: [REDACTED]');
+      expect(result.style?.fontFamily, isNull);
+      expect(find.textContaining(secret), findsNothing);
+      expect(find.textContaining('"ok"'), findsNothing);
+      expect(find.text('Все параметры (JSON)'), findsNothing);
+      expect(find.byKey(_action), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'browser JSON result shows labeled values before raw disclosure',
+    (tester) async {
+      await _open(
+        tester,
+        steps: [
+          _step(
+            'browser-read',
+            toolName: 'browser_use',
+            arguments: {'action': 'read'},
+            content:
+                '{"ok":true,"summary":"Page summary","title":"Documentation",'
+                '"url":"https://example.com/docs","details":{"count":3}}',
+          ),
+        ],
+      );
+      expect(find.text('Status'), findsOneWidget);
+      expect(find.text('Yes'), findsOneWidget);
+      expect(find.text('Summary'), findsOneWidget);
+      expect(find.text('Page summary'), findsOneWidget);
+      expect(find.text('Title'), findsOneWidget);
+      expect(find.text('Documentation'), findsOneWidget);
+      expect(find.text('URL'), findsOneWidget);
+      expect(find.textContaining('"details"'), findsNothing);
+      expect(find.textContaining('"ok"'), findsNothing);
+      await tester.tap(find.text('All parameters (JSON)'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('"details"'), findsOneWidget);
+      expect(find.textContaining('"ok"'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final json in ['{}', '[]']) {
+    testWidgets('empty browser result $json omits raw JSON and disclosure', (
+      tester,
+    ) async {
+      await _open(
+        tester,
+        steps: [
+          _step(
+            'empty-browser-result',
+            toolName: 'browser_use',
+            arguments: {'action': 'done'},
+            content: json,
+          ),
+        ],
+      );
+      expect(find.text('No result yet'), findsOneWidget);
+      expect(find.text(json), findsNothing);
+      expect(find.text('All parameters (JSON)'), findsNothing);
+    });
+  }
+
+  testWidgets('browser result lists only appear in collapsed JSON', (
+    tester,
+  ) async {
+    await _open(
+      tester,
+      steps: [
+        _step(
+          'browser-result-list',
+          toolName: 'browser_use',
+          arguments: {'action': 'read'},
+          content: '[{"title":"List detail"}]',
+        ),
+      ],
+    );
+    expect(find.textContaining('List detail'), findsNothing);
+    expect(find.text('No result yet'), findsOneWidget);
+    await tester.tap(find.text('All parameters (JSON)'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('"title"'), findsOneWidget);
+    expect(find.textContaining('List detail'), findsOneWidget);
+  });
+
+  testWidgets('plain browser result text remains readable', (tester) async {
+    await _open(
+      tester,
+      steps: [
+        _step(
+          'plain-browser-result',
+          toolName: 'browser_use',
+          arguments: {'action': 'read'},
+          content: 'Legacy page text',
+        ),
+      ],
+    );
+    expect(find.text('Legacy page text'), findsOneWidget);
+    expect(find.text('All parameters (JSON)'), findsNothing);
+  });
+
   testWidgets('stopped plan never says AI is working', (tester) async {
     await _open(
       tester,
@@ -1260,7 +1384,14 @@ void main() {
                 ),
                 ComputerStepThumbnail(
                   key: const ValueKey('newer-fallback-shot'),
-                  step: _step('navigate', toolName: 'browser_use'),
+                  step: _step(
+                    'navigate',
+                    toolName: 'browser_use',
+                    arguments: {'url': 'https://example.com/newer'},
+                    metadata: {
+                      'browser': {'startedAt': '2020-01-01T00:00:00Z'},
+                    },
+                  ),
                   conversationId: 'chat-a',
                 ),
               ],
@@ -1376,7 +1507,14 @@ void main() {
                   ),
                 ComputerStepThumbnail(
                   key: const ValueKey('reused-latest'),
-                  step: _step('browser_use-0', toolName: 'browser_use'),
+                  step: _step(
+                    'browser_use-0',
+                    toolName: 'browser_use',
+                    arguments: {'url': 'https://example.com/latest'},
+                    metadata: {
+                      'browser': {'startedAt': '2020-01-01T00:00:00Z'},
+                    },
+                  ),
                   conversationId: 'chat-a',
                 ),
               ],
@@ -1459,7 +1597,14 @@ void main() {
               children: [
                 ComputerStepThumbnail(
                   key: const ValueKey('same-chat'),
-                  step: _step('new-step', toolName: 'browser_use'),
+                  step: _step(
+                    'new-step',
+                    toolName: 'browser_use',
+                    arguments: {'url': 'https://example.com/'},
+                    metadata: {
+                      'browser': {'startedAt': '2020-01-01T00:00:00Z'},
+                    },
+                  ),
                   conversationId: 'chat-a',
                 ),
                 ComputerStepThumbnail(

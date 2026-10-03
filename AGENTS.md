@@ -81,8 +81,15 @@ package name does not require building other platforms.
   and keeps the open plan (`TaskPlanChip`) nearby. It replaces the separate
   running-command chip in the composer, follows the newest working step,
   retains a manually selected working step and briefly shows the final result.
-  The working card is at most 88dp at text scale 1.0 (76x56 preview) and has
-  no Stop of its own: the composer's Stop cancels the reply and, through
+  The working card is at most 88dp at text scale 1.0 (76x56 preview for
+  commands/files, 112x64 light page preview for browser steps). Browser cards
+  have a domain pill with a blue running pulse (disabled by reduced motion),
+  green success, red error or grey stopped dot. The preview expands the shared
+  browser without reloading its controller; the rest opens ComputerSheet.
+  Browser previews use an exact saved source or a proven same-page snapshot
+  captured no earlier than the step start; a different site's latest chat image
+  never fills the placeholder. The card has no Stop of its own: the composer's
+  Stop cancels the reply and, through
   `cancelStreamingById`, the shared browser action of that chat. A running
   browser step without a URL yet is named from that chat's live browser page
   and current action. Browser tool cards read "Browser · site/action", never
@@ -96,7 +103,10 @@ package name does not require building other platforms.
   Preserve original specialized details on long press, reruns and approvals.
   The sheet centers its title between equal 44dp close/action slots, shows
   known parameters as labeled rows and hides other filtered JSON in a collapsed
-  section. Commands fill the result area and follow output until the user
+  section; empty JSON sections are hidden. Browser done actions use a Summary
+  chip and plain summary text; other browser results show readable status,
+  summary, title and URL, with raw JSON only in the collapsed parameters.
+  Commands fill the result area and follow output until the user
   scrolls up; update_plan shows its actual checklist. Terminal response status
   always overrides "AI is working", including when its background job lives on.
   Cancellation durably marks unfinished response tools as stopped, clears live

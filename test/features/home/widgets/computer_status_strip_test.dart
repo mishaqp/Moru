@@ -30,6 +30,10 @@ Widget _host({
   return ChangeNotifierProvider.value(
     value: registry,
     child: MaterialApp(
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(disableAnimations: true),
+        child: child!,
+      ),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
@@ -228,7 +232,20 @@ void main() {
       );
       await tester.pumpWidget(_host(registry: registry, steps: [browser]));
       await tester.pumpAndSettle();
-      expect(find.textContaining('Browser'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('computer-browser-title')),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('computer-browser-title')))
+            .data,
+        'Browser',
+      );
+      expect(
+        find.byKey(const ValueKey('computer-step-thumbnail:current-browser')),
+        findsOneWidget,
+      );
       expect(find.text('2 / 2'), findsOneWidget);
       oldRun.complete(status: ToolRunStatus.succeeded);
       await tester.pumpAndSettle();
@@ -621,7 +638,18 @@ void main() {
         expect(find.text('notes.md'), findsWidgets);
         expect(find.textContaining('Opening lines'), findsOneWidget);
       } else {
-        expect(find.textContaining('Browser'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('computer-browser-title')),
+          findsOneWidget,
+        );
+        expect(
+          tester
+              .widget<Text>(
+                find.byKey(const ValueKey('computer-browser-title')),
+              )
+              .data,
+          'Browser · example.com',
+        );
       }
       await tester.pumpWidget(const SizedBox());
       registry.dispose();

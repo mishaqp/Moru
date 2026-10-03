@@ -136,6 +136,105 @@ void main() {
     },
   );
 
+  test('fallback belongs to the step page and capture time', () async {
+    final file = await picture('owned-page');
+    final capturedAt = DateTime.utc(2026, 10, 3, 12);
+    final thumbnail = await cache.capture(
+      conversationId: 'chat',
+      stepId: 'activity',
+      sourcePath: file.path,
+      sourceDirectory: dir,
+      pageUrl: 'https://ya.ru/search',
+      pageKey: 'yandex-page',
+      capturedAt: capturedAt,
+    );
+    expect(thumbnail!.pageUrl, 'https://ya.ru/search');
+    expect(thumbnail.pageKey, 'yandex-page');
+    expect(thumbnail.capturedAt, capturedAt);
+    expect(
+      cache.previewForStep(
+        'chat',
+        pageUrl: 'https://ya.ru',
+        startedAt: capturedAt,
+      ),
+      same(thumbnail),
+    );
+    expect(
+      cache.previewForStep(
+        'chat',
+        activityId: 'activity',
+        pageUrl: 'https://ya.ru/search',
+        pageKey: 'yandex-page',
+        startedAt: capturedAt,
+      ),
+      same(thumbnail),
+    );
+    for (final invalid in [
+      (page: 'https://wttr.in', key: null, start: capturedAt),
+      (page: 'https://ya.ru', key: 'another-page', start: capturedAt),
+      (
+        page: 'https://ya.ru',
+        key: null,
+        start: capturedAt.add(const Duration(seconds: 1)),
+      ),
+      (page: 'https://ya.ru', key: null, start: null),
+      (page: null, key: null, start: capturedAt),
+      (
+        page: 'https://ya.ru/?access_token=private',
+        key: null,
+        start: capturedAt,
+      ),
+    ]) {
+      expect(
+        cache.previewForStep(
+          'chat',
+          activityId: 'activity',
+          pageUrl: invalid.page,
+          pageKey: invalid.key,
+          startedAt: invalid.start,
+        ),
+        isNull,
+      );
+    }
+    expect(
+      cache.previewForStep(
+        'other-chat',
+        pageUrl: 'https://ya.ru',
+        startedAt: capturedAt,
+      ),
+      isNull,
+    );
+  });
+
+  test(
+    'restored source stays exact but cannot become a recent fallback',
+    () async {
+      final file = await picture('restored-page');
+      final thumbnail = await cache.capture(
+        conversationId: 'chat',
+        stepId: 'restored',
+        sourcePath: file.path,
+        sourceDirectory: dir,
+        pageUrl: 'https://ya.ru',
+        historical: true,
+      );
+      expect(thumbnail!.capturedAt, isNull);
+      expect(
+        cache.previewForStep('chat', sourcePath: file.path),
+        same(thumbnail),
+      );
+      expect(
+        cache.previewForStep(
+          'chat',
+          activityId: 'restored',
+          pageUrl: 'https://ya.ru',
+          startedAt: DateTime.utc(2020),
+        ),
+        isNull,
+      );
+    },
+  );
+
   test(
     'a restored preview remains available at capacity beside native latest',
     () async {
