@@ -31,6 +31,7 @@ import 'core/providers/memory_provider.dart';
 import 'core/providers/memory_provider_v2.dart';
 import 'core/providers/backup_provider.dart';
 import 'core/providers/local_snapshot_provider.dart';
+import 'core/services/logging/problem_report_service.dart';
 import 'features/backup/local_snapshot_scheduler.dart';
 import 'core/services/memory/memory_pipeline.dart';
 import 'core/services/memory/memory_usage_meter.dart';
@@ -70,6 +71,8 @@ import 'core/services/backup/restore_business_lease.dart';
 import 'core/services/backup/restore_startup_gate.dart';
 import 'core/services/backup/restore_receipt.dart';
 import 'core/services/mcp/mcp_tool_service.dart';
+import 'core/services/acp/acp_agent_manager.dart';
+import 'core/services/acp/acp_chat_sessions.dart';
 import 'core/services/logging/flutter_logger.dart';
 import 'core/services/storage/storage_usage_service.dart';
 import 'features/home/services/ask_user_interaction_service.dart';
@@ -152,6 +155,11 @@ Future<void> main() async {
         } catch (_) {}
       }
       FlutterLogger.installGlobalHandlers();
+      // Diagnostic exports, including private Android share-cache copies,
+      // never survive the next launch. Cleanup touches only our report names.
+      try {
+        await ProblemReportService().cleanup(all: true);
+      } catch (_) {}
       final appDataDirectory = await AppDirectories.getAppDataDirectory();
       final RestoreReceipt? restoreOutcome;
       RestoreBusinessLease? businessLease;
@@ -209,14 +217,14 @@ Future<void> main() async {
         PaintingBinding.instance.imageCache.maximumSizeBytes =
             48 << 20; // ~48MB
       } catch (_) {}
-      // Avoid preloading all system fonts at launch (huge memory on desktop)
+      // Load selected fonts lazily to limit startup memory
       // Debug logging and global error handlers were enabled previously for diagnosis.
       // They are commented out now per request to reduce log noise.
       // FlutterError.onError = (FlutterErrorDetails details) { ... };
       // WidgetsBinding.instance.platformDispatcher.onError = (Object error, StackTrace stack) { ... };
       // logging.Logger.root.level = logging.Level.ALL;
       // logging.Logger.root.onRecord.listen((rec) { ... });
-      // Cache current Documents directory to fix sandboxed absolute paths on iOS
+      // Cache Documents to resolve imported legacy attachment paths
       await SandboxPathResolver.init();
       ChatDatabaseLease? processDatabaseLease;
       BusinessPreferences? businessPreferences;
@@ -446,7 +454,7 @@ class _RestoreProgressApp extends StatelessWidget {
     final palette = ThemePalettes.defaultPalette;
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Kelivo',
+      title: 'Moru',
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       theme: buildLightThemeForScheme(palette.light),
@@ -472,7 +480,7 @@ class _RestoreFailureApp extends StatelessWidget {
     final palette = ThemePalettes.defaultPalette;
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Kelivo',
+      title: 'Moru',
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       theme: buildLightThemeForScheme(palette.light),
@@ -512,7 +520,7 @@ class MigrationApp extends StatelessWidget {
     final palette = ThemePalettes.defaultPalette;
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Kelivo',
+      title: 'Moru',
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       theme: buildLightThemeForScheme(palette.light),
@@ -589,6 +597,7 @@ class MyApp extends StatelessWidget {
           create: (_) => ToolApprovalService(),
           update: (_, settings, approval) {
             final service = approval ?? ToolApprovalService();
+            MobileBackgroundCoordinator.instance.bindApprovals(service);
             service.setAutoApproveAll(settings.toolAutoApproveAll);
             return service;
           },
@@ -688,6 +697,43 @@ class MyApp extends StatelessWidget {
             environment: ctx.read<EnvironmentProvider>(),
             workspaces: ctx.read<WorkspaceProvider>(),
           ),
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) {
+            final extras = ctx.read<_WorkspaceStackHolder>();
+            final manager = AcpAgentManager(
+              preferences: businessPreferences,
+              runtimeProvider: ctx.read<WorkspaceRuntimeProvider>(),
+              environment: ctx.read<EnvironmentProvider>(),
+              dependencies: extras.dependencies,
+            );
+            // The Node.js installer arrives with the workspace stack.
+            extras.addListener(
+              () => manager.dependencies = extras.dependencies,
+            );
+            return manager;
+          },
+        ),
+        ChangeNotifierProvider<AcpChatSessions>(
+          create: (ctx) {
+            final manager = ctx.read<AcpAgentManager>();
+            return AcpChatSessions(
+              start:
+                  (
+                    spec,
+                    provider, {
+                    required cwd,
+                    required mounts,
+                    required authMode,
+                  }) => manager.start(
+                    spec,
+                    provider,
+                    cwd: cwd,
+                    mounts: mounts,
+                    authMode: authMode,
+                  ),
+            );
+          },
         ),
         ProxyProvider<_WorkspaceStackHolder, EnvironmentManager?>(
           update: (_, extras, __) => extras.environmentManager,
@@ -792,9 +838,9 @@ class MyApp extends StatelessWidget {
               final effectiveAppFont = themes.fontFamily;
               return MaterialApp(
                 debugShowCheckedModeBanner: false,
-                title: 'Kelivo',
+                title: 'Moru',
                 navigatorKey: rootNavigatorKey,
-                // App UI language; null = follow system (respects iOS per-app language)
+                // App UI language; null = follow the Android system language
                 locale: themes.locale,
                 supportedLocales: AppLocalizations.supportedLocales,
                 localizationsDelegates: AppLocalizations.localizationsDelegates,

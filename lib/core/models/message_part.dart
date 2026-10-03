@@ -27,6 +27,8 @@ sealed class MessagePart {
         return FilePart.fromPayload(payload);
       case 'provider_auth_error':
         return ProviderAuthErrorPart.fromPayload(payload);
+      case 'agent_error':
+        return AgentErrorPart.fromPayload(payload);
       default:
         return UnknownPart(rawKind: kind, payload: payload);
     }
@@ -35,6 +37,42 @@ sealed class MessagePart {
   String get kind;
 
   String encodePayload();
+}
+
+/// Durable agent failure details for the UI, excluded from model input.
+final class AgentErrorPart extends MessagePart {
+  const AgentErrorPart({required this.message, this.details});
+
+  factory AgentErrorPart.fromPayload(String payload) {
+    final data = _decodeObjectPayload(payload);
+    final message = data['message'];
+    if (message is! String || message.isEmpty) {
+      throw const _MessagePartFormatException('missing_error_message');
+    }
+    return AgentErrorPart(
+      message: message,
+      details: _optionalString(data, 'details'),
+    );
+  }
+
+  final String message;
+  final String? details;
+
+  @override
+  String get kind => 'agent_error';
+
+  @override
+  String encodePayload() =>
+      jsonEncode({'message': message, if (details != null) 'details': details});
+
+  @override
+  bool operator ==(Object other) =>
+      other is AgentErrorPart &&
+      other.message == message &&
+      other.details == details;
+
+  @override
+  int get hashCode => Object.hash(message, details);
 }
 
 /// Durable recovery action for an OAuth failure, excluded from model input.

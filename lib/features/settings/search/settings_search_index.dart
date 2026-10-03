@@ -25,6 +25,7 @@ enum SettingsSearchDestination {
   search,
   tts,
   mcp,
+  agents,
   workspace,
   skills,
   quickPhrases,
@@ -36,6 +37,7 @@ enum SettingsSearchDestination {
   storage,
   scheduledTasks,
   miniApps,
+  miniAppWeb,
   hotkeys,
   stats,
   toolSchemas,
@@ -69,6 +71,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.search => l.settingsPageSearch,
     SettingsSearchDestination.tts => l.settingsPageTts,
     SettingsSearchDestination.mcp => l.settingsPageMcp,
+    SettingsSearchDestination.agents => l.agentsTitle,
     SettingsSearchDestination.workspace => l.settingsPageWorkspace,
     SettingsSearchDestination.skills => l.settingsPageSkills,
     SettingsSearchDestination.quickPhrases => l.settingsPageQuickPhrase,
@@ -81,6 +84,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.storage => l.settingsPageChatStorage,
     SettingsSearchDestination.scheduledTasks => l.scheduledTasksTitle,
     SettingsSearchDestination.miniApps => l.miniAppsTitle,
+    SettingsSearchDestination.miniAppWeb => l.miniAppsWebTitle,
     SettingsSearchDestination.hotkeys => l.settingsPageHotkeys,
     SettingsSearchDestination.stats => l.settingsPageStatistics,
     SettingsSearchDestination.toolSchemas => l.toolSchemaSettingsPageTitle,
@@ -109,6 +113,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.search => LucideIcons.globe,
     SettingsSearchDestination.tts => LucideIcons.volume2,
     SettingsSearchDestination.mcp => LucideIcons.terminal,
+    SettingsSearchDestination.agents => LucideIcons.bot,
     SettingsSearchDestination.workspace => LucideIcons.folderCode,
     SettingsSearchDestination.skills => LucideIcons.wandSparkles,
     SettingsSearchDestination.quickPhrases => LucideIcons.zap,
@@ -120,6 +125,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.storage => LucideIcons.hardDrive,
     SettingsSearchDestination.scheduledTasks => LucideIcons.clock,
     SettingsSearchDestination.miniApps => LucideIcons.layoutGrid,
+    SettingsSearchDestination.miniAppWeb => LucideIcons.earth,
     SettingsSearchDestination.hotkeys => LucideIcons.keyboard,
     SettingsSearchDestination.stats => LucideIcons.chartColumnBig,
     SettingsSearchDestination.toolSchemas => LucideIcons.wrench,
@@ -382,6 +388,13 @@ class SettingsSearchIndex {
       keywords: 'mcp server tools sse stdio streamable 工具 服务器 伺服器',
     );
     add(
+      'agents',
+      SettingsSearchDestination.agents,
+      (l) => l.agentsTitle,
+      page: true,
+      keywords: 'agents acp claude code codex opencode агенты агент 智能体 代理',
+    );
+    add(
       'workspace',
       SettingsSearchDestination.workspace,
       (l) => l.settingsPageWorkspace,
@@ -461,6 +474,16 @@ class SettingsSearchIndex {
       (l) => l.miniAppsTitle,
       page: true,
       keywords: 'mini apps applets widgets приложения мини 小应用 小應用 应用',
+    );
+
+    add(
+      'miniAppWeb',
+      SettingsSearchDestination.miniAppWeb,
+      (l) => l.miniAppsWebTitle,
+      page: true,
+      keywords:
+          'web server lan wifi browser localhost mdns веб сервер сеть браузер '
+          '网页 服务器 局域网 網頁 伺服器',
     );
 
     add(
@@ -704,9 +727,14 @@ class SettingsSearchIndex {
       (l) => l.displaySettingsPageMessageNavButtonsTitle,
     );
     add(
-      'displaySettingsPageShowChatListDateTitle',
+      'displaySettingsPageSidebarThumbnailsTitle',
       SettingsSearchDestination.behavior,
-      (l) => l.displaySettingsPageShowChatListDateTitle,
+      (l) => l.displaySettingsPageSidebarThumbnailsTitle,
+    );
+    add(
+      'sideDrawerShortcutsTitle',
+      SettingsSearchDestination.behavior,
+      (l) => l.sideDrawerShortcutsTitle,
     );
     add(
       'displaySettingsPageKeepSidebarOpenOnAssistantTapTitle',

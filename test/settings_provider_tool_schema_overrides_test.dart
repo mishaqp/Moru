@@ -4,14 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/models/tool_schema_override.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
-import 'package:Kelivo/core/services/app_exit_flush.dart';
 
 import 'support/business_test_harness.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  tearDown(AppExitFlush.debugReset);
 
   test('tool schema overrides default to empty', () async {
     final harness = await createBusinessTestHarness(initial: {});
@@ -129,7 +126,7 @@ void main() {
     );
   });
 
-  test('app-exit flush persists the last live edit', () async {
+  test('explicit flush persists the last live edit', () async {
     final harness = await createBusinessTestHarness(initial: {});
     final settings = SettingsProvider(harness.preferences);
     addTearDown(settings.dispose);
@@ -141,7 +138,7 @@ void main() {
     );
     expect(harness.preferences.getString('tool_schema_overrides_v1'), isNull);
 
-    await AppExitFlush.flushAll();
+    await settings.flushPendingToolSchemaOverridePersist();
     expect(
       jsonDecode(harness.preferences.getString('tool_schema_overrides_v1')!),
       {

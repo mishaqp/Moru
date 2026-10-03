@@ -8,6 +8,7 @@ import 'package:Kelivo/core/models/mobile_background_settings.dart';
 import 'package:Kelivo/core/services/mobile_background.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
+import 'package:Kelivo/core/services/api/stream/stream_chunk.dart';
 import 'package:Kelivo/features/home/controllers/chat_controller.dart';
 import 'package:Kelivo/features/home/controllers/chat_actions.dart';
 import 'package:Kelivo/features/home/controllers/generation_controller.dart';
@@ -30,6 +31,17 @@ class _ThrowingFinalizeChatService extends ChatService {
   final terminalStates = <GenerationRunState>[];
   ChatMessage? lastMessage;
   String? lastErrorCode;
+  final checkpoints = <ChatMessage>[];
+
+  @override
+  Future<void> updateStreamingCheckpointSilent(
+    ChatMessage message,
+    List<Map<String, dynamic>> toolEvents, {
+    String? generationRunId,
+    int? checkpointSeq,
+  }) async {
+    checkpoints.add(message);
+  }
 
   @override
   Future<GenerationRun?> finalizeGenerationRunSilent({
@@ -108,6 +120,296 @@ class _ThrowingFinalizeChatService extends ChatService {
 }
 
 void main() {
+  for (final failed in [false, true]) {
+    testWidgets(
+      'terminal ${failed ? 'failure' : 'completion'} keeps foreground owner until FIFO successor registers',
+      (tester) async {
+        final service = _ThrowingFinalizeChatService(failCompletion: false);
+        final settings = SettingsProvider(createBusinessTestPreferences());
+        const channel = MethodChannel('test.chat_actions.fifo_handoff');
+        final snapshots = <Map>[];
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          (call) async {
+            if (call.method == 'sync') snapshots.add(call.arguments as Map);
+            return call.method == 'sync' ? <String, Object?>{} : null;
+          },
+        );
+        final background = MobileBackgroundCoordinator(
+          platform: TargetPlatform.android,
+          channel: channel,
+        );
+        addTearDown(settings.dispose);
+        addTearDown(background.dispose);
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            channel,
+            null,
+          ),
+        );
+        late ChatActions actions;
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Builder(
+                builder: (context) {
+                  actions = _actionsFor(
+                    context,
+                    service,
+                    settings,
+                    background,
+                  ).actions;
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.runAsync(() async {
+          await background.configure(
+            const MobileBackgroundSettings(androidEnabled: true),
+            await AppLocalizations.delegate.load(const Locale('en')),
+          );
+          await background.start(
+            id: 'first',
+            conversationId: 'conversation-1',
+            title: 'First',
+            cancel: () async {},
+          );
+          background.didChangeAppLifecycleState(AppLifecycleState.paused);
+          final entered = Completer<void>();
+          final release = Completer<void>();
+          actions.onLoadingChanged = (_, loading) {
+            if (!loading) expect(background.activeTaskIds, contains('first'));
+          };
+          actions.onGenerationReadyForNext = (cid, finishingId) async {
+            expect(cid, 'conversation-1');
+            expect(finishingId, 'first');
+            expect(service.terminalStates, [
+              failed ? GenerationRunState.failed : GenerationRunState.completed,
+            ]);
+            entered.complete();
+            await release.future;
+          };
+          final state = StreamingState(
+            GenerationContext(
+              executionId: 'first',
+              assistantMessage: ChatMessage(
+                id: 'assistant',
+                conversationId: 'conversation-1',
+                role: 'assistant',
+                content: 'reply',
+                isStreaming: true,
+              ),
+              apiMessages: const [],
+              userImagePaths: const [],
+              allowImagesApiRouting: false,
+              providerKey: 'test',
+              modelId: 'test-model',
+              assistant: null,
+              settings: settings,
+              config: ProviderConfig(
+                id: 'test',
+                enabled: true,
+                name: 'Test',
+                apiKey: '',
+                baseUrl: '',
+              ),
+              toolDefs: const [],
+              supportsReasoning: false,
+              enableReasoning: false,
+              streamOutput: true,
+            ),
+          );
+          actions.debugTrackStreamingState(state);
+          final terminal = failed
+              ? actions.debugHandleStreamError(StateError('failed'), state)
+              : actions.debugFinishStreaming(state);
+          await entered.future;
+          expect(background.activeTaskIds, {'first'});
+          await background.start(
+            id: 'successor',
+            conversationId: 'conversation-1',
+            title: 'Next',
+            cancel: () async {},
+          );
+          expect(background.activeTaskIds, {'first', 'successor'});
+          release.complete();
+          await terminal;
+          expect(background.activeTaskIds, {'successor'});
+          final protected = snapshots.skipWhile(
+            (snapshot) => (snapshot['tasks'] as List).isEmpty,
+          );
+          expect(
+            protected.map((snapshot) => snapshot['tasks']),
+            everyElement(isNotEmpty),
+          );
+          await background.finish('successor', BackgroundTaskOutcome.cancelled);
+        });
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+  testWidgets(
+    'late callbacks cannot finish a newer continuation of the same message',
+    (tester) async {
+      final service = _ThrowingFinalizeChatService(failCompletion: false);
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      final background = MobileBackgroundCoordinator(
+        platform: TargetPlatform.android,
+      );
+      addTearDown(settings.dispose);
+      addTearDown(background.dispose);
+      late ChatActions actions;
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+            ChangeNotifierProvider<ChatService>.value(value: service),
+          ],
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) {
+                actions = _actionsFor(
+                  context,
+                  service,
+                  settings,
+                  background,
+                ).actions;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+      );
+      StreamingState continuation() => StreamingState(
+        GenerationContext(
+          assistantMessage: ChatMessage(
+            id: 'same-assistant',
+            role: 'assistant',
+            content: 'reply',
+            conversationId: 'conversation-1',
+            isStreaming: true,
+          ),
+          apiMessages: const [],
+          userImagePaths: const [],
+          allowImagesApiRouting: false,
+          providerKey: 'test',
+          modelId: 'test-model',
+          assistant: null,
+          settings: settings,
+          config: ProviderConfig(
+            id: 'test',
+            enabled: true,
+            name: 'Test',
+            apiKey: '',
+            baseUrl: '',
+          ),
+          toolDefs: const [],
+          supportsReasoning: false,
+          enableReasoning: false,
+          streamOutput: true,
+        ),
+      );
+      final previous = continuation();
+      final current = continuation();
+      actions.debugTrackStreamingState(previous);
+      actions.debugTrackStreamingState(current);
+      await actions.debugHandleStreamChunk(
+        const TextDelta(id: 'old', text: 'stale'),
+        previous,
+      );
+      await actions.debugHandleStreamError(
+        StateError('old execution'),
+        previous,
+      );
+      await actions.debugFinishStreaming(previous);
+      expect(previous.fullContentRaw, 'reply');
+      expect(current.fullContentRaw, 'reply');
+      expect(service.terminalStates, isEmpty);
+      expect(service.checkpoints, isEmpty);
+      expect(actions.activeStreamingMessageIds, {'same-assistant'});
+      await actions.debugHandleStreamChunk(
+        const TextDelta(id: 'new', text: ' current'),
+        current,
+      );
+      expect(current.fullContentRaw, 'reply current');
+      final finished = actions.debugFinishStreaming(current);
+      for (var tick = 0; tick < 10; tick++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await finished;
+      expect(service.terminalStates, [GenerationRunState.completed]);
+      expect(service.lastMessage!.content, 'reply current');
+    },
+  );
+
+  testWidgets(
+    'lifecycle flush includes both active chats outside the selected timeline',
+    (tester) async {
+      final service = _ThrowingFinalizeChatService(failCompletion: false);
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      final background = MobileBackgroundCoordinator(
+        platform: TargetPlatform.android,
+      );
+      addTearDown(settings.dispose);
+      addTearDown(background.dispose);
+      late ChatActions actions;
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+            ChangeNotifierProvider<ChatService>.value(value: service),
+          ],
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) {
+                actions = _actionsFor(
+                  context,
+                  service,
+                  settings,
+                  background,
+                ).actions;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+      );
+      actions.debugTrackActiveMessage(
+        ChatMessage(
+          id: 'a-message',
+          role: 'assistant',
+          content: 'partial a',
+          conversationId: 'a',
+          isStreaming: true,
+        ),
+      );
+      actions.debugTrackActiveMessage(
+        ChatMessage(
+          id: 'b-message',
+          role: 'assistant',
+          content: 'partial b',
+          conversationId: 'b',
+          isStreaming: true,
+        ),
+      );
+      await actions.flushAllActiveGenerationProgress();
+      expect(
+        service.checkpoints.map((message) => message.conversationId),
+        unorderedEquals(['a', 'b']),
+      );
+      expect(
+        service.checkpoints.map((message) => message.content),
+        unorderedEquals(['partial a', 'partial b']),
+      );
+    },
+  );
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues(const {});
 
@@ -115,7 +417,7 @@ void main() {
     final service = _ThrowingFinalizeChatService(failCompletion: false);
     final settings = SettingsProvider(createBusinessTestPreferences());
     final background = MobileBackgroundCoordinator(
-      platform: TargetPlatform.linux,
+      platform: TargetPlatform.android,
     );
     addTearDown(background.dispose);
     addTearDown(settings.dispose);
@@ -147,6 +449,7 @@ void main() {
     );
     final state = StreamingState(
       GenerationContext(
+        executionId: 'assistant-1',
         assistantMessage: ChatMessage(
           id: 'assistant-1',
           role: 'assistant',
@@ -257,6 +560,7 @@ void main() {
 
     final state = StreamingState(
       GenerationContext(
+        executionId: 'assistant-1',
         assistantMessage: ChatMessage(
           id: 'assistant-1',
           role: 'assistant',
@@ -341,7 +645,7 @@ void main() {
       final service = _ThrowingFinalizeChatService(failCompletion: false);
       final settings = SettingsProvider(createBusinessTestPreferences());
       final background = MobileBackgroundCoordinator(
-        platform: TargetPlatform.linux,
+        platform: TargetPlatform.android,
       );
       addTearDown(background.dispose);
       addTearDown(settings.dispose);
@@ -379,6 +683,7 @@ void main() {
       );
       final state = StreamingState(
         GenerationContext(
+          executionId: 'assistant-1',
           assistantMessage: ChatMessage(
             id: 'assistant-1',
             role: 'assistant',
@@ -494,6 +799,7 @@ void main() {
       );
       final state = StreamingState(
         GenerationContext(
+          executionId: 'assistant-1',
           assistantMessage: ChatMessage(
             id: 'assistant-1',
             role: 'assistant',

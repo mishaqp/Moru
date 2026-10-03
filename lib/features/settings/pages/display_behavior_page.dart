@@ -22,6 +22,7 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
         s.keepScreenOnDuringGeneration,
         s.keepSidebarOpenOnAssistantTap,
         s.keepSidebarOpenOnTopicTap,
+        s.sidebarShortcuts.length,
         s.keepThinkingAndToolCardsWhenEditingAssistant,
         s.longPasteAsFile,
         s.longPasteAsFileThreshold,
@@ -31,7 +32,7 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
         s.newChatOnLaunch,
         s.regenerateDeleteTrailingMessages,
         s.showAppUpdates,
-        s.showChatListDate,
+        s.sidebarThumbnails,
         s.showRegenerateConfirmDialog,
         s.showToolResultSummary,
       ),
@@ -213,11 +214,11 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
               _iosDivider(context),
               _iosSwitchRow(
                 context,
-                icon: Lucide.Calendar,
-                label: l10n.displaySettingsPageShowChatListDateTitle,
-                value: sp.showChatListDate,
+                icon: Lucide.Image,
+                label: l10n.displaySettingsPageSidebarThumbnailsTitle,
+                value: sp.sidebarThumbnails,
                 onChanged: (v) =>
-                    context.read<SettingsProvider>().setShowChatListDate(v),
+                    context.read<SettingsProvider>().setSidebarThumbnails(v),
               ),
               _iosDivider(context),
               _iosSwitchRow(
@@ -250,6 +251,14 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
                 onChanged: (v) => context
                     .read<SettingsProvider>()
                     .setKeepAssistantListExpandedOnSidebarClose(v),
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.LayoutGrid,
+                label: l10n.sideDrawerShortcutsTitle,
+                detailText: '${sp.sidebarShortcuts.length}',
+                onTap: () => showSidebarShortcutPicker(context),
               ),
               _iosDivider(context),
               _iosSwitchRow(

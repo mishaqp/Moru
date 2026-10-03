@@ -52,6 +52,22 @@ class PrepareReleaseTest(unittest.TestCase):
         self.assertEqual((self.destination / f'{target.name}.sha256').read_text(),
                          f'{self.digest}  {target.name}\n')
 
+    def test_prerelease_uses_its_own_tag_and_filename(self):
+        result = prepare_release(self.root, self.apk_dir, self.reports.parent,
+                                 self.destination, self.commit, prerelease=7)
+        target = self.destination / 'Moru-v0.1.1-pre.7-arm64-v8a-release.apk'
+        self.assertEqual(target.read_bytes(), self.apk.read_bytes())
+        self.assertEqual(result['tag'], 'v0.1.1-pre.7')
+        self.assertTrue(result['prerelease'])
+
+    def test_stable_release_is_not_marked_as_prerelease(self):
+        self.assertFalse(self.prepare()['prerelease'])
+
+    def test_rejects_non_positive_prerelease_number(self):
+        with self.assertRaises(ValueError):
+            prepare_release(self.root, self.apk_dir, self.reports.parent,
+                            self.destination, self.commit, prerelease=0)
+
     def test_accepts_v2_signer_format_from_the_previous_release(self):
         (self.reports / 'signature.txt').write_text(
             'Verifies\n'

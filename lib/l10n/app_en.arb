@@ -397,11 +397,8 @@
   "assistantEditChooseImageButton": "Choose Image",
   "assistantEditClearButton": "Clear",
   "desktopNavTranslateTooltip": "Translate",
-  "desktopAvatarMenuUseEmoji": "Use emoji",
   "cameraPermissionDeniedMessage": "Camera unavailable: permission not granted.",
   "openSystemSettings": "Open Settings",
-  "desktopAvatarMenuChangeFromImage": "Change from image…",
-  "desktopAvatarMenuReset": "Reset avatar",
   "assistantEditAvatarChooseImage": "Choose Image",
   "assistantEditAvatarChooseEmoji": "Choose Emoji",
   "assistantEditAvatarEnterLink": "Enter Link",
@@ -1118,6 +1115,104 @@
   "sideDrawerMenuMoveTo": "Move to",
   "sideDrawerMenuDelete": "Delete",
   "sideDrawerMenuSelect": "Select",
+  "sideDrawerNewChat": "New chat",
+  "sideDrawerMoveToFolder": "Move to folder",
+  "sideDrawerNoFolder": "No folder",
+  "sideDrawerNewFolder": "New folder",
+  "sideDrawerFolderNameHint": "Folder name",
+  "sideDrawerFolderIcon": "Icon",
+  "sideDrawerFolderDelete": "Delete folder",
+  "sideDrawerFolderDeleteContent": "Chats in \"{name}\" stay in the list.",
+  "@sideDrawerFolderDeleteContent": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "agentsTitle": "Agents",
+  "agentsIntro": "Coding agents such as Claude Code can answer in your chats. They run in the Linux environment on this phone, work with the chat's files and use the model and key you already set up in Moru — nothing to configure twice.",
+  "agentsSection": "Agents",
+  "agentsFooter": "Installing takes a few minutes and needs the internet. Node.js is installed first if it is missing.",
+  "agentsNeedEnvironment": "Install and start the Linux environment first (Settings → Workspace & environment).",
+  "agentsStatusInstalled": "Installed",
+  "agentsStatusMissing": "Not installed",
+  "agentsStatusChecking": "Checking…",
+  "agentsStatusWorking": "Working…",
+  "agentsInstall": "Install",
+  "agentsUpdate": "Update",
+  "agentsRemove": "Remove",
+  "agentsCheck": "Check connection",
+  "agentsCancel": "Cancel",
+  "agentsSave": "Save",
+  "agentsLog": "Log",
+  "agentsMoruToolsAvailable": "Moru tools: available",
+  "agentsMoruToolsUnavailable": "Moru tools: unavailable",
+  "agentsCheckOk": "It works: {name} {version} answered.",
+  "@agentsCheckOk": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "version": {"type": "String"}
+    }
+  },
+  "agentsCheckFailed": "The agent did not start: {error}",
+  "@agentsCheckFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "agentsCheckModel": "The check uses your default chat model: {model}.",
+  "@agentsCheckModel": {
+    "placeholders": {
+      "model": {"type": "String"}
+    }
+  },
+  "agentsNoModel": "Choose a default chat model with an API key first (Settings → Default Model).",
+  "agentsDescClaudeCode": "Anthropic's coding agent: reads and edits files, runs commands and tests, plans larger tasks.",
+  "agentsDescCodex": "OpenAI's coding agent: writes and fixes code, runs commands, explains projects.",
+  "agentsDescOpenCode": "An open-source coding agent that works with almost any provider. A good first choice.",
+  "agentsApiAnthropic": "Needs a provider with an Anthropic-compatible API: Anthropic, DeepSeek, Kimi, GLM, MiniMax or OpenRouter.",
+  "agentsApiCodex": "Best with OpenAI. Other providers need an OpenAI-compatible API; turn on the Responses API in the provider if it supports it.",
+  "agentsApiOpenai": "Works with any OpenAI-compatible provider and with Anthropic.",
+  "agentsApiCustom": "Moru passes the model's address, key and name as MORU_AGENT_BASE_URL, MORU_AGENT_API_KEY and MORU_AGENT_MODEL (and as OPENAI_* variables).",
+  "agentsCustomAdd": "Add your own agent",
+  "agentsCustomName": "Name",
+  "agentsCustomCommand": "Command",
+  "agentsCustomHint": "Any program in the Linux environment that speaks ACP (Agent Client Protocol) over stdin/stdout.",
+  "agentsCustomDelete": "Delete agent",
+  "agentsFailureNode": "Node.js could not be installed. See the log.",
+  "agentsFailureInstall": "Installation failed. See the log below.",
+  "agentsFailureRemove": "The agent could not be removed. See the log.",
+  "agentsStartChat": "Start a chat",
+  "agentsChatMissing": "This assistant's agent is not in the list any more. Pick another in the assistant's settings.",
+  "agentsChatNoKey": "The agent needs a model with an API key. Choose one with a key for this assistant or as the default model.",
+  "agentsChatNotInstalled": "{name} is not installed yet. Install it in Settings → Agents.",
+  "@agentsChatNotInstalled": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "assistantAgentTitle": "Agent",
+  "assistantAgentNone": "None — the model answers",
+  "assistantAgentHint": "With an agent, it answers in this assistant's chats and works with the chat's files. It uses the chat model above for its own requests.",
+  "displaySettingsPageSidebarThumbnailsTitle": "Image previews in the chat list",
+  "sideDrawerArchive": "Archive",
+  "sideDrawerArchived": "Chat archived",
+  "sideDrawerUndo": "Undo",
+  "archivePageTitle": "Archive",
+  "archivePageEmpty": "Nothing archived. Swipe a chat to the right to put it here.",
+  "archivePageRestore": "Restore",
+  "archivePageRestored": "Chat restored",
+  "archivePageSortArchived": "By date archived",
+  "archivePageSortActivity": "By last message",
+  "archivePageDeleteTitle": "Delete \"{title}\"?",
+  "@archivePageDeleteTitle": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "archivePageDeleteContent": "The chat and all its messages will be deleted.",
+  "sideDrawerShortcutsTitle": "Sidebar shortcuts",
+  "sideDrawerShortcutsEmpty": "No mini apps or browser bookmarks yet",
+  "sideDrawerShortcutRemove": "Remove from sidebar",
   "sideDrawerSelectionTitle": "Selected {count} items",
   "@sideDrawerSelectionTitle": {
     "placeholders": {
@@ -1835,7 +1930,6 @@
   "chainOfThoughtCollapse": "Collapse",
   "chainOfThoughtProcessedIn": "Processed · {seconds} s",
   "chainOfThoughtProcessedSteps": "Processed · {count} steps",
-  "displaySettingsPageShowChatListDateTitle": "Show Chat List Dates",
   "displaySettingsPageEnableImageCropperTitle": "Enable Image Cropping",
   "@displaySettingsPageEnableImageCropperTitle": {},
   "displaySettingsPageEnableImageCropperSubtitle": "Crop images after selecting from gallery or camera",
@@ -3282,7 +3376,6 @@
   "migrationPerformanceNote": "After migration, startup, history loading, and search use SQLite indexes for smoother long-chat performance.",
   "migrationSourceDatabaseLabel": "Hive",
   "migrationTargetDatabaseLabel": "SQLite",
-  "migrationChooseFolderButton": "Choose Folder and Back Up",
   "migrationSaveBackupButton": "Save Backup ZIP",
   "migrationStartWithoutBackupButton": "Migrate Without Backing Up",
   "migrationSkipChatsJsonOption": "Skip chats.json",
@@ -3885,14 +3978,6 @@
       }
     }
   },
-  "workspaceEnvEngineAlpine": "Alpine {version} (iSH)",
-  "@workspaceEnvEngineAlpine": {
-    "placeholders": {
-      "version": {
-        "type": "String"
-      }
-    }
-  },
   "workspaceEnvPhaseNotInstalled": "Not installed",
   "workspaceEnvPhaseDownloading": "Downloading",
   "workspaceEnvPhaseVerifying": "Verifying",
@@ -4026,8 +4111,6 @@
   "terminalNameLabel": "Name",
   "terminalCancel": "Cancel",
   "workspaceDeskBarEmptyHint": "Bind a workspace from the toolbar to browse files here",
-  "workspaceDeskOpenSystemTerminal": "Open in system terminal",
-  "workspaceDeskReveal": "Reveal in file manager",
   "workspaceEntryBind": "Bind workspace",
   "workspaceEntryUnbind": "Unbind",
   "workspaceEntryChange": "Change",
@@ -4039,8 +4122,6 @@
   "workspaceEntryCwdInvalid": "That path is invalid or leaves the workspace",
   "workspaceEntryFiles": "Files",
   "workspaceEntryTerminal": "Terminal",
-  "workspaceEntryOpenSystemTerminal": "Open in system terminal",
-  "workspaceEntryReveal": "Reveal in file manager",
   "workspaceEntrySessionSkills": "Skills",
   "workspaceEntryAllowAll": "Allow all this session",
   "workspaceEntryAllowAllSubtitle": "Shell commands in this conversation will run without approval.",
@@ -4161,7 +4242,6 @@
   "workspacePreviewLoadError": "Couldn’t load this file.",
   "workspacePreviewOpenInBrowser": "Open in browser",
   "workspacePreviewTable": "Table",
-  "workspacePreviewRevealFailed": "Couldn’t show this file in the file manager.",
   "workspacePreviewEmptyTable": "This table is empty.",
   "workspaceFilesNew": "New",
   "workspaceFilesFoldersFirst": "Folders first",
@@ -4369,7 +4449,6 @@
   "workspaceEnvSizeTimeout": "Timed out",
   "workspacePreviewEmptyFile": "This file is empty",
   "workspacePreviewEmptyHint": "There's nothing to preview.",
-  "workspacePreviewRevealInFileManager": "Show in Files",
   "workspaceBindingSetAssistantDefault": "Set as default workspace for “{assistant}”",
   "@workspaceBindingSetAssistantDefault": {
     "placeholders": {
@@ -4512,6 +4591,14 @@
   "workspaceEnvReplaceSystem": "Replace system",
   "workspaceEnvReplaceSystemHint": "This replaces installed packages and files inside the current environment and stops its commands and terminal sessions. Workspaces, chat files, and external folders are kept. If preparing the new image fails, the current environment is preserved.",
   "workspaceEnvProotOptions": "PRoot options",
+  "workspaceEnvRootChroot": "Fast mode (root)",
+  "workspaceEnvRootChrootHint": "Runs the Linux environment in a real chroot through su instead of PRoot: programs start and work many times faster. Commands run as real root with full access to the phone. Turning it off gives the files back to Moru.",
+  "workspaceEnvRootChrootChecking": "Checking root…",
+  "workspaceEnvRootChrootRestoring": "Giving files back to Moru…",
+  "workspaceEnvRootChrootOn": "Fast mode is on",
+  "workspaceEnvRootChrootOff": "Fast mode is off, PRoot is back",
+  "workspaceEnvRootChrootFailed": "Fast mode is unavailable: {reason}",
+  "@workspaceEnvRootChrootFailed": {"placeholders": {"reason": {"type": "String"}}},
   "workspaceEnvShellPath": "Shell path",
   "workspaceEnvShellAutomatic": "Automatic",
   "workspaceEnvShellHint": "Leave empty to use /bin/bash when available, otherwise /bin/sh. A custom shell must use an absolute path inside the environment.",
@@ -4955,9 +5042,67 @@
   "browserAddressEditorHint": "https://example.com",
   "browserAddressEditorInvalid": "Enter a valid http or https address.",
   "browserAddressEditorGo": "Go",
-  "browserMinimize": "Minimize",
+  "browserMinimize": "Minimize to chat",
   "browserMiniExpand": "Expand",
   "browserMiniTitle": "Browser",
+  "userscriptsTitle": "User scripts",
+  "userscriptsHint": "Scripts like in Tampermonkey: they change the sites they are made for. Install only scripts you trust — they see everything on those sites.",
+  "userscriptsInstall": "Install",
+  "userscriptsEmpty": "No scripts yet. Paste a link to a .user.js file, e.g. from greasyfork.org.",
+  "userscriptsBadLink": "Enter an http(s) link to a .user.js file",
+  "userscriptsNotAScript": "That file is not a user script (no ==UserScript== header)",
+  "userscriptsInstalled": "Installed: {name}",
+  "@userscriptsInstalled": {"placeholders": {"name": {"type": "String"}}},
+  "userscriptsInstallFailed": "Could not install: {error}",
+  "@userscriptsInstallFailed": {"placeholders": {"error": {"type": "String"}}},
+  "browserGoogleSignInBlocked": "Google does not allow signing in inside this browser. Sign in another way or open the site in Chrome.",
+  "browserOpenInChrome": "Open in Chrome",
+  "browserSslTitle": "Connection is not secure",
+  "browserSslMessage": "The certificate of {site} is not valid ({problem}). Someone may be trying to steal your data.",
+  "@browserSslMessage": {"placeholders": {"site": {"type": "String"}, "problem": {"type": "String"}}},
+  "browserSslProceed": "Continue anyway",
+  "browserSslBack": "Go back",
+  "browserBookmarks": "Bookmarks",
+  "browserHistory": "History",
+  "browserClearHistory": "Clear",
+  "browserClearHistoryConfirm": "Clear the history of the last 7 days?",
+  "browserLibrarySearch": "Search",
+  "browserHistoryEmpty": "No pages visited in the last 7 days",
+  "browserBookmarksEmpty": "No bookmarks yet. Tap the star in the address bar.",
+  "browserLibraryRemove": "Remove",
+  "browserBookmarkAdded": "Bookmarked",
+  "browserBookmarkRemoved": "Bookmark removed",
+  "browserTabsTooltip": "Tabs",
+  "browserNewTab": "New tab",
+  "browserCloseAllTabs": "Close all",
+  "browserTabByAssistant": "assistant",
+  "browserDesktopSite": "Desktop site",
+  "browserClearSiteData": "Clear site data",
+  "browserClearSiteDataConfirm": "Sign out of {site} and delete its data in this browser?",
+  "@browserClearSiteDataConfirm": {"placeholders": {"site": {"type": "String"}}},
+  "browserClearSiteDataDone": "Data of {site} deleted",
+  "@browserClearSiteDataDone": {"placeholders": {"site": {"type": "String"}}},
+  "browserTabsTitle": "Tabs: {count}",
+  "@browserTabsTitle": {"placeholders": {"count": {"type": "int"}}},
+  "browserDownloadDone": "Downloaded {file}",
+  "@browserDownloadDone": {"placeholders": {"file": {"type": "String"}}},
+  "browserNoAppForLink": "No app on the phone opens this link.",
+  "browserDownloadStarted": "Downloading {file} to Downloads",
+  "@browserDownloadStarted": {"placeholders": {"file": {"type": "String"}}},
+  "browserDownloadFailed": "Could not download {file}",
+  "@browserDownloadFailed": {"placeholders": {"file": {"type": "String"}}},
+  "browserDownloadUnsupported": "This file is made by the page itself and cannot be downloaded yet.",
+  "browserPermissionQuestion": "Allow this site to use: {what}?",
+  "@browserPermissionQuestion": {"placeholders": {"what": {"type": "String"}}},
+  "browserPermissionCamera": "camera",
+  "browserPermissionMicrophone": "microphone",
+  "browserPermissionLocation": "location",
+  "browserPermissionProtectedMedia": "protected video",
+  "browserPermissionAllow": "Allow",
+  "browserPermissionBlock": "Block",
+  "browserChallengeVerify": "The site asks to confirm you are a person. Complete the check yourself; the assistant waits.",
+  "browserChallengeRateLimited": "The site limits requests. The assistant slows down.",
+  "browserChallengeDenied": "The site refuses automated access.",
   "chatHeaderFiles": "Files",
   "chatHeaderTerminal": "Terminal",
   "chatHeaderBrowser": "Browser",
@@ -5109,6 +5254,115 @@
   "miniAppsImportFailed": "Could not install the app: {message}",
   "miniAppsNotificationChannel": "Mini apps",
   "miniAppsNotificationChannelDescription": "Notifications and reminders from your mini apps.",
+  "miniAppsToolActionErrors": "Read app error log",
+  "miniAppsToolActionVersions": "List app versions",
+  "miniAppsToolActionRollback": "Roll back app",
+  "miniAppsBackAgainToExit": "Back again to exit",
+  "miniAppsJobs": "Background jobs",
+  "miniAppsJobsEmpty": "No background jobs. Ask the agent, e.g. “every morning at 8 check the weather and notify me”.",
+  "miniAppsJobsFooter": "At the set time Moru opens the app out of sight and runs the job for up to 30 seconds, even when Moru is closed. Errors go to the error log.",
+  "miniAppsJobRunNow": "Run now",
+  "miniAppsJobStarted": "Job started",
+  "miniAppsJobEveryDay": "every day",
+  "miniAppsJobRunning": "Running…",
+  "miniAppsToolActionJobs": "List app background jobs",
+  "miniAppsToolActionRunJob": "Run app background job",
+  "@miniAppsJobNext": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "miniAppsJobNext": "Next: {time}",
+  "@miniAppsJobLastDone": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "miniAppsJobLastDone": "Last run {time}: done",
+  "@miniAppsJobLastFailed": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "miniAppsJobLastFailed": "Last run {time}: failed",
+  "miniAppsToolActionServer": "Read app server state",
+  "rootShellToolTitle": "Root commands",
+  "rootShellToolSubtitle": "Run commands as root (su) on a rooted phone: system settings, apps, logs, screen input. You approve every command.",
+  "miniAppsWebTitle": "Web server",
+  "miniAppsWebPort": "Port",
+  "miniAppsWebLocalhostOnly": "Only this phone",
+  "miniAppsWebLocalhostOnlySubtitle": "Listen on 127.0.0.1 only: no access from the network and no moru.local.",
+  "miniAppsWebPasswordEnabled": "Require a password",
+  "miniAppsWebPasswordEnabledSubtitle": "The browser asks for it; any user name works.",
+  "miniAppsWebPassword": "Password",
+  "miniAppsWebStart": "Start",
+  "miniAppsWebStop": "Stop",
+  "miniAppsWebRunning": "Running. Open in a browser:",
+  "miniAppsWebCopied": "Address copied",
+  "miniAppsWebInvalidPort": "The port must be from 1024 to 65535.",
+  "miniAppsWebNoPassword": "Set a password or turn the password off.",
+  "miniAppsWebFooter": "Your mini apps open in a browser with the same data as in Moru. moru.local and the Wi-Fi address work on devices in the same Wi-Fi, not over mobile data; 127.0.0.1 works in a browser on this phone. While the server runs, Moru keeps a notification; stopping it there stops the server.",
+  "@miniAppsWebNotification": {
+    "placeholders": {
+      "url": {"type": "String"}
+    }
+  },
+  "miniAppsWebNotification": "Web server: {url}",
+  "@miniAppsWebPortInUse": {
+    "placeholders": {
+      "port": {"type": "String"}
+    }
+  },
+  "miniAppsWebPortInUse": "Port {port} is already in use: choose another one.",
+  "miniAppsWebAutostart": "Start with Moru",
+  "miniAppsWebAutostartSubtitle": "Start the server whenever Moru starts.",
+  "miniAppsServer": "Server",
+  "miniAppsServerStarting": "Starting…",
+  "miniAppsServerIdle": "Not running. It starts while the app is open.",
+  "miniAppsServerRestart": "Restart",
+  "miniAppsServerNoOutput": "No output yet.",
+  "@miniAppsServerRunning": {
+    "placeholders": {
+      "port": {"type": "String"}
+    }
+  },
+  "miniAppsServerRunning": "Running on port {port}",
+  "@miniAppsServerExited": {
+    "placeholders": {
+      "code": {"type": "String"}
+    }
+  },
+  "miniAppsServerExited": "Stopped with code {code}",
+  "miniAppsSearch": "Search apps",
+  "miniAppsBadgeGame": "Game",
+  "@miniAppsJobFailed": {
+    "placeholders": {
+      "job": {"type": "String"}
+    }
+  },
+  "miniAppsJobFailed": "Background job \"{job}\" failed. Open the app to see why.",
+  "miniAppsMore": "More",
+  "miniAppsErrors": "Error log",
+  "miniAppsErrorsEmpty": "No errors recorded.",
+  "miniAppsErrorsFooter": "Errors of the current version. Ask the agent in the chat to fix the app: it reads this log.",
+  "miniAppsErrorsCopy": "Copy all",
+  "miniAppsErrorsCopied": "Log copied",
+  "miniAppsErrorsClear": "Clear",
+  "miniAppsVersions": "Versions",
+  "miniAppsVersionsEmpty": "No earlier versions yet.",
+  "miniAppsVersionsFooter": "Moru keeps the last 5 versions. Rolling back changes only the app's code; its data and reminders stay. The current version is kept, so you can return to it.",
+  "@miniAppsVersionsTitle": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "miniAppsVersionsTitle": "Roll back “{name}”",
+  "@miniAppsRolledBack": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "miniAppsRolledBack": "Restored the version of {date}",
   "phoneControlTitle": "Phone Control",
   "phoneControlSubtitle": "Read the screen and perform actions through Accessibility",
   "phoneControlAccessibilityService": "Accessibility service",
@@ -5137,5 +5391,309 @@
   },
   "toolApprovalsSectionTitle": "Tool approvals",
   "toolApprovalsFullTrustTitle": "Full trust mode (dangerous)",
-  "toolApprovalsFullTrustDescription": "Skip per-action confirmations for browser, MCP, shell, file writes, and other tools that normally require approval."
+  "toolApprovalsFullTrustDescription": "Skip per-action confirmations for browser, MCP, shell, file writes, and other tools that normally require approval.",
+  "chatReasoningTailHint": "Showing the last {shown} of {total} characters",
+  "@chatReasoningTailHint": {
+    "description": "Above a streaming reasoning that shows only its end; shown and total are sizes like 8K.",
+    "placeholders": {
+      "shown": {"type": "String"},
+      "total": {"type": "String"}
+    }
+  },
+  "chatToolCopyDetails": "Copy details",
+  "chatToolRerunFromHere": "Rerun from here",
+  "@chatToolCopyDetails": {"description": "Long-press menu of a tool call: copies the call, its arguments and result."},
+  "@chatToolRerunFromHere": {"description": "Long-press menu of a tool call: regenerates the reply it belongs to."},
+  "chatTokensTitle": "Chat tokens",
+  "chatTokensContext": "Context",
+  "chatTokensContextUsed": "In use",
+  "chatTokensContextWindow": "Context window",
+  "chatTokensMaxOutput": "Max reply",
+  "chatTokensSpent": "Spent in this chat",
+  "chatTokensInput": "Input",
+  "chatTokensOutput": "Output",
+  "chatTokensCached": "From cache",
+  "chatTokensReplies": "Replies",
+  "chatTokensCost": "Cost",
+  "@chatTokensTitle": {"description": "Sheet opened from the context ring by the send button."},
+  "chatInputHintQueue": "Type while AI answers: your message waits in line",
+  "chatInputHintMiniApp": "Ask for a mini app: a tracker, a game, a tool",
+  "chatInputHintPaste": "Paste long text: it becomes a file",
+  "chatInputHintTokens": "Tap the ring by Send to see the tokens",
+  "chatInputHintToolMenu": "Long-press a tool step to copy or rerun it",
+  "@chatInputHintQueue": {"description": "Composer placeholders shown in turn, one more each time the field is focused."},
+  "messageMoreSheetCopyFormatted": "Copy with formatting",
+  "@messageMoreSheetCopyFormatted": {"description": "Copies the message as rich text (HTML) that keeps headings, lists and tables when pasted."},
+  "agentsMode": "Agent mode",
+  "agentsSessionOptions": "Agent options",
+  "@agentsSessionOptions": {"description": "Chip and sheet title for the live agent session options such as its model and reasoning effort."},
+  "agentsImageNotSent": "An image was not sent to the agent.",
+  "agentsErrorApiKey": "Invalid API key for the provider.",
+  "agentsErrorModel": "Model not found. Check the provider model settings.",
+  "agentsErrorNetwork": "No network connection. Check your connection and try again.",
+  "agentsErrorHeaders": "Provider headers contain an invalid name or a line break. Check the provider header settings.",
+  "agentsErrorTemporaryDirectory": "The agent cannot use its temporary directory. Check the Linux environment and try again.",
+  "agentsShowDetails": "Show details",
+  "agentsHideDetails": "Hide details",
+  "agentsDescKimiCode": "Moonshot’s coding agent: edits files and runs commands.",
+  "agentsDescDeepSeekHarness": "DeepSeek’s coding agent: works on files and commands in a workspace.",
+  "agentsApiCompatible": "Uses the Moru provider with Anthropic, Chat Completions or Responses API.",
+  "agentsWebOpen": "Open web interface",
+  "agentsWebStop": "Stop",
+  "agentsWebStarting": "Starting the web interface…",
+  "agentsWebRunning": "The web interface is running in the background.",
+  "agentsWebTimeout": "The agent did not print a local web address within 120 seconds. Stop it and try again.",
+  "agentsWebExited": "The web process exited. Open the interface again to restart it.",
+  "agentsWebStartFailed": "Could not start the web interface. Check the Linux environment, agent installation and Node.js version.",
+  "agentsWebStopped": "The web interface was stopped.",
+  "agentsWebDeepSeekWorkspace": "For DeepSeek Harness, choose or add /workspace in the web interface.",
+  "agentsNodeVersionRequired": "{agent} requires Node.js {requiredVersion}. Detected in the Linux environment: {actual}. Update Node.js, reopen this card and try again.",
+  "agentsNodeVersionUnknown": "version unavailable",
+  "agentsNodeUpdateDebian": "In the Linux terminal, install Node.js 24 from the official NodeSource repository:\napt-get update\napt-get install -y ca-certificates curl bash\ncurl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\nbash /tmp/moru-node24-setup.sh\napt-get install -y nodejs\nnode --version\nnpm --version\nInstructions: https://github.com/nodesource/distributions/blob/master/DEV_README.md",
+  "agentsNodeUpdateAlpine": "In the Linux terminal, update the Alpine packages:\napk update\napk add --upgrade nodejs npm\nnode --version\nnpm --version",
+  "agentsNodeUpdateUnknown": "No verified upgrade method is available for this distribution. Check its official Node.js installation instructions; then reopen this card.",
+  "@agentsNodeVersionRequired": {
+    "placeholders": {
+      "agent": {
+        "type": "String"
+      },
+      "requiredVersion": {
+        "type": "String"
+      },
+      "actual": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaceEnvGroupDevelopment": "Development",
+  "workspaceEnvGroupAgents": "AI agents",
+  "workspaceEnvGroupAgentsDetail": "“Prepare for agents” installs what coding agents need from the system; open an agent to install, update or check it.",
+  "workspaceEnvGroupSsh": "SSH",
+  "workspaceEnvPrepareAgents": "Prepare for agents",
+  "workspaceEnvPrepareAgentsDone": "Everything agents need is installed",
+  "workspaceEnvDependencyBuildTitle": "Build tools",
+  "workspaceEnvDependencyBuild": "Compiler and make, to build Node and Python modules",
+  "workspaceEnvDependencyProcessesTitle": "Processes",
+  "workspaceEnvDependencyCompatTitle": "glibc compatibility",
+  "workspaceEnvDependencyCompat": "Runs programs built for regular Linux on Alpine",
+  "workspaceEnvDependencyBash": "The shell agents and scripts run commands in",
+  "workspaceEnvDependencyRipgrep": "Fast code search, used by coding agents",
+  "workspaceEnvDependencySshTitle": "SSH client",
+  "workspaceEnvDependencySshpass": "Password logins for scripts",
+  "workspaceEnvDependencySshdTitle": "SSH server",
+  "workspaceEnvDependencySshd": "Connect to the phone over SSH",
+  "workspaceEnvInstallSelected": "Install selected ({count})",
+  "@workspaceEnvInstallSelected": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "agentsCodexResponsesRequired": "Codex only works with providers that support the OpenAI Responses API. Enable it in the provider settings or choose another agent.",
+  "backgroundReliabilityHintTitle": "Keep this task running",
+  "backgroundReliabilityHintDisabled": "Background execution is off. Enable it to keep this task running when you switch apps or turn off the screen.",
+  "backgroundReliabilityHintRestricted": "Android restricts Moru in the background. Check the app’s battery settings before leaving this task.",
+  "backgroundReliabilityHintStandby": "Low Power Standby can pause network access even while this task is running. Check your device’s power settings.",
+  "backgroundReliabilityHintVendor": "Vivo and Xiaomi can stop background tasks. Allow background activity and autostart in system settings.",
+  "backgroundReliabilityHintInterrupted": "A previous task stopped when Moru’s process ended. Check battery and background activity settings before leaving another task.",
+  "backgroundReliabilityHintSettings": "Background settings",
+  "backgroundReliabilityHintDismiss": "Dismiss tip",
+  "backgroundLowPowerStandby": "Low Power Standby",
+  "backgroundLowPowerStandbyDetail": "This device mode can restrict network access even with a foreground service. A battery optimization exception does not always disable it.",
+  "backgroundPowerRestricted": "Restricted",
+  "backgroundPowerUnrestricted": "No restriction reported",
+  "backgroundShellRunning": "Running background command",
+  "backgroundServerRunning": "Mini app server running",
+  "backgroundProtectionUnavailable": "Background protection could not start. Keep Moru open and try again.",
+  "chatInterruptedBody": "The app stopped before this reply finished. Your saved partial reply and queued messages are preserved. Continuing starts a new turn.",
+  "chatContinueAfterInterruption": "Continue",
+  "chatContinuePrompt": "Continue from the saved context after the interruption. Check what has already completed before taking further actions.",
+  "queuedInputSaveFailed": "Could not save the queued message. Your draft is still available.",
+  "notificationApprovalTitle": "Approval needed",
+  "notificationApprovalBody": "An agent is waiting for your decision.",
+  "notificationApprovalAllow": "Allow",
+  "notificationApprovalDeny": "Deny",
+  "notificationApprovalStaleTitle": "Approval no longer available",
+  "notificationApprovalStaleBody": "Open the chat to check this request.",
+  "notificationApprovalChannelName": "Agent approvals",
+  "notificationApprovalChannelDescription": "Decisions requested by a running agent or tool.",
+  "backgroundShellCompleted": "Background command finished",
+  "backgroundShellFailed": "Background command failed",
+  "agentsAuthTitle": "Sign in with subscription",
+  "agentsAuthMode": "Authentication",
+  "agentsAuthProvider": "API provider",
+  "agentsAuthSubscription": "Subscription",
+  "agentsAuthProviderHint": "Use this assistant’s API provider settings.",
+  "agentsAuthSubscriptionHint": "Use the agent’s own Claude or ChatGPT sign-in. API provider keys and model overrides are not used.",
+  "agentsAuthSignIn": "Sign in",
+  "agentsAuthCheck": "Check sign-in",
+  "agentsAuthSignOut": "Sign out",
+  "agentsAuthSignedIn": "Signed in",
+  "agentsAuthSignedOut": "Sign-in required",
+  "agentsAuthUnknown": "Sign-in not checked",
+  "agentsAuthWaiting": "Complete sign-in in your browser.",
+  "agentsAuthOpenBrowser": "Open sign-in page",
+  "agentsAuthDeviceCode": "Device code",
+  "agentsAuthCodexHint": "Enable device code login in ChatGPT Settings → Security before signing in.",
+  "agentsAuthCode": "Authorization code",
+  "agentsAuthSubmitCode": "Submit code",
+  "agentsAuthCodeHint": "If your browser asks you to copy a code, paste the complete code here, including the part after #.",
+  "agentsAuthCancel": "Cancel sign-in",
+  "agentsAuthFailureEnvironment": "Set up the Linux environment first.",
+  "agentsAuthFailureStart": "Sign-in could not be completed. Update the agent and try again.",
+  "agentsAuthFailureNetwork": "Sign-in failed because of a network connection. Try again.",
+  "agentsAuthFailureTimeout": "Sign-in timed out. Try again.",
+  "agentsAuthBrowserFailed": "The sign-in page could not be opened. You can copy the link below.",
+  "agentsErrorAuthRequired": "The agent needs authentication. Sign in under Settings → Agents, or check the selected provider’s API key.",
+  "agentsErrorAccountBusy": "Codex is already active in another chat. Finish or stop that reply before continuing.",
+  "computerTitle": "Computer",
+  "computerWorking": "AI is working…",
+  "computerDone": "Done",
+  "computerError": "Error",
+  "computerPreviousStep": "Previous step",
+  "computerNextStep": "Next step",
+  "computerLatest": "Go to latest",
+  "computerOpenTerminal": "Open terminal",
+  "computerOpenBrowser": "Open live browser",
+  "computerOpenFile": "Preview file",
+  "computerCopyResult": "Copy result",
+  "computerNoResult": "No result yet",
+  "computerParameters": "Parameters",
+  "computerResult": "Result",
+  "browserFloatingWindowTitle": "Floating browser window",
+  "browserFloatingWindowDescription": "Show a floating live browser when minimized. By default, AI actions appear in Computer above the composer.",
+  "computerMoreDetails": "Detailed result",
+  "computerStopped": "Stopped",
+  "computerActionsCount": "{count, plural, =1{{count} action} other{{count} actions}}",
+  "@computerActionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "computerViewAction": "View",
+  "computerBackgroundOutput": "Background job output",
+  "computerBackground": "In background",
+  "computerRunningElapsed": "Running · {elapsed}",
+  "@computerRunningElapsed": {
+    "placeholders": {
+      "elapsed": {
+        "type": "String"
+      }
+    }
+  },
+  "computerExitElapsed": "Exit code {code} · {seconds} s",
+  "@computerExitElapsed": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "computerBrowserStep": "Browser · {domain}",
+  "@computerBrowserStep": {
+    "placeholders": {
+      "domain": {
+        "type": "String"
+      }
+    }
+  },
+  "computerPlanProgress": "Plan · {completed}/{total}",
+  "@computerPlanProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "computerFileStep": "{action} · {name}",
+  "@computerFileStep": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "computerAddedLines": "(+{count} lines)",
+  "@computerAddedLines": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "computerActionCommand": "Command",
+  "computerActionOpen": "Open",
+  "computerActionClick": "Click",
+  "computerActionType": "Type",
+  "computerActionRead": "Read",
+  "computerActionWrite": "Write",
+  "computerActionEdit": "Edit",
+  "computerActionList": "List",
+  "computerActionPlan": "Plan",
+  "computerActionScreenshot": "Screenshot",
+  "computerBrowserOpening": "Opening…",
+  "computerBrowserClicking": "Clicking…",
+  "computerBrowserTyping": "Typing…",
+  "computerBrowserReading": "Reading page",
+  "computerAllParameters": "All parameters (JSON)",
+  "computerParameterDirectory": "Directory",
+  "computerParameterBackground": "Background",
+  "computerParameterTimeout": "Timeout",
+  "computerParameterUrl": "URL",
+  "computerParameterSelector": "Selector",
+  "computerParameterText": "Text",
+  "computerParameterPath": "Path",
+  "computerParameterRange": "Range",
+  "computerStepPosition": "Step {current} of {total}",
+  "@computerStepPosition": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "browserActions": "Actions",
+  "browserActionsCount": "Actions · {count}",
+  "@browserActionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browserCloseBrowser": "Close browser",
+  "browserCloseWhileAiTitle": "Close browser?",
+  "browserCloseWhileAiMessage": "The AI action will stop.",
+  "computerActionSummary": "Summary",
+  "computerBrowserResultStatus": "Status",
+  "computerBrowserResultSuccess": "Success",
+  "computerBrowserResultError": "Error",
+  "computerBrowserResultTitle": "Title",
+  "computerParameterYes": "Yes",
+  "computerParameterNo": "No",
+  "computerBrowserAction": "{action, select, open{Open} observe{Inspect} screenshot{Screenshot} read{Read} collect{Collect} outline{Page outline} wait_stable{Wait until loaded} wait_for{Wait for element} back{Back} forward{Forward} reload{Reload} scroll{Scroll} tabs{Tabs} new_tab{New tab} switch_tab{Switch tab} close_tab{Close tab} set_mode{Site mode} close{Close browser} done{Done} click{Click} hover{Hover} type{Type} submit{Submit form} press_key{Press key} eval_js{Run page code} fetch{Page request} export_cookies{Export cookies} other{Browser action}}",
+  "@computerBrowserAction": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "problemReportToolTitle": "Problem report",
+  "problemReportToolSubtitle": "Create a private ZIP of technical diagnostics. Confirmation is required every time.",
+  "problemReportConsent": "The ZIP will contain:\n• App version and build number\n• Android version, manufacturer and device model\n• Environment mode: PRoot/root\n• Interface, tool and logging settings and provider types, without secrets\n• Technical events from this app run: event names, error types and stack frames (up to 128 KiB)\nChats, message text and request/context logs are excluded. Secrets are removed. The report is deleted at the next app launch or expires after 24 hours.",
+  "problemReportUnavailable": "This report was deleted or could not be shared. Create a new report."
 }

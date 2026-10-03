@@ -973,20 +973,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopNavTranslateTooltip => 'Translate';
 
   @override
-  String get desktopAvatarMenuUseEmoji => 'Use emoji';
-
-  @override
   String get cameraPermissionDeniedMessage =>
       'Camera unavailable: permission not granted.';
 
   @override
   String get openSystemSettings => 'Open Settings';
-
-  @override
-  String get desktopAvatarMenuChangeFromImage => 'Change from image…';
-
-  @override
-  String get desktopAvatarMenuReset => 'Reset avatar';
 
   @override
   String get assistantEditAvatarChooseImage => 'Choose Image';
@@ -2529,6 +2520,240 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sideDrawerMenuSelect => 'Select';
+
+  @override
+  String get sideDrawerNewChat => 'New chat';
+
+  @override
+  String get sideDrawerMoveToFolder => 'Move to folder';
+
+  @override
+  String get sideDrawerNoFolder => 'No folder';
+
+  @override
+  String get sideDrawerNewFolder => 'New folder';
+
+  @override
+  String get sideDrawerFolderNameHint => 'Folder name';
+
+  @override
+  String get sideDrawerFolderIcon => 'Icon';
+
+  @override
+  String get sideDrawerFolderDelete => 'Delete folder';
+
+  @override
+  String sideDrawerFolderDeleteContent(String name) {
+    return 'Chats in \"$name\" stay in the list.';
+  }
+
+  @override
+  String get agentsTitle => 'Agents';
+
+  @override
+  String get agentsIntro =>
+      'Coding agents such as Claude Code can answer in your chats. They run in the Linux environment on this phone, work with the chat\'s files and use the model and key you already set up in Moru — nothing to configure twice.';
+
+  @override
+  String get agentsSection => 'Agents';
+
+  @override
+  String get agentsFooter =>
+      'Installing takes a few minutes and needs the internet. Node.js is installed first if it is missing.';
+
+  @override
+  String get agentsNeedEnvironment =>
+      'Install and start the Linux environment first (Settings → Workspace & environment).';
+
+  @override
+  String get agentsStatusInstalled => 'Installed';
+
+  @override
+  String get agentsStatusMissing => 'Not installed';
+
+  @override
+  String get agentsStatusChecking => 'Checking…';
+
+  @override
+  String get agentsStatusWorking => 'Working…';
+
+  @override
+  String get agentsInstall => 'Install';
+
+  @override
+  String get agentsUpdate => 'Update';
+
+  @override
+  String get agentsRemove => 'Remove';
+
+  @override
+  String get agentsCheck => 'Check connection';
+
+  @override
+  String get agentsCancel => 'Cancel';
+
+  @override
+  String get agentsSave => 'Save';
+
+  @override
+  String get agentsLog => 'Log';
+
+  @override
+  String get agentsMoruToolsAvailable => 'Moru tools: available';
+
+  @override
+  String get agentsMoruToolsUnavailable => 'Moru tools: unavailable';
+
+  @override
+  String agentsCheckOk(String name, String version) {
+    return 'It works: $name $version answered.';
+  }
+
+  @override
+  String agentsCheckFailed(String error) {
+    return 'The agent did not start: $error';
+  }
+
+  @override
+  String agentsCheckModel(String model) {
+    return 'The check uses your default chat model: $model.';
+  }
+
+  @override
+  String get agentsNoModel =>
+      'Choose a default chat model with an API key first (Settings → Default Model).';
+
+  @override
+  String get agentsDescClaudeCode =>
+      'Anthropic\'s coding agent: reads and edits files, runs commands and tests, plans larger tasks.';
+
+  @override
+  String get agentsDescCodex =>
+      'OpenAI\'s coding agent: writes and fixes code, runs commands, explains projects.';
+
+  @override
+  String get agentsDescOpenCode =>
+      'An open-source coding agent that works with almost any provider. A good first choice.';
+
+  @override
+  String get agentsApiAnthropic =>
+      'Needs a provider with an Anthropic-compatible API: Anthropic, DeepSeek, Kimi, GLM, MiniMax or OpenRouter.';
+
+  @override
+  String get agentsApiCodex =>
+      'Best with OpenAI. Other providers need an OpenAI-compatible API; turn on the Responses API in the provider if it supports it.';
+
+  @override
+  String get agentsApiOpenai =>
+      'Works with any OpenAI-compatible provider and with Anthropic.';
+
+  @override
+  String get agentsApiCustom =>
+      'Moru passes the model\'s address, key and name as MORU_AGENT_BASE_URL, MORU_AGENT_API_KEY and MORU_AGENT_MODEL (and as OPENAI_* variables).';
+
+  @override
+  String get agentsCustomAdd => 'Add your own agent';
+
+  @override
+  String get agentsCustomName => 'Name';
+
+  @override
+  String get agentsCustomCommand => 'Command';
+
+  @override
+  String get agentsCustomHint =>
+      'Any program in the Linux environment that speaks ACP (Agent Client Protocol) over stdin/stdout.';
+
+  @override
+  String get agentsCustomDelete => 'Delete agent';
+
+  @override
+  String get agentsFailureNode =>
+      'Node.js could not be installed. See the log.';
+
+  @override
+  String get agentsFailureInstall => 'Installation failed. See the log below.';
+
+  @override
+  String get agentsFailureRemove =>
+      'The agent could not be removed. See the log.';
+
+  @override
+  String get agentsStartChat => 'Start a chat';
+
+  @override
+  String get agentsChatMissing =>
+      'This assistant\'s agent is not in the list any more. Pick another in the assistant\'s settings.';
+
+  @override
+  String get agentsChatNoKey =>
+      'The agent needs a model with an API key. Choose one with a key for this assistant or as the default model.';
+
+  @override
+  String agentsChatNotInstalled(String name) {
+    return '$name is not installed yet. Install it in Settings → Agents.';
+  }
+
+  @override
+  String get assistantAgentTitle => 'Agent';
+
+  @override
+  String get assistantAgentNone => 'None — the model answers';
+
+  @override
+  String get assistantAgentHint =>
+      'With an agent, it answers in this assistant\'s chats and works with the chat\'s files. It uses the chat model above for its own requests.';
+
+  @override
+  String get displaySettingsPageSidebarThumbnailsTitle =>
+      'Image previews in the chat list';
+
+  @override
+  String get sideDrawerArchive => 'Archive';
+
+  @override
+  String get sideDrawerArchived => 'Chat archived';
+
+  @override
+  String get sideDrawerUndo => 'Undo';
+
+  @override
+  String get archivePageTitle => 'Archive';
+
+  @override
+  String get archivePageEmpty =>
+      'Nothing archived. Swipe a chat to the right to put it here.';
+
+  @override
+  String get archivePageRestore => 'Restore';
+
+  @override
+  String get archivePageRestored => 'Chat restored';
+
+  @override
+  String get archivePageSortArchived => 'By date archived';
+
+  @override
+  String get archivePageSortActivity => 'By last message';
+
+  @override
+  String archivePageDeleteTitle(String title) {
+    return 'Delete \"$title\"?';
+  }
+
+  @override
+  String get archivePageDeleteContent =>
+      'The chat and all its messages will be deleted.';
+
+  @override
+  String get sideDrawerShortcutsTitle => 'Sidebar shortcuts';
+
+  @override
+  String get sideDrawerShortcutsEmpty =>
+      'No mini apps or browser bookmarks yet';
+
+  @override
+  String get sideDrawerShortcutRemove => 'Remove from sidebar';
 
   @override
   String sideDrawerSelectionTitle(int count) {
@@ -4090,9 +4315,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String chainOfThoughtProcessedSteps(Object count) {
     return 'Processed · $count steps';
   }
-
-  @override
-  String get displaySettingsPageShowChatListDateTitle => 'Show Chat List Dates';
 
   @override
   String get displaySettingsPageEnableImageCropperTitle =>
@@ -7292,9 +7514,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get migrationTargetDatabaseLabel => 'SQLite';
 
   @override
-  String get migrationChooseFolderButton => 'Choose Folder and Back Up';
-
-  @override
   String get migrationSaveBackupButton => 'Save Backup ZIP';
 
   @override
@@ -8535,11 +8754,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String workspaceEnvEngineAlpine(String version) {
-    return 'Alpine $version (iSH)';
-  }
-
-  @override
   String get workspaceEnvPhaseNotInstalled => 'Not installed';
 
   @override
@@ -8839,12 +9053,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Bind a workspace from the toolbar to browse files here';
 
   @override
-  String get workspaceDeskOpenSystemTerminal => 'Open in system terminal';
-
-  @override
-  String get workspaceDeskReveal => 'Reveal in file manager';
-
-  @override
   String get workspaceEntryBind => 'Bind workspace';
 
   @override
@@ -8878,12 +9086,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspaceEntryTerminal => 'Terminal';
-
-  @override
-  String get workspaceEntryOpenSystemTerminal => 'Open in system terminal';
-
-  @override
-  String get workspaceEntryReveal => 'Reveal in file manager';
 
   @override
   String get workspaceEntrySessionSkills => 'Skills';
@@ -9084,10 +9286,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspacePreviewTable => 'Table';
-
-  @override
-  String get workspacePreviewRevealFailed =>
-      'Couldn’t show this file in the file manager.';
 
   @override
   String get workspacePreviewEmptyTable => 'This table is empty.';
@@ -9423,9 +9621,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspacePreviewEmptyHint => 'There\'s nothing to preview.';
-
-  @override
-  String get workspacePreviewRevealInFileManager => 'Show in Files';
 
   @override
   String workspaceBindingSetAssistantDefault(String assistant) {
@@ -9848,6 +10043,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspaceEnvProotOptions => 'PRoot options';
+
+  @override
+  String get workspaceEnvRootChroot => 'Fast mode (root)';
+
+  @override
+  String get workspaceEnvRootChrootHint =>
+      'Runs the Linux environment in a real chroot through su instead of PRoot: programs start and work many times faster. Commands run as real root with full access to the phone. Turning it off gives the files back to Moru.';
+
+  @override
+  String get workspaceEnvRootChrootChecking => 'Checking root…';
+
+  @override
+  String get workspaceEnvRootChrootRestoring => 'Giving files back to Moru…';
+
+  @override
+  String get workspaceEnvRootChrootOn => 'Fast mode is on';
+
+  @override
+  String get workspaceEnvRootChrootOff => 'Fast mode is off, PRoot is back';
+
+  @override
+  String workspaceEnvRootChrootFailed(String reason) {
+    return 'Fast mode is unavailable: $reason';
+  }
 
   @override
   String get workspaceEnvShellPath => 'Shell path';
@@ -10972,13 +11191,186 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserAddressEditorGo => 'Go';
 
   @override
-  String get browserMinimize => 'Minimize';
+  String get browserMinimize => 'Minimize to chat';
 
   @override
   String get browserMiniExpand => 'Expand';
 
   @override
   String get browserMiniTitle => 'Browser';
+
+  @override
+  String get userscriptsTitle => 'User scripts';
+
+  @override
+  String get userscriptsHint =>
+      'Scripts like in Tampermonkey: they change the sites they are made for. Install only scripts you trust — they see everything on those sites.';
+
+  @override
+  String get userscriptsInstall => 'Install';
+
+  @override
+  String get userscriptsEmpty =>
+      'No scripts yet. Paste a link to a .user.js file, e.g. from greasyfork.org.';
+
+  @override
+  String get userscriptsBadLink => 'Enter an http(s) link to a .user.js file';
+
+  @override
+  String get userscriptsNotAScript =>
+      'That file is not a user script (no ==UserScript== header)';
+
+  @override
+  String userscriptsInstalled(String name) {
+    return 'Installed: $name';
+  }
+
+  @override
+  String userscriptsInstallFailed(String error) {
+    return 'Could not install: $error';
+  }
+
+  @override
+  String get browserGoogleSignInBlocked =>
+      'Google does not allow signing in inside this browser. Sign in another way or open the site in Chrome.';
+
+  @override
+  String get browserOpenInChrome => 'Open in Chrome';
+
+  @override
+  String get browserSslTitle => 'Connection is not secure';
+
+  @override
+  String browserSslMessage(String site, String problem) {
+    return 'The certificate of $site is not valid ($problem). Someone may be trying to steal your data.';
+  }
+
+  @override
+  String get browserSslProceed => 'Continue anyway';
+
+  @override
+  String get browserSslBack => 'Go back';
+
+  @override
+  String get browserBookmarks => 'Bookmarks';
+
+  @override
+  String get browserHistory => 'History';
+
+  @override
+  String get browserClearHistory => 'Clear';
+
+  @override
+  String get browserClearHistoryConfirm =>
+      'Clear the history of the last 7 days?';
+
+  @override
+  String get browserLibrarySearch => 'Search';
+
+  @override
+  String get browserHistoryEmpty => 'No pages visited in the last 7 days';
+
+  @override
+  String get browserBookmarksEmpty =>
+      'No bookmarks yet. Tap the star in the address bar.';
+
+  @override
+  String get browserLibraryRemove => 'Remove';
+
+  @override
+  String get browserBookmarkAdded => 'Bookmarked';
+
+  @override
+  String get browserBookmarkRemoved => 'Bookmark removed';
+
+  @override
+  String get browserTabsTooltip => 'Tabs';
+
+  @override
+  String get browserNewTab => 'New tab';
+
+  @override
+  String get browserCloseAllTabs => 'Close all';
+
+  @override
+  String get browserTabByAssistant => 'assistant';
+
+  @override
+  String get browserDesktopSite => 'Desktop site';
+
+  @override
+  String get browserClearSiteData => 'Clear site data';
+
+  @override
+  String browserClearSiteDataConfirm(String site) {
+    return 'Sign out of $site and delete its data in this browser?';
+  }
+
+  @override
+  String browserClearSiteDataDone(String site) {
+    return 'Data of $site deleted';
+  }
+
+  @override
+  String browserTabsTitle(int count) {
+    return 'Tabs: $count';
+  }
+
+  @override
+  String browserDownloadDone(String file) {
+    return 'Downloaded $file';
+  }
+
+  @override
+  String get browserNoAppForLink => 'No app on the phone opens this link.';
+
+  @override
+  String browserDownloadStarted(String file) {
+    return 'Downloading $file to Downloads';
+  }
+
+  @override
+  String browserDownloadFailed(String file) {
+    return 'Could not download $file';
+  }
+
+  @override
+  String get browserDownloadUnsupported =>
+      'This file is made by the page itself and cannot be downloaded yet.';
+
+  @override
+  String browserPermissionQuestion(String what) {
+    return 'Allow this site to use: $what?';
+  }
+
+  @override
+  String get browserPermissionCamera => 'camera';
+
+  @override
+  String get browserPermissionMicrophone => 'microphone';
+
+  @override
+  String get browserPermissionLocation => 'location';
+
+  @override
+  String get browserPermissionProtectedMedia => 'protected video';
+
+  @override
+  String get browserPermissionAllow => 'Allow';
+
+  @override
+  String get browserPermissionBlock => 'Block';
+
+  @override
+  String get browserChallengeVerify =>
+      'The site asks to confirm you are a person. Complete the check yourself; the assistant waits.';
+
+  @override
+  String get browserChallengeRateLimited =>
+      'The site limits requests. The assistant slows down.';
+
+  @override
+  String get browserChallengeDenied => 'The site refuses automated access.';
 
   @override
   String get chatHeaderFiles => 'Files';
@@ -11301,6 +11693,214 @@ class AppLocalizationsEn extends AppLocalizations {
       'Notifications and reminders from your mini apps.';
 
   @override
+  String get miniAppsToolActionErrors => 'Read app error log';
+
+  @override
+  String get miniAppsToolActionVersions => 'List app versions';
+
+  @override
+  String get miniAppsToolActionRollback => 'Roll back app';
+
+  @override
+  String get miniAppsBackAgainToExit => 'Back again to exit';
+
+  @override
+  String get miniAppsJobs => 'Background jobs';
+
+  @override
+  String get miniAppsJobsEmpty =>
+      'No background jobs. Ask the agent, e.g. “every morning at 8 check the weather and notify me”.';
+
+  @override
+  String get miniAppsJobsFooter =>
+      'At the set time Moru opens the app out of sight and runs the job for up to 30 seconds, even when Moru is closed. Errors go to the error log.';
+
+  @override
+  String get miniAppsJobRunNow => 'Run now';
+
+  @override
+  String get miniAppsJobStarted => 'Job started';
+
+  @override
+  String get miniAppsJobEveryDay => 'every day';
+
+  @override
+  String get miniAppsJobRunning => 'Running…';
+
+  @override
+  String get miniAppsToolActionJobs => 'List app background jobs';
+
+  @override
+  String get miniAppsToolActionRunJob => 'Run app background job';
+
+  @override
+  String miniAppsJobNext(String time) {
+    return 'Next: $time';
+  }
+
+  @override
+  String miniAppsJobLastDone(String time) {
+    return 'Last run $time: done';
+  }
+
+  @override
+  String miniAppsJobLastFailed(String time) {
+    return 'Last run $time: failed';
+  }
+
+  @override
+  String get miniAppsToolActionServer => 'Read app server state';
+
+  @override
+  String get rootShellToolTitle => 'Root commands';
+
+  @override
+  String get rootShellToolSubtitle =>
+      'Run commands as root (su) on a rooted phone: system settings, apps, logs, screen input. You approve every command.';
+
+  @override
+  String get miniAppsWebTitle => 'Web server';
+
+  @override
+  String get miniAppsWebPort => 'Port';
+
+  @override
+  String get miniAppsWebLocalhostOnly => 'Only this phone';
+
+  @override
+  String get miniAppsWebLocalhostOnlySubtitle =>
+      'Listen on 127.0.0.1 only: no access from the network and no moru.local.';
+
+  @override
+  String get miniAppsWebPasswordEnabled => 'Require a password';
+
+  @override
+  String get miniAppsWebPasswordEnabledSubtitle =>
+      'The browser asks for it; any user name works.';
+
+  @override
+  String get miniAppsWebPassword => 'Password';
+
+  @override
+  String get miniAppsWebStart => 'Start';
+
+  @override
+  String get miniAppsWebStop => 'Stop';
+
+  @override
+  String get miniAppsWebRunning => 'Running. Open in a browser:';
+
+  @override
+  String get miniAppsWebCopied => 'Address copied';
+
+  @override
+  String get miniAppsWebInvalidPort => 'The port must be from 1024 to 65535.';
+
+  @override
+  String get miniAppsWebNoPassword =>
+      'Set a password or turn the password off.';
+
+  @override
+  String get miniAppsWebFooter =>
+      'Your mini apps open in a browser with the same data as in Moru. moru.local and the Wi-Fi address work on devices in the same Wi-Fi, not over mobile data; 127.0.0.1 works in a browser on this phone. While the server runs, Moru keeps a notification; stopping it there stops the server.';
+
+  @override
+  String miniAppsWebNotification(String url) {
+    return 'Web server: $url';
+  }
+
+  @override
+  String miniAppsWebPortInUse(String port) {
+    return 'Port $port is already in use: choose another one.';
+  }
+
+  @override
+  String get miniAppsWebAutostart => 'Start with Moru';
+
+  @override
+  String get miniAppsWebAutostartSubtitle =>
+      'Start the server whenever Moru starts.';
+
+  @override
+  String get miniAppsServer => 'Server';
+
+  @override
+  String get miniAppsServerStarting => 'Starting…';
+
+  @override
+  String get miniAppsServerIdle =>
+      'Not running. It starts while the app is open.';
+
+  @override
+  String get miniAppsServerRestart => 'Restart';
+
+  @override
+  String get miniAppsServerNoOutput => 'No output yet.';
+
+  @override
+  String miniAppsServerRunning(String port) {
+    return 'Running on port $port';
+  }
+
+  @override
+  String miniAppsServerExited(String code) {
+    return 'Stopped with code $code';
+  }
+
+  @override
+  String get miniAppsSearch => 'Search apps';
+
+  @override
+  String get miniAppsBadgeGame => 'Game';
+
+  @override
+  String miniAppsJobFailed(String job) {
+    return 'Background job \"$job\" failed. Open the app to see why.';
+  }
+
+  @override
+  String get miniAppsMore => 'More';
+
+  @override
+  String get miniAppsErrors => 'Error log';
+
+  @override
+  String get miniAppsErrorsEmpty => 'No errors recorded.';
+
+  @override
+  String get miniAppsErrorsFooter =>
+      'Errors of the current version. Ask the agent in the chat to fix the app: it reads this log.';
+
+  @override
+  String get miniAppsErrorsCopy => 'Copy all';
+
+  @override
+  String get miniAppsErrorsCopied => 'Log copied';
+
+  @override
+  String get miniAppsErrorsClear => 'Clear';
+
+  @override
+  String get miniAppsVersions => 'Versions';
+
+  @override
+  String get miniAppsVersionsEmpty => 'No earlier versions yet.';
+
+  @override
+  String get miniAppsVersionsFooter =>
+      'Moru keeps the last 5 versions. Rolling back changes only the app\'s code; its data and reminders stay. The current version is kept, so you can return to it.';
+
+  @override
+  String miniAppsVersionsTitle(String name) {
+    return 'Roll back “$name”';
+  }
+
+  @override
+  String miniAppsRolledBack(String date) {
+    return 'Restored the version of $date';
+  }
+
+  @override
   String get phoneControlTitle => 'Phone Control';
 
   @override
@@ -11376,4 +11976,695 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get toolApprovalsFullTrustDescription =>
       'Skip per-action confirmations for browser, MCP, shell, file writes, and other tools that normally require approval.';
+
+  @override
+  String chatReasoningTailHint(String shown, String total) {
+    return 'Showing the last $shown of $total characters';
+  }
+
+  @override
+  String get chatToolCopyDetails => 'Copy details';
+
+  @override
+  String get chatToolRerunFromHere => 'Rerun from here';
+
+  @override
+  String get chatTokensTitle => 'Chat tokens';
+
+  @override
+  String get chatTokensContext => 'Context';
+
+  @override
+  String get chatTokensContextUsed => 'In use';
+
+  @override
+  String get chatTokensContextWindow => 'Context window';
+
+  @override
+  String get chatTokensMaxOutput => 'Max reply';
+
+  @override
+  String get chatTokensSpent => 'Spent in this chat';
+
+  @override
+  String get chatTokensInput => 'Input';
+
+  @override
+  String get chatTokensOutput => 'Output';
+
+  @override
+  String get chatTokensCached => 'From cache';
+
+  @override
+  String get chatTokensReplies => 'Replies';
+
+  @override
+  String get chatTokensCost => 'Cost';
+
+  @override
+  String get chatInputHintQueue =>
+      'Type while AI answers: your message waits in line';
+
+  @override
+  String get chatInputHintMiniApp =>
+      'Ask for a mini app: a tracker, a game, a tool';
+
+  @override
+  String get chatInputHintPaste => 'Paste long text: it becomes a file';
+
+  @override
+  String get chatInputHintTokens => 'Tap the ring by Send to see the tokens';
+
+  @override
+  String get chatInputHintToolMenu =>
+      'Long-press a tool step to copy or rerun it';
+
+  @override
+  String get messageMoreSheetCopyFormatted => 'Copy with formatting';
+
+  @override
+  String get agentsMode => 'Agent mode';
+
+  @override
+  String get agentsSessionOptions => 'Agent options';
+
+  @override
+  String get agentsImageNotSent => 'An image was not sent to the agent.';
+
+  @override
+  String get agentsErrorApiKey => 'Invalid API key for the provider.';
+
+  @override
+  String get agentsErrorModel =>
+      'Model not found. Check the provider model settings.';
+
+  @override
+  String get agentsErrorNetwork =>
+      'No network connection. Check your connection and try again.';
+
+  @override
+  String get agentsErrorHeaders =>
+      'Provider headers contain an invalid name or a line break. Check the provider header settings.';
+
+  @override
+  String get agentsErrorTemporaryDirectory =>
+      'The agent cannot use its temporary directory. Check the Linux environment and try again.';
+
+  @override
+  String get agentsShowDetails => 'Show details';
+
+  @override
+  String get agentsHideDetails => 'Hide details';
+
+  @override
+  String get agentsDescKimiCode =>
+      'Moonshot’s coding agent: edits files and runs commands.';
+
+  @override
+  String get agentsDescDeepSeekHarness =>
+      'DeepSeek’s coding agent: works on files and commands in a workspace.';
+
+  @override
+  String get agentsApiCompatible =>
+      'Uses the Moru provider with Anthropic, Chat Completions or Responses API.';
+
+  @override
+  String get agentsWebOpen => 'Open web interface';
+
+  @override
+  String get agentsWebStop => 'Stop';
+
+  @override
+  String get agentsWebStarting => 'Starting the web interface…';
+
+  @override
+  String get agentsWebRunning =>
+      'The web interface is running in the background.';
+
+  @override
+  String get agentsWebTimeout =>
+      'The agent did not print a local web address within 120 seconds. Stop it and try again.';
+
+  @override
+  String get agentsWebExited =>
+      'The web process exited. Open the interface again to restart it.';
+
+  @override
+  String get agentsWebStartFailed =>
+      'Could not start the web interface. Check the Linux environment, agent installation and Node.js version.';
+
+  @override
+  String get agentsWebStopped => 'The web interface was stopped.';
+
+  @override
+  String get agentsWebDeepSeekWorkspace =>
+      'For DeepSeek Harness, choose or add /workspace in the web interface.';
+
+  @override
+  String agentsNodeVersionRequired(
+    String agent,
+    String requiredVersion,
+    String actual,
+  ) {
+    return '$agent requires Node.js $requiredVersion. Detected in the Linux environment: $actual. Update Node.js, reopen this card and try again.';
+  }
+
+  @override
+  String get agentsNodeVersionUnknown => 'version unavailable';
+
+  @override
+  String get agentsNodeUpdateDebian =>
+      'In the Linux terminal, install Node.js 24 from the official NodeSource repository:\napt-get update\napt-get install -y ca-certificates curl bash\ncurl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\nbash /tmp/moru-node24-setup.sh\napt-get install -y nodejs\nnode --version\nnpm --version\nInstructions: https://github.com/nodesource/distributions/blob/master/DEV_README.md';
+
+  @override
+  String get agentsNodeUpdateAlpine =>
+      'In the Linux terminal, update the Alpine packages:\napk update\napk add --upgrade nodejs npm\nnode --version\nnpm --version';
+
+  @override
+  String get agentsNodeUpdateUnknown =>
+      'No verified upgrade method is available for this distribution. Check its official Node.js installation instructions; then reopen this card.';
+
+  @override
+  String get workspaceEnvGroupDevelopment => 'Development';
+
+  @override
+  String get workspaceEnvGroupAgents => 'AI agents';
+
+  @override
+  String get workspaceEnvGroupAgentsDetail =>
+      '“Prepare for agents” installs what coding agents need from the system; open an agent to install, update or check it.';
+
+  @override
+  String get workspaceEnvGroupSsh => 'SSH';
+
+  @override
+  String get workspaceEnvPrepareAgents => 'Prepare for agents';
+
+  @override
+  String get workspaceEnvPrepareAgentsDone =>
+      'Everything agents need is installed';
+
+  @override
+  String get workspaceEnvDependencyBuildTitle => 'Build tools';
+
+  @override
+  String get workspaceEnvDependencyBuild =>
+      'Compiler and make, to build Node and Python modules';
+
+  @override
+  String get workspaceEnvDependencyProcessesTitle => 'Processes';
+
+  @override
+  String get workspaceEnvDependencyCompatTitle => 'glibc compatibility';
+
+  @override
+  String get workspaceEnvDependencyCompat =>
+      'Runs programs built for regular Linux on Alpine';
+
+  @override
+  String get workspaceEnvDependencyBash =>
+      'The shell agents and scripts run commands in';
+
+  @override
+  String get workspaceEnvDependencyRipgrep =>
+      'Fast code search, used by coding agents';
+
+  @override
+  String get workspaceEnvDependencySshTitle => 'SSH client';
+
+  @override
+  String get workspaceEnvDependencySshpass => 'Password logins for scripts';
+
+  @override
+  String get workspaceEnvDependencySshdTitle => 'SSH server';
+
+  @override
+  String get workspaceEnvDependencySshd => 'Connect to the phone over SSH';
+
+  @override
+  String workspaceEnvInstallSelected(int count) {
+    return 'Install selected ($count)';
+  }
+
+  @override
+  String get agentsCodexResponsesRequired =>
+      'Codex only works with providers that support the OpenAI Responses API. Enable it in the provider settings or choose another agent.';
+
+  @override
+  String get backgroundReliabilityHintTitle => 'Keep this task running';
+
+  @override
+  String get backgroundReliabilityHintDisabled =>
+      'Background execution is off. Enable it to keep this task running when you switch apps or turn off the screen.';
+
+  @override
+  String get backgroundReliabilityHintRestricted =>
+      'Android restricts Moru in the background. Check the app’s battery settings before leaving this task.';
+
+  @override
+  String get backgroundReliabilityHintStandby =>
+      'Low Power Standby can pause network access even while this task is running. Check your device’s power settings.';
+
+  @override
+  String get backgroundReliabilityHintVendor =>
+      'Vivo and Xiaomi can stop background tasks. Allow background activity and autostart in system settings.';
+
+  @override
+  String get backgroundReliabilityHintInterrupted =>
+      'A previous task stopped when Moru’s process ended. Check battery and background activity settings before leaving another task.';
+
+  @override
+  String get backgroundReliabilityHintSettings => 'Background settings';
+
+  @override
+  String get backgroundReliabilityHintDismiss => 'Dismiss tip';
+
+  @override
+  String get backgroundLowPowerStandby => 'Low Power Standby';
+
+  @override
+  String get backgroundLowPowerStandbyDetail =>
+      'This device mode can restrict network access even with a foreground service. A battery optimization exception does not always disable it.';
+
+  @override
+  String get backgroundPowerRestricted => 'Restricted';
+
+  @override
+  String get backgroundPowerUnrestricted => 'No restriction reported';
+
+  @override
+  String get backgroundShellRunning => 'Running background command';
+
+  @override
+  String get backgroundServerRunning => 'Mini app server running';
+
+  @override
+  String get backgroundProtectionUnavailable =>
+      'Background protection could not start. Keep Moru open and try again.';
+
+  @override
+  String get chatInterruptedBody =>
+      'The app stopped before this reply finished. Your saved partial reply and queued messages are preserved. Continuing starts a new turn.';
+
+  @override
+  String get chatContinueAfterInterruption => 'Continue';
+
+  @override
+  String get chatContinuePrompt =>
+      'Continue from the saved context after the interruption. Check what has already completed before taking further actions.';
+
+  @override
+  String get queuedInputSaveFailed =>
+      'Could not save the queued message. Your draft is still available.';
+
+  @override
+  String get notificationApprovalTitle => 'Approval needed';
+
+  @override
+  String get notificationApprovalBody =>
+      'An agent is waiting for your decision.';
+
+  @override
+  String get notificationApprovalAllow => 'Allow';
+
+  @override
+  String get notificationApprovalDeny => 'Deny';
+
+  @override
+  String get notificationApprovalStaleTitle => 'Approval no longer available';
+
+  @override
+  String get notificationApprovalStaleBody =>
+      'Open the chat to check this request.';
+
+  @override
+  String get notificationApprovalChannelName => 'Agent approvals';
+
+  @override
+  String get notificationApprovalChannelDescription =>
+      'Decisions requested by a running agent or tool.';
+
+  @override
+  String get backgroundShellCompleted => 'Background command finished';
+
+  @override
+  String get backgroundShellFailed => 'Background command failed';
+
+  @override
+  String get agentsAuthTitle => 'Sign in with subscription';
+
+  @override
+  String get agentsAuthMode => 'Authentication';
+
+  @override
+  String get agentsAuthProvider => 'API provider';
+
+  @override
+  String get agentsAuthSubscription => 'Subscription';
+
+  @override
+  String get agentsAuthProviderHint =>
+      'Use this assistant’s API provider settings.';
+
+  @override
+  String get agentsAuthSubscriptionHint =>
+      'Use the agent’s own Claude or ChatGPT sign-in. API provider keys and model overrides are not used.';
+
+  @override
+  String get agentsAuthSignIn => 'Sign in';
+
+  @override
+  String get agentsAuthCheck => 'Check sign-in';
+
+  @override
+  String get agentsAuthSignOut => 'Sign out';
+
+  @override
+  String get agentsAuthSignedIn => 'Signed in';
+
+  @override
+  String get agentsAuthSignedOut => 'Sign-in required';
+
+  @override
+  String get agentsAuthUnknown => 'Sign-in not checked';
+
+  @override
+  String get agentsAuthWaiting => 'Complete sign-in in your browser.';
+
+  @override
+  String get agentsAuthOpenBrowser => 'Open sign-in page';
+
+  @override
+  String get agentsAuthDeviceCode => 'Device code';
+
+  @override
+  String get agentsAuthCodexHint =>
+      'Enable device code login in ChatGPT Settings → Security before signing in.';
+
+  @override
+  String get agentsAuthCode => 'Authorization code';
+
+  @override
+  String get agentsAuthSubmitCode => 'Submit code';
+
+  @override
+  String get agentsAuthCodeHint =>
+      'If your browser asks you to copy a code, paste the complete code here, including the part after #.';
+
+  @override
+  String get agentsAuthCancel => 'Cancel sign-in';
+
+  @override
+  String get agentsAuthFailureEnvironment =>
+      'Set up the Linux environment first.';
+
+  @override
+  String get agentsAuthFailureStart =>
+      'Sign-in could not be completed. Update the agent and try again.';
+
+  @override
+  String get agentsAuthFailureNetwork =>
+      'Sign-in failed because of a network connection. Try again.';
+
+  @override
+  String get agentsAuthFailureTimeout => 'Sign-in timed out. Try again.';
+
+  @override
+  String get agentsAuthBrowserFailed =>
+      'The sign-in page could not be opened. You can copy the link below.';
+
+  @override
+  String get agentsErrorAuthRequired =>
+      'The agent needs authentication. Sign in under Settings → Agents, or check the selected provider’s API key.';
+
+  @override
+  String get agentsErrorAccountBusy =>
+      'Codex is already active in another chat. Finish or stop that reply before continuing.';
+
+  @override
+  String get computerTitle => 'Computer';
+
+  @override
+  String get computerWorking => 'AI is working…';
+
+  @override
+  String get computerDone => 'Done';
+
+  @override
+  String get computerError => 'Error';
+
+  @override
+  String get computerPreviousStep => 'Previous step';
+
+  @override
+  String get computerNextStep => 'Next step';
+
+  @override
+  String get computerLatest => 'Go to latest';
+
+  @override
+  String get computerOpenTerminal => 'Open terminal';
+
+  @override
+  String get computerOpenBrowser => 'Open live browser';
+
+  @override
+  String get computerOpenFile => 'Preview file';
+
+  @override
+  String get computerCopyResult => 'Copy result';
+
+  @override
+  String get computerNoResult => 'No result yet';
+
+  @override
+  String get computerParameters => 'Parameters';
+
+  @override
+  String get computerResult => 'Result';
+
+  @override
+  String get browserFloatingWindowTitle => 'Floating browser window';
+
+  @override
+  String get browserFloatingWindowDescription =>
+      'Show a floating live browser when minimized. By default, AI actions appear in Computer above the composer.';
+
+  @override
+  String get computerMoreDetails => 'Detailed result';
+
+  @override
+  String get computerStopped => 'Stopped';
+
+  @override
+  String computerActionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count actions',
+      one: '$count action',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get computerViewAction => 'View';
+
+  @override
+  String get computerBackgroundOutput => 'Background job output';
+
+  @override
+  String get computerBackground => 'In background';
+
+  @override
+  String computerRunningElapsed(String elapsed) {
+    return 'Running · $elapsed';
+  }
+
+  @override
+  String computerExitElapsed(int code, String seconds) {
+    return 'Exit code $code · $seconds s';
+  }
+
+  @override
+  String computerBrowserStep(String domain) {
+    return 'Browser · $domain';
+  }
+
+  @override
+  String computerPlanProgress(int completed, int total) {
+    return 'Plan · $completed/$total';
+  }
+
+  @override
+  String computerFileStep(String action, String name) {
+    return '$action · $name';
+  }
+
+  @override
+  String computerAddedLines(int count) {
+    return '(+$count lines)';
+  }
+
+  @override
+  String get computerActionCommand => 'Command';
+
+  @override
+  String get computerActionOpen => 'Open';
+
+  @override
+  String get computerActionClick => 'Click';
+
+  @override
+  String get computerActionType => 'Type';
+
+  @override
+  String get computerActionRead => 'Read';
+
+  @override
+  String get computerActionWrite => 'Write';
+
+  @override
+  String get computerActionEdit => 'Edit';
+
+  @override
+  String get computerActionList => 'List';
+
+  @override
+  String get computerActionPlan => 'Plan';
+
+  @override
+  String get computerActionScreenshot => 'Screenshot';
+
+  @override
+  String get computerBrowserOpening => 'Opening…';
+
+  @override
+  String get computerBrowserClicking => 'Clicking…';
+
+  @override
+  String get computerBrowserTyping => 'Typing…';
+
+  @override
+  String get computerBrowserReading => 'Reading page';
+
+  @override
+  String get computerAllParameters => 'All parameters (JSON)';
+
+  @override
+  String get computerParameterDirectory => 'Directory';
+
+  @override
+  String get computerParameterBackground => 'Background';
+
+  @override
+  String get computerParameterTimeout => 'Timeout';
+
+  @override
+  String get computerParameterUrl => 'URL';
+
+  @override
+  String get computerParameterSelector => 'Selector';
+
+  @override
+  String get computerParameterText => 'Text';
+
+  @override
+  String get computerParameterPath => 'Path';
+
+  @override
+  String get computerParameterRange => 'Range';
+
+  @override
+  String computerStepPosition(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String get browserActions => 'Actions';
+
+  @override
+  String browserActionsCount(int count) {
+    return 'Actions · $count';
+  }
+
+  @override
+  String get browserCloseBrowser => 'Close browser';
+
+  @override
+  String get browserCloseWhileAiTitle => 'Close browser?';
+
+  @override
+  String get browserCloseWhileAiMessage => 'The AI action will stop.';
+
+  @override
+  String get computerActionSummary => 'Summary';
+
+  @override
+  String get computerBrowserResultStatus => 'Status';
+
+  @override
+  String get computerBrowserResultSuccess => 'Success';
+
+  @override
+  String get computerBrowserResultError => 'Error';
+
+  @override
+  String get computerBrowserResultTitle => 'Title';
+
+  @override
+  String get computerParameterYes => 'Yes';
+
+  @override
+  String get computerParameterNo => 'No';
+
+  @override
+  String computerBrowserAction(String action) {
+    String _temp0 = intl.Intl.selectLogic(action, {
+      'open': 'Open',
+      'observe': 'Inspect',
+      'screenshot': 'Screenshot',
+      'read': 'Read',
+      'collect': 'Collect',
+      'outline': 'Page outline',
+      'wait_stable': 'Wait until loaded',
+      'wait_for': 'Wait for element',
+      'back': 'Back',
+      'forward': 'Forward',
+      'reload': 'Reload',
+      'scroll': 'Scroll',
+      'tabs': 'Tabs',
+      'new_tab': 'New tab',
+      'switch_tab': 'Switch tab',
+      'close_tab': 'Close tab',
+      'set_mode': 'Site mode',
+      'close': 'Close browser',
+      'done': 'Done',
+      'click': 'Click',
+      'hover': 'Hover',
+      'type': 'Type',
+      'submit': 'Submit form',
+      'press_key': 'Press key',
+      'eval_js': 'Run page code',
+      'fetch': 'Page request',
+      'export_cookies': 'Export cookies',
+      'other': 'Browser action',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get problemReportToolTitle => 'Problem report';
+
+  @override
+  String get problemReportToolSubtitle =>
+      'Create a private ZIP of technical diagnostics. Confirmation is required every time.';
+
+  @override
+  String get problemReportConsent =>
+      'The ZIP will contain:\n• App version and build number\n• Android version, manufacturer and device model\n• Environment mode: PRoot/root\n• Interface, tool and logging settings and provider types, without secrets\n• Technical events from this app run: event names, error types and stack frames (up to 128 KiB)\nChats, message text and request/context logs are excluded. Secrets are removed. The report is deleted at the next app launch or expires after 24 hours.';
+
+  @override
+  String get problemReportUnavailable =>
+      'This report was deleted or could not be shared. Create a new report.';
 }

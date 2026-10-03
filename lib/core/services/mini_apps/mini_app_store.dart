@@ -23,6 +23,10 @@ class MiniApp {
     this.dataHelp = '',
     this.network = const [],
     this.permissions = const {},
+    this.fullscreen = false,
+    this.orientation = MiniAppOrientation.any,
+    this.keepAwake = false,
+    this.serverCommand,
     required this.updatedAt,
   });
 
@@ -41,6 +45,19 @@ class MiniApp {
   /// Device features the app asked for in `permissions`, e.g. `calendar`.
   final Set<String> permissions;
 
+  /// Hides Moru's app bar and the system bars, e.g. for games.
+  final bool fullscreen;
+
+  /// Screen orientation while the app is open.
+  final MiniAppOrientation orientation;
+
+  /// Keeps the screen on while the app is open.
+  final bool keepAwake;
+
+  /// Shell command of the app's server, from `server.command`: Moru runs it
+  /// in the Linux environment while the app is open (see MiniAppServers).
+  final String? serverCommand;
+
   /// Folder of the installed copy (manifest, app/ and data).
   final String directory;
 
@@ -58,25 +75,32 @@ class MiniApp {
   /// Opens the app from a chat reply.
   String get link => MiniAppStore.linkFor(id);
 
-  factory MiniApp.fromJson(String directory, Map<String, dynamic> json) =>
-      MiniApp(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        description: json['description'] as String? ?? '',
-        entry: json['entry'] as String? ?? 'index.html',
-        icon: json['icon'] as String?,
-        dataHelp: json['data'] as String? ?? '',
-        network: [
-          for (final host in json['network'] as List? ?? const []) '$host',
-        ],
-        permissions: {
-          for (final name in json['permissions'] as List? ?? const []) '$name',
-        },
-        directory: directory,
-        updatedAt: DateTime.fromMillisecondsSinceEpoch(
-          json['updatedAt'] as int? ?? 0,
-        ),
-      );
+  factory MiniApp.fromJson(
+    String directory,
+    Map<String, dynamic> json,
+  ) => MiniApp(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    description: json['description'] as String? ?? '',
+    entry: json['entry'] as String? ?? 'index.html',
+    icon: json['icon'] as String?,
+    dataHelp: json['data'] as String? ?? '',
+    network: [for (final host in json['network'] as List? ?? const []) '$host'],
+    permissions: {
+      for (final name in json['permissions'] as List? ?? const []) '$name',
+    },
+    fullscreen: json['fullscreen'] == true,
+    orientation:
+        MiniAppOrientation.parse(json['orientation']) ?? MiniAppOrientation.any,
+    keepAwake: json['keepAwake'] == true,
+    serverCommand: json['server'] is Map
+        ? (json['server'] as Map)['command'] as String?
+        : null,
+    directory: directory,
+    updatedAt: DateTime.fromMillisecondsSinceEpoch(
+      json['updatedAt'] as int? ?? 0,
+    ),
+  );
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -87,7 +111,54 @@ class MiniApp {
     if (dataHelp.isNotEmpty) 'data': dataHelp,
     if (network.isNotEmpty) 'network': network,
     if (permissions.isNotEmpty) 'permissions': permissions.toList()..sort(),
+    if (fullscreen) 'fullscreen': true,
+    if (orientation != MiniAppOrientation.any) 'orientation': orientation.name,
+    if (keepAwake) 'keepAwake': true,
+    if (serverCommand != null) 'server': {'command': serverCommand},
     'updatedAt': updatedAt.millisecondsSinceEpoch,
+  };
+}
+
+enum MiniAppOrientation {
+  any,
+  portrait,
+  landscape;
+
+  /// The value of `orientation` in moru-app.json, or null when it is not
+  /// one of these names.
+  static MiniAppOrientation? parse(Object? raw) {
+    for (final value in values) {
+      if (value.name == raw) return value;
+    }
+    return null;
+  }
+}
+
+/// One line of an app's error journal. Repeats of the last message only
+/// raise [count].
+@immutable
+class MiniAppLogEntry {
+  const MiniAppLogEntry({
+    required this.at,
+    required this.message,
+    this.count = 1,
+  });
+
+  final DateTime at;
+  final String message;
+  final int count;
+
+  factory MiniAppLogEntry.fromJson(Map<String, dynamic> json) =>
+      MiniAppLogEntry(
+        at: DateTime.fromMillisecondsSinceEpoch(json['at'] as int? ?? 0),
+        message: '${json['message'] ?? ''}',
+        count: json['count'] as int? ?? 1,
+      );
+
+  Map<String, dynamic> toJson() => {
+    'at': at.millisecondsSinceEpoch,
+    'message': message,
+    if (count > 1) 'count': count,
   };
 }
 
@@ -107,6 +178,9 @@ class MiniAppException implements Exception {
 /// mini_apps/<id>/manifest.json   what Moru knows about the app
 /// mini_apps/<id>/app/            copy of the published files
 /// mini_apps/<id>/data.json       moru.storage, kept across republishing
+/// mini_apps/<id>/errors.json     error journal of the current code
+/// mini_apps/<id>/versions/<ms>/  earlier manifest.json and app/, named by
+///                                their updatedAt
 /// ```
 class MiniAppStore extends ChangeNotifier {
   MiniAppStore({Future<Directory> Function()? root, DateTime Function()? now})
@@ -127,6 +201,9 @@ class MiniAppStore extends ChangeNotifier {
     'node_modules',
     '.git',
     '__pycache__',
+    // Virtualenvs of a server; it installs its dependencies into /data.
+    '.venv',
+    'venv',
   };
 
   static final RegExp _idPattern = RegExp(r'^[a-z0-9][a-z0-9-]{0,39}$');
@@ -176,7 +253,10 @@ class MiniAppStore extends ChangeNotifier {
     final apps = <MiniApp>[];
     if (await root.exists()) {
       await for (final entry in root.list()) {
-        if (entry is! Directory) continue;
+        // Staging folders of an interrupted install or rollback.
+        if (entry is! Directory || p.basename(entry.path).startsWith('.')) {
+          continue;
+        }
         final manifest = File(p.join(entry.path, 'manifest.json'));
         if (!await manifest.exists()) continue;
         try {
@@ -244,6 +324,24 @@ class MiniAppStore extends ChangeNotifier {
     final network = _hosts(manifest['network']);
     final permissions = _permissions(manifest['permissions']);
     final icon = _relative(manifest['icon'], fallback: null);
+    final orientation = manifest['orientation'] == null
+        ? MiniAppOrientation.any
+        : MiniAppOrientation.parse(manifest['orientation']);
+    if (orientation == null) {
+      throw const MiniAppException(
+        'invalid_orientation',
+        '"orientation" must be "any", "portrait" or "landscape".',
+      );
+    }
+    final serverCommand = _serverCommand(manifest['server']);
+    for (final flag in const ['fullscreen', 'keepAwake']) {
+      if (manifest[flag] != null && manifest[flag] is! bool) {
+        throw MiniAppException(
+          'invalid_manifest',
+          '"$flag" must be a boolean.',
+        );
+      }
+    }
 
     final files = await _collect(sourceDir);
     final names = files.map((f) => f.relative).toSet();
@@ -288,6 +386,10 @@ class MiniAppStore extends ChangeNotifier {
       dataHelp: _limited('${manifest['data'] ?? ''}'.trim(), 2000),
       network: network,
       permissions: permissions,
+      fullscreen: manifest['fullscreen'] == true,
+      orientation: orientation,
+      keepAwake: manifest['keepAwake'] == true,
+      serverCommand: serverCommand,
       directory: directory.path,
       updatedAt: _now(),
     );
@@ -297,12 +399,17 @@ class MiniAppStore extends ChangeNotifier {
 
     await directory.create(recursive: true);
     final oldCode = Directory(p.join(directory.path, 'app'));
-    if (await oldCode.exists()) await oldCode.delete(recursive: true);
+    if (previous != null) {
+      await _keepVersion(previous);
+    } else if (await oldCode.exists()) {
+      await oldCode.delete(recursive: true);
+    }
     await code.rename(oldCode.path);
     await File(
       p.join(staging.path, 'manifest.json'),
     ).rename(p.join(directory.path, 'manifest.json'));
     await staging.delete(recursive: true);
+    if (previous != null) await clearErrors(id);
 
     _apps = _sorted([
       for (final other in _apps)
@@ -327,6 +434,10 @@ class MiniAppStore extends ChangeNotifier {
       await hook(id);
     }
     await _writes[id];
+    await _writes[_journal(id)]?.catchError((_) {});
+    for (final name in ['jobs.json', 'reminders.json']) {
+      await _writes[_mapKey(id, name)]?.catchError((_) {});
+    }
     final directory = Directory(app.directory);
     if (await directory.exists()) await directory.delete(recursive: true);
     _apps = [
@@ -517,22 +628,225 @@ class MiniAppStore extends ChangeNotifier {
   }
 
   // ---------------------------------------------------------------------------
-  // Reminders (scheduled by MiniAppNotifications)
+  // Reminders and background jobs, kept with the app
   // ---------------------------------------------------------------------------
 
-  Future<Map<String, dynamic>> readReminders(String id) async {
-    final file = File(p.join(_require(id).directory, 'reminders.json'));
+  Future<Map<String, dynamic>> readReminders(String id) =>
+      _readMap(id, 'reminders.json');
+
+  /// Reads, changes and writes the reminders as one step (see [updateJobs]).
+  Future<T> updateReminders<T>(
+    String id,
+    FutureOr<T> Function(Map<String, dynamic> reminders) change,
+  ) => _updateMap(id, 'reminders.json', change);
+
+  /// Background jobs set with `moru.jobs` (scheduled by MiniAppJobs).
+  Future<Map<String, dynamic>> readJobs(String id) => _readMap(id, 'jobs.json');
+
+  /// Reads, changes and writes the jobs as one step, one call after
+  /// another: a page that does not await each `moru.jobs.set` must not have
+  /// one call overwrite another or both write the same temporary file. A
+  /// [change] that throws writes nothing.
+  Future<T> updateJobs<T>(
+    String id,
+    FutureOr<T> Function(Map<String, dynamic> jobs) change,
+  ) => _updateMap(id, 'jobs.json', change);
+
+  Future<T> _updateMap<T>(
+    String id,
+    String name,
+    FutureOr<T> Function(Map<String, dynamic> map) change,
+  ) => _queued(_mapKey(id, name), () async {
+    final map = await _readMap(id, name);
+    final result = await change(map);
+    await _writeMap(id, name, map);
+    return result;
+  });
+
+  static String _mapKey(String id, String name) => '$id\u0000$name';
+
+  Future<Map<String, dynamic>> _readMap(String id, String name) async {
+    final file = File(p.join(_require(id).directory, name));
     if (!await file.exists()) return <String, dynamic>{};
     return Map<String, dynamic>.from(
       jsonDecode(await file.readAsString()) as Map,
     );
   }
 
-  Future<void> writeReminders(String id, Map<String, dynamic> reminders) async {
-    final file = File(p.join(_require(id).directory, 'reminders.json'));
-    final temp = File('${file.path}.tmp');
-    await temp.writeAsString(jsonEncode(reminders), flush: true);
-    await temp.rename(file.path);
+  Future<void> _writeMap(
+    String id,
+    String name,
+    Map<String, dynamic> map,
+  ) async => _writeAtomically(
+    File(p.join(_require(id).directory, name)),
+    jsonEncode(map),
+  );
+
+  // ---------------------------------------------------------------------------
+  // Error journal
+  // ---------------------------------------------------------------------------
+
+  static const int maxLogEntries = 50;
+
+  static String _journal(String id) => '$id/errors';
+
+  File _errorsFile(MiniApp app) => File(p.join(app.directory, 'errors.json'));
+
+  /// The journal of the current code, oldest first.
+  Future<List<MiniAppLogEntry>> readErrors(String id) async {
+    await load();
+    final app = _require(id);
+    await _writes[_journal(id)]?.catchError((_) {});
+    return _readErrors(app);
+  }
+
+  Future<List<MiniAppLogEntry>> _readErrors(MiniApp app) async {
+    final file = _errorsFile(app);
+    if (!await file.exists()) return [];
+    try {
+      return [
+        for (final entry in jsonDecode(await file.readAsString()) as List)
+          MiniAppLogEntry.fromJson(Map<String, dynamic>.from(entry as Map)),
+      ];
+    } on FormatException {
+      return [];
+    }
+  }
+
+  /// Adds [message] to the journal, keeping the last [maxLogEntries].
+  Future<void> logError(String id, String message) async {
+    final app = _require(id);
+    return _queued(_journal(id), () async {
+      final entries = await _readErrors(app);
+      final last = entries.isEmpty ? null : entries.last;
+      if (last != null && last.message == message) {
+        entries.last = MiniAppLogEntry(
+          at: _now(),
+          message: message,
+          count: last.count + 1,
+        );
+      } else {
+        entries.add(MiniAppLogEntry(at: _now(), message: message));
+      }
+      final kept = entries.length > maxLogEntries
+          ? entries.sublist(entries.length - maxLogEntries)
+          : entries;
+      await _writeAtomically(
+        _errorsFile(app),
+        jsonEncode([for (final entry in kept) entry.toJson()]),
+      );
+    });
+  }
+
+  Future<void> clearErrors(String id) async {
+    final app = _require(id);
+    return _queued(_journal(id), () async {
+      final file = _errorsFile(app);
+      if (await file.exists()) await file.delete();
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Versions
+  // ---------------------------------------------------------------------------
+
+  static const int maxVersions = 5;
+  static final RegExp _versionPattern = RegExp(r'^\d{1,16}$');
+
+  /// Earlier copies of the app's code, newest first. [MiniApp.updatedAt]
+  /// tells when each was published; [versionOf] names it for [rollback].
+  Future<List<MiniApp>> versions(String id) async {
+    await load();
+    return _versions(_require(id));
+  }
+
+  static String versionOf(MiniApp version) =>
+      '${version.updatedAt.millisecondsSinceEpoch}';
+
+  Future<List<MiniApp>> _versions(MiniApp app) async {
+    final root = Directory(p.join(app.directory, 'versions'));
+    if (!await root.exists()) return [];
+    final found = <MiniApp>[];
+    await for (final entry in root.list()) {
+      if (entry is! Directory ||
+          !_versionPattern.hasMatch(p.basename(entry.path))) {
+        continue;
+      }
+      try {
+        found.add(
+          MiniApp.fromJson(
+            entry.path,
+            jsonDecode(
+                  await File(
+                    p.join(entry.path, 'manifest.json'),
+                  ).readAsString(),
+                )
+                as Map<String, dynamic>,
+          ),
+        );
+      } catch (e) {
+        debugPrint('[MiniApps] skipping version ${entry.path}: $e');
+      }
+    }
+    return _sorted(found);
+  }
+
+  /// Moves the current code of [app] into `versions/` and drops the oldest
+  /// copies beyond [maxVersions]. The manifest stays until it is replaced.
+  Future<void> _keepVersion(MiniApp app) async {
+    final target = Directory(p.join(app.directory, 'versions', versionOf(app)));
+    if (await target.exists()) await target.delete(recursive: true);
+    await target.create(recursive: true);
+    final code = Directory(app.codeDirectory);
+    if (await code.exists()) {
+      await code.rename(p.join(target.path, 'app'));
+    }
+    await File(
+      p.join(app.directory, 'manifest.json'),
+    ).copy(p.join(target.path, 'manifest.json'));
+    final kept = await _versions(app);
+    for (final old in kept.skip(maxVersions)) {
+      await Directory(old.directory).delete(recursive: true);
+    }
+  }
+
+  /// Puts back the code of [version] (see [versions]). The current code
+  /// becomes a version itself, so a rollback can be undone. Stored data and
+  /// reminders stay as they are.
+  Future<MiniApp> rollback(String id, String version) async {
+    await load();
+    final current = _require(id);
+    final source = Directory(p.join(current.directory, 'versions', version));
+    if (!_versionPattern.hasMatch(version) ||
+        !await File(p.join(source.path, 'manifest.json')).exists() ||
+        !await Directory(p.join(source.path, 'app')).exists()) {
+      throw MiniAppException('not_found', 'No version "$version" of "$id".');
+    }
+    // Move it aside first so pruning while keeping the current code cannot
+    // delete it.
+    final picked = Directory(
+      p.join(p.dirname(current.directory), '.$id.rollback'),
+    );
+    if (await picked.exists()) await picked.delete(recursive: true);
+    await source.rename(picked.path);
+    final manifest = File(p.join(picked.path, 'manifest.json'));
+    final restored = MiniApp.fromJson(
+      current.directory,
+      jsonDecode(await manifest.readAsString()) as Map<String, dynamic>,
+    );
+    await _keepVersion(current);
+    await Directory(p.join(picked.path, 'app')).rename(restored.codeDirectory);
+    await manifest.rename(p.join(current.directory, 'manifest.json'));
+    await picked.delete(recursive: true);
+    await refreshBridge(restored);
+    await clearErrors(id);
+    _apps = _sorted([
+      for (final other in _apps)
+        if (other.id != id) other,
+      restored,
+    ]);
+    notifyListeners();
+    return restored;
   }
 
   /// Rewrites `moru.js` of an app installed by an older Moru, so it gets the
@@ -548,8 +862,7 @@ class MiniAppStore extends ChangeNotifier {
   /// Writes are queued per app so two quick saves cannot overwrite each other.
   Future<void> _update(String id, void Function(Map<String, dynamic>) change) {
     final app = _require(id);
-    final previous = _writes[id] ?? Future<void>.value();
-    final next = previous.catchError((_) {}).then((_) async {
+    return _queued(id, () async {
       final data = await _readData(app);
       change(data);
       final encoded = jsonEncode(data);
@@ -559,13 +872,22 @@ class MiniAppStore extends ChangeNotifier {
           'App data may not exceed 5 MB.',
         );
       }
-      final file = File(p.join(app.directory, 'data.json'));
-      final temp = File('${file.path}.tmp');
-      await temp.writeAsString(encoded, flush: true);
-      await temp.rename(file.path);
+      await _writeAtomically(File(p.join(app.directory, 'data.json')), encoded);
     });
-    _writes[id] = next;
+  }
+
+  Future<T> _queued<T>(String key, Future<T> Function() action) {
+    final previous = _writes[key] ?? Future<void>.value();
+    final next = previous.catchError((_) {}).then((_) => action());
+    // What waits on the queue only needs it done; the caller gets the error.
+    _writes[key] = next.then<void>((_) {}, onError: (Object _) {});
     return next;
+  }
+
+  static Future<void> _writeAtomically(File file, String text) async {
+    final temp = File('${file.path}.tmp');
+    await temp.writeAsString(text, flush: true);
+    await temp.rename(file.path);
   }
 
   MiniApp _require(String id) {
@@ -606,6 +928,24 @@ class MiniAppStore extends ChangeNotifier {
       hosts.add(host);
     }
     return hosts.toList();
+  }
+
+  static const int maxServerCommandLength = 500;
+
+  static String? _serverCommand(Object? raw) {
+    if (raw == null) return null;
+    final command = raw is Map ? raw['command'] : null;
+    if (command is! String ||
+        command.trim().isEmpty ||
+        command.length > maxServerCommandLength ||
+        command.contains('\u0000')) {
+      throw const MiniAppException(
+        'invalid_server',
+        '"server" must be {"command": "..."} with a shell command of at most '
+            '$maxServerCommandLength characters.',
+      );
+    }
+    return command.trim();
   }
 
   static Set<String> _permissions(Object? raw) {
@@ -769,6 +1109,11 @@ class MiniAppStore extends ChangeNotifier {
       remove: function (id) { return call('reminders.remove', { id: id }); },
       list: function () { return call('reminders.list'); }
     },
+    jobs: {
+      set: function (id, job) { return call('jobs.set', { id: id, job: job }); },
+      remove: function (id) { return call('jobs.remove', { id: id }); },
+      list: function () { return call('jobs.list'); }
+    },
     fetch: function (url, options) {
       options = options || {};
       return call('fetch', {
@@ -779,12 +1124,28 @@ class MiniAppStore extends ChangeNotifier {
         return response;
       });
     },
+    server: {
+      fetch: function (path, options) {
+        options = options || {};
+        return call('server.fetch', {
+          path: path, method: options.method, headers: options.headers, body: options.body
+        }).then(function (response) {
+          response.json = function () { return JSON.parse(response.body); };
+          response.text = function () { return response.body; };
+          return response;
+        });
+      },
+      url: function (path) { return call('server.url', { path: path || '/' }); }
+    },
     calendar: {
       list: function (query) { return call('calendar.list', query); },
       add: function (event) { return call('calendar.add', event); }
     },
+    vibrate: function (pattern) { return call('vibrate', { pattern: pattern }); },
+    haptic: function (kind) { return call('haptic', { kind: kind }); },
     app: {
-      info: function () { return call('app.info'); }
+      info: function () { return call('app.info'); },
+      close: function () { return call('app.close'); }
     }
   };
 })();

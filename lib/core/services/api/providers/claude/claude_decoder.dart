@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../generation/tool_result_images.dart';
 import '../../../../../utils/utf16_safe_cut.dart';
 
 import '../../../../models/token_usage.dart';
@@ -74,6 +75,10 @@ class ClaudeStreamDecoder implements StreamChunkDecoder {
   void recordToolResult(String id, String content) {
     toolResults[id] = content;
   }
+
+  /// Images of client tool results run mid-stream, by call id.
+  final Map<String, List<ToolResultImage>> toolResultImages =
+      <String, List<ToolResultImage>>{};
 
   /// Surfaces hosted calls from a complete non-streaming response.
   ///

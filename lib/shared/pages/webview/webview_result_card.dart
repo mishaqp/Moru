@@ -5,6 +5,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_font_weights.dart';
 import '../../widgets/browser_ask_ai_preview_text.dart';
+import '../../widgets/custom_bottom_sheet.dart';
 import '../../widgets/markdown_with_highlight.dart';
 
 /// Compact "Ask AI" answer card, shown when a
@@ -22,7 +23,7 @@ import '../../widgets/markdown_with_highlight.dart';
 ///
 /// The preview is a plain-text rendering of [answerText] -- Markdown
 /// markers (`**bold**`, backticks, `#` headings, ...) never leak into it --
-/// clamped to three visual lines. The full, unmodified Markdown source is
+/// clamped to two visual lines. The full, unmodified Markdown source is
 /// only ever shown (and copied) via [onExpand]'s full-answer sheet.
 class BrowserAskAiResultCard extends StatelessWidget {
   const BrowserAskAiResultCard({
@@ -74,10 +75,15 @@ class BrowserAskAiResultCard extends StatelessWidget {
                     label: l10n.browserResultCopyTooltip,
                     child: IconButton(
                       constraints: const BoxConstraints(
-                        minWidth: 48,
-                        minHeight: 48,
+                        minWidth: 44,
+                        minHeight: 44,
+                        maxWidth: 44,
+                        maxHeight: 44,
                       ),
-                      visualDensity: VisualDensity.compact,
+                      visualDensity: VisualDensity.standard,
+                      style: IconButton.styleFrom(
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       icon: const Icon(Lucide.Copy, size: 15),
                       onPressed: onCopy,
                     ),
@@ -90,10 +96,15 @@ class BrowserAskAiResultCard extends StatelessWidget {
                     label: l10n.browserResultCloseTooltip,
                     child: IconButton(
                       constraints: const BoxConstraints(
-                        minWidth: 48,
-                        minHeight: 48,
+                        minWidth: 44,
+                        minHeight: 44,
+                        maxWidth: 44,
+                        maxHeight: 44,
                       ),
-                      visualDensity: VisualDensity.compact,
+                      visualDensity: VisualDensity.standard,
+                      style: IconButton.styleFrom(
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       icon: const Icon(Lucide.X, size: 15),
                       onPressed: onDismiss,
                     ),
@@ -108,7 +119,7 @@ class BrowserAskAiResultCard extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(0, 0, 8, 0),
                 child: Text(
                   preview,
-                  maxLines: 3,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(
                     context,
@@ -121,8 +132,10 @@ class BrowserAskAiResultCard extends StatelessWidget {
               child: TextButton(
                 style: TextButton.styleFrom(
                   visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  padding: EdgeInsets.zero,
                   minimumSize: const Size(48, 32),
+                  foregroundColor: cs.primary,
+                  alignment: Alignment.centerLeft,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 onPressed: onExpand,
@@ -155,82 +168,78 @@ Future<void> showBrowserAskAiResultSheet(
   String text, {
   String? conversationId,
 }) {
-  return showModalBottomSheet(
+  return showCustomBottomSheet<void>(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    builder: (ctx) => _ResultSheet(text: text, conversationId: conversationId),
+    title: AppLocalizations.of(context)!.browserResultSheetTitle,
+    partialHeightFactor: 0.85,
+    expandedHeightFactor: 0.85,
+    headerBuilder: (context, onClose) => Padding(
+      padding: const EdgeInsets.only(left: 16, right: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              AppLocalizations.of(context)!.browserResultSheetTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          IconButton(
+            key: CustomBottomSheet.closeButtonKey,
+            tooltip: AppLocalizations.of(context)!.commonClose,
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            visualDensity: VisualDensity.standard,
+            icon: const Icon(Lucide.X, size: 20),
+            onPressed: onClose,
+          ),
+        ],
+      ),
+    ),
+    builder: (ctx, scrollController) => _ResultSheet(
+      text: text,
+      conversationId: conversationId,
+      scrollController: scrollController,
+    ),
   );
 }
 
 class _ResultSheet extends StatelessWidget {
-  const _ResultSheet({required this.text, this.conversationId});
+  const _ResultSheet({
+    required this.text,
+    this.conversationId,
+    required this.scrollController,
+  });
 
   final String text;
   final String? conversationId;
+  final ScrollController scrollController;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxHeight),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      l10n.browserResultSheetTitle,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  Semantics(
-                    button: true,
-                    label: l10n.commonClose,
-                    child: IconButton(
-                      constraints: const BoxConstraints(
-                        minWidth: 48,
-                        minHeight: 48,
-                      ),
-                      tooltip: l10n.commonClose,
-                      icon: const Icon(Lucide.X, size: 20),
-                      onPressed: () => Navigator.of(context).maybePop(),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: SelectionArea(
-                    child: MarkdownWithCodeHighlight(
-                      text: text,
-                      conversationId: conversationId,
-                      renderImages: false,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  icon: const Icon(Lucide.Copy, size: 16),
-                  label: Text(l10n.browserResultCopyTooltip),
-                  onPressed: () => Clipboard.setData(ClipboardData(text: text)),
-                ),
-              ),
-            ],
+    return ListView(
+      controller: scrollController,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      children: [
+        SelectionArea(
+          child: MarkdownWithCodeHighlight(
+            text: text,
+            conversationId: conversationId,
+            renderImages: false,
           ),
         ),
-      ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            style: TextButton.styleFrom(minimumSize: const Size(48, 44)),
+            icon: const Icon(Lucide.Copy, size: 16),
+            label: Text(l10n.browserResultCopyTooltip),
+            onPressed: () => Clipboard.setData(ClipboardData(text: text)),
+          ),
+        ),
+      ],
     );
   }
 }

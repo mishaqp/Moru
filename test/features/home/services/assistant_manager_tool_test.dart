@@ -28,6 +28,12 @@ const _catalog = AssistantManagerCatalog(
   mcpServers: [AssistantManagerOption(id: 'mcp-1', name: 'Files')],
   skills: [AssistantManagerOption(id: 'skill-1', name: 'Writer')],
   workspaces: [AssistantManagerOption(id: 'ws-1', name: 'Project')],
+  agents: [
+    AssistantManagerOption(id: 'opencode', name: 'OpenCode'),
+    AssistantManagerOption(id: 'claude-code', name: 'Claude Code'),
+    AssistantManagerOption(id: 'codex', name: 'Codex'),
+    AssistantManagerOption(id: 'custom:mine', name: 'Custom'),
+  ],
   localToolIds: [LocalToolNames.timeInfo, LocalToolNames.calculate],
 );
 
@@ -77,6 +83,203 @@ void main() {
       );
     }
   });
+
+  test('the schema documents provider and subscription authentication', () {
+    final settings =
+        AssistantManagerTool
+                .definition['function']['parameters']['properties']['settings']['properties']
+            as Map;
+    expect(settings['agentAuthMode'], isA<Map>());
+    expect(settings['agentAuthMode']['type'], 'string');
+    expect(settings['agentAuthMode']['enum'], ['provider', 'subscription']);
+  });
+
+  for (final agentId in ['claude-code', 'codex']) {
+    test('creates a $agentId assistant using its own account', () async {
+      final result = await _run(tool, {
+        'action': 'create',
+        'settings': {
+          'name': 'Subscription',
+          'agentId': agentId,
+          'agentAuthMode': 'subscription',
+        },
+      });
+      expect(result['ok'], isTrue, reason: '$result');
+      final id = result['created']['id'] as String;
+      final settings = assistants.getById(id)!.toJson();
+      expect(settings['agentId'], agentId);
+      expect(settings['agentAuthMode'], 'subscription');
+      expect(settings['chatModelProvider'], isNull);
+      expect(settings['chatModelId'], isNull);
+    });
+  }
+
+  test('agent session options are set, validated and cleared', () async {
+    final created = await _run(tool, {
+      'action': 'create',
+      'settings': {
+        'name': 'Options',
+        'agentId': 'codex',
+        'agentConfig': {'model': 'gpt-6-astra', 'reasoning_effort': 'high'},
+      },
+    });
+    expect(created['ok'], isTrue, reason: '$created');
+    final id = created['created']['id'] as String;
+    expect(assistants.getById(id)!.agentConfig, {
+      'model': 'gpt-6-astra',
+      'reasoning_effort': 'high',
+    });
+
+    for (final invalid in [
+      'high',
+      {'model': 1},
+      {'': 'x'},
+      {for (var i = 0; i < 17; i++) 'k$i': 'v'},
+    ]) {
+      final result = await _run(tool, {
+        'action': 'update',
+        'assistant_id': id,
+        'settings': {'agentConfig': invalid},
+      });
+      expect(result['ok'], isFalse, reason: '$invalid');
+      expect(result['error'], 'invalid_settings');
+    }
+    expect(assistants.getById(id)!.agentConfig, hasLength(2));
+
+    final cleared = await _run(tool, {
+      'action': 'update',
+      'assistant_id': id,
+      'clear': ['agentConfig'],
+    });
+    expect(cleared['ok'], isTrue, reason: '$cleared');
+    expect(assistants.getById(id)!.agentConfig, isEmpty);
+    expect(assistants.getById(id)!.agentId, 'codex');
+  });
+
+  test(
+    'rejects unsupported or invalid subscription requests atomically',
+    () async {
+      for (final settings in [
+        {'name': 'A', 'agentAuthMode': 'subscription'},
+        {'name': 'A', 'agentId': 'opencode', 'agentAuthMode': 'subscription'},
+        {
+          'name': 'A',
+          'agentId': 'custom:mine',
+          'agentAuthMode': 'subscription',
+        },
+        {'name': 'A', 'agentId': 'codex', 'agentAuthMode': 'unknown'},
+        {'name': 'A', 'agentId': 'codex', 'agentAuthMode': true},
+      ]) {
+        final result = await _run(tool, {
+          'action': 'create',
+          'settings': settings,
+        });
+        expect(result['ok'], isFalse, reason: '$settings');
+        expect(result['error'], 'invalid_settings');
+        expect(assistants.assistants.map((a) => a.id), [mainId]);
+      }
+    },
+  );
+
+  test(
+    'mode changes and copies preserve provider settings and the source',
+    () async {
+      await assistants.updateAssistant(
+        Assistant.fromJson({
+          ...assistants.getById(mainId)!.toJson(),
+          'agentId': 'codex',
+          'agentAuthMode': 'subscription',
+          'chatModelProvider': 'openai',
+          'chatModelId': 'gpt-5',
+        }),
+      );
+
+      final duplicate = await _run(tool, {
+        'action': 'duplicate',
+        'assistant_id': mainId,
+      });
+      expect(duplicate['ok'], isTrue, reason: '$duplicate');
+      final copyId = duplicate['created']['id'] as String;
+      expect(
+        assistants.getById(copyId)!.toJson()['agentAuthMode'],
+        'subscription',
+      );
+      final switched = await _run(tool, {
+        'action': 'update',
+        'assistant_id': copyId,
+        'settings': {'agentAuthMode': 'provider'},
+      });
+      expect(switched['ok'], isTrue, reason: '$switched');
+      final copy = assistants.getById(copyId)!;
+      expect(copy.toJson()['agentAuthMode'], 'provider');
+      expect(copy.agentId, 'codex');
+      expect(copy.chatModelProvider, 'openai');
+      expect(copy.chatModelId, 'gpt-5');
+      expect(
+        assistants.getById(mainId)!.toJson()['agentAuthMode'],
+        'subscription',
+      );
+    },
+  );
+
+  test(
+    'an unsupported agent change or agent removal restores provider mode',
+    () async {
+      for (final mutation in [
+        {
+          'settings': {'agentId': 'opencode'},
+        },
+        {
+          'clear': ['agentId'],
+        },
+      ]) {
+        await assistants.updateAssistant(
+          Assistant.fromJson({
+            ...assistants.getById(mainId)!.toJson(),
+            'agentId': 'codex',
+            'agentAuthMode': 'subscription',
+          }),
+        );
+        final changed = await _run(tool, {
+          'action': 'update',
+          'assistant_id': mainId,
+          ...mutation,
+        });
+        expect(changed['ok'], isTrue, reason: '$changed');
+        expect(
+          assistants.getById(mainId)!.toJson()['agentAuthMode'],
+          'provider',
+        );
+      }
+    },
+  );
+
+  test(
+    'setting subscription while removing or changing an agent is rejected',
+    () async {
+      await assistants.updateAssistant(
+        assistants.getById(mainId)!.copyWith(agentId: 'codex'),
+      );
+      for (final mutation in [
+        {
+          'settings': {'agentId': 'opencode', 'agentAuthMode': 'subscription'},
+        },
+        {
+          'settings': {'agentAuthMode': 'subscription'},
+          'clear': ['agentId'],
+        },
+      ]) {
+        final changed = await _run(tool, {
+          'action': 'update',
+          'assistant_id': mainId,
+          ...mutation,
+        });
+        expect(changed['ok'], isFalse, reason: '$changed');
+        expect(changed['error'], 'invalid_settings');
+        expect(assistants.getById(mainId)!.agentId, 'codex');
+      }
+    },
+  );
 
   test('creates an assistant with every kind of setting', () async {
     final result = await _run(tool, {
@@ -347,5 +550,41 @@ void main() {
       'not_found',
     );
     expect((await _run(tool, {'action': 'fly'}))['error'], 'invalid_action');
+  });
+
+  test('an agent is set from the options, checked and cleared', () async {
+    final options = await _run(tool, {'action': 'options'});
+    expect(options['agents'], [
+      {'id': 'opencode', 'name': 'OpenCode', 'installed': true},
+      {'id': 'claude-code', 'name': 'Claude Code', 'installed': true},
+      {'id': 'codex', 'name': 'Codex', 'installed': true},
+      {'id': 'custom:mine', 'name': 'Custom', 'installed': true},
+    ]);
+
+    final bad = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {'agentId': 'nope'},
+    });
+    expect(bad['ok'], isFalse);
+    expect(assistants.getById(mainId)!.agentId, isNull);
+
+    final set = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {'agentId': 'opencode'},
+    });
+    expect(set['ok'], isTrue, reason: '$set');
+    expect(assistants.getById(mainId)!.agentId, 'opencode');
+    final got = await _run(tool, {'action': 'get', 'assistant_id': mainId});
+    expect(got['settings']['agentId'], 'opencode');
+
+    final cleared = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'clear': ['agentId'],
+    });
+    expect(cleared['ok'], isTrue, reason: '$cleared');
+    expect(assistants.getById(mainId)!.agentId, isNull);
   });
 }

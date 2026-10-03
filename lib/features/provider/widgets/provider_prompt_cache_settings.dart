@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/providers/settings_provider.dart';
-import '../../../shared/widgets/select_dropdown.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_settings_rows.dart';
 import '../../../shared/widgets/ios_switch.dart';
@@ -10,13 +9,8 @@ import '../../../shared/widgets/section_card.dart';
 import 'prompt_cache_ttl_control.dart';
 
 class ProviderPromptCacheSettings extends StatelessWidget {
-  const ProviderPromptCacheSettings({
-    super.key,
-    required this.config,
-    this.desktop = false,
-  });
+  const ProviderPromptCacheSettings({super.key, required this.config});
   final ProviderConfig config;
-  final bool desktop;
 
   @override
   Widget build(BuildContext context) {
@@ -54,31 +48,13 @@ class ProviderPromptCacheSettings extends StatelessWidget {
         if (config.claudePromptCachingEnabled == true)
           IosNavRow(
             label: l.providerDetailPageClaudePromptCachingTtlTitle,
-            trailing: desktop
-                ? DesktopSelectDropdown<String>(
-                    value: ttl,
-                    minWidth: 130,
-                    options: [
-                      DesktopSelectOption(
-                        value: ProviderConfig.claudePromptCachingTtl5m,
-                        label: l.providerDetailPageClaudePromptCachingTtl5m,
-                      ),
-                      DesktopSelectOption(
-                        value: ProviderConfig.claudePromptCachingTtl1h,
-                        label: l.providerDetailPageClaudePromptCachingTtl1h,
-                      ),
-                    ],
-                    onSelected: saveTtl,
-                  )
-                : PromptCachingTtlSegmentedControl(
-                    value: ttl,
-                    fiveMinuteLabel:
-                        l.providerDetailPageClaudePromptCachingTtl5m,
-                    oneHourLabel: l.providerDetailPageClaudePromptCachingTtl1h,
-                    semanticLabel:
-                        l.providerDetailPageClaudePromptCachingTtlTitle,
-                    onChanged: saveTtl,
-                  ),
+            trailing: PromptCachingTtlSegmentedControl(
+              value: ttl,
+              fiveMinuteLabel: l.providerDetailPageClaudePromptCachingTtl5m,
+              oneHourLabel: l.providerDetailPageClaudePromptCachingTtl1h,
+              semanticLabel: l.providerDetailPageClaudePromptCachingTtlTitle,
+              onChanged: saveTtl,
+            ),
           ),
       ],
     );

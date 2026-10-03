@@ -14,34 +14,20 @@ void main() {
   tearDown(() => harness.dispose());
   const args = ExecArgs(runId: 'cancel-me', command: 'true', cwd: '/');
 
-  test(
-    'cancel during background setup prevents exec and releases background task',
-    () async {
-      final setup = Completer<void>();
-      var cancelled = false;
-      var released = false;
-      final result = runChannelCommand(
-        channel: harness.channel,
-        request: CommandRequest(
-          runId: args.runId,
-          command: args.command,
-          cwd: args.cwd,
-          isCancelled: () => cancelled,
-        ),
-        args: args,
-        before: () => setup.future,
-        after: () async {
-          released = true;
-        },
-      );
-      final expectation = expectLater(result, emitsError(isA<StateError>()));
-      cancelled = true;
-      setup.complete();
-      await expectation;
-      expect(harness.methods, isNot(contains('exec')));
-      expect(released, isTrue);
-    },
-  );
+  test('cancelled Android command never issues exec', () async {
+    final result = runChannelCommand(
+      channel: harness.channel,
+      request: CommandRequest(
+        runId: args.runId,
+        command: args.command,
+        cwd: args.cwd,
+        isCancelled: () => true,
+      ),
+      args: args,
+    );
+    await expectLater(result, emitsError(isA<StateError>()));
+    expect(harness.methods, isNot(contains('exec')));
+  });
 
   test('cancel is repeated after delayed native registration', () async {
     final entered = Completer<void>();
@@ -80,30 +66,4 @@ void main() {
     expect(harness.methods, contains('cancel'));
     expect(events.whereType<CommandExited>().single.cancelled, isTrue);
   });
-
-  test(
-    'cancelling subscription during setup releases it without starting exec',
-    () async {
-      final setup = Completer<void>();
-      var released = false;
-      final subscription = runChannelCommand(
-        channel: harness.channel,
-        request: const CommandRequest(
-          runId: 'cancel-me',
-          command: 'true',
-          cwd: '/',
-        ),
-        args: args,
-        before: () => setup.future,
-        after: () async {
-          released = true;
-        },
-      ).listen((_) {});
-      final cancellation = subscription.cancel();
-      setup.complete();
-      await cancellation.timeout(const Duration(seconds: 3));
-      expect(harness.methods, isNot(contains('exec')));
-      expect(released, isTrue);
-    },
-  );
 }

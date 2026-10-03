@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import 'package:Kelivo/core/models/workspace_binding.dart';
+import 'package:Kelivo/core/models/tool_call_status.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/services/workspace/shell_output_buffer.dart';
@@ -27,7 +28,9 @@ import 'package:Kelivo/shared/widgets/ios_tile_button.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
+import '../models/computer_step.dart' show sanitizeComputerDisplayText;
 import 'chat_surface.dart';
+import 'computer_response_scope.dart';
 
 export 'package:Kelivo/features/workspace/workspace_file_navigation.dart';
 
@@ -48,6 +51,35 @@ class WorkspaceToolPart {
   final String? content;
   final Map<String, dynamic>? metadata;
   final bool loading;
+}
+
+/// Saved jobs retain their runtime identity even when a later response reused
+/// the call ID. Foreground cards only attach a run owned by their response.
+ToolRun? workspaceRunForPart(
+  WorkspaceToolPart part,
+  ToolRunRegistry? registry,
+  String? conversationId, {
+  String? responseId,
+}) {
+  String? jobId = part.arguments['job_id']?.toString();
+  if (jobId == null && part.content != null) {
+    try {
+      final result = jsonDecode(part.content!);
+      if (result is Map) jobId = result['job_id']?.toString();
+    } on FormatException {
+      // Plain output is also a valid saved result.
+    }
+  }
+  jobId ??= toolCallBackgroundRuntimeId(part.metadata);
+  if (jobId != null) {
+    return registry?.byRuntimeRunId(jobId, conversationId: conversationId);
+  }
+  final run = registry?.of(part.id, conversationId: conversationId);
+  return responseId != null &&
+          run?.responseId != null &&
+          run!.responseId != responseId
+      ? null
+      : run;
 }
 
 bool isWorkspaceToolName(String name) =>
@@ -167,16 +199,28 @@ IconData workspaceToolIcon(String toolName) {
   };
 }
 
+/// A display/copy value. Runs retain their launch filter after its zone ends;
+/// execution and reruns continue to use the original arguments and run data.
+String workspaceDisplayText(String value, {ToolRun? run}) =>
+    sanitizeComputerDisplayText(run?.displayText(value) ?? value);
+
 String workspaceCommandOf(
   WorkspaceToolPart part, {
   WorkspaceToolMetadata? meta,
   ToolRun? run,
 }) {
-  final fromMeta = meta?.command?.trim() ?? '';
-  if (fromMeta.isNotEmpty) return fromMeta;
-  final fromRun = run?.command?.trim() ?? '';
-  if (fromRun.isNotEmpty) return fromRun;
-  return (part.arguments['command'] ?? '').toString();
+  final fromMeta = meta?.command ?? '';
+  if (fromMeta.trim().isNotEmpty) {
+    return workspaceDisplayText(fromMeta, run: run).trim();
+  }
+  final fromRun = run?.command ?? '';
+  if (fromRun.trim().isNotEmpty) {
+    return workspaceDisplayText(fromRun, run: run).trim();
+  }
+  return workspaceDisplayText(
+    (part.arguments['command'] ?? '').toString(),
+    run: run,
+  );
 }
 
 String workspacePathOf(WorkspaceToolPart part, {WorkspaceToolMetadata? meta}) {
@@ -247,7 +291,11 @@ List<String> workspaceOutputTailLines({
   ToolRun? run,
 }) {
   if (run != null) {
-    return run.tailLines;
+    final lines = run.tailLines;
+    if (lines.isEmpty) return const <String>[];
+    // Filter together so a known secret spanning lines cannot be exposed by
+    // independently filtering each line. Preserve the tail's empty lines.
+    return workspaceDisplayText(lines.join('\n'), run: run).split('\n');
   }
   final preview = part.toolName == 'shell'
       ? [
@@ -255,7 +303,9 @@ List<String> workspaceOutputTailLines({
           workspaceShellOutput(meta: meta, stderr: true),
         ].where((text) => text.isNotEmpty).join('\n')
       : meta?.stdoutPreview ?? '';
-  if (preview.isNotEmpty) return const LineSplitter().convert(preview);
+  if (preview.isNotEmpty) {
+    return const LineSplitter().convert(workspaceDisplayText(preview));
+  }
   return const <String>[];
 }
 
@@ -264,10 +314,14 @@ String workspaceShellOutput({
   ToolRun? run,
   bool stderr = false,
 }) {
-  if (run != null) return stderr ? run.stderrSoFar : run.stdoutSoFar;
-  return ShellOutputBuffer.normalize(
-    (stderr ? meta?.stderrPreview : meta?.stdoutPreview) ?? '',
-  );
+  final output = run != null
+      ? stderr
+            ? run.stderrSoFar
+            : run.stdoutSoFar
+      : ShellOutputBuffer.normalize(
+          (stderr ? meta?.stderrPreview : meta?.stdoutPreview) ?? '',
+        );
+  return workspaceDisplayText(output, run: run);
 }
 
 Color _workspaceQuietFill(BuildContext context) {
@@ -758,20 +812,28 @@ class WorkspaceToolStatusText extends StatelessWidget {
     required this.part,
     this.conversationId,
     this.run,
+    this.responseId,
   });
 
   final WorkspaceToolPart part;
   final String? conversationId;
   final ToolRun? run;
+  final String? responseId;
 
   @override
   Widget build(BuildContext context) {
     ToolRun? liveRun = run;
     if (liveRun == null) {
       try {
-        liveRun = context.watch<ToolRunRegistry>().of(
-          part.id,
-          conversationId: conversationId,
+        liveRun = workspaceRunForPart(
+          part,
+          context.watch<ToolRunRegistry>(),
+          conversationId,
+          responseId:
+              responseId ??
+              context
+                  .dependOnInheritedWidgetOfExactType<ComputerResponseScope>()
+                  ?.responseId,
         );
       } on ProviderNotFoundException {
         liveRun = null;
@@ -846,8 +908,9 @@ class WorkspaceToolStatusText extends StatelessWidget {
       color = colors.warning;
       key = WorkspaceStatusBadge.timeoutKey;
     } else if (cancelled) {
-      label = l10n.workspaceToolCancelled;
-      color = cs.error;
+      final stopped = toolCallWasStopped(part.metadata);
+      label = stopped ? l10n.computerStopped : l10n.workspaceToolCancelled;
+      color = stopped ? fg.muted : cs.error;
       key = WorkspaceStatusBadge.cancelledKey;
     } else if (interrupted) {
       label = l10n.workspaceToolInterrupted;
@@ -909,9 +972,13 @@ class WorkspaceToolCardBody extends StatelessWidget {
     ToolRun? liveRun = run;
     if (liveRun == null) {
       try {
-        liveRun = context.watch<ToolRunRegistry>().of(
-          part.id,
-          conversationId: conversationId,
+        liveRun = workspaceRunForPart(
+          part,
+          context.watch<ToolRunRegistry>(),
+          conversationId,
+          responseId: context
+              .dependOnInheritedWidgetOfExactType<ComputerResponseScope>()
+              ?.responseId,
         );
       } on ProviderNotFoundException {
         liveRun = null;

@@ -365,6 +365,75 @@ void main() {
       () => provider.playbackState.status == TtsPlaybackStatus.ended,
     );
   });
+
+  test('network playback keeps at most one temporary audio file', () async {
+    final originalPathProvider = PathProviderPlatform.instance;
+    final tempDirectory = await Directory.systemTemp.createTemp(
+      'moru_tts_files_test_',
+    );
+    PathProviderPlatform.instance = _FakePathProviderPlatform(
+      tempDirectory.path,
+    );
+    addTearDown(() async {
+      PathProviderPlatform.instance = originalPathProvider;
+      await tempDirectory.delete(recursive: true);
+    });
+    final stale = File('${tempDirectory.path}/kelivo_tts_123.mp3')
+      ..writeAsBytesSync(const [1]);
+    final unrelated = File('${tempDirectory.path}/notes.txt')
+      ..writeAsStringSync('keep');
+    List<String> audioFiles() => tempDirectory
+        .listSync()
+        .map((e) => e.uri.pathSegments.last)
+        .where((name) => name.contains('_tts_'))
+        .toList();
+
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    server.listen((request) async {
+      await request.drain<void>();
+      request.response.statusCode = HttpStatus.ok;
+      request.response.add(const <int>[1, 2, 3]);
+      await request.response.close();
+    });
+    addTearDown(() => server.close(force: true));
+
+    final provider = TtsProvider(preferences: session.preferences);
+    addTearDown(provider.dispose);
+    await _waitUntil(() => provider.isAvailable && !stale.existsSync());
+    expect(unrelated.existsSync(), isTrue);
+
+    final service = OpenAiTtsOptions(
+      enabled: true,
+      name: 'Local TTS',
+      apiKey: 'test-key',
+      baseUrl: 'http://${server.address.address}:${server.port}/v1',
+      model: 'test-model',
+      voice: 'alloy',
+    );
+    unawaited(provider.speakWithNetworkService(service, 'hello network'));
+    await _waitUntil(
+      () => provider.playbackState.status == TtsPlaybackStatus.playing,
+    );
+    expect(audioFiles(), hasLength(1));
+    expect(audioFiles().single, startsWith('moru_tts_'));
+
+    await _emitAudioEvent(audioPlayerEventChannel!, {
+      'event': 'audio.onComplete',
+    });
+    await _waitUntil(
+      () =>
+          provider.playbackState.status == TtsPlaybackStatus.ended &&
+          audioFiles().isEmpty,
+    );
+
+    unawaited(provider.speakWithNetworkService(service, 'again'));
+    await _waitUntil(
+      () => provider.playbackState.status == TtsPlaybackStatus.playing,
+    );
+    expect(audioFiles(), hasLength(1));
+    await provider.stop();
+    expect(audioFiles(), isEmpty);
+  });
 }
 
 Future<void> _waitUntil(bool Function() condition) async {

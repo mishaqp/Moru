@@ -147,10 +147,6 @@ class _MemoryTabState extends State<_MemoryTab> {
     ).push(MaterialPageRoute(builder: (_) => const MemorySettingsPage()));
   }
 
-  bool get _isDesktopPlatform {
-    return false;
-  }
-
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
@@ -241,22 +237,15 @@ class _MemoryTabState extends State<_MemoryTab> {
                                         ),
                                       _MemoryOrganizeFrequencySection(
                                         assistant: a,
-                                        desktop: _isDesktopPlatform,
                                       ),
                                       _iosDivider(context),
-                                      _MemoryDedupeModeSection(
-                                        assistant: a,
-                                        desktop: _isDesktopPlatform,
-                                      ),
+                                      _MemoryDedupeModeSection(assistant: a),
                                     ],
                                   )
                                 : const SizedBox.shrink(),
                           ),
                           _iosDivider(context),
-                          _MemoryWriteScopeSection(
-                            assistant: a,
-                            desktop: _isDesktopPlatform,
-                          ),
+                          _MemoryWriteScopeSection(assistant: a),
                         ],
                       )
                     : const SizedBox.shrink(),
@@ -309,7 +298,6 @@ class _MemoryTabState extends State<_MemoryTab> {
                                       _iosDivider(context),
                                       _RecentChatsSummaryFrequencySection(
                                         assistant: a,
-                                        desktop: _isDesktopPlatform,
                                       ),
                                     ],
                                   )
@@ -627,7 +615,7 @@ class _MemoryTabState extends State<_MemoryTab> {
   }
 }
 
-/// Text/number input: centered Dialog on desktop, bottom sheet on mobile.
+/// Text/number input in the Android bottom sheet.
 /// Controller lives in a [State] so it survives the exit transition.
 Future<String?> _showMemoryTextSheet(
   BuildContext context, {
@@ -918,86 +906,10 @@ Future<T?> _showMemoryChoiceSheet<T>(
   );
 }
 
-Widget _memoryDesktopSelectRow<T>({
-  required BuildContext context,
-  required IconData icon,
-  required String label,
-  required T value,
-  required List<DesktopSelectOption<T>> options,
-  required Future<void> Function(T value) onSelected,
-  String? subtitle,
-  String? tip,
-}) {
-  final cs = Theme.of(context).colorScheme;
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    child: Row(
-      children: [
-        SizedBox(
-          width: 36,
-          child: Icon(
-            icon,
-            size: 20,
-            color: cs.onSurface.withValues(alpha: 0.9),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: subtitle == null
-              ? Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: cs.onSurface.withValues(alpha: 0.9),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: cs.onSurface.withValues(alpha: 0.9),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: cs.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-        ),
-        if (tip != null) MemoryTipIcon(message: tip),
-        const SizedBox(width: 8),
-        DesktopSelectDropdown<T>(
-          value: value,
-          options: options,
-          onSelected: onSelected,
-          minWidth: 140,
-          maxLabelWidth: 220,
-        ),
-      ],
-    ),
-  );
-}
-
 class _MemoryOrganizeFrequencySection extends StatelessWidget {
-  const _MemoryOrganizeFrequencySection({
-    required this.assistant,
-    required this.desktop,
-  });
+  const _MemoryOrganizeFrequencySection({required this.assistant});
 
   final Assistant assistant;
-  final bool desktop;
 
   static const _options = [1, 3, 5, 10];
 
@@ -1070,29 +982,6 @@ class _MemoryOrganizeFrequencySection extends StatelessWidget {
     final selected = assistant.memoryOrganizeEveryNTurns;
     final detail = l10n.assistantEditOrganizeFrequencyOption(selected);
 
-    if (desktop) {
-      final counts = <int>{..._options, selected}.toList()..sort();
-      return _memoryDesktopSelectRow<int>(
-        context: context,
-        icon: Lucide.FileClock,
-        label: l10n.assistantEditOrganizeFrequencyTitle,
-        tip: l10n.assistantEditOrganizeFrequencySubtitle,
-        value: selected,
-        options: [
-          for (final count in counts)
-            DesktopSelectOption(
-              value: count,
-              label: l10n.assistantEditOrganizeFrequencyOption(count),
-            ),
-          DesktopSelectOption(
-            value: _kMemoryFrequencyCustomSentinel,
-            label: l10n.assistantEditOrganizeFrequencyCustomButton,
-          ),
-        ],
-        onSelected: (count) => _apply(context, count),
-      );
-    }
-
     return _iosNavRow(
       context,
       icon: Lucide.FileClock,
@@ -1105,13 +994,9 @@ class _MemoryOrganizeFrequencySection extends StatelessWidget {
 }
 
 class _MemoryDedupeModeSection extends StatelessWidget {
-  const _MemoryDedupeModeSection({
-    required this.assistant,
-    required this.desktop,
-  });
+  const _MemoryDedupeModeSection({required this.assistant});
 
   final Assistant assistant;
-  final bool desktop;
 
   String _label(AppLocalizations l10n, MemorySmartAddMode mode) {
     return switch (mode) {
@@ -1161,25 +1046,6 @@ class _MemoryDedupeModeSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final selected = assistant.memorySmartAddMode;
 
-    if (desktop) {
-      return _memoryDesktopSelectRow<MemorySmartAddMode>(
-        context: context,
-        icon: Lucide.Layers,
-        label: l10n.assistantEditDedupeModeTitle,
-        tip: l10n.assistantEditDedupeModeSubtitle,
-        value: selected,
-        options: [
-          for (final mode in MemorySmartAddMode.values)
-            DesktopSelectOption(
-              value: mode,
-              label: _label(l10n, mode),
-              subtitle: _subtitle(l10n, mode),
-            ),
-        ],
-        onSelected: (mode) => _apply(context, mode),
-      );
-    }
-
     return _iosNavRow(
       context,
       icon: Lucide.Layers,
@@ -1192,13 +1058,9 @@ class _MemoryDedupeModeSection extends StatelessWidget {
 }
 
 class _MemoryWriteScopeSection extends StatelessWidget {
-  const _MemoryWriteScopeSection({
-    required this.assistant,
-    required this.desktop,
-  });
+  const _MemoryWriteScopeSection({required this.assistant});
 
   final Assistant assistant;
-  final bool desktop;
 
   List<MemoryPickerOption<MemoryWriteScope>> _options(AppLocalizations l10n) =>
       [
@@ -1254,25 +1116,6 @@ class _MemoryWriteScopeSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final selected = assistant.memoryWriteScope;
 
-    if (desktop) {
-      return _memoryDesktopSelectRow<MemoryWriteScope>(
-        context: context,
-        icon: Lucide.Globe,
-        label: l10n.assistantEditWriteScopeTitle,
-        tip: l10n.assistantEditWriteScopeSubtitle,
-        value: selected,
-        options: [
-          for (final item in _options(l10n))
-            DesktopSelectOption(
-              value: item.value,
-              label: item.label,
-              subtitle: item.subtitle,
-            ),
-        ],
-        onSelected: (scope) => _apply(context, scope),
-      );
-    }
-
     return _iosNavRow(
       context,
       icon: Lucide.Globe,
@@ -1285,13 +1128,9 @@ class _MemoryWriteScopeSection extends StatelessWidget {
 }
 
 class _RecentChatsSummaryFrequencySection extends StatelessWidget {
-  const _RecentChatsSummaryFrequencySection({
-    required this.assistant,
-    required this.desktop,
-  });
+  const _RecentChatsSummaryFrequencySection({required this.assistant});
 
   final Assistant assistant;
-  final bool desktop;
 
   Future<void> _showCustomCountInput(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
@@ -1354,31 +1193,6 @@ class _RecentChatsSummaryFrequencySection extends StatelessWidget {
     final detail = l10n.assistantEditRecentChatsSummaryFrequencyOption(
       selected,
     );
-
-    if (desktop) {
-      final counts = <int>{
-        ...Assistant.recentChatsSummaryMessageCountOptions,
-        selected,
-      }.toList()..sort();
-      return _memoryDesktopSelectRow<int>(
-        context: context,
-        icon: Lucide.FileClock,
-        label: l10n.assistantEditRecentChatsSummaryFrequencyTitle,
-        value: selected,
-        options: [
-          for (final count in counts)
-            DesktopSelectOption(
-              value: count,
-              label: l10n.assistantEditRecentChatsSummaryFrequencyOption(count),
-            ),
-          DesktopSelectOption(
-            value: _kMemoryFrequencyCustomSentinel,
-            label: l10n.assistantEditRecentChatsSummaryFrequencyCustomButton,
-          ),
-        ],
-        onSelected: (count) => _apply(context, count),
-      );
-    }
 
     return _iosNavRow(
       context,

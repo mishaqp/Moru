@@ -705,7 +705,7 @@ Future<void> _saveExportTextWithPicker(
 }) async {
   final l10n = AppLocalizations.of(context)!;
 
-  // Mobile: use FilePicker with bytes parameter (required on Android & iOS).
+  // Android FilePicker saves these bytes through the document picker.
   final contentBytes = utf8.encode(content);
   final String? savePath = await FilePicker.platform.saveFile(
     dialogTitle: l10n.backupPageExportToFile,
@@ -942,7 +942,7 @@ Future<File?> _renderAndSaveMessageImage(
     await preRenderDiagramCodesForExport(context, codes);
   } catch (_) {}
 
-  final exportConfig = _exportImageRenderConfig(isDesktop: false);
+  final exportConfig = _exportImageRenderConfig();
 
   Widget buildContent() => ExportCaptureScope(
     enabled: true,
@@ -953,7 +953,6 @@ Future<File?> _renderAndSaveMessageImage(
       chatFontScale: settings.chatFontScale,
       showThinkingAndToolCards: showThinkingAndToolCards,
       expandThinkingContent: expandThinkingContent,
-      isDesktop: false,
     ),
   );
   if (!context.mounted) return null;
@@ -986,7 +985,7 @@ Future<File?> _renderAndSaveChatImage(
     await preRenderDiagramCodesForExport(context, codes);
   } catch (_) {}
 
-  final exportConfig = _exportImageRenderConfig(isDesktop: false);
+  final exportConfig = _exportImageRenderConfig();
 
   Widget buildContent() => ExportCaptureScope(
     enabled: true,
@@ -1000,7 +999,6 @@ Future<File?> _renderAndSaveChatImage(
       timestamp: conversation.updatedAt,
       showThinkingAndToolCards: showThinkingAndToolCards,
       expandThinkingContent: expandThinkingContent,
-      isDesktop: false,
     ),
   );
   if (!context.mounted) return null;
@@ -1013,27 +1011,19 @@ Future<File?> _renderAndSaveChatImage(
   );
 }
 
-const double _desktopExportLogicalWidth = 720.0;
 const double _mobileExportLogicalWidth = 480.0;
 const double _exportImagePixelRatio = 3.0;
 const int _exportImageBlankTrimPreservePaddingPhysical = 48;
 const int _exportImageBlankAlphaTolerance = 8;
 const int _exportImageBlankColorTolerance = 3;
 
-({double width, double pixelRatio}) _exportImageRenderConfig({
-  required bool isDesktop,
-}) {
-  return (
-    width: isDesktop ? _desktopExportLogicalWidth : _mobileExportLogicalWidth,
-    pixelRatio: _exportImagePixelRatio,
-  );
+({double width, double pixelRatio}) _exportImageRenderConfig() {
+  return (width: _mobileExportLogicalWidth, pixelRatio: _exportImagePixelRatio);
 }
 
 @visibleForTesting
-({double width, double pixelRatio}) exportImageRenderConfigForTesting({
-  required bool isDesktop,
-}) {
-  return _exportImageRenderConfig(isDesktop: isDesktop);
+({double width, double pixelRatio}) exportImageRenderConfigForTesting() {
+  return _exportImageRenderConfig();
 }
 
 // New direct rendering approach without pagination
@@ -1765,492 +1755,6 @@ Future<void> showChatExportSheet(
   );
 }
 
-// Desktop dialog: single message export
-class _ExportDialog extends StatefulWidget {
-  const _ExportDialog({required this.message, required this.parentContext});
-  final ChatMessage message;
-  final BuildContext parentContext;
-
-  @override
-  State<_ExportDialog> createState() => _ExportDialogState();
-}
-
-class _ExportDialogState extends State<_ExportDialog> {
-  final bool _exporting = false;
-  bool _showThinkingAndToolCards = false;
-  bool _expandThinkingContent = false;
-
-  Future<void> _onExportMarkdown() async {
-    if (_exporting) return;
-    try {
-      final pctx = widget.parentContext;
-      final msg = widget.message;
-      final service = pctx.read<ChatService>();
-      final convo = service.getConversation(msg.conversationId);
-      final effectiveConvo =
-          convo ?? Conversation(id: msg.conversationId, title: '');
-      await Navigator.of(context).maybePop();
-      if (!pctx.mounted) return;
-      await exportChatMessagesMarkdown(
-        pctx,
-        conversation: effectiveConvo,
-        messages: [msg],
-        showThinkingAndToolCards: _showThinkingAndToolCards,
-        expandThinkingContent: _expandThinkingContent,
-      );
-    } catch (e) {
-      final pctx = widget.parentContext;
-      if (!pctx.mounted) return;
-      final l10n = AppLocalizations.of(pctx)!;
-      showAppSnackBar(
-        pctx,
-        message: l10n.messageExportSheetExportFailed('$e'),
-        type: NotificationType.error,
-      );
-    }
-  }
-
-  Future<void> _onExportTxt() async {
-    if (_exporting) return;
-    try {
-      final pctx = widget.parentContext;
-      final msg = widget.message;
-      final service = pctx.read<ChatService>();
-      final convo = service.getConversation(msg.conversationId);
-      final effectiveConvo =
-          convo ?? Conversation(id: msg.conversationId, title: '');
-      await Navigator.of(context).maybePop();
-      if (!pctx.mounted) return;
-      await exportChatMessagesTxt(
-        pctx,
-        conversation: effectiveConvo,
-        messages: [msg],
-        showThinkingAndToolCards: _showThinkingAndToolCards,
-        expandThinkingContent: _expandThinkingContent,
-      );
-    } catch (e) {
-      final pctx = widget.parentContext;
-      if (!pctx.mounted) return;
-      final l10n = AppLocalizations.of(pctx)!;
-      showAppSnackBar(
-        pctx,
-        message: l10n.messageExportSheetExportFailed('$e'),
-        type: NotificationType.error,
-      );
-    }
-  }
-
-  Future<void> _onExportImage() async {
-    if (_exporting) return;
-    try {
-      final pctx = widget.parentContext;
-      await Navigator.of(context).maybePop();
-      if (!pctx.mounted) return;
-      File? file;
-      await _runWithExportingOverlay(pctx, () async {
-        file = await _renderAndSaveMessageImage(
-          pctx,
-          widget.message,
-          showThinkingAndToolCards: _showThinkingAndToolCards,
-          expandThinkingContent: _expandThinkingContent,
-        );
-      });
-      if (file == null) throw 'render error';
-      if (!pctx.mounted) return;
-      await showImagePreviewSheet(pctx, file: file!);
-      return;
-    } catch (e) {
-      final pctx = widget.parentContext;
-      if (!pctx.mounted) return;
-      final l10n = AppLocalizations.of(pctx)!;
-      showAppSnackBar(
-        pctx,
-        message: l10n.messageExportSheetExportFailed('$e'),
-        type: NotificationType.error,
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(
-        minWidth: 420,
-        maxWidth: 640,
-        maxHeight: 640,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Material(
-          color: context.appColors.surfaceCard,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.messageExportSheetFormatTitle,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: AppFontWeights.emphasis,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: l10n.mcpPageClose,
-                      icon: Icon(
-                        Lucide.X,
-                        size: 18,
-                        color: cs.onSurface.withValues(alpha: 0.75),
-                      ),
-                      onPressed: () => Navigator.of(context).maybePop(),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
-              // Body
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  child: Scrollbar(
-                    child: ListView(
-                      children: [
-                        _ExportOptionTile(
-                          icon: Lucide.BookOpenText,
-                          title: l10n.messageExportSheetMarkdown,
-                          subtitle:
-                              l10n.messageExportSheetSingleMarkdownSubtitle,
-                          onTap: _exporting ? null : _onExportMarkdown,
-                        ),
-                        _ExportOptionTile(
-                          icon: Lucide.FileText,
-                          title: l10n.messageExportSheetPlainText,
-                          subtitle: l10n.messageExportSheetSingleTxtSubtitle,
-                          onTap: _exporting ? null : _onExportTxt,
-                        ),
-                        _ExportOptionTile(
-                          icon: Lucide.Image,
-                          title: l10n.messageExportSheetExportImage,
-                          subtitle:
-                              l10n.messageExportSheetSingleExportImageSubtitle,
-                          onTap: _exporting ? null : _onExportImage,
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Column(
-                            children: [
-                              _buildSwitchRow(
-                                context,
-                                title: l10n
-                                    .messageExportSheetShowThinkingAndToolCards,
-                                value: _showThinkingAndToolCards,
-                                onChanged: (v) {
-                                  setState(() {
-                                    _showThinkingAndToolCards = v;
-                                    if (!v) _expandThinkingContent = false;
-                                  });
-                                },
-                              ),
-                              _buildSwitchRow(
-                                context,
-                                title:
-                                    l10n.messageExportSheetShowThinkingContent,
-                                value: _expandThinkingContent,
-                                onChanged: _showThinkingAndToolCards
-                                    ? (v) => setState(
-                                        () => _expandThinkingContent = v,
-                                      )
-                                    : null,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSwitchRow(
-    BuildContext context, {
-    required String title,
-    required bool value,
-    required ValueChanged<bool>? onChanged,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    final isEnabled = onChanged != null;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                color: isEnabled
-                    ? cs.onSurface
-                    : cs.onSurface.withValues(alpha: 0.4),
-              ),
-            ),
-          ),
-          IosSwitch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: cs.primary,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Desktop dialog: batch export
-class _BatchExportDialog extends StatefulWidget {
-  const _BatchExportDialog({
-    required this.conversation,
-    required this.messages,
-    required this.parentContext,
-  });
-  final Conversation conversation;
-  final List<ChatMessage> messages;
-  final BuildContext parentContext;
-
-  @override
-  State<_BatchExportDialog> createState() => _BatchExportDialogState();
-}
-
-class _BatchExportDialogState extends State<_BatchExportDialog> {
-  final bool _exporting = false;
-  bool _showThinkingAndToolCards = false;
-  bool _expandThinkingContent = false;
-
-  Future<void> _onExportMarkdown() async {
-    if (_exporting) return;
-    final pctx = widget.parentContext;
-    await Navigator.of(context).maybePop();
-    if (!pctx.mounted) return;
-    await exportChatMessagesMarkdown(
-      pctx,
-      conversation: widget.conversation,
-      messages: widget.messages,
-      showThinkingAndToolCards: _showThinkingAndToolCards,
-      expandThinkingContent: _expandThinkingContent,
-    );
-  }
-
-  Future<void> _onExportTxt() async {
-    if (_exporting) return;
-    final pctx = widget.parentContext;
-    await Navigator.of(context).maybePop();
-    if (!pctx.mounted) return;
-    await exportChatMessagesTxt(
-      pctx,
-      conversation: widget.conversation,
-      messages: widget.messages,
-      showThinkingAndToolCards: _showThinkingAndToolCards,
-      expandThinkingContent: _expandThinkingContent,
-    );
-  }
-
-  Future<void> _onExportImage() async {
-    if (_exporting) return;
-    try {
-      final pctx = widget.parentContext;
-      await Navigator.of(context).maybePop();
-      if (!pctx.mounted) return;
-      File? file;
-      await _runWithExportingOverlay(pctx, () async {
-        file = await _renderAndSaveChatImage(
-          pctx,
-          widget.conversation,
-          widget.messages,
-          showThinkingAndToolCards: _showThinkingAndToolCards,
-          expandThinkingContent: _expandThinkingContent,
-        );
-      });
-      if (file == null) throw 'render error';
-      if (!pctx.mounted) return;
-      await showImagePreviewSheet(pctx, file: file!);
-      return;
-    } catch (e) {
-      final pctx = widget.parentContext;
-      if (!pctx.mounted) return;
-      final l10n = AppLocalizations.of(pctx)!;
-      showAppSnackBar(
-        pctx,
-        message: l10n.messageExportSheetExportFailed('$e'),
-        type: NotificationType.error,
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(
-        minWidth: 480,
-        maxWidth: 720,
-        maxHeight: 460,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Material(
-          color: context.appColors.surfaceCard,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.messageExportSheetFormatTitle,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: AppFontWeights.emphasis,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: l10n.mcpPageClose,
-                      icon: Icon(
-                        Lucide.X,
-                        size: 18,
-                        color: cs.onSurface.withValues(alpha: 0.75),
-                      ),
-                      onPressed: () => Navigator.of(context).maybePop(),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
-              // Body
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  child: Scrollbar(
-                    child: ListView(
-                      children: [
-                        _ExportOptionTile(
-                          icon: Lucide.BookOpenText,
-                          title: l10n.messageExportSheetMarkdown,
-                          subtitle:
-                              l10n.messageExportSheetBatchMarkdownSubtitle,
-                          onTap: _exporting ? null : _onExportMarkdown,
-                        ),
-                        _ExportOptionTile(
-                          icon: Lucide.FileText,
-                          title: l10n.messageExportSheetPlainText,
-                          subtitle: l10n.messageExportSheetBatchTxtSubtitle,
-                          onTap: _exporting ? null : _onExportTxt,
-                        ),
-                        _ExportOptionTile(
-                          icon: Lucide.Image,
-                          title: l10n.messageExportSheetExportImage,
-                          subtitle:
-                              l10n.messageExportSheetBatchExportImageSubtitle,
-                          onTap: _exporting ? null : _onExportImage,
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Column(
-                            children: [
-                              _buildSwitchRow(
-                                context,
-                                title: l10n
-                                    .messageExportSheetShowThinkingAndToolCards,
-                                value: _showThinkingAndToolCards,
-                                onChanged: (v) {
-                                  setState(() {
-                                    _showThinkingAndToolCards = v;
-                                    if (!v) _expandThinkingContent = false;
-                                  });
-                                },
-                              ),
-                              _buildSwitchRow(
-                                context,
-                                title:
-                                    l10n.messageExportSheetShowThinkingContent,
-                                value: _expandThinkingContent,
-                                onChanged: _showThinkingAndToolCards
-                                    ? (v) => setState(
-                                        () => _expandThinkingContent = v,
-                                      )
-                                    : null,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSwitchRow(
-    BuildContext context, {
-    required String title,
-    required bool value,
-    required ValueChanged<bool>? onChanged,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    final isEnabled = onChanged != null;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                color: isEnabled
-                    ? cs.onSurface
-                    : cs.onSurface.withValues(alpha: 0.4),
-              ),
-            ),
-          ),
-          IosSwitch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: cs.primary,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ExportSheet extends StatefulWidget {
   const _ExportSheet({required this.message, required this.parentContext});
   final ChatMessage message;
@@ -2764,7 +2268,6 @@ class _ExportedMessageCard extends StatelessWidget {
     required this.chatFontScale,
     this.showThinkingAndToolCards = false,
     this.expandThinkingContent = false,
-    this.isDesktop = false,
   });
   final ChatMessage message;
   final String title;
@@ -2772,7 +2275,6 @@ class _ExportedMessageCard extends StatelessWidget {
   final double chatFontScale;
   final bool showThinkingAndToolCards;
   final bool expandThinkingContent;
-  final bool isDesktop;
 
   @override
   Widget build(BuildContext context) {
@@ -2780,12 +2282,10 @@ class _ExportedMessageCard extends StatelessWidget {
     final headerFg = cs.onSurface;
     final time = DateFormat('yyyy-MM-dd HH:mm').format(message.timestamp);
 
-    // Desktop uses smaller font sizes for better proportions
-    final double titleFontSize = isDesktop ? 15.0 : 18.0;
-    final double timeFontSize = isDesktop ? 10.0 : 12.0;
-    // Desktop uses smaller margins and paddings
-    final double containerMargin = isDesktop ? 12.0 : 16.0;
-    final double containerPadding = isDesktop ? 12.0 : 16.0;
+    final double titleFontSize = 18.0;
+    final double timeFontSize = 12.0;
+    final double containerMargin = 16.0;
+    final double containerPadding = 16.0;
 
     final messageForExport = messageForThinkingExport(
       message,
@@ -2844,7 +2344,7 @@ class _ExportedMessageCard extends StatelessWidget {
                 color: headerFg.withValues(alpha: 0.6),
               ),
             ),
-            SizedBox(height: isDesktop ? 10.0 : 12.0),
+            SizedBox(height: 12.0),
             ChatMessageWidget(
               message: messageForExport,
               collapseLongUserText: false,
@@ -2882,8 +2382,8 @@ class _ExportedMessageCard extends StatelessWidget {
               showThinkingCards: true,
               showToolCards: true,
             ),
-            SizedBox(height: isDesktop ? 12.0 : 16.0),
-            _ExportDisclaimer(isDesktop: isDesktop),
+            SizedBox(height: 16.0),
+            _ExportDisclaimer(),
           ],
         ),
       ),
@@ -2900,7 +2400,6 @@ class _ExportedChatImage extends StatelessWidget {
     required this.timestamp,
     this.showThinkingAndToolCards = false,
     this.expandThinkingContent = false,
-    this.isDesktop = false,
   });
   final String conversationTitle;
   final ColorScheme cs;
@@ -2909,15 +2408,13 @@ class _ExportedChatImage extends StatelessWidget {
   final DateTime timestamp;
   final bool showThinkingAndToolCards;
   final bool expandThinkingContent;
-  final bool isDesktop;
 
   @override
   Widget build(BuildContext context) {
-    // Desktop uses smaller font sizes for better proportions
-    final double titleFontSize = isDesktop ? 15.0 : 18.0;
-    final double timeFontSize = isDesktop ? 10.0 : 12.0;
-    final double containerMargin = isDesktop ? 5.0 : 6.0;
-    final double containerPadding = isDesktop ? 5.0 : 6.0;
+    final double titleFontSize = 18.0;
+    final double timeFontSize = 12.0;
+    final double containerMargin = 6.0;
+    final double containerPadding = 6.0;
 
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(
@@ -2931,7 +2428,7 @@ class _ExportedChatImage extends StatelessWidget {
           padding: EdgeInsets.all(containerPadding),
           decoration: BoxDecoration(
             color: context.appColors.surfaceCard,
-            borderRadius: BorderRadius.circular(isDesktop ? 12.0 : 16.0),
+            borderRadius: BorderRadius.circular(16.0),
             // removed outer border per UX
           ),
           child: Column(
@@ -2958,19 +2455,18 @@ class _ExportedChatImage extends StatelessWidget {
                   color: cs.onSurface.withValues(alpha: 0.6),
                 ),
               ),
-              SizedBox(height: isDesktop ? 10.0 : 12.0),
+              SizedBox(height: 12.0),
               for (final m in messages) ...[
                 _ExportedBubble(
                   message: m,
                   cs: cs,
                   showThinkingAndToolCards: showThinkingAndToolCards,
                   expandThinkingContent: expandThinkingContent,
-                  isDesktop: isDesktop,
                 ),
-                SizedBox(height: isDesktop ? 6.0 : 8.0),
+                SizedBox(height: 8.0),
               ],
-              SizedBox(height: isDesktop ? 10.0 : 12.0),
-              _ExportDisclaimer(isDesktop: isDesktop),
+              SizedBox(height: 12.0),
+              _ExportDisclaimer(),
             ],
           ),
         ),
@@ -2985,13 +2481,11 @@ class _ExportedBubble extends StatelessWidget {
     required this.cs,
     this.showThinkingAndToolCards = false,
     this.expandThinkingContent = false,
-    this.isDesktop = false,
   });
   final ChatMessage message;
   final ColorScheme cs;
   final bool showThinkingAndToolCards;
   final bool expandThinkingContent;
-  final bool isDesktop;
 
   @override
   Widget build(BuildContext context) {
@@ -2999,8 +2493,7 @@ class _ExportedBubble extends StatelessWidget {
     final bubbleBg = cs.primary.withValues(alpha: 0.08);
     final bubbleFg = cs.onSurface;
 
-    // Desktop uses smaller font sizes for better proportions
-    final double contentFontSize = isDesktop ? 13.0 : 15.7;
+    final double contentFontSize = 15.7;
 
     final messageForExport = messageForThinkingExport(
       message,
@@ -3045,7 +2538,7 @@ class _ExportedBubble extends StatelessWidget {
       return Align(
         alignment: Alignment.centerLeft,
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: isDesktop ? 760.0 : 860.0),
+          constraints: BoxConstraints(maxWidth: 860.0),
           child: ChatMessageWidget(
             message: messageForExport,
             modelIcon:
@@ -3085,12 +2578,12 @@ class _ExportedBubble extends StatelessWidget {
     return Align(
       alignment: Alignment.centerRight,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: isDesktop ? 600.0 : 680.0),
+        constraints: BoxConstraints(maxWidth: 680.0),
         child: Container(
-          padding: EdgeInsets.all(isDesktop ? 10.0 : 12.0),
+          padding: EdgeInsets.all(12.0),
           decoration: BoxDecoration(
             color: bubbleBg,
-            borderRadius: BorderRadius.circular(isDesktop ? 12.0 : 16.0),
+            borderRadius: BorderRadius.circular(16.0),
           ),
           child: contentWidget,
         ),
@@ -3100,20 +2593,16 @@ class _ExportedBubble extends StatelessWidget {
 }
 
 class _ExportDisclaimer extends StatelessWidget {
-  const _ExportDisclaimer({this.isDesktop = false});
-  final bool isDesktop;
+  const _ExportDisclaimer();
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final text = AppLocalizations.of(context)!.exportDisclaimerAiGenerated;
-    final double fontSize = isDesktop ? 10.0 : 12.0;
+    final double fontSize = 12.0;
     return Center(
       child: Padding(
-        padding: EdgeInsets.only(
-          top: isDesktop ? 3.0 : 4.0,
-          bottom: isDesktop ? 4.0 : 6.0,
-        ),
+        padding: EdgeInsets.only(top: 4.0, bottom: 6.0),
         child: Text(
           text,
           style: TextStyle(

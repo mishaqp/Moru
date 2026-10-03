@@ -17,10 +17,12 @@ import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_check.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tools_service.dart';
+import 'package:Kelivo/core/services/api/generation/tool_result_images.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
 import 'package:Kelivo/utils/mcp_structured_image.dart';
 
 import '../../../support/fake_workspace_runtime.dart';
+import '../../../support/fake_process_keep_alive.dart';
 
 class _RecordingApproval extends ToolApprovalService {
   int calls = 0;
@@ -34,6 +36,7 @@ class _RecordingApproval extends ToolApprovalService {
     required String toolName,
     required Map<String, dynamic> arguments,
     String? conversationId,
+    ToolApprovalOwner? owner,
   }) async {
     calls++;
     lastName = toolName;
@@ -88,7 +91,7 @@ class _ManualRuntime extends FakeWorkspaceRuntime {
 }
 
 void main() {
-  final canRunReal = Platform.isMacOS || Platform.isLinux;
+  final canRunReal = Platform.isLinux;
 
   late Directory tmp;
   late Directory workspaceDir;
@@ -182,6 +185,9 @@ void main() {
     return WorkspaceToolsService(
       registry: registry,
       runtimeProvider: provider,
+      keepAlive: FakeProcessKeepAlive(),
+      reportBackgroundShellResult:
+          ({required id, required conversationId, required succeeded}) async {},
       onShellCompleted: onShellCompleted,
       loadEnvironment: loadEnvironment,
       updateConversationExtras: (id, update) async {
@@ -763,7 +769,7 @@ void main() {
         final jobId = started['job_id'] as String;
         expect(runtime.requests.single.timeout, const Duration(seconds: 3600));
         // A background job does not follow the reply's cancellation.
-        expect(runtime.requests.single.isCancelled, isNull);
+        expect(runtime.requests.single.isCancelled?.call(), isFalse);
 
         runtime.job.add(
           CommandOutput(
@@ -990,6 +996,28 @@ void main() {
       expect(result.metadata, contains(kMcpResultMetadataKey));
     });
 
+    test(
+      'read_file image does not reopen a replaced source for the model',
+      () async {
+        final png = Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]);
+        final file = File(p.join(workspaceDir.path, 'original.png'))
+          ..writeAsBytesSync(png);
+        final result = client(
+          await service().handle(ctx(), 'read_file', {
+            'path': file.path,
+          }, toolCallId: 'read-img-swap'),
+        );
+        final replacement = File(p.join(tmp.path, 'replacement.png'))
+          ..writeAsBytesSync([1, 2, 3, 4]);
+        file.deleteSync();
+        Link(file.path).createSync(replacement.path);
+
+        final images = await loadToolResultImages(result.metadata);
+        expect(images.single.base64, base64Encode(png));
+        expect(result.content, isNot(contains(file.path)));
+      },
+    );
+
     test('write_file and edit_file content shapes', () async {
       final tools = service();
       final native = ctx();
@@ -1164,7 +1192,7 @@ void main() {
     () async {
       final tools = service();
       final context = ctx(sandboxed: true);
-      final fileName = Platform.isWindows ? 'report 报告.txt' : 'report:报告.txt';
+      final fileName = 'report:报告.txt';
       final path = '/workspace/$fileName';
       final write = metaOf(
         await tools.handle(context, 'write_file', {
@@ -1197,9 +1225,7 @@ void main() {
       );
       expect(
         write.files.single.link,
-        Platform.isWindows
-            ? 'kelivo://workspace/report%20%E6%8A%A5%E5%91%8A.txt'
-            : 'kelivo://workspace/report%3A%E6%8A%A5%E5%91%8A.txt',
+        'kelivo://workspace/report%3A%E6%8A%A5%E5%91%8A.txt',
       );
       expect(
         KelivoLink.tryParse(write.files.single.link!)?.relativePath,

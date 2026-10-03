@@ -47,6 +47,17 @@ void main() {
     );
   }
 
+  test('legacy continuations receive distinct immutable execution IDs', () {
+    final first = buildState(const [TextPart('same reply')]);
+    final second = buildState(const [TextPart('same reply')]);
+    expect(first.messageId, second.messageId);
+    expect(first.ctx.generationRunId, isNull);
+    expect(second.ctx.generationRunId, isNull);
+    expect(first.ctx.executionId, isNotEmpty);
+    expect(first.ctx.executionId, isNot(second.ctx.executionId));
+    expect(first.ctx.executionId, first.ctx.executionId);
+  });
+
   test('StreamingState seeds partsHandler from the assistant message', () {
     final state = buildState(const [
       TextPart('before'),

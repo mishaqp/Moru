@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:uuid/uuid.dart';
 
+import '../../../core/models/agent_auth_mode.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/models/assistant_regex.dart';
 import '../../../core/models/preset_message.dart';
 import '../../../core/providers/assistant_provider.dart';
+import '../../../core/services/acp/acp_agent_catalog.dart';
 
 /// A chat provider and the models the user added to it.
 class AssistantManagerProvider {
@@ -45,6 +47,7 @@ class AssistantManagerCatalog {
     this.mcpServers = const [],
     this.skills = const [],
     this.workspaces = const [],
+    this.agents = const [],
     this.localToolIds = const [],
   });
 
@@ -52,6 +55,9 @@ class AssistantManagerCatalog {
   final List<AssistantManagerOption> mcpServers;
   final List<AssistantManagerOption> skills;
   final List<AssistantManagerOption> workspaces;
+
+  /// ACP agents (Settings → Agents); `enabled` means installed.
+  final List<AssistantManagerOption> agents;
   final List<String> localToolIds;
 }
 
@@ -113,6 +119,8 @@ class AssistantManagerTool {
     'defaultWorkspaceId',
     'skillIds',
     'avatar',
+    'agentId',
+    'agentConfig',
   ];
 
   static const Map<String, String> _memorySmartAddModes = {
@@ -217,6 +225,29 @@ class AssistantManagerTool {
     'chatModelId': {
       'type': 'string',
       'description': 'Model id of that provider from "options".',
+    },
+    'agentId': {
+      'type': 'string',
+      'description':
+          'A coding agent from "options" (agents) that answers in this '
+          "assistant's chats. By default it uses the chat model provider. "
+          'Clear it to let the model answer again.',
+    },
+    'agentAuthMode': {
+      'type': 'string',
+      'enum': [for (final mode in AgentAuthMode.values) mode.name],
+      'description':
+          'provider uses the chat model provider. subscription uses the '
+          "agent's own account and requires claude-code or codex.",
+    },
+    'agentConfig': {
+      'type': 'object',
+      'additionalProperties': {'type': 'string'},
+      'description':
+          "The agent's own session options by option id, for example its "
+          'model or reasoning effort, as the agent names them in the chat. '
+          'Values the agent does not offer are ignored. Changing agentId '
+          'resets them.',
     },
     'systemPrompt': {'type': 'string'},
     'messageTemplate': {
@@ -464,6 +495,10 @@ class AssistantManagerTool {
     'workspaces': [
       for (final w in catalog.workspaces) {'id': w.id, 'name': w.name},
     ],
+    'agents': [
+      for (final a in catalog.agents)
+        {'id': a.id, 'name': a.name, 'installed': a.enabled},
+    ],
     'localToolIds': catalog.localToolIds,
     'memorySmartAddMode': _memorySmartAddModes,
     'memoryWriteScope': _memoryWriteScopes,
@@ -652,6 +687,8 @@ class AssistantManagerTool {
       clearDefaultWorkspaceId: clear.contains('defaultWorkspaceId'),
       clearSkillIds: clear.contains('skillIds'),
       clearAvatar: clear.contains('avatar'),
+      clearAgent: clear.contains('agentId'),
+      clearAgentConfig: clear.contains('agentConfig'),
     );
 
     final name = s.string('name');
@@ -722,6 +759,30 @@ class AssistantManagerTool {
       );
     }
 
+    final agentId = s.string('agentId');
+    if (agentId != null) {
+      _checkIds('agentId', [agentId], {for (final o in catalog.agents) o.id});
+    }
+    final requestedAuthMode = s.oneOf('agentAuthMode', [
+      for (final mode in AgentAuthMode.values) mode.name,
+    ]);
+    var agentAuthMode = requestedAuthMode == null
+        ? next.agentAuthMode
+        : AgentAuthMode.values.firstWhere(
+            (mode) => mode.name == requestedAuthMode,
+          );
+    final selectedAgent = AcpAgentSpec.byId(agentId ?? next.agentId ?? '');
+    if (agentAuthMode == AgentAuthMode.subscription &&
+        selectedAgent?.supportsSubscription != true) {
+      if (requestedAuthMode == AgentAuthMode.subscription.name) {
+        throw const _ToolFailure(
+          'invalid_settings',
+          'agentAuthMode subscription requires agentId claude-code or codex.',
+        );
+      }
+      agentAuthMode = AgentAuthMode.provider;
+    }
+
     final smartAdd = s.oneOf('memorySmartAddMode', _memorySmartAddModes.keys);
     final writeScope = s.oneOf('memoryWriteScope', _memoryWriteScopes.keys);
 
@@ -732,6 +793,9 @@ class AssistantManagerTool {
       useAssistantName: s.boolean('useAssistantName'),
       chatModelProvider: providerKey,
       chatModelId: modelId,
+      agentId: agentId,
+      agentAuthMode: agentAuthMode,
+      agentConfig: s.stringMap('agentConfig'),
       systemPrompt: s.string('systemPrompt'),
       messageTemplate: s.string('messageTemplate'),
       temperature: s.number('temperature', min: 0, max: 2),
@@ -988,6 +1052,28 @@ class _SettingsReader {
   }
 
   /// Header/body pairs stored as `{nameKey: ..., 'value': ...}`.
+  /// At most 16 short entries: option ids and values are agent identifiers.
+  Map<String, String>? stringMap(String key) {
+    if (!_settings.containsKey(key)) return null;
+    final value = _settings[key];
+    if (value is Map &&
+        value.length <= 16 &&
+        value.entries.every(
+          (e) =>
+              e.key is String &&
+              e.value is String &&
+              (e.key as String).trim().isNotEmpty &&
+              (e.key as String).length <= 128 &&
+              (e.value as String).length <= 128,
+        )) {
+      return {
+        for (final e in value.entries)
+          (e.key as String).trim(): (e.value as String).trim(),
+      };
+    }
+    _invalid(key, 'an object of at most 16 short string values');
+  }
+
   List<Map<String, String>>? pairs(String key, String nameKey) {
     if (!_settings.containsKey(key)) return null;
     final value = _settings[key];

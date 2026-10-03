@@ -7,6 +7,7 @@ import '../../../shared/widgets/ios_tactile.dart';
 import '../../../core/services/haptics.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/markdown_preview_html.dart';
+import '../../../utils/rich_clipboard.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
 import '../../../shared/pages/webview/webview_page.dart';
 import 'dart:convert';
@@ -163,6 +164,24 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
                         });
                       },
                     ),
+                    if (widget.message.content.trim().isNotEmpty)
+                      _actionItem(
+                        icon: Lucide.ClipboardType,
+                        label: l10n.messageMoreSheetCopyFormatted,
+                        onTap: () async {
+                          final parentCtx = widget.parentContext;
+                          Navigator.of(context).pop();
+                          await RichClipboard.copyMarkdown(
+                            widget.message.content,
+                          );
+                          if (!parentCtx.mounted) return;
+                          showAppSnackBar(
+                            parentCtx,
+                            message: l10n.chatMessageWidgetCopiedToClipboard,
+                            type: NotificationType.success,
+                          );
+                        },
+                      ),
                     _actionItem(
                       icon: Lucide.BookOpenText,
                       label: l10n.messageMoreSheetRenderWebView,

@@ -4,6 +4,7 @@ import '../../../core/services/browser/browser_agent_session.dart';
 import '../../../features/home/services/browser_agent_actions.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../widgets/custom_bottom_sheet.dart';
 
 /// Opens the browser activity log as a modal sheet, reactive for as long as
 /// it stays open: it reads [BrowserAgentSession.recentActivityNotifier]
@@ -15,62 +16,50 @@ import '../../../l10n/app_localizations.dart';
 /// only while the agent is currently busy -- the log stays useful to review
 /// after a task finishes.
 Future<void> showActivityLogSheet(BuildContext context) {
-  return showModalBottomSheet(
+  return showCustomBottomSheet<void>(
     context: context,
-    isScrollControlled: true,
-    builder: (ctx) => const ActivityLogSheet(),
+    title: AppLocalizations.of(context)!.browserActivityLogTitle,
+    partialHeightFactor: 0.85,
+    expandedHeightFactor: 0.85,
+    builder: (ctx, scrollController) =>
+        ActivityLogSheet(scrollController: scrollController),
   );
 }
 
 class ActivityLogSheet extends StatelessWidget {
-  const ActivityLogSheet({super.key});
+  const ActivityLogSheet({super.key, this.scrollController});
+
+  final ScrollController? scrollController;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final ru = Localizations.localeOf(context).languageCode == 'ru';
     final cs = Theme.of(context).colorScheme;
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.browserActivityLogTitle,
-              style: Theme.of(context).textTheme.titleLarge,
+    return ValueListenableBuilder<List<BrowserActivity>>(
+      valueListenable: BrowserAgentSession.instance.recentActivityNotifier,
+      builder: (context, activities, _) {
+        if (activities.isEmpty) {
+          return SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Text(
+              l10n.browserActivityLogEmpty,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
-            const SizedBox(height: 12),
-            Flexible(
-              child: ValueListenableBuilder<List<BrowserActivity>>(
-                valueListenable:
-                    BrowserAgentSession.instance.recentActivityNotifier,
-                builder: (context, activities, _) {
-                  if (activities.isEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: Text(
-                        l10n.browserActivityLogEmpty,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
-                    );
-                  }
-                  final entries = activities.reversed.toList();
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: entries.length,
-                    itemBuilder: (c, i) =>
-                        _ActivityRow(activity: entries[i], ru: ru),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+          );
+        }
+        final entries = activities.reversed.toList();
+        return ListView.builder(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          itemCount: entries.length,
+          itemBuilder: (context, i) =>
+              _ActivityRow(activity: entries[i], ru: ru),
+        );
+      },
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:Kelivo/core/services/workspace/workspace_file_access.dart';
 import 'package:path/path.dart' as p;
 import 'package:Kelivo/features/workspace/widgets/files/file_browser_ops.dart';
 import 'package:Kelivo/features/workspace/widgets/files/workspace_file_thumbnail.dart';
@@ -351,15 +352,18 @@ class _ProducedImageThumbState extends State<_ProducedImageThumb> {
       _failed = false;
       _entry = null;
     });
-    final file = await resolveWorkspaceLinkedFile(
+    final resolved = await resolveWorkspaceLinkedEntry(
       context,
       widget.entry.link,
       conversationId: widget.conversationId,
     );
     FileBrowserEntry? entry;
-    if (file != null) {
+    final file = resolved?.entry;
+    if (file is File) {
       try {
-        final stat = await file.stat();
+        final stat = await WorkspaceFileAccess(
+          roots: [resolved!.rootPath],
+        ).stat(file.path);
         if (stat.type == FileSystemEntityType.file) {
           entry = FileBrowserEntry(
             name: p.basename(file.path),
@@ -367,10 +371,13 @@ class _ProducedImageThumbState extends State<_ProducedImageThumb> {
             isDirectory: false,
             size: stat.size,
             modified: stat.modified,
+            rootPath: resolved.rootPath,
           );
         }
       } on FileSystemException {
         // A generated file may have been removed before its thumbnail loads.
+      } on WorkspaceFileAccessException {
+        // A replaced link must not expose a target outside its original zone.
       }
     }
     if (!mounted || serial != _resolveSerial) return;

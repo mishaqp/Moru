@@ -10,16 +10,22 @@
     <uses-permission android:name="android.permission.VIBRATE"/>
     <!-- Microphone access for voice input waveform -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Camera for web pages in the browser (video calls, QR scanners) after
+         the user allows the site; the phone may have none. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- Foreground service + notifications for background execution (Android only) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- moru.local for the mini app web server (mDNS in the Wi-Fi). -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
      <!-- Assistant local tools: calendar query/create -->
      <uses-permission android:name="android.permission.READ_CALENDAR" />
      <uses-permission android:name="android.permission.WRITE_CALENDAR" />
@@ -151,12 +157,19 @@
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
-        <!-- Foreground service to keep Flutter isolate alive for background generation -->
+        <!-- User-started interactive assistant/workspace execution; Play reviews this subtype. -->
         <service
             android:name=".background.GenerationForegroundService"
             android:stopWithTask="false"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-started interactive assistant and coding workspace: streaming model requests, local tools, ACP subprocesses, PTY commands, approval pauses and user-visible local mini-app servers. Execution ends when the last task or server owner exits or the user stops it." />
+        </service>
+        <receiver
+            android:name=".background.ApprovalNotificationReceiver"
+            android:exported="false" />
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"

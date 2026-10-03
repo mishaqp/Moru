@@ -95,9 +95,11 @@ class HomeMobileScaffold extends StatelessWidget {
     return InteractiveDrawer(
       controller: drawerController,
       side: DrawerSide.left,
-      drawerWidth: MediaQuery.sizeOf(context).width * 0.75,
-      scrimColor: cs.onSurface,
-      maxScrimOpacity: 0.12,
+      // Most of the screen, with the chat dimmed at the edge so it still shows
+      // where the panel came from.
+      drawerWidth: MediaQuery.sizeOf(context).width * 0.8,
+      scrimColor: Colors.black,
+      maxScrimOpacity: 0.32,
       barrierDismissible: true,
       drawer: SideDrawer(
         userName: context.watch<UserProvider>().name,

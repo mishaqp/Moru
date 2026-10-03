@@ -35,13 +35,65 @@ class QueuedChatInput {
   final String id;
   final String conversationId;
   final ChatInputData input;
+  final bool isEditing;
 
   const QueuedChatInput({
     required this.id,
     required this.conversationId,
     required this.input,
+    this.isEditing = false,
   });
 
   QueuedChatInput withInput(ChatInputData input) =>
       QueuedChatInput(id: id, conversationId: conversationId, input: input);
+
+  QueuedChatInput withEditing(bool editing) => QueuedChatInput(
+    id: id,
+    conversationId: conversationId,
+    input: input,
+    isEditing: editing,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'conversationId': conversationId,
+    'editing': isEditing,
+    'text': input.text,
+    'imagePaths': input.imagePaths,
+    'documents': [
+      for (final document in input.documents)
+        {
+          'path': document.path,
+          'fileName': document.fileName,
+          'mime': document.mime,
+        },
+    ],
+    'allowImagesApiRouting': input.allowImagesApiRouting,
+  };
+
+  factory QueuedChatInput.fromJson(Map<String, dynamic> json) {
+    final id = json['id'] as String;
+    final conversationId = json['conversationId'] as String;
+    if (id.isEmpty || conversationId.isEmpty) {
+      throw const FormatException('invalid_queued_input_identity');
+    }
+    return QueuedChatInput(
+      id: id,
+      conversationId: conversationId,
+      isEditing: json['editing'] as bool? ?? false,
+      input: ChatInputData(
+        text: json['text'] as String,
+        imagePaths: (json['imagePaths'] as List).cast<String>(),
+        documents: [
+          for (final value in json['documents'] as List)
+            DocumentAttachment(
+              path: (value as Map)['path'] as String,
+              fileName: value['fileName'] as String,
+              mime: value['mime'] as String,
+            ),
+        ],
+        allowImagesApiRouting: json['allowImagesApiRouting'] as bool? ?? true,
+      ),
+    );
+  }
 }

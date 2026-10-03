@@ -43,7 +43,7 @@ void main() {
   Future<GlobalKey> pumpSettings(
     WidgetTester tester, {
     Brightness brightness = Brightness.light,
-    TargetPlatform platform = TargetPlatform.iOS,
+    TargetPlatform platform = TargetPlatform.android,
     bool reduceMotion = false,
     Size size = const Size(390, 844),
     FakeViewPadding padding = const FakeViewPadding(top: 47, bottom: 34),
@@ -89,7 +89,11 @@ void main() {
             ).copyWith(disableAnimations: reduceMotion),
             child: RepaintBoundary(key: key, child: child!),
           ),
-          home: const SettingsPage(),
+          // Exercise the search route's own animation without an unrelated
+          // root MaterialPageRoute reacting to its interactive gesture.
+          onGenerateRoute: (_) => PageRouteBuilder<void>(
+            pageBuilder: (_, _, _) => const SettingsPage(),
+          ),
         ),
       ),
     );
@@ -282,7 +286,7 @@ void main() {
     },
   );
 
-  for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+  for (final platform in [TargetPlatform.android]) {
     testWidgets('a short fast swipe dismisses on ${platform.name}', (
       tester,
     ) async {

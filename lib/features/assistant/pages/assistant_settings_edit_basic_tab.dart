@@ -395,6 +395,8 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
           ),
         ),
         const SizedBox(height: 16),
+        AssistantAgentCard(assistant: a),
+        const SizedBox(height: 8),
 
         // Chat background (separate iOS card)
         SectionCard(

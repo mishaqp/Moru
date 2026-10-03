@@ -140,6 +140,10 @@ class MainActivity : FlutterActivity() {
                     result.success(id)
                 }
                 "localTimeZone" -> result.success(java.util.TimeZone.getDefault().id)
+                "vibrate" -> {
+                    val pattern = call.argument<List<Number>>("pattern").orEmpty().map { it.toInt() }
+                    result.success(MiniAppVibration.vibrate(this, pattern))
+                }
                 "pinShortcut" -> {
                     val id = call.argument<String>("id")
                     val icon = call.argument<ByteArray>("icon")
@@ -153,6 +157,135 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        // The browser pages' native parts: a picture of the page for the
+        // model (the WebView draws itself into a bitmap, longer side at most
+        // 1280 px, JPEG), downloads through the system download manager with
+        // the page's cookies, and links that belong to other apps.
+        val browserChannel =
+            MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "app.browser")
+        BrowserDownloads.onFinished = { event ->
+            runOnUiThread { browserChannel.invokeMethod("downloadFinished", event) }
+        }
+        browserChannel.setMethodCallHandler { call, result ->
+            fun webView(): android.webkit.WebView? {
+                val id = (call.argument<Number>("id"))?.toLong() ?: return null
+                @Suppress("DEPRECATION")
+                return io.flutter.plugins.webviewflutter.WebViewFlutterAndroidExternalApi
+                    .getWebView(flutterEngine, id)
+            }
+            when (call.method) {
+                "capture" -> {
+                    val view = webView()
+                    if (view == null) {
+                        result.error("no_webview", "The browser view is not available.", null)
+                        return@setMethodCallHandler
+                    }
+                    view.post {
+                        try {
+                            result.success(BrowserCapture.jpeg(view))
+                        } catch (e: Exception) {
+                            result.error("capture_failed", e.message, null)
+                        }
+                    }
+                }
+                "watchDownloads" -> {
+                    val view = webView()
+                    if (view == null) {
+                        result.success(false)
+                        return@setMethodCallHandler
+                    }
+                    val appContext = applicationContext
+                    view.setDownloadListener { url, userAgent, disposition, mime, _ ->
+                        val event = try {
+                            BrowserDownloads.enqueue(appContext, url, userAgent, disposition, mime)
+                        } catch (e: Exception) {
+                            mapOf(
+                                "error" to (e.message ?: "download_failed"),
+                                "url" to url.take(300),
+                                "file" to BrowserDownloads.fileName(url, disposition, mime),
+                            )
+                        }
+                        browserChannel.invokeMethod("download", event)
+                    }
+                    result.success(true)
+                }
+                "tap" -> {
+                    val view = webView()
+                    val fx = call.argument<Number>("fx")?.toDouble()
+                    val fy = call.argument<Number>("fy")?.toDouble()
+                    if (view == null || fx == null || fy == null) {
+                        result.success(false)
+                        return@setMethodCallHandler
+                    }
+                    view.post { BrowserInput.tap(view, fx, fy) { result.success(true) } }
+                }
+                "key" -> {
+                    val view = webView()
+                    val code = BrowserInput.keyCode(call.argument<String>("key").orEmpty())
+                    if (view == null || code == null) {
+                        result.success(false)
+                        return@setMethodCallHandler
+                    }
+                    view.post {
+                        BrowserInput.key(view, code)
+                        result.success(true)
+                    }
+                }
+                "clearCookies" -> {
+                    val url = call.argument<String>("url").orEmpty()
+                    result.success(BrowserCookies.clear(url))
+                }
+                "downloadsDir" -> {
+                    val dir = android.os.Environment.getExternalStoragePublicDirectory(
+                        android.os.Environment.DIRECTORY_DOWNLOADS,
+                    )
+                    dir.mkdirs()
+                    result.success(dir.absolutePath)
+                }
+                "cookies" -> {
+                    val url = call.argument<String>("url").orEmpty()
+                    result.success(android.webkit.CookieManager.getInstance().getCookie(url))
+                }
+                "openExternal" -> {
+                    val url = call.argument<String>("url").orEmpty()
+                    val intent = BrowserLinks.intentFor(url, packageName)
+                    val fallback = BrowserLinks.fallbackUrl(url)
+                    if (intent == null || intent.resolveActivity(packageManager)?.packageName == packageName) {
+                        result.success(mapOf("opened" to false, "fallback" to fallback))
+                        return@setMethodCallHandler
+                    }
+                    val opened = try {
+                        startActivity(intent)
+                        true
+                    } catch (e: ActivityNotFoundException) {
+                        false
+                    } catch (e: SecurityException) {
+                        false
+                    }
+                    result.success(mapOf("opened" to opened, "fallback" to fallback))
+                }
+                else -> result.notImplemented()
+            }
+        }
+        // Copy with formatting: plain text plus HTML, which Notes, Gmail and
+        // Docs paste as rich text. Flutter's Clipboard only writes plain text.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "app.clipboard")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "setHtml" -> {
+                        val text = call.argument<String>("text")
+                        val html = call.argument<String>("html")
+                        val clipboard = getSystemService(android.content.ClipboardManager::class.java)
+                        if (text == null || html == null || clipboard == null) {
+                            result.success(false)
+                        } else {
+                            clipboard.setPrimaryClip(android.content.ClipData.newHtmlText("Moru", text, html))
+                            result.success(true)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         fileSaveChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, fileSaveChannelName)
         fileSaveChannel?.setMethodCallHandler { call, result ->
             when (call.method) {

@@ -154,14 +154,12 @@ class _SystemConfiguration extends StatelessWidget {
     required this.checking,
     required this.localeController,
     required this.onCheck,
-    required this.desktop,
   });
 
   final bool? available;
   final bool checking;
   final TextEditingController localeController;
   final VoidCallback onCheck;
-  final bool desktop;
 
   @override
   Widget build(BuildContext context) {
@@ -175,17 +173,12 @@ class _SystemConfiguration extends StatelessWidget {
         : available == false
         ? l10n.asrServicesSystemCheckFailed
         : l10n.asrServicesSystemSubtitle;
-    final controlColor = desktop
-        ? Colors.transparent
-        : (context.appColors.surfaceFill);
+    final controlColor = context.appColors.surfaceFill;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: desktop ? 4 : 12,
-            vertical: desktop ? 6 : 10,
-          ),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Semantics(
             button: true,
             label: statusText,
@@ -207,13 +200,9 @@ class _SystemConfiguration extends StatelessWidget {
                     color: available == false
                         ? cs.error.withValues(alpha: isDark ? 0.10 : 0.06)
                         : controlColor,
-                    borderRadius: BorderRadius.circular(desktop ? 10 : 12),
-                    border: desktop || available == false
-                        ? Border.all(
-                            color: available == false
-                                ? cs.error.withValues(alpha: 0.42)
-                                : cs.onSurface.withValues(alpha: 0.24),
-                          )
+                    borderRadius: BorderRadius.circular(12),
+                    border: available == false
+                        ? Border.all(color: cs.error.withValues(alpha: 0.42))
                         : null,
                   ),
                   child: Row(
@@ -261,7 +250,6 @@ class _SystemConfiguration extends StatelessWidget {
           label: l10n.asrServicesLanguageLabel,
           controller: localeController,
           hint: l10n.asrServicesAutomaticLabel,
-          desktop: desktop,
         ),
       ],
     );
@@ -278,7 +266,6 @@ class _LocalModelPicker extends StatelessWidget {
     required this.onDelete,
     required this.onUse,
     required this.languageController,
-    required this.desktop,
   });
 
   final Map<String, SherpaModelInstallStatus> statuses;
@@ -289,45 +276,35 @@ class _LocalModelPicker extends StatelessWidget {
   final ValueChanged<SherpaModelDefinition> onDelete;
   final ValueChanged<SherpaModelDefinition> onUse;
   final TextEditingController languageController;
-  final bool desktop;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final listColor = desktop
-        ? Colors.transparent
-        : (context.appColors.surfaceFill);
+    final listColor = context.appColors.surfaceFill;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: desktop ? 4 : 12,
-            vertical: desktop ? 6 : 10,
-          ),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
                 l10n.asrServicesChooseModelTitle,
                 style: TextStyle(
-                  fontSize: desktop ? 12 : 13,
-                  fontWeight: desktop
-                      ? AppFontWeights.regular
-                      : AppFontWeights.semibold,
+                  fontSize: 13,
+                  fontWeight: AppFontWeights.semibold,
                   color: cs.onSurface.withValues(alpha: 0.72),
                 ),
               ),
-              SizedBox(height: desktop ? 6 : 7),
+              SizedBox(height: 7),
               Container(
                 key: const ValueKey('asr-local-model-list'),
                 decoration: BoxDecoration(
                   color: listColor,
-                  borderRadius: BorderRadius.circular(desktop ? 10 : 12),
-                  border: desktop
-                      ? Border.all(color: cs.onSurface.withValues(alpha: 0.24))
-                      : null,
+                  borderRadius: BorderRadius.circular(12),
+                  border: null,
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Column(
@@ -374,7 +351,6 @@ class _LocalModelPicker extends StatelessWidget {
           label: l10n.asrServicesLanguageLabel,
           controller: languageController,
           hint: l10n.asrServicesAutomaticLabel,
-          desktop: desktop,
         ),
       ],
     );
@@ -628,7 +604,6 @@ class _EditorField extends StatefulWidget {
     this.obscure = false,
     this.errorText,
     this.onChanged,
-    this.desktop = false,
   });
 
   final String label;
@@ -637,7 +612,6 @@ class _EditorField extends StatefulWidget {
   final bool obscure;
   final String? errorText;
   final ValueChanged<String>? onChanged;
-  final bool desktop;
 
   @override
   State<_EditorField> createState() => _EditorFieldState();
@@ -649,39 +623,6 @@ class _EditorFieldState extends State<_EditorField> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    if (widget.desktop) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.label,
-              style: TextStyle(
-                fontSize: 12,
-                color: cs.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: widget.controller,
-              obscureText: widget.obscure,
-              autocorrect: !widget.obscure,
-              enableSuggestions: !widget.obscure,
-              onChanged: widget.onChanged,
-              decoration: InputDecoration(
-                hintText: widget.hint,
-                errorText: widget.errorText,
-                isDense: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
 
     final fieldBg = context.appColors.surfaceFill;
     return Padding(

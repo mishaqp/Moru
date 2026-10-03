@@ -38,7 +38,7 @@ class FakeWorkspaceRuntime extends WorkspaceRuntime {
   @override
   Stream<CommandEvent> run(CommandRequest request) {
     requests.add(request);
-    if (useRealProcess && (Platform.isMacOS || Platform.isLinux)) {
+    if (useRealProcess && (Platform.isLinux)) {
       return _runReal(request);
     }
     return _runScripted(request);

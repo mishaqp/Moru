@@ -24,6 +24,8 @@ import '../models/backup.dart';
 import '../models/compress_context_options.dart';
 import '../models/auto_retry_options.dart';
 import '../models/provider_group.dart';
+import '../models/chat_folder.dart';
+import '../models/sidebar_shortcut.dart';
 import '../services/haptics.dart';
 import '../services/api/retry_policy.dart';
 import '../services/screen_wakelock.dart';
@@ -41,21 +43,9 @@ import '../../theme/palettes.dart';
 import '../../theme/custom_theme.dart';
 import '../../theme/chat_bubble_style.dart';
 import '../models/tool_schema_override.dart';
-import '../services/app_exit_flush.dart';
 
-// Desktop: topic list position
-
-// Desktop: send message shortcut
+// Android hardware keyboard send shortcut (legacy storage key).
 enum DesktopSendShortcut { enter, ctrlEnter }
-
-// Desktop: message navigation buttons visibility mode
-enum DesktopMessageNavButtonsMode {
-  always,
-  scroll,
-  hover,
-  scrollAndHover,
-  never,
-}
 
 // Mobile: message navigation buttons visibility mode
 enum MobileMessageNavButtonsMode { always, scroll, never }
@@ -216,8 +206,6 @@ class SettingsProvider extends ChangeNotifier {
   static const String _chatEditAssistantKeepThinkingToolCardsKey =
       'chat_edit_assistant_keep_thinking_tool_cards_v1';
   static const String _displayShowMessageNavKey = 'display_show_message_nav_v1';
-  static const String _displayDesktopMessageNavButtonsModeKey =
-      'display_desktop_message_nav_buttons_mode_v1';
   static const String _displayMobileMessageNavButtonsModeKey =
       'display_mobile_message_nav_buttons_mode_v1';
   static const String _displayUseNewAssistantAvatarUxKey =
@@ -281,8 +269,10 @@ class SettingsProvider extends ChangeNotifier {
       'display_enable_reasoning_markdown_v1';
   static const String _displayEnableAssistantMarkdownKey =
       'display_enable_assistant_markdown_v1';
-  static const String _displayShowChatListDateKey =
-      'display_show_chat_list_date_v1';
+  static const String _sidebarThumbnailsKey = 'sidebar_thumbnails_v1';
+  static const String _sidebarFoldersKey = 'sidebar_folders_v1';
+  static const String _sidebarCollapsedSectionsKey =
+      'sidebar_collapsed_sections_v1';
   static const String _imageCropperEnabledKey = 'image_cropper_enabled_v1';
   static const String _imageUploadQualityKey = 'image_upload_quality_v1';
   static const String _imageCompressCustomQualityKey =
@@ -324,6 +314,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String _toolAutoApproveAllKey = 'tool_auto_approve_all_v1';
   static const String _disabledBrowserActionsKey =
       'browser_disabled_actions_v1';
+  static const String _browserFloatingWindowKey = 'browser_floating_window_v1';
+  static const String _sidebarShortcutsKey = 'sidebar_shortcuts_v1';
   static const String _mobileAssistantEditTabOrderKey =
       'mobile_assistant_edit_tab_order_v1';
   static const String _mobileAssistantEditTabHiddenKey =
@@ -374,6 +366,14 @@ class SettingsProvider extends ChangeNotifier {
       'search_auto_test_on_launch_v1';
   static const String _webDavConfigKey = 'webdav_config_v1';
   static const String _s3ConfigKey = 's3_config_v1';
+  // Mini app web server
+  static const String _miniAppWebPortKey = 'mini_app_web_port_v1';
+  static const String _miniAppWebLocalhostOnlyKey =
+      'mini_app_web_localhost_only_v1';
+  static const String _miniAppWebPasswordEnabledKey =
+      'mini_app_web_password_enabled_v1';
+  static const String _miniAppWebPasswordKey = 'mini_app_web_password_v1';
+  static const String _miniAppWebAutostartKey = 'mini_app_web_autostart_v1';
   // Global network proxy
   static const String _globalProxyEnabledKey = 'global_proxy_enabled_v1';
   static const String _globalProxyTypeKey =
@@ -714,6 +714,45 @@ class SettingsProvider extends ChangeNotifier {
   final Map<String, bool?> _searchConnection = <String, bool?>{};
   Map<String, bool?> get searchConnection =>
       Map.unmodifiable(_searchConnection);
+
+  // ===== Mini app web server =====
+  int _miniAppWebPort = 8080;
+  bool _miniAppWebLocalhostOnly = false;
+  bool _miniAppWebPasswordEnabled = true;
+  String _miniAppWebPassword = '';
+  bool _miniAppWebAutostart = false;
+
+  int get miniAppWebPort => _miniAppWebPort;
+  bool get miniAppWebLocalhostOnly => _miniAppWebLocalhostOnly;
+  bool get miniAppWebPasswordEnabled => _miniAppWebPasswordEnabled;
+  String get miniAppWebPassword => _miniAppWebPassword;
+
+  /// Start the web server when Moru starts.
+  bool get miniAppWebAutostart => _miniAppWebAutostart;
+
+  Future<void> setMiniAppWeb({
+    int? port,
+    bool? localhostOnly,
+    bool? passwordEnabled,
+    String? password,
+    bool? autostart,
+  }) async {
+    if (port != null) _miniAppWebPort = port;
+    if (autostart != null) _miniAppWebAutostart = autostart;
+    if (localhostOnly != null) _miniAppWebLocalhostOnly = localhostOnly;
+    if (passwordEnabled != null) _miniAppWebPasswordEnabled = passwordEnabled;
+    if (password != null) _miniAppWebPassword = password;
+    notifyListeners();
+    final prefs = _preferences;
+    await prefs.setInt(_miniAppWebPortKey, _miniAppWebPort);
+    await prefs.setBool(_miniAppWebLocalhostOnlyKey, _miniAppWebLocalhostOnly);
+    await prefs.setBool(
+      _miniAppWebPasswordEnabledKey,
+      _miniAppWebPasswordEnabled,
+    );
+    await prefs.setString(_miniAppWebPasswordKey, _miniAppWebPassword);
+    await prefs.setBool(_miniAppWebAutostartKey, _miniAppWebAutostart);
+  }
 
   // ===== Global Proxy Settings =====
   bool _globalProxyEnabled = false;
@@ -1101,10 +1140,6 @@ class SettingsProvider extends ChangeNotifier {
       prefs.getString(_displayMobileMessageNavButtonsModeKey),
       legacyEnabled: _showMessageNavButtons,
     );
-    _desktopMessageNavButtonsMode = _parseDesktopMessageNavButtonsMode(
-      prefs.getString(_displayDesktopMessageNavButtonsModeKey),
-      legacyEnabled: _showMessageNavButtons,
-    );
     _useNewAssistantAvatarUx =
         prefs.getBool(_displayUseNewAssistantAvatarUxKey) ?? false;
     _showProviderInModelCapsule =
@@ -1136,6 +1171,12 @@ class SettingsProvider extends ChangeNotifier {
     _disabledBrowserActions = Set.unmodifiable(
       prefs.getStringList(_disabledBrowserActionsKey) ?? const <String>[],
     );
+    _browserFloatingWindow = prefs.getBool(_browserFloatingWindowKey) ?? false;
+    _sidebarShortcuts = List.unmodifiable({
+      for (final raw
+          in prefs.getStringList(_sidebarShortcutsKey) ?? const <String>[])
+        ?SidebarShortcut.decode(raw),
+    });
     _requestLogEnabled = prefs.getBool(_requestLogEnabledKey) ?? true;
     await RequestLogger.setEnabled(_requestLogEnabled);
     _contextLogEnabled = prefs.getBool(_contextLogEnabledKey) ?? true;
@@ -1159,7 +1200,7 @@ class SettingsProvider extends ChangeNotifier {
     _newChatOnAssistantSwitch =
         prefs.getBool(_displayNewChatOnAssistantSwitchKey) ?? false;
     _newChatAfterDelete = prefs.getBool(_displayNewChatAfterDeleteKey) ?? false;
-    // Enter to send on mobile: iOS defaults to true, Android defaults to false
+    // Enter to send on Android defaults to false.
     final enterToSendPref = prefs.getBool(_displayEnterToSendOnMobileKey);
     if (enterToSendPref == null) {
       _enterToSendOnMobile = false;
@@ -1172,7 +1213,7 @@ class SettingsProvider extends ChangeNotifier {
         (prefs.getInt(_displayLongPasteAsFileThresholdKey) ??
                 defaultLongPasteAsFileThreshold)
             .clamp(minLongPasteAsFileThreshold, maxLongPasteAsFileThreshold);
-    // Desktop send shortcut: Enter (default) or Ctrl/Cmd+Enter
+    // Android hardware keyboard shortcut: Enter (default) or Ctrl/Meta+Enter
     final sendShortcutStr = prefs.getString(_desktopSendShortcutKey);
     switch (sendShortcutStr) {
       case 'ctrlEnter':
@@ -1222,7 +1263,13 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getBool(_displayEnableReasoningMarkdownKey) ?? true;
     _enableAssistantMarkdown =
         prefs.getBool(_displayEnableAssistantMarkdownKey) ?? true;
-    _showChatListDate = prefs.getBool(_displayShowChatListDateKey) ?? false;
+    _sidebarThumbnails = prefs.getBool(_sidebarThumbnailsKey) ?? true;
+    _sidebarFolders = ChatFolder.decodeList(
+      prefs.getString(_sidebarFoldersKey),
+    );
+    _sidebarCollapsedSections = Set.unmodifiable(
+      prefs.getStringList(_sidebarCollapsedSectionsKey) ?? const <String>[],
+    );
     _imageCropperEnabled = prefs.getBool(_imageCropperEnabledKey) ?? false;
     _imageUploadQuality = switch (prefs.getString(_imageUploadQualityKey)) {
       'original' => ImageUploadQuality.original,
@@ -1359,6 +1406,14 @@ class SettingsProvider extends ChangeNotifier {
     _searchEnabled = prefs.getBool(_searchEnabledKey) ?? false;
     _searchAutoTestOnLaunch =
         prefs.getBool(_searchAutoTestOnLaunchKey) ?? false;
+
+    _miniAppWebPort = prefs.getInt(_miniAppWebPortKey) ?? 8080;
+    _miniAppWebLocalhostOnly =
+        prefs.getBool(_miniAppWebLocalhostOnlyKey) ?? false;
+    _miniAppWebPasswordEnabled =
+        prefs.getBool(_miniAppWebPasswordEnabledKey) ?? true;
+    _miniAppWebPassword = prefs.getString(_miniAppWebPasswordKey) ?? '';
+    _miniAppWebAutostart = prefs.getBool(_miniAppWebAutostartKey) ?? false;
 
     // load global proxy
     _globalProxyEnabled = prefs.getBool(_globalProxyEnabledKey) ?? false;
@@ -2101,9 +2156,6 @@ class SettingsProvider extends ChangeNotifier {
         bytes[3] == 0x00;
   }
 
-  // ===== Desktop UI setters =====
-  // Desktop: topic panel placement (left/right)
-  // Desktop: right sidebar visible state
   // ===== App locale (UI language) =====
   String? _appLocaleTag; // 'system', 'ru', 'zh_CN', 'zh_Hant', 'en_US'
   static String _readAppLocaleTag(BusinessPreferences preferences) {
@@ -2972,7 +3024,6 @@ class SettingsProvider extends ChangeNotifier {
 
   Timer? _toolSchemaOverridePersistTimer;
   bool _toolSchemaOverridePersistDirty = false;
-  Future<void> Function()? _toolSchemaOverrideExitFlushHandler;
 
   bool _applyToolSchemaOverrideInMemory(
     String toolName,
@@ -3028,7 +3079,6 @@ class SettingsProvider extends ChangeNotifier {
 
   void _scheduleDebouncedToolSchemaOverridePersist() {
     _toolSchemaOverridePersistDirty = true;
-    _ensureToolSchemaOverrideExitFlushRegistered();
     _toolSchemaOverridePersistTimer?.cancel();
     _toolSchemaOverridePersistTimer = Timer(
       toolSchemaOverridePersistDebounce,
@@ -3048,12 +3098,6 @@ class SettingsProvider extends ChangeNotifier {
     _toolSchemaOverridePersistTimer?.cancel();
     _toolSchemaOverridePersistTimer = null;
     await _persistToolSchemaOverrides();
-  }
-
-  void _ensureToolSchemaOverrideExitFlushRegistered() {
-    if (_toolSchemaOverrideExitFlushHandler != null) return;
-    _toolSchemaOverrideExitFlushHandler = flushPendingToolSchemaOverridePersist;
-    AppExitFlush.register(_toolSchemaOverrideExitFlushHandler!);
   }
 
   Future<void> _persistToolSchemaOverrides() async {
@@ -3077,11 +3121,6 @@ class SettingsProvider extends ChangeNotifier {
     _toolSchemaOverridePersistTimer = null;
     if (_toolSchemaOverridePersistDirty) {
       unawaited(_persistToolSchemaOverrides());
-    }
-    final handler = _toolSchemaOverrideExitFlushHandler;
-    if (handler != null) {
-      AppExitFlush.unregister(handler);
-      _toolSchemaOverrideExitFlushHandler = null;
     }
     super.dispose();
   }
@@ -4810,7 +4849,7 @@ Requirements:
     await prefs.setBool(_displayUseNewAssistantAvatarUxKey, v);
   }
 
-  // Display: show provider name in model capsule (desktop header)
+  // Display: show provider name in the wide Android model capsule
   bool _showProviderInModelCapsule = true;
   bool get showProviderInModelCapsule => _showProviderInModelCapsule;
   Future<void> setShowProviderInModelCapsule(bool v) async {
@@ -4865,7 +4904,7 @@ Requirements:
     await prefs.setBool(_displayNewChatAfterDeleteKey, v);
   }
 
-  // Display: enter key sends message on mobile (iOS defaults true, Android defaults false)
+  // Display: enter key sends message on Android (default false).
   bool _enterToSendOnMobile = false;
   bool get enterToSendOnMobile => _enterToSendOnMobile;
   Future<void> setEnterToSendOnMobile(bool v) async {
@@ -4917,7 +4956,7 @@ Requirements:
     await prefs.setInt(_displayLongPasteAsFileThresholdKey, next);
   }
 
-  // Desktop: send shortcut (Enter or Ctrl/Cmd+Enter)
+  // Android hardware keyboard: Enter or Ctrl/Meta+Enter (legacy storage key).
   DesktopSendShortcut _desktopSendShortcut = DesktopSendShortcut.enter;
   DesktopSendShortcut get desktopSendShortcut => _desktopSendShortcut;
   Future<void> setDesktopSendShortcut(DesktopSendShortcut v) async {
@@ -4927,64 +4966,6 @@ Requirements:
     final prefs = _preferences;
     final str = v == DesktopSendShortcut.ctrlEnter ? 'ctrlEnter' : 'enter';
     await prefs.setString(_desktopSendShortcutKey, str);
-  }
-
-  // Desktop: message navigation buttons visibility mode
-  DesktopMessageNavButtonsMode _desktopMessageNavButtonsMode =
-      DesktopMessageNavButtonsMode.scroll;
-  DesktopMessageNavButtonsMode get desktopMessageNavButtonsMode =>
-      _desktopMessageNavButtonsMode;
-
-  Future<void> setDesktopMessageNavButtonsMode(
-    DesktopMessageNavButtonsMode mode,
-  ) async {
-    if (_desktopMessageNavButtonsMode == mode) return;
-    _desktopMessageNavButtonsMode = mode;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setString(
-      _displayDesktopMessageNavButtonsModeKey,
-      _desktopMessageNavButtonsModeToString(mode),
-    );
-  }
-
-  DesktopMessageNavButtonsMode _parseDesktopMessageNavButtonsMode(
-    String? raw, {
-    required bool legacyEnabled,
-  }) {
-    switch (raw) {
-      case 'always':
-        return DesktopMessageNavButtonsMode.always;
-      case 'scroll':
-        return DesktopMessageNavButtonsMode.scroll;
-      case 'hover':
-        return DesktopMessageNavButtonsMode.hover;
-      case 'scrollAndHover':
-        return DesktopMessageNavButtonsMode.scrollAndHover;
-      case 'never':
-        return DesktopMessageNavButtonsMode.never;
-      default:
-        return legacyEnabled
-            ? DesktopMessageNavButtonsMode.scroll
-            : DesktopMessageNavButtonsMode.never;
-    }
-  }
-
-  String _desktopMessageNavButtonsModeToString(
-    DesktopMessageNavButtonsMode mode,
-  ) {
-    switch (mode) {
-      case DesktopMessageNavButtonsMode.always:
-        return 'always';
-      case DesktopMessageNavButtonsMode.scroll:
-        return 'scroll';
-      case DesktopMessageNavButtonsMode.hover:
-        return 'hover';
-      case DesktopMessageNavButtonsMode.scrollAndHover:
-        return 'scrollAndHover';
-      case DesktopMessageNavButtonsMode.never:
-        return 'never';
-    }
   }
 
   // Mobile: message navigation buttons visibility mode
@@ -5184,15 +5165,42 @@ Requirements:
     await prefs.setBool(_displayEnableAssistantMarkdownKey, v);
   }
 
-  // Display: show chat list date
-  bool _showChatListDate = false;
-  bool get showChatListDate => _showChatListDate;
-  Future<void> setShowChatListDate(bool v) async {
-    if (_showChatListDate == v) return;
-    _showChatListDate = v;
+  // Sidebar: small previews of a chat's latest images under its title.
+  bool _sidebarThumbnails = true;
+  bool get sidebarThumbnails => _sidebarThumbnails;
+  Future<void> setSidebarThumbnails(bool v) async {
+    if (_sidebarThumbnails == v) return;
+    _sidebarThumbnails = v;
     notifyListeners();
-    final prefs = _preferences;
-    await prefs.setBool(_displayShowChatListDateKey, v);
+    await _preferences.setBool(_sidebarThumbnailsKey, v);
+  }
+
+  // Sidebar: the user's folders, in their order.
+  List<ChatFolder> _sidebarFolders = const <ChatFolder>[];
+  List<ChatFolder> get sidebarFolders => _sidebarFolders;
+  Future<void> setSidebarFolders(List<ChatFolder> folders) async {
+    final next = List<ChatFolder>.unmodifiable(folders);
+    if (listEquals(next, _sidebarFolders)) return;
+    _sidebarFolders = next;
+    notifyListeners();
+    await _preferences.setString(
+      _sidebarFoldersKey,
+      ChatFolder.encodeList(next),
+    );
+  }
+
+  // Sidebar: sections (pinned, a day) the user folded.
+  Set<String> _sidebarCollapsedSections = const <String>{};
+  Set<String> get sidebarCollapsedSections => _sidebarCollapsedSections;
+  Future<void> toggleSidebarSection(String key) async {
+    final next = Set<String>.from(_sidebarCollapsedSections);
+    if (!next.remove(key)) next.add(key);
+    _sidebarCollapsedSections = Set.unmodifiable(next);
+    notifyListeners();
+    await _preferences.setStringList(
+      _sidebarCollapsedSectionsKey,
+      next.toList()..sort(),
+    );
   }
 
   // Display: crop images after selecting from gallery or camera
@@ -5495,6 +5503,33 @@ Requirements:
       _disabledBrowserActionsKey,
       _disabledBrowserActions.toList()..sort(),
     );
+  }
+
+  // Shared Browser: floating preview is an explicit opt-in. Turning it off
+  // only changes presentation; the parked browser session remains alive.
+  bool _browserFloatingWindow = false;
+  bool get browserFloatingWindow => _browserFloatingWindow;
+
+  Future<void> setBrowserFloatingWindow(bool value) async {
+    if (_browserFloatingWindow == value) return;
+    _browserFloatingWindow = value;
+    notifyListeners();
+    await _preferences.setBool(_browserFloatingWindowKey, value);
+  }
+
+  // Sidebar: mini apps and web pages pinned as cards above the dock, in the
+  // user's order.
+  List<SidebarShortcut> _sidebarShortcuts = const <SidebarShortcut>[];
+  List<SidebarShortcut> get sidebarShortcuts => _sidebarShortcuts;
+
+  Future<void> setSidebarShortcuts(List<SidebarShortcut> shortcuts) async {
+    final next = List<SidebarShortcut>.unmodifiable(shortcuts.toSet());
+    if (listEquals(next, _sidebarShortcuts)) return;
+    _sidebarShortcuts = next;
+    notifyListeners();
+    await _preferences.setStringList(_sidebarShortcutsKey, [
+      for (final shortcut in next) shortcut.encode(),
+    ]);
   }
 
   // Network: request logging (debug)
@@ -5811,7 +5846,6 @@ Requirements:
     copy._longPasteAsFileThreshold = _longPasteAsFileThreshold;
     copy._mobileBackground = _mobileBackground;
     copy._desktopSendShortcut = _desktopSendShortcut;
-    copy._desktopMessageNavButtonsMode = _desktopMessageNavButtonsMode;
     copy._chatFontScale = _chatFontScale;
     copy._autoScrollEnabled = _autoScrollEnabled;
     copy._autoScrollIdleSeconds = _autoScrollIdleSeconds;
@@ -5820,7 +5854,7 @@ Requirements:
     copy._enableUserMarkdown = _enableUserMarkdown;
     copy._enableReasoningMarkdown = _enableReasoningMarkdown;
     copy._enableAssistantMarkdown = _enableAssistantMarkdown;
-    copy._showChatListDate = _showChatListDate;
+    copy._sidebarThumbnails = _sidebarThumbnails;
     copy._autoCollapseCodeBlock = _autoCollapseCodeBlock;
     copy._autoCollapseCodeBlockLines = _autoCollapseCodeBlockLines;
     copy._collapseLongUserMessages = _collapseLongUserMessages;
@@ -5832,6 +5866,7 @@ Requirements:
     copy._assistantBubbleSplitParagraphs = _assistantBubbleSplitParagraphs;
     copy._glassTheme = _glassTheme;
     copy._glassEconomy = _glassEconomy;
+    copy._browserFloatingWindow = _browserFloatingWindow;
     copy._chatMessageBackgroundStyle = _chatMessageBackgroundStyle;
     copy._chatBubbleStyleOverrides = _chatBubbleStyleOverrides;
     copy._userChatBubbleStyleOverrides = _userChatBubbleStyleOverrides;

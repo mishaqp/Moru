@@ -21,7 +21,7 @@ import '../../support/fake_workspace_runtime.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+  for (final platform in [TargetPlatform.android]) {
     group('fixed workspace binding on ${platform.name}', () {
       late BusinessTestHarness harness;
       late EnvironmentProvider environment;

@@ -66,6 +66,7 @@ void main() {
         'skills': RestorePreviousAssetRootState.missing,
         'workspaces': RestorePreviousAssetRootState.missing,
         'sessions': RestorePreviousAssetRootState.missing,
+        'mini_apps': RestorePreviousAssetRootState.missing,
       });
       expect(bundle.plan.assets?.entries.keys, [
         'fonts/font.bin',
@@ -234,7 +235,6 @@ void main() {
     });
 
     test('rejects links without following them', () async {
-      if (Platform.isWindows) return;
       final outside = File(p.join(root.parent.path, 'outside_asset.txt'));
       await outside.writeAsBytes([1, 2, 3]);
       final upload = Directory(p.join(root.path, 'upload'));

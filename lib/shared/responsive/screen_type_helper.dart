@@ -8,7 +8,7 @@ class ResponsiveHelper {
       screenTypeForContext(c) == ScreenType.mobile;
   static bool isTablet(BuildContext c) =>
       screenTypeForContext(c) == ScreenType.tablet;
-  static bool isDesktop(BuildContext c) {
+  static bool isWide(BuildContext c) {
     final t = screenTypeForContext(c);
     return t == ScreenType.desktop || t == ScreenType.wide;
   }

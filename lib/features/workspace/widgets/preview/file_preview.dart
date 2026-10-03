@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'package:Kelivo/core/services/haptics.dart';
+import 'package:Kelivo/core/services/workspace/workspace_file_access.dart';
 import 'package:Kelivo/features/chat/pages/image_viewer_page.dart';
 import 'package:Kelivo/features/settings/widgets/custom_theme_widgets.dart';
 import 'package:Kelivo/features/workspace/widgets/preview/code_file_preview.dart';
@@ -15,6 +16,7 @@ import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/features/workspace/workspace_layout.dart';
 import 'package:Kelivo/shared/widgets/ios_tactile.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart';
+import 'package:Kelivo/shared/widgets/markdown_image_provider.dart';
 
 import 'binary_file_preview.dart';
 import 'csv_file_preview.dart';
@@ -80,6 +82,8 @@ Future<void> showFilePreview(
   BuildContext context,
   File file, {
   String? title,
+  File? sourceFile,
+  String? accessRoot,
   FilePreviewKind? kind,
   bool autoLoad = true,
 }) async {
@@ -104,13 +108,21 @@ Future<void> showFilePreview(
       context,
       file: file,
       title: resolvedTitle,
+      sourceFile: sourceFile,
+      accessRoot: accessRoot,
       desktop: desktop,
       autoLoad: autoLoad,
     );
     return;
   }
 
-  final body = _previewBody(kind: resolvedKind, file: file, autoLoad: autoLoad);
+  final body = _previewBody(
+    kind: resolvedKind,
+    file: file,
+    sourceFile: sourceFile,
+    accessRoot: accessRoot,
+    autoLoad: autoLoad,
+  );
   if (desktop) {
     final height = MediaQuery.sizeOf(context).height * 0.8;
     await showAppDialog<void>(
@@ -120,6 +132,8 @@ Future<void> showFilePreview(
         height: height,
         child: FilePreviewFrame(
           file: file,
+          sourceFile: sourceFile,
+          accessRoot: accessRoot,
           title: resolvedTitle,
           kind: resolvedKind,
           dialog: true,
@@ -134,6 +148,8 @@ Future<void> showFilePreview(
     MaterialPageRoute<void>(
       builder: (_) => FilePreviewPage(
         file: file,
+        sourceFile: sourceFile,
+        accessRoot: accessRoot,
         title: resolvedTitle,
         kind: resolvedKind,
         child: body,
@@ -145,6 +161,8 @@ Future<void> showFilePreview(
 Widget _previewBody({
   required FilePreviewKind kind,
   required File file,
+  File? sourceFile,
+  String? accessRoot,
   bool autoLoad = true,
 }) {
   switch (kind) {
@@ -154,7 +172,12 @@ Widget _previewBody({
       return MarkdownFilePreview(file: file, autoLoad: autoLoad);
     case FilePreviewKind.html:
       if (htmlPreviewSupported) {
-        return HtmlFilePreview(file: file, autoLoad: autoLoad);
+        return HtmlFilePreview(
+          file: file,
+          sourceFile: sourceFile,
+          accessRoot: accessRoot,
+          autoLoad: autoLoad,
+        );
       }
       return CodeFilePreview(file: file, autoLoad: autoLoad);
     case FilePreviewKind.csv:
@@ -170,6 +193,8 @@ Future<void> _showImagePreview(
   BuildContext context, {
   required File file,
   required String title,
+  File? sourceFile,
+  String? accessRoot,
   required bool desktop,
   bool autoLoad = true,
 }) async {
@@ -182,6 +207,8 @@ Future<void> _showImagePreview(
         height: height,
         child: FilePreviewFrame(
           file: file,
+          sourceFile: sourceFile,
+          accessRoot: accessRoot,
           title: title,
           kind: FilePreviewKind.image,
           dialog: true,
@@ -191,7 +218,19 @@ Future<void> _showImagePreview(
     );
     return;
   }
-  final page = ImageViewerPage(images: [file.path]);
+  // Files UI/picker explicitly grants this one file (usually a private
+  // snapshot). Carry checked bytes into the viewer, rather than broadening the
+  // roots that model-written image sources can read.
+  final bytes = await WorkspaceFileAccess(
+    roots: [file.path],
+  ).readBytes(file.path, maxBytes: kMaxMarkdownImageBytes + 1);
+  if (!context.mounted) return;
+  final page = ImageViewerPage(
+    images: [file.path],
+    imageProviders: {
+      file.path: markdownImageFromBytes(bytes, source: file.path),
+    },
+  );
   await Navigator.of(context).push(
     PageRouteBuilder<void>(
       pageBuilder: (_, __, ___) => page,
@@ -222,12 +261,16 @@ class FilePreviewPage extends StatelessWidget {
   const FilePreviewPage({
     super.key,
     required this.file,
+    this.sourceFile,
+    this.accessRoot,
     required this.title,
     required this.kind,
     required this.child,
   });
 
   final File file;
+  final File? sourceFile;
+  final String? accessRoot;
   final String title;
   final FilePreviewKind kind;
   final Widget child;
@@ -236,6 +279,8 @@ class FilePreviewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return FilePreviewFrame(
       file: file,
+      sourceFile: sourceFile,
+      accessRoot: accessRoot,
       title: title,
       kind: kind,
       dialog: false,
@@ -248,6 +293,8 @@ class FilePreviewFrame extends StatelessWidget {
   const FilePreviewFrame({
     super.key,
     required this.file,
+    this.sourceFile,
+    this.accessRoot,
     required this.title,
     required this.kind,
     required this.dialog,
@@ -262,6 +309,8 @@ class FilePreviewFrame extends StatelessWidget {
   );
 
   final File file;
+  final File? sourceFile;
+  final String? accessRoot;
   final String title;
   final FilePreviewKind kind;
   final bool dialog;
@@ -270,8 +319,7 @@ class FilePreviewFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final desktop = dialog || useDesktopWorkspaceLayout(context);
-    final actions = _headerActions(context, desktop: desktop);
+    final actions = _headerActions(context);
     if (dialog) {
       return Column(
         children: [
@@ -304,7 +352,7 @@ class FilePreviewFrame extends StatelessWidget {
     );
   }
 
-  List<Widget> _headerActions(BuildContext context, {required bool desktop}) {
+  List<Widget> _headerActions(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     // 20 is the IosIconButton default every other page's app-bar actions use;
@@ -353,22 +401,20 @@ class FilePreviewFrame extends StatelessWidget {
         onTap: () => unawaited(openPreviewFileExternally(context, file)),
       ),
     ];
-    if (desktop) {
-      items.add(
-        action(
-          label: revealInFileManagerLabel(l10n),
-          icon: Lucide.FolderOpen,
-          onTap: () => unawaited(revealPreviewFileInFileManager(context, file)),
-        ),
-      );
-    }
     if (kind == FilePreviewKind.html) {
       items.add(
         action(
           key: FilePreviewFrame.openInBrowserActionKey,
           label: l10n.workspacePreviewOpenInBrowser,
           icon: Lucide.Globe,
-          onTap: () => unawaited(openPreviewFileInBrowser(context, file)),
+          onTap: () => unawaited(
+            openPreviewFileInBrowser(
+              context,
+              file,
+              sourceFile: sourceFile,
+              accessRoot: accessRoot,
+            ),
+          ),
         ),
       );
     }

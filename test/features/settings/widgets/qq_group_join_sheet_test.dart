@@ -32,7 +32,7 @@ void main() {
   testWidgets(
     'qq group picker uses bottom sheet on mobile and lists all groups',
     (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       try {
         await tester.pumpWidget(_opener());
         await tester.tap(find.text('Open'));

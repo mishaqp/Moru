@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'mini_app_fetch.dart';
+import 'mini_app_jobs.dart';
 import 'mini_app_reminders.dart';
 import 'mini_app_store.dart';
 
@@ -12,6 +13,13 @@ class MiniAppHost {
     this.reminders,
     this.fetch,
     this.calendar,
+    this.vibrate,
+    this.haptic,
+    this.close,
+    this.jobs,
+    this.background = false,
+    this.server,
+    this.serverUrl,
   });
 
   /// Asks the default model; returns its text.
@@ -29,6 +37,27 @@ class MiniAppHost {
     Map<String, dynamic> args,
   )?
   calendar;
+
+  /// Vibrates for the milliseconds in [pattern]: on, off, on, ...
+  final Future<void> Function(List<int> pattern)? vibrate;
+
+  /// A short system haptic, one of [MiniAppBridge.hapticKinds].
+  final Future<void> Function(String kind)? haptic;
+
+  /// Closes the app screen.
+  final Future<void> Function()? close;
+  final MiniAppJobs? jobs;
+
+  /// The app runs out of sight for a background job.
+  final bool background;
+
+  /// `moru.server.fetch`: a request to the app's own server.
+  final Future<Map<String, Object?>> Function(Map<String, dynamic> args)?
+  server;
+
+  /// `moru.server.url`: the address of a path on the app's own server, for
+  /// the page to reach it directly.
+  final Future<String> Function(String path)? serverUrl;
 }
 
 /// Answers `window.moru` calls from one mini app page. Each message is
@@ -39,6 +68,7 @@ class MiniAppBridge {
     required this.store,
     required this.appId,
     this.host = const MiniAppHost(),
+    this.onProblem,
   });
 
   static const int maxPromptChars = 32000;
@@ -47,7 +77,27 @@ class MiniAppBridge {
   final String appId;
   final MiniAppHost host;
 
+  /// Called with each problem noted in [pageErrors] (its kind: `error`,
+  /// `promise`, `resource`) or [failedCalls] (kind `call`), e.g. to keep it
+  /// in the app's error journal.
+  final void Function(String kind, String problem)? onProblem;
+
   static const int maxProblems = 50;
+
+  /// Code of a call the publish check does not make, e.g. to the app's
+  /// server; it is not a problem of the app.
+  static const String notInCheck = 'not_in_check';
+
+  static const Set<String> hapticKinds = {
+    'light',
+    'medium',
+    'heavy',
+    'selection',
+  };
+
+  /// Longest vibration pattern: segments and total milliseconds.
+  static const int maxVibrationSegments = 20;
+  static const int maxVibrationMs = 5000;
 
   /// One model request at a time, so a looping page cannot flood the model.
   bool _asking = false;
@@ -72,22 +122,27 @@ class MiniAppBridge {
           ? Map<String, dynamic>.from(call['args'] as Map)
           : const <String, dynamic>{};
       if (method == '__report') {
-        _note(pageErrors, '${args['kind']}: ${args['message']}');
+        final kind = '${args['kind']}';
+        _note(pageErrors, kind, '$kind: ${args['message']}');
         return null;
       }
       final value = await _dispatch(method, args);
       return _reply(id, true, value);
     } on MiniAppException catch (e) {
-      _note(failedCalls, '$method: ${e.message}');
+      if (e.code != notInCheck) {
+        _note(failedCalls, 'call', '$method: ${e.message}');
+      }
       return _reply(id, false, e.message);
     } catch (e) {
-      _note(failedCalls, '$method: $e');
+      _note(failedCalls, 'call', '$method: $e');
       return _reply(id, false, '$e');
     }
   }
 
-  static void _note(List<String> list, String problem) {
-    if (list.length < maxProblems) list.add(problem);
+  void _note(List<String> list, String kind, String problem) {
+    if (list.length >= maxProblems) return;
+    list.add(problem);
+    onProblem?.call(kind, problem);
   }
 
   /// Tells the page that [key] changed outside it.
@@ -126,7 +181,30 @@ class MiniAppBridge {
         return store.storageKeys(appId);
       case 'app.info':
         final app = store.byId(appId);
-        return {'id': appId, 'name': app?.name, 'platform': 'android'};
+        return {
+          'id': appId,
+          'name': app?.name,
+          'platform': 'android',
+          'fullscreen': app?.fullscreen ?? false,
+          'orientation': (app?.orientation ?? MiniAppOrientation.any).name,
+          'background': host.background,
+        };
+      case 'app.close':
+        await _need(host.close)();
+        return null;
+      case 'vibrate':
+        await _need(host.vibrate)(_vibrationPattern(args['pattern']));
+        return null;
+      case 'haptic':
+        final kind = args['kind'] ?? 'light';
+        if (!hapticKinds.contains(kind)) {
+          throw MiniAppException(
+            'invalid_argument',
+            'kind must be one of: ${hapticKinds.join(', ')}.',
+          );
+        }
+        await _need(host.haptic)(kind as String);
+        return null;
       case 'ai.ask':
         final ask = _need(host.ask);
         final prompt = text('prompt', max: maxPromptChars);
@@ -159,8 +237,22 @@ class MiniAppBridge {
         return null;
       case 'reminders.list':
         return _need(host.reminders).list(appId);
+      case 'jobs.set':
+        await _need(host.jobs).set(appId, text('id', max: 40), args['job']);
+        return null;
+      case 'jobs.remove':
+        await _need(host.jobs).remove(appId, text('id', max: 40));
+        return null;
+      case 'jobs.list':
+        return [
+          for (final job in await _need(host.jobs).list(appId)) job.toJson(),
+        ];
       case 'fetch':
         return _need(host.fetch).fetch(_app(), args);
+      case 'server.fetch':
+        return _need(host.server)(args);
+      case 'server.url':
+        return _need(host.serverUrl)(text('path', max: 2000));
       case 'calendar.list':
         return _calendar('queryCalendar', args, _calendarListKeys);
       case 'calendar.add':
@@ -189,6 +281,32 @@ class MiniAppBridge {
     'reminders',
     'calendar_id',
   };
+
+  /// `moru.vibrate(200)` or `moru.vibrate([100, 50, 100])`.
+  static List<int> _vibrationPattern(Object? raw) {
+    final values = raw is List ? raw : [raw];
+    final pattern = <int>[];
+    for (final value in values) {
+      if (value is! num || !value.isFinite || value < 0) {
+        throw const MiniAppException(
+          'invalid_argument',
+          'pattern must be milliseconds or a list of them.',
+        );
+      }
+      pattern.add(value.round());
+    }
+    final total = pattern.fold<int>(0, (sum, ms) => sum + ms);
+    if (pattern.isEmpty ||
+        pattern.length > maxVibrationSegments ||
+        total > maxVibrationMs) {
+      throw const MiniAppException(
+        'invalid_argument',
+        'pattern takes 1-$maxVibrationSegments values and at most '
+            '$maxVibrationMs ms in total.',
+      );
+    }
+    return pattern;
+  }
 
   MiniApp _app() {
     final app = store.byId(appId);

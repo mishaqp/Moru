@@ -15,6 +15,7 @@ import '../builtin_tools.dart';
 import '../chat_api_helpers.dart';
 import '../gemini_tool_config.dart';
 import '../generation/tool_loop_runner.dart';
+import '../generation/tool_result_images.dart';
 import '../google_service_account_auth.dart';
 import '../stream/sse_framing.dart';
 import '../stream/stream_chunk.dart';
@@ -483,6 +484,7 @@ Stream<StreamChunk> sendGoogleStream(
   final enableYoutube = builtIns.contains(BuiltInToolNames.youtube);
   // Effective model features (includes user overrides)
   final effective = effectiveModelInfo(config, modelId);
+  final takesImages = effective.input.contains(Modality.image);
   final isReasoning = _shouldRequestGoogleThoughts(config, modelId, effective);
   // Non-streaming path: use generateContent
   if (!stream) {
@@ -933,6 +935,9 @@ Stream<StreamChunk> sendGoogleStream(
                               as Map)['id'],
                   },
                 },
+              if (takesImages)
+                for (final item in executed)
+                  ...geminiToolImageParts(item.images),
             ],
           },
         ];
@@ -1386,6 +1391,9 @@ Stream<StreamChunk> sendGoogleStream(
               )) {
                 if (resultChunk is ToolCallResult) {
                   call.result = (resultChunk.output ?? '').toString();
+                  call.images = await loadToolResultImages(
+                    resultChunk.metadata,
+                  );
                 }
                 yield resultChunk;
               }
@@ -1409,6 +1417,7 @@ Stream<StreamChunk> sendGoogleStream(
             'name': call.name,
             'args': call.args,
             'result': call.result,
+            'images': call.images,
             'thoughtSigKey': call.thoughtSigKey,
             'thoughtSigVal': call.thoughtSigVal,
             'part': call.part,
@@ -1511,6 +1520,15 @@ Stream<StreamChunk> sendGoogleStream(
             },
           });
         }
+        if (takesImages) {
+          for (final c in lastRoundCalls) {
+            responseParts.addAll(
+              geminiToolImageParts(
+                (c['images'] as List<ToolResultImage>?) ?? const [],
+              ),
+            );
+          }
+        }
         convo.add({'role': 'user', 'parts': responseParts});
         return;
       }
@@ -1545,6 +1563,10 @@ Stream<StreamChunk> sendGoogleStream(
             {
               'functionResponse': {'name': name, 'response': responseObj},
             },
+            if (takesImages)
+              ...geminiToolImageParts(
+                (c['images'] as List<ToolResultImage>?) ?? const [],
+              ),
           ],
         });
       }

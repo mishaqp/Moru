@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:Kelivo/core/services/haptics.dart';
 import 'package:Kelivo/core/providers/external_mounts_provider.dart';
 import 'package:Kelivo/core/services/sandbox/workspace_channel.dart';
+import 'package:Kelivo/core/services/workspace/workspace_file_access.dart';
 import 'package:Kelivo/features/settings/widgets/custom_theme_widgets.dart';
 import 'package:Kelivo/features/chat/widgets/workspace_tool_ui.dart'
     show workspaceFileTypeIcon;
@@ -102,6 +103,7 @@ class FileBrowser extends StatefulWidget {
   const FileBrowser({
     super.key,
     required this.root,
+    this.accessRoot,
     required this.rootLabel,
     required this.modelPathOf,
     this.readOnly = false,
@@ -119,6 +121,7 @@ class FileBrowser extends StatefulWidget {
   });
 
   final Directory root;
+  final String? accessRoot;
   final String rootLabel;
   final String Function(String hostPath) modelPathOf;
   final bool readOnly;
@@ -194,6 +197,7 @@ class FileBrowserState extends State<FileBrowser> {
   bool _foldersFirst = true;
 
   String get _rootPath => FileBrowserOps.canonicalize(widget.root.path);
+  String get _accessRoot => widget.accessRoot ?? _rootPath;
 
   String get currentRelPath => _segments.join('/');
 
@@ -247,13 +251,27 @@ class FileBrowserState extends State<FileBrowser> {
   @visibleForTesting
   Future<void> refreshEntries() => _reload();
 
-  Future<void> _runMutation(FileMutation mutation) async {
+  @visibleForTesting
+  Future<void> runMutation(FileMutation mutation) async {
     final mounts = context.read<ExternalMountsProvider?>();
     final readOnlyMessage = AppLocalizations.of(
       context,
     )!.workspaceMountReadOnly;
+    final registered = await mounts?.resolveMounts();
+    mutation = mutation.withReadOnlyRoots(
+      List.unmodifiable([
+        ...mutation.readOnlyRoots,
+        for (final mount in registered ?? const [])
+          if (mount.readOnly) mount.host,
+      ]),
+    );
     try {
-      await mounts?.requireWritableHostPaths(mutation.writePaths);
+      await FileBrowserOps.validateMutation(mutation);
+    } on WorkspaceFileAccessException catch (error) {
+      if (error.message.contains('read-only')) {
+        throw StateError(readOnlyMessage);
+      }
+      rethrow;
     } on WorkspaceChannelException catch (error) {
       if (error.code == 'mount_readonly') throw StateError(readOnlyMessage);
       rethrow;
@@ -274,7 +292,7 @@ class FileBrowserState extends State<FileBrowser> {
       }
       final entries = await FileBrowserOps.listDir(
         dir,
-        rootPath: _rootPath,
+        rootPath: _accessRoot,
         showHidden: _showHidden,
         sort: _sort,
         ascending: _ascending,
@@ -317,22 +335,34 @@ class FileBrowserState extends State<FileBrowser> {
   }
 
   Future<void> _openEntry(FileBrowserEntry entry) async {
-    if (entry.isDirectory) {
-      final resolved = FileBrowserOps.resolveInsideRoot(
-        _rootPath,
-        entry.hostPath,
-      );
-      if (resolved == null) {
-        _showEscapeRefused();
+    try {
+      if (entry.isDirectory) {
+        // The listing performs the realpath/descriptor check before reading.
+        // Keep the logical navigation path so internal symlinks still work.
+        setState(() => _segments.add(entry.name));
+        await _reload();
         return;
       }
-      setState(() => _segments.add(entry.name));
-      await _reload();
-      return;
+      if (widget.pickDirectoryMode) return;
+      final accessRoot = _accessRoot;
+      await FileBrowserOps.withReadableFile<void>(
+        rootPath: accessRoot,
+        hostPath: entry.hostPath,
+        operation: (file) async {
+          if (mounted) {
+            await showFilePreview(
+              context,
+              file,
+              title: entry.name,
+              sourceFile: File(entry.hostPath),
+              accessRoot: accessRoot,
+            );
+          }
+        },
+      );
+    } catch (error) {
+      await _handleError(error);
     }
-    if (widget.pickDirectoryMode) return;
-    if (!mounted) return;
-    await showFilePreview(context, File(entry.hostPath), title: entry.name);
   }
 
   void _showSnack(String message, NotificationType type) {
@@ -369,9 +399,9 @@ class FileBrowserState extends State<FileBrowser> {
       return;
     }
     try {
-      await _runMutation(
+      await runMutation(
         CreateFolderMutation(
-          rootPath: _rootPath,
+          rootPath: _accessRoot,
           parentPath: _currentDir.path,
           name: name,
         ),
@@ -398,9 +428,9 @@ class FileBrowserState extends State<FileBrowser> {
       return;
     }
     try {
-      await _runMutation(
+      await runMutation(
         CreateFileMutation(
-          rootPath: _rootPath,
+          rootPath: _accessRoot,
           parentPath: _currentDir.path,
           name: name,
         ),
@@ -425,13 +455,25 @@ class FileBrowserState extends State<FileBrowser> {
       for (final file in result.files) {
         final path = file.path;
         if (path == null || path.isEmpty) continue;
-        await _runMutation(
-          CopyIntoMutation(
-            rootPath: _rootPath,
-            sourcePath: path,
-            destDirPath: _currentDir.path,
-          ),
-        );
+        // Capture the selected real file and keep its descriptor open across
+        // asynchronous mount checks; a later symlink replacement cannot change
+        // what the user selected.
+        final realPath = await WorkspaceFileAccess.resolvePath(path);
+        final pickedSource = await WorkspaceFileAccess(
+          roots: [realPath],
+        ).openRead(realPath);
+        try {
+          await runMutation(
+            CopyIntoMutation(
+              rootPath: _accessRoot,
+              sourcePath: path,
+              destDirPath: _currentDir.path,
+              pickedSource: pickedSource,
+            ),
+          );
+        } finally {
+          await pickedSource.close();
+        }
       }
       await _reload();
     } catch (e) {
@@ -444,20 +486,25 @@ class FileBrowserState extends State<FileBrowser> {
     required String name,
   }) async {
     final zipName = _safeFileName(name.isEmpty ? widget.rootLabel : name);
-    final temp = File(
-      p.join(
-        Directory.systemTemp.path,
-        'kelivo-$zipName-${DateTime.now().microsecondsSinceEpoch}.zip',
-      ),
-    );
-    await _runMutation(
-      ZipDirectoryMutation(
-        rootPath: _rootPath,
-        sourcePath: dir.path,
-        destPath: temp.path,
-      ),
-    );
-    if (!mounted) return null;
+    final temporary = await FileBrowserOps.createPrivateTemporaryDirectory();
+    final temp = File(p.join(temporary.path, '$zipName.zip'));
+    try {
+      await runMutation(
+        ZipDirectoryMutation(
+          rootPath: _accessRoot,
+          sourcePath: dir.path,
+          destPath: temp.path,
+          destinationRoot: temporary.path,
+        ),
+      );
+    } catch (_) {
+      await temporary.delete(recursive: true);
+      rethrow;
+    }
+    if (!mounted) {
+      await temporary.delete(recursive: true);
+      return null;
+    }
     return (file: temp, fileName: '$zipName.zip');
   }
 
@@ -465,7 +512,11 @@ class FileBrowserState extends State<FileBrowser> {
     try {
       final zipped = await _zipDirectory(dir, name: name);
       if (zipped == null) return;
-      await _exportFile(zipped.file, fileName: zipped.fileName);
+      try {
+        await _exportFile(zipped.file, fileName: zipped.fileName);
+      } finally {
+        await zipped.file.parent.delete(recursive: true);
+      }
     } catch (e) {
       await _handleError(e);
     }
@@ -475,7 +526,11 @@ class FileBrowserState extends State<FileBrowser> {
     try {
       final zipped = await _zipDirectory(dir, name: name);
       if (zipped == null) return;
-      await _shareFile(zipped.file, fileName: zipped.fileName);
+      try {
+        await _shareFile(zipped.file, fileName: zipped.fileName);
+      } finally {
+        await zipped.file.parent.delete(recursive: true);
+      }
     } catch (e) {
       await _handleError(e);
     }
@@ -522,7 +577,11 @@ class FileBrowserState extends State<FileBrowser> {
           if (entry.isDirectory) {
             await _shareDirectory(Directory(entry.hostPath), name: entry.name);
           } else {
-            await _shareFile(File(entry.hostPath), fileName: entry.name);
+            await FileBrowserOps.withReadableFile<void>(
+              rootPath: _accessRoot,
+              hostPath: entry.hostPath,
+              operation: (file) => _shareFile(file, fileName: entry.name),
+            );
           }
         } catch (e) {
           await _handleError(e);
@@ -538,7 +597,11 @@ class FileBrowserState extends State<FileBrowser> {
           if (entry.isDirectory) {
             await _exportDirectory(Directory(entry.hostPath), name: entry.name);
           } else {
-            await _exportFile(File(entry.hostPath), fileName: entry.name);
+            await FileBrowserOps.withReadableFile<void>(
+              rootPath: _accessRoot,
+              hostPath: entry.hostPath,
+              operation: (file) => _exportFile(file, fileName: entry.name),
+            );
           }
         } catch (e) {
           await _handleError(e);
@@ -565,9 +628,9 @@ class FileBrowserState extends State<FileBrowser> {
       return;
     }
     try {
-      await _runMutation(
+      await runMutation(
         RenameMutation(
-          rootPath: _rootPath,
+          rootPath: _accessRoot,
           hostPath: entry.hostPath,
           newName: name,
         ),
@@ -596,9 +659,9 @@ class FileBrowserState extends State<FileBrowser> {
       return;
     }
     try {
-      await _runMutation(
+      await runMutation(
         MoveMutation(
-          rootPath: _rootPath,
+          rootPath: _accessRoot,
           hostPath: entry.hostPath,
           destDirPath: destPath,
         ),
@@ -623,8 +686,8 @@ class FileBrowserState extends State<FileBrowser> {
     );
     if (!confirmed || !mounted) return;
     try {
-      await _runMutation(
-        DeleteMutation(rootPath: _rootPath, hostPath: entry.hostPath),
+      await runMutation(
+        DeleteMutation(rootPath: _accessRoot, hostPath: entry.hostPath),
       );
       await _reload();
     } catch (e) {

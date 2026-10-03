@@ -21,6 +21,39 @@ void main() {
   ];
 
   group('QueuedInputQueue', () {
+    test(
+      'restoring an editing item keeps its slot and makes it pending again',
+      () {
+        final queue = QueuedInputQueue();
+        queue.restore([
+          QueuedChatInput(
+            id: 'saved',
+            conversationId: a,
+            input: text('one'),
+            isEditing: true,
+          ),
+          QueuedChatInput(id: 'next', conversationId: a, input: text('two')),
+        ]);
+        expect(textsOf(queue.forConversation(a)), ['one', 'two']);
+        expect(queue.claimHeadFor(a)?.id, 'saved');
+        expect(queue.enqueue(a, text('new')).id, isNot(anyOf('saved', 'next')));
+      },
+    );
+
+    test(
+      'editing reserves the original position without sending stale content',
+      () {
+        final queue = QueuedInputQueue();
+        final head = queue.enqueue(a, text('one'));
+        queue.enqueue(a, text('two'));
+        queue.setEditing(head.id, true);
+        expect(queue.headFor(a)?.input.text, 'two');
+        expect(queue.indexOf(head.id), 0);
+        queue.setEditing(head.id, false);
+        expect(queue.headFor(a)?.id, head.id);
+      },
+    );
+
     test('holds one pending message per conversation', () {
       final queue = QueuedInputQueue();
       expect(queue.isEmpty, isTrue);

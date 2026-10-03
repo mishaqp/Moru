@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
+import 'package:Kelivo/core/services/mini_apps/mini_app_jobs.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
 import 'package:Kelivo/features/mini_apps/pages/mini_apps_page.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
@@ -16,23 +17,74 @@ import '../../support/business_test_harness.dart';
 void main() {
   late Directory temp;
   late MiniAppStore store;
+  late DateTime clock;
+  late MiniAppJobs jobs;
+  late List<String> ran;
 
   setUp(() async {
     temp = await Directory.systemTemp.createTemp('mini-apps-page-');
+    clock = DateTime(2026, 9, 1, 10);
     store = MiniAppStore(
       root: () async => Directory(p.join(temp.path, 'installed')),
+      // Each publish a minute later, so versions have distinct times.
+      now: () => clock = clock.add(const Duration(minutes: 1)),
+    );
+    ran = [];
+    final scheduled = <String, Map<String, Object?>>{};
+    jobs = MiniAppJobs(
+      store: store,
+      scheduler: MiniAppJobScheduler(
+        save: (job) async => scheduled['${job['id']}'] = job,
+        delete: (id) async => scheduled.remove(id),
+        list: (appId) async => [
+          for (final job in scheduled.values)
+            {
+              ...job,
+              'runs': [
+                {
+                  'status': 'completed',
+                  'startedAt': DateTime(2026, 9, 30, 8).millisecondsSinceEpoch,
+                },
+              ],
+            },
+        ],
+        runNow: (id) async => ran.add(id),
+      ),
     );
   });
   tearDown(() => temp.delete(recursive: true));
 
-  Future<void> install(String id, String name, String description) async {
+  Future<void> install(
+    String id,
+    String name,
+    String description, {
+    String html = '<p>x</p>',
+    Map<String, Object?> manifest = const {},
+  }) async {
     final dir = Directory(p.join(temp.path, 'src', id))
       ..createSync(recursive: true);
     File(p.join(dir.path, 'moru-app.json')).writeAsStringSync(
-      jsonEncode({'id': id, 'name': name, 'description': description}),
+      jsonEncode({
+        'id': id,
+        'name': name,
+        'description': description,
+        ...manifest,
+      }),
     );
-    File(p.join(dir.path, 'index.html')).writeAsStringSync('<p>x</p>');
+    File(p.join(dir.path, 'index.html')).writeAsStringSync(html);
     await store.install(dir);
+  }
+
+  /// Lets real file IO run until [done], delivering its results.
+  Future<void> ioUntil(WidgetTester tester, bool Function() done) async {
+    for (var i = 0; i < 200 && !done(); i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      await tester.pump();
+    }
+    expect(done(), isTrue);
+    await tester.pumpAndSettle();
   }
 
   Future<void> pump(WidgetTester tester) async {
@@ -46,7 +98,7 @@ void main() {
           locale: const Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: MiniAppsPage(store: store),
+          home: MiniAppsPage(store: store, jobs: jobs),
         ),
       ),
     );
@@ -100,5 +152,180 @@ void main() {
     expect(store.byId('water'), isNull);
     expect(find.text('Water'), findsNothing);
     expect(find.text('Notes'), findsOneWidget);
+  });
+
+  testWidgets('the error log shows, copies and clears the journal', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      await install('water', 'Water', '');
+      await store.logError('water', 'console: x is not defined');
+    });
+    await pump(tester);
+
+    await tester.longPress(find.byKey(const ValueKey('mini-app-water')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Error log'));
+    await ioUntil(
+      tester,
+      () => find.text('console: x is not defined').evaluate().isNotEmpty,
+    );
+    expect(find.text('Copy all'), findsOneWidget);
+
+    await tester.tap(find.text('Clear'));
+    await ioUntil(
+      tester,
+      () => find.text('No errors recorded.').evaluate().isNotEmpty,
+    );
+    // The journal file is gone. (Awaiting the store here would wait on a
+    // future of the test's fake zone.)
+    final journal = File(p.join(store.byId('water')!.directory, 'errors.json'));
+    expect(await tester.runAsync(journal.exists), isFalse);
+  });
+
+  testWidgets('versions roll the app back to earlier code', (tester) async {
+    await tester.runAsync(() async {
+      await install('water', 'Water', '', html: '<p>v1</p>');
+      await install('water', 'Water', '', html: '<p>v2</p>');
+    });
+    await pump(tester);
+
+    await tester.longPress(find.byKey(const ValueKey('mini-app-water')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Versions'));
+    await ioUntil(
+      tester,
+      () => find.text('Roll back “Water”').evaluate().isNotEmpty,
+    );
+    expect(find.textContaining('last 5 versions'), findsOneWidget);
+
+    final first = (await tester.runAsync(
+      () => store.versions('water'),
+    ))!.single.updatedAt;
+    await tester.tap(find.textContaining('2026'));
+    await ioUntil(tester, () => store.byId('water')!.updatedAt == first);
+    expect(find.text('Roll back “Water”'), findsNothing);
+    // Let the confirmation snack bar time out.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    final entry = File(store.byId('water')!.entryPath);
+    expect(await tester.runAsync(entry.readAsString), contains('v1'));
+  });
+
+  testWidgets('background jobs show their schedule and run on demand', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      await install('water', 'Water', '');
+      await jobs.set('water', 'morning', {
+        'time': '08:00',
+        'days': [1, 3],
+        'run': 'remind',
+      });
+    });
+    await pump(tester);
+
+    await tester.longPress(find.byKey(const ValueKey('mini-app-water')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Background jobs'));
+    await ioUntil(
+      tester,
+      () => find.text('morning · remind()').evaluate().isNotEmpty,
+    );
+    expect(find.textContaining('08:00 · Mon, Wed'), findsOneWidget);
+    expect(
+      find.textContaining('Last run Sep 30, 2026 08:00: done'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('morning · remind()'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Run now'));
+    await ioUntil(tester, () => ran.isNotEmpty);
+    expect(ran, ['miniapp:water:morning']);
+    // Let the confirmation snack bar time out.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('apps with a server show its state in the menu', (tester) async {
+    await tester.runAsync(() async {
+      await install(
+        'notes',
+        'Notes',
+        '',
+        manifest: {
+          'server': {'command': 'python3 server.py'},
+        },
+      );
+      await install('plain', 'Plain', '');
+    });
+    await pump(tester);
+
+    await tester.longPress(find.byKey(const ValueKey('mini-app-plain')));
+    await tester.pumpAndSettle();
+    expect(find.text('Server'), findsNothing);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const ValueKey('mini-app-notes')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Server'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Not running. It starts while the app is open.'),
+      findsOneWidget,
+    );
+    expect(find.text(r'$ python3 server.py'), findsOneWidget);
+    expect(find.text('No output yet.'), findsOneWidget);
+    // Closing the sheet stops its refresh timer.
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('badges show game, server, jobs and errors; search filters', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      await install(
+        'snake',
+        'Snake',
+        'Arcade',
+        manifest: {
+          'fullscreen': true,
+          'server': {'command': 'python3 s.py'},
+        },
+      );
+      await jobs.set('snake', 'daily', {'time': '09:00', 'run': 'tick'});
+      await store.logError('snake', 'console: boom');
+      await store.logError('snake', 'console: bang');
+      for (final name in ['Water', 'Notes', 'Budget', 'Weather']) {
+        await install(name.toLowerCase(), name, '');
+      }
+    });
+    await pump(tester);
+    await ioUntil(
+      tester,
+      () => find.byTooltip('Error log').evaluate().isNotEmpty,
+    );
+    expect(find.byTooltip('Game'), findsOneWidget);
+    expect(find.byTooltip('Server'), findsOneWidget);
+    expect(find.byTooltip('Background jobs'), findsOneWidget);
+    // The number of journal entries.
+    expect(
+      find.descendant(
+        of: find.byTooltip('Error log'),
+        matching: find.text(' 2'),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.enterText(
+      find.byKey(const ValueKey('mini-apps-search')),
+      'arca',
+    );
+    await tester.pump();
+    expect(find.text('Snake'), findsOneWidget);
+    expect(find.text('Water'), findsNothing);
   });
 }

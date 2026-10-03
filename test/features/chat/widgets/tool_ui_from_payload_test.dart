@@ -4,6 +4,18 @@ import 'package:Kelivo/features/chat/widgets/chat_message_widget.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('a stopped tool without result hydrates as terminal', () {
+    final part = toolUiFromPayload(
+      jsonEncode({
+        'id': 'plan',
+        'name': 'update_plan',
+        'metadata': {
+          'computer': {'status': 'stopped'},
+        },
+      }),
+    )!;
+    expect(part.loading, isFalse);
+  });
   test(
     'empty tool id falls back to name plus ordinal so the card still renders',
     () {

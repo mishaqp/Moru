@@ -423,6 +423,7 @@ class MessageGenerationService {
     required Assistant? assistant,
     required String modelId,
     required String providerKey,
+    String? queuedInputId,
   }) async {
     final userParts = await buildPersistedUserMessageParts(
       input,
@@ -450,6 +451,7 @@ class MessageGenerationService {
       userParts: userParts,
       modelId: modelId,
       providerId: providerKey,
+      queuedInputId: queuedInputId,
     );
     return (
       userMessage: result.userMessage!,
@@ -618,6 +620,7 @@ class MessageGenerationService {
     required bool enableReasoning,
     required bool generateTitleOnFinish,
     String? generationRunId,
+    String? executionId,
     bool scheduled = false,
     bool scheduledNotify = true,
     bool scheduledPreview = true,
@@ -650,6 +653,7 @@ class MessageGenerationService {
       ocrActive: ocrActive,
       generateTitleOnFinish: generateTitleOnFinish,
       generationRunId: generationRunId,
+      executionId: executionId,
       scheduled: scheduled,
       scheduledNotify: scheduledNotify,
       scheduledPreview: scheduledPreview,

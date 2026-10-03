@@ -23,8 +23,12 @@ import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/compress_context_options.dart';
 import '../../../core/services/android_process_text.dart';
+import '../../../core/services/chat/chat_service.dart';
+import '../../chat/widgets/chat_message_widget.dart';
+import '../../chat/widgets/computer_response_scope.dart';
 import '../../../core/services/notification_service.dart';
 import '../../mini_apps/mini_app_launcher.dart';
+import '../../mini_apps/mini_app_web_host.dart';
 import '../../../core/services/incoming_share_service.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../utils/platform_utils.dart';
@@ -51,6 +55,7 @@ import '../widgets/learning_prompt_sheet.dart';
 import '../widgets/scroll_nav_buttons.dart';
 import '../widgets/message_list_view.dart';
 import '../widgets/chat_input_section.dart';
+import '../widgets/background_reliability_hint.dart';
 import '../widgets/conversation_system_prompt_button.dart';
 import '../widgets/chat_input_overlay_layout.dart';
 import '../widgets/chat_selection_app_bar.dart';
@@ -764,6 +769,10 @@ class _HomePageState extends State<HomePage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // A failed mini app job notifies in the user's language.
+    MiniAppLauncher.jobFailedBody = AppLocalizations.of(
+      context,
+    )!.miniAppsJobFailed;
     // Modal routes disable tickers only after an opaque route covers us.
     // Keep streaming visible behind translucent dialogs and bottom sheets.
     _controller.onHomeVisibilityChanged(TickerMode.valuesOf(context).enabled);
@@ -867,6 +876,18 @@ class _HomePageState extends State<HomePage>
     );
     final pending = NotificationService.takePendingMiniAppId();
     if (pending != null) _openMiniApp(pending);
+    unawaited(_autostartMiniAppWeb());
+  }
+
+  Future<void> _autostartMiniAppWeb() async {
+    final settings = context.read<SettingsProvider>();
+    await settings.loaded;
+    if (!mounted ||
+        !settings.miniAppWebAutostart ||
+        MiniAppWebHost.instance.running) {
+      return;
+    }
+    await MiniAppWebHost.instance.startFrom(context);
   }
 
   void _openMiniApp(String id) {
@@ -1029,22 +1050,41 @@ class _HomePageState extends State<HomePage>
         ? _controller.currentConversation!.title
         : _controller.titleForLocale();
 
-    if (width >= AppBreakpoints.tablet) {
-      return _buildTabletLayout(
-        context,
-        title: title,
-        providerName: modelInfo.providerName,
-        modelDisplay: modelInfo.modelDisplay,
-        cs: cs,
-      );
-    }
-
-    return _buildMobileLayout(
-      context,
-      title: title,
-      providerName: modelInfo.providerName,
-      modelDisplay: modelInfo.modelDisplay,
-      cs: cs,
+    final layout = width >= AppBreakpoints.tablet
+        ? _buildTabletLayout(
+            context,
+            title: title,
+            providerName: modelInfo.providerName,
+            modelDisplay: modelInfo.modelDisplay,
+            cs: cs,
+          )
+        : _buildMobileLayout(
+            context,
+            title: title,
+            providerName: modelInfo.providerName,
+            modelDisplay: modelInfo.modelDisplay,
+            cs: cs,
+          );
+    return ComputerToolSource(
+      readMessages: () => _controller.messages,
+      readSteps: (id) {
+        final live = _controller.toolParts[id];
+        if (live != null && live.isNotEmpty) {
+          return computerStepsFromToolUi(live);
+        }
+        final message = _controller.messages
+            .where((m) => m.id == id)
+            .firstOrNull;
+        final stored = computerStepsFromEvents(
+          context.read<ChatService>().getToolEvents(id),
+          streaming: message?.isStreaming ?? false,
+        );
+        return stored.isNotEmpty || message == null
+            ? stored
+            : computerStepsFromMessage(message);
+      },
+      updates: _controller.streamingContentNotifier.toolHeightEvents,
+      child: layout,
     );
   }
 
@@ -1113,7 +1153,7 @@ class _HomePageState extends State<HomePage>
               onInvertSelection: _controller.invertSelection,
             )
           : null,
-      body: _wrapWithDropTarget(_buildMobileBody(context, cs)),
+      body: _buildMobileBody(context, cs),
     );
   }
 
@@ -1232,7 +1272,7 @@ class _HomePageState extends State<HomePage>
               onInvertSelection: _controller.invertSelection,
             )
           : null,
-      body: _wrapWithDropTarget(_buildTabletBody(context, cs)),
+      body: _buildTabletBody(context, cs),
     );
   }
 
@@ -1472,6 +1512,8 @@ class _HomePageState extends State<HomePage>
       },
       onRegenerateMessage: (message) =>
           _controller.regenerateAtMessage(message),
+      interruptedMessageIds: _controller.interruptedMessageIds,
+      onContinueInterruptedReply: _controller.continueInterruptedReply,
       onResendMessage: (message) => _controller.regenerateAtMessage(message),
       onTranslateMessage: (message) => _controller.translateMessage(message),
       onEditMessage: (message) => _controller.editMessage(message),
@@ -1520,7 +1562,7 @@ class _HomePageState extends State<HomePage>
       conversation: conversation,
       assistant: context.watch<AssistantProvider>().currentAssistant,
     );
-    return ChatInputSection(
+    final input = ChatInputSection(
       inputBarKey: _inputBarKey,
       chatModelProviderKey: chatModel.providerKey,
       chatModelId: chatModel.modelId,
@@ -1538,6 +1580,7 @@ class _HomePageState extends State<HomePage>
       isReasoningEnabled: _controller.isReasoningEnabled,
       conversationId: _controller.currentConversation?.id,
       contextTokensUsed: _controller.contextTokensUsed(),
+      chatMessages: () => _controller.messages,
       sendButtonTooltip:
           (_controller.isUserMessageEditActive ||
               _controller.isQueuedMessageEditActive)
@@ -1636,6 +1679,10 @@ class _HomePageState extends State<HomePage>
       onClearContext: _controller.clearContext,
       onCompressContext: _handleDesktopCompressContext,
       backgroundImageActive: _assistantBackgroundActive(context),
+    );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [const BackgroundReliabilityHint(), input],
     );
   }
 
@@ -1744,10 +1791,6 @@ class _HomePageState extends State<HomePage>
       opacity: _controller.messageJumpOpacity,
       child: child,
     );
-  }
-
-  Widget _wrapWithDropTarget(Widget child) {
-    return child;
   }
 
   // ============================================================================

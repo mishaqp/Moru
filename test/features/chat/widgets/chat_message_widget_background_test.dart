@@ -903,7 +903,7 @@ void main() {
     testWidgets('tool card opens custom details and shows the full result', (
       tester,
     ) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       try {
         final settings = await _createSettings(
           ChatMessageBackgroundStyle.defaultStyle,
@@ -940,7 +940,9 @@ void main() {
 
         expect(find.byTooltip('Replay'), findsOneWidget);
 
-        await tester.tap(find.text('Speaking:'));
+        await tester.longPress(find.text('Speaking:'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Detailed result'));
         await tester.pumpAndSettle();
 
         expect(find.byKey(CustomBottomSheet.panelKey), findsOneWidget);
@@ -960,7 +962,7 @@ void main() {
     testWidgets('tool details stay mounted after the source card is removed', (
       tester,
     ) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       try {
         final settings = await _createSettings(
           ChatMessageBackgroundStyle.defaultStyle,

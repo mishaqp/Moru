@@ -13,7 +13,7 @@ import '../../support/business_test_harness.dart';
 
 void main() {
   testWidgets('selected check mark and returns value', (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
     String? result;

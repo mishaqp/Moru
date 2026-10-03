@@ -89,8 +89,6 @@ void main() {
 
   group('runBackupIsolate', () {
     test('debug native sleep restores the caller signal mask', () {
-      if (Platform.isWindows) return;
-
       final before = _currentSignalMask();
       debugNativeSleepIgnoringKill(0);
 
@@ -479,7 +477,7 @@ List<int> _currentSignalMask() {
           Int32 Function(Int32, Pointer<Void>, Pointer<Void>),
           int Function(int, Pointer<Void>, Pointer<Void>)
         >('pthread_sigmask');
-    final sigBlock = Platform.isMacOS || Platform.isIOS ? 1 : 0;
+    final sigBlock = 0;
     expect(pthreadSigmask(sigBlock, nullptr, current.cast()), 0);
     return List<int>.of(current.asTypedList(signalSetSize));
   } finally {

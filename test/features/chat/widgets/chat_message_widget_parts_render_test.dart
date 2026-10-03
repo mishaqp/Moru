@@ -6,6 +6,7 @@ import 'package:Kelivo/core/providers/tts_provider.dart';
 import 'package:Kelivo/features/chat/pages/image_viewer_page.dart';
 import 'package:Kelivo/features/chat/widgets/chat_message_widget.dart';
 import 'package:Kelivo/features/chat/widgets/timeline_projection.dart';
+import 'package:Kelivo/features/chat/widgets/workspace_tool_ui.dart';
 import 'package:Kelivo/features/home/controllers/stream_controller.dart';
 import 'package:Kelivo/features/home/services/ask_user_interaction_service.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
@@ -52,6 +53,70 @@ void expectAbove(WidgetTester tester, Finder upper, Finder lower) {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('agent error details start collapsed and toggle in chat', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHarness(
+        child: ChatMessageWidget(
+          message: ChatMessage(
+            id: 'agent-error',
+            conversationId: 'c1',
+            role: 'assistant',
+            parts: [
+              const TextPart('Partial agent reply'),
+              MessagePart.fromRow(
+                'agent_error',
+                '{"message":"Internal error","details":"safe nested data\\n\\nstderr explanation"}',
+              ),
+            ],
+          ),
+          showModelIcon: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Partial agent reply'), findsOneWidget);
+    expect(find.text('Internal error'), findsOneWidget);
+    expect(find.text('safe nested data\n\nstderr explanation'), findsNothing);
+    await tester.tap(find.text('Show details'));
+    await tester.pumpAndSettle();
+    expect(find.text('safe nested data\n\nstderr explanation'), findsOneWidget);
+    await tester.tap(find.text('Hide details'));
+    await tester.pumpAndSettle();
+    expect(find.text('safe nested data\n\nstderr explanation'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'a terminal persisted tool without a result stays interrupted instead of spinning',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildHarness(
+          child: ChatMessageWidget(
+            message: ChatMessage(
+              id: 'interrupted-tool',
+              conversationId: 'c1',
+              role: 'assistant',
+              parts: const [
+                ToolCallPart(
+                  '{"id":"unknown-shell","name":"shell","arguments":{"command":"touch result"}}',
+                ),
+                TextPart('saved partial'),
+              ],
+            ),
+            showModelIcon: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('saved partial'), findsOneWidget);
+      expect(find.byKey(WorkspaceStatusBadge.runningKey), findsNothing);
+      expect(find.byKey(WorkspaceStatusBadge.interruptedKey), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 
   for (final brightness in Brightness.values) {
     testWidgets(
@@ -273,6 +338,35 @@ void main() {
     },
   );
 
+  testWidgets('browser tool cards read as browser actions, not tool names', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHarness(
+        child: ChatMessageWidget(
+          message: ChatMessage(
+            id: 'browser-parts',
+            role: 'assistant',
+            conversationId: 'c1',
+            parts: const [
+              ToolCallPart(
+                '{"id":"b1","name":"browser_use","arguments":{"action":"open","url":"https://dzen.ru/feed"},"content":"{}"}',
+              ),
+              ToolCallPart(
+                '{"id":"b2","name":"browser_use","arguments":{"action":"read"},"content":"{}"}',
+              ),
+            ],
+          ),
+          showModelIcon: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.textContaining('browser_use'), findsNothing);
+    expect(find.text('Browser · dzen.ru'), findsOneWidget);
+    expect(find.text('Browser · Read'), findsOneWidget);
+  });
+
   testWidgets('structured parts render reasoning, text, and tool in order', (
     tester,
   ) async {
@@ -353,6 +447,106 @@ void main() {
       );
     },
   );
+
+  testWidgets('long-pressing a tool step offers copy and rerun', (
+    tester,
+  ) async {
+    var reruns = 0;
+    Widget message({required bool streaming}) => _buildHarness(
+      child: ChatMessageWidget(
+        message: ChatMessage(
+          id: 'tool-menu',
+          role: 'assistant',
+          conversationId: 'c1',
+          isStreaming: streaming,
+          parts: const [
+            ToolCallPart(
+              '{"id":"c1","name":"lookup","arguments":{"q":"x"},"content":"ok"}',
+            ),
+            TextPart('done'),
+          ],
+        ),
+        onRegenerate: () => reruns++,
+        showModelIcon: false,
+      ),
+    );
+
+    await tester.pumpWidget(message(streaming: false));
+    await tester.pump();
+    await tester.longPress(find.textContaining('lookup').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Copy details'), findsOneWidget);
+    await tester.tap(find.text('Rerun from here'));
+    await tester.pumpAndSettle();
+    expect(reruns, 1);
+
+    // Not while the reply is still being written.
+    await tester.pumpWidget(message(streaming: true));
+    await tester.pump();
+    await tester.longPress(find.textContaining('lookup').first);
+    // The streaming reply keeps animating; the sheet is open after this.
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Copy details'), findsOneWidget);
+    expect(find.text('Rerun from here'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  test('clipboard details redact credentials and authentication URLs', () {
+    final text = toolDetailsForClipboard(
+      const ToolUIPart(
+        id: 'call-safe',
+        toolName: 'custom',
+        arguments: {
+          'access_token': 'private-token',
+          'url': 'https://auth.openai.com/authorize?state=private-state',
+        },
+        content:
+            '{"password":"private-password","url":"https://example.com/callback?code=private-code"}',
+      ),
+    );
+    for (final secret in [
+      'private-token',
+      'private-state',
+      'private-password',
+      'private-code',
+    ]) {
+      expect(text, isNot(contains(secret)));
+    }
+    expect(text, contains('call-safe'));
+  });
+
+  test('tool details for the clipboard hold the call and its result', () {
+    expect(
+      toolDetailsForClipboard(
+        const ToolUIPart(
+          id: 'call-1',
+          toolName: 'shell',
+          arguments: {'command': 'ls'},
+          content: 'a\nb',
+        ),
+      ),
+      '## Tool call\n'
+      'name: shell\n'
+      'id: call-1\n'
+      'arguments:\n'
+      '{\n  "command": "ls"\n}\n'
+      '\n'
+      '## Result\n'
+      '(3 chars)\n'
+      'a\nb',
+    );
+    expect(
+      toolDetailsForClipboard(
+        const ToolUIPart(
+          id: 'call-2',
+          toolName: 'shell',
+          arguments: {},
+          loading: true,
+        ),
+      ),
+      endsWith('## Result\n(running)'),
+    );
+  });
 
   testWidgets('empty contentSplits keep reasoning above body', (tester) async {
     await tester.pumpWidget(

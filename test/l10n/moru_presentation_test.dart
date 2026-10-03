@@ -12,6 +12,15 @@ import '../support/business_test_harness.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('the job failure notification names the job', () async {
+    final ru = await AppLocalizations.delegate.load(const Locale('ru'));
+    expect(
+      ru.miniAppsJobFailed('sync'),
+      'Фоновая задача «sync» не выполнилась. '
+      'Откройте приложение, чтобы узнать почему.',
+    );
+  });
+
   test('notifications switch RU/EN without changing payload IDs', () async {
     final ru = await AppLocalizations.delegate.load(const Locale('ru'));
     final en = await AppLocalizations.delegate.load(const Locale('en'));

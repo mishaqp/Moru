@@ -10,7 +10,7 @@ class AppShadows {
   ];
 }
 
-/// Shared desktop popover wash. Alpha is unchanged from the previous
+/// Shared pointer popover wash. Alpha is unchanged from the previous
 /// per-popover literals (`surface` @ 0.28 dark / 0.56 light).
 class AppOverlayColors {
   static const double desktopPopoverAlphaDark = 0.28;

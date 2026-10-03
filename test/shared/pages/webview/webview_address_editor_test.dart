@@ -54,7 +54,7 @@ void main() {
             builder: (context) => ElevatedButton(
               onPressed: () => showBrowserAddressEditor(
                 context,
-                currentUrl: 'https://example.com',
+                currentUrl: 'https://example.com/the/full/path?query=kept',
                 onSubmit: (uri) => submitted = uri,
               ),
               child: const Text('open'),
@@ -65,6 +65,11 @@ void main() {
 
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'https://example.com/the/full/path?query=kept',
+      );
 
       await tester.enterText(find.byType(TextField), 'newsite.com');
       await tester.tap(find.text('Go'));

@@ -41,6 +41,7 @@ final class BusinessKeyRegistry {
   };
 
   static const preferenceKeys = <String>{
+    'browser_floating_window_v1',
     'desktop_scheduled_tasks_v1',
     'scheduled_task_results_v1',
     'current_assistant_id_v1',
@@ -491,6 +492,7 @@ final class BusinessSettingsRouter {
             'avatar',
             'chatModelProvider',
             'chatModelId',
+            'agentId',
             'systemPrompt',
             'messageTemplate',
             'background',

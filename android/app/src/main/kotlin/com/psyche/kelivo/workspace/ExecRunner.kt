@@ -19,7 +19,18 @@ data class ExecRequest(
     val timeoutMs: Long,
     val keepStdinOpen: Boolean = false,
     val prootArguments: List<String> = emptyList(),
+    /** False for agents: they need real (copied) files where PRoot would fake links. */
+    val emulateHardLinks: Boolean = true,
     val shell: String? = null,
+    /** Runs in the fast mode's chroot instead of PRoot. */
+    val chroot: ChrootOptions? = null,
+)
+
+/** Who the app is, for the chroot helper to give files back to. */
+data class ChrootOptions(
+    val uid: Int,
+    val gid: Int,
+    val appDataDir: File,
 )
 
 class ExecRunner(
@@ -30,19 +41,40 @@ class ExecRunner(
     fun start(request: ExecRequest) {
         cancel(request.runId)
         request.tmpDir.mkdirs()
-        ProotCommand.stageTalloc(request.nativeLibDir, request.tmpDir)
         RootfsCertificates.ensureInstalled(request.rootfsDir)
-        val launch = ProotCommand.build(
-            nativeLibDir = request.nativeLibDir,
-            rootfsDir = request.rootfsDir,
-            tmpDir = request.tmpDir,
-            binds = request.binds,
-            cwd = request.cwd,
-            command = request.command,
-            env = request.env,
-            extraArgs = request.prootArguments,
-            shell = request.shell,
-        )
+        val chroot = request.chroot
+        val launch = if (chroot != null) {
+            RootfsProfile.ensureInstalled(request.rootfsDir)
+            RootfsNodeDns.ensureInstalled(request.rootfsDir)
+            ChrootCommand.build(
+                nativeLibDir = request.nativeLibDir,
+                rootfsDir = request.rootfsDir,
+                binds = request.binds,
+                cwd = request.cwd,
+                command = request.command,
+                env = request.env,
+                shell = request.shell,
+                tag = request.runId,
+                uid = chroot.uid,
+                gid = chroot.gid,
+                appDataDir = chroot.appDataDir,
+            )
+        } else {
+            ProotCommand.stageTalloc(request.nativeLibDir, request.tmpDir)
+            ProotCommand.stageGuest(request.rootfsDir, request.tmpDir)
+            ProotCommand.build(
+                nativeLibDir = request.nativeLibDir,
+                rootfsDir = request.rootfsDir,
+                tmpDir = request.tmpDir,
+                binds = request.binds,
+                cwd = request.cwd,
+                command = request.command,
+                env = request.env,
+                extraArgs = request.prootArguments,
+                shell = request.shell,
+                emulateHardLinks = request.emulateHardLinks,
+            )
+        }
         val builder = ProcessBuilder(launch.argv)
             .directory(launch.workingDirectory)
             .redirectErrorStream(false)
@@ -53,7 +85,7 @@ class ExecRunner(
         } catch (_: Exception) {
         }
 
-        val running = Running(process)
+        val running = Running(process, request.runId, request.nativeLibDir.takeIf { chroot != null })
         runs[request.runId] = running
         val startedAt = System.nanoTime()
         if (request.keepStdinOpen) events.emit(mapOf("type" to "started", "runId" to request.runId))
@@ -78,14 +110,14 @@ class ExecRunner(
             val cancelled = running.cancelled.get()
             val timedOut = !finished && !cancelled
             if (!finished || cancelled) {
-                killProcessTree(process)
+                stop(running)
             }
             val exitCode = when {
                 cancelled || timedOut -> -1
                 else -> try {
                     process.exitValue()
                 } catch (_: IllegalThreadStateException) {
-                    killProcessTree(process)
+                    stop(running)
                     -1
                 }
             }
@@ -121,8 +153,23 @@ class ExecRunner(
     fun cancel(runId: String): Boolean {
         val running = runs[runId] ?: return false
         running.cancelled.set(true)
-        killProcessTree(running.process)
+        stop(running)
         return true
+    }
+
+    /**
+     * A chroot run is root's: only the helper, through su, can stop it. That
+     * takes a moment, so it runs off the caller's thread (cancel comes from
+     * the platform channel on the main thread).
+     */
+    private fun stop(running: Running) {
+        val helperDir = running.chrootHelperDir
+        if (helperDir != null) {
+            Thread({
+                ChrootCommand.runRoot(ChrootCommand.killArgv(helperDir, running.runId), 15)
+            }, "ws-kill-${running.runId}").apply { isDaemon = true; start() }
+        }
+        killProcessTree(running.process)
     }
 
     fun cancelAll() {
@@ -151,7 +198,12 @@ class ExecRunner(
         }
     }
 
-    private class Running(val process: Process) {
+    private class Running(
+        val process: Process,
+        val runId: String,
+        /** The native library dir with the chroot helper, for a chroot run. */
+        val chrootHelperDir: File?,
+    ) {
         val cancelled = AtomicBoolean(false)
     }
 

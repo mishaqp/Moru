@@ -467,7 +467,8 @@ class BlockQuote extends InlineMd {
 /// Unordered list component
 class UnOrderedList extends BlockMd {
   @override
-  String get expString => (r"(?:\-|\*)\ ([^\n]+)$");
+  String get expString =>
+      r"(?<ulIndent> *)(?<ulMarker>[-*+])(?<ulPadding>[ \t]+)(?<ulBody>[^\n]+)(?:\n\k<ulIndent>[ \t]+[^\n]+)*";
 
   @override
   Widget build(
@@ -477,7 +478,12 @@ class UnOrderedList extends BlockMd {
   ) {
     var match = this.exp.firstMatch(text);
 
-    var child = MdWidget(context, "${match?[1]?.trim()}", true, config: config);
+    final child = MdWidget(
+      context,
+      _listItemBody(text, match!, 'ul'),
+      true,
+      config: _listItemConfig(config),
+    );
 
     return config.unOrderedListBuilder?.call(
           context,
@@ -503,7 +509,8 @@ class UnOrderedList extends BlockMd {
 /// Ordered list component
 class OrderedList extends BlockMd {
   @override
-  String get expString => (r"([0-9]+)\.\ ([^\n]+)$");
+  String get expString =>
+      r"(?<olIndent> *)(?<olMarker>[0-9]+)\.(?<olPadding>[ \t]+)(?<olBody>[^\n]+)(?:\n\k<olIndent>[ \t]+[^\n]+)*";
 
   @override
   Widget build(
@@ -513,9 +520,14 @@ class OrderedList extends BlockMd {
   ) {
     var match = this.exp.firstMatch(text);
 
-    var no = "${match?[1]}".trim();
+    final no = match!.namedGroup('olMarker')!;
 
-    var child = MdWidget(context, "${match?[2]}".trim(), true, config: config);
+    final child = MdWidget(
+      context,
+      _listItemBody(text, match, 'ol'),
+      true,
+      config: _listItemConfig(config),
+    );
     return config.orderedListBuilder?.call(
           context,
           no,
@@ -532,6 +544,32 @@ class OrderedList extends BlockMd {
         );
   }
 }
+
+// A soft continuation belongs to the same list-item paragraph, including its
+// style and caller-provided text scaling. Remove the marker's content indent
+// before recursively parsing the item, retaining extra indent for nested lists.
+String _listItemBody(String text, RegExpMatch match, String prefix) {
+  final lines = text.split('\n');
+  final contentIndent =
+      match.namedGroup('${prefix}Indent')!.length +
+      match.namedGroup('${prefix}Marker')!.length +
+      (prefix == 'ol' ? 1 : 0) +
+      match.namedGroup('${prefix}Padding')!.length;
+  return [
+    match.namedGroup('${prefix}Body')!.trim(),
+    for (final line in lines.skip(1))
+      line.substring(min(contentIndent, line.length - line.trimLeft().length)),
+  ].join('\n');
+}
+
+GptMarkdownConfig _listItemConfig(GptMarkdownConfig config) => config.copyWith(
+  // Once inside an item, extra prose indentation is still a soft paragraph
+  // continuation. Nested lists and other blocks retain their own components.
+  components:
+      (config.components ?? MarkdownComponent.globalComponents)
+          .where((component) => component is! IndentMd)
+          .toList(),
+);
 
 class HighlightedText extends InlineMd {
   @override

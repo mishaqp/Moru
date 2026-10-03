@@ -1,10 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../icons/lucide_adapter.dart' as lucide;
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_font_weights.dart';
 import 'ios_tactile.dart';
-import 'ios_tile_button.dart';
 
 Future<int?> showIosTimePicker(
   BuildContext context, {
@@ -33,7 +31,7 @@ Future<int?> _showIosMobileTimePicker(
       return _IosTimeWheelPanel(
         initialMinutes: initial,
         title: title,
-        isDesktop: false,
+
         onCancel: () => Navigator.of(ctx).pop(),
         onSave: (minutes) => Navigator.of(ctx).pop(minutes),
       );
@@ -51,14 +49,13 @@ class _IosTimeWheelPanel extends StatefulWidget {
   const _IosTimeWheelPanel({
     required this.initialMinutes,
     required this.title,
-    required this.isDesktop,
+
     required this.onCancel,
     required this.onSave,
   });
 
   final int initialMinutes;
   final String title;
-  final bool isDesktop;
   final VoidCallback onCancel;
   final ValueChanged<int> onSave;
 
@@ -106,42 +103,20 @@ class _IosTimeWheelPanelState extends State<_IosTimeWheelPanel> {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-    final radius = widget.isDesktop
-        ? BorderRadius.circular(18)
-        : BorderRadius.circular(22);
-    final borderColor = cs.outlineVariant.withValues(
-      alpha: widget.isDesktop ? 0.24 : 0.12,
-    );
+    final radius = BorderRadius.circular(22);
     final selectedTime = TimeOfDay(
       hour: _selectedHour,
       minute: _selectedMinute,
     ).format(context);
-    final panelColor = widget.isDesktop ? cs.surface : cs.surfaceContainerHigh;
+    final panelColor = cs.surfaceContainerHigh;
 
     final panel = Material(
       color: Colors.transparent,
       child: Container(
-        key: widget.isDesktop
-            ? const ValueKey('ios-time-picker-desktop-sheet')
-            : const ValueKey('ios-time-picker-mobile-sheet'),
-        width: widget.isDesktop ? null : double.infinity,
-        margin: widget.isDesktop
-            ? EdgeInsets.zero
-            : EdgeInsets.only(left: 12, right: 12, bottom: 12 + bottomInset),
-        decoration: BoxDecoration(
-          color: panelColor,
-          borderRadius: radius,
-          border: widget.isDesktop ? Border.all(color: borderColor) : null,
-          boxShadow: widget.isDesktop
-              ? [
-                  BoxShadow(
-                    color: cs.shadow.withValues(alpha: isDark ? 0.32 : 0.12),
-                    blurRadius: 28,
-                    offset: const Offset(0, 16),
-                  ),
-                ]
-              : null,
-        ),
+        key: const ValueKey('ios-time-picker-mobile-sheet'),
+        width: double.infinity,
+        margin: EdgeInsets.only(left: 12, right: 12, bottom: 12 + bottomInset),
+        decoration: BoxDecoration(color: panelColor, borderRadius: radius),
         child: ClipRRect(
           borderRadius: radius,
           child: Column(
@@ -149,18 +124,13 @@ class _IosTimeWheelPanelState extends State<_IosTimeWheelPanel> {
             children: [
               _buildHeader(context, l10n, cs),
               Padding(
-                padding: EdgeInsets.fromLTRB(
-                  widget.isDesktop ? 22 : 18,
-                  widget.isDesktop ? 18 : 12,
-                  widget.isDesktop ? 22 : 18,
-                  widget.isDesktop ? 8 : 14,
-                ),
+                padding: EdgeInsets.fromLTRB(18, 12, 18, 14),
                 child: Column(
                   children: [
                     Text(
                       selectedTime,
                       style: TextStyle(
-                        fontSize: widget.isDesktop ? 30 : 28,
+                        fontSize: 28,
                         fontWeight: AppFontWeights.emphasis,
                         letterSpacing: 0,
                         color: cs.primary,
@@ -171,15 +141,13 @@ class _IosTimeWheelPanelState extends State<_IosTimeWheelPanel> {
                   ],
                 ),
               ),
-              if (widget.isDesktop) _buildDesktopActions(context, l10n, cs),
-              if (!widget.isDesktop) _buildMobileActions(context, l10n, cs),
+              _buildMobileActions(context, l10n, cs),
             ],
           ),
         ),
       ),
     );
 
-    if (widget.isDesktop) return panel;
     return SafeArea(top: false, child: panel);
   }
 
@@ -188,23 +156,6 @@ class _IosTimeWheelPanelState extends State<_IosTimeWheelPanel> {
     AppLocalizations l10n,
     ColorScheme cs,
   ) {
-    if (widget.isDesktop) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(22, 20, 22, 14),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            widget.title,
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: AppFontWeights.emphasis,
-              color: cs.onSurface,
-            ),
-          ),
-        ),
-      );
-    }
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       child: Center(
@@ -334,37 +285,6 @@ class _IosTimeWheelPanelState extends State<_IosTimeWheelPanel> {
             ),
           );
         }),
-      ),
-    );
-  }
-
-  Widget _buildDesktopActions(
-    BuildContext context,
-    AppLocalizations l10n,
-    ColorScheme cs,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 4, 22, 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: IosTileButton(
-              label: l10n.backupPageCancel,
-              icon: lucide.Lucide.X,
-              onTap: widget.onCancel,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: IosTileButton(
-              label: l10n.backupPageSave,
-              icon: lucide.Lucide.Check,
-              backgroundColor: cs.primary,
-              foregroundColor: cs.primary,
-              onTap: _save,
-            ),
-          ),
-        ],
       ),
     );
   }

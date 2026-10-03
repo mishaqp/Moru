@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 
 import 'package:Kelivo/core/services/workspace/host_file_tools.dart';
 import 'package:Kelivo/core/services/workspace/workspace_paths.dart';
+import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 
 void main() {
   late Directory tmp;
@@ -188,5 +189,134 @@ void main() {
     final limited = await tools.grep('alpha', cwd: cwd, limit: 1);
     expect(limited.matches.length, 1);
     expect(limited.truncated, isTrue);
+  });
+
+  test(
+    'read-only mount links cannot write or edit a writable target',
+    () async {
+      final readonly = Directory(p.join(cwd, 'readonly'))..createSync();
+      final writable = Directory(p.join(cwd, 'writable'))..createSync();
+      await File(p.join(writable.path, 'source.txt')).writeAsString('original');
+      await Link(p.join(readonly.path, 'alias')).create(writable.path);
+      tools = HostFileTools(
+        WorkspacePaths.sandboxed(
+          workspaceHostRoot: cwd,
+          sessionHostDir: p.join(tmp.path, 'session'),
+          skillsHostDir: p.join(tmp.path, 'skills'),
+          externalMounts: [
+            Mount(host: readonly.path, guest: '/readonly', readOnly: true),
+          ],
+        ),
+      );
+      expect(
+        (await tools.readFile('/readonly/alias/source.txt')).text,
+        contains('original'),
+      );
+      await expectLater(
+        tools.writeFile('/readonly/alias/new.txt', 'new'),
+        throwsA(isA<HostFileException>()),
+      );
+      await expectLater(
+        tools.editFile('/readonly/alias/source.txt', 'original', 'changed'),
+        throwsA(isA<HostFileException>()),
+      );
+      expect(await File(p.join(writable.path, 'new.txt')).exists(), isFalse);
+      expect(
+        await File(p.join(writable.path, 'source.txt')).readAsString(),
+        'original',
+      );
+    },
+  );
+
+  group('real path boundary', () {
+    late Directory outside;
+
+    setUp(() async {
+      outside = Directory(p.join(tmp.path, 'outside'))..createSync();
+      final scratch = Directory(p.join(tmp.path, 'scratch'))..createSync();
+      tools = HostFileTools(
+        IOOverrides.runZoned(
+          () => WorkspacePaths.native(
+            workspaceHostRoot: cwd,
+            sessionHostDir: p.join(tmp.path, 'session'),
+            skillsHostDir: p.join(tmp.path, 'skills'),
+          ),
+          getSystemTempDirectory: () => scratch,
+        ),
+      );
+      await File(p.join(outside.path, 'secret.txt')).writeAsString('sentinel');
+      await File(p.join(outside.path, 'secret.png')).writeAsBytes([1, 2, 3]);
+      await Link(
+        p.join(cwd, 'escaped.txt'),
+      ).create(p.join(outside.path, 'secret.txt'));
+      await Link(
+        p.join(cwd, 'escaped.png'),
+      ).create(p.join(outside.path, 'secret.png'));
+      await Link(p.join(cwd, 'escaped-dir')).create(outside.path);
+    });
+
+    test('text and image file links outside all zones are rejected', () async {
+      for (final name in ['escaped.txt', 'escaped.png']) {
+        await expectLater(
+          tools.readFile(name, cwd: cwd),
+          throwsA(isA<PathResolutionException>()),
+        );
+      }
+    });
+
+    test('directory link in the middle of a read is rejected', () async {
+      await expectLater(
+        tools.readFile('escaped-dir/secret.txt', cwd: cwd),
+        throwsA(isA<PathResolutionException>()),
+      );
+    });
+
+    test('list, glob and grep cannot use an escaped directory root', () async {
+      for (final operation in [
+        () => tools.listDir('escaped-dir', depth: 3, cwd: cwd),
+        () => tools.glob('**/*', path: 'escaped-dir', cwd: cwd),
+        () => tools.grep('sentinel', path: 'escaped-dir', cwd: cwd),
+      ]) {
+        await expectLater(operation(), throwsA(isA<PathResolutionException>()));
+      }
+    });
+
+    test('recursive listings and searches hide escaped children', () async {
+      final listed = await tools.listDir('.', depth: 3, cwd: cwd);
+      final found = await tools.glob('**/*', cwd: cwd);
+      final matches = await tools.grep('sentinel', cwd: cwd);
+      expect(listed.entries, isEmpty);
+      expect(found.paths, isEmpty);
+      expect(matches.matches, isEmpty);
+    });
+
+    test('links inside the workspace remain readable and searchable', () async {
+      final inside = Directory(p.join(cwd, 'inside'))..createSync();
+      await File(p.join(inside.path, 'ok.txt')).writeAsString('allowed');
+      await Link(p.join(cwd, 'inside-link')).create(inside.path);
+      await Link(
+        p.join(cwd, 'ok-link.txt'),
+      ).create(p.join(inside.path, 'ok.txt'));
+      expect(
+        (await tools.readFile('ok-link.txt', cwd: cwd)).text,
+        contains('allowed'),
+      );
+      expect(
+        (await tools.readFile('inside-link/ok.txt', cwd: cwd)).text,
+        contains('allowed'),
+      );
+      expect(
+        (await tools.listDir('inside-link', cwd: cwd)).entries.single.name,
+        'ok.txt',
+      );
+      expect(
+        (await tools.glob('*.txt', path: 'inside-link', cwd: cwd)).paths,
+        isNotEmpty,
+      );
+      expect(
+        (await tools.grep('allowed', path: 'inside-link', cwd: cwd)).matches,
+        isNotEmpty,
+      );
+    });
   });
 }

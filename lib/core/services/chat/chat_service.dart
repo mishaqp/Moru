@@ -20,6 +20,7 @@ import '../backup/backup_isolate_runner.dart';
 import '../backup/backup_task_progress.dart';
 import '../../database/generation_run.dart';
 import '../../models/chat_message.dart';
+import '../../models/chat_input_data.dart';
 import '../api/providers/claude/claude_container.dart';
 import '../api/providers/claude/claude_history.dart';
 import '../api/providers/google_gemini.dart';
@@ -111,6 +112,131 @@ class ChatService extends ChangeNotifier {
   final Map<String, List<ChatMessage>> _messagesCache = {};
   final Map<String, Conversation> _conversationsCache = {};
   final Map<String, Conversation> _draftConversations = {};
+  final Set<String> _interruptedMessageIds = {};
+  final Set<String> _interruptedQueueHolds = {};
+  final Map<String, int> _queueHoldRevisions = {};
+  final Map<String, Future<void>> _queueHoldWriteTails = {};
+
+  Set<String> get interruptedMessageIds =>
+      Set.unmodifiable(_interruptedMessageIds);
+  bool isQueueHeldAfterInterruption(String conversationId) =>
+      _interruptedQueueHolds.contains(conversationId);
+
+  int queueHoldRevisionFor(String conversationId) =>
+      _queueHoldRevisions[conversationId] ?? 0;
+
+  Future<void> _writeQueueHold(
+    String conversationId,
+    Future<void> Function() operation,
+  ) {
+    final previous = _queueHoldWriteTails[conversationId];
+    final next = previous == null
+        ? Future<void>.sync(operation)
+        : previous.then((_) => operation());
+    late final Future<void> tail;
+    tail = next
+        .then<void>((_) {}, onError: (Object _, StackTrace _) {})
+        .whenComplete(() {
+          if (identical(_queueHoldWriteTails[conversationId], tail)) {
+            _queueHoldWriteTails.remove(conversationId);
+          }
+        });
+    _queueHoldWriteTails[conversationId] = tail;
+    return next;
+  }
+
+  Future<void> acknowledgeInterruptedConversation(
+    String conversationId, {
+    int? expectedHoldRevision,
+  }) {
+    final expected =
+        expectedHoldRevision ?? queueHoldRevisionFor(conversationId);
+    return _writeQueueHold(conversationId, () async {
+      if (expected != queueHoldRevisionFor(conversationId) ||
+          !_interruptedQueueHolds.contains(conversationId)) {
+        return;
+      }
+      if (!isTemporaryConversation(conversationId)) {
+        await _repo.acknowledgeInterruptedConversation(conversationId);
+      }
+      if (expected == queueHoldRevisionFor(conversationId)) {
+        _interruptedQueueHolds.remove(conversationId);
+        notifyListeners();
+      }
+    });
+  }
+
+  Future<void> holdQueuedInputsAfterRuntimeStop(String conversationId) async {
+    if (!_initialized) await init();
+    // Block claims immediately, including a writer finishing before the
+    // durable hold commits. Runtime Stop awaits this before publishing idle.
+    _queueHoldRevisions[conversationId] =
+        queueHoldRevisionFor(conversationId) + 1;
+    _interruptedQueueHolds.add(conversationId);
+    notifyListeners();
+    await _writeQueueHold(conversationId, () async {
+      if (!isTemporaryConversation(conversationId)) {
+        await _repo.holdQueuedInputsAfterRuntimeStop(conversationId);
+      }
+    });
+  }
+
+  Future<List<QueuedChatInput>> loadQueuedInputs() async {
+    if (!_initialized) await init();
+    final inputs = await _repo.allQueuedInputs();
+    final restored = <QueuedChatInput>[];
+    for (final item in inputs) {
+      if (item.isEditing) {
+        await _repo.setQueuedInputEditing(item.conversationId, item.id, false);
+      }
+      restored.add(
+        QueuedChatInput(
+          id: item.id,
+          conversationId: item.conversationId,
+          input: ChatInputData(
+            text: item.input.text,
+            imagePaths: [
+              for (final path in item.input.imagePaths)
+                SandboxPathResolver.resolveForIo(path) ?? path,
+            ],
+            documents: [
+              for (final document in item.input.documents)
+                DocumentAttachment(
+                  path:
+                      SandboxPathResolver.resolveForIo(document.path) ??
+                      document.path,
+                  fileName: document.fileName,
+                  mime: document.mime,
+                ),
+            ],
+            allowImagesApiRouting: item.input.allowImagesApiRouting,
+          ),
+        ),
+      );
+    }
+    return restored;
+  }
+
+  Future<void> putQueuedInput(QueuedChatInput item, {int? index}) =>
+      isTemporaryConversation(item.conversationId)
+      ? Future<void>.value()
+      : _repo.putQueuedInput(item, index: index);
+
+  Future<void> removeQueuedInput(QueuedChatInput item) =>
+      isTemporaryConversation(item.conversationId)
+      ? Future<void>.value()
+      : _repo.removeQueuedInput(item.conversationId, item.id);
+
+  Future<void> setQueuedInputEditing(QueuedChatInput item, bool editing) =>
+      isTemporaryConversation(item.conversationId)
+      ? Future<void>.value()
+      : _repo.setQueuedInputEditing(item.conversationId, item.id, editing);
+
+  Future<bool> isQueuedInputPending(QueuedChatInput item) async =>
+      isTemporaryConversation(item.conversationId) ||
+      (await _repo.queuedInputsForConversation(
+        item.conversationId,
+      )).any((pending) => pending.id == item.id);
   final Set<String> _temporaryConversationIds = <String>{};
   // Evicting these ids could reopen persistence races with background work.
   final Set<String> _discardedTemporaryConversationIds = <String>{};
@@ -1998,6 +2124,7 @@ class ChatService extends ChangeNotifier {
     if (conversation == null) return false;
 
     await _repo.deleteConversation(id);
+    _interruptedQueueHolds.remove(id);
     _conversationsCache.remove(id);
     // Stop any deferred/in-flight order backfill before clearing caches so a
     // late getMessageIds cannot resurrect order/count for a deleted id.
@@ -2291,6 +2418,12 @@ class ChatService extends ChangeNotifier {
   ///
   Future<void> _resetStaleStreamingFlags() async {
     await _repo.resetStaleStreamingState();
+    _interruptedMessageIds
+      ..clear()
+      ..addAll(await _repo.getInterruptedRevisionIds());
+    _interruptedQueueHolds
+      ..clear()
+      ..addAll(await _repo.unacknowledgedInterruptedConversationIds());
   }
 
   Future<void> runAssetMaintenance({DateTime? now}) async {
@@ -2557,6 +2690,8 @@ class ChatService extends ChangeNotifier {
     }
     _messagesCache.clear();
     _draftConversations.clear();
+    _interruptedMessageIds.clear();
+    _interruptedQueueHolds.clear();
     _temporaryConversationIds.clear();
     _temporaryToolEvents.clear();
     _temporaryProviderArtifacts.clear();
@@ -2812,6 +2947,126 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
   }
 
+  final Map<String, ({int stamp, Future<List<String>> uris})>
+  _recentImagesCache = {};
+
+  /// Addresses of the newest [limit] images in a chat, for the sidebar's
+  /// thumbnails. The answer is remembered until the chat changes (its
+  /// updatedAt moves on every new message), and one lookup serves every
+  /// tile that asks meanwhile.
+  Future<List<String>> recentImageUris(String conversationId, {int limit = 3}) {
+    final conversation = _conversationsCache[conversationId];
+    if (!_initialized || conversation == null) {
+      return Future<List<String>>.value(const <String>[]);
+    }
+    final stamp = conversation.updatedAt.microsecondsSinceEpoch;
+    final cached = _recentImagesCache[conversationId];
+    if (cached != null && cached.stamp == stamp) return cached.uris;
+    final uris = _repo
+        .recentImageUris(conversationId, limit: limit)
+        .catchError((Object _) => const <String>[]);
+    _recentImagesCache[conversationId] = (stamp: stamp, uris: uris);
+    return uris;
+  }
+
+  /// Extras key of the folder a conversation is in (a ChatFolder id).
+  static const String folderKey = 'folder.id';
+
+  /// The folder [conversation] is in, or null.
+  static String? folderOf(Conversation conversation) {
+    final id = conversation.extras[folderKey];
+    return id is String && id.isNotEmpty ? id : null;
+  }
+
+  /// Puts each id into folder [folderId], or out of any folder with null.
+  /// Like archiving, this is not activity: the last-message time stays.
+  /// Returns how many changed; notifies and bumps at most once.
+  Future<int> setConversationsFolder(
+    Iterable<String> ids,
+    String? folderId,
+  ) async {
+    if (!_initialized) await init();
+    var changed = 0;
+    final seen = <String>{};
+    for (final id in ids) {
+      if (id.isEmpty || !seen.add(id)) continue;
+      final conversation = _conversationsCache[id];
+      if (conversation == null || folderOf(conversation) == folderId) continue;
+      await _repo.updateConversationExtras(id, (extras) {
+        if (folderId == null) {
+          extras.remove(folderKey);
+        } else {
+          extras[folderKey] = folderId;
+        }
+        return extras;
+      }, touch: false);
+      await _refreshConversation(id);
+      changed++;
+    }
+    if (changed == 0) return 0;
+    _bumpConversationListRevision();
+    notifyListeners();
+    return changed;
+  }
+
+  /// Extras key of an archived conversation: when it was archived, in ms
+  /// since the epoch.
+  static const String archivedAtKey = 'archive.at';
+
+  /// Whether [conversation] is in the archive: hidden from the sidebar list
+  /// and from picks of the latest chat, kept with all its messages.
+  static bool isArchived(Conversation conversation) =>
+      conversation.extras[archivedAtKey] is num;
+
+  /// When [conversation] was archived, or null when it is not.
+  static DateTime? archivedAt(Conversation conversation) {
+    final at = conversation.extras[archivedAtKey];
+    return at is num ? DateTime.fromMillisecondsSinceEpoch(at.toInt()) : null;
+  }
+
+  /// Archived conversations, most recently archived first.
+  List<Conversation> getArchivedConversations() {
+    final archived = getAllConversations().where(isArchived).toList()
+      ..sort((a, b) => archivedAt(b)!.compareTo(archivedAt(a)!));
+    return archived;
+  }
+
+  /// Moves each id into the archive, or back out with [archived] false.
+  /// Unsaved drafts and unchanged items are skipped; the last-message time
+  /// stays, so a restored chat returns to its old place. Returns how many
+  /// changed; notifies and bumps at most once.
+  Future<int> setConversationsArchived(
+    Iterable<String> ids,
+    bool archived, {
+    DateTime? now,
+  }) async {
+    if (!_initialized) await init();
+    final at = (now ?? DateTime.now()).millisecondsSinceEpoch;
+    var changed = 0;
+    final seen = <String>{};
+    for (final id in ids) {
+      if (id.isEmpty || !seen.add(id)) continue;
+      final conversation = _conversationsCache[id];
+      if (conversation == null || isArchived(conversation) == archived) {
+        continue;
+      }
+      await _repo.updateConversationExtras(id, (extras) {
+        if (archived) {
+          extras[archivedAtKey] = at;
+        } else {
+          extras.remove(archivedAtKey);
+        }
+        return extras;
+      }, touch: false);
+      await _refreshConversation(id);
+      changed++;
+    }
+    if (changed == 0) return 0;
+    _bumpConversationListRevision();
+    notifyListeners();
+    return changed;
+  }
+
   /// Sets pin state to [pinned] for each id. Unchanged items are skipped.
   /// Returns how many conversations changed. Notifies and bumps at most once.
   Future<int> setConversationsPinned(Iterable<String> ids, bool pinned) async {
@@ -2972,6 +3227,7 @@ class ChatService extends ChangeNotifier {
     required List<MessagePart> userParts,
     required String modelId,
     required String providerId,
+    String? queuedInputId,
   }) async {
     if (!_initialized) await init();
     if (isTemporaryConversation(conversationId)) {
@@ -3002,8 +3258,33 @@ class ChatService extends ChangeNotifier {
       userMessage: userMessage,
       assistantMessage: assistantMessage,
       runId: const Uuid().v4(),
+      queuedInputId: queuedInputId,
     );
     await _publishGenerationBegin(result);
+    return result;
+  }
+
+  Future<GenerationBeginResult> beginContinuationGeneration({
+    required String conversationId,
+    required String assistantMessageId,
+    required String modelId,
+    required String providerId,
+  }) async {
+    if (!_initialized) await init();
+    if (isTemporaryConversation(conversationId)) {
+      throw StateError('temporary_generation_is_not_persisted');
+    }
+    final result = await _repo.beginContinuationGeneration(
+      conversationId: conversationId,
+      assistantMessageId: assistantMessageId,
+      runId: const Uuid().v4(),
+      startedAt: DateTime.now().toUtc(),
+      modelId: modelId,
+      providerId: providerId,
+    );
+    _interruptedMessageIds.remove(assistantMessageId);
+    _replaceCachedMessage(result.assistantMessage);
+    notifyListeners();
     return result;
   }
 
@@ -3362,6 +3643,12 @@ class ChatService extends ChangeNotifier {
       checkpointSeq: checkpointSeq,
       errorCode: errorCode,
     );
+    if (terminalState == GenerationRunState.interrupted) {
+      _queueHoldRevisions[message.conversationId] =
+          queueHoldRevisionFor(message.conversationId) + 1;
+      _interruptedMessageIds.add(message.id);
+      _interruptedQueueHolds.add(message.conversationId);
+    }
     if (_messageCanOwnAssets(message)) {
       await _synchronizeMessageAssetsBestEffort(message);
     }
@@ -4202,6 +4489,8 @@ class ChatService extends ChangeNotifier {
     _messagesCache.clear();
     _conversationsCache.clear();
     _draftConversations.clear();
+    _interruptedMessageIds.clear();
+    _interruptedQueueHolds.clear();
     _temporaryConversationIds.clear();
     _temporaryToolEvents.clear();
     _temporaryProviderArtifacts.clear();

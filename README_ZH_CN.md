@@ -2,15 +2,15 @@
 
 <img src="assets/app_icon.png" alt="Kelivo" width="112" />
 
-# Kelivo
+# Moru
 
-**开源的 LLM 客户端，覆盖手机与桌面。**
+**基于 [Kelivo](https://github.com/Chevey339/kelivo) 的个人 Android 专用分支。**
 
 一个应用接入所有主流模型，给模型一个能真正做事的工作区，数据始终留在你自己的设备上。
 
 <p>
-  <a href="https://github.com/Chevey339/kelivo/releases/latest"><img src="https://img.shields.io/github/v/release/Chevey339/kelivo?style=flat-square&amp;label=release" alt="Latest release" /></a>
-  <a href="https://github.com/Chevey339/kelivo/releases"><img src="https://img.shields.io/github/downloads/Chevey339/kelivo/total?style=flat-square" alt="Downloads" /></a>
+  <a href="https://github.com/mishaqp/Moru/releases/latest"><img src="https://img.shields.io/github/v/release/mishaqp/Moru?style=flat-square&amp;label=release" alt="Latest release" /></a>
+  <a href="https://github.com/mishaqp/Moru/releases"><img src="https://img.shields.io/github/downloads/mishaqp/Moru/total?style=flat-square" alt="Downloads" /></a>
   <a href="https://github.com/Chevey339/kelivo/stargazers"><img src="https://img.shields.io/github/stars/Chevey339/kelivo?style=flat-square" alt="Stars" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/Chevey339/kelivo?style=flat-square" alt="License" /></a>
   <a href="https://flutter.dev"><img src="https://img.shields.io/badge/built%20with-Flutter-02569B?style=flat-square&amp;logo=flutter&amp;logoColor=white" alt="Built with Flutter" /></a>
@@ -31,9 +31,9 @@
 
 ## 💡 简介
 
-Kelivo 是基于 Flutter 构建的跨平台 LLM 客户端，支持 Android、iOS、macOS、Windows 和 Linux。你可以填入自己的 API Key，也可以直接登录已支持的订阅账号，在同一个应用里使用 OpenAI、Gemini、Claude、DeepSeek、OpenRouter 以及任何 OpenAI 兼容服务。
+Moru 是基于 Flutter 和 Kelivo 的个人 Android 专用分支。你可以填入自己的 API Key，也可以直接登录已支持的订阅账号，在同一个应用里使用 OpenAI、Gemini、Claude、DeepSeek、OpenRouter 以及任何 OpenAI 兼容服务。
 
-Kelivo 不只是聊天。模型可以联网搜索、调用 MCP 服务器、按技能完成任务，并记住对你重要的信息。为对话绑定**工作区**后，模型还能读写文件、执行命令：在手机上运行于 Linux 沙盒中，在电脑上直接使用本机 Shell。
+Kelivo 不只是聊天。模型可以联网搜索、调用 MCP 服务器、按技能完成任务，并记住对你重要的信息。为对话绑定**工作区**后，模型还能读写文件、执行命令：在 Android 设备上运行于 PRoot/Linux 环境中。
 
 对话、设置和文件都保存在本地。Kelivo 没有自己的账号体系，需要时可以备份到 WebDAV 或 S3 兼容存储。
 
@@ -76,20 +76,15 @@ Kelivo 不只是聊天。模型可以联网搜索、调用 MCP 服务器、按�
 
 | 平台 | 获取方式 | 安装包 | 系统要求 |
 | --- | --- | --- | --- |
-| iOS / iPadOS | [App Store](https://apps.apple.com/us/app/kelivo/id6752122930) · [TestFlight](https://testflight.apple.com/join/erbGGykR)（测试版） | App Store；[Releases](https://github.com/Chevey339/kelivo/releases/latest) 另提供未签名 IPA | iOS 15.0 及以上 |
-| Android | [GitHub Releases](https://github.com/Chevey339/kelivo/releases/latest) | APK（`arm64-v8a`、`armeabi-v7a`、`x86_64`） | Android 7.0 及以上 |
-| macOS | [GitHub Releases](https://github.com/Chevey339/kelivo/releases/latest) | DMG | macOS 11.0 及以上，支持 Apple 芯片与 Intel |
-| Windows | [GitHub Releases](https://github.com/Chevey339/kelivo/releases/latest) | 安装程序（`setup.exe`）或免安装 ZIP | Windows 10 / 11 |
-| Linux | [GitHub Releases](https://github.com/Chevey339/kelivo/releases/latest) | AppImage、DEB、RPM、tar.gz | x86_64 |
-| HarmonyOS | [kelivo-ohos](https://github.com/Chevey339/kelivo-ohos) | 在独立仓库中维护 | — |
+| Android | [GitHub Releases](https://github.com/mishaqp/Moru/releases/latest) | 单个 APK（`arm64-v8a`） | Android 7.0 及以上 |
 
-官网的[下载页](https://kelivo.psycheas.top/downloads)提供同样的安装包。
+Moru 只发布 Android arm64-v8a APK，详见 [Android 范围](docs/MORU_ANDROID_ONLY.md)。
 
 ## 🧭 快速上手
 
 1. **添加模型供应商。** 打开 **设置 → 供应商**，为预置供应商填入 API Key 或添加自定义接口，然后拉取模型列表。如果使用 ChatGPT、Grok 或 Kimi Code 账号，也可以在 **添加供应商** 的 **账号登录** 页直接登录。
 2. **开始对话。** 在输入栏选择模型；联网搜索、MCP 服务器、工具和思维链强度也在输入栏中按对话开启。
-3. **让模型处理文件（可选）。** 打开 **设置 → 工作区与环境** 新建工作区，再在对话中绑定。Android 和 iOS 需要先在同一页面安装 Linux 环境；iOS 的环境随应用内置，无需下载。
+3. **让模型处理文件（可选）。** 打开 **设置 → 工作区与环境** 新建工作区，再在对话中绑定。请先在同一页面安装 Android Linux 环境。
 
 [使用手册](https://kelivo.psycheas.top/guide)详细介绍了添加模型、记忆、世界书等功能的用法。
 
@@ -109,15 +104,14 @@ Kelivo 不只是聊天。模型可以联网搜索、调用 MCP 服务器、按�
 ### 🤖 智能体与工作区
 
 - **工作区**：为对话绑定工作区后，模型可以使用 `shell`、`read_file`、`write_file`、`edit_file`、`list_dir`、`glob` 和 `grep` 七个工具。命令输出实时显示，文件修改以 diff 呈现；Shell 命令可以设为需要审批，按单条命令批准或在本次会话中全部允许。
-- **手机上的 Linux 沙盒**：Android 通过 PRoot 运行 Ubuntu、Debian 或 Alpine Linux，也可以导入自己的 rootfs 镜像；iOS 内置基于 iSH 的 Alpine Linux，无需额外下载。可在应用内安装 Python、Node.js、Git、SSH 等常用工具，并通过测速为 apt/apk、pip 和 npm 选择最快的镜像源。
-- **桌面端原生运行**：在 macOS、Windows 和 Linux 上，工具直接在系统 Shell 中运行，工作区可以是应用托管的文件夹，也可以链接电脑上的任意文件夹。
-- **文件与终端**：内置文件浏览器，可预览 Markdown、HTML、CSV、图片和文本。手机端提供应用内终端，桌面端可在系统终端中打开工作区。手机端还可以把最多 10 个外部文件夹以只读或读写方式挂载到沙盒中。
+- **手机上的 Linux 沙盒**：Android 通过 PRoot 运行 Ubuntu、Debian 或 Alpine Linux，也可以导入自己的 rootfs 镜像。可在应用内安装 Python、Node.js、Git、SSH 等常用工具，并通过测速为 apt/apk、pip 和 npm 选择最快的镜像源。
+- **文件与终端**：内置文件浏览器，可预览 Markdown、HTML、CSV、图片和文本。Android 提供应用内 PTY 终端，还可以把最多 10 个外部文件夹以只读或读写方式挂载到沙盒中。
 - **环境变量**：所有工作区共享，并可防止变量值出现在命令输出中。
 - **技能**：技能是包含 `SKILL.md` 的文件夹，可以通过粘贴 Markdown、导入 `.md` 或 `.zip` 文件、填写 GitHub 链接添加，并按助手或按对话启用。内置的 *skill-creator* 技能可以帮助模型编写新技能。
-- **MCP**：通过 Streamable HTTP、SSE 或 STDIO 连接 Model Context Protocol 服务器，支持 OAuth 登录、JSON 导入和按工具审批，并内置 fetch 服务器。STDIO 服务器在桌面端原生运行，在手机端运行于 Linux 沙盒中。
+- **MCP**：通过 Streamable HTTP、SSE 或 STDIO 连接 Model Context Protocol 服务器，支持 OAuth 登录、JSON 导入和按工具审批，并内置 fetch 服务器。STDIO 服务器在 Android Linux 环境中运行。
 - **向用户提问**：模型可以暂停下来，用选择题或开放式问题向你确认，再根据回答继续。
-- **设备工具**：时间、剪贴板、计算器和文本转语音全平台可用；日历和定位支持 Android 与 iOS；屏幕使用时间支持 Android；天气、提醒事项和 Apple 健康数据支持 iOS。
-- **定时任务**：按计划让指定助手执行提示词，例如每天早上的简报，结果保存为对话。支持 Android 和桌面端。
+- **设备工具**：Android 支持时间、剪贴板、计算器、文本转语音、日历、定位和屏幕使用时间。
+- **定时任务**：按计划让指定助手执行提示词，例如每天早上的简报，结果保存为对话。支持 Android。
 
 ### 🧩 助手、记忆与上下文
 
@@ -160,40 +154,33 @@ Kelivo 不只是聊天。模型可以联网搜索、调用 MCP 服务器、按�
 
 ### 🔗 系统集成
 
-- **手机端**：生成可在后台持续进行，并在完成时通知；iOS 支持实时活动，Android 支持实时通知和任务悬浮窗。可以从其他应用分享文本和文件到 Kelivo，Android 上还能通过文本选择菜单直接发送选中的文字。
-- **桌面端**：多栏布局、可自定义的快捷键（包括显示/隐藏 Kelivo 的全局快捷键）、系统托盘、拖拽添加附件，并在重新启动后恢复窗口大小与位置。
+- **手机端**：生成可在后台持续进行，并在完成时通知；Android 支持实时通知和任务悬浮窗。可以从其他应用分享文本和文件到 Kelivo，Android 上还能通过文本选择菜单直接发送选中的文字。
+- **Android 宽屏**：平板、折叠屏和横屏继续使用多栏布局，并支持外接键盘和指针。
 
-## 📊 平台差异
+## 📊 Android 功能
 
-大部分功能在各平台上一致，以下能力取决于操作系统：
-
-| 能力 | Android | iOS | macOS / Windows / Linux |
-| --- | --- | --- | --- |
-| 工作区运行环境 | Linux 沙盒（PRoot） | Linux 沙盒（iSH） | 本机 Shell |
-| Linux 发行版 | Ubuntu、Debian、Alpine 或导入的 rootfs | Alpine（内置） | — |
-| 终端 | 应用内终端 | 应用内终端 | 系统终端 |
-| 访问外部文件夹 | 最多挂载 10 个文件夹 | 最多挂载 10 个文件夹 | 链接任意本地文件夹 |
-| STDIO 类型的 MCP | 在沙盒中运行 | 在沙盒中运行 | 本机运行 |
-| 定时任务 | ✓ | — | ✓ |
-| 后台生成 | 常驻通知、实时通知、任务悬浮窗 | 增强后台运行、实时活动 | Kelivo 运行期间 |
-| 平台专属设备工具 | 日历、定位、屏幕使用时间 | 日历、定位、天气、提醒事项、健康数据 | — |
-| 全局快捷键与系统托盘 | — | — | ✓ |
-
-桌面端的工作区命令以当前用户的权限运行，没有沙盒隔离。对于存放重要文件的工作区，建议保持命令审批开启。
+| 能力 | Android |
+| --- | --- |
+| 工作区运行环境 | PRoot/Linux 环境 |
+| Linux 发行版 | Ubuntu、Debian、Alpine 或导入的 rootfs |
+| 终端 | 应用内 PTY |
+| 访问外部文件夹 | 最多挂载 10 个文件夹 |
+| STDIO 类型的 MCP | 在 Linux 环境中运行 |
+| 定时任务 | 支持 |
+| 后台生成 | 常驻通知、实时通知、任务悬浮窗 |
+| 布局 | 手机和平板等 Android 宽屏 |
 
 ## 🔧 从源码构建
 
 **环境要求**
 
 - Flutter 3.44.9 及以上（Dart 3.12）
-- 目标平台的工具链：Android SDK、Xcode，或安装了“使用 C++ 的桌面开发”工作负载的 Visual Studio
-- 仅 Linux（Debian/Ubuntu 包名）：`clang cmake ninja-build pkg-config libgtk-3-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libkeybinder-3.0-dev libayatana-appindicator3-dev`
-- 仅 iOS：`brew install meson ninja llvm lld`。Xcode 构建时会自动编译 iSH 沙盒并准备 Alpine Linux 镜像。
+- Android SDK 和 JDK，详见 [AGENTS.md](AGENTS.md)。
 - 仅 Android：需要 `python3`、`curl` 和 `tar`。Gradle 构建时会自动下载 PRoot 二进制文件。
 
 ```bash
-git clone https://github.com/Chevey339/kelivo.git
-cd kelivo
+git clone https://github.com/mishaqp/Moru.git
+cd Moru
 flutter pub get
 flutter run
 ```
@@ -206,25 +193,24 @@ flutter run
 
 ```bash
 dart format lib test
-dart analyze --fatal-infos lib test
+dart analyze --fatal-infos lib test integration_test
 flutter test
 ```
 
 - **问题反馈与功能建议**：请使用 [Issue 模板](https://github.com/Chevey339/kelivo/issues/new/choose)。
-- **界面改动**：遵循 [AGENTS.md](AGENTS.md) 中的 UI 规范，新页面需要分别提供手机端和桌面端布局。
+- **界面改动**：遵循 [AGENTS.md](AGENTS.md) 中的 UI 规范，保留 Android 手机和宽屏布局。
 - **本地化**：文案位于 [`lib/l10n`](lib/l10n)，以 `app_en.arb` 为模板。修改后运行 `flutter gen-l10n`，并一同提交生成的文件。
 - **交流讨论**：欢迎加入 [Discord](https://discord.gg/Tb8DyvvV5T) 或 [QQ 群](https://qm.qq.com/q/OQaXetKssC)。
 
 ## 🙏 致谢
 
 - [RikkaHub](https://github.com/re-ovo/rikkahub)：Kelivo 的界面设计深受其优美而实用的设计启发。
-- [Minis](https://github.com/OpenMinis/OpenMinis)：iOS 端的 Linux 沙盒基于其 [iSH-ARM64](https://github.com/OpenMinis/ish-arm64) 移植构建，工作区的许多设计也参考了 Minis。
-- [iSH](https://github.com/ish-app/ish)：iOS 沙盒所基于的上游 iOS Linux Shell 项目。
+- [Minis](https://github.com/OpenMinis/OpenMinis)：Kelivo 工作区的部分设计参考了 Minis。
 - [PRoot](https://github.com/termux/proot) 与 [Termux](https://termux.dev)：Android Linux 沙盒的基础。
 - [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)：提供离线语音识别。
 - Kelivo 依赖的所有开源软件包，详见 [`pubspec.yaml`](pubspec.yaml)。
 
-沙盒组件的完整第三方声明见 [`ios/sandbox/NOTICE`](ios/sandbox/NOTICE) 和 [`android/app/src/main/jniLibs/NOTICE`](android/app/src/main/jniLibs/NOTICE)。
+Android 沙盒组件的完整第三方声明见 [`android/app/src/main/jniLibs/NOTICE`](android/app/src/main/jniLibs/NOTICE)。
 
 ## ⭐ Star History
 

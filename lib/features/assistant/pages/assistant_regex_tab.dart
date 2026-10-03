@@ -190,7 +190,6 @@ class _AssistantRegexTabState extends State<AssistantRegexTab> {
                     onTap: () => _addOrEdit(rule: rule),
                     onDelete: () => _deleteRule(rule),
                     onToggle: (v) => _toggleRule(rule, v),
-                    desktop: false,
                   ),
                 ),
               ),
@@ -214,233 +213,24 @@ class _AssistantRegexTabState extends State<AssistantRegexTab> {
   }
 }
 
-class AssistantRegexDesktopPane extends StatefulWidget {
-  const AssistantRegexDesktopPane({super.key, required this.assistantId});
-  final String assistantId;
-
-  @override
-  State<AssistantRegexDesktopPane> createState() =>
-      _AssistantRegexDesktopPaneState();
-}
-
-class _AssistantRegexDesktopPaneState extends State<AssistantRegexDesktopPane> {
-  List<AssistantRegexScope> _normalizeScopes(
-    Iterable<AssistantRegexScope> scopes,
-  ) {
-    final set = {...scopes};
-    return AssistantRegexScope.values
-        .where((e) => set.contains(e))
-        .toList(growable: false);
-  }
-
-  void _reorder(int oldIndex, int newIndex) {
-    final ap = context.read<AssistantProvider>();
-    final assistant = ap.getById(widget.assistantId);
-    if (assistant == null) return;
-    ap.reorderAssistantRegex(
-      assistantId: widget.assistantId,
-      oldIndex: oldIndex,
-      newIndex: newIndex,
-    );
-  }
-
-  Future<void> _toggleRule(AssistantRegex rule, bool enabled) async {
-    final ap = context.read<AssistantProvider>();
-    final assistant = ap.getById(widget.assistantId);
-    if (assistant == null) return;
-    final list = assistant.regexRules.map((r) {
-      if (r.id == rule.id) return r.copyWith(enabled: enabled);
-      return r;
-    }).toList();
-    await ap.updateAssistant(assistant.copyWith(regexRules: list));
-  }
-
-  Future<void> _deleteRule(AssistantRegex rule) async {
-    final ap = context.read<AssistantProvider>();
-    final assistant = ap.getById(widget.assistantId);
-    if (assistant == null) return;
-    final list = List<AssistantRegex>.of(assistant.regexRules)
-      ..removeWhere((r) => r.id == rule.id);
-    await ap.updateAssistant(assistant.copyWith(regexRules: list));
-  }
-
-  Future<void> _addOrEdit({AssistantRegex? rule}) async {
-    final ap = context.read<AssistantProvider>();
-    final data = await _showRegexEditor(context, rule: rule);
-    if (data == null) return;
-    final assistant = ap.getById(widget.assistantId);
-    if (assistant == null) return;
-    final list = List<AssistantRegex>.of(assistant.regexRules);
-    final updated = AssistantRegex(
-      id: rule?.id ?? const Uuid().v4(),
-      name: data.name,
-      pattern: data.pattern,
-      replacement: data.replacement,
-      scopes: _normalizeScopes(data.scopes),
-      visualOnly: data.visualOnly,
-      replaceOnly: data.replaceOnly,
-      enabled: rule?.enabled ?? true,
-    );
-    if (rule == null) {
-      list.add(updated);
-    } else {
-      final idx = list.indexWhere((r) => r.id == rule.id);
-      if (idx == -1) {
-        list.add(updated);
-      } else {
-        list[idx] = updated;
-      }
-    }
-    await ap.updateAssistant(assistant.copyWith(regexRules: list));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final assistant = context.watch<AssistantProvider>().getById(
-      widget.assistantId,
-    );
-    if (assistant == null) return const SizedBox.shrink();
-    final rules = assistant.regexRules;
-
-    return Container(
-      alignment: Alignment.topCenter,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.assistantEditPageRegexTab,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: AppFontWeights.emphasis,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        l10n.assistantEditRegexDescription,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: cs.onSurface.withValues(alpha: 0.65),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IosCardPress(
-                  onTap: () => _addOrEdit(),
-                  borderRadius: BorderRadius.circular(12),
-                  baseColor: cs.primary.withValues(alpha: isDark ? 0.18 : 0.12),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  pressedBlendStrength: 0.18,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Lucide.Plus, size: 16, color: cs.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        l10n.assistantEditAddRegexButton,
-                        style: TextStyle(
-                          color: cs.primary,
-                          fontWeight: AppFontWeights.emphasis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: rules.isEmpty
-                ? Center(
-                    child: Text(
-                      l10n.assistantEditRegexDescription,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: cs.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  )
-                : ReorderableListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                    itemCount: rules.length,
-                    buildDefaultDragHandles: false,
-                    proxyDecorator: (child, index, animation) {
-                      return AnimatedBuilder(
-                        animation: animation,
-                        builder: (context, _) {
-                          final t = Curves.easeOut.transform(animation.value);
-                          return Transform.scale(
-                            scale: 0.985 + 0.015 * t,
-                            child: child,
-                          );
-                        },
-                      );
-                    },
-                    onReorderItem: _reorder,
-                    itemBuilder: (context, index) {
-                      final rule = rules[index];
-                      return KeyedSubtree(
-                        key: ValueKey('assistant-regex-desktop-${rule.id}'),
-                        child: ReorderableDragStartListener(
-                          index: index,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _RegexRuleCard(
-                              rule: rule,
-                              onTap: () => _addOrEdit(rule: rule),
-                              onDelete: () => _deleteRule(rule),
-                              onToggle: (v) => _toggleRule(rule, v),
-                              desktop: true,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _RegexRuleCard extends StatefulWidget {
   const _RegexRuleCard({
     required this.rule,
     required this.onTap,
     required this.onDelete,
     required this.onToggle,
-    required this.desktop,
   });
 
   final AssistantRegex rule;
   final VoidCallback onTap;
   final VoidCallback onDelete;
   final ValueChanged<bool> onToggle;
-  final bool desktop;
 
   @override
   State<_RegexRuleCard> createState() => _RegexRuleCardState();
 }
 
 class _RegexRuleCardState extends State<_RegexRuleCard> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -450,13 +240,9 @@ class _RegexRuleCardState extends State<_RegexRuleCard> {
     final borderBase = cs.outlineVariant.withValues(
       alpha: isDark ? 0.08 : 0.06,
     );
-    final borderColor = widget.desktop && _hovered
-        ? cs.primary.withValues(alpha: 0.55)
-        : borderBase;
+    final borderColor = borderBase;
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
       child: IosCardPress(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(14),
@@ -840,7 +626,6 @@ Future<_RegexFormData?> _showRegexBottomSheet(
                                       }
                                     });
                                   },
-                                  desktop: false,
                                 ),
                                 _ScopeChoiceCard(
                                   label: l10n.assistantRegexScopeAssistant,
@@ -862,7 +647,6 @@ Future<_RegexFormData?> _showRegexBottomSheet(
                                       }
                                     });
                                   },
-                                  desktop: false,
                                 ),
                                 _ScopeChoiceCard(
                                   label: l10n.assistantRegexScopeVisualOnly,
@@ -873,7 +657,6 @@ Future<_RegexFormData?> _showRegexBottomSheet(
                                       if (visualOnly) replaceOnly = false;
                                     });
                                   },
-                                  desktop: false,
                                 ),
                                 _ScopeChoiceCard(
                                   label: l10n.assistantRegexScopeReplaceOnly,
@@ -884,7 +667,6 @@ Future<_RegexFormData?> _showRegexBottomSheet(
                                       if (replaceOnly) visualOnly = false;
                                     });
                                   },
-                                  desktop: false,
                                 ),
                               ],
                             ),
@@ -953,21 +735,17 @@ class _ScopeChoiceCard extends StatefulWidget {
     required this.label,
     required this.selected,
     required this.onTap,
-    required this.desktop,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  final bool desktop;
 
   @override
   State<_ScopeChoiceCard> createState() => _ScopeChoiceCardState();
 }
 
 class _ScopeChoiceCardState extends State<_ScopeChoiceCard> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -978,15 +756,13 @@ class _ScopeChoiceCardState extends State<_ScopeChoiceCard> {
     final borderBase = widget.selected
         ? cs.primary.withValues(alpha: 0.55)
         : cs.outlineVariant.withValues(alpha: isDark ? 0.14 : 0.12);
-    final borderColor = (widget.desktop && _hovered) ? cs.primary : borderBase;
+    final borderColor = borderBase;
     final fg = widget.selected
         ? cs.primary
         : cs.onSurface.withValues(alpha: 0.8);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,

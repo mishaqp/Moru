@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/assistant.dart';
@@ -13,12 +14,14 @@ import '../../../core/providers/memory_provider_v2.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/tts_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
+import '../../../core/services/api/tool_call_cancellation.dart';
 import '../../../core/services/api/json_schema_utils.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/mcp/mcp_tool_service.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
 import '../../../core/services/memory/memory_tools.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
+import '../../../core/services/logging/problem_report_service.dart';
 import '../../../core/services/scheduled_tasks_service.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import '../../../core/services/tools/tool_schema_overrides.dart';
@@ -29,14 +32,20 @@ import '../../../core/services/workspace/workspace_runtime.dart';
 import '../../../core/services/workspace/workspace_tools_service.dart';
 import '../../../core/providers/workspace_provider.dart';
 import '../../../core/services/browser/browser_agent_session.dart';
+import '../../../core/services/browser/browser_cookie_export.dart';
 import '../../mini_apps/mini_app_checker.dart';
+import '../../mini_apps/mini_app_launcher.dart';
 import 'ask_user_interaction_service.dart';
 import 'assistant_manager_tool.dart';
+import 'browser_agent_tool.dart';
 import 'built_in_tool_names.dart';
 import 'local_tools_service.dart';
 import 'mini_app_data_tool.dart';
+import 'root_phone_control.dart';
+import 'root_shell_tool.dart';
 import 'scheduled_task_tool.dart';
 import 'tool_approval_service.dart';
+import '../../../core/services/acp/acp_agent_manager.dart';
 
 /// 工具调用处理服务
 ///
@@ -83,7 +92,20 @@ class ToolHandlerService {
             workspaces.byId(id)?.isToolEnabled(name) ?? false,
         plans: _optional<TaskPlanRegistry>(),
         checkMiniApp: defaultTargetPlatform == TargetPlatform.android
-            ? MiniAppChecker.run
+            ? (app) {
+                final environment = contextProvider
+                    .read<EnvironmentProvider?>();
+                return MiniAppChecker.run(
+                  app,
+                  jobs: MiniAppLauncher.jobs,
+                  serverEnvironment: environment == null
+                      ? null
+                      : MiniAppLauncher.serverEnvironment(
+                          contextProvider.read<WorkspaceRuntimeProvider>(),
+                          environment,
+                        ),
+                );
+              }
             : null,
       );
     } catch (_) {
@@ -448,6 +470,14 @@ class ToolHandlerService {
       return '${name}_${DateTime.now().microsecondsSinceEpoch}';
     }
 
+    void ensureLiveToolCall() {
+      ToolCallCancellation.current?.throwIfCancelled();
+      final owner = ToolApprovalOwner.current;
+      if (owner != null && !owner.isActive()) {
+        throw StateError('tool_call_cancelled');
+      }
+    }
+
     Future<Object?> approveAndExecuteMcp(
       String name,
       Map<String, dynamic> args, {
@@ -477,6 +507,7 @@ class ToolHandlerService {
         }
       }
 
+      ensureLiveToolCall();
       return toolSvc.callToolForAssistant(
         mcp,
         assistantProvider,
@@ -492,6 +523,7 @@ class ToolHandlerService {
 
     return (name, args, {toolCallId}) async {
       try {
+        ensureLiveToolCall();
         if (workspaceContext != null &&
             workspaceTools != null &&
             WorkspaceToolsService.toolNames.contains(name)) {
@@ -523,6 +555,7 @@ class ToolHandlerService {
           assistant,
           conversationId: conversationId,
         );
+        ensureLiveToolCall();
         if (memoryResult != null) {
           return memoryResult;
         }
@@ -543,7 +576,8 @@ class ToolHandlerService {
 
         // Mutating device tools and Shared Browser click/type actions modify
         // user-visible state, so they require explicit approval first.
-        if (LocalToolNames.requiresApprovalFor(name, args) &&
+        if (name != LocalToolNames.reportProblem &&
+            LocalToolNames.requiresApprovalFor(name, args) &&
             assistant != null &&
             LocalToolsService.isEnabledForAssistant(name, assistant) &&
             approvalService != null) {
@@ -560,6 +594,7 @@ class ToolHandlerService {
             arguments: args,
             conversationId: conversationId,
           );
+          ensureLiveToolCall();
           if (!approval.approved) {
             return _toolError(
               error: 'approval_denied',
@@ -582,6 +617,60 @@ class ToolHandlerService {
               tool: name,
             );
           }
+        }
+
+        if (name == LocalToolNames.reportProblem) {
+          bool isEnabled() {
+            final current = assistant == null
+                ? null
+                : assistantProvider.getById(assistant.id);
+            return current != null &&
+                LocalToolsService.isEnabledForAssistant(name, current) &&
+                LocalToolsService.isAvailableOnThisPlatform(name);
+          }
+
+          if (!isEnabled()) {
+            return _toolError(
+              error: 'permission_denied',
+              message: 'Problem reports are disabled for this assistant.',
+              tool: name,
+            );
+          }
+          if (approvalService == null) {
+            return _toolError(
+              error: 'approval_unavailable',
+              message: 'A problem report requires the user\'s confirmation.',
+              tool: name,
+            );
+          }
+          final approval = await approvalService.requestApproval(
+            toolCallId: approvalIdFor(name, toolCallId),
+            toolName: name,
+            arguments: const {},
+            conversationId: conversationId,
+          );
+          ensureLiveToolCall();
+          if (!approval.approved) {
+            return _toolError(
+              error: 'approval_denied',
+              message: approval.denyReason ?? 'User denied the tool call',
+              tool: name,
+            );
+          }
+          if (!isEnabled()) {
+            return _toolError(
+              error: 'permission_denied',
+              message: 'Problem reports are disabled for this assistant.',
+              tool: name,
+            );
+          }
+          return jsonEncode(
+            await ProblemReportService().create(
+              settings: settings,
+              environment: _optional<EnvironmentProvider>(),
+              checkCancelled: ensureLiveToolCall,
+            ),
+          );
         }
 
         if (name == LocalToolNames.assistantManager &&
@@ -637,10 +726,58 @@ class ToolHandlerService {
           ).execute(args);
         }
 
+        if (name == LocalToolNames.rootShell &&
+            assistant != null &&
+            LocalToolsService.isEnabledForAssistant(name, assistant)) {
+          // Commands that change anything are approved first; a caller
+          // without the prompt (e.g. a background run) may only read. The
+          // permission is read again so turning it off stops a tool loop.
+          final current = assistantProvider.getById(assistant.id);
+          if (current == null || !current.localToolIds.contains(name)) {
+            return _toolError(
+              error: 'permission_denied',
+              message: 'Root commands are disabled for this assistant.',
+              tool: name,
+            );
+          }
+          if (approvalService == null &&
+              LocalToolNames.requiresApprovalFor(name, args)) {
+            return _toolError(
+              error: 'approval_unavailable',
+              message:
+                  'Root commands that change something need the user\'s '
+                  'confirmation, which is not available here.',
+              tool: name,
+            );
+          }
+          return const RootShellTool().execute(args);
+        }
+
         if (name == LocalToolNames.miniApps &&
             assistant != null &&
             LocalToolsService.isEnabledForAssistant(name, assistant)) {
-          return MiniAppDataTool(store: MiniAppStore.instance).execute(args);
+          // Deleting is only done after the approval prompt above; a caller
+          // without one (e.g. a background run) may not delete.
+          if (approvalService == null &&
+              MiniAppDataTool.requiresApproval(args)) {
+            return _toolError(
+              error: 'approval_unavailable',
+              message:
+                  'Deleting mini apps or jobs needs the user\'s confirmation, '
+                  'which is not available here.',
+              tool: name,
+            );
+          }
+          return MiniAppDataTool(
+            store: MiniAppStore.instance,
+            jobs: MiniAppLauncher.jobs,
+            serverStatus: MiniAppLauncher.servers.status,
+          ).execute(args);
+        }
+
+        if (name == LocalToolNames.browserUse &&
+            '${args['action']}'.trim().toLowerCase() == 'export_cookies') {
+          return _exportBrowserCookies(conversationId, approvalService);
         }
 
         // Local tools
@@ -670,6 +807,23 @@ class ToolHandlerService {
           },
         );
         if (localResult != null) {
+          if (name == LocalToolNames.phoneControl &&
+              assistant != null &&
+              RootPhoneControl.accessibilityUnavailable(localResult) &&
+              (assistantProvider
+                      .getById(assistant.id)
+                      ?.localToolIds
+                      .contains(LocalToolNames.rootShell) ??
+                  false)) {
+            // Accessibility is off; root can still read and drive the screen.
+            return RootPhoneControl(
+              setClipboard: (text) =>
+                  Clipboard.setData(ClipboardData(text: text)),
+            ).execute(args);
+          }
+          if (name == LocalToolNames.browserUse) {
+            return BrowserAgentTool.forModel(localResult);
+          }
           return localResult;
         }
 
@@ -716,6 +870,14 @@ class ToolHandlerService {
     };
   }
 
+  AcpAgentManager? _agentManager() {
+    try {
+      return contextProvider.read<AcpAgentManager>();
+    } on ProviderNotFoundException {
+      return null;
+    }
+  }
+
   AssistantManagerCatalog _assistantManagerCatalog(
     SettingsProvider settings,
     McpProvider mcp,
@@ -757,12 +919,68 @@ class ToolHandlerService {
             in contextProvider.read<WorkspaceProvider>().workspaces)
           AssistantManagerOption(id: workspace.id, name: workspace.name),
       ],
+      agents: [
+        if (_agentManager() case final agents?)
+          for (final spec in agents.agents)
+            AssistantManagerOption(
+              id: spec.id,
+              name: spec.name,
+              enabled: agents.state(spec.id) == AcpInstallState.installed,
+            ),
+      ],
       localToolIds: [
         for (final id in LocalToolNames.all)
           if (LocalToolsService.isAvailableOnThisPlatform(id) &&
               id != LocalToolNames.browserUse)
             id,
       ],
+    );
+  }
+
+  /// browser_use export_cookies: the open site's cookies as a file in the
+  /// chat folder of the conversation's workspace, for the terminal. Only
+  /// after the user's approval, which [handleToolCall] asked for already.
+  Future<String> _exportBrowserCookies(
+    String? conversationId,
+    ToolApprovalService? approvalService,
+  ) async {
+    if (approvalService == null) {
+      return _toolError(
+        error: 'approval_unavailable',
+        message:
+            'Exporting cookies needs the user\'s confirmation, which is not '
+            'available here.',
+        tool: LocalToolNames.browserUse,
+      );
+    }
+    final session = BrowserAgentSession.instance;
+    if (!session.isAttached) {
+      return _toolError(
+        error: 'browser_not_open',
+        message: 'Open the site in the browser first.',
+        tool: LocalToolNames.browserUse,
+      );
+    }
+    final ctx = await WorkspaceToolsService.resolve(
+      conversationId: conversationId,
+      workspaceProvider: contextProvider.read<WorkspaceProvider>(),
+      runtimeProvider: contextProvider.read<WorkspaceRuntimeProvider>(),
+      chatService: contextProvider.read<ChatService>(),
+    );
+    if (ctx == null) {
+      return _toolError(
+        error: 'workspace_required',
+        message:
+            'Cookies go to the terminal of a workspace; this chat has none.',
+        tool: LocalToolNames.browserUse,
+      );
+    }
+    return jsonEncode(
+      await BrowserCookieExport.export(
+        pageUrl: await session.controller?.currentUrl(),
+        hostDir: ctx.sessionDir,
+        modelDir: ctx.paths.modelSessionDir,
+      ),
     );
   }
 

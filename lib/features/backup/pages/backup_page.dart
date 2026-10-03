@@ -1405,53 +1405,21 @@ class _BackupPageState extends State<BackupPage> {
 
     try {
       if (!context.mounted) return;
-      final isMobile = Platform.isAndroid;
-      if (isMobile) {
-        try {
-          final saved = await NativeFileSave.saveFileFromPath(
-            sourcePath: exported.path,
-            fileName: exported.uri.pathSegments.last,
-          );
-          if (saved && context.mounted) {
-            await context
-                .read<BackupReminderProvider>()
-                .recordBackupCompleted();
-          }
-        } catch (e) {
-          if (!context.mounted) return;
-          showAppSnackBar(
-            context,
-            message: e.toString(),
-            type: NotificationType.error,
-          );
-        }
-      } else {
-        final savePath = await FilePicker.platform.saveFile(
-          dialogTitle: l10n.backupPageExportToFile,
+      try {
+        final saved = await NativeFileSave.saveFileFromPath(
+          sourcePath: exported.path,
           fileName: exported.uri.pathSegments.last,
-          type: FileType.custom,
-          allowedExtensions: ['zip'],
         );
-        if (savePath != null) {
-          try {
-            await File(savePath).parent.create(recursive: true);
-            await exported.copy(savePath);
-            if (context.mounted) {
-              await context
-                  .read<BackupReminderProvider>()
-                  .recordBackupCompleted();
-            }
-          } catch (e) {
-            // A full disk or unwritable target must not look like a
-            // successful export.
-            if (!context.mounted) return;
-            showAppSnackBar(
-              context,
-              message: e.toString(),
-              type: NotificationType.error,
-            );
-          }
+        if (saved && context.mounted) {
+          await context.read<BackupReminderProvider>().recordBackupCompleted();
         }
+      } catch (e) {
+        if (!context.mounted) return;
+        showAppSnackBar(
+          context,
+          message: e.toString(),
+          type: NotificationType.error,
+        );
       }
     } finally {
       await DataSync.cleanupTemporaryBackupFile(file);

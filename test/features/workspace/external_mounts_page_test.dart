@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:Kelivo/core/services/workspace/workspace_file_access.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -197,6 +198,63 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'delete unlinks a stale readonly or dangling link without following it',
+    (tester) async {
+      final writable = Directory.systemTemp.createTempSync(
+        'file_browser_unlink_',
+      );
+      addTearDown(() => writable.deleteSync(recursive: true));
+      final inside = File('${writable.path}/inside.txt')
+        ..writeAsStringSync('inside');
+      for (final dangling in [false, true]) {
+        final link = Link('${writable.path}/safe-link.txt')
+          ..createSync(inside.path);
+        await showPage(
+          tester,
+          home: Scaffold(
+            body: FileBrowser(
+              root: writable,
+              rootLabel: 'Workspace',
+              modelPathOf: (path) => path,
+            ),
+          ),
+        );
+        await tester.runAsync(
+          tester
+              .state<FileBrowserState>(find.byType(FileBrowser))
+              .refreshEntries,
+        );
+        await tester.pump();
+        expect(
+          find.byKey(FileBrowser.itemKey('safe-link.txt')),
+          findsOneWidget,
+        );
+        // Keep the listed entry, but change the target before Delete is pressed.
+        await tester.runAsync(
+          () => link.update(
+            '${root.path}/${dangling ? 'missing.txt' : 'note.txt'}',
+          ),
+        );
+        final state = tester.state<FileBrowserState>(find.byType(FileBrowser));
+        await tester.runAsync(
+          () => state.runMutation(
+            DeleteMutation(rootPath: writable.path, hostPath: link.path),
+          ),
+        );
+        await tester.pump();
+        expect(
+          FileSystemEntity.typeSync(link.path, followLinks: false),
+          FileSystemEntityType.notFound,
+        );
+        expect(File('${root.path}/note.txt').readAsStringSync(), 'hello');
+        expect(inside.readAsStringSync(), 'inside');
+        expect(tester.takeException(), isNull);
+      }
+      debugDefaultTargetPlatformOverride = null;
+    },
+  );
+
   for (final externalPage in [true, false]) {
     testWidgets('browser protects readonly aliases, external=$externalPage', (
       tester,
@@ -205,30 +263,38 @@ void main() {
         'kelivo-mount-browser-',
       );
       addTearDown(() => writable.deleteSync(recursive: true));
-      Link('${writable.path}/alias').createSync(root.path);
+      // The alias stays inside the browser's allowed root, while the target
+      // is also registered as read-only. An outside alias is hidden separately.
+      final readonly =
+          externalPage ? root : Directory('${writable.path}/readonly')
+            ..createSync();
+      File('${readonly.path}/note.txt').writeAsStringSync('hello');
+      Link('${writable.path}/alias').createSync(readonly.path);
       harness.handler = (call) {
         if (call.method == 'resolveDirectory') {
           final token = (call.arguments as Map)['token'];
           return {
-            'path': token == 'writable' ? writable.path : root.path,
+            'path': token == 'writable' ? writable.path : readonly.path,
             'token': token,
           };
         }
         return null;
       };
-      await tester.runAsync(
-        () => provider.add(
-          WorkspaceDirectory(
-            path: writable.path,
-            access: const WorkspaceDirectoryAccess(
-              platform: 'android',
-              token: 'writable',
+      if (externalPage) {
+        await tester.runAsync(
+          () => provider.add(
+            WorkspaceDirectory(
+              path: writable.path,
+              access: const WorkspaceDirectoryAccess(
+                platform: 'android',
+                token: 'writable',
+              ),
             ),
+            name: 'Writable',
+            readOnly: false,
           ),
-          name: 'Writable',
-          readOnly: false,
-        ),
-      );
+        );
+      }
       await showPage(
         tester,
         home: externalPage
@@ -250,15 +316,50 @@ void main() {
         await tester.tap(find.text(l10n.workspaceMountBrowse));
         await settle(tester);
       }
+      if (externalPage) {
+        expect(find.text('alias'), findsNothing);
+        await tester.runAsync(() async {
+          await expectLater(
+            FileBrowserOps.createFile(
+              rootPath: writable.path,
+              parent: Directory('${writable.path}/alias'),
+              name: 'new.txt',
+            ),
+            throwsA(isA<WorkspaceFileAccessException>()),
+          );
+          final source = await WorkspaceFileAccess(
+            roots: [readonly.path],
+          ).openRead('${readonly.path}/note.txt');
+          try {
+            await FileBrowserOps.runMutation(
+              CopyIntoMutation(
+                rootPath: writable.path,
+                sourcePath: '${readonly.path}/note.txt',
+                destDirPath: writable.path,
+                pickedSource: source,
+              ),
+            );
+          } finally {
+            await source.close();
+          }
+        });
+        expect(File('${readonly.path}/new.txt').existsSync(), isFalse);
+        expect(File('${writable.path}/note.txt').readAsStringSync(), 'hello');
+        debugDefaultTargetPlatformOverride = null;
+        expect(tester.takeException(), isNull);
+        return;
+      }
       await tester.tap(find.text('alias'));
       await settle(tester);
       final l10n = AppLocalizations.of(
         tester.element(find.byType(FileBrowser)),
       )!;
       Future<void> createFile() async {
-        await tester.tap(find.byKey(FileBrowser.newKey));
+        await tester.runAsync(() => tester.tap(find.byKey(FileBrowser.newKey)));
         await settle(tester);
-        await tester.tap(find.byKey(FileBrowser.newFileKey));
+        await tester.runAsync(
+          () => tester.tap(find.byKey(FileBrowser.newFileKey)),
+        );
         await settle(tester);
         await tester.enterText(find.byType(EditableText), 'new.txt');
         await tester.pump();
@@ -276,7 +377,7 @@ void main() {
       }
 
       await createFile();
-      expect(File('${root.path}/new.txt').existsSync(), isFalse);
+      expect(File('${readonly.path}/new.txt').existsSync(), isFalse);
       expect(
         AppSnackBarManager().activeToasts.any(
           (toast) =>
@@ -291,7 +392,7 @@ void main() {
       await tester.runAsync(() async {
         final copy = CopyIntoMutation(
           rootPath: writable.path,
-          sourcePath: '${root.path}/note.txt',
+          sourcePath: '${readonly.path}/note.txt',
           destDirPath: writable.path,
         );
         await provider.requireWritableHostPaths(copy.writePaths);
@@ -306,7 +407,7 @@ void main() {
         ),
       );
       await createFile();
-      expect(File('${root.path}/new.txt').existsSync(), isTrue);
+      expect(File('${readonly.path}/new.txt').existsSync(), isTrue);
       debugDefaultTargetPlatformOverride = null;
       expect(tester.takeException(), isNull);
     });

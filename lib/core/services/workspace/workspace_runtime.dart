@@ -48,6 +48,8 @@ class CommandRequest {
     this.mounts = const <Mount>[],
     this.isCancelled,
     this.keepStdinOpen = false,
+    this.emulateHardLinks = true,
+    this.expectedRootChroot,
   });
 
   final String runId;
@@ -55,6 +57,15 @@ class CommandRequest {
 
   /// Keep a raw stdin pipe open for a persistent protocol process.
   final bool keepStdinOpen;
+
+  /// PRoot fakes hard links with symlinks, which breaks programs that publish
+  /// files atomically (write, link into place, remove the temporary): coding
+  /// agents turn off the fake and copy instead ([AcpFsCompat]).
+  final bool emulateHardLinks;
+
+  /// Cancel an Android Linux launch if its prepared execution mode changed.
+  /// Null accepts the runtime's current mode for ordinary commands.
+  final bool? expectedRootChroot;
 
   /// Resolved path in the runtime's vocabulary (guest path when sandboxed,
   /// host path when native).
@@ -106,14 +117,18 @@ class RuntimeStatus {
     this.reason,
     required this.engine,
     required this.sandboxed,
+    this.rootChroot = false,
   });
 
   final bool ready;
   final String? reason;
 
-  /// One of `proot`, `ish`, `process`, `fake`.
+  /// Android uses `proot`; deterministic host fixtures use `fake`.
   final String engine;
   final bool sandboxed;
+
+  /// The fast mode: the PRoot rootfs runs in a real chroot as root.
+  final bool rootChroot;
 }
 
 abstract class PtySession {
@@ -132,7 +147,6 @@ abstract class WorkspaceRuntime {
   Future<void> cancel(String runId);
 
   bool get supportsPty => false;
-  bool get supportsSystemTerminal => false;
 
   Future<PtySession> openPty({
     required List<Mount> mounts,
@@ -142,16 +156,6 @@ abstract class WorkspaceRuntime {
     required int rows,
   }) {
     throw UnsupportedError('PTY is not supported by this runtime');
-  }
-
-  Future<void> openInSystemTerminal(String hostDir) {
-    throw UnsupportedError('System terminal is not supported by this runtime');
-  }
-
-  Future<void> revealInFileManager(String hostPath) {
-    throw UnsupportedError(
-      'Reveal in file manager is not supported by this runtime',
-    );
   }
 }
 

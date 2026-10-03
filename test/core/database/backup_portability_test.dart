@@ -75,6 +75,41 @@ void main() {
     },
   );
 
+  test('root mode is excluded from settings and raw SQLite backups', () async {
+    const key = 'environment_root_chroot_v1';
+    await BusinessPreferences(repository).setBool(key, true);
+
+    final exported = await DataSync.exportBusinessSettingsFrom(repository);
+    final settings = jsonDecode(exported.settingsJson) as Map<String, dynamic>;
+    expect(settings, isNot(contains(key)));
+    expect((await repository.readSnapshot()).preferences[key], isTrue);
+
+    await BackupPortability.sanitizeDatabase(database);
+    expect((await repository.readSnapshot()).preferences, isNot(contains(key)));
+  });
+
+  for (final localRoot in [false, true, null]) {
+    test('overwrite preserves target root mode $localRoot', () async {
+      const key = 'environment_root_chroot_v1';
+      final prefs = BusinessPreferences(repository);
+      if (localRoot == null) {
+        await prefs.remove(key);
+      } else {
+        await prefs.setBool(key, localRoot);
+      }
+
+      final service = BusinessRestoreService(repository);
+      await service.overwrite({key: localRoot != true});
+
+      final preferences = (await repository.readSnapshot()).preferences;
+      if (localRoot == null) {
+        expect(preferences, isNot(contains(key)));
+      } else {
+        expect(preferences[key], localRoot);
+      }
+    });
+  }
+
   for (final merge in [false, true]) {
     test(
       '${merge ? 'merge' : 'overwrite'} ignores old device state and preserves local state',

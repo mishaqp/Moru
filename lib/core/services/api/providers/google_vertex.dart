@@ -13,6 +13,7 @@ import '../../../../utils/sandbox_path_resolver.dart';
 import '../builtin_tools.dart';
 import '../chat_api_helpers.dart';
 import '../generation/tool_loop_runner.dart';
+import '../generation/tool_result_images.dart';
 import '../google_service_account_auth.dart';
 import '../stream/sse_framing.dart';
 import '../stream/stream_chunk.dart';
@@ -184,6 +185,7 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
   StreamRoundRunner? retryRound,
 }) async* {
   final upstreamId = apiModelId(config, modelId);
+  final takesImages = modelTakesImages(config, modelId);
   final loc = (config.location ?? 'us-central1').trim();
   final proj = (config.projectId ?? '').trim();
   final endpoint = stream ? 'streamRawPredict' : 'rawPredict';
@@ -627,6 +629,9 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
                   tool.id,
                   (resultChunk.output ?? '').toString(),
                 );
+                decoder.toolResultImages[tool.id] = await loadToolResultImages(
+                  resultChunk.metadata,
+                );
               }
               yield resultChunk;
             }
@@ -661,19 +666,25 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
       ];
       for (final tool in decoder.clientTools.values) {
         var res = toolResultsContent[tool.id] ?? '';
+        var images = decoder.toolResultImages[tool.id] ?? const [];
         if (res.isEmpty && onToolCall != null) {
-          res = ClientToolResult.fromHandler(
+          final parsed = ClientToolResult.fromHandler(
             await onToolCall(
               tool.name,
               tool.decodedArguments,
               toolCallId: tool.id,
             ),
-          ).content;
+          );
+          res = parsed.content;
+          images = await loadToolResultImages(parsed.metadata);
         }
         lastStreamResults.add({
           'type': 'tool_result',
           'tool_use_id': tool.id,
-          'content': claudeToolResultContent(res),
+          'content': claudeToolResultWithImages(
+            res,
+            takesImages ? images : const [],
+          ),
         });
       }
     },
@@ -697,7 +708,10 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
                 <String, dynamic>{
                   'type': 'tool_result',
                   'tool_use_id': item.call.id,
-                  'content': claudeToolResultContent(item.content),
+                  'content': claudeToolResultWithImages(
+                    item.content,
+                    takesImages ? item.images : const [],
+                  ),
                 },
             ];
       convo = [

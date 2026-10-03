@@ -984,20 +984,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get desktopNavTranslateTooltip => 'Перевести';
 
   @override
-  String get desktopAvatarMenuUseEmoji => 'Использовать эмодзи';
-
-  @override
   String get cameraPermissionDeniedMessage =>
       'Камера недоступна: разрешение не предоставлено.';
 
   @override
   String get openSystemSettings => 'Открыть настройки';
-
-  @override
-  String get desktopAvatarMenuChangeFromImage => 'Выбрать изображение…';
-
-  @override
-  String get desktopAvatarMenuReset => 'Сбросить аватар';
 
   @override
   String get assistantEditAvatarChooseImage => 'Выбрать изображение';
@@ -2556,6 +2547,241 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get sideDrawerMenuSelect => 'Выбрать';
+
+  @override
+  String get sideDrawerNewChat => 'Новый чат';
+
+  @override
+  String get sideDrawerMoveToFolder => 'В папку';
+
+  @override
+  String get sideDrawerNoFolder => 'Без папки';
+
+  @override
+  String get sideDrawerNewFolder => 'Новая папка';
+
+  @override
+  String get sideDrawerFolderNameHint => 'Название папки';
+
+  @override
+  String get sideDrawerFolderIcon => 'Значок';
+
+  @override
+  String get sideDrawerFolderDelete => 'Удалить папку';
+
+  @override
+  String sideDrawerFolderDeleteContent(String name) {
+    return 'Чаты из папки «$name» останутся в списке.';
+  }
+
+  @override
+  String get agentsTitle => 'Агенты';
+
+  @override
+  String get agentsIntro =>
+      'Агенты-программисты вроде Claude Code могут отвечать прямо в ваших чатах. Они работают в Linux-среде на этом телефоне, с файлами чата, и берут модель и ключ, которые уже настроены в Moru, — ничего не нужно настраивать дважды.';
+
+  @override
+  String get agentsSection => 'Агенты';
+
+  @override
+  String get agentsFooter =>
+      'Установка занимает несколько минут и нужен интернет. Если Node.js нет, он поставится первым.';
+
+  @override
+  String get agentsNeedEnvironment =>
+      'Сначала установите и запустите Linux-среду (Настройки → Рабочее пространство и среда).';
+
+  @override
+  String get agentsStatusInstalled => 'Установлен';
+
+  @override
+  String get agentsStatusMissing => 'Не установлен';
+
+  @override
+  String get agentsStatusChecking => 'Проверяю…';
+
+  @override
+  String get agentsStatusWorking => 'Работаю…';
+
+  @override
+  String get agentsInstall => 'Установить';
+
+  @override
+  String get agentsUpdate => 'Обновить';
+
+  @override
+  String get agentsRemove => 'Удалить';
+
+  @override
+  String get agentsCheck => 'Проверить связь';
+
+  @override
+  String get agentsCancel => 'Отмена';
+
+  @override
+  String get agentsSave => 'Сохранить';
+
+  @override
+  String get agentsLog => 'Журнал';
+
+  @override
+  String get agentsMoruToolsAvailable => 'Инструменты Moru: доступны';
+
+  @override
+  String get agentsMoruToolsUnavailable => 'Инструменты Moru: недоступны';
+
+  @override
+  String agentsCheckOk(String name, String version) {
+    return 'Работает: ответил $name $version.';
+  }
+
+  @override
+  String agentsCheckFailed(String error) {
+    return 'Агент не запустился: $error';
+  }
+
+  @override
+  String agentsCheckModel(String model) {
+    return 'Для проверки берётся модель чата по умолчанию: $model.';
+  }
+
+  @override
+  String get agentsNoModel =>
+      'Сначала выберите модель чата по умолчанию с API-ключом (Настройки → Модель по умолчанию).';
+
+  @override
+  String get agentsDescClaudeCode =>
+      'Агент от Anthropic: читает и правит файлы, запускает команды и тесты, планирует большие задачи.';
+
+  @override
+  String get agentsDescCodex =>
+      'Агент от OpenAI: пишет и чинит код, запускает команды, объясняет проекты.';
+
+  @override
+  String get agentsDescOpenCode =>
+      'Открытый агент-программист, работает почти с любым провайдером. Хороший первый выбор.';
+
+  @override
+  String get agentsApiAnthropic =>
+      'Нужен провайдер с API, совместимым с Anthropic: Anthropic, DeepSeek, Kimi, GLM, MiniMax или OpenRouter.';
+
+  @override
+  String get agentsApiCodex =>
+      'Лучше всего с OpenAI. Другим провайдерам нужен API, совместимый с OpenAI; если провайдер умеет Responses API, включите его в настройках провайдера.';
+
+  @override
+  String get agentsApiOpenai =>
+      'Работает с любым провайдером, совместимым с OpenAI, и с Anthropic.';
+
+  @override
+  String get agentsApiCustom =>
+      'Moru передаёт адрес, ключ и имя модели в переменных MORU_AGENT_BASE_URL, MORU_AGENT_API_KEY и MORU_AGENT_MODEL (и в OPENAI_*).';
+
+  @override
+  String get agentsCustomAdd => 'Добавить своего агента';
+
+  @override
+  String get agentsCustomName => 'Название';
+
+  @override
+  String get agentsCustomCommand => 'Команда';
+
+  @override
+  String get agentsCustomHint =>
+      'Любая программа в Linux-среде, которая говорит по ACP (Agent Client Protocol) через stdin/stdout.';
+
+  @override
+  String get agentsCustomDelete => 'Удалить агента';
+
+  @override
+  String get agentsFailureNode =>
+      'Не удалось установить Node.js. Подробности в журнале.';
+
+  @override
+  String get agentsFailureInstall =>
+      'Установка не удалась. Подробности в журнале ниже.';
+
+  @override
+  String get agentsFailureRemove =>
+      'Не удалось удалить агента. Подробности в журнале.';
+
+  @override
+  String get agentsStartChat => 'Начать чат';
+
+  @override
+  String get agentsChatMissing =>
+      'Агента этого ассистента больше нет в списке. Выберите другого в настройках ассистента.';
+
+  @override
+  String get agentsChatNoKey =>
+      'Агенту нужна модель с API-ключом. Выберите модель с ключом для этого ассистента или как модель по умолчанию.';
+
+  @override
+  String agentsChatNotInstalled(String name) {
+    return '$name ещё не установлен. Установите его в Настройки → Агенты.';
+  }
+
+  @override
+  String get assistantAgentTitle => 'Агент';
+
+  @override
+  String get assistantAgentNone => 'Нет — отвечает модель';
+
+  @override
+  String get assistantAgentHint =>
+      'Если выбран агент, в чатах этого ассистента отвечает он и работает с файлами чата. Для своих запросов он использует модель чата, выбранную выше.';
+
+  @override
+  String get displaySettingsPageSidebarThumbnailsTitle =>
+      'Миниатюры картинок в списке чатов';
+
+  @override
+  String get sideDrawerArchive => 'В архив';
+
+  @override
+  String get sideDrawerArchived => 'Чат в архиве';
+
+  @override
+  String get sideDrawerUndo => 'Отменить';
+
+  @override
+  String get archivePageTitle => 'Архив';
+
+  @override
+  String get archivePageEmpty =>
+      'В архиве пусто. Смахните чат вправо, чтобы убрать его сюда.';
+
+  @override
+  String get archivePageRestore => 'Вернуть';
+
+  @override
+  String get archivePageRestored => 'Чат возвращён';
+
+  @override
+  String get archivePageSortArchived => 'По дате архивации';
+
+  @override
+  String get archivePageSortActivity => 'По последнему сообщению';
+
+  @override
+  String archivePageDeleteTitle(String title) {
+    return 'Удалить «$title»?';
+  }
+
+  @override
+  String get archivePageDeleteContent =>
+      'Чат и все его сообщения будут удалены.';
+
+  @override
+  String get sideDrawerShortcutsTitle => 'Ярлыки в боковой панели';
+
+  @override
+  String get sideDrawerShortcutsEmpty =>
+      'Пока нет мини-приложений и закладок браузера';
+
+  @override
+  String get sideDrawerShortcutRemove => 'Убрать из панели';
 
   @override
   String sideDrawerSelectionTitle(int count) {
@@ -4146,10 +4372,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String chainOfThoughtProcessedSteps(Object count) {
     return 'Обработано · шагов: $count';
   }
-
-  @override
-  String get displaySettingsPageShowChatListDateTitle =>
-      'Показывать даты в списке чатов';
 
   @override
   String get displaySettingsPageEnableImageCropperTitle =>
@@ -7392,9 +7614,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get migrationTargetDatabaseLabel => 'SQLite';
 
   @override
-  String get migrationChooseFolderButton => 'Выбрать папку и создать копию';
-
-  @override
   String get migrationSaveBackupButton => 'Сохранить ZIP-копию';
 
   @override
@@ -8645,11 +8864,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String workspaceEnvEngineAlpine(String version) {
-    return 'Alpine $version (iSH)';
-  }
-
-  @override
   String get workspaceEnvPhaseNotInstalled => 'Не установлено';
 
   @override
@@ -8951,12 +9165,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Привяжите рабочее пространство на панели инструментов для просмотра файлов';
 
   @override
-  String get workspaceDeskOpenSystemTerminal => 'Открыть в системном терминале';
-
-  @override
-  String get workspaceDeskReveal => 'Показать в файловом менеджере';
-
-  @override
   String get workspaceEntryBind => 'Привязать рабочее пространство';
 
   @override
@@ -8991,13 +9199,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspaceEntryTerminal => 'Терминал';
-
-  @override
-  String get workspaceEntryOpenSystemTerminal =>
-      'Открыть в системном терминале';
-
-  @override
-  String get workspaceEntryReveal => 'Показать в файловом менеджере';
 
   @override
   String get workspaceEntrySessionSkills => 'Навыки';
@@ -9201,10 +9402,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspacePreviewTable => 'Таблица';
-
-  @override
-  String get workspacePreviewRevealFailed =>
-      'Не удалось показать файл в файловом менеджере.';
 
   @override
   String get workspacePreviewEmptyTable => 'Эта таблица пуста.';
@@ -9540,10 +9737,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspacePreviewEmptyHint => 'Нет содержимого для предпросмотра.';
-
-  @override
-  String get workspacePreviewRevealInFileManager =>
-      'Показать в файловом менеджере';
 
   @override
   String workspaceBindingSetAssistantDefault(String assistant) {
@@ -9968,6 +10161,30 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspaceEnvProotOptions => 'Параметры PRoot';
+
+  @override
+  String get workspaceEnvRootChroot => 'Быстрый режим (root)';
+
+  @override
+  String get workspaceEnvRootChrootHint =>
+      'Linux-среда работает в настоящем chroot через su вместо PRoot: программы запускаются и работают во много раз быстрее. Команды выполняются от настоящего root с полным доступом к телефону. При выключении файлы возвращаются Moru.';
+
+  @override
+  String get workspaceEnvRootChrootChecking => 'Проверяю root…';
+
+  @override
+  String get workspaceEnvRootChrootRestoring => 'Возвращаю файлы Moru…';
+
+  @override
+  String get workspaceEnvRootChrootOn => 'Быстрый режим включён';
+
+  @override
+  String get workspaceEnvRootChrootOff => 'Быстрый режим выключен, снова PRoot';
+
+  @override
+  String workspaceEnvRootChrootFailed(String reason) {
+    return 'Быстрый режим недоступен: $reason';
+  }
 
   @override
   String get workspaceEnvShellPath => 'Путь к оболочке';
@@ -11097,13 +11314,187 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserAddressEditorGo => 'Перейти';
 
   @override
-  String get browserMinimize => 'Свернуть';
+  String get browserMinimize => 'Свернуть в чат';
 
   @override
   String get browserMiniExpand => 'Развернуть';
 
   @override
   String get browserMiniTitle => 'Браузер';
+
+  @override
+  String get userscriptsTitle => 'Юзерскрипты';
+
+  @override
+  String get userscriptsHint =>
+      'Скрипты как в Tampermonkey: меняют сайты, для которых написаны. Ставьте только те, которым доверяете, — они видят всё на этих сайтах.';
+
+  @override
+  String get userscriptsInstall => 'Установить';
+
+  @override
+  String get userscriptsEmpty =>
+      'Скриптов пока нет. Вставьте ссылку на файл .user.js, например с greasyfork.org.';
+
+  @override
+  String get userscriptsBadLink => 'Нужна http(s)-ссылка на файл .user.js';
+
+  @override
+  String get userscriptsNotAScript =>
+      'Это не юзерскрипт: нет заголовка ==UserScript==';
+
+  @override
+  String userscriptsInstalled(String name) {
+    return 'Установлен: $name';
+  }
+
+  @override
+  String userscriptsInstallFailed(String error) {
+    return 'Не удалось установить: $error';
+  }
+
+  @override
+  String get browserGoogleSignInBlocked =>
+      'Google не пускает вход во встроенном браузере. Войдите другим способом или откройте сайт в Chrome.';
+
+  @override
+  String get browserOpenInChrome => 'Открыть в Chrome';
+
+  @override
+  String get browserSslTitle => 'Соединение не защищено';
+
+  @override
+  String browserSslMessage(String site, String problem) {
+    return 'Сертификат $site недействителен ($problem). Возможно, кто-то пытается перехватить ваши данные.';
+  }
+
+  @override
+  String get browserSslProceed => 'Всё равно продолжить';
+
+  @override
+  String get browserSslBack => 'Назад';
+
+  @override
+  String get browserBookmarks => 'Закладки';
+
+  @override
+  String get browserHistory => 'История';
+
+  @override
+  String get browserClearHistory => 'Очистить';
+
+  @override
+  String get browserClearHistoryConfirm =>
+      'Очистить историю за последние 7 дней?';
+
+  @override
+  String get browserLibrarySearch => 'Поиск';
+
+  @override
+  String get browserHistoryEmpty => 'За последние 7 дней страниц нет';
+
+  @override
+  String get browserBookmarksEmpty =>
+      'Закладок пока нет. Нажмите звёздочку в адресной строке.';
+
+  @override
+  String get browserLibraryRemove => 'Удалить';
+
+  @override
+  String get browserBookmarkAdded => 'Добавлено в закладки';
+
+  @override
+  String get browserBookmarkRemoved => 'Закладка удалена';
+
+  @override
+  String get browserTabsTooltip => 'Вкладки';
+
+  @override
+  String get browserNewTab => 'Новая вкладка';
+
+  @override
+  String get browserCloseAllTabs => 'Закрыть все';
+
+  @override
+  String get browserTabByAssistant => 'ассистент';
+
+  @override
+  String get browserDesktopSite => 'Версия для ПК';
+
+  @override
+  String get browserClearSiteData => 'Очистить данные сайта';
+
+  @override
+  String browserClearSiteDataConfirm(String site) {
+    return 'Выйти из $site и удалить его данные в этом браузере?';
+  }
+
+  @override
+  String browserClearSiteDataDone(String site) {
+    return 'Данные $site удалены';
+  }
+
+  @override
+  String browserTabsTitle(int count) {
+    return 'Вкладки: $count';
+  }
+
+  @override
+  String browserDownloadDone(String file) {
+    return 'Скачано: $file';
+  }
+
+  @override
+  String get browserNoAppForLink =>
+      'На телефоне нет приложения для этой ссылки.';
+
+  @override
+  String browserDownloadStarted(String file) {
+    return 'Скачивается $file в «Загрузки»';
+  }
+
+  @override
+  String browserDownloadFailed(String file) {
+    return 'Не удалось скачать $file';
+  }
+
+  @override
+  String get browserDownloadUnsupported =>
+      'Этот файл создаёт сама страница, скачать его пока нельзя.';
+
+  @override
+  String browserPermissionQuestion(String what) {
+    return 'Разрешить сайту доступ: $what?';
+  }
+
+  @override
+  String get browserPermissionCamera => 'камера';
+
+  @override
+  String get browserPermissionMicrophone => 'микрофон';
+
+  @override
+  String get browserPermissionLocation => 'местоположение';
+
+  @override
+  String get browserPermissionProtectedMedia => 'защищённое видео';
+
+  @override
+  String get browserPermissionAllow => 'Разрешить';
+
+  @override
+  String get browserPermissionBlock => 'Запретить';
+
+  @override
+  String get browserChallengeVerify =>
+      'Сайт просит подтвердить, что вы человек. Пройдите проверку сами — ассистент подождёт.';
+
+  @override
+  String get browserChallengeRateLimited =>
+      'Сайт ограничивает запросы. Ассистент сбавит темп.';
+
+  @override
+  String get browserChallengeDenied => 'Сайт не пускает автоматический доступ.';
 
   @override
   String get chatHeaderFiles => 'Файлы';
@@ -11428,6 +11819,213 @@ class AppLocalizationsRu extends AppLocalizations {
       'Уведомления и напоминания ваших мини-приложений.';
 
   @override
+  String get miniAppsToolActionErrors => 'Чтение журнала ошибок приложения';
+
+  @override
+  String get miniAppsToolActionVersions => 'Версии приложения';
+
+  @override
+  String get miniAppsToolActionRollback => 'Откат приложения';
+
+  @override
+  String get miniAppsBackAgainToExit => 'Ещё раз «Назад» — выход';
+
+  @override
+  String get miniAppsJobs => 'Фоновые задачи';
+
+  @override
+  String get miniAppsJobsEmpty =>
+      'Фоновых задач нет. Попросите агента, например: «каждое утро в 8 проверяй погоду и присылай уведомление».';
+
+  @override
+  String get miniAppsJobsFooter =>
+      'В назначенное время Moru невидимо открывает приложение и выполняет задачу до 30 секунд, даже если Moru закрыт. Ошибки попадают в журнал.';
+
+  @override
+  String get miniAppsJobRunNow => 'Запустить сейчас';
+
+  @override
+  String get miniAppsJobStarted => 'Задача запущена';
+
+  @override
+  String get miniAppsJobEveryDay => 'каждый день';
+
+  @override
+  String get miniAppsJobRunning => 'Выполняется…';
+
+  @override
+  String get miniAppsToolActionJobs => 'Фоновые задачи приложения';
+
+  @override
+  String get miniAppsToolActionRunJob => 'Запуск фоновой задачи приложения';
+
+  @override
+  String miniAppsJobNext(String time) {
+    return 'Следующий запуск: $time';
+  }
+
+  @override
+  String miniAppsJobLastDone(String time) {
+    return 'Последний запуск $time: выполнено';
+  }
+
+  @override
+  String miniAppsJobLastFailed(String time) {
+    return 'Последний запуск $time: ошибка';
+  }
+
+  @override
+  String get miniAppsToolActionServer => 'Состояние сервера приложения';
+
+  @override
+  String get rootShellToolTitle => 'Root-команды';
+
+  @override
+  String get rootShellToolSubtitle =>
+      'Команды от root (su) на рутованном телефоне: системные настройки, приложения, логи, нажатия по экрану. Каждую команду вы подтверждаете.';
+
+  @override
+  String get miniAppsWebTitle => 'Веб-сервер';
+
+  @override
+  String get miniAppsWebPort => 'Порт';
+
+  @override
+  String get miniAppsWebLocalhostOnly => 'Только этот телефон';
+
+  @override
+  String get miniAppsWebLocalhostOnlySubtitle =>
+      'Слушать только 127.0.0.1: без доступа из сети и без moru.local.';
+
+  @override
+  String get miniAppsWebPasswordEnabled => 'Требовать пароль';
+
+  @override
+  String get miniAppsWebPasswordEnabledSubtitle =>
+      'Браузер спросит его при входе, имя пользователя любое.';
+
+  @override
+  String get miniAppsWebPassword => 'Пароль';
+
+  @override
+  String get miniAppsWebStart => 'Запустить';
+
+  @override
+  String get miniAppsWebStop => 'Остановить';
+
+  @override
+  String get miniAppsWebRunning => 'Работает. Откройте в браузере:';
+
+  @override
+  String get miniAppsWebCopied => 'Адрес скопирован';
+
+  @override
+  String get miniAppsWebInvalidPort => 'Порт должен быть от 1024 до 65535.';
+
+  @override
+  String get miniAppsWebNoPassword => 'Задайте пароль или отключите его.';
+
+  @override
+  String get miniAppsWebFooter =>
+      'Мини-приложения открываются в браузере с теми же данными, что и в Moru. moru.local и Wi-Fi-адрес работают на устройствах в той же Wi-Fi-сети, не через мобильный интернет; 127.0.0.1 — в браузере на этом телефоне. Пока сервер работает, Moru держит уведомление; остановка там останавливает и сервер.';
+
+  @override
+  String miniAppsWebNotification(String url) {
+    return 'Веб-сервер: $url';
+  }
+
+  @override
+  String miniAppsWebPortInUse(String port) {
+    return 'Порт $port уже занят: выберите другой.';
+  }
+
+  @override
+  String get miniAppsWebAutostart => 'Запускать вместе с Moru';
+
+  @override
+  String get miniAppsWebAutostartSubtitle =>
+      'Сервер включается сам при каждом запуске Moru.';
+
+  @override
+  String get miniAppsServer => 'Сервер';
+
+  @override
+  String get miniAppsServerStarting => 'Запускается…';
+
+  @override
+  String get miniAppsServerIdle =>
+      'Не запущен. Работает, пока приложение открыто.';
+
+  @override
+  String get miniAppsServerRestart => 'Перезапустить';
+
+  @override
+  String get miniAppsServerNoOutput => 'Вывода пока нет.';
+
+  @override
+  String miniAppsServerRunning(String port) {
+    return 'Работает, порт $port';
+  }
+
+  @override
+  String miniAppsServerExited(String code) {
+    return 'Остановлен, код $code';
+  }
+
+  @override
+  String get miniAppsSearch => 'Поиск приложений';
+
+  @override
+  String get miniAppsBadgeGame => 'Игра';
+
+  @override
+  String miniAppsJobFailed(String job) {
+    return 'Фоновая задача «$job» не выполнилась. Откройте приложение, чтобы узнать почему.';
+  }
+
+  @override
+  String get miniAppsMore => 'Ещё';
+
+  @override
+  String get miniAppsErrors => 'Журнал ошибок';
+
+  @override
+  String get miniAppsErrorsEmpty => 'Ошибок нет.';
+
+  @override
+  String get miniAppsErrorsFooter =>
+      'Ошибки текущей версии. Попросите агента в чате исправить приложение — он прочитает этот журнал.';
+
+  @override
+  String get miniAppsErrorsCopy => 'Скопировать всё';
+
+  @override
+  String get miniAppsErrorsCopied => 'Журнал скопирован';
+
+  @override
+  String get miniAppsErrorsClear => 'Очистить';
+
+  @override
+  String get miniAppsVersions => 'Версии';
+
+  @override
+  String get miniAppsVersionsEmpty => 'Предыдущих версий пока нет.';
+
+  @override
+  String get miniAppsVersionsFooter =>
+      'Moru хранит 5 последних версий. Откат меняет только код приложения, данные и напоминания остаются. Текущая версия тоже сохранится, к ней можно вернуться.';
+
+  @override
+  String miniAppsVersionsTitle(String name) {
+    return 'Откатить «$name»';
+  }
+
+  @override
+  String miniAppsRolledBack(String date) {
+    return 'Возвращена версия от $date';
+  }
+
+  @override
   String get phoneControlTitle => 'Управление телефоном';
 
   @override
@@ -11507,4 +12105,698 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get toolApprovalsFullTrustDescription =>
       'Не спрашивать подтверждение перед действиями ИИ. Действует для браузера, MCP, shell, записи файлов и других инструментов, которые обычно требуют подтверждения.';
+
+  @override
+  String chatReasoningTailHint(String shown, String total) {
+    return 'Показаны последние $shown из $total символов';
+  }
+
+  @override
+  String get chatToolCopyDetails => 'Копировать подробности';
+
+  @override
+  String get chatToolRerunFromHere => 'Перезапустить отсюда';
+
+  @override
+  String get chatTokensTitle => 'Токены чата';
+
+  @override
+  String get chatTokensContext => 'Контекст';
+
+  @override
+  String get chatTokensContextUsed => 'Занято';
+
+  @override
+  String get chatTokensContextWindow => 'Окно контекста';
+
+  @override
+  String get chatTokensMaxOutput => 'Максимум ответа';
+
+  @override
+  String get chatTokensSpent => 'Потрачено в чате';
+
+  @override
+  String get chatTokensInput => 'Вход';
+
+  @override
+  String get chatTokensOutput => 'Выход';
+
+  @override
+  String get chatTokensCached => 'Из кэша';
+
+  @override
+  String get chatTokensReplies => 'Ответов';
+
+  @override
+  String get chatTokensCost => 'Стоимость';
+
+  @override
+  String get chatInputHintQueue =>
+      'Пишите, пока ИИ отвечает: сообщение встанет в очередь';
+
+  @override
+  String get chatInputHintMiniApp =>
+      'Попросите мини-приложение: трекер, игру, инструмент';
+
+  @override
+  String get chatInputHintPaste => 'Вставьте длинный текст: он станет файлом';
+
+  @override
+  String get chatInputHintTokens =>
+      'Нажмите на кольцо у кнопки: расход токенов';
+
+  @override
+  String get chatInputHintToolMenu =>
+      'Долгое нажатие на шаг инструмента: копировать или перезапустить';
+
+  @override
+  String get messageMoreSheetCopyFormatted => 'Копировать с форматированием';
+
+  @override
+  String get agentsMode => 'Режим агента';
+
+  @override
+  String get agentsSessionOptions => 'Настройки агента';
+
+  @override
+  String get agentsImageNotSent => 'Картинка не передана агенту.';
+
+  @override
+  String get agentsErrorApiKey => 'Неверный API-ключ у провайдера.';
+
+  @override
+  String get agentsErrorModel =>
+      'Модель не найдена. Проверьте модель в настройках провайдера.';
+
+  @override
+  String get agentsErrorNetwork =>
+      'Нет сети. Проверьте подключение и попробуйте снова.';
+
+  @override
+  String get agentsErrorHeaders =>
+      'В заголовках провайдера есть недопустимое имя или перенос строки. Проверьте настройки заголовков провайдера.';
+
+  @override
+  String get agentsErrorTemporaryDirectory =>
+      'Агенту недоступна временная папка. Проверьте Linux-окружение и попробуйте снова.';
+
+  @override
+  String get agentsShowDetails => 'Показать подробности';
+
+  @override
+  String get agentsHideDetails => 'Скрыть подробности';
+
+  @override
+  String get agentsDescKimiCode =>
+      'Агент Moonshot: правит файлы и запускает команды.';
+
+  @override
+  String get agentsDescDeepSeekHarness =>
+      'Агент DeepSeek: работает с файлами и командами в рабочей папке.';
+
+  @override
+  String get agentsApiCompatible =>
+      'Использует провайдера Moru через Anthropic, Chat Completions или Responses API.';
+
+  @override
+  String get agentsWebOpen => 'Открыть веб-интерфейс';
+
+  @override
+  String get agentsWebStop => 'Остановить';
+
+  @override
+  String get agentsWebStarting => 'Запускается веб-интерфейс…';
+
+  @override
+  String get agentsWebRunning => 'Веб-интерфейс работает в фоне.';
+
+  @override
+  String get agentsWebTimeout =>
+      'Агент не напечатал локальный веб-адрес за 120 секунд. Остановите его и попробуйте снова.';
+
+  @override
+  String get agentsWebExited =>
+      'Веб-процесс завершился. Откройте интерфейс снова, чтобы запустить его.';
+
+  @override
+  String get agentsWebStartFailed =>
+      'Не удалось запустить веб-интерфейс. Проверьте Linux-окружение, установку агента и версию Node.js.';
+
+  @override
+  String get agentsWebStopped => 'Веб-интерфейс остановлен.';
+
+  @override
+  String get agentsWebDeepSeekWorkspace =>
+      'В веб-интерфейсе DeepSeek Harness выберите или добавьте папку /workspace.';
+
+  @override
+  String agentsNodeVersionRequired(
+    String agent,
+    String requiredVersion,
+    String actual,
+  ) {
+    return 'Для $agent нужен Node.js $requiredVersion. В Linux-окружении обнаружен: $actual. Обновите Node.js, снова откройте карточку и повторите действие.';
+  }
+
+  @override
+  String get agentsNodeVersionUnknown => 'версия недоступна';
+
+  @override
+  String get agentsNodeUpdateDebian =>
+      'В терминале Linux установите Node.js 24 из официального репозитория NodeSource:\napt-get update\napt-get install -y ca-certificates curl bash\ncurl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\nbash /tmp/moru-node24-setup.sh\napt-get install -y nodejs\nnode --version\nnpm --version\nИнструкция: https://github.com/nodesource/distributions/blob/master/DEV_README.md';
+
+  @override
+  String get agentsNodeUpdateAlpine =>
+      'В терминале Linux обновите пакеты Alpine:\napk update\napk add --upgrade nodejs npm\nnode --version\nnpm --version';
+
+  @override
+  String get agentsNodeUpdateUnknown =>
+      'Для этого дистрибутива нет подтверждённого способа обновления. Проверьте его официальную инструкцию по установке Node.js, затем снова откройте карточку.';
+
+  @override
+  String get workspaceEnvGroupDevelopment => 'Разработка';
+
+  @override
+  String get workspaceEnvGroupAgents => 'ИИ-агенты';
+
+  @override
+  String get workspaceEnvGroupAgentsDetail =>
+      '«Подготовить для агентов» ставит то, что агентам нужно от системы. Откройте агента, чтобы установить, обновить или проверить его.';
+
+  @override
+  String get workspaceEnvGroupSsh => 'SSH';
+
+  @override
+  String get workspaceEnvPrepareAgents => 'Подготовить для агентов';
+
+  @override
+  String get workspaceEnvPrepareAgentsDone => 'Всё нужное агентам установлено';
+
+  @override
+  String get workspaceEnvDependencyBuildTitle => 'Сборка';
+
+  @override
+  String get workspaceEnvDependencyBuild =>
+      'Компилятор и make: собирать модули Node и Python';
+
+  @override
+  String get workspaceEnvDependencyProcessesTitle => 'Процессы';
+
+  @override
+  String get workspaceEnvDependencyCompatTitle => 'Совместимость с glibc';
+
+  @override
+  String get workspaceEnvDependencyCompat =>
+      'Запуск программ для обычного Linux на Alpine';
+
+  @override
+  String get workspaceEnvDependencyBash =>
+      'Оболочка, в которой агенты и скрипты выполняют команды';
+
+  @override
+  String get workspaceEnvDependencyRipgrep =>
+      'Быстрый поиск по коду — им ищут агенты';
+
+  @override
+  String get workspaceEnvDependencySshTitle => 'SSH-клиент';
+
+  @override
+  String get workspaceEnvDependencySshpass => 'Вход по паролю для скриптов';
+
+  @override
+  String get workspaceEnvDependencySshdTitle => 'SSH-сервер';
+
+  @override
+  String get workspaceEnvDependencySshd => 'Подключаться к телефону по SSH';
+
+  @override
+  String workspaceEnvInstallSelected(int count) {
+    return 'Установить выбранное ($count)';
+  }
+
+  @override
+  String get agentsCodexResponsesRequired =>
+      'Codex работает только с провайдерами, которые поддерживают OpenAI Responses API. Включите его в настройках провайдера или выберите другого агента';
+
+  @override
+  String get backgroundReliabilityHintTitle => 'Чтобы задача завершилась';
+
+  @override
+  String get backgroundReliabilityHintDisabled =>
+      'Фоновая работа выключена. Включите её, чтобы задача продолжалась при сворачивании Moru и выключении экрана.';
+
+  @override
+  String get backgroundReliabilityHintRestricted =>
+      'Android ограничивает Moru в фоне. Проверьте настройки батареи для приложения, прежде чем свернуть его.';
+
+  @override
+  String get backgroundReliabilityHintStandby =>
+      'Режим ожидания с низким энергопотреблением может отключать сеть даже во время задачи. Проверьте настройки энергосбережения телефона.';
+
+  @override
+  String get backgroundReliabilityHintVendor =>
+      'Vivo и Xiaomi могут останавливать фоновые задачи. Разрешите работу в фоне и автозапуск в настройках телефона.';
+
+  @override
+  String get backgroundReliabilityHintInterrupted =>
+      'Предыдущая задача прервалась вместе с процессом Moru. Перед сворачиванием новой задачи проверьте настройки батареи и работы в фоне.';
+
+  @override
+  String get backgroundReliabilityHintSettings => 'Настройки фоновой работы';
+
+  @override
+  String get backgroundReliabilityHintDismiss =>
+      'Больше не показывать подсказку';
+
+  @override
+  String get backgroundLowPowerStandby =>
+      'Ожидание с низким энергопотреблением';
+
+  @override
+  String get backgroundLowPowerStandbyDetail =>
+      'Этот режим телефона может отключать сеть даже при активной фоновой службе. Исключение из оптимизации батареи не всегда снимает это ограничение.';
+
+  @override
+  String get backgroundPowerRestricted => 'Есть ограничение';
+
+  @override
+  String get backgroundPowerUnrestricted => 'Ограничений не обнаружено';
+
+  @override
+  String get backgroundShellRunning => 'Выполняется фоновая команда';
+
+  @override
+  String get backgroundServerRunning => 'Работает сервер мини-приложения';
+
+  @override
+  String get backgroundProtectionUnavailable =>
+      'Не удалось включить фоновую защиту. Оставьте Moru открытым и повторите попытку.';
+
+  @override
+  String get chatInterruptedBody =>
+      'Приложение остановилось до завершения ответа. Сохранённая часть ответа и очередь сообщений остались. Продолжение начнёт новый ход.';
+
+  @override
+  String get chatContinueAfterInterruption => 'Продолжить';
+
+  @override
+  String get chatContinuePrompt =>
+      'Продолжи с сохранённого контекста после прерывания. Перед дальнейшими действиями проверь, что уже выполнено.';
+
+  @override
+  String get queuedInputSaveFailed =>
+      'Не удалось сохранить сообщение в очереди. Черновик остался доступен.';
+
+  @override
+  String get notificationApprovalTitle => 'Нужно разрешение';
+
+  @override
+  String get notificationApprovalBody => 'Агент ждёт вашего решения.';
+
+  @override
+  String get notificationApprovalAllow => 'Разрешить';
+
+  @override
+  String get notificationApprovalDeny => 'Отклонить';
+
+  @override
+  String get notificationApprovalStaleTitle =>
+      'Запрос разрешения уже неактивен';
+
+  @override
+  String get notificationApprovalStaleBody =>
+      'Откройте чат, чтобы проверить этот запрос.';
+
+  @override
+  String get notificationApprovalChannelName => 'Разрешения агенту';
+
+  @override
+  String get notificationApprovalChannelDescription =>
+      'Запросы разрешения от работающего агента или инструмента.';
+
+  @override
+  String get backgroundShellCompleted => 'Фоновая команда завершена';
+
+  @override
+  String get backgroundShellFailed => 'Ошибка фоновой команды';
+
+  @override
+  String get agentsAuthTitle => 'Войти по подписке';
+
+  @override
+  String get agentsAuthMode => 'Авторизация';
+
+  @override
+  String get agentsAuthProvider => 'API-провайдер';
+
+  @override
+  String get agentsAuthSubscription => 'Подписка';
+
+  @override
+  String get agentsAuthProviderHint =>
+      'Использовать настройки API-провайдера этого ассистента.';
+
+  @override
+  String get agentsAuthSubscriptionHint =>
+      'Использовать собственный вход агента в Claude или ChatGPT. Ключи и настройки модели API-провайдера не передаются.';
+
+  @override
+  String get agentsAuthSignIn => 'Войти';
+
+  @override
+  String get agentsAuthCheck => 'Проверить вход';
+
+  @override
+  String get agentsAuthSignOut => 'Выйти';
+
+  @override
+  String get agentsAuthSignedIn => 'Вход выполнен';
+
+  @override
+  String get agentsAuthSignedOut => 'Нужен вход';
+
+  @override
+  String get agentsAuthUnknown => 'Вход не проверен';
+
+  @override
+  String get agentsAuthWaiting => 'Завершите вход в браузере.';
+
+  @override
+  String get agentsAuthOpenBrowser => 'Открыть страницу входа';
+
+  @override
+  String get agentsAuthDeviceCode => 'Код устройства';
+
+  @override
+  String get agentsAuthCodexHint =>
+      'Перед входом включите вход по коду устройства в ChatGPT: Настройки → Безопасность.';
+
+  @override
+  String get agentsAuthCode => 'Код авторизации';
+
+  @override
+  String get agentsAuthSubmitCode => 'Отправить код';
+
+  @override
+  String get agentsAuthCodeHint =>
+      'Если браузер предлагает скопировать код, вставьте его целиком, включая часть после #.';
+
+  @override
+  String get agentsAuthCancel => 'Отменить вход';
+
+  @override
+  String get agentsAuthFailureEnvironment => 'Сначала настройте Linux-среду.';
+
+  @override
+  String get agentsAuthFailureStart =>
+      'Не удалось завершить вход. Обновите агента и попробуйте снова.';
+
+  @override
+  String get agentsAuthFailureNetwork =>
+      'Вход не выполнен из-за ошибки сети. Попробуйте снова.';
+
+  @override
+  String get agentsAuthFailureTimeout =>
+      'Время ожидания входа истекло. Попробуйте снова.';
+
+  @override
+  String get agentsAuthBrowserFailed =>
+      'Не удалось открыть страницу входа. Можно скопировать ссылку ниже.';
+
+  @override
+  String get agentsErrorAuthRequired =>
+      'Агенту нужна авторизация. Войдите через Настройки → Агенты или проверьте API-ключ выбранного провайдера.';
+
+  @override
+  String get agentsErrorAccountBusy =>
+      'Codex уже работает в другом чате. Дождитесь завершения ответа или остановите его.';
+
+  @override
+  String get computerTitle => 'Компьютер';
+
+  @override
+  String get computerWorking => 'ИИ работает…';
+
+  @override
+  String get computerDone => 'Готово';
+
+  @override
+  String get computerError => 'Ошибка';
+
+  @override
+  String get computerPreviousStep => 'Предыдущий шаг';
+
+  @override
+  String get computerNextStep => 'Следующий шаг';
+
+  @override
+  String get computerLatest => 'К последнему';
+
+  @override
+  String get computerOpenTerminal => 'Открыть терминал';
+
+  @override
+  String get computerOpenBrowser => 'Открыть живой браузер';
+
+  @override
+  String get computerOpenFile => 'Открыть файл';
+
+  @override
+  String get computerCopyResult => 'Скопировать результат';
+
+  @override
+  String get computerNoResult => 'Результата пока нет';
+
+  @override
+  String get computerParameters => 'Параметры';
+
+  @override
+  String get computerResult => 'Результат';
+
+  @override
+  String get browserFloatingWindowTitle => 'Плавающее окно браузера';
+
+  @override
+  String get browserFloatingWindowDescription =>
+      'Показывать живой браузер в плавающем окне при сворачивании. По умолчанию действия ИИ отображаются в «Компьютере» над полем ввода.';
+
+  @override
+  String get computerMoreDetails => 'Подробный результат';
+
+  @override
+  String get computerStopped => 'Остановлено';
+
+  @override
+  String computerActionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count действия',
+      many: '$count действий',
+      few: '$count действия',
+      one: '$count действие',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get computerViewAction => 'Посмотреть';
+
+  @override
+  String get computerBackgroundOutput => 'Вывод фоновой задачи';
+
+  @override
+  String get computerBackground => 'В фоне';
+
+  @override
+  String computerRunningElapsed(String elapsed) {
+    return 'Выполняется · $elapsed';
+  }
+
+  @override
+  String computerExitElapsed(int code, String seconds) {
+    return 'Код выхода $code · $seconds с';
+  }
+
+  @override
+  String computerBrowserStep(String domain) {
+    return 'Браузер · $domain';
+  }
+
+  @override
+  String computerPlanProgress(int completed, int total) {
+    return 'План · $completed/$total';
+  }
+
+  @override
+  String computerFileStep(String action, String name) {
+    return '$action · $name';
+  }
+
+  @override
+  String computerAddedLines(int count) {
+    return '(+$count строк)';
+  }
+
+  @override
+  String get computerActionCommand => 'Команда';
+
+  @override
+  String get computerActionOpen => 'Открыть';
+
+  @override
+  String get computerActionClick => 'Нажать';
+
+  @override
+  String get computerActionType => 'Ввод';
+
+  @override
+  String get computerActionRead => 'Чтение';
+
+  @override
+  String get computerActionWrite => 'Запись';
+
+  @override
+  String get computerActionEdit => 'Изменение';
+
+  @override
+  String get computerActionList => 'Список';
+
+  @override
+  String get computerActionPlan => 'План';
+
+  @override
+  String get computerActionScreenshot => 'Скриншот';
+
+  @override
+  String get computerBrowserOpening => 'Открывает…';
+
+  @override
+  String get computerBrowserClicking => 'Нажимает…';
+
+  @override
+  String get computerBrowserTyping => 'Вводит…';
+
+  @override
+  String get computerBrowserReading => 'Читает страницу';
+
+  @override
+  String get computerAllParameters => 'Все параметры (JSON)';
+
+  @override
+  String get computerParameterDirectory => 'Папка';
+
+  @override
+  String get computerParameterBackground => 'Фон';
+
+  @override
+  String get computerParameterTimeout => 'Таймаут';
+
+  @override
+  String get computerParameterUrl => 'Адрес';
+
+  @override
+  String get computerParameterSelector => 'Селектор';
+
+  @override
+  String get computerParameterText => 'Текст';
+
+  @override
+  String get computerParameterPath => 'Путь';
+
+  @override
+  String get computerParameterRange => 'Диапазон';
+
+  @override
+  String computerStepPosition(int current, int total) {
+    return 'Шаг $current из $total';
+  }
+
+  @override
+  String get browserActions => 'Действия';
+
+  @override
+  String browserActionsCount(int count) {
+    return 'Действия · $count';
+  }
+
+  @override
+  String get browserCloseBrowser => 'Закрыть браузер';
+
+  @override
+  String get browserCloseWhileAiTitle => 'Закрыть браузер?';
+
+  @override
+  String get browserCloseWhileAiMessage => 'Действие ИИ будет остановлено.';
+
+  @override
+  String get computerActionSummary => 'Итог';
+
+  @override
+  String get computerBrowserResultStatus => 'Статус';
+
+  @override
+  String get computerBrowserResultSuccess => 'Успешно';
+
+  @override
+  String get computerBrowserResultError => 'Ошибка';
+
+  @override
+  String get computerBrowserResultTitle => 'Заголовок';
+
+  @override
+  String get computerParameterYes => 'Да';
+
+  @override
+  String get computerParameterNo => 'Нет';
+
+  @override
+  String computerBrowserAction(String action) {
+    String _temp0 = intl.Intl.selectLogic(action, {
+      'open': 'Открыть',
+      'observe': 'Осмотр',
+      'screenshot': 'Скриншот',
+      'read': 'Чтение',
+      'collect': 'Сбор списка',
+      'outline': 'Структура страницы',
+      'wait_stable': 'Ожидание загрузки',
+      'wait_for': 'Ожидание элемента',
+      'back': 'Назад',
+      'forward': 'Вперёд',
+      'reload': 'Обновить',
+      'scroll': 'Прокрутка',
+      'tabs': 'Вкладки',
+      'new_tab': 'Новая вкладка',
+      'switch_tab': 'Смена вкладки',
+      'close_tab': 'Закрыть вкладку',
+      'set_mode': 'Режим сайта',
+      'close': 'Закрыть браузер',
+      'done': 'Готово',
+      'click': 'Нажать',
+      'hover': 'Наведение',
+      'type': 'Ввод',
+      'submit': 'Отправить форму',
+      'press_key': 'Нажать клавишу',
+      'eval_js': 'Выполнить код',
+      'fetch': 'Запрос со страницы',
+      'export_cookies': 'Экспорт куки',
+      'other': 'Действие браузера',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get problemReportToolTitle => 'Отчёт об ошибке';
+
+  @override
+  String get problemReportToolSubtitle =>
+      'Собрать приватный ZIP с техническими сведениями. Подтверждение нужно каждый раз.';
+
+  @override
+  String get problemReportConsent =>
+      'В ZIP войдут:\n• Версия приложения и номер сборки\n• Версия Android, производитель и модель устройства\n• Режим окружения: PRoot/root\n• Настройки интерфейса, инструментов и журналов, типы провайдеров — без секретов\n• Технические события текущего запуска: названия, типы ошибок и кадры стека (до 128 КиБ)\nЧаты, тексты сообщений и журналы запросов/контекста не входят. Секреты удаляются. Отчёт удаляется при следующем запуске или истекает через сутки.';
+
+  @override
+  String get problemReportUnavailable =>
+      'Отчёт удалён или им не удалось поделиться. Соберите новый отчёт.';
 }

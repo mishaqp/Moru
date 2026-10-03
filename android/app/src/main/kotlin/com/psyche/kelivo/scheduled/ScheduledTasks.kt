@@ -17,11 +17,21 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.util.UUID
 
-/** Native storage is the single owner: alarms also work without a Dart isolate. */
+/**
+ * Native storage is the single owner: alarms also work without a Dart isolate.
+ * Besides the chat's tasks it keeps the background jobs of mini apps (ids
+ * starting with [JOB_PREFIX], kind `miniAppJob`): same alarms, foreground
+ * service and run records, a shorter time limit, and they may fire inexactly.
+ */
 class ScheduledTasks(private val app: KelivoApplication) {
     companion object {
         const val FIRE = "com.psyche.kelivo.scheduled.FIRE"
         private const val LIMIT_MS = 10 * 60 * 1000L
+        const val JOB_PREFIX = "miniapp:"
+        private const val JOB_LIMIT_MS = 90 * 1000L
+        private const val JOB_RUNS = 5
+        private val JOB_FUNCTION = Regex("^[A-Za-z_\\$][A-Za-z0-9_\\$]{0,63}$")
+        fun isJob(id: String) = id.startsWith(JOB_PREFIX)
     }
     private val prefs = app.getSharedPreferences("kelivo_scheduled_tasks", Context.MODE_PRIVATE)
     private val alarms = app.getSystemService(AlarmManager::class.java)
@@ -34,7 +44,7 @@ class ScheduledTasks(private val app: KelivoApplication) {
 
     init {
         // A terminated HTTP stream cannot be resumed or safely replayed.
-        tasks().forEach { task ->
+        (tasks() + jobs()).forEach { task ->
             val runs = task.optJSONArray("runs") ?: JSONArray()
             var changed = false
             for (i in 0 until runs.length()) {
@@ -75,8 +85,28 @@ class ScheduledTasks(private val app: KelivoApplication) {
                             val id = args["id"] as String
                             require(active.values.none { it.getString("taskId") == id }) { "task_running" }
                             alarms.cancel(pendingIntent(id, 0))
-                            check(prefs.edit().remove("task:$id").commit())
+                            check(prefs.edit().remove(key(id)).commit())
                             result.success(snapshot())
+                        }
+                        "saveJob" -> {
+                            val job = JSONObject(args)
+                            validateJob(job)
+                            job.put("runs", get(job.getString("id"))?.optJSONArray("runs") ?: JSONArray())
+                            arm(job)
+                            persist(job)
+                            result.success(null)
+                        }
+                        "deleteJob" -> {
+                            val id = args["id"] as String
+                            require(isJob(id))
+                            alarms.cancel(pendingIntent(id, 0))
+                            check(prefs.edit().remove(key(id)).commit())
+                            result.success(null)
+                        }
+                        "listJobs" -> {
+                            val appId = args["appId"] as String?
+                            result.success(jobs().filter { appId == null || it.optString("appId") == appId }
+                                .map { it.toString() })
                         }
                         "runNow" -> {
                             val task = get(args["id"] as String) ?: error("task_missing")
@@ -125,6 +155,16 @@ class ScheduledTasks(private val app: KelivoApplication) {
         val next = next(task, System.currentTimeMillis())
         require(!task.getBoolean("enabled") || next != null) { "schedule_ended" }
     }
+    private fun validateJob(job: JSONObject) {
+        val id = job.getString("id")
+        require(isJob(id) && id.length <= 128)
+        require(job.optString("kind") == "miniAppJob")
+        require(job.getString("appId").isNotBlank() && job.getString("jobId").isNotBlank())
+        require(id == "$JOB_PREFIX${job.getString("appId")}:${job.getString("jobId")}")
+        require(JOB_FUNCTION.matches(job.getString("run")))
+        job.put("enabled", true)
+        requireNotNull(next(job, System.currentTimeMillis()))
+    }
     private fun date(task: JSONObject, key: String): LocalDate? =
         if (task.isNull(key)) null else LocalDate.parse(task.getString(key))
     private fun next(task: JSONObject, after: Long): Long? = ScheduleTime.next(
@@ -136,9 +176,12 @@ class ScheduledTasks(private val app: KelivoApplication) {
     }
     private fun tasks() = prefs.all.keys.filter { it.startsWith("task:") }
         .mapNotNull { get(it.removePrefix("task:")) }.sortedBy { it.optString("name") }
-    private fun get(id: String) = prefs.getString("task:$id", null)?.let(::JSONObject)
+    private fun jobs() = prefs.all.keys.filter { it.startsWith("job:") }
+        .mapNotNull { get(it.removePrefix("job:")) }.sortedBy { it.optString("id") }
+    private fun key(id: String) = if (isJob(id)) "job:$id" else "task:$id"
+    private fun get(id: String) = prefs.getString(key(id), null)?.let(::JSONObject)
     private fun persist(task: JSONObject) {
-        check(prefs.edit().putString("task:${task.getString("id")}", task.toString()).commit())
+        check(prefs.edit().putString(key(task.getString("id")), task.toString()).commit())
     }
     private fun permitted() = Build.VERSION.SDK_INT < 31 || alarms.canScheduleExactAlarms()
     private fun snapshot(): Map<String, Any> = mapOf(
@@ -164,12 +207,19 @@ class ScheduledTasks(private val app: KelivoApplication) {
             task.put("enabled", false)
             return
         }
-        if (!task.getBoolean("enabled") || !permitted()) return
-        alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pendingIntent(id, next))
+        if (!task.getBoolean("enabled")) return
+        if (permitted()) {
+            alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pendingIntent(id, next))
+        } else if (isJob(id)) {
+            // A few minutes late is fine for a job; a chat task waits for the permission.
+            alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pendingIntent(id, next))
+        } else {
+            return
+        }
         task.put("nextRunAt", next)
     }
     fun rescheduleAll() {
-        tasks().forEach { task ->
+        (tasks() + jobs()).forEach { task ->
             try { arm(task); persist(task) }
             catch (error: RuntimeException) { app.backgroundRuntime.recordError("schedule_failed: ${error.message}") }
         }
@@ -193,8 +243,9 @@ class ScheduledTasks(private val app: KelivoApplication) {
         val run = JSONObject().put("id", id).put("taskId", task.getString("id"))
             .put("startedAt", System.currentTimeMillis()).put("status", "running")
         val old = task.optJSONArray("runs") ?: JSONArray()
+        val kept = if (isJob(task.getString("id"))) JOB_RUNS else 20
         task.put("runs", JSONArray().put(run).also { rows ->
-            for (i in 0 until minOf(19, old.length())) rows.put(old.getJSONObject(i))
+            for (i in 0 until minOf(kept - 1, old.length())) rows.put(old.getJSONObject(i))
         })
         persist(task)
         active[id] = run
@@ -203,7 +254,7 @@ class ScheduledTasks(private val app: KelivoApplication) {
             finish(id, mapOf("status" to "failed", "error" to "execution_timeout"))
         }
         deadlines[id] = timeout
-        main.postDelayed(timeout, LIMIT_MS)
+        main.postDelayed(timeout, if (isJob(task.getString("id"))) JOB_LIMIT_MS else LIMIT_MS)
         // The service posts its foreground notification before warming Flutter.
         if (!app.hasEngine) app.backgroundRuntime.setForeground(false)
         app.backgroundRuntime.beginScheduledRun(id)

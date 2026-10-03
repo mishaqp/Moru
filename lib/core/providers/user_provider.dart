@@ -38,7 +38,7 @@ class UserProvider extends ChangeNotifier {
     _avatarValue = rawAvatar == null
         ? null
         : SandboxPathResolver.fix(rawAvatar);
-    // Persist the fixed path back if it changed (helps desktop after imports)
+    // Persist the fixed path back if it changed (keeps imported avatar paths current)
     if (rawAvatar != null &&
         _avatarValue != null &&
         rawAvatar != _avatarValue) {

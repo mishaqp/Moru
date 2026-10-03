@@ -8,17 +8,32 @@ import 'package:Kelivo/core/services/mcp/mcp_oauth_http_client.dart';
 import 'package:Kelivo/core/services/mcp/mcp_oauth_http_client_io.dart'
     show isPublicMcpOAuthAddress;
 import 'package:Kelivo/core/services/mcp/mcp_oauth_service.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+class _RealHttpOverrides extends HttpOverrides {}
+
 void main() {
-  test('loopback callback listens before waitForCallback is called', () async {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('Android loopback listens before waitForCallback is called', () async {
+    const channel = MethodChannel('app.oauth');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (_) async => null);
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
     final callback = await openOAuthCallback(
       Uri.parse('https://auth.example.com'),
+      loopbackRedirect: Uri.parse('http://127.0.0.1:0/oauth/callback'),
+      expectedState: 'state',
     );
     final redirectUri = callback.redirectUri;
-    final client = HttpClient();
+    final client = HttpOverrides.runWithHttpOverrides(
+      HttpClient.new,
+      _RealHttpOverrides(),
+    )..findProxy = (_) => 'DIRECT';
 
     try {
       final request = await client.getUrl(
@@ -36,7 +51,14 @@ void main() {
 
       expect(callbackUri.queryParameters['code'], 'code');
       expect(callback.redirectUri, redirectUri);
-      expect(responseBody, contains('You may close this window'));
+      expect(responseBody, contains('Return to Moru'));
+      expect(
+        responseBody,
+        contains(
+          const HtmlEscape().convert('com.mishaqp.moru://mcp-oauth-callback/'),
+        ),
+      );
+      expect(responseBody, isNot(contains('code=code')));
       expect(responseBody, isNot(contains('kelivo://oauth-return')));
       expect(responseBody, isNot(contains('Authorization complete')));
     } finally {

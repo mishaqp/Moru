@@ -194,6 +194,21 @@ class _LocalToolsTab extends StatelessWidget {
                   toggleTool(LocalToolNames.scheduledTasks, value),
             ),
             if (LocalToolsService.isAvailableOnThisPlatform(
+              LocalToolNames.reportProblem,
+            )) ...[
+              _iosDivider(context),
+              _LocalToolRow(
+                icon: Lucide.Bug,
+                title: l10n.problemReportToolTitle,
+                subtitle: l10n.problemReportToolSubtitle,
+                enabled: assistant.localToolIds.contains(
+                  LocalToolNames.reportProblem,
+                ),
+                onChanged: (value) =>
+                    toggleTool(LocalToolNames.reportProblem, value),
+              ),
+            ],
+            if (LocalToolsService.isAvailableOnThisPlatform(
               LocalToolNames.miniApps,
             )) ...[
               _iosDivider(context),
@@ -206,6 +221,21 @@ class _LocalToolsTab extends StatelessWidget {
                 ),
                 onChanged: (value) =>
                     toggleTool(LocalToolNames.miniApps, value),
+              ),
+            ],
+            if (LocalToolsService.isAvailableOnThisPlatform(
+              LocalToolNames.rootShell,
+            )) ...[
+              _iosDivider(context),
+              _LocalToolRow(
+                icon: Lucide.ShieldAlert,
+                title: l10n.rootShellToolTitle,
+                subtitle: l10n.rootShellToolSubtitle,
+                enabled: assistant.localToolIds.contains(
+                  LocalToolNames.rootShell,
+                ),
+                onChanged: (value) =>
+                    toggleTool(LocalToolNames.rootShell, value),
               ),
             ],
           ],

@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:Kelivo/core/services/workspace/workspace_file_access.dart';
+import 'package:Kelivo/utils/app_directories.dart';
 import 'package:archive/archive.dart';
 import 'package:path/path.dart' as p;
 
@@ -13,6 +15,7 @@ class FileBrowserEntry {
     required this.size,
     required this.modified,
     this.childCount,
+    this.rootPath,
   });
 
   final String name;
@@ -23,13 +26,74 @@ class FileBrowserEntry {
 
   /// Immediate child count for directories when it was cheap to collect.
   final int? childCount;
+
+  /// Boundary used again when the thumbnail or preview actually reads the file.
+  final String? rootPath;
 }
 
 /// Host-side mutation routed through [FileBrowser.mutationRunner].
 sealed class FileMutation {
-  const FileMutation({required this.rootPath});
+  const FileMutation({required this.rootPath, this.readOnlyRoots = const []});
 
   final String rootPath;
+  final List<String> readOnlyRoots;
+
+  FileMutation withReadOnlyRoots(List<String> roots) => switch (this) {
+    CreateFolderMutation(:final parentPath, :final name) =>
+      CreateFolderMutation(
+        rootPath: rootPath,
+        parentPath: parentPath,
+        name: name,
+        readOnlyRoots: roots,
+      ),
+    CreateFileMutation(:final parentPath, :final name) => CreateFileMutation(
+      rootPath: rootPath,
+      parentPath: parentPath,
+      name: name,
+      readOnlyRoots: roots,
+    ),
+    RenameMutation(:final hostPath, :final newName) => RenameMutation(
+      rootPath: rootPath,
+      hostPath: hostPath,
+      newName: newName,
+      readOnlyRoots: roots,
+    ),
+    MoveMutation(:final hostPath, :final destDirPath) => MoveMutation(
+      rootPath: rootPath,
+      hostPath: hostPath,
+      destDirPath: destDirPath,
+      readOnlyRoots: roots,
+    ),
+    DeleteMutation(:final hostPath) => DeleteMutation(
+      rootPath: rootPath,
+      hostPath: hostPath,
+      readOnlyRoots: roots,
+    ),
+    CopyIntoMutation(
+      :final sourcePath,
+      :final destDirPath,
+      :final pickedSource,
+    ) =>
+      CopyIntoMutation(
+        rootPath: rootPath,
+        sourcePath: sourcePath,
+        destDirPath: destDirPath,
+        pickedSource: pickedSource,
+        readOnlyRoots: roots,
+      ),
+    ZipDirectoryMutation(
+      :final sourcePath,
+      :final destPath,
+      :final destinationRoot,
+    ) =>
+      ZipDirectoryMutation(
+        rootPath: rootPath,
+        sourcePath: sourcePath,
+        destPath: destPath,
+        destinationRoot: destinationRoot,
+        readOnlyRoots: roots,
+      ),
+  };
 
   /// Paths modified by this operation; copying only reads the source.
   Iterable<String> get writePaths => switch (this) {
@@ -55,6 +119,7 @@ sealed class FileMutation {
 final class CreateFolderMutation extends FileMutation {
   const CreateFolderMutation({
     required super.rootPath,
+    super.readOnlyRoots,
     required this.parentPath,
     required this.name,
   });
@@ -66,6 +131,7 @@ final class CreateFolderMutation extends FileMutation {
 final class CreateFileMutation extends FileMutation {
   const CreateFileMutation({
     required super.rootPath,
+    super.readOnlyRoots,
     required this.parentPath,
     required this.name,
   });
@@ -77,6 +143,7 @@ final class CreateFileMutation extends FileMutation {
 final class RenameMutation extends FileMutation {
   const RenameMutation({
     required super.rootPath,
+    super.readOnlyRoots,
     required this.hostPath,
     required this.newName,
   });
@@ -88,6 +155,7 @@ final class RenameMutation extends FileMutation {
 final class MoveMutation extends FileMutation {
   const MoveMutation({
     required super.rootPath,
+    super.readOnlyRoots,
     required this.hostPath,
     required this.destDirPath,
   });
@@ -97,7 +165,11 @@ final class MoveMutation extends FileMutation {
 }
 
 final class DeleteMutation extends FileMutation {
-  const DeleteMutation({required super.rootPath, required this.hostPath});
+  const DeleteMutation({
+    required super.rootPath,
+    super.readOnlyRoots,
+    required this.hostPath,
+  });
 
   final String hostPath;
 }
@@ -105,23 +177,33 @@ final class DeleteMutation extends FileMutation {
 final class CopyIntoMutation extends FileMutation {
   const CopyIntoMutation({
     required super.rootPath,
+    super.readOnlyRoots,
     required this.sourcePath,
     required this.destDirPath,
+    this.pickedSource,
   });
 
   final String sourcePath;
   final String destDirPath;
+
+  /// A checked, held descriptor granted by the system file picker.
+  final WorkspaceFileHandle? pickedSource;
 }
 
 final class ZipDirectoryMutation extends FileMutation {
   const ZipDirectoryMutation({
     required super.rootPath,
+    super.readOnlyRoots,
     required this.sourcePath,
     required this.destPath,
+    this.destinationRoot,
   });
 
   final String sourcePath;
   final String destPath;
+
+  /// A newly created private export directory, never the whole system temp.
+  final String? destinationRoot;
 }
 
 /// Path-safe file operations that always stay inside [rootPath].
@@ -129,6 +211,71 @@ class FileBrowserOps {
   FileBrowserOps._();
 
   static String canonicalize(String path) => p.canonicalize(path);
+
+  static WorkspaceFileAccess _access(
+    String rootPath, {
+    Iterable<String> readOnlyRoots = const [],
+  }) => WorkspaceFileAccess(roots: [rootPath], readOnlyRoots: readOnlyRoots);
+
+  static Future<String> resolveRealInsideRoot(
+    String rootPath,
+    String hostPath, {
+    bool followFinalLink = true,
+    bool write = false,
+  }) => _access(
+    rootPath,
+  ).resolve(hostPath, followFinalLink: followFinalLink, write: write);
+
+  /// Native preview/share handlers reopen paths later. Give them a private
+  /// snapshot copied from the descriptor that passed the realpath check.
+  static Future<T> withReadableFile<T>({
+    required String rootPath,
+    required String hostPath,
+    required Future<T> Function(File file) operation,
+  }) async {
+    final source = await _access(rootPath).openRead(hostPath);
+    Directory? temporary;
+    try {
+      temporary = await createPrivateTemporaryDirectory();
+      final snapshotPath = p.join(temporary.path, p.basename(hostPath));
+      final destination = await _access(temporary.path).openWrite(snapshotPath);
+      try {
+        await _copyHandles(source, destination);
+      } finally {
+        await destination.close();
+      }
+      return await operation(File(snapshotPath));
+    } finally {
+      await source.close();
+      await temporary?.delete(recursive: true);
+    }
+  }
+
+  /// Preview/export snapshots are not in the model's writable `/tmp` mount.
+  static Future<Directory> createPrivateTemporaryDirectory() async {
+    final appData = await AppDirectories.getAppDataDirectory();
+    final access = _access(appData.path);
+    final root = p.join(appData.path, 'workspace-previews');
+    await access.createDirectory(root);
+    final name = await access.withDirectory(root, (path) async {
+      final directory = await Directory(path).createTemp('snapshot-');
+      return p.basename(directory.path);
+    });
+    return Directory(p.join(root, name));
+  }
+
+  static Future<void> _copyHandles(
+    WorkspaceFileHandle source,
+    WorkspaceFileHandle destination,
+  ) async {
+    await source.handle.setPosition(0);
+    while (true) {
+      final bytes = await source.handle.read(64 * 1024);
+      if (bytes.isEmpty) break;
+      await destination.handle.writeFrom(bytes);
+    }
+    await destination.handle.flush();
+  }
 
   static bool isWithinRoot(String rootPath, String candidatePath) {
     final root = canonicalize(rootPath);
@@ -220,36 +367,48 @@ class FileBrowserOps {
     bool directoriesOnly = false,
     String? excludePath,
   }) async {
-    final resolved = resolveInsideRoot(rootPath, dir.path);
-    if (resolved == null) {
-      throw StateError('path escapes root');
-    }
+    final access = _access(rootPath);
+    await access.resolve(dir.path);
     final exclude = excludePath == null
         ? null
         : resolveInsideRoot(rootPath, excludePath);
-    final entities = await Directory(
-      resolved,
-    ).list(followLinks: false).toList();
+    final names = await access.withDirectory(
+      dir.path,
+      (anchoredPath) async => [
+        await for (final entity in Directory(
+          anchoredPath,
+        ).list(followLinks: false))
+          p.basename(entity.path),
+      ],
+    );
     final entries = <FileBrowserEntry>[];
-    for (final entity in entities) {
-      final name = p.basename(entity.path);
+    for (final name in names) {
       if (!showHidden && isHiddenName(name)) continue;
-      final entityPath = resolveInsideRoot(rootPath, entity.path);
+      final entityPath = resolveInsideRoot(rootPath, p.join(dir.path, name));
       if (entityPath == null) continue;
       if (exclude != null &&
           (p.equals(entityPath, exclude) || p.isWithin(exclude, entityPath))) {
         continue;
       }
-      final stat = await entity.stat();
+      FileStat stat;
+      try {
+        stat = await access.stat(entityPath);
+      } on WorkspaceFileAccessException {
+        // An escaped or replaced link must not disclose its target's metadata.
+        continue;
+      } on FileSystemException {
+        continue;
+      }
       final isDirectory = stat.type == FileSystemEntityType.directory;
       if (directoriesOnly && !isDirectory) continue;
       entries.add(
         FileBrowserEntry(
           name: name,
-          hostPath: entity.path,
+          hostPath: entityPath,
           isDirectory: isDirectory,
           size: stat.size,
           modified: stat.modified,
+          rootPath: rootPath,
         ),
       );
     }
@@ -273,6 +432,7 @@ class FileBrowserOps {
 
   /// Default host `dart:io` runner used when [FileBrowser.mutationRunner] is null.
   static Future<void> runMutation(FileMutation mutation) async {
+    await validateMutation(mutation);
     switch (mutation) {
       case CreateFolderMutation(
         :final rootPath,
@@ -281,60 +441,119 @@ class FileBrowserOps {
       ):
         await createFolder(
           rootPath: rootPath,
+          readOnlyRoots: mutation.readOnlyRoots,
           parent: Directory(parentPath),
           name: name,
         );
       case CreateFileMutation(:final rootPath, :final parentPath, :final name):
         await createFile(
           rootPath: rootPath,
+          readOnlyRoots: mutation.readOnlyRoots,
           parent: Directory(parentPath),
           name: name,
         );
       case RenameMutation(:final rootPath, :final hostPath, :final newName):
         await renameEntry(
           rootPath: rootPath,
+          readOnlyRoots: mutation.readOnlyRoots,
           hostPath: hostPath,
           newName: newName,
         );
       case MoveMutation(:final rootPath, :final hostPath, :final destDirPath):
         await moveEntry(
           rootPath: rootPath,
+          readOnlyRoots: mutation.readOnlyRoots,
           hostPath: hostPath,
           destDir: Directory(destDirPath),
         );
       case DeleteMutation(:final rootPath, :final hostPath):
-        await deleteEntry(rootPath: rootPath, hostPath: hostPath);
+        await deleteEntry(
+          rootPath: rootPath,
+          readOnlyRoots: mutation.readOnlyRoots,
+          hostPath: hostPath,
+        );
       case CopyIntoMutation(
         :final rootPath,
         :final sourcePath,
         :final destDirPath,
+        :final pickedSource,
       ):
         await copyInto(
           rootPath: rootPath,
+          readOnlyRoots: mutation.readOnlyRoots,
           source: File(sourcePath),
           destDir: Directory(destDirPath),
+          pickedSource: pickedSource,
         );
       case ZipDirectoryMutation(
         :final rootPath,
         :final sourcePath,
         :final destPath,
+        :final destinationRoot,
       ):
         await zipDirectory(
           rootPath: rootPath,
+          readOnlyRoots: mutation.readOnlyRoots,
           source: Directory(sourcePath),
           dest: File(destPath),
+          destinationRoot: destinationRoot,
         );
     }
   }
 
-  static Future<int> directorySize(Directory dir) async {
+  /// Run this before user-supplied runners too; callbacks cannot waive the
+  /// browser's boundary. Actual I/O checks again while holding descriptors.
+  static Future<void> validateMutation(FileMutation mutation) async {
+    final access = _access(
+      mutation.rootPath,
+      readOnlyRoots: mutation.readOnlyRoots,
+    );
+    switch (mutation) {
+      case CreateFolderMutation(:final parentPath, :final name) ||
+          CreateFileMutation(:final parentPath, :final name):
+        if (!isValidFileName(name)) throw ArgumentError('invalid name');
+        await access.resolve(p.join(parentPath, name), write: true);
+      case RenameMutation(:final hostPath, :final newName):
+        if (!isValidFileName(newName)) throw ArgumentError('invalid name');
+        await access.resolve(hostPath, write: true);
+        await access.resolve(p.join(p.dirname(hostPath), newName), write: true);
+      case MoveMutation(:final hostPath, :final destDirPath):
+        await access.resolve(hostPath, write: true);
+        await access.resolve(destDirPath, write: true);
+      case DeleteMutation(:final hostPath):
+        await access.resolve(hostPath, followFinalLink: false, write: true);
+      case CopyIntoMutation(
+        :final sourcePath,
+        :final destDirPath,
+        :final pickedSource,
+      ):
+        if (pickedSource == null) await access.resolve(sourcePath);
+        await access.resolve(destDirPath, write: true);
+      case ZipDirectoryMutation(
+        :final sourcePath,
+        :final destPath,
+        :final destinationRoot,
+      ):
+        await access.resolve(sourcePath);
+        await _access(
+          destinationRoot ?? mutation.rootPath,
+          readOnlyRoots: mutation.readOnlyRoots,
+        ).resolve(destPath, write: true);
+    }
+  }
+
+  static Future<int> directorySize(
+    Directory dir, {
+    required String rootPath,
+  }) async {
     var total = 0;
-    if (!await dir.exists()) return 0;
-    await for (final entity in dir.list(recursive: true, followLinks: false)) {
-      if (entity is File) {
-        try {
-          total += await entity.length();
-        } catch (_) {}
+    final access = _access(rootPath);
+    await for (final path in _walkFiles(access, dir.path)) {
+      final file = await access.openRead(path);
+      try {
+        total += await file.handle.length();
+      } finally {
+        await file.close();
       }
     }
     return total;
@@ -342,159 +561,206 @@ class FileBrowserOps {
 
   static Future<void> createFolder({
     required String rootPath,
+    Iterable<String> readOnlyRoots = const [],
     required Directory parent,
     required String name,
   }) async {
-    if (!isValidFileName(name)) {
-      throw ArgumentError('invalid name');
-    }
-    final parentPath = resolveInsideRoot(rootPath, parent.path);
-    if (parentPath == null) throw StateError('path escapes root');
-    final dest = joinInsideRoot(
+    if (!isValidFileName(name)) throw ArgumentError('invalid name');
+    final dest = p.join(parent.path, name);
+    await _access(
       rootPath,
-      _relChild(rootPath, parentPath, name),
-    );
-    if (dest == null) throw StateError('path escapes root');
-    await Directory(dest).create();
+      readOnlyRoots: readOnlyRoots,
+    ).createDirectory(dest, recursive: false);
   }
 
   static Future<void> createFile({
     required String rootPath,
+    Iterable<String> readOnlyRoots = const [],
     required Directory parent,
     required String name,
   }) async {
-    if (!isValidFileName(name)) {
-      throw ArgumentError('invalid name');
-    }
-    final parentPath = resolveInsideRoot(rootPath, parent.path);
-    if (parentPath == null) throw StateError('path escapes root');
-    final dest = joinInsideRoot(
-      rootPath,
-      _relChild(rootPath, parentPath, name),
-    );
-    if (dest == null) throw StateError('path escapes root');
-    await File(dest).create();
+    if (!isValidFileName(name)) throw ArgumentError('invalid name');
+    final access = _access(rootPath, readOnlyRoots: readOnlyRoots);
+    final dest = p.join(parent.path, name);
+    await access.resolve(dest, write: true);
+    // File.create preserves an existing file. Opening without truncation does
+    // the same while verifying the descriptor before any change.
+    final file = await access.openWrite(dest, append: true);
+    await file.close();
   }
 
   static Future<void> renameEntry({
     required String rootPath,
+    Iterable<String> readOnlyRoots = const [],
     required String hostPath,
     required String newName,
   }) async {
-    if (!isValidFileName(newName)) {
-      throw ArgumentError('invalid name');
-    }
-    final source = resolveInsideRoot(rootPath, hostPath);
-    if (source == null) throw StateError('path escapes root');
-    if (p.equals(canonicalize(rootPath), source)) {
-      throw StateError('cannot rename root');
-    }
-    final dest = joinInsideRoot(
-      rootPath,
-      _relChild(rootPath, p.dirname(source), newName),
-    );
-    if (dest == null) throw StateError('path escapes root');
-    await _movePath(source, dest);
+    if (!isValidFileName(newName)) throw ArgumentError('invalid name');
+    final access = _access(rootPath, readOnlyRoots: readOnlyRoots);
+    final source = await access.resolve(hostPath, write: true);
+    final realRoot = await access.resolve(rootPath);
+    if (p.equals(realRoot, source)) throw StateError('cannot rename root');
+    final dest = p.join(p.dirname(hostPath), newName);
+    await access.resolve(dest, write: true);
+    await _movePath(access, hostPath, dest);
   }
 
   static Future<void> moveEntry({
     required String rootPath,
+    Iterable<String> readOnlyRoots = const [],
     required String hostPath,
     required Directory destDir,
   }) async {
-    final source = resolveInsideRoot(rootPath, hostPath);
-    final destDirPath = resolveInsideRoot(rootPath, destDir.path);
-    if (source == null || destDirPath == null) {
-      throw StateError('path escapes root');
-    }
-    if (p.equals(canonicalize(rootPath), source)) {
+    final access = _access(rootPath, readOnlyRoots: readOnlyRoots);
+    final source = await access.resolve(hostPath, write: true);
+    final destDirPath = await access.resolve(destDir.path, write: true);
+    if (p.equals(await access.resolve(rootPath), source)) {
       throw StateError('cannot move root');
     }
     if (p.equals(source, destDirPath) || p.isWithin(source, destDirPath)) {
       throw StateError('invalid move');
     }
-    final name = uniqueName(Directory(destDirPath), p.basename(source));
-    final dest = joinInsideRoot(
-      rootPath,
-      _relChild(rootPath, destDirPath, name),
+    final name = await access.withDirectory(
+      destDir.path,
+      (path) async => uniqueName(Directory(path), p.basename(hostPath)),
     );
-    if (dest == null) throw StateError('path escapes root');
-    if (p.equals(source, dest)) return;
-    await _movePath(source, dest);
+    final dest = p.join(destDir.path, name);
+    await access.resolve(dest, write: true);
+    if (p.equals(source, await access.resolve(dest))) return;
+    await _movePath(access, hostPath, dest);
   }
 
   static Future<void> deleteEntry({
     required String rootPath,
+    Iterable<String> readOnlyRoots = const [],
     required String hostPath,
   }) async {
-    final resolved = resolveInsideRoot(rootPath, hostPath);
-    if (resolved == null) throw StateError('path escapes root');
-    if (p.equals(canonicalize(rootPath), resolved)) {
+    final access = _access(rootPath, readOnlyRoots: readOnlyRoots);
+    final source = await access.resolve(
+      hostPath,
+      followFinalLink: false,
+      write: true,
+    );
+    if (p.equals(await access.resolve(rootPath), source)) {
       throw StateError('cannot delete root');
     }
-    final type = FileSystemEntity.typeSync(resolved, followLinks: false);
-    if (type == FileSystemEntityType.directory) {
-      await Directory(resolved).delete(recursive: true);
-    } else {
-      await File(resolved).delete();
-    }
+    await access.withParent(hostPath, (path) async {
+      final type = await FileSystemEntity.type(path, followLinks: false);
+      if (type == FileSystemEntityType.link) {
+        await Link(path).delete();
+      } else if (type == FileSystemEntityType.directory) {
+        await Directory(path).delete(recursive: true);
+      } else {
+        await File(path).delete();
+      }
+    }, followFinalLink: false);
   }
 
   static Future<void> copyInto({
     required String rootPath,
+    Iterable<String> readOnlyRoots = const [],
     required File source,
     required Directory destDir,
+    WorkspaceFileHandle? pickedSource,
   }) async {
-    final destDirPath = resolveInsideRoot(rootPath, destDir.path);
-    if (destDirPath == null) throw StateError('path escapes root');
-    final name = uniqueName(Directory(destDirPath), p.basename(source.path));
-    final dest = joinInsideRoot(
-      rootPath,
-      _relChild(rootPath, destDirPath, name),
+    final access = _access(rootPath, readOnlyRoots: readOnlyRoots);
+    final input = pickedSource ?? await access.openRead(source.path);
+    try {
+      final name = await access.withDirectory(
+        destDir.path,
+        (path) async => uniqueName(Directory(path), p.basename(source.path)),
+      );
+      final output = await access.openWrite(p.join(destDir.path, name));
+      try {
+        await _copyHandles(input, output);
+      } finally {
+        await output.close();
+      }
+    } finally {
+      if (pickedSource == null) await input.close();
+    }
+  }
+
+  static Stream<String> _walkFiles(
+    WorkspaceFileAccess access,
+    String directory,
+  ) async* {
+    final children = await access.withDirectory(
+      directory,
+      (path) async => [
+        await for (final entity in Directory(path).list(followLinks: false))
+          (
+            name: p.basename(entity.path),
+            directory: entity is Directory,
+            file: entity is File,
+          ),
+      ],
     );
-    if (dest == null) throw StateError('path escapes root');
-    await source.copy(dest);
+    for (final child in children) {
+      final path = p.join(directory, child.name);
+      if (child.directory) {
+        yield* _walkFiles(access, path);
+      } else if (child.file) {
+        await access.resolve(path);
+        yield path;
+      }
+    }
   }
 
   static Future<File> zipDirectory({
     required String rootPath,
+    Iterable<String> readOnlyRoots = const [],
     required Directory source,
     required File dest,
+    String? destinationRoot,
   }) async {
-    final resolved = resolveInsideRoot(rootPath, source.path);
-    if (resolved == null) throw StateError('path escapes root');
-    final destResolved = resolveInsideRoot(rootPath, dest.path);
-    // Destination may be outside the workspace (temp / user-chosen save).
-    final destPath = destResolved ?? dest.path;
+    final access = _access(rootPath, readOnlyRoots: readOnlyRoots);
+    final destinationAccess = _access(
+      destinationRoot ?? rootPath,
+      readOnlyRoots: readOnlyRoots,
+    );
+    await access.resolve(source.path);
+    await destinationAccess.resolve(dest.path, write: true);
     final archive = Archive();
-    await for (final entity in Directory(
-      resolved,
-    ).list(recursive: true, followLinks: false)) {
-      if (entity is! File) continue;
-      final filePath = resolveInsideRoot(rootPath, entity.path);
-      if (filePath == null) continue;
-      final rel = p.relative(filePath, from: resolved).replaceAll('\\', '/');
-      archive.addFile(ArchiveFile.bytes(rel, await entity.readAsBytes()));
+    await for (final filePath in _walkFiles(access, source.path)) {
+      // Never include an old archive at the output path in its own contents.
+      if (p.equals(canonicalize(filePath), canonicalize(dest.path))) continue;
+      final rel = p.relative(filePath, from: source.path).replaceAll('\\', '/');
+      archive.addFile(ArchiveFile.bytes(rel, await access.readBytes(filePath)));
     }
-    final out = File(destPath);
-    await out.parent.create(recursive: true);
-    await out.writeAsBytes(ZipEncoder().encodeBytes(archive), flush: true);
-    return out;
+    await destinationAccess.createDirectory(dest.parent.path);
+    final out = await destinationAccess.openWrite(dest.path);
+    try {
+      await out.handle.writeFrom(ZipEncoder().encodeBytes(archive));
+      await out.handle.flush();
+    } finally {
+      await out.close();
+    }
+    return dest;
   }
 
-  static String _relChild(String rootPath, String parentPath, String name) {
-    final parentRel = posixRelative(rootPath, parentPath) ?? '';
-    if (parentRel.isEmpty) return name;
-    return '$parentRel/$name';
-  }
-
-  static Future<void> _movePath(String source, String dest) async {
-    final type = FileSystemEntity.typeSync(source, followLinks: false);
-    if (type == FileSystemEntityType.directory) {
-      await Directory(source).rename(dest);
-    } else {
-      await File(source).rename(dest);
-    }
+  static Future<void> _movePath(
+    WorkspaceFileAccess access,
+    String source,
+    String dest,
+  ) async {
+    // Follow links for the policy check above, then rename the directory entry
+    // itself. Held parent descriptors prevent an ancestor from changing target.
+    await access.withParent(source, (anchoredSource) async {
+      await access.withParent(dest, (anchoredDest) async {
+        final type = await FileSystemEntity.type(
+          anchoredSource,
+          followLinks: false,
+        );
+        if (type == FileSystemEntityType.directory) {
+          await Directory(anchoredSource).rename(anchoredDest);
+        } else if (type == FileSystemEntityType.link) {
+          await Link(anchoredSource).rename(anchoredDest);
+        } else {
+          await File(anchoredSource).rename(anchoredDest);
+        }
+      }, followFinalLink: false);
+    }, followFinalLink: false);
   }
 }
 

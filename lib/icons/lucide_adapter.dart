@@ -31,8 +31,12 @@ class Lucide {
   static const IconData Upload = lucide.LucideIcons.upload;
   static const IconData Bot = lucide.LucideIcons.bot;
   static const IconData History = lucide.LucideIcons.history;
+  static const IconData Archive = lucide.LucideIcons.archive;
+  static const IconData ArchiveRestore = lucide.LucideIcons.archiveRestore;
+  static const IconData ArrowUpDown = lucide.LucideIcons.arrowUpDown;
   static const IconData Settings = lucide.LucideIcons.settings;
   static const IconData Search = lucide.LucideIcons.search;
+  static const IconData Gamepad = lucide.LucideIcons.gamepad2;
   static const IconData SearchX = lucide.LucideIcons.searchX;
   static const IconData Play = lucide.LucideIcons.play;
   static const IconData ExternalLink = lucide.LucideIcons.externalLink;
@@ -49,11 +53,14 @@ class Lucide {
   static const IconData Terminal = lucide.LucideIcons.terminal;
   static const IconData Database = lucide.LucideIcons.database;
   static const IconData HardDrive = lucide.LucideIcons.hardDrive;
+  static const IconData Server = lucide.LucideIcons.server;
   static const IconData BadgeInfo = lucide.LucideIcons.badgeInfo;
   static const IconData Library = lucide.LucideIcons.library;
   static const IconData Share2 = lucide.LucideIcons.share2;
   static const IconData Share = lucide.LucideIcons.share;
   static const IconData Bookmark = lucide.LucideIcons.bookmark;
+  static const IconData Star = lucide.LucideIcons.star;
+  static const IconData LogIn = lucide.LucideIcons.logIn;
   static const IconData MessageCircleWarning =
       lucide.LucideIcons.messageCircleWarning;
   static const IconData MessageCircleQuestionMark =
@@ -67,6 +74,7 @@ class Lucide {
   static const IconData Cable = lucide.LucideIcons.cable;
   static const IconData FileText = lucide.LucideIcons.fileText;
   static const IconData Wrench = lucide.LucideIcons.wrench;
+  static const IconData Bug = lucide.LucideIcons.bug;
   static const IconData Minus = lucide.LucideIcons.minus;
   static const IconData Type = lucide.LucideIcons.type;
   static const IconData ChevronRight = lucide.LucideIcons.chevronRight;
@@ -113,6 +121,7 @@ class Lucide {
   static const IconData CircleX = lucide.LucideIcons.circleX;
   static const IconData Link2 = lucide.LucideIcons.link2;
   static const IconData Shield = lucide.LucideIcons.shield;
+  static const IconData ShieldAlert = lucide.LucideIcons.shieldAlert;
   static const IconData TriangleAlert = lucide.LucideIcons.triangleAlert;
   static const IconData Compass = lucide.LucideIcons.compass;
   static const IconData ArrowDown = lucide.LucideIcons.arrowDown;
@@ -236,6 +245,12 @@ class Lucide {
   static const IconData TextSearch = lucide.LucideIcons.textSearch;
   static const IconData SquareTerminal = lucide.LucideIcons.squareTerminal;
   static const IconData Gauge = lucide.LucideIcons.gauge;
+  static const IconData ArrowUpToLine = lucide.LucideIcons.arrowUpToLine;
+  static const IconData ArrowDownToLine = lucide.LucideIcons.arrowDownToLine;
+  static const IconData ArrowUpFromLine = lucide.LucideIcons.arrowUpFromLine;
+  static const IconData DatabaseZap = lucide.LucideIcons.databaseZap;
+  static const IconData DollarSign = lucide.LucideIcons.dollarSign;
+  static const IconData ClipboardType = lucide.LucideIcons.clipboardType;
   static const IconData Package = lucide.LucideIcons.package;
   static const IconData FileCode = lucide.LucideIcons.fileCode;
   static const IconData FileSpreadsheet = lucide.LucideIcons.fileSpreadsheet;

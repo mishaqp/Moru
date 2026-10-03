@@ -4,7 +4,7 @@ import 'emoji_text.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
-/// A reusable emoji picker dialog used by both mobile and desktop.
+/// A reusable emoji picker dialog used on Android phone and wide layouts.
 /// Returns the chosen emoji (single grapheme) or null if cancelled.
 Future<String?> showEmojiPickerDialog(
   BuildContext context, {

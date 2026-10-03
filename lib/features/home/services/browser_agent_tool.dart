@@ -6,11 +6,15 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 
 import '../../../core/services/browser/browser_agent_session.dart';
+import '../../../core/services/api/tool_display_redaction.dart';
+import '../../../core/services/browser/browser_handoffs.dart';
+import '../../../core/services/browser/browser_guard.dart';
 import '../../../core/services/browser/browser_research.dart';
 import 'browser_agent_actions.dart';
 import '../../../core/services/browser/web_source.dart';
 import '../../../shared/pages/webview/webview_page.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../../../utils/mcp_structured_image.dart';
 
 /// Local-tool adapter for the visible shared browser.
 class BrowserAgentTool {
@@ -45,17 +49,42 @@ class BrowserAgentTool {
     final activityId = BrowserAgentActions.isKnown(action)
         ? session.recordActivity(
             action: action,
-            detail: _activityDetail(action, args),
+            detail: switch (_activityDetail(action, args)) {
+              final String detail =>
+                ToolDisplayRedaction.current?.text(detail) ?? detail,
+              _ => null,
+            },
           )
         : null;
-    final result = await _dispatch(action, args, session);
+    session.beginAction();
+    String result;
+    String? destinationPageKey;
+    var destinationCaptured = false;
+    try {
+      result = await _guarded(
+        action,
+        args,
+        session,
+        onNavigated: (tabId, url) {
+          destinationCaptured = true;
+          destinationPageKey = session.activityPageKey(url, tabId: tabId);
+        },
+      );
+    } finally {
+      session.endAction();
+    }
     if (activityId != null) {
       final decoded = jsonDecode(result) as Map<String, dynamic>;
       final ok = decoded['ok'] == true;
       final outcome = ok && action == 'wait_for' && decoded['found'] == false
           ? BrowserActivityOutcome.notFound
           : (ok ? BrowserActivityOutcome.ok : BrowserActivityOutcome.failed);
-      session.resolveActivity(activityId, outcome);
+      session.resolveActivity(
+        activityId,
+        outcome,
+        destinationPageKey: destinationPageKey,
+        destinationCaptured: destinationCaptured,
+      );
     }
     return result;
   }
@@ -67,7 +96,13 @@ class BrowserAgentTool {
   static String? _activityDetail(String action, Map<String, dynamic> args) {
     switch (action) {
       case 'open':
+      case 'new_tab':
         return _stringArg(args, 'url');
+      case 'switch_tab':
+      case 'close_tab':
+        return _stringArg(args, 'tab_id');
+      case 'set_mode':
+        return _stringArg(args, 'mode');
       case 'press_key':
         return _stringArg(args, 'key');
       case 'scroll':
@@ -81,16 +116,98 @@ class BrowserAgentTool {
     }
   }
 
+  /// Actions after which the page may be a different one.
+  static const Set<String> _navigating = {
+    'open',
+    'new_tab',
+    'switch_tab',
+    'set_mode',
+    'back',
+    'forward',
+    'reload',
+    'click',
+    'submit',
+    'press_key',
+  };
+
+  /// [_dispatch] with the guard around it: a blocking verification page
+  /// refuses interaction, actions are paced per site, and the result says
+  /// which check the page shows and which dialogs were answered.
+  static Future<String> _guarded(
+    String action,
+    Map<String, dynamic> args,
+    BrowserAgentSession session, {
+    required void Function(String? tabId, String? url) onNavigated,
+  }) async {
+    try {
+      if (BrowserGuard.blockedByChallenge.contains(action) &&
+          session.isAttached &&
+          session.challenge.value?.blocking == true &&
+          (await session.checkChallenge())?.blocking == true) {
+        return jsonEncode({
+          'ok': false,
+          'error': 'challenge_detected',
+          'message':
+              'The page is a verification check. Ask the user to complete it '
+              'in the browser, then observe again.',
+          'challenge': session.challenge.value!.toJson(),
+        });
+      }
+      if (session.isAttached || action == 'open') {
+        await session.pace(
+          action,
+          url: action == 'open' || action == 'new_tab'
+              ? _stringArg(args, 'url')
+              : null,
+        );
+      }
+      final raw = await _dispatch(
+        action,
+        args,
+        session,
+        onNavigated: onNavigated,
+      );
+      if (!session.isAttached) return raw;
+      final result = jsonDecode(raw) as Map<String, dynamic>;
+      if (_navigating.contains(action) || action == 'observe') {
+        final found = await session.checkChallenge();
+        if (found != null) result['challenge'] = found.toJson();
+      }
+      final dialogs = session.drainDialogs();
+      if (dialogs.isNotEmpty) result['dialogs'] = dialogs;
+      // Downloads and app links arrive after the click that started them,
+      // so they ride on this result or the next one.
+      final handoffs = BrowserHandoffs.instance.drainForModel();
+      if (handoffs.isNotEmpty) result['handoffs'] = handoffs;
+      // `screenshot: true` on any action: the page as it looks afterwards.
+      if (action != 'screenshot' &&
+          _boolArg(args, 'screenshot', false) &&
+          result['ok'] == true) {
+        final shot = await session.screenshot();
+        if (shot['ok'] == true) result['screenshot'] = shot['screenshot'];
+        if (shot['viewport'] != null) result['viewport'] = shot['viewport'];
+      }
+      return jsonEncode(result);
+    } on BrowserStoppedException {
+      return jsonEncode({
+        'ok': false,
+        'error': 'stopped_by_user',
+        'message': 'The user stopped this browser action.',
+      });
+    }
+  }
+
   static Future<String> _dispatch(
     String action,
     Map<String, dynamic> args,
-    BrowserAgentSession session,
-  ) async {
+    BrowserAgentSession session, {
+    required void Function(String? tabId, String? url) onNavigated,
+  }) async {
     try {
       switch (action) {
         case 'open':
           final url = (args['url'] ?? '').toString();
-          return jsonEncode(await _open(url));
+          return jsonEncode(await _open(url, onNavigated: onNavigated));
         case 'observe':
           return jsonEncode(
             await session.observe(
@@ -101,12 +218,54 @@ class BrowserAgentTool {
             ),
           );
         case 'click':
-          return jsonEncode(await session.click(_elementId(args)));
-        case 'type':
+          final point = _point(args);
+          if (point != null && _nullableIntArg(args, 'element_id') == null) {
+            return jsonEncode(await session.clickAt(point.x, point.y));
+          }
+          final elementId = _elementId(args);
+          if (_boolArg(args, 'trusted', false)) {
+            // A real tap on the element's center, for pages that ignore
+            // script clicks.
+            final center = await session.elementCenter(elementId);
+            if (center['ok'] != true) return jsonEncode(center);
+            final tapped = await session.clickAt(
+              center['x'] as num,
+              center['y'] as num,
+            );
+            return jsonEncode({...tapped, 'element_id': elementId});
+          }
+          return jsonEncode(await session.click(elementId));
+        case 'hover':
+          final at = _point(args);
+          final id = _nullableIntArg(args, 'element_id');
+          if (at == null && id == null) {
+            throw ArgumentError('hover needs element_id or x and y.');
+          }
           return jsonEncode(
-            await session.type(
-              _elementId(args),
-              (args['text'] ?? '').toString(),
+            await session.hover(elementId: id, x: at?.x, y: at?.y),
+          );
+        case 'type':
+          final text = (args['text'] ?? '').toString();
+          return jsonEncode(
+            _boolArg(args, 'human', false)
+                ? await session.typeLikeHuman(_elementId(args), text)
+                : await session.type(_elementId(args), text),
+          );
+        case 'collect':
+          return jsonEncode(
+            await session.collect(
+              selector: _stringArg(args, 'selector'),
+              maxItems: _intArg(args, 'max_items', 50),
+              maxScrolls: _intArg(args, 'max_scrolls', 10),
+            ),
+          );
+        case 'outline':
+          return jsonEncode(await session.outline());
+        case 'wait_stable':
+          return jsonEncode(
+            await session.waitStable(
+              quietMs: _intArg(args, 'quiet_ms', 600),
+              timeoutMs: _intArg(args, 'timeout_ms', 10000),
             ),
           );
         case 'submit':
@@ -145,8 +304,98 @@ class BrowserAgentTool {
               timeoutMs: _intArg(args, 'timeout_ms', 10000),
             ),
           );
+        case 'screenshot':
+          return jsonEncode(await session.screenshot());
         case 'eval_js':
           return jsonEncode(await _evalJs(args));
+        case 'tabs':
+          return jsonEncode(session.listTabs());
+        case 'new_tab':
+          final url = _stringArg(args, 'url');
+          if (url != null) {
+            final uri = Uri.tryParse(url);
+            if (uri == null ||
+                !(uri.isScheme('http') || uri.isScheme('https'))) {
+              return jsonEncode({
+                'ok': false,
+                'error': 'invalid_url',
+                'message': 'new_tab only opens http or https URLs.',
+              });
+            }
+          }
+          final opened = await session.newTab(url: url, byAgent: true);
+          if (opened['ok'] == true) {
+            final tabId = opened['tab_id'] as String;
+            String? pageUrl;
+            for (final tab in opened['tabs'] as List) {
+              if (tab['tab_id'] == tabId) pageUrl = tab['url'] as String?;
+            }
+            onNavigated(tabId, pageUrl);
+          }
+          return jsonEncode(opened);
+        case 'switch_tab':
+        case 'close_tab':
+          final tabId = _stringArg(args, 'tab_id');
+          if (tabId == null && action == 'switch_tab') {
+            return jsonEncode({
+              'ok': false,
+              'error': 'missing_tab_id',
+              'message': 'switch_tab needs tab_id from action=tabs.',
+            });
+          }
+          if (action == 'switch_tab') {
+            final switched = await session.switchTab(tabId!);
+            if (switched['ok'] == true) {
+              onNavigated(tabId, switched['url'] as String?);
+            }
+            return jsonEncode(switched);
+          }
+          final active = [
+            for (final tab in session.tabs.value)
+              if (tab.active) tab.id,
+          ];
+          final target = tabId ?? (active.isEmpty ? null : active.first);
+          if (target == null) {
+            return jsonEncode({
+              'ok': false,
+              'error': 'browser_not_open',
+              'message': 'Shared browser is not open.',
+            });
+          }
+          return jsonEncode(await session.closeTab(target));
+        case 'set_mode':
+          final mode = _stringArg(args, 'mode');
+          if (mode != 'desktop' && mode != 'mobile') {
+            return jsonEncode({
+              'ok': false,
+              'error': 'invalid_mode',
+              'message': 'mode is desktop or mobile.',
+            });
+          }
+          return jsonEncode(await session.setDesktopMode(mode == 'desktop'));
+        case 'fetch':
+          final url = _stringArg(args, 'url');
+          if (url == null) {
+            return jsonEncode({
+              'ok': false,
+              'error': 'missing_url',
+              'message': 'fetch needs url.',
+            });
+          }
+          final rawHeaders = args['headers'];
+          return jsonEncode(
+            await session.fetchInPage(
+              url: url,
+              method: _stringArg(args, 'method') ?? 'GET',
+              body: _stringArg(args, 'body'),
+              headers: {
+                if (rawHeaders is Map)
+                  for (final entry in rawHeaders.entries)
+                    '${entry.key}': '${entry.value}',
+              },
+              maxChars: _intArg(args, 'max_chars', 20000),
+            ),
+          );
         case 'close':
           return jsonEncode(await _close());
         case 'done':
@@ -161,7 +410,7 @@ class BrowserAgentTool {
             'ok': false,
             'error': 'invalid_action',
             'message':
-                'Use action open, observe, click, type, submit, press_key, scroll, back, forward, reload, read, wait_for, eval_js, done, or close.',
+                'Use action open, observe, screenshot, click, hover, type, submit, press_key, scroll, back, forward, reload, read, collect, outline, wait_for, wait_stable, eval_js, fetch, export_cookies, tabs, new_tab, switch_tab, close_tab, set_mode, done, or close.',
           });
       }
     } on TimeoutException {
@@ -189,6 +438,33 @@ class BrowserAgentTool {
         'message': error.message,
       });
     }
+  }
+
+  /// The result as the model gets it: a screenshot path becomes an image
+  /// attached to the tool result (shown in the chat, and sent to models
+  /// that read images) instead of a path the model cannot open.
+  static Object forModel(String raw) {
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } on FormatException {
+      return raw;
+    }
+    if (decoded is! Map<String, dynamic>) return raw;
+    final path = decoded['screenshot'];
+    if (path is! String || path.isEmpty) return raw;
+    decoded
+      ..['screenshot'] = 'attached'
+      ..['screenshot_note'] =
+          'The picture of the viewport is attached as an image. Points in it '
+          'map to click/hover x and y after scaling to the viewport size. If '
+          'you see no image, your model cannot read images: use observe.';
+    return ClientToolResult(
+      jsonEncode(decoded),
+      metadata: {
+        kMcpResultMetadataKey: mcpResultMetadata([path]),
+      },
+    );
   }
 
   static Future<Map<String, dynamic>> _close() {
@@ -244,7 +520,10 @@ class BrowserAgentTool {
     return {'ok': !result.containsKey('error'), ...result};
   }
 
-  static Future<Map<String, dynamic>> _open(String rawUrl) async {
+  static Future<Map<String, dynamic>> _open(
+    String rawUrl, {
+    required void Function(String? tabId, String? url) onNavigated,
+  }) async {
     final uri = Uri.tryParse(rawUrl.trim());
     if (uri == null ||
         !uri.hasScheme ||
@@ -254,7 +533,9 @@ class BrowserAgentTool {
 
     final session = BrowserAgentSession.instance;
     if (session.isAttached) {
+      final tabId = session.activeTabId;
       await session.load(uri);
+      onNavigated(tabId, session.pageUrlForTab(tabId));
       return {'ok': true, 'url': uri.toString(), 'reused': true};
     }
 
@@ -272,16 +553,31 @@ class BrowserAgentTool {
       ),
     );
     await session.waitUntilAttached();
+    final tabId = session.activeTabId;
     await session.waitUntilReady();
     await session.recordInitialPage();
+    onNavigated(tabId, session.pageUrlForTab(tabId));
     return {'ok': true, 'url': uri.toString(), 'reused': false};
+  }
+
+  /// Viewport point in CSS pixels from `x` and `y`, when both are given.
+  static ({num x, num y})? _point(Map<String, dynamic> args) {
+    num? read(String key) {
+      final raw = args[key];
+      return raw is num ? raw : num.tryParse('${raw ?? ''}');
+    }
+
+    final x = read('x');
+    final y = read('y');
+    return x == null || y == null ? null : (x: x, y: y);
   }
 
   static int _elementId(Map<String, dynamic> args) {
     final id = _nullableIntArg(args, 'element_id');
     if (id == null || id < 1) {
       throw ArgumentError(
-        'element_id must be a positive integer from observe.',
+        'element_id must be a positive integer from observe (or give x and '
+        'y for click).',
       );
     }
     return id;

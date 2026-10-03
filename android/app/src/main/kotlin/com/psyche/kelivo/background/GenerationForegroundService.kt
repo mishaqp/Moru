@@ -22,15 +22,18 @@ class GenerationForegroundService : Service() {
         // Even if completion raced service creation, satisfy the platform's
         // startForeground deadline before stopping the now-unneeded service.
         try {
-            if (Build.VERSION.SDK_INT >= 29) startForeground(
-                BackgroundRuntime.NOTIFICATION_ID, runtime.buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            if (Build.VERSION.SDK_INT >= 34) startForeground(
+                BackgroundRuntime.NOTIFICATION_ID, runtime.buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             else startForeground(BackgroundRuntime.NOTIFICATION_ID, runtime.buildNotification())
-            runtime.serviceStarted(this)
-            if (intent?.action == STOP) runtime.stopTasks()
-            else if (!runtime.shouldRunService()) stopGenerationService()
-            else {
-                acquireWakeLock()
-                if (runtime.hasScheduledRuns) android.os.Handler(mainLooper).post {
+            if (intent?.action == STOP) {
+                // Do not acknowledge a queued holder as protected during Stop.
+                runtime.stopTasks()
+                stopGenerationService()
+            } else {
+                if (runtime.shouldRunService()) acquireWakeLock()
+                runtime.serviceStarted(this)
+                if (!runtime.shouldRunService()) stopGenerationService()
+                else if (runtime.hasScheduledRuns) android.os.Handler(mainLooper).post {
                     val app = application as KelivoApplication
                     if (runtime.hasScheduledRuns) {
                         app.engine // Shared engine: no second isolate or database owner.
@@ -39,7 +42,7 @@ class GenerationForegroundService : Service() {
                 }
             }
         } catch (error: RuntimeException) {
-            runtime.serviceFailed("foreground_service_failed: ${error.message}")
+            runtime.serviceFailed("foreground_service_failed")
             stopGenerationService()
         }
         return START_NOT_STICKY

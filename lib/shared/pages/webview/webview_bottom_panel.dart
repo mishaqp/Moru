@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import 'webview_ask_ai_controller.dart';
+import 'browser_surface.dart';
 
 /// The merged bottom panel: one compact nav row (back/forward/reload/
 /// activity-log) plus, below it, exactly one of the Ask-AI composer, a
@@ -22,6 +23,8 @@ class WebViewBottomPanel extends StatefulWidget {
     required this.onReload,
     required this.onShowActivityLog,
     required this.currentUrl,
+    this.actionCount = 0,
+    this.showCompletedStatus = true,
     this.approvalCard,
   });
 
@@ -33,6 +36,8 @@ class WebViewBottomPanel extends StatefulWidget {
   final VoidCallback onReload;
   final VoidCallback onShowActivityLog;
   final String? currentUrl;
+  final int actionCount;
+  final bool showCompletedStatus;
 
   /// Non-null exactly when a `browser_use` approval is pending for this
   /// browser session -- replaces the composer/status row entirely while
@@ -84,43 +89,47 @@ class _WebViewBottomPanelState extends State<WebViewBottomPanel> {
         final state = widget.controller.state;
         return SafeArea(
           top: false,
-          child: Container(
-            decoration: BoxDecoration(
-              color: cs.surface,
-              border: Border(
-                top: BorderSide(
-                  color: cs.outlineVariant.withValues(alpha: 0.35),
+          child: BrowserSurface(
+            defaultColor: cs.surface,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: cs.outlineVariant.withValues(alpha: 0.35),
+                  ),
                 ),
               ),
-            ),
-            padding: const EdgeInsets.fromLTRB(4, 4, 12, 6),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                WebViewNavRow(
-                  canGoBack: widget.canGoBack,
-                  canGoForward: widget.canGoForward,
-                  onBack: widget.onBack,
-                  onForward: widget.onForward,
-                  onReload: widget.onReload,
-                  onShowActivityLog: widget.onShowActivityLog,
-                ),
-                if (widget.approvalCard != null)
-                  widget.approvalCard!
-                else
-                  _AskAiArea(
-                    key: ValueKey('browser_ask_ai_area_${state.name}'),
-                    state: state,
-                    textController: _textController,
-                    onSubmit: _submit,
-                    onStop: widget.controller.stop,
-                    onDismiss: widget.controller.dismiss,
-                    errorMessage: state == AskAiPanelState.error
-                        ? widget.controller.lastOutcome?.error
-                        : null,
+              padding: const EdgeInsets.fromLTRB(4, 4, 12, 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  WebViewNavRow(
+                    canGoBack: widget.canGoBack,
+                    canGoForward: widget.canGoForward,
+                    onBack: widget.onBack,
+                    onForward: widget.onForward,
+                    onReload: widget.onReload,
+                    onShowActivityLog: widget.onShowActivityLog,
+                    actionCount: widget.actionCount,
                   ),
-              ],
+                  if (widget.approvalCard != null)
+                    widget.approvalCard!
+                  else
+                    _AskAiArea(
+                      key: ValueKey('browser_ask_ai_area_${state.name}'),
+                      state: state,
+                      textController: _textController,
+                      onSubmit: _submit,
+                      onStop: widget.controller.stop,
+                      onDismiss: widget.controller.dismiss,
+                      errorMessage: state == AskAiPanelState.error
+                          ? widget.controller.lastOutcome?.error
+                          : null,
+                      showCompletedStatus: widget.showCompletedStatus,
+                    ),
+                ],
+              ),
             ),
           ),
         );
@@ -142,6 +151,7 @@ class WebViewNavRow extends StatelessWidget {
     required this.onForward,
     required this.onReload,
     this.onShowActivityLog,
+    this.actionCount = 0,
   });
 
   final bool canGoBack;
@@ -150,11 +160,13 @@ class WebViewNavRow extends StatelessWidget {
   final VoidCallback onForward;
   final VoidCallback onReload;
   final VoidCallback? onShowActivityLog;
+  final int actionCount;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _NavIconButton(
           icon: Lucide.ArrowLeft,
@@ -172,10 +184,29 @@ class WebViewNavRow extends StatelessWidget {
           onTap: onReload,
         ),
         if (onShowActivityLog != null)
-          _NavIconButton(
-            icon: Lucide.History,
-            tooltip: l10n.browserComposerActivityLogTooltip,
-            onTap: onShowActivityLog,
+          Flexible(
+            child: Tooltip(
+              message: l10n.browserComposerActivityLogTooltip,
+              child: FilledButton.tonalIcon(
+                key: const ValueKey('browser_actions_button'),
+                onPressed: onShowActivityLog,
+                icon: const Icon(Lucide.Sparkles, size: 16),
+                label: Text(
+                  actionCount == 0
+                      ? l10n.browserActions
+                      : l10n.browserActionsCount(actionCount),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12),
+                ),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  visualDensity: VisualDensity.standard,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  shape: const StadiumBorder(),
+                ),
+              ),
+            ),
           ),
       ],
     );
@@ -199,17 +230,23 @@ class _NavIconButton extends StatelessWidget {
     final enabled = onTap != null;
     return Tooltip(
       message: tooltip,
+      excludeFromSemantics: true,
       child: Semantics(
         button: true,
         label: tooltip,
         enabled: enabled,
+        onTap: onTap,
+        excludeSemantics: true,
         child: IconButton(
           constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+          visualDensity: VisualDensity.standard,
           onPressed: onTap,
           icon: Icon(
             icon,
             size: 19,
-            color: enabled ? cs.onSurface : cs.onSurface.withValues(alpha: 0.3),
+            color: enabled
+                ? cs.onSurface
+                : cs.onSurface.withValues(alpha: 0.55),
           ),
         ),
       ),
@@ -229,6 +266,7 @@ class _AskAiArea extends StatelessWidget {
     required this.onStop,
     required this.onDismiss,
     required this.errorMessage,
+    required this.showCompletedStatus,
   });
 
   final AskAiPanelState state;
@@ -237,6 +275,7 @@ class _AskAiArea extends StatelessWidget {
   final VoidCallback onStop;
   final VoidCallback onDismiss;
   final String? errorMessage;
+  final bool showCompletedStatus;
 
   bool get _busy =>
       state == AskAiPanelState.starting ||
@@ -316,7 +355,7 @@ class _AskAiArea extends StatelessWidget {
     }
 
     final showBanner =
-        state == AskAiPanelState.completed ||
+        (state == AskAiPanelState.completed && showCompletedStatus) ||
         state == AskAiPanelState.stopped ||
         state == AskAiPanelState.error;
     final trimmed = textController.text.trim();
@@ -376,60 +415,69 @@ class _AskAiArea extends StatelessWidget {
               ],
             ),
           ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 40),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: TextField(
-                  controller: textController,
-                  minLines: 1,
-                  maxLines: 4,
-                  keyboardType: TextInputType.multiline,
-                  textInputAction: TextInputAction.newline,
-                  decoration: InputDecoration(
-                    isCollapsed: true,
-                    border: InputBorder.none,
-                    hintText: l10n.browserComposerHint,
-                  ),
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Tooltip(
-              message: l10n.browserComposerSendTooltip,
-              child: Semantics(
-                button: true,
-                label: l10n.browserComposerSendTooltip,
-                enabled: canSend,
-                child: IconButton(
-                  constraints: const BoxConstraints(
-                    minWidth: 48,
-                    minHeight: 48,
-                  ),
-                  onPressed: canSend ? onSubmit : null,
-                  icon: Icon(Lucide.ArrowUp, size: 18),
-                  style: IconButton.styleFrom(
-                    backgroundColor: canSend
-                        ? cs.primary
-                        : cs.primary.withValues(alpha: 0.35),
-                    foregroundColor: cs.onPrimary,
-                    shape: const CircleBorder(),
+        Container(
+          key: const ValueKey('browser_composer_pill'),
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: TextField(
+                    controller: textController,
+                    minLines: 1,
+                    maxLines: 4,
+                    keyboardType: TextInputType.multiline,
+                    textInputAction: TextInputAction.newline,
+                    decoration: InputDecoration(
+                      isCollapsed: true,
+                      border: InputBorder.none,
+                      hintText: l10n.browserComposerHint,
+                      hintMaxLines: 1,
+                    ),
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Tooltip(
+                message: l10n.browserComposerSendTooltip,
+                child: Semantics(
+                  button: true,
+                  label: l10n.browserComposerSendTooltip,
+                  enabled: canSend,
+                  child: IconButton(
+                    constraints: const BoxConstraints(
+                      minWidth: 40,
+                      minHeight: 40,
+                      maxWidth: 40,
+                      maxHeight: 40,
+                    ),
+                    visualDensity: VisualDensity.standard,
+                    onPressed: canSend ? onSubmit : null,
+                    icon: Icon(Lucide.ArrowUp, size: 18),
+                    style: IconButton.styleFrom(
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      backgroundColor: canSend
+                          ? cs.primary
+                          : cs.onSurface.withValues(alpha: 0.08),
+                      foregroundColor: cs.onPrimary,
+                      disabledForegroundColor: cs.onSurface.withValues(
+                        alpha: 0.35,
+                      ),
+                      shape: const CircleBorder(),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

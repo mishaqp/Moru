@@ -20,6 +20,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:provider/provider.dart';
 
 import '../../../support/business_test_harness.dart';
+import '../../../support/acp_test_manager.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
   _FakePathProviderPlatform(this.path);
@@ -114,6 +115,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
+            ChangeNotifierProvider(create: (_) => createTestAcpAgentManager()),
             ChangeNotifierProvider(
               create: (_) => SettingsProvider(createBusinessTestPreferences()),
             ),

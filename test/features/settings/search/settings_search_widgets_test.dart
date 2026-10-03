@@ -22,7 +22,7 @@ void main() {
     WidgetTester tester,
     Widget child, {
     Size size = const Size(390, 844),
-    TargetPlatform platform = TargetPlatform.iOS,
+    TargetPlatform platform = TargetPlatform.android,
     double textScale = 1,
     Locale locale = const Locale('en', 'US'),
   }) async {
@@ -297,7 +297,7 @@ void main() {
           onClose: _noop,
         ),
       ),
-      platform: TargetPlatform.macOS,
+      platform: TargetPlatform.android,
     );
     await tester.enterText(find.byType(TextField), 'font size');
     await tester.pumpAndSettle();

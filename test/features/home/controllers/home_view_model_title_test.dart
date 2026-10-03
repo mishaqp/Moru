@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 
 import '../../../support/business_test_harness.dart';
 import 'package:Kelivo/core/database/chat_database_repository.dart';
+import 'package:Kelivo/core/models/agent_auth_mode.dart';
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/mcp_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
@@ -219,6 +220,76 @@ void main() {
 
       expect(generateTextRequestCount, 1);
       expect(generateTextModel, 'test-model');
+      expect(titleErrors, isEmpty);
+      expect(chatService.getConversation(convo.id)!.title, 'Dark mode chat');
+    });
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('subscription follow-current titles make no API request', (
+    tester,
+  ) async {
+    final controller = await pumpHarness(tester);
+    await tester.runAsync(() async {
+      await assistantProvider.updateAssistant(
+        assistantProvider.currentAssistant!.copyWith(
+          agentId: 'codex',
+          agentAuthMode: AgentAuthMode.subscription,
+        ),
+      );
+      await settings.resetTitleModel();
+      await settings.resetCurrentModel();
+      // Trap an erroneous API lookup for the logical source on loopback.
+      await settings.setProviderConfig(
+        'acp:codex',
+        ProviderConfig(
+          id: 'acp:codex',
+          enabled: true,
+          name: 'Logical source trap',
+          baseUrl: 'http://${server.address.address}:${server.port}/v1',
+          apiKey: 'source-must-not-use-this-key',
+          providerType: ProviderKind.openai,
+        ),
+      );
+      final convo = await chatService.createConversation(
+        title: 'New Chat',
+        assistantId: assistantProvider.currentAssistantId,
+      );
+      await seedTwoTurnConversation(convo.id);
+
+      await controller.debugViewModel.debugMaybeGenerateTitleFor(convo.id);
+
+      expect(generateTextRequestCount, 0);
+      expect(titleErrors, isEmpty);
+      expect(chatService.getConversation(convo.id)!.title, 'New Chat');
+      expect(settings.currentModelProvider, isNull);
+      expect(settings.currentModelId, isNull);
+    });
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('subscription titles honor an explicitly configured API model', (
+    tester,
+  ) async {
+    final controller = await pumpHarness(tester);
+    await tester.runAsync(() async {
+      await assistantProvider.updateAssistant(
+        assistantProvider.currentAssistant!.copyWith(
+          agentId: 'codex',
+          agentAuthMode: AgentAuthMode.subscription,
+        ),
+      );
+      await settings.setTitleModel('SiliconFlow', 'title-model');
+      final convo = await chatService.createConversation(
+        title: 'New Chat',
+        assistantId: assistantProvider.currentAssistantId,
+      );
+      await seedTwoTurnConversation(convo.id);
+
+      await controller.debugViewModel.debugMaybeGenerateTitleFor(convo.id);
+
+      expect(generateTextRequestCount, 1);
+      expect(generateTextModel, 'title-model');
       expect(titleErrors, isEmpty);
       expect(chatService.getConversation(convo.id)!.title, 'Dark mode chat');
     });

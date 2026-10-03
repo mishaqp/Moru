@@ -1,0 +1,932 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:Kelivo/core/providers/environment_provider.dart';
+import 'package:Kelivo/core/models/agent_auth_mode.dart';
+import 'package:Kelivo/core/services/acp/acp_agent_auth.dart';
+import 'package:Kelivo/core/services/acp/acp_agent_catalog.dart';
+import 'package:Kelivo/core/services/acp/acp_agent_manager.dart';
+import 'package:Kelivo/core/services/acp/acp_connection.dart';
+import 'package:Kelivo/core/services/acp/acp_error_messages.dart';
+import 'package:Kelivo/core/services/acp/acp_fs_compat.dart';
+import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
+import 'package:Kelivo/features/agents/pages/agents_page.dart';
+
+import '../../../support/business_test_harness.dart';
+import '../../../support/fake_workspace_runtime.dart';
+
+CommandExited _exit(int code) => CommandExited(
+  exitCode: code,
+  timedOut: false,
+  cancelled: false,
+  interrupted: false,
+  duration: Duration.zero,
+);
+
+/// Scripts answer by what they contain; a process kept open is a fake agent
+/// that answers `initialize`.
+class _AgentRuntime extends FakeWorkspaceRuntime
+    implements WorkspaceStdioRuntime {
+  String probeOutput = '';
+  int installExit = 0;
+  int uninstallExit = 0;
+  String uninstallOutput = '';
+  Object? uninstallError;
+  bool moruAvailable = true;
+  bool agentMissing = false;
+  bool subscriptionSignedIn = false;
+  Completer<void>? logoutGate;
+  final logoutStarted = Completer<void>();
+  String nodeVersion = 'v24.0.0';
+
+  /// The Node a NodeSource upgrade leaves behind; null when it fails.
+  String? upgradedNode;
+  final _agents = <String, StreamController<CommandEvent>>{};
+  final cancelled = <String>[];
+
+  @override
+  Stream<CommandEvent> run(CommandRequest request) {
+    requests.add(request);
+    if (request.keepStdinOpen && agentMissing) {
+      // What the guest shell reports when the command is not installed.
+      return Stream.fromIterable([
+        const CommandStarted(),
+        CommandOutput(
+          OutputStreamKind.stderr,
+          Uint8List.fromList(
+            utf8.encode('kelivo: exec: codex-acp: not found\n'),
+          ),
+        ),
+        _exit(127),
+      ]);
+    }
+    if (request.keepStdinOpen) {
+      final events = StreamController<CommandEvent>();
+      _agents[request.runId] = events;
+      events.add(const CommandStarted());
+      return events.stream;
+    }
+    final script = request.command;
+    final String output;
+    final int code;
+    if (script.contains("'login' 'status'")) {
+      output = subscriptionSignedIn
+          ? 'Logged in using ChatGPT\n'
+          : 'Not logged in\n';
+      code = subscriptionSignedIn ? 0 : 1;
+    } else if (script.contains("'auth' 'status'")) {
+      output = jsonEncode({
+        'loggedIn': subscriptionSignedIn,
+        'authMethod': subscriptionSignedIn ? 'claude.ai' : 'none',
+      });
+      code = subscriptionSignedIn ? 0 : 1;
+    } else if (script.contains("'logout'")) {
+      if (!logoutStarted.isCompleted) logoutStarted.complete();
+      if (logoutGate != null) {
+        return _delayedLogout(logoutGate!.future);
+      }
+      subscriptionSignedIn = false;
+      output = 'Logged out\n';
+      code = 0;
+    } else if (request.env.containsKey('MORU_MCP_TOKEN')) {
+      output = moruAvailable ? '__moru_mcp_available__\n' : '';
+      code = moruAvailable ? 0 : 1;
+    } else if (script.contains('deb.nodesource.com')) {
+      if (upgradedNode != null) nodeVersion = upgradedNode!;
+      output = '';
+      code = upgradedNode == null ? 1 : 0;
+    } else if (script.contains('__moru_node=')) {
+      output = '__moru_node=$nodeVersion\n$probeOutput';
+      code = 0;
+    } else if (script.contains('__acp_')) {
+      output = probeOutput;
+      code = 0;
+    } else if (script.contains('npm install')) {
+      output = 'added 42 packages in 9s\n';
+      code = installExit;
+    } else if (script.contains('npm uninstall')) {
+      if (uninstallError != null) return Stream.error(uninstallError!);
+      output = uninstallOutput;
+      code = uninstallExit;
+    } else {
+      output = '';
+      code = 0;
+    }
+    return Stream.fromIterable([
+      const CommandStarted(),
+      if (output.isNotEmpty)
+        CommandOutput(
+          OutputStreamKind.stdout,
+          Uint8List.fromList(utf8.encode(output)),
+        ),
+      _exit(code),
+    ]);
+  }
+
+  Stream<CommandEvent> _delayedLogout(Future<void> gate) async* {
+    yield const CommandStarted();
+    await gate;
+    subscriptionSignedIn = false;
+    yield _exit(0);
+  }
+
+  @override
+  Future<void> writeStdin(String runId, Uint8List data) async {
+    for (final line in const LineSplitter().convert(utf8.decode(data))) {
+      final message = jsonDecode(line) as Map;
+      if (message['method'] != 'initialize' &&
+          message['method'] != 'session/new') {
+        continue;
+      }
+      _agents[runId]!.add(
+        CommandOutput(
+          OutputStreamKind.stdout,
+          Uint8List.fromList(
+            utf8.encode(
+              '${jsonEncode({
+                'jsonrpc': '2.0',
+                'id': message['id'],
+                'result': message['method'] == 'session/new' ? {'sessionId': 'checked-session'} : {
+                        'protocolVersion': 1,
+                        'agentInfo': {'name': 'codex-acp', 'version': '1.10.0'},
+                      },
+              })}\n',
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<void> cancel(String runId) async {
+    cancelled.add(runId);
+    final agent = _agents.remove(runId);
+    if (agent != null) {
+      agent.add(_exit(143));
+      await agent.close();
+    }
+  }
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late _AgentRuntime runtime;
+  late WorkspaceRuntimeProvider runtimeProvider;
+  late EnvironmentProvider environment;
+
+  AcpAgentManager manager({prefs}) => AcpAgentManager(
+    preferences: prefs ?? createBusinessTestPreferences(),
+    runtimeProvider: runtimeProvider,
+    environment: environment,
+  );
+
+  setUp(() {
+    runtime = _AgentRuntime();
+    runtimeProvider = WorkspaceRuntimeProvider()..register(runtime);
+    environment = EnvironmentProvider(
+      preferences: createBusinessTestPreferences(),
+    );
+  });
+
+  const provider = AcpProviderInput(
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: 'sk-test',
+    model: 'gpt-5',
+    responsesApi: true,
+  );
+
+  for (final id in ['claude-code', 'codex']) {
+    test('$id subscription check verifies login and keeps MCP probe', () async {
+      final agents = manager();
+      addTearDown(agents.dispose);
+      final spec = AcpAgentSpec.byId(id)!;
+      final signedOut = await agents.check(
+        spec,
+        null,
+        authMode: AgentAuthMode.subscription,
+      );
+      expect(signedOut.ok, isFalse);
+      expect(signedOut.authStatus, AcpAuthStatus.signedOut);
+      expect(signedOut.failureKind, AcpFailureKind.authRequired);
+      expect(signedOut.moruToolsAvailable, isTrue);
+      runtime.subscriptionSignedIn = true;
+      final signedIn = await agents.check(
+        spec,
+        null,
+        authMode: AgentAuthMode.subscription,
+      );
+      expect(signedIn.ok, isTrue);
+      expect(signedIn.authStatus, AcpAuthStatus.signedIn);
+      expect(signedIn.moruToolsAvailable, isTrue);
+      final launch = runtime.requests.where((r) => r.keepStdinOpen).last;
+      expect(
+        launch.env.keys.where(AcpAgentSpec.isSubscriptionEnvironmentVariable),
+        isEmpty,
+      );
+      expect(agents.log, isEmpty);
+    });
+  }
+
+  test(
+    'logout closes subscription ACP processes before clearing tokens',
+    () async {
+      final agents = manager();
+      addTearDown(agents.dispose);
+      final spec = AcpAgentSpec.byId('codex')!;
+      final agent = await agents.start(
+        spec,
+        null,
+        authMode: AgentAuthMode.subscription,
+      );
+      await agents.auth.signOut(spec);
+      expect(agent.isAlive, isFalse);
+      expect(agents.auth.status(spec.id), AcpAuthStatus.signedOut);
+      expect(agents.log, isEmpty);
+    },
+  );
+
+  test('subscription startup cannot overtake logout', () async {
+    final agents = manager();
+    addTearDown(agents.dispose);
+    final spec = AcpAgentSpec.byId('codex')!;
+    final gate = runtime.logoutGate = Completer<void>();
+    final logout = agents.auth.signOut(spec);
+    await runtime.logoutStarted.future;
+    try {
+      await expectLater(
+        agents.start(spec, null, authMode: AgentAuthMode.subscription),
+        throwsA(isA<AcpError>()),
+      );
+      expect(runtime.requests.where((r) => r.keepStdinOpen), isEmpty);
+    } finally {
+      gate.complete();
+      await logout;
+    }
+  });
+
+  test(
+    'subscription startup is blocked while native login awaits user',
+    () async {
+      final agents = manager();
+      addTearDown(agents.dispose);
+      final spec = AcpAgentSpec.byId('claude-code')!;
+      final waiting = Completer<void>();
+      final auth = agents.auth;
+      auth.addListener(() {
+        if (!waiting.isCompleted &&
+            runtime.requests.any(
+              (r) => r.keepStdinOpen && r.command.contains("'auth' 'login'"),
+            )) {
+          waiting.complete();
+        }
+      });
+      final login = auth.signIn(spec);
+      await waiting.future;
+      try {
+        await expectLater(
+          agents.start(spec, null, authMode: AgentAuthMode.subscription),
+          throwsA(isA<AcpError>()),
+        );
+        expect(runtime.requests.where((r) => r.keepStdinOpen), hasLength(1));
+        expect(agents.log, isEmpty);
+      } finally {
+        await auth.cancel(spec.id);
+        await login;
+      }
+    },
+  );
+
+  test('Codex subscription has one process and check reuses it', () async {
+    final agents = manager();
+    addTearDown(agents.dispose);
+    final spec = AcpAgentSpec.byId('codex')!;
+    runtime.subscriptionSignedIn = true;
+    final first = await agents.start(
+      spec,
+      null,
+      authMode: AgentAuthMode.subscription,
+    );
+    await expectLater(
+      agents.start(spec, null, authMode: AgentAuthMode.subscription),
+      throwsA(
+        isA<AcpError>().having(
+          (error) => error.failureKind,
+          'account busy',
+          AcpFailureKind.accountBusy,
+        ),
+      ),
+    );
+    final checked = await agents.check(
+      spec,
+      null,
+      authMode: AgentAuthMode.subscription,
+    );
+    expect(checked.ok, isTrue);
+    expect(first.isAlive, isTrue);
+    expect(runtime.requests.where((r) => r.keepStdinOpen), hasLength(1));
+    first.close();
+    final replacement = await agents.start(
+      spec,
+      null,
+      authMode: AgentAuthMode.subscription,
+    );
+    expect(first.isAlive, isFalse);
+    expect(runtime.cancelled, hasLength(1));
+    replacement.close();
+    final apiFirst = await agents.start(spec, provider);
+    final apiSecond = await agents.start(spec, provider);
+    expect(apiFirst.isAlive && apiSecond.isAlive, isTrue);
+  });
+
+  test('new agents reject old Node before any npm installation', () async {
+    runtime.nodeVersion = 'v18.19.1';
+    final agents = manager();
+    final spec = AcpAgentSpec.byId('deepseek-harness')!;
+    await agents.install(spec);
+    expect(agents.nodeIssueFor(spec), isNotNull);
+    expect(agents.state(spec.id), isNot(AcpInstallState.installed));
+    expect(
+      runtime.requests.any((r) => r.command.contains('npm install')),
+      isFalse,
+    );
+    agents.dispose();
+  });
+
+  test('an old Node is updated from NodeSource before the agent', () async {
+    // Debian 13's own Node.
+    runtime
+      ..nodeVersion = 'v20.19.2'
+      ..upgradedNode = 'v24.21.0';
+    final agents = manager();
+    final spec = AcpAgentSpec.byId('kimi-code')!;
+    await agents.install(spec);
+    expect(agents.failure, isNull);
+    expect(agents.state(spec.id), AcpInstallState.installed);
+    final commands = runtime.requests.map((r) => r.command).toList();
+    final upgrade = commands.indexWhere((c) => c.contains('nodesource'));
+    expect(upgrade, isNot(-1));
+    expect(
+      commands.indexWhere((c) => c.contains('npm install')),
+      greaterThan(upgrade),
+    );
+    expect(agents.log, contains('Node.js 24'));
+    agents.dispose();
+  });
+
+  test('a Node new enough is left alone', () async {
+    final agents = manager();
+    await agents.install(AcpAgentSpec.byId('claude-code')!);
+    expect(agents.failure, isNull);
+    expect(
+      runtime.requests.any((r) => r.command.contains('nodesource')),
+      isFalse,
+    );
+    agents.dispose();
+  });
+
+  test(
+    'Claude rejects Node 20 before preparing or starting the adapter',
+    () async {
+      runtime.nodeVersion = 'v20.19.2';
+      final agents = manager();
+      addTearDown(agents.dispose);
+      await expectLater(
+        agents.start(AcpAgentSpec.byId('claude-code')!, provider),
+        throwsA(isA<Exception>()),
+      );
+      expect(runtime.requests.any((r) => r.keepStdinOpen), isFalse);
+      expect(
+        runtime.requests.any((r) => r.command.contains('base64 -d')),
+        isFalse,
+      );
+    },
+  );
+
+  test(
+    'DSH rejects Node 23 and unreadable versions; Kimi accepts Node 23',
+    () async {
+      final agents = manager();
+      final dsh = AcpAgentSpec.byId('deepseek-harness')!;
+      runtime.nodeVersion = 'v23.11.0';
+      await agents.install(dsh);
+      expect(agents.nodeIssueFor(dsh), isNotNull);
+      await agents.install(AcpAgentSpec.byId('kimi-code')!);
+      expect(agents.failure, isNull);
+      runtime.nodeVersion = '';
+      await agents.install(dsh);
+      expect(agents.nodeIssueFor(dsh), isNotNull);
+      agents.dispose();
+    },
+  );
+
+  test(
+    'fresh Node probe gates agent start even after a previous good refresh',
+    () async {
+      final agents = manager();
+      runtime.probeOutput = '__acp_deepseek-harness=1\n';
+      await agents.refresh();
+      final dsh = AcpAgentSpec.byId('deepseek-harness')!;
+      expect(agents.nodeIssueFor(dsh), isNull);
+      runtime.nodeVersion = 'v22.18.0';
+      await expectLater(agents.start(dsh, provider), throwsA(isA<Exception>()));
+      expect(agents.nodeIssueFor(dsh), isNotNull);
+      expect(runtime.requests.any((r) => r.keepStdinOpen), isFalse);
+      agents.dispose();
+    },
+  );
+
+  for (final id in ['kimi-code', 'deepseek-harness']) {
+    test('$id check includes the actual Moru tools probe', () async {
+      final agents = manager();
+      final result = await agents.check(AcpAgentSpec.byId(id)!, provider);
+      expect(result.ok, isTrue);
+      expect(result.moruToolsAvailable, isTrue);
+      expect(
+        runtime.requests.any((r) => r.env.containsKey('MORU_MCP_TOKEN')),
+        isTrue,
+      );
+      agents.dispose();
+    });
+  }
+
+  test(
+    'Web output including the login token never enters the agent log',
+    () async {
+      final agents = manager();
+      final opening = agents.webServers.open(
+        AcpAgentSpec.byId('kimi-code')!,
+        provider,
+        cwd: '/workspace',
+        openBrowser: (_) async {},
+      );
+      await Future.doWhile(() async {
+        await Future<void>.delayed(Duration.zero);
+        return !runtime.requests.any((r) => r.keepStdinOpen);
+      });
+      final request = runtime.requests.last;
+      runtime._agents[request.runId]!.add(
+        CommandOutput(
+          OutputStreamKind.stdout,
+          Uint8List.fromList(
+            utf8.encode('http://127.0.0.1:12345/#token=private-web-token\n'),
+          ),
+        ),
+      );
+      await opening;
+      expect(agents.log, isEmpty);
+      expect(request.command, isNot(contains('private-web-token')));
+      await agents.webServers.stopAll();
+      agents.dispose();
+    },
+  );
+
+  test(
+    'OpenCode generated Web password stays out of command, URL and log',
+    () async {
+      final agents = manager();
+      String? openedUrl;
+      final opening = agents.webServers.open(
+        AcpAgentSpec.byId('opencode')!,
+        provider,
+        cwd: '/workspace',
+        openBrowser: (target) async => openedUrl = target.url,
+      );
+      await Future.doWhile(() async {
+        await Future<void>.delayed(Duration.zero);
+        return !runtime.requests.any((request) => request.keepStdinOpen);
+      });
+      final request = runtime.requests.last;
+      final password = request.env['OPENCODE_SERVER_PASSWORD']!;
+      expect(password.length, greaterThanOrEqualTo(32));
+      expect(request.command.contains(password), isFalse);
+      final port = RegExp(
+        r"'--port' '(\d+)'",
+      ).firstMatch(request.command)!.group(1)!;
+      runtime._agents[request.runId]!.add(
+        CommandOutput(
+          OutputStreamKind.stderr,
+          Uint8List.fromList(utf8.encode('password marker: $password\n')),
+        ),
+      );
+      runtime._agents[request.runId]!.add(
+        CommandOutput(
+          OutputStreamKind.stdout,
+          Uint8List.fromList(utf8.encode('http://127.0.0.1:$port/\n')),
+        ),
+      );
+      await opening;
+      expect(openedUrl, 'http://127.0.0.1:$port/');
+      expect(openedUrl!.contains(password), isFalse);
+      expect(agents.log, isEmpty);
+      await agents.webServers.stopAll();
+      agents.dispose();
+    },
+  );
+
+  test('refresh finds which agents are installed', () async {
+    runtime.probeOutput =
+        '__acp_claude-code=1\n__acp_codex=0\n__acp_opencode=0\n';
+    final agents = manager();
+    await agents.refresh();
+    expect(agents.state('claude-code'), AcpInstallState.installed);
+    expect(agents.state('codex'), AcpInstallState.missing);
+    expect(agents.state('opencode'), AcpInstallState.missing);
+    // The probe looks on the npm prefix too.
+    expect(
+      runtime.requests.single.env['PATH'],
+      startsWith('$acpNpmPrefix/bin:'),
+    );
+  });
+
+  test('install runs the npm script, keeps its log and marks the agent '
+      'installed', () async {
+    final agents = manager();
+    final spec = AcpAgentSpec.byId('codex')!;
+    await agents.install(spec);
+    expect(agents.failure, isNull);
+    expect(agents.state('codex'), AcpInstallState.installed);
+    expect(agents.log, contains('added 42 packages'));
+    // Node's version is read first, then the npm script runs.
+    expect(runtime.requests.map((r) => r.command), [
+      contains('__moru_node='),
+      spec.installScript,
+    ]);
+    expect(agents.busy, isFalse);
+  });
+
+  test('a failed install says so and keeps the log', () async {
+    runtime.installExit = 1;
+    final agents = manager();
+    await agents.install(AcpAgentSpec.byId('codex')!);
+    expect(agents.failure, AcpAgentFailure.install);
+    expect(agents.failedAgentId, 'codex');
+    expect(agents.state('codex'), isNot(AcpInstallState.installed));
+    expect(agents.log, contains('added 42 packages'));
+  });
+
+  test(
+    'uninstall names every npm package installed by each built-in',
+    () async {
+      const packagesByAgent = {
+        'claude-code': [
+          '@anthropic-ai/claude-code',
+          '@agentclientprotocol/claude-agent-acp',
+        ],
+        'codex': ['@openai/codex', '@agentclientprotocol/codex-acp'],
+        'opencode': [
+          'opencode-ai',
+          'opencode-linux-arm64',
+          'opencode-linux-arm64-musl',
+        ],
+        'kimi-code': ['@moonshot-ai/kimi-code'],
+        'deepseek-harness': ['@deepseek-ai/dsh'],
+      };
+      final agents = manager();
+      addTearDown(agents.dispose);
+      for (final spec in AcpAgentSpec.builtIn) {
+        await agents.uninstall(spec);
+        final command = runtime.requests.last.command;
+        final npmCommand = const LineSplitter()
+            .convert(command)
+            .singleWhere((line) => line.startsWith('npm uninstall '));
+        expect(npmCommand.split(' '), [
+          'npm',
+          'uninstall',
+          '-g',
+          '--prefix',
+          acpNpmPrefix,
+          ...packagesByAgent[spec.id]!,
+        ], reason: spec.id);
+      }
+    },
+  );
+
+  test(
+    'OpenCode uninstall removes both platform packages through npm',
+    () async {
+      if (!Platform.isLinux) return;
+      final dir = await Directory.systemTemp.createTemp('acp-uninstall-');
+      addTearDown(() => dir.delete(recursive: true));
+      final bin = await Directory('${dir.path}/bin').create();
+      final modules = await Directory('${dir.path}/node_modules').create();
+      const agentPackages = [
+        'opencode-ai',
+        'opencode-linux-arm64',
+        'opencode-linux-arm64-musl',
+      ];
+      const sharedPackages = ['node', 'npm', '@openai/codex'];
+      for (final package in [...agentPackages, ...sharedPackages]) {
+        await Directory('${modules.path}/$package').create(recursive: true);
+      }
+      final npmArguments = File('${dir.path}/npm-arguments');
+      final rmArguments = File('${dir.path}/rm-arguments');
+      await File('${bin.path}/npm').writeAsString(
+        '#!/bin/sh\n'
+        'printf "%s\\n" "\$@" > "\$ACP_FIXTURE_NPM_ARGUMENTS"\n'
+        'shift 4\n'
+        'for package do\n'
+        '  /bin/rm -rf "\$ACP_FIXTURE_MODULES/\$package"\n'
+        'done\n',
+      );
+      await File('${bin.path}/rm').writeAsString(
+        '#!/bin/sh\n'
+        'printf "%s\\n" "\$@" > "\$ACP_FIXTURE_RM_ARGUMENTS"\n',
+      );
+      final chmod = await Process.run('/bin/chmod', [
+        '+x',
+        '${bin.path}/npm',
+        '${bin.path}/rm',
+      ]);
+      expect(chmod.exitCode, 0, reason: '${chmod.stderr}');
+      final agents = manager();
+      addTearDown(agents.dispose);
+      await agents.uninstall(AcpAgentSpec.byId('opencode')!);
+      final result = await Process.run(
+        '/bin/sh',
+        ['-c', runtime.requests.single.command],
+        environment: {
+          'PATH': '${bin.path}:${Platform.environment['PATH']}',
+          'ACP_FIXTURE_MODULES': modules.path,
+          'ACP_FIXTURE_NPM_ARGUMENTS': npmArguments.path,
+          'ACP_FIXTURE_RM_ARGUMENTS': rmArguments.path,
+        },
+      );
+      expect(result.exitCode, 0, reason: '${result.stderr}');
+      expect(await npmArguments.readAsLines(), [
+        'uninstall',
+        '-g',
+        '--prefix',
+        acpNpmPrefix,
+        ...agentPackages,
+      ]);
+      expect(await rmArguments.readAsLines(), [
+        '-f',
+        '$acpNpmPrefix/bin/opencode',
+      ]);
+      for (final package in agentPackages) {
+        expect(
+          await Directory('${modules.path}/$package').exists(),
+          isFalse,
+          reason: package,
+        );
+      }
+      for (final package in sharedPackages) {
+        expect(
+          await Directory('${modules.path}/$package').exists(),
+          isTrue,
+          reason: package,
+        );
+      }
+    },
+  );
+
+  test('custom agents do not run an uninstall script', () async {
+    final agents = manager();
+    addTearDown(agents.dispose);
+    await agents.uninstall(
+      AcpAgentSpec.custom(id: 'mine', name: 'Mine', command: 'my-agent'),
+    );
+    expect(runtime.requests, isEmpty);
+    expect(agents.busy, isFalse);
+  });
+
+  test(
+    'uninstall shell stops at npm failure before launcher cleanup',
+    () async {
+      if (!Platform.isLinux) return;
+      final dir = await Directory.systemTemp.createTemp('acp-uninstall-');
+      addTearDown(() => dir.delete(recursive: true));
+      final bin = await Directory('${dir.path}/bin').create();
+      final npmMarker = File('${dir.path}/npm-called');
+      final rmMarker = File('${dir.path}/rm-called');
+      await File('${bin.path}/npm').writeAsString(
+        '#!/bin/sh\n'
+        'printf npm > "\$ACP_FIXTURE_NPM_MARKER"\n'
+        'echo "npm uninstall failed" >&2\n'
+        'exit 42\n',
+      );
+      await File('${bin.path}/rm').writeAsString(
+        '#!/bin/sh\n'
+        'printf rm > "\$ACP_FIXTURE_RM_MARKER"\n'
+        'exit 0\n',
+      );
+      final chmod = await Process.run('/bin/chmod', [
+        '+x',
+        '${bin.path}/npm',
+        '${bin.path}/rm',
+      ]);
+      expect(chmod.exitCode, 0, reason: '${chmod.stderr}');
+      final agents = manager();
+      addTearDown(agents.dispose);
+      await agents.uninstall(AcpAgentSpec.byId('codex')!);
+      final result = await Process.run(
+        '/bin/sh',
+        ['-c', runtime.requests.single.command],
+        environment: {
+          'PATH': '${bin.path}:${Platform.environment['PATH']}',
+          'ACP_FIXTURE_NPM_MARKER': npmMarker.path,
+          'ACP_FIXTURE_RM_MARKER': rmMarker.path,
+        },
+      );
+      expect(await npmMarker.exists(), isTrue);
+      expect(result.exitCode, 42, reason: '${result.stderr}');
+      expect(await rmMarker.exists(), isFalse);
+    },
+  );
+
+  test(
+    'failed uninstall keeps installed state and the error journal',
+    () async {
+      runtime
+        ..probeOutput = '__acp_codex=1\n'
+        ..uninstallExit = 42
+        ..uninstallOutput = 'npm ERR! EACCES: permission denied\n';
+      final agents = manager();
+      addTearDown(agents.dispose);
+      await agents.refresh();
+      expect(agents.state('codex'), AcpInstallState.installed);
+      await agents.uninstall(AcpAgentSpec.byId('codex')!);
+      expect(agents.failure, AcpAgentFailure.remove);
+      expect(agents.failedAgentId, 'codex');
+      expect(agents.state('codex'), AcpInstallState.installed);
+      expect(agents.log, contains('npm ERR! EACCES: permission denied'));
+      expect(agents.busy, isFalse);
+    },
+  );
+
+  test(
+    'uninstall runtime errors keep installed state and are journaled',
+    () async {
+      runtime
+        ..probeOutput = '__acp_codex=1\n'
+        ..uninstallError = StateError('runtime disconnected');
+      final agents = manager();
+      addTearDown(agents.dispose);
+      await agents.refresh();
+      await agents.uninstall(AcpAgentSpec.byId('codex')!);
+      expect(agents.failure, AcpAgentFailure.remove);
+      expect(agents.failedAgentId, 'codex');
+      expect(agents.state('codex'), AcpInstallState.installed);
+      expect(agents.log, contains('runtime disconnected'));
+      expect(agents.busy, isFalse);
+    },
+  );
+
+  test('successful uninstall marks the agent missing', () async {
+    runtime.probeOutput = '__acp_codex=1\n';
+    final agents = manager();
+    addTearDown(agents.dispose);
+    await agents.refresh();
+    await agents.uninstall(AcpAgentSpec.byId('codex')!);
+    expect(agents.failure, isNull);
+    expect(agents.failedAgentId, isNull);
+    expect(agents.state('codex'), AcpInstallState.missing);
+    expect(agents.busy, isFalse);
+  });
+
+  test('without the Linux environment nothing starts', () async {
+    runtimeProvider = WorkspaceRuntimeProvider();
+    final agents = manager();
+    await agents.install(AcpAgentSpec.byId('codex')!);
+    expect(agents.failure, AcpAgentFailure.noEnvironment);
+    expect(agents.environmentAvailable, isFalse);
+  });
+
+  test('check writes the agent settings, starts it with the provider and '
+      'greets it', () async {
+    final agents = manager();
+    final result = await agents.check(AcpAgentSpec.byId('codex')!, provider);
+    expect(result.ok, isTrue, reason: result.error);
+    expect(result.info!.name, 'codex-acp');
+    expect(result.moruToolsAvailable, isTrue);
+    expect(agents.lastCheck('codex')?.info?.version, '1.10.0');
+    expect(agents.state('codex'), AcpInstallState.installed);
+
+    final write = runtime.requests.singleWhere(
+      (r) => r.command.contains('base64 -d'),
+    );
+    expect(write.command, contains('base64 -d'));
+    // The key stays out of the settings file and the script.
+    expect(write.command, isNot(contains('sk-test')));
+    final launch = runtime.requests.singleWhere((r) => r.keepStdinOpen);
+    expect(launch.keepStdinOpen, isTrue);
+    expect(launch.command, "exec 'codex-acp'");
+    expect(launch.env['MORU_CODEX_API_KEY'], 'sk-test');
+    expect(launch.env['CODEX_HOME'], '$acpConfigDir/codex');
+    // Agents run without PRoot's fake hard links, with the copy fallback.
+    expect(launch.emulateHardLinks, isFalse);
+    expect(launch.env['NODE_OPTIONS'], '--require=${AcpFsCompat.path}');
+    expect(write.command, contains(AcpFsCompat.path));
+    // Package installs keep the usual behaviour.
+    expect(
+      runtime.requests.where((r) => !r.keepStdinOpen),
+      everyElement(
+        isA<CommandRequest>().having(
+          (r) => r.emulateHardLinks,
+          'emulateHardLinks',
+          isTrue,
+        ),
+      ),
+    );
+    // The check stops the agent again.
+    expect(runtime.cancelled, contains(launch.runId));
+  });
+
+  test(
+    'a check whose command is gone marks the agent as not installed',
+    () async {
+      runtime.probeOutput = '__acp_codex=1\n';
+      final agents = manager();
+      await agents.refresh();
+      expect(agents.state('codex'), AcpInstallState.installed);
+      // A switched distribution no longer has the agent.
+      runtime
+        ..agentMissing = true
+        ..probeOutput = '__acp_codex=0\n';
+      final result = await agents.check(AcpAgentSpec.byId('codex')!, provider);
+      expect(result.ok, isFalse);
+      expect(isAcpCommandMissing(result.error!), isTrue, reason: result.error);
+      expect(agents.state('codex'), AcpInstallState.missing);
+    },
+  );
+
+  test(
+    'a new check reports unavailable instead of keeping the previous result',
+    () async {
+      final agents = manager();
+      final spec = AcpAgentSpec.byId('codex')!;
+      expect((await agents.check(spec, provider)).moruToolsAvailable, isTrue);
+      runtime.moruAvailable = false;
+      final result = await agents.check(spec, provider);
+      expect(result.ok, isTrue);
+      expect(result.moruToolsAvailable, isFalse);
+      expect(agents.lastCheck(spec.id)!.moruToolsAvailable, isFalse);
+      final probes = runtime.requests
+          .where((r) => r.env.containsKey('MORU_MCP_TOKEN'))
+          .toList();
+      expect(probes, hasLength(2));
+      expect(
+        probes[0].env['MORU_MCP_TOKEN'],
+        isNot(probes[1].env['MORU_MCP_TOKEN']),
+      );
+      for (final probe in probes) {
+        expect(probe.command, isNot(contains(probe.env['MORU_MCP_TOKEN'])));
+      }
+    },
+  );
+
+  test('your own agents are kept and can be deleted', () async {
+    final prefs = createBusinessTestPreferences();
+    final first = manager(prefs: prefs);
+    await first.loaded;
+    final spec = await first.saveCustomAgent(
+      name: 'Goose',
+      command: 'goose',
+      arguments: const ['acp'],
+    );
+    expect(first.agents.last.name, 'Goose');
+
+    final second = manager(prefs: prefs);
+    await second.loaded;
+    final kept = second.agent(spec.id)!;
+    expect(kept.command, 'goose');
+    expect(kept.arguments, ['acp']);
+    expect(kept.isCustom, isTrue);
+
+    await second.deleteCustomAgent(spec.id);
+    final third = manager(prefs: prefs);
+    await third.loaded;
+    expect(third.customAgents, isEmpty);
+  });
+
+  test('the settings script writes files byte for byte', () async {
+    if (!Platform.isLinux) return;
+    final dir = await Directory.systemTemp.createTemp('acp-config-');
+    addTearDown(() => dir.delete(recursive: true));
+    const content = 'model = "gpt\'s \$HOME"\né中 `x`\n';
+    final path = '${dir.path}/deep/it\'s/config.toml';
+    final result = await Process.run('/bin/sh', [
+      '-c',
+      AcpAgentManager.writeFilesScript([AcpConfigFile(path, content)]),
+    ]);
+    expect(result.exitCode, 0, reason: '${result.stderr}');
+    expect(await File(path).readAsString(), content);
+  });
+
+  test('a command line is split into words, honouring quotes', () {
+    expect(splitCommandLine('goose acp'), ['goose', 'acp']);
+    expect(splitCommandLine('  my-agent --dir "a b" \'c d\' '), [
+      'my-agent',
+      '--dir',
+      'a b',
+      'c d',
+    ]);
+    expect(splitCommandLine('agent ""'), ['agent', '']);
+    expect(splitCommandLine('   '), isEmpty);
+  });
+}

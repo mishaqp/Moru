@@ -355,10 +355,7 @@ void main() {
           find.byKey(const ValueKey('conversation-system-prompt-button')),
         );
         await tester.pumpAndSettle();
-        expect(
-          find.byType(Dialog),
-          platform == TargetPlatform.macOS ? findsOneWidget : findsNothing,
-        );
+        expect(find.byType(Dialog), findsNothing);
         await tester.enterText(
           find.byType(TextField),
           'Only this conversation',

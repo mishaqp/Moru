@@ -16,10 +16,10 @@ const _wallpaperColor = Color(0xFF4080C0);
 
 void main() {
   for (final config in [
-    (TargetPlatform.iOS, const Size(1024, 768), true),
+    (TargetPlatform.android, const Size(1024, 768), true),
     (TargetPlatform.android, const Size(1280, 800), true),
-    (TargetPlatform.iOS, const Size(390, 844), false),
-    (TargetPlatform.windows, const Size(1440, 900), true),
+    (TargetPlatform.android, const Size(390, 844), false),
+    (TargetPlatform.android, const Size(1440, 900), true),
   ]) {
     for (final brightness in Brightness.values) {
       testWidgets(

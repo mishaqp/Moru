@@ -124,11 +124,6 @@ class NotificationService {
         AndroidInitializationSettings('@drawable/ic_background_generation');
     const InitializationSettings init = InitializationSettings(
       android: androidInit,
-      iOS: DarwinInitializationSettings(
-        requestAlertPermission: false,
-        requestBadgePermission: false,
-        requestSoundPermission: false,
-      ),
     );
     await _plugin.initialize(
       init,
@@ -200,16 +195,11 @@ class NotificationService {
           playSound: true,
           enableVibration: true,
           category: AndroidNotificationCategory.message,
-          visibility: NotificationVisibility.public,
+          visibility: NotificationVisibility.private,
           ticker: 'Moru',
           styleInformation: BigTextStyleInformation(
             body ?? completionText.body,
           ),
-        ),
-        iOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentSound: true,
-          threadIdentifier: 'kelivo.chat-completion',
         ),
       ),
       payload: '$_chatCompletionPayloadPrefix$conversationId',
@@ -243,13 +233,33 @@ class NotificationService {
   /// Also receives taps from the native ongoing notification, overlay and
   /// ActivityKit. Keep the target until the home route has initialized.
   static void openConversation(String conversationId, {String? messageId}) {
-    if (messageId != null) _pendingMessageIds[conversationId] = messageId;
     if (conversationId.trim().isEmpty) return;
+    if (messageId?.isNotEmpty == true) {
+      _pendingMessageIds[conversationId] = messageId!;
+    }
     if (_conversationTapController.hasListener) {
       _conversationTapController.add(conversationId);
     } else {
       _pendingConversationId = conversationId;
     }
+  }
+
+  /// Native result/approval taps retain their original execution target.
+  static bool openNativeConversationTarget(Object? target) {
+    final Object? conversationId = target is String
+        ? target
+        : target is Map
+        ? target['conversationId']
+        : null;
+    if (conversationId is! String || conversationId.trim().isEmpty) {
+      return false;
+    }
+    final messageId = target is Map ? target['assistantMessageId'] : null;
+    openConversation(
+      conversationId,
+      messageId: messageId is String && messageId.isNotEmpty ? messageId : null,
+    );
+    return true;
   }
 
   @visibleForTesting

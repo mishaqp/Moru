@@ -158,7 +158,9 @@ void main() {
       expect((properties['action'] as Map<String, dynamic>)['enum'], const [
         'open',
         'observe',
+        'screenshot',
         'click',
+        'hover',
         'type',
         'submit',
         'press_key',
@@ -167,8 +169,18 @@ void main() {
         'forward',
         'reload',
         'read',
+        'collect',
+        'outline',
         'wait_for',
+        'wait_stable',
         'eval_js',
+        'fetch',
+        'export_cookies',
+        'tabs',
+        'new_tab',
+        'switch_tab',
+        'close_tab',
+        'set_mode',
         'done',
         'close',
       ]);
@@ -185,6 +197,18 @@ void main() {
         36,
       );
       expect(parameters['required'], const ['action']);
+    });
+
+    test('browser fetch needs approval only to send data', () {
+      bool gated(Map<String, dynamic> args) =>
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, {
+            'action': 'fetch',
+            ...args,
+          });
+      expect(gated({}), isFalse);
+      expect(gated({'method': 'head'}), isFalse);
+      expect(gated({'method': 'POST'}), isTrue);
+      expect(gated({'method': 'delete'}), isTrue);
     });
 
     test(
@@ -875,23 +899,6 @@ void main() {
         });
       },
     );
-
-    test('location is unavailable on desktop platforms', () {
-      addTearDown(() => debugDefaultTargetPlatformOverride = null);
-      for (final platform in [
-        TargetPlatform.macOS,
-        TargetPlatform.windows,
-        TargetPlatform.linux,
-      ]) {
-        debugDefaultTargetPlatformOverride = platform;
-        expect(
-          LocalToolsService.isAvailableOnThisPlatform(
-            LocalToolNames.currentLocation,
-          ),
-          isFalse,
-        );
-      }
-    });
 
     test(
       'Android location permissions and calls use the native channel',

@@ -8,7 +8,7 @@ class _QuickPhraseTab extends StatelessWidget {
     BuildContext context, {
     QuickPhrase? phrase,
   }) async {
-    // Desktop: custom dialog; Mobile: bottom sheet
+    // Android: bottom sheet
     final quickPhraseProvider = context.read<QuickPhraseProvider>();
     final result = await showModalBottomSheet<Map<String, String>?>(
       context: context,
