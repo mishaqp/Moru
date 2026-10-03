@@ -22,7 +22,7 @@ part 'claude_oauth_adapter.dart';
 part 'chatgpt_browser_oauth.dart';
 part 'openrouter_oauth_adapter.dart';
 
-const codexClientVersion = '0.156.1';
+const codexClientVersion = '0.160.0';
 
 class OAuthLoginPrompt {
   const OAuthLoginPrompt({
