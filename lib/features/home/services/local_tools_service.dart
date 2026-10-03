@@ -112,7 +112,7 @@ class PhoneControlStatus {
 }
 
 /// Platform availability of the device-backed local tools (implemented over
-/// a MethodChannel in the Android/iOS host apps).
+/// a MethodChannel in the Android host app).
 class DeviceLocalTools {
   const DeviceLocalTools._();
 
@@ -160,8 +160,7 @@ class DeviceLocalTools {
   static bool get locationSupported =>
       (defaultTargetPlatform == TargetPlatform.android);
 
-  /// HealthKit type IDs the current OS can query. Until prefetch finishes,
-  /// version-gated types (daylight) are omitted.
+  /// No HealthKit queries run on Android; stored type IDs remain compatible.
   static List<String> get availableHealthTypeIds {
     return const [];
   }
@@ -194,8 +193,7 @@ class DeviceLocalTools {
   }
 
   /// Returns true when calendar full access is already granted.
-  /// Uses the native EventKit / Android calendar permission path (not
-  /// permission_handler), so it works without iOS PERMISSION_EVENTS macros.
+  /// Uses the native Android calendar permission path.
   static Future<bool> hasCalendarPermission() async {
     if (!calendarSupported) return false;
     try {
@@ -209,8 +207,7 @@ class DeviceLocalTools {
   }
 
   /// Requests calendar full access via the native channel.
-  /// Returns true only when granted. On iOS, permanently denied / restricted
-  /// states open the app Settings page.
+  /// Returns true only when granted.
   static Future<bool> requestCalendarPermission() async {
     if (!calendarSupported) return false;
     try {
@@ -265,15 +262,14 @@ class DeviceLocalTools {
     return false;
   }
 
-  /// Presents the HealthKit read sheet for [types] only. The returned flag is
-  /// only that the request completed; iOS does not reveal per-type read grants.
+  /// Compatibility API for saved HealthKit selections; unavailable on Android.
   static Future<bool> requestHealthPermission({
     List<String> types = const [],
   }) async {
     return false;
   }
 
-  /// Opens this app's system settings page on Android or iOS.
+  /// Opens this app's Android system settings page.
   static Future<void> openAppSettings() async {
     if (!locationSupported) return;
     try {

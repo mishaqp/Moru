@@ -1119,7 +1119,11 @@ void main() {
       i < 100 && find.byType(FilePreviewFrame).evaluate().isEmpty;
       i++
     ) {
-      await tester.runAsync(() => Future<void>(() {}));
+      // Let native SQLite/file I/O run; virtual frames alone can exhaust the
+      // polling bound before the checked snapshot has completed.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
       await tester.pump(const Duration(milliseconds: 16));
     }
     expect(find.byType(FilePreviewFrame), findsOneWidget);

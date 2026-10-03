@@ -72,6 +72,7 @@ class AndroidOnlyPolicyTest(unittest.TestCase):
         forbidden = re.compile(
             r'Platform\.is(?:MacOS|Windows|Linux|IOS)\b|'
             r'TargetPlatform\.(?:iOS|macOS|windows|linux|fuchsia)\b|'
+            r'TargetPlatformVariant\.(?:mobile|desktop|all)\b|'
             r'\b(?:window_manager|desktop_drop)\b')
         problems = []
         for folder in ('lib', 'test', 'integration_test'):
@@ -87,12 +88,54 @@ class AndroidOnlyPolicyTest(unittest.TestCase):
     def test_no_apple_native_notification_or_filesystem_code(self):
         forbidden = re.compile(
             r'\b(?:DarwinInitializationSettings|DarwinNotificationDetails|'
-            r'_isApple|_fFullFsync)\b|Apple Color Emoji|Segoe UI Emoji')
+            r'_isApple|_fFullFsync|IOSUiSettings)\b|Apple Color Emoji|Segoe UI Emoji')
         problems = []
         for path in (ROOT / 'lib').rglob('*.dart'):
             if forbidden.search(path.read_text()):
                 problems.append(path.relative_to(ROOT).as_posix())
         self.assertEqual(problems, [], '\n'.join(problems))
+
+    def test_unused_platform_widgets_do_not_return(self):
+        forbidden_by_file = {
+            'lib/features/home/services/file_upload_service.dart':
+                r'\bonFilesDroppedDesktop\b',
+            'lib/features/home/controllers/home_page_controller.dart':
+                r'\b(?:onFilesDroppedDesktop|isDragHovering|setDragHovering)\b',
+            'lib/core/providers/update_provider.dart':
+                r"downloads\['ios'\]",
+            'lib/features/chat/widgets/message_export_sheet.dart':
+                r'\b(?:_ExportDialog|_BatchExportDialog)\b',
+            'lib/features/chat/widgets/image_preview_sheet.dart':
+                r'\b_DesktopIconButton\b',
+            'lib/features/settings/widgets/voice_service_widgets.dart':
+                r'\b(?:desktop|VoiceServiceSelectRow)\b',
+        }
+        for relative in (
+            'lib/features/workspace/widgets/preview/preview_actions.dart',
+            'lib/features/workspace/widgets/preview/file_preview.dart',
+            'lib/features/workspace/widgets/preview/binary_file_preview.dart',
+        ):
+            forbidden_by_file[relative] = r'\b(?:revealPreviewFileInFileManager|revealInFileManagerLabel)\b'
+        for path in (ROOT / 'lib/features/settings/widgets').glob('asr*.dart'):
+            forbidden_by_file[path.relative_to(ROOT).as_posix()] = r'\bdesktop\b|\b_buildDesktop\b'
+        for relative, pattern in forbidden_by_file.items():
+            with self.subTest(path=relative):
+                self.assertNotRegex((ROOT / relative).read_text(), pattern)
+
+    def test_no_desktop_backup_or_oauth_fallback(self):
+        # Android uses its native document picker for these backups and its
+        # native OAuth browser session, including explicit loopback redirects.
+        for relative in (
+            'lib/features/backup/pages/backup_page.dart',
+            'lib/features/backup/pages/local_snapshots_page.dart',
+        ):
+            with self.subTest(path=relative):
+                self.assertNotRegex((ROOT / relative).read_text(),
+                                    r'FilePicker\.platform\.saveFile')
+        migration = (ROOT / 'lib/features/migration/hive_to_sqlite_migration_page.dart').read_text()
+        self.assertNotRegex(migration, r'\b(?:_createDesktopBackup|FilePicker|_usesMobileBackupFlow)\b')
+        oauth = (ROOT / 'lib/core/services/auth/oauth_callback_io.dart').read_text()
+        self.assertNotRegex(oauth, r'Platform\.isAndroid|OAuthCallback\? mobileCallback|_callbackPage\(')
 
     def test_non_android_native_test_sources_do_not_return(self):
         tests = ROOT / 'test/native'

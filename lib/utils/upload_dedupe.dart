@@ -7,7 +7,7 @@ import 'package:path/path.dart' as p;
 /// Content-addressed helpers for the shared upload directory.
 ///
 /// Attachments are identified by their bytes, not by size or mtime: the
-/// Android/iOS document pickers hand us a fresh copy in the app cache whose
+/// Android document pickers hand us a fresh copy in the app cache whose
 /// modification time is the moment of the pick, so timestamps of the very same
 /// physical file never match across two picks.
 class UploadDedupe {

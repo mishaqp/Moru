@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
@@ -47,7 +46,6 @@ class HiveToSqliteMigrationPage extends StatefulWidget {
 class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
   late HiveToSqliteMigrationStatus _status;
   StreamSubscription<HiveToSqliteMigrationStatus>? _sub;
-  File? _backupFile;
   File? _temporaryBackupFile;
   bool _savingTemporaryBackup = false;
   bool _mobileBackupSaved = false;
@@ -56,14 +54,9 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
   bool _skipChatsJson = false;
   bool _skipBackup = false;
 
-  bool get _usesMobileBackupFlow =>
-      widget.mobileBackupSaver != null ||
-      widget.mobileDirectBackupSaver != null ||
-      Platform.isAndroid;
-
   bool get _usesDirectMobileBackupFlow =>
       widget.mobileDirectBackupSaver != null ||
-      (Platform.isAndroid && widget.mobileBackupSaver == null);
+      widget.mobileBackupSaver == null;
 
   @override
   void initState() {
@@ -102,21 +95,14 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
         await widget.service.migrate();
         return;
       }
-      File? backupFile;
-      if (_usesMobileBackupFlow) {
-        _mobileBackupSaved = false;
-        if (!await _createAndSaveMobileBackup()) return;
-        _mobileBackupSaved = true;
-      } else {
-        backupFile = await _createDesktopBackup();
-        if (backupFile == null) return;
-      }
+      _mobileBackupSaved = false;
+      if (!await _createAndSaveMobileBackup()) return;
+      _mobileBackupSaved = true;
       if (!mounted) return;
-      setState(() => _backupFile = backupFile);
       // migrate() bumps the attempt counter itself; anything before this is a
       // backup-phase failure that must still count toward unlocking skip.
       backupPhaseComplete = true;
-      await widget.service.migrate(backupPath: backupFile?.path);
+      await widget.service.migrate();
     } catch (error, stackTrace) {
       if (!backupPhaseComplete) {
         try {
@@ -146,17 +132,6 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
       await _deleteTemporaryBackup();
       if (mounted) setState(() => _busy = false);
     }
-  }
-
-  Future<File?> _createDesktopBackup() async {
-    final path = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: AppLocalizations.of(context)!.migrationChooseFolderButton,
-    );
-    if (path == null || path.trim().isEmpty) return null;
-    return widget.service.backupTo(
-      Directory(path),
-      includeChatsJson: !_skipChatsJson,
-    );
   }
 
   Future<bool> _createAndSaveMobileBackup() async {
@@ -233,14 +208,13 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
       }
       return;
     }
-    final backupPath = _mobileBackupSaved ? null : _backupFile?.path;
-    if (!_mobileBackupSaved && backupPath == null) {
+    if (!_mobileBackupSaved) {
       await _pickBackupAndStart();
       return;
     }
     setState(() => _busy = true);
     try {
-      await widget.service.migrate(backupPath: backupPath);
+      await widget.service.migrate();
     } catch (_) {
       // Status stream already carries the failure details.
       await _refreshSkipAvailability();
@@ -302,7 +276,7 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final desktop = MediaQuery.sizeOf(context).width >= 720;
+    final wide = MediaQuery.sizeOf(context).width >= 720;
     final overlay = Theme.of(context).brightness == Brightness.dark
         ? const SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
@@ -333,13 +307,13 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
           decoration: BoxDecoration(color: cs.surface),
           child: Center(
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: desktop ? 520 : 430),
+              constraints: BoxConstraints(maxWidth: wide ? 520 : 430),
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
-                  desktop ? 32 : 20,
-                  (desktop ? 34 : 18) + viewPadding.top,
-                  desktop ? 32 : 20,
-                  (desktop ? 34 : 18) + viewPadding.bottom,
+                  wide ? 32 : 20,
+                  (wide ? 34 : 18) + viewPadding.top,
+                  wide ? 32 : 20,
+                  (wide ? 34 : 18) + viewPadding.bottom,
                 ),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 260),
@@ -361,7 +335,6 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
       HiveToSqliteMigrationStage.intro => _IntroStep(
         key: key,
         status: _status,
-        mobileBackupFlow: _usesMobileBackupFlow,
         skipChatsJson: _skipChatsJson,
         skipBackup: _skipBackup,
         onSkipChatsJsonChanged: _busy
@@ -408,7 +381,6 @@ class _IntroStep extends StatelessWidget {
   const _IntroStep({
     super.key,
     required this.status,
-    required this.mobileBackupFlow,
     required this.skipChatsJson,
     required this.skipBackup,
     required this.onSkipChatsJsonChanged,
@@ -418,7 +390,6 @@ class _IntroStep extends StatelessWidget {
   });
 
   final HiveToSqliteMigrationStatus status;
-  final bool mobileBackupFlow;
   final bool skipChatsJson;
   final bool skipBackup;
   final ValueChanged<bool>? onSkipChatsJsonChanged;
@@ -474,9 +445,7 @@ class _IntroStep extends StatelessWidget {
           icon: skipBackup ? Lucide.Database : Lucide.FolderPlus,
           label: skipBackup
               ? l10n.migrationStartWithoutBackupButton
-              : mobileBackupFlow
-              ? l10n.migrationSaveBackupButton
-              : l10n.migrationChooseFolderButton,
+              : l10n.migrationSaveBackupButton,
           onPressed: onStart,
         ),
         if (onSkip != null) ...[

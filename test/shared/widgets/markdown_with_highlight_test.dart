@@ -1142,6 +1142,7 @@ Inline ***strong emphasis*** text.
       );
       await tester.pumpAndSettle();
 
+      var gestureNumber = 0;
       for (final value in [true, false]) {
         streaming.value = value;
         await tester.pumpAndSettle();
@@ -1163,14 +1164,30 @@ Inline ***strong emphasis*** text.
           // Separate the gestures so reversing at the previous endpoint does
           // not become a double click and select a word instead of a range.
           await tester.pump(const Duration(milliseconds: 400));
-          final gesture = await tester.startGesture(
-            reverse ? end : start,
+          // Pumping time does not advance TestPointer event timestamps.
+          // Separate drags on the Android recognizer's event clock as well.
+          final timeStamp = Duration(seconds: ++gestureNumber);
+          final gesture = await tester.createGesture(
             kind: ui.PointerDeviceKind.mouse,
           );
+          await gesture.down(reverse ? end : start, timeStamp: timeStamp);
           await tester.pump();
-          await gesture.moveTo(reverse ? start : end);
-          await tester.pump();
-          await gesture.up();
+          // Android starts the selection drag after crossing its slop. Send
+          // intermediate moves so the anchor stays in the starting paragraph.
+          for (var sample = 1; sample <= 12; sample++) {
+            await gesture.moveTo(
+              Offset.lerp(
+                reverse ? end : start,
+                reverse ? start : end,
+                sample / 12,
+              )!,
+              timeStamp: timeStamp + Duration(milliseconds: sample * 16),
+            );
+            await tester.pump();
+          }
+          await gesture.up(
+            timeStamp: timeStamp + const Duration(milliseconds: 200),
+          );
           await gesture.removePointer();
           await tester.pumpAndSettle();
           expect(selected, text, reason: 'streaming=$value reverse=$reverse');
@@ -1179,7 +1196,7 @@ Inline ***strong emphasis*** text.
         }
       }
     },
-    variant: TargetPlatformVariant.desktop(),
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
   for (final longReply in [false, true]) {

@@ -74,7 +74,7 @@ class GuestScripts {
     return writeFile(path: '/root/.npmrc', body: 'registry=$url\n');
   }
 
-  /// Replaces the selected source in place, including on iSH fakefs.
+  /// Replaces the selected package source in place inside the Android guest.
   @visibleForTesting
   static String writeFile({required String path, required String body}) {
     return 'set -e\n'

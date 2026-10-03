@@ -1153,7 +1153,7 @@ class _HomePageState extends State<HomePage>
               onInvertSelection: _controller.invertSelection,
             )
           : null,
-      body: _wrapWithDropTarget(_buildMobileBody(context, cs)),
+      body: _buildMobileBody(context, cs),
     );
   }
 
@@ -1272,7 +1272,7 @@ class _HomePageState extends State<HomePage>
               onInvertSelection: _controller.invertSelection,
             )
           : null,
-      body: _wrapWithDropTarget(_buildTabletBody(context, cs)),
+      body: _buildTabletBody(context, cs),
     );
   }
 
@@ -1791,10 +1791,6 @@ class _HomePageState extends State<HomePage>
       opacity: _controller.messageJumpOpacity,
       child: child,
     );
-  }
-
-  Widget _wrapWithDropTarget(Widget child) {
-    return child;
   }
 
   // ============================================================================

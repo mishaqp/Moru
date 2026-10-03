@@ -117,7 +117,7 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
     await _requireReady();
     // Unique per open, never a counter: the native session map lives on the
     // platform side and outlives the Dart isolate, so a hot restart would hand
-    // out ids that are still registered there — iSH rejects the open, proot
+    // out ids that are still registered there — PRoot
     // silently kills the older session.
     final sessionId = 'pty-${const Uuid().v4()}';
     final session = ChannelPtySession(channel: channel, sessionId: sessionId);

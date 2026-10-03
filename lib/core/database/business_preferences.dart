@@ -69,8 +69,8 @@ final class BusinessPreferences {
     }
   }
 
-  /// Awaits every write accepted so far. Desktop exit hooks flush through this
-  /// so the serialized queue reaches SQLite before the process exits.
+  /// Awaits every write accepted so far so the serialized queue reaches SQLite
+  /// before its caller proceeds with shutdown or a storage operation.
   Future<void> flushPendingWrites() => _writeTail;
 
   Object? get(String key) => _copyForRead(_values[key]);

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
@@ -23,12 +22,7 @@ class UpdateInfo {
     this.downloads = const {},
   });
 
-  String? bestDownloadUrl() {
-    if (Platform.isAndroid) {
-      return downloads['android'] ?? downloads['universal'];
-    }
-    return downloads['universal'] ?? downloads['android'] ?? downloads['ios'];
-  }
+  String? bestDownloadUrl() => downloads['android'] ?? downloads['universal'];
 
   /// Only completed, stable Moru releases with the exact arm64 asset qualify.
   /// Never fall back to an upstream feed or a different repository/ABI.

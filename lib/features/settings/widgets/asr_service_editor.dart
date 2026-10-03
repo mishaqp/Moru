@@ -2,33 +2,10 @@ part of 'asr_services_section.dart';
 
 Future<AsrServiceOptions?> _showAsrEditor(
   BuildContext context, {
-  required bool desktop,
   required SherpaModelManager modelManager,
   required Future<bool> Function() checkSystemAvailability,
   AsrServiceOptions? initial,
 }) {
-  if (desktop) {
-    return showDialog<AsrServiceOptions>(
-      context: context,
-      builder: (dialogContext) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-        backgroundColor: dialogContext.overlaySurface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560, maxHeight: 720),
-          child: _AsrEditor(
-            initial: initial,
-            desktop: true,
-            modelManager: modelManager,
-            checkSystemAvailability: checkSystemAvailability,
-            onCancel: () => Navigator.of(dialogContext).pop(),
-            onSubmit: (value) => Navigator.of(dialogContext).pop(value),
-          ),
-        ),
-      ),
-    );
-  }
-
   final editorKey = GlobalKey<_AsrEditorState>();
   return Navigator.of(context).push<AsrServiceOptions>(
     MaterialPageRoute(
@@ -59,10 +36,8 @@ Future<AsrServiceOptions?> _showAsrEditor(
         body: _AsrEditor(
           key: editorKey,
           initial: initial,
-          desktop: false,
           modelManager: modelManager,
           checkSystemAvailability: checkSystemAvailability,
-          onCancel: () => Navigator.of(pageContext).pop(),
           onSubmit: (value) => Navigator.of(pageContext).pop(value),
         ),
       ),
@@ -74,18 +49,14 @@ class _AsrEditor extends StatefulWidget {
   const _AsrEditor({
     super.key,
     required this.initial,
-    required this.desktop,
     required this.modelManager,
     required this.checkSystemAvailability,
-    required this.onCancel,
     required this.onSubmit,
   });
 
   final AsrServiceOptions? initial;
-  final bool desktop;
   final SherpaModelManager modelManager;
   final Future<bool> Function() checkSystemAvailability;
-  final VoidCallback onCancel;
   final ValueChanged<AsrServiceOptions> onSubmit;
 
   @override
@@ -438,7 +409,6 @@ class _AsrEditorState extends State<_AsrEditor> {
         label: l10n.asrServicesNameLabel,
         controller: _nameController,
         hint: _kindTitle(l10n, _kind),
-        desktop: widget.desktop,
       ),
     ];
     if (_kind == AsrServiceKind.sherpaOnnx) {
@@ -455,7 +425,6 @@ class _AsrEditorState extends State<_AsrEditor> {
           onDelete: _deleteModel,
           onUse: (model) => setState(() => _localModelId = model.id),
           languageController: _languageController,
-          desktop: widget.desktop,
         ),
       );
       return widgets;
@@ -467,7 +436,6 @@ class _AsrEditorState extends State<_AsrEditor> {
           checking: _checkingSystem,
           localeController: _languageController,
           onCheck: _checkSystem,
-          desktop: widget.desktop,
         ),
       );
       return widgets;
@@ -477,7 +445,6 @@ class _AsrEditorState extends State<_AsrEditor> {
         label: l10n.asrServicesApiKeyLabel,
         controller: _apiKeyController,
         obscure: true,
-        desktop: widget.desktop,
         errorText: _apiKeyError ? l10n.asrServicesApiKeyRequired : null,
         onChanged: (_) {
           if (_apiKeyError && _apiKeyController.text.trim().isNotEmpty) {
@@ -491,27 +458,23 @@ class _AsrEditorState extends State<_AsrEditor> {
         label: l10n.asrServicesEndpointLabel,
         controller: _endpointController,
         hint: _defaultEndpoint(_kind),
-        desktop: widget.desktop,
       ),
       if (_kind == AsrServiceKind.volcengine)
         _EditorField(
           label: l10n.asrServicesResourceIdLabel,
           controller: _resourceIdController,
           hint: _defaultResourceId(_kind),
-          desktop: widget.desktop,
         )
       else
         _EditorField(
           label: l10n.asrServicesModelLabel,
           controller: _modelController,
           hint: _defaultModel(_kind),
-          desktop: widget.desktop,
         ),
       _EditorField(
         label: l10n.asrServicesLanguageLabel,
         controller: _languageController,
         hint: l10n.asrServicesAutomaticLabel,
-        desktop: widget.desktop,
       ),
     ]);
     return widgets;
@@ -521,160 +484,55 @@ class _AsrEditorState extends State<_AsrEditor> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final title = widget.initial == null
-        ? l10n.asrServicesAddTitle
-        : l10n.asrServicesEditTitle;
     final actionLabel = widget.initial == null
         ? l10n.asrServicesAddAction
         : l10n.asrServicesSaveAction;
     final configuration = _configurationWidgets(l10n);
-    if (!widget.desktop) {
-      return SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                children: [
-                  _EditorSectionHeader(
-                    text: l10n.ttsServicesDialogProviderType,
-                    first: true,
-                  ),
-                  VoiceServiceMobileCard(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                        child: SizedBox(
-                          key: const ValueKey('asr-provider-choice-grid'),
-                          width: double.infinity,
-                          child: _ProviderChoiceGrid(
-                            selected: _kind,
-                            onSelected: _selectKind,
-                          ),
+
+    return SafeArea(
+      top: false,
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              children: [
+                _EditorSectionHeader(
+                  text: l10n.ttsServicesDialogProviderType,
+                  first: true,
+                ),
+                VoiceServiceMobileCard(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                      child: SizedBox(
+                        key: const ValueKey('asr-provider-choice-grid'),
+                        width: double.infinity,
+                        child: _ProviderChoiceGrid(
+                          selected: _kind,
+                          onSelected: _selectKind,
                         ),
                       ),
-                    ],
-                  ),
-                  _EditorSectionHeader(text: l10n.asrServicesSectionTitle),
-                  VoiceServiceMobileCard(children: configuration),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: IosTileButton(
-                  label: actionLabel,
-                  icon: Lucide.Check,
-                  enabled: _canSubmit,
-                  backgroundColor: cs.primary,
-                  foregroundColor: cs.primary,
-                  onTap: _submit,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: AppFontWeights.emphasis,
-                    color: cs.onSurface,
-                  ),
-                ),
-              ),
-              VoiceServiceHeaderIconButton(
-                icon: Lucide.X,
-                tooltip: l10n.asrServicesCancelAction,
-                onTap: widget.onCancel,
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Divider(
-            height: 6,
-            thickness: 0.6,
-            indent: 12,
-            endIndent: 12,
-            color: cs.outlineVariant.withValues(alpha: 0.18),
-          ),
-          const SizedBox(height: 10),
-          Flexible(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  VoiceServiceSelectRow<AsrServiceKind>(
-                    label: l10n.ttsServicesDialogProviderType,
-                    value: _kind,
-                    options: const [
-                      AsrServiceKind.system,
-                      AsrServiceKind.sherpaOnnx,
-                      AsrServiceKind.openAiRealtime,
-                      AsrServiceKind.dashScope,
-                      AsrServiceKind.qwenAudio,
-                      AsrServiceKind.volcengine,
-                      AsrServiceKind.mimo,
-                      AsrServiceKind.step,
-                    ],
-                    labelFor: (kind) => _kindTitle(l10n, kind),
-                    onSelected: _selectKind,
-                  ),
-                  const SizedBox(height: 6),
-                  ...configuration,
-                  const SizedBox(height: 14),
-                ],
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextButton(
-                  onPressed: widget.onCancel,
-                  style: TextButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
                     ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                  ),
-                  child: Text(l10n.asrServicesCancelAction),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: _canSubmit ? _submit : null,
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                  ),
-                  child: Text(actionLabel),
-                ),
+                _EditorSectionHeader(text: l10n.asrServicesSectionTitle),
+                VoiceServiceMobileCard(children: configuration),
               ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: IosTileButton(
+                label: actionLabel,
+                icon: Lucide.Check,
+                enabled: _canSubmit,
+                backgroundColor: cs.primary,
+                foregroundColor: cs.primary,
+                onTap: _submit,
+              ),
             ),
           ),
         ],

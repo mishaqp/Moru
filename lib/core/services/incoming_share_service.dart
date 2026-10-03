@@ -93,7 +93,7 @@ class IncomingShareService {
             : ShareImportProgress.fromMap(value);
       }
     } on MissingPluginException {
-      // No native inbox in desktop/test hosts.
+      // No native inbox in test hosts.
     }
   }
 

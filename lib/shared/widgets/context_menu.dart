@@ -6,7 +6,7 @@ import 'ios_tactile.dart';
 import '../../core/services/haptics.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 
-/// Simple anchored context menu for desktop.
+/// Simple anchored context menu for an Android pointer.
 /// Shows a Material menu near the cursor or an anchor widget with a subtle animation.
 class DesktopContextMenuItem {
   final IconData? icon;

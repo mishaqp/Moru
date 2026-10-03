@@ -30,13 +30,8 @@ part 'asr_service_helpers.dart';
 /// This widget deliberately owns only short-lived discovery/download helpers.
 /// The selected provider and provider definitions stay in [SettingsProvider].
 class AsrServicesSection extends StatefulWidget {
-  const AsrServicesSection({
-    super.key,
-    this.desktop = false,
-    this.modelManager,
-  });
+  const AsrServicesSection({super.key, this.modelManager});
 
-  final bool desktop;
   final SherpaModelManager? modelManager;
 
   @override
@@ -67,7 +62,6 @@ class _AsrServicesSectionState extends State<AsrServicesSection> {
     final runtimeAsr = Provider.of<AsrProvider?>(context, listen: false);
     final created = await _showAsrEditor(
       context,
-      desktop: widget.desktop,
       modelManager: _modelManager,
       checkSystemAvailability:
           runtimeAsr?.checkSystemAvailability ?? _systemAsr.initialize,
@@ -90,7 +84,6 @@ class _AsrServicesSectionState extends State<AsrServicesSection> {
     final runtimeAsr = Provider.of<AsrProvider?>(context, listen: false);
     final edited = await _showAsrEditor(
       context,
-      desktop: widget.desktop,
       modelManager: _modelManager,
       checkSystemAvailability:
           runtimeAsr?.checkSystemAvailability ?? _systemAsr.initialize,
@@ -141,49 +134,17 @@ class _AsrServicesSectionState extends State<AsrServicesSection> {
     return SliverMainAxisGroup(
       slivers: [
         SliverPadding(
-          padding: EdgeInsets.only(top: widget.desktop ? 28 : 0),
+          padding: EdgeInsets.only(top: 0),
           sliver: SliverToBoxAdapter(
             child: VoiceServiceSectionHeader(
               title: l10n.asrServicesSectionTitle,
               addTooltip: l10n.asrServicesAddTooltip,
               onAdd: _addService,
-              desktop: widget.desktop,
             ),
           ),
         ),
-        if (widget.desktop)
-          const SliverToBoxAdapter(child: SizedBox(height: 16)),
         if (services.isEmpty)
-          SliverToBoxAdapter(child: _EmptyAsrState(desktop: widget.desktop))
-        else if (widget.desktop)
-          SliverReorderableList(
-            itemCount: services.length,
-            onReorderItem: _reorderServices,
-            onReorderStart: (_) => Tooltip.dismissAllToolTips(),
-            proxyDecorator: voiceServiceDragProxy,
-            itemBuilder: (context, index) {
-              final service = services[index];
-              return Padding(
-                key: ValueKey('asr-service-${service.id}'),
-                padding: EdgeInsets.only(
-                  bottom: index == services.length - 1 ? 0 : 12,
-                ),
-                child: ReorderableDragStartListener(
-                  index: index,
-                  child: _AsrServiceCard(
-                    service: service,
-                    selected: settings.selectedAsrServiceId == service.id,
-                    desktop: true,
-                    modelManager: _modelManager,
-                    onSelect: () =>
-                        settings.setSelectedAsrServiceId(service.id),
-                    onEdit: () => _editService(service),
-                    onDelete: () => _deleteService(service),
-                  ),
-                ),
-              );
-            },
-          )
+          SliverToBoxAdapter(child: _EmptyAsrState())
         else
           VoiceServiceCardSliver(
             sliver: SliverReorderableList(
@@ -205,7 +166,6 @@ class _AsrServicesSectionState extends State<AsrServicesSection> {
                       child: _AsrServiceCard(
                         service: service,
                         selected: settings.selectedAsrServiceId == service.id,
-                        desktop: false,
                         modelManager: _modelManager,
                         onSelect: () =>
                             settings.setSelectedAsrServiceId(service.id),

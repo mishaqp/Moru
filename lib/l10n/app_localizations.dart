@@ -1884,12 +1884,6 @@ abstract class AppLocalizations {
   /// **'Translate'**
   String get desktopNavTranslateTooltip;
 
-  /// No description provided for @desktopAvatarMenuUseEmoji.
-  ///
-  /// In en, this message translates to:
-  /// **'Use emoji'**
-  String get desktopAvatarMenuUseEmoji;
-
   /// No description provided for @cameraPermissionDeniedMessage.
   ///
   /// In en, this message translates to:
@@ -1901,18 +1895,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open Settings'**
   String get openSystemSettings;
-
-  /// No description provided for @desktopAvatarMenuChangeFromImage.
-  ///
-  /// In en, this message translates to:
-  /// **'Change from image…'**
-  String get desktopAvatarMenuChangeFromImage;
-
-  /// No description provided for @desktopAvatarMenuReset.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset avatar'**
-  String get desktopAvatarMenuReset;
 
   /// No description provided for @assistantEditAvatarChooseImage.
   ///
@@ -13585,12 +13567,6 @@ abstract class AppLocalizations {
   /// **'SQLite'**
   String get migrationTargetDatabaseLabel;
 
-  /// No description provided for @migrationChooseFolderButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose Folder and Back Up'**
-  String get migrationChooseFolderButton;
-
   /// No description provided for @migrationSaveBackupButton.
   ///
   /// In en, this message translates to:
@@ -15709,12 +15685,6 @@ abstract class AppLocalizations {
   /// **'Ubuntu {version} (PRoot)'**
   String workspaceEnvEngineUbuntu(String version);
 
-  /// No description provided for @workspaceEnvEngineAlpine.
-  ///
-  /// In en, this message translates to:
-  /// **'Alpine {version} (iSH)'**
-  String workspaceEnvEngineAlpine(String version);
-
   /// No description provided for @workspaceEnvPhaseNotInstalled.
   ///
   /// In en, this message translates to:
@@ -16261,18 +16231,6 @@ abstract class AppLocalizations {
   /// **'Bind a workspace from the toolbar to browse files here'**
   String get workspaceDeskBarEmptyHint;
 
-  /// No description provided for @workspaceDeskOpenSystemTerminal.
-  ///
-  /// In en, this message translates to:
-  /// **'Open in system terminal'**
-  String get workspaceDeskOpenSystemTerminal;
-
-  /// No description provided for @workspaceDeskReveal.
-  ///
-  /// In en, this message translates to:
-  /// **'Reveal in file manager'**
-  String get workspaceDeskReveal;
-
   /// No description provided for @workspaceEntryBind.
   ///
   /// In en, this message translates to:
@@ -16338,18 +16296,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Terminal'**
   String get workspaceEntryTerminal;
-
-  /// No description provided for @workspaceEntryOpenSystemTerminal.
-  ///
-  /// In en, this message translates to:
-  /// **'Open in system terminal'**
-  String get workspaceEntryOpenSystemTerminal;
-
-  /// No description provided for @workspaceEntryReveal.
-  ///
-  /// In en, this message translates to:
-  /// **'Reveal in file manager'**
-  String get workspaceEntryReveal;
 
   /// No description provided for @workspaceEntrySessionSkills.
   ///
@@ -16698,12 +16644,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Table'**
   String get workspacePreviewTable;
-
-  /// No description provided for @workspacePreviewRevealFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn’t show this file in the file manager.'**
-  String get workspacePreviewRevealFailed;
 
   /// No description provided for @workspacePreviewEmptyTable.
   ///
@@ -17290,12 +17230,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'There\'s nothing to preview.'**
   String get workspacePreviewEmptyHint;
-
-  /// No description provided for @workspacePreviewRevealInFileManager.
-  ///
-  /// In en, this message translates to:
-  /// **'Show in Files'**
-  String get workspacePreviewRevealInFileManager;
 
   /// No description provided for @workspaceBindingSetAssistantDefault.
   ///

@@ -91,23 +91,6 @@ Future<void> openPreviewFileExternally(BuildContext context, File file) async {
   }
 }
 
-Future<void> revealPreviewFileInFileManager(
-  BuildContext context,
-  File file,
-) async {
-  final l10n = AppLocalizations.of(context)!;
-  try {
-    throw UnsupportedError('Reveal is only supported on desktop');
-  } catch (e) {
-    if (!context.mounted) return;
-    showAppSnackBar(
-      context,
-      message: l10n.workspacePreviewRevealFailed,
-      type: NotificationType.error,
-    );
-  }
-}
-
 Future<void> openPreviewFileInBrowser(
   BuildContext context,
   File file, {
@@ -123,17 +106,7 @@ Future<void> openPreviewFileInBrowser(
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (ok) return;
     if (!context.mounted) return;
-    if (Platform.isAndroid) {
-      await openPreviewFileExternally(context, file);
-      return;
-    }
-    if (context.mounted) {
-      showAppSnackBar(
-        context,
-        message: l10n.chatMessageWidgetCannotOpenFile(file.path),
-        type: NotificationType.error,
-      );
-    }
+    await openPreviewFileExternally(context, file);
   } catch (_) {
     if (!context.mounted) return;
     showAppSnackBar(
@@ -185,10 +158,6 @@ Future<void> _closePreviewFileBrowserServer() async {
   final server = _previewBrowserServer;
   _previewBrowserServer = null;
   await server?.close();
-}
-
-String revealInFileManagerLabel(AppLocalizations l10n) {
-  return l10n.workspacePreviewRevealInFileManager;
 }
 
 Rect shareAnchorRect(BuildContext context) {

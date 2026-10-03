@@ -251,8 +251,7 @@ final class RestorePreviousBuilder {
   /// Makes the selected live asset roots durable before the first rename.
   ///
   /// Files are synchronized first, followed by their directories from the
-  /// deepest level to [root]. The final root barrier also orders all earlier
-  /// file and directory flushes on Apple platforms.
+  /// deepest level to [root]. Android uses fsync for both barrier modes.
   static Future<void> syncAssetRoots({
     required Directory root,
     required RestorePreviousAssetsPlan expected,

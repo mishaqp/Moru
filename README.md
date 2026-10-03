@@ -2,15 +2,15 @@
 
 <img src="assets/app_icon.png" alt="Kelivo" width="112" />
 
-# Kelivo
+# Moru
 
-**An open-source LLM client for mobile and desktop.**
+**A personal Android-only fork of [Kelivo](https://github.com/Chevey339/kelivo).**
 
 Use every major model in one app, give it a workspace to get real work done, and keep your data on your own device.
 
 <p>
-  <a href="https://github.com/Chevey339/kelivo/releases/latest"><img src="https://img.shields.io/github/v/release/Chevey339/kelivo?style=flat-square&amp;label=release" alt="Latest release" /></a>
-  <a href="https://github.com/Chevey339/kelivo/releases"><img src="https://img.shields.io/github/downloads/Chevey339/kelivo/total?style=flat-square" alt="Downloads" /></a>
+  <a href="https://github.com/mishaqp/Moru/releases/latest"><img src="https://img.shields.io/github/v/release/mishaqp/Moru?style=flat-square&amp;label=release" alt="Latest release" /></a>
+  <a href="https://github.com/mishaqp/Moru/releases"><img src="https://img.shields.io/github/downloads/mishaqp/Moru/total?style=flat-square" alt="Downloads" /></a>
   <a href="https://github.com/Chevey339/kelivo/stargazers"><img src="https://img.shields.io/github/stars/Chevey339/kelivo?style=flat-square" alt="Stars" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/Chevey339/kelivo?style=flat-square" alt="License" /></a>
   <a href="https://flutter.dev"><img src="https://img.shields.io/badge/built%20with-Flutter-02569B?style=flat-square&amp;logo=flutter&amp;logoColor=white" alt="Built with Flutter" /></a>
@@ -31,9 +31,9 @@ Use every major model in one app, give it a workspace to get real work done, and
 
 ## 💡 Overview
 
-Kelivo is a cross-platform LLM client built with Flutter for Android, iOS, macOS, Windows and Linux. Connect your own API keys or sign in with a supported subscription, and switch between OpenAI, Gemini, Claude, DeepSeek, OpenRouter and any OpenAI-compatible service without switching apps.
+Moru is a personal Android-only fork of Kelivo, built with Flutter. Connect your own API keys or sign in with a supported subscription, and switch between OpenAI, Gemini, Claude, DeepSeek, OpenRouter and any OpenAI-compatible service without switching apps.
 
-Kelivo goes beyond chat. Models can search the web, call MCP servers, follow skills and remember what matters to you. Bind a conversation to a **workspace** and the model can read and edit files and run commands: inside a Linux sandbox on your phone, or in a native shell on your computer.
+Kelivo goes beyond chat. Models can search the web, call MCP servers, follow skills and remember what matters to you. Bind a conversation to a **workspace** and the model can read and edit files and run commands: inside a PRoot/Linux environment on your Android device.
 
 Conversations, settings and files are stored locally. Kelivo has no account system of its own; back up to WebDAV or S3-compatible storage whenever you choose.
 
@@ -74,22 +74,17 @@ If Kelivo is useful to you, you can also [support the project on WeChat](docx/sp
 
 ## 🚀 Download
 
-| Platform | Get Kelivo | Package | Requirements |
+| Platform | Get Moru | Package | Requirements |
 | --- | --- | --- | --- |
-| iOS / iPadOS | [App Store](https://apps.apple.com/us/app/kelivo/id6752122930) · [TestFlight](https://testflight.apple.com/join/erbGGykR) (beta) | App Store, or unsigned IPA in [Releases](https://github.com/Chevey339/kelivo/releases/latest) | iOS 15.0 or later |
-| Android | [GitHub Releases](https://github.com/Chevey339/kelivo/releases/latest) | APK (`arm64-v8a`, `armeabi-v7a`, `x86_64`) | Android 7.0 or later |
-| macOS | [GitHub Releases](https://github.com/Chevey339/kelivo/releases/latest) | DMG | macOS 11.0 or later, Apple silicon or Intel |
-| Windows | [GitHub Releases](https://github.com/Chevey339/kelivo/releases/latest) | Installer (`setup.exe`) or portable ZIP | Windows 10 or 11 |
-| Linux | [GitHub Releases](https://github.com/Chevey339/kelivo/releases/latest) | AppImage, DEB, RPM, tar.gz | x86_64 |
-| HarmonyOS | [kelivo-ohos](https://github.com/Chevey339/kelivo-ohos) | Maintained in a separate repository | — |
+| Android | [GitHub Releases](https://github.com/mishaqp/Moru/releases/latest) | One APK (`arm64-v8a`) | Android 7.0 or later |
 
-The [download page](https://kelivo.psycheas.top/downloads) on the website lists the same builds.
+Moru ships one Android arm64-v8a APK. See [Android scope](docs/MORU_ANDROID_ONLY.md).
 
 ## 🧭 Getting Started
 
 1. **Add a model provider.** Open **Settings → Providers**, enter an API key for a preset provider or add your own endpoint, then fetch its model list. To use a ChatGPT, Grok or Kimi Code account instead, sign in from the **Accounts** tab under **Add Provider**.
 2. **Start a conversation.** Select a model from the input bar. Turn on web search, MCP servers, tools or reasoning for the current chat from the same bar.
-3. **Let the model work with files (optional).** Open **Settings → Workspace & environment** and create a workspace, then bind it to a conversation from the chat. On Android and iOS, install the Linux environment on the same page first; the iOS environment is bundled with the app, so nothing is downloaded.
+3. **Let the model work with files (optional).** Open **Settings → Workspace & environment** and create a workspace, then bind it to a conversation from the chat. Install the Android Linux environment on the same page first.
 
 The [User Guide](https://kelivo.psycheas.top/guide) (Chinese) covers providers, memory, world books and more.
 
@@ -109,15 +104,14 @@ The [User Guide](https://kelivo.psycheas.top/guide) (Chinese) covers providers, 
 ### 🤖 Agent and Workspaces
 
 - **Workspaces**: bind a conversation to a workspace to give the model seven tools: `shell`, `read_file`, `write_file`, `edit_file`, `list_dir`, `glob` and `grep`. Command output streams live, file edits appear as diffs, and shell commands can require approval, which you grant per command or for the whole session.
-- **A Linux sandbox on your phone**: Android runs Ubuntu, Debian or Alpine Linux through PRoot, or a rootfs image you import. iOS includes Alpine Linux based on iSH, so nothing needs to be downloaded. Install Python, Node.js, Git, SSH and other common tools from the app, and choose the fastest apt/apk, pip and npm mirrors after a speed test.
-- **Native on desktop**: on macOS, Windows and Linux, tools run in your system shell, in an app-managed folder or a folder you link from your computer.
-- **Files and terminal**: browse workspace files with previews for Markdown, HTML, CSV, images and text. Mobile has an in-app terminal; on desktop, open the workspace in your system terminal. On mobile, you can also mount up to 10 external folders into the sandbox, read-only or read-write.
+- **A Linux sandbox on your phone**: Android runs Ubuntu, Debian or Alpine Linux through PRoot, or a rootfs image you import. Install Python, Node.js, Git, SSH and other common tools from the app, and choose the fastest apt/apk, pip and npm mirrors after a speed test.
+- **Files and terminal**: browse workspace files with previews for Markdown, HTML, CSV, images and text. Android has an in-app PTY terminal; you can also mount up to 10 external folders into the sandbox, read-only or read-write.
 - **Environment variables** shared by all workspaces, with controls that keep their values out of command output.
 - **Skills**: import skills (a folder with a `SKILL.md`) from pasted Markdown, a `.md` or `.zip` file, or a GitHub URL. Enable them per assistant or per conversation. The bundled *skill-creator* skill helps the model write new ones.
-- **MCP**: connect Model Context Protocol servers over Streamable HTTP, SSE or STDIO, with OAuth sign-in, JSON import, per-tool approval and a built-in fetch server. STDIO servers run natively on desktop and inside the Linux sandbox on mobile.
+- **MCP**: connect Model Context Protocol servers over Streamable HTTP, SSE or STDIO, with OAuth sign-in, JSON import, per-tool approval and a built-in fetch server. STDIO servers run inside the Android Linux environment.
 - **Ask user**: the model can pause to ask you multiple-choice or open questions, then continue with your answers.
-- **Device tools**: time, clipboard, calculator and text-to-speech on every platform; calendar and location on Android and iOS; screen time on Android; weather, reminders and Apple Health data on iOS.
-- **Scheduled tasks**: run a prompt with a chosen assistant on a schedule, such as a morning briefing. Results are saved as conversations. Available on Android and desktop.
+- **Device tools**: time, clipboard, calculator, text-to-speech, calendar, location and screen time on Android.
+- **Scheduled tasks**: run a prompt with a chosen assistant on a schedule, such as a morning briefing. Results are saved as conversations. Available on Android.
 
 ### 🧩 Assistants, Memory and Context
 
@@ -160,40 +154,33 @@ The [User Guide](https://kelivo.psycheas.top/guide) (Chinese) covers providers, 
 
 ### 🔗 System Integration
 
-- **Mobile**: generation continues in the background with completion notifications, Live Activities on iOS, and Live Updates or a floating status capsule on Android. Share text and files to Kelivo from other apps, or send selected text to it from the Android text selection menu.
-- **Desktop**: a multi-pane layout, customizable keyboard shortcuts including a global shortcut to show or hide Kelivo, system tray, drag-and-drop attachments, and window size and position restored between launches.
+- **Mobile**: generation continues in the background with completion notifications, Live Updates or a floating status capsule on Android. Share text and files to Kelivo from other apps, or send selected text to it from the Android text selection menu.
+- **Wide Android screens**: the multi-pane layout remains available on tablets, foldables and in landscape, with hardware keyboard and pointer support.
 
-## 📊 Platform Differences
+## 📊 Android Features
 
-Most features work on every platform. These depend on the operating system:
-
-| Capability | Android | iOS | macOS / Windows / Linux |
-| --- | --- | --- | --- |
-| Workspace runtime | Linux sandbox (PRoot) | Linux sandbox (iSH) | Native shell |
-| Linux distributions | Ubuntu, Debian, Alpine or imported rootfs | Alpine (included) | — |
-| Terminal | In-app | In-app | System terminal |
-| Access to outside folders | Up to 10 mounted folders | Up to 10 mounted folders | Link any local folder |
-| MCP over STDIO | In sandbox | In sandbox | Native |
-| Scheduled tasks | ✓ | — | ✓ |
-| Background generation | Notification, Live Updates, floating capsule | Extra background time, Live Activities | While Kelivo is running |
-| Platform-specific device tools | Calendar, location, screen time | Calendar, location, weather, reminders, Health | — |
-| Global shortcut and system tray | — | — | ✓ |
-
-On desktop, workspace commands run with your user account's permissions and are not sandboxed. Keep command approval turned on for workspaces that contain important files.
+| Capability | Android |
+| --- | --- |
+| Workspace runtime | Linux environment (PRoot) |
+| Linux distributions | Ubuntu, Debian, Alpine or imported rootfs |
+| Terminal | In-app PTY |
+| Access to outside folders | Up to 10 mounted folders |
+| MCP over STDIO | In the Linux environment |
+| Scheduled tasks | Supported |
+| Background generation | Notifications, Live Updates, floating capsule |
+| Layouts | Phone and wide Android screens |
 
 ## 🔧 Building from Source
 
 **Requirements**
 
 - Flutter 3.44.9 or later (Dart 3.12)
-- The toolchain for your target platform: Android SDK, Xcode, or Visual Studio with the "Desktop development with C++" workload
-- Linux only (Debian/Ubuntu package names): `clang cmake ninja-build pkg-config libgtk-3-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libkeybinder-3.0-dev libayatana-appindicator3-dev`
-- iOS only: `brew install meson ninja llvm lld`. The Xcode build compiles the iSH sandbox and prepares the Alpine Linux image automatically.
+- Android SDK and JDK; see [AGENTS.md](AGENTS.md).
 - Android only: `python3`, `curl` and `tar`. The Gradle build downloads the PRoot binaries automatically.
 
 ```bash
-git clone https://github.com/Chevey339/kelivo.git
-cd kelivo
+git clone https://github.com/mishaqp/Moru.git
+cd Moru
 flutter pub get
 flutter run
 ```
@@ -206,25 +193,24 @@ Issues and pull requests are welcome. Before opening a pull request, run the sam
 
 ```bash
 dart format lib test
-dart analyze --fatal-infos lib test
+dart analyze --fatal-infos lib test integration_test
 flutter test
 ```
 
 - **Bug reports and feature requests**: use the [issue templates](https://github.com/Chevey339/kelivo/issues/new/choose).
-- **UI changes**: follow the UI guidelines in [AGENTS.md](AGENTS.md), including separate mobile and desktop layouts for new pages.
+- **UI changes**: follow the UI guidelines in [AGENTS.md](AGENTS.md), including phone and wide Android layouts.
 - **Localization**: strings live in [`lib/l10n`](lib/l10n), with `app_en.arb` as the template. Run `flutter gen-l10n` after editing and commit the generated files.
 - **Questions and discussion**: join us on [Discord](https://discord.gg/Tb8DyvvV5T) or in the [QQ group](https://qm.qq.com/q/OQaXetKssC).
 
 ## 🙏 Acknowledgements
 
 - [RikkaHub](https://github.com/re-ovo/rikkahub), whose beautiful and practical design inspired Kelivo's interface.
-- [Minis](https://github.com/OpenMinis/OpenMinis): Kelivo's iOS Linux sandbox is built on its [iSH-ARM64](https://github.com/OpenMinis/ish-arm64) port, and much of the workspace feature draws on its design.
-- [iSH](https://github.com/ish-app/ish), the upstream Linux shell for iOS behind the iOS sandbox.
+- [Minis](https://github.com/OpenMinis/OpenMinis), whose workspace design inspired parts of Kelivo.
 - [PRoot](https://github.com/termux/proot) and [Termux](https://termux.dev), which power the Android Linux sandbox.
 - [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), which provides offline speech recognition.
 - Every open-source package Kelivo depends on, listed in [`pubspec.yaml`](pubspec.yaml).
 
-Full third-party notices for the sandbox components are in [`ios/sandbox/NOTICE`](ios/sandbox/NOTICE) and [`android/app/src/main/jniLibs/NOTICE`](android/app/src/main/jniLibs/NOTICE).
+Full third-party notices for the Android sandbox components are in [`android/app/src/main/jniLibs/NOTICE`](android/app/src/main/jniLibs/NOTICE).
 
 ## ⭐ Star History
 

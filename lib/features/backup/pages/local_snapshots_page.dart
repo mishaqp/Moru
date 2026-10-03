@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -306,7 +305,7 @@ class _LocalSnapshotsPageState extends State<LocalSnapshotsPage> {
       // on Android bringing it up resumes the app, which is exactly what arms
       // the schedule that could prune this copy.
       final saved = await vm.whileHoldingCopies(
-        () => _saveExport(prepared.file, fileName, l10n),
+        () => _saveExport(prepared.file, fileName),
       );
       if (!context.mounted) return;
       if (saved) {
@@ -326,35 +325,12 @@ class _LocalSnapshotsPageState extends State<LocalSnapshotsPage> {
     }
   }
 
-  /// Hands [source] to whichever save flow the platform actually has.
-  ///
-  /// Desktop has no native save channel, so it goes through the file picker
-  /// the rest of the backup screen already uses; calling the mobile-only path
-  /// there would throw and leave a recovered database with no way off the
-  /// machine.
-  Future<bool> _saveExport(
-    File source,
-    String fileName,
-    AppLocalizations l10n,
-  ) async {
-    if (Platform.isAndroid) {
-      return NativeFileSave.saveFileFromPath(
+  /// Hands the materialized backup to Android's document picker.
+  Future<bool> _saveExport(File source, String fileName) =>
+      NativeFileSave.saveFileFromPath(
         sourcePath: source.path,
         fileName: fileName,
       );
-    }
-    final savePath = await FilePicker.platform.saveFile(
-      dialogTitle: l10n.localSnapshotActionExport,
-      fileName: fileName,
-      type: FileType.custom,
-      allowedExtensions: const ['zip'],
-    );
-    if (savePath == null) return false;
-    final target = File(savePath);
-    await target.parent.create(recursive: true);
-    await source.copy(target.path);
-    return true;
-  }
 
   Future<void> _restore(
     BuildContext context,

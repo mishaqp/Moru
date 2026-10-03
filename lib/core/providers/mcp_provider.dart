@@ -15,7 +15,7 @@ import 'environment_provider.dart';
 import 'workspace_provider.dart';
 import 'package:uuid/uuid.dart';
 
-/// Transport type: SSE, Streamable HTTP, and STDIO (host desktop or mobile workspace environment).
+/// Transport type: SSE, Streamable HTTP, and STDIO (Android workspace environment).
 enum McpTransportType { sse, http, stdio, inmemory }
 
 /// Connection status for an MCP server.
@@ -173,7 +173,7 @@ class McpServerConfig {
   final Map<String, String> headers; // custom HTTP headers
   final McpOAuthState? oauth;
   final McpOAuthClientRegistration? oauthClient;
-  // For STDIO (host desktop or mobile workspace environment)
+  // For STDIO (Android workspace environment)
   final String? command;
   final List<String> args;
   final Map<String, String> env;

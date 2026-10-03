@@ -1233,7 +1233,7 @@ class _ChatInputBarState extends State<ChatInputBar>
       return KeyEventResult.handled;
     }
 
-    // Paste handling for images on iOS/macOS (tablet/desktop)
+    // Paste images from an Android hardware keyboard
     if (isDown && isPasteV) {
       final keys = HardwareKeyboard.instance.logicalKeysPressed;
       final meta =
@@ -1248,7 +1248,6 @@ class _ChatInputBarState extends State<ChatInputBar>
       }
     }
 
-    // Arrow repeat fix only needed on iOS tablets
     return KeyEventResult.ignored;
   }
 
@@ -1340,7 +1339,7 @@ class _ChatInputBarState extends State<ChatInputBar>
         .read<SettingsProvider>()
         .resolveImageCompressConfig();
 
-    // 1) Prefer reading via super_clipboard for better Windows support
+    // 1) Prefer reading via super_clipboard
     try {
       final clipboard = SystemClipboard.instance;
       if (clipboard != null) {

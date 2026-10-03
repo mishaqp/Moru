@@ -50,7 +50,7 @@ void debugNativeSleepIgnoringKill(int seconds) {
           int Function(Pointer<Void>)
         >('sigfillset')
         .call(set.cast());
-    // SIG_BLOCK is 0 on Linux/Android and 1 on the BSD-derived Apple libc.
+    // SIG_BLOCK is 0 on Android and Linux test hosts.
     final sigBlock = 0;
     maskChanged = pthreadSigmask(sigBlock, set.cast(), oldSet.cast()) == 0;
     libc
@@ -58,7 +58,7 @@ void debugNativeSleepIgnoringKill(int seconds) {
         .call(seconds);
   } finally {
     if (maskChanged) {
-      // SIG_SETMASK is 2 on Linux/Android and 3 on BSD-derived Apple libc.
+      // SIG_SETMASK is 2 on Android and Linux test hosts.
       final sigSetMask = 2;
       pthreadSigmask(sigSetMask, oldSet.cast(), nullptr);
     }

@@ -1213,7 +1213,7 @@ class SettingsProvider extends ChangeNotifier {
         (prefs.getInt(_displayLongPasteAsFileThresholdKey) ??
                 defaultLongPasteAsFileThreshold)
             .clamp(minLongPasteAsFileThreshold, maxLongPasteAsFileThreshold);
-    // Desktop send shortcut: Enter (default) or Ctrl/Cmd+Enter
+    // Android hardware keyboard shortcut: Enter (default) or Ctrl/Meta+Enter
     final sendShortcutStr = prefs.getString(_desktopSendShortcutKey);
     switch (sendShortcutStr) {
       case 'ctrlEnter':
@@ -4849,7 +4849,7 @@ Requirements:
     await prefs.setBool(_displayUseNewAssistantAvatarUxKey, v);
   }
 
-  // Display: show provider name in model capsule (desktop header)
+  // Display: show provider name in the wide Android model capsule
   bool _showProviderInModelCapsule = true;
   bool get showProviderInModelCapsule => _showProviderInModelCapsule;
   Future<void> setShowProviderInModelCapsule(bool v) async {

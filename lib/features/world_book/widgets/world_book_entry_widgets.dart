@@ -131,7 +131,7 @@ class WorldBookEntryTitle extends StatelessWidget {
   }
 }
 
-/// Shared fields keep the mobile sheet and desktop dialog's timing semantics identical.
+/// Shared fields keep World Book entry timing semantics identical across hosts.
 class WorldBookTimedEffectsFields extends StatefulWidget {
   const WorldBookTimedEffectsFields({
     super.key,

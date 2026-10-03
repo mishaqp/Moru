@@ -397,11 +397,8 @@
   "assistantEditChooseImageButton": "Choose Image",
   "assistantEditClearButton": "Clear",
   "desktopNavTranslateTooltip": "Translate",
-  "desktopAvatarMenuUseEmoji": "Use emoji",
   "cameraPermissionDeniedMessage": "Camera unavailable: permission not granted.",
   "openSystemSettings": "Open Settings",
-  "desktopAvatarMenuChangeFromImage": "Change from image…",
-  "desktopAvatarMenuReset": "Reset avatar",
   "assistantEditAvatarChooseImage": "Choose Image",
   "assistantEditAvatarChooseEmoji": "Choose Emoji",
   "assistantEditAvatarEnterLink": "Enter Link",
@@ -3379,7 +3376,6 @@
   "migrationPerformanceNote": "After migration, startup, history loading, and search use SQLite indexes for smoother long-chat performance.",
   "migrationSourceDatabaseLabel": "Hive",
   "migrationTargetDatabaseLabel": "SQLite",
-  "migrationChooseFolderButton": "Choose Folder and Back Up",
   "migrationSaveBackupButton": "Save Backup ZIP",
   "migrationStartWithoutBackupButton": "Migrate Without Backing Up",
   "migrationSkipChatsJsonOption": "Skip chats.json",
@@ -3982,14 +3978,6 @@
       }
     }
   },
-  "workspaceEnvEngineAlpine": "Alpine {version} (iSH)",
-  "@workspaceEnvEngineAlpine": {
-    "placeholders": {
-      "version": {
-        "type": "String"
-      }
-    }
-  },
   "workspaceEnvPhaseNotInstalled": "Not installed",
   "workspaceEnvPhaseDownloading": "Downloading",
   "workspaceEnvPhaseVerifying": "Verifying",
@@ -4123,8 +4111,6 @@
   "terminalNameLabel": "Name",
   "terminalCancel": "Cancel",
   "workspaceDeskBarEmptyHint": "Bind a workspace from the toolbar to browse files here",
-  "workspaceDeskOpenSystemTerminal": "Open in system terminal",
-  "workspaceDeskReveal": "Reveal in file manager",
   "workspaceEntryBind": "Bind workspace",
   "workspaceEntryUnbind": "Unbind",
   "workspaceEntryChange": "Change",
@@ -4136,8 +4122,6 @@
   "workspaceEntryCwdInvalid": "That path is invalid or leaves the workspace",
   "workspaceEntryFiles": "Files",
   "workspaceEntryTerminal": "Terminal",
-  "workspaceEntryOpenSystemTerminal": "Open in system terminal",
-  "workspaceEntryReveal": "Reveal in file manager",
   "workspaceEntrySessionSkills": "Skills",
   "workspaceEntryAllowAll": "Allow all this session",
   "workspaceEntryAllowAllSubtitle": "Shell commands in this conversation will run without approval.",
@@ -4258,7 +4242,6 @@
   "workspacePreviewLoadError": "Couldn’t load this file.",
   "workspacePreviewOpenInBrowser": "Open in browser",
   "workspacePreviewTable": "Table",
-  "workspacePreviewRevealFailed": "Couldn’t show this file in the file manager.",
   "workspacePreviewEmptyTable": "This table is empty.",
   "workspaceFilesNew": "New",
   "workspaceFilesFoldersFirst": "Folders first",
@@ -4466,7 +4449,6 @@
   "workspaceEnvSizeTimeout": "Timed out",
   "workspacePreviewEmptyFile": "This file is empty",
   "workspacePreviewEmptyHint": "There's nothing to preview.",
-  "workspacePreviewRevealInFileManager": "Show in Files",
   "workspaceBindingSetAssistantDefault": "Set as default workspace for “{assistant}”",
   "@workspaceBindingSetAssistantDefault": {
     "placeholders": {

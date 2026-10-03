@@ -28,8 +28,6 @@ Future<void> showImagePreviewSheet(
   BuildContext context, {
   required File file,
 }) async {
-  // On desktop platforms, show a custom dialog instead of bottom sheet
-
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -521,95 +519,6 @@ Future<dynamic> saveImagePreviewFileForTesting(
   required String name,
 }) {
   return _saveImagePreviewFile(file, name: name);
-}
-
-class _DesktopIconButton extends StatefulWidget {
-  const _DesktopIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  final Widget icon;
-  final String tooltip;
-  final VoidCallback? onTap;
-
-  @override
-  State<_DesktopIconButton> createState() => _DesktopIconButtonState();
-}
-
-class _DesktopIconButtonState extends State<_DesktopIconButton> {
-  bool _hovered = false;
-  bool _pressed = false;
-
-  void _setHovered(bool v) {
-    if (_hovered == v) return;
-    setState(() => _hovered = v);
-  }
-
-  void _setPressed(bool v) {
-    if (_pressed == v) return;
-    setState(() => _pressed = v);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final bool disabled = widget.onTap == null;
-    final Color baseBorder = cs.outline.withValues(alpha: 0.16);
-    final Color hoverFill = cs.onSurface.withValues(
-      alpha: Theme.of(context).brightness == Brightness.dark ? 0.10 : 0.06,
-    );
-    final Color bg = _hovered ? hoverFill : Colors.transparent;
-    final Color border = _hovered ? baseBorder : Colors.transparent;
-
-    return Tooltip(
-      message: widget.tooltip,
-      waitDuration: const Duration(milliseconds: 400),
-      child: MouseRegion(
-        cursor: disabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
-        onEnter: (_) => _setHovered(true),
-        onExit: (_) {
-          _setHovered(false);
-          _setPressed(false);
-        },
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (_) => _setPressed(true),
-          onTapUp: (_) => _setPressed(false),
-          onTapCancel: () => _setPressed(false),
-          onTap: widget.onTap,
-          child: AnimatedScale(
-            duration: const Duration(milliseconds: 80),
-            curve: Curves.easeOutCubic,
-            scale: _pressed ? 0.96 : 1.0,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              curve: Curves.easeOutCubic,
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: disabled ? Colors.transparent : bg,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: disabled ? Colors.transparent : border,
-                  width: 0.75,
-                ),
-              ),
-              child: Center(
-                child: IconTheme(
-                  data: IconTheme.of(context).copyWith(
-                    color: cs.onSurface.withValues(alpha: disabled ? 0.4 : 0.9),
-                  ),
-                  child: widget.icon,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _ImagePreviewSheetState extends State<_ImagePreviewSheet> {

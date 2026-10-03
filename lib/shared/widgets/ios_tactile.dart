@@ -97,7 +97,7 @@ class _IosIconButtonState extends State<IosIconButton> {
       },
     );
 
-    // Subtle hover background for desktop/web
+    // Subtle hover background for an Android pointer
     final Color bgTarget = _pressed
         ? (Theme.of(
             context,
