@@ -8,6 +8,7 @@ import 'package:math_expressions/math_expressions.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/models/health_data_type.dart';
 import 'assistant_manager_tool.dart';
+import 'mcp_manager_tool.dart';
 import 'browser_agent_tool.dart';
 import 'mini_app_data_tool.dart';
 import 'root_shell_tool.dart';
@@ -37,6 +38,7 @@ class LocalToolNames {
   static const String remindersCreate = 'reminders_create';
   static const String remindersComplete = 'reminders_complete';
   static const String assistantManager = AssistantManagerTool.toolName;
+  static const String mcpManager = McpManagerTool.toolName;
   static const String reportProblem = 'report_problem';
   static const String scheduledTasks = ScheduledTaskTool.toolName;
   static const String miniApps = MiniAppDataTool.toolName;
@@ -62,6 +64,7 @@ class LocalToolNames {
     remindersCreate,
     remindersComplete,
     assistantManager,
+    mcpManager,
     reportProblem,
     scheduledTasks,
     miniApps,
@@ -82,6 +85,7 @@ class LocalToolNames {
     if (name == assistantManager) {
       return AssistantManagerTool.requiresApproval(arguments);
     }
+    if (name == mcpManager) return McpManagerTool.requiresApproval(arguments);
     if (name == scheduledTasks) {
       return ScheduledTaskTool.requiresApproval(arguments);
     }
@@ -379,6 +383,8 @@ class LocalToolsService {
         return _remindersCompleteDefinition;
       case LocalToolNames.assistantManager:
         return AssistantManagerTool.definition;
+      case LocalToolNames.mcpManager:
+        return McpManagerTool.definition;
       case LocalToolNames.reportProblem:
         return {
           'type': 'function',

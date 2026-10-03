@@ -10,6 +10,8 @@ import 'package:uuid/uuid.dart';
 
 import '../../providers/environment_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/mcp_provider.dart';
+import '../mcp/mcp_secrets.dart';
 import '../../../utils/app_directories.dart';
 import '../acp/acp_secret_redactor.dart';
 import '../workspace/workspace_file_access.dart';
@@ -118,6 +120,7 @@ class ProblemReportService {
   Future<Map<String, Object?>> create({
     required SettingsProvider settings,
     EnvironmentProvider? environment,
+    McpProvider? mcp,
     void Function()? checkCancelled,
   }) async {
     await cleanup();
@@ -130,8 +133,17 @@ class ProblemReportService {
       _secrets(settings, environment),
       protectAuthentication: true,
     );
-    String safeText(String value) =>
-        LogRedactor.redactDiagnosticText(known.text(value));
+    final mcpSecrets = [
+      for (final server in mcp?.configuredServers ?? <McpServerConfig>[])
+        McpSecrets(server),
+    ];
+    String safeText(String value) {
+      for (final secrets in mcpSecrets) {
+        value = secrets.redactor.text(value);
+      }
+      return LogRedactor.redactDiagnosticText(known.text(value));
+    }
+
     Object? safeValue(Object? value) => switch (value) {
       String() => _head(safeText(value), 1024),
       Map() => {

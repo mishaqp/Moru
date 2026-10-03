@@ -4495,5 +4495,19 @@
   "problemReportToolTitle": "問題報告",
   "problemReportToolSubtitle": "將技術診斷資訊收集到私密 ZIP 檔案。每次都需要確認。",
   "problemReportConsent": "ZIP 將包含：\n• 應用版本和建置編號\n• Android 版本、製造商和裝置型號\n• 環境模式：PRoot/root\n• 介面、工具、日誌設定及服務商類型，不含機密資訊\n• 本次啟動的技術事件：事件名稱、錯誤類型和堆疊框架（最多 128 KiB）\n不包含聊天、訊息文字或請求/上下文日誌。機密資訊會被移除。報告將在下次啟動時刪除，或在 24 小時後過期。",
-  "problemReportUnavailable": "報告已刪除或無法分享。請建立新報告。"
+  "problemReportUnavailable": "報告已刪除或無法分享。請建立新報告。",
+  "mcpManagerToolTitle": "管理 MCP 伺服器",
+  "mcpManagerToolSubtitle": "允許模型在確認後新增、設定和測試 MCP 伺服器。密鑰需私下輸入。",
+  "mcpManagerActionList": "列出 MCP 伺服器",
+  "mcpManagerActionGet": "查看 MCP 伺服器",
+  "mcpManagerActionAdd": "新增 MCP 伺服器",
+  "mcpManagerActionUpdate": "更新 MCP 伺服器",
+  "mcpManagerActionEnable": "啟用 MCP 伺服器",
+  "mcpManagerActionDisable": "停用 MCP 伺服器",
+  "mcpManagerActionRemove": "刪除 MCP 伺服器",
+  "mcpManagerActionTest": "測試 MCP 伺服器",
+  "mcpManagerSecretHint": "請在此輸入密鑰。密鑰僅儲存至 MCP 設定，不會傳送給模型或寫入聊天記錄。請求標頭如有需要，請包含 Bearer/Basic 前綴。",
+  "mcpManagerPrevious": "目前設定",
+  "mcpManagerValueSet": "已設定值",
+  "mcpManagerValueNeeded": "需要輸入值"
 }

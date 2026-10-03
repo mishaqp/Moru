@@ -9,12 +9,39 @@ import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/services/browser/browser_agent_session.dart';
 import 'package:Kelivo/core/services/browser/web_source.dart';
 import 'package:Kelivo/features/home/services/browser_agent_actions.dart';
+import 'package:Kelivo/features/home/services/built_in_tool_names.dart';
 import 'package:Kelivo/features/home/services/local_tools_service.dart';
 
 import 'support/fake_webview_platform.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('manage_mcp is opt-in and only mutations require approval', () {
+    const disabled = Assistant(id: 'mcp', name: 'MCP');
+    final enabled = disabled.copyWith(localToolIds: ['manage_mcp']);
+    expect(LocalToolNames.all, contains('manage_mcp'));
+    expect(BuiltInToolNames.all, contains('manage_mcp'));
+    for (final assistant in [disabled, enabled]) {
+      final names = LocalToolsService.buildToolDefinitions(
+        assistant: assistant,
+        supportsTools: true,
+      ).map((tool) => tool['function']['name']);
+      expect(names.contains('manage_mcp'), identical(assistant, enabled));
+    }
+    for (final action in ['add', 'update', 'remove', 'enable', 'disable']) {
+      expect(
+        LocalToolNames.requiresApprovalFor('manage_mcp', {'action': action}),
+        isTrue,
+      );
+    }
+    for (final action in ['list', 'get', 'test']) {
+      expect(
+        LocalToolNames.requiresApprovalFor('manage_mcp', {'action': action}),
+        isFalse,
+      );
+    }
+  });
 
   group('Assistant local tools', () {
     const localToolsAssistant = Assistant(

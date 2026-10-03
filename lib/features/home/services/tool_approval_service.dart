@@ -9,13 +9,28 @@ import 'browser_agent_actions.dart';
 class ToolApprovalResult {
   final bool approved;
   final String? denyReason;
+  final Map<String, String>? _secretValues;
 
-  const ToolApprovalResult({required this.approved, this.denyReason});
+  const ToolApprovalResult({required this.approved, this.denyReason})
+    : _secretValues = null;
 
-  factory ToolApprovalResult.approved() =>
-      const ToolApprovalResult(approved: true);
+  const ToolApprovalResult._approved(this._secretValues)
+    : approved = true,
+      denyReason = null;
+
+  factory ToolApprovalResult.approved({Map<String, String>? secretValues}) =>
+      ToolApprovalResult._approved(
+        secretValues == null ? null : Map.of(secretValues),
+      );
   factory ToolApprovalResult.denied([String? reason]) =>
       ToolApprovalResult(approved: false, denyReason: reason);
+
+  /// Private, one-use inputs from the approval card, never tool arguments.
+  Map<String, String> takeSecretValues() {
+    final values = Map<String, String>.of(_secretValues ?? const {});
+    _secretValues?.clear();
+    return values;
+  }
 }
 
 typedef _PendingKey = ({String scope, String toolCallId});
@@ -54,8 +69,10 @@ class ToolApprovalRequest {
   String? get generationRunId => owner?.generationRunId;
   String? get assistantMessageId => owner?.assistantMessageId;
   bool get hasLiveOwner => owner?.isActive() == true;
-  // Outside global trusted mode, diagnostic exports need fresh in-chat consent.
-  bool get requiresExplicitConsent => toolName == 'report_problem';
+  // Outside global trusted mode, these tools need fresh in-chat consent.
+  bool get requiresExplicitConsent =>
+      toolName == 'report_problem' || toolName == 'manage_mcp';
+  final List<String> secretFields;
   final Completer<ToolApprovalResult> _completer;
 
   ToolApprovalRequest({
@@ -65,6 +82,7 @@ class ToolApprovalRequest {
     required this.arguments,
     this.conversationId,
     this.owner,
+    this.secretFields = const [],
     required this._completer,
   });
 
@@ -170,6 +188,7 @@ class ToolApprovalService extends ChangeNotifier {
     required Map<String, dynamic> arguments,
     String? conversationId,
     ToolApprovalOwner? owner,
+    List<String> secretFields = const [],
   }) {
     owner ??= ToolApprovalOwner.current;
     conversationId ??= owner?.conversationId;
@@ -186,7 +205,10 @@ class ToolApprovalService extends ChangeNotifier {
     final key = _storageKey(conversationId, toolCallId);
     final existing = _pending[key];
     if (existing != null) {
-      if (existing.toolName == toolName &&
+      // MCP consent describes one prepared change and private inputs are
+      // consumed once. A repeated backend id must get a fresh request.
+      if (toolName != 'manage_mcp' &&
+          existing.toolName == toolName &&
           existing.generationRunId == owner?.generationRunId &&
           existing.assistantMessageId == owner?.assistantMessageId) {
         return existing.future;
@@ -222,6 +244,7 @@ class ToolApprovalService extends ChangeNotifier {
       arguments: displayArguments,
       conversationId: _storedConversationId(conversationId),
       owner: owner,
+      secretFields: List.unmodifiable(secretFields),
       completer: completer,
     );
     notifyListeners();
@@ -287,7 +310,23 @@ class ToolApprovalService extends ChangeNotifier {
   }
 
   /// Approve a pending tool call.
-  void approve(String toolCallId, {String? conversationId}) {
+  void approve(
+    String toolCallId, {
+    String? conversationId,
+    Map<String, String> secretValues = const {},
+  }) {
+    final pending = pendingFor(
+      toolCallId: toolCallId,
+      conversationId: conversationId,
+    );
+    if (pending != null &&
+        pending.secretFields.any(
+          (name) =>
+              secretValues[name]?.isNotEmpty != true ||
+              secretValues[name]!.length > 8192,
+        )) {
+      return;
+    }
     final req = _takePending(
       toolCallId: toolCallId,
       conversationId: conversationId,
@@ -296,7 +335,12 @@ class ToolApprovalService extends ChangeNotifier {
       req._completer.complete(
         req.owner != null && !req.hasLiveOwner
             ? ToolApprovalResult.denied('cancelled')
-            : ToolApprovalResult.approved(),
+            : ToolApprovalResult.approved(
+                secretValues: {
+                  for (final name in req.secretFields)
+                    name: secretValues[name]!,
+                },
+              ),
       );
     }
     notifyListeners();

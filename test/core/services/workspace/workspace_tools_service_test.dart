@@ -37,6 +37,7 @@ class _RecordingApproval extends ToolApprovalService {
     required Map<String, dynamic> arguments,
     String? conversationId,
     ToolApprovalOwner? owner,
+    List<String> secretFields = const [],
   }) async {
     calls++;
     lastName = toolName;

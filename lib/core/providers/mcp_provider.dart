@@ -6,6 +6,7 @@ import 'package:mcp_client/mcp_client.dart' as mcp;
 import '../database/business_preferences.dart';
 import '../services/mcp/kelivo_fetch/kelivo_fetch_server.dart';
 import '../services/mcp/mcp_oauth_service.dart';
+import '../services/mcp/mcp_secrets.dart';
 import '../services/mcp/workspace_stdio_transport.dart';
 import '../services/mcp/workspace_stdio_command.dart';
 import '../services/workspace/workspace_runtime.dart';
@@ -179,6 +180,8 @@ class McpServerConfig {
   final Map<String, String> env;
   final String? workingDirectory;
   final String? workspaceId;
+  // Private inputs supplied by the user on a manage_mcp approval card.
+  final Map<String, String> managedSecrets;
 
   McpServerConfig({
     required this.id,
@@ -195,6 +198,7 @@ class McpServerConfig {
     this.env = const {},
     this.workingDirectory,
     this.workspaceId,
+    this.managedSecrets = const {},
   });
 
   McpServerConfig copyWith({
@@ -216,6 +220,7 @@ class McpServerConfig {
     bool clearWorkspace = false,
     bool clearOAuth = false,
     bool clearOAuthClient = false,
+    Map<String, String>? managedSecrets,
   }) => McpServerConfig(
     id: id ?? this.id,
     enabled: enabled ?? this.enabled,
@@ -233,6 +238,7 @@ class McpServerConfig {
         ? null
         : (workingDirectory ?? this.workingDirectory),
     workspaceId: clearWorkspace ? null : (workspaceId ?? this.workspaceId),
+    managedSecrets: managedSecrets ?? this.managedSecrets,
   );
 
   Map<String, dynamic> toJson() => {
@@ -240,6 +246,7 @@ class McpServerConfig {
     'enabled': enabled,
     'name': name,
     'transport': transport.name,
+    if (managedSecrets.isNotEmpty) 'managedSecrets': managedSecrets,
     if (transport != McpTransportType.stdio &&
         transport != McpTransportType.inmemory)
       'url': url,
@@ -296,6 +303,9 @@ class McpServerConfig {
         env: envAny is Map
             ? envAny.map((k, v) => MapEntry(k.toString(), v.toString()))
             : const <String, String>{},
+        managedSecrets: Map<String, String>.from(
+          json['managedSecrets'] as Map? ?? const {},
+        ),
         workingDirectory: (json['workingDirectory'] as String?)?.trim(),
         workspaceId: (json['workspaceId'] as String?)?.trim(),
       );
@@ -328,6 +338,9 @@ class McpServerConfig {
               (k, v) => MapEntry(k.toString(), v.toString()),
             )) ??
             const {},
+        managedSecrets: Map<String, String>.from(
+          json['managedSecrets'] as Map? ?? const {},
+        ),
         oauth: _oauthMatchesServer(oauth, url) ? oauth : null,
         oauthClient: oauthClient,
       );
@@ -343,6 +356,14 @@ class McpServerConfig {
     return boundServer != null
         ? canonical == boundServer
         : oauth.resource == uri.toString() || oauth.resource == canonical;
+  }
+
+  bool hasSameConfigurationAs(McpServerConfig other) {
+    Map<String, dynamic> settings(McpServerConfig server) => server.toJson()
+      ..remove('tools')
+      ..remove('oauth')
+      ..remove('oauthClient');
+    return jsonEncode(settings(this)) == jsonEncode(settings(other));
   }
 }
 
@@ -438,8 +459,18 @@ class McpProvider extends ChangeNotifier {
       (s) => s.transport != McpTransportType.stdio || supportsStdio,
     ),
   );
+
+  /// Saved servers, including STDIO while its environment is unavailable.
+  List<McpServerConfig> get configuredServers => List.unmodifiable(_servers);
   McpStatus statusFor(String id) => _connections[id]?.status ?? McpStatus.idle;
-  String? errorFor(String id) => _connections[id]?.error;
+  String? errorFor(String id) {
+    final error = _connections[id]?.error;
+    final server = getById(id);
+    return error == null || server == null
+        ? error
+        : McpSecrets(server).text(error);
+  }
+
   bool get hasAnyEnabled => _servers.any((s) => s.enabled);
   bool isConnected(String id) {
     final state = _connections[id];
@@ -831,18 +862,29 @@ class McpProvider extends ChangeNotifier {
     var detached = <_DetachedConnection>[];
     await _serializeServerMutation(() async {
       final latestById = {for (final server in _servers) server.id: server};
-      final committed = [
-        for (final server in next)
-          if (_isRemoteTransport(server.transport) &&
-              identical(server.oauth, existingById[server.id]?.oauth) &&
-              McpServerConfig._oauthMatchesServer(
-                latestById[server.id]?.oauth,
-                server.url,
-              ))
-            server.copyWith(oauth: latestById[server.id]!.oauth)
-          else
-            server,
-      ];
+      final committed =
+          [
+            for (final server in next)
+              if (_isRemoteTransport(server.transport) &&
+                  identical(server.oauth, existingById[server.id]?.oauth) &&
+                  McpServerConfig._oauthMatchesServer(
+                    latestById[server.id]?.oauth,
+                    server.url,
+                  ))
+                server.copyWith(oauth: latestById[server.id]!.oauth)
+              else
+                server,
+          ].map((server) {
+            final previous = latestById[server.id];
+            return server.copyWith(
+              managedSecrets: McpSecrets.privateFields(
+                server,
+                retained: previous == null
+                    ? const {}
+                    : McpSecrets.privateFields(previous),
+              ),
+            );
+          }).toList();
       await _persistServers(committed);
       detached = [for (final server in _servers) _detachConnection(server.id)];
       _servers = committed;
@@ -862,9 +904,13 @@ class McpProvider extends ChangeNotifier {
   }
 
   /// Adds a validated import in one write, preserving existing connections.
-  Future<void> importServers(List<McpServerConfig> imported) async {
+  Future<void> importServers(
+    List<McpServerConfig> imported, {
+    void Function()? beforeCommit,
+  }) async {
     if (imported.isEmpty) return;
     await _serializeServerMutation(() async {
+      beforeCommit?.call();
       final ids = _servers.map((server) => server.id).toSet();
       for (final server in imported) {
         if (!ids.add(server.id)) {
@@ -938,25 +984,43 @@ class McpProvider extends ChangeNotifier {
   Future<void> updateServer(McpServerConfig updated) =>
       _updateServer(updated, preserveLatestTools: false);
 
-  Future<void> updateServerMetadata(McpServerConfig updated) =>
-      _updateServer(updated, preserveLatestTools: true);
+  Future<void> updateServerMetadata(
+    McpServerConfig updated, {
+    McpServerConfig? expected,
+    void Function()? beforeCommit,
+  }) => _updateServer(
+    updated,
+    preserveLatestTools: true,
+    expected: expected,
+    beforeCommit: beforeCommit,
+  );
 
   Future<void> _updateServer(
     McpServerConfig updated, {
     required bool preserveLatestTools,
+    McpServerConfig? expected,
+    void Function()? beforeCommit,
   }) async {
     _DetachedConnection? detached;
     var reconnect = false;
     await _serializeServerMutation(() async {
+      _requireExpectedServer(expected);
+      beforeCommit?.call();
       final idx = _servers.indexWhere((e) => e.id == updated.id);
       if (idx < 0) return;
       final previous = _servers[idx];
       final resourceChanged =
           !_isRemoteTransport(updated.transport) ||
           updated.url.trim() != previous.url.trim();
+      final privateUpdated = updated.copyWith(
+        managedSecrets: McpSecrets.privateFields(
+          updated,
+          retained: McpSecrets.privateFields(previous),
+        ),
+      );
       final effectiveUpdated = resourceChanged
-          ? updated.copyWith(clearOAuth: true, clearOAuthClient: true)
-          : updated.copyWith(
+          ? privateUpdated.copyWith(clearOAuth: true, clearOAuthClient: true)
+          : privateUpdated.copyWith(
               oauth: previous.oauth,
               oauthClient: _mergeOAuthClient(
                 updated.oauthClient,
@@ -990,9 +1054,24 @@ class McpProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> removeServer(String id) async {
+  void _requireExpectedServer(McpServerConfig? expected) {
+    if (expected == null) return;
+    final current = getById(expected.id);
+    if (current == null) throw StateError('mcp_server_missing');
+    if (!expected.hasSameConfigurationAs(current)) {
+      throw StateError('mcp_server_changed');
+    }
+  }
+
+  Future<void> removeServer(
+    String id, {
+    McpServerConfig? expected,
+    void Function()? beforeCommit,
+  }) async {
     _DetachedConnection? detached;
     await _serializeServerMutation(() async {
+      _requireExpectedServer(expected);
+      beforeCommit?.call();
       final next = _servers.where((e) => e.id != id).toList(growable: false);
       await _persistServers(next);
       detached = _detachConnection(id);
@@ -1269,8 +1348,14 @@ class McpProvider extends ChangeNotifier {
     } else {
       boundClient = configuredClient;
     }
+    final updated = server.copyWith(oauth: oauth, oauthClient: boundClient);
     final next = List<McpServerConfig>.of(_servers)
-      ..[index] = server.copyWith(oauth: oauth, oauthClient: boundClient);
+      ..[index] = updated.copyWith(
+        managedSecrets: McpSecrets.privateFields(
+          updated,
+          retained: McpSecrets.privateFields(server),
+        ),
+      );
     await _persistServers(next);
     _servers = next;
     _notify();
@@ -1458,6 +1543,10 @@ class McpProvider extends ChangeNotifier {
           cwd: cwd,
           mounts: mounts,
           environment: {...config.variables, ...server.env},
+          stderrFilter: McpSecrets(
+            server,
+            extra: config.variables.values,
+          ).redactor.stderrBuffer().addBytes,
           startupTimeout: _requestTimeout,
           isCancelled: () => _disposed || state.generation != generation,
         );

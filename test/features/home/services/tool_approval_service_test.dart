@@ -11,6 +11,37 @@ Future<void> expectStillPending(Future<dynamic> future) async {
 }
 
 void main() {
+  test(
+    'reused MCP call ids cannot apply consent to a different change',
+    () async {
+      final service = ToolApprovalService();
+      addTearDown(service.dispose);
+      final first = service.requestApproval(
+        toolCallId: 'same',
+        toolName: 'manage_mcp',
+        arguments: {
+          'action': 'remove',
+          'server': {'id': 'one'},
+        },
+        conversationId: 'chat',
+      );
+      final second = service.requestApproval(
+        toolCallId: 'same',
+        toolName: 'manage_mcp',
+        arguments: {
+          'action': 'remove',
+          'server': {'id': 'two'},
+        },
+        conversationId: 'chat',
+      );
+      expect(service.pendingRequests.single.arguments['server']['id'], 'two');
+      expect((await first).approved, isFalse);
+      await expectStillPending(second);
+      service.approve('same', conversationId: 'chat');
+      expect((await second).approved, isTrue);
+    },
+  );
+
   test('a report cannot reuse another tool\'s pending consent', () async {
     final service = ToolApprovalService();
     addTearDown(service.dispose);

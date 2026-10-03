@@ -5695,5 +5695,19 @@
   "problemReportToolTitle": "Problem report",
   "problemReportToolSubtitle": "Create a private ZIP of technical diagnostics. Confirmation is required every time.",
   "problemReportConsent": "The ZIP will contain:\n• App version and build number\n• Android version, manufacturer and device model\n• Environment mode: PRoot/root\n• Interface, tool and logging settings and provider types, without secrets\n• Technical events from this app run: event names, error types and stack frames (up to 128 KiB)\nChats, message text and request/context logs are excluded. Secrets are removed. The report is deleted at the next app launch or expires after 24 hours.",
-  "problemReportUnavailable": "This report was deleted or could not be shared. Create a new report."
+  "problemReportUnavailable": "This report was deleted or could not be shared. Create a new report.",
+  "mcpManagerToolTitle": "Manage MCP servers",
+  "mcpManagerToolSubtitle": "Let the model add, configure and test MCP servers after confirmation. Secrets are entered privately.",
+  "mcpManagerActionList": "List MCP servers",
+  "mcpManagerActionGet": "Read MCP server",
+  "mcpManagerActionAdd": "Add MCP server",
+  "mcpManagerActionUpdate": "Update MCP server",
+  "mcpManagerActionEnable": "Enable MCP server",
+  "mcpManagerActionDisable": "Disable MCP server",
+  "mcpManagerActionRemove": "Remove MCP server",
+  "mcpManagerActionTest": "Test MCP server",
+  "mcpManagerSecretHint": "Enter secret values here. They are saved only in MCP settings and are never sent to the model or chat history. Include Bearer/Basic when needed for a header.",
+  "mcpManagerPrevious": "Current configuration",
+  "mcpManagerValueSet": "Value set",
+  "mcpManagerValueNeeded": "Value needed"
 }

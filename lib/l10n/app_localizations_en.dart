@@ -12667,4 +12667,48 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get problemReportUnavailable =>
       'This report was deleted or could not be shared. Create a new report.';
+
+  @override
+  String get mcpManagerToolTitle => 'Manage MCP servers';
+
+  @override
+  String get mcpManagerToolSubtitle =>
+      'Let the model add, configure and test MCP servers after confirmation. Secrets are entered privately.';
+
+  @override
+  String get mcpManagerActionList => 'List MCP servers';
+
+  @override
+  String get mcpManagerActionGet => 'Read MCP server';
+
+  @override
+  String get mcpManagerActionAdd => 'Add MCP server';
+
+  @override
+  String get mcpManagerActionUpdate => 'Update MCP server';
+
+  @override
+  String get mcpManagerActionEnable => 'Enable MCP server';
+
+  @override
+  String get mcpManagerActionDisable => 'Disable MCP server';
+
+  @override
+  String get mcpManagerActionRemove => 'Remove MCP server';
+
+  @override
+  String get mcpManagerActionTest => 'Test MCP server';
+
+  @override
+  String get mcpManagerSecretHint =>
+      'Enter secret values here. They are saved only in MCP settings and are never sent to the model or chat history. Include Bearer/Basic when needed for a header.';
+
+  @override
+  String get mcpManagerPrevious => 'Current configuration';
+
+  @override
+  String get mcpManagerValueSet => 'Value set';
+
+  @override
+  String get mcpManagerValueNeeded => 'Value needed';
 }
