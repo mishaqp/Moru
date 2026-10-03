@@ -57,11 +57,14 @@ package name does not require building other platforms.
   go through the tool approval prompt, and it cannot delete the assistant
   running the chat or the last one. Extend its settings schema when
   `Assistant` gains a user-facing field.
-- **Problem reports**: opt-in `report_problem` always asks for fresh consent,
-  even in full-trust mode. `ProblemReportService` exports a private ZIP with
+- **Problem reports**: opt-in `report_problem` asks for fresh consent unless
+  global full-trust mode is enabled; individual "Always allow" is unavailable.
+  `ProblemReportService` exports a private ZIP with
   app/device/runtime details, allowlisted settings and a bounded technical
   journal from `FlutterLogger` (event names, error types and package frames,
-  never chat text, prints or request/context logs). ACP/log redactors remove
+  never chat text, prints or request/context logs). With Flutter logging enabled,
+  it also includes bounded one-second summaries of frames over 100 ms (count,
+  longest frame, build and raster durations). ACP/log redactors remove
   secrets before writing. The chat offers Share through a checked private
   snapshot; exports and owned share-cache copies are removed on next launch.
 - **Browser and Computer**: `BrowserAgentSession.minimize` parks the live

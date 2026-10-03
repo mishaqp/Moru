@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
+import 'package:fake_async/fake_async.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/logging/flutter_logger.dart';
@@ -121,6 +123,34 @@ void main() {
     expect(
       zip.findFile('events.txt')!.size,
       lessThanOrEqualTo(FlutterLogger.technicalTailMaxBytes),
+    );
+  });
+
+  test('reports include slow-frame summaries without any errors', () async {
+    await settings.setFlutterLogEnabled(true);
+    addTearDown(() => FlutterLogger.setEnabled(false));
+    fakeAsync((clock) {
+      SchedulerBinding.instance.platformDispatcher.onReportTimings?.call([
+        FrameTiming(
+          vsyncStart: 0,
+          buildStart: 0,
+          buildFinish: 70000,
+          rasterStart: 70000,
+          rasterFinish: 150000,
+          rasterFinishWallTime: 1790985600000000,
+        ),
+      ]);
+      clock.elapse(const Duration(seconds: 1));
+    });
+    final result = await reports.create(settings: settings);
+    final summary = result['summary'] as Map;
+    expect(summary['recent_events'], contains(contains('[SlowFrames]')));
+    final zip = ZipDecoder().decodeBytes(
+      await reports.readReport(result['name'] as String),
+    );
+    expect(
+      utf8.decode(zip.findFile('events.txt')!.content),
+      contains('count=1 max_ms=150.0 build_ms=70.0 raster_ms=80.0'),
     );
   });
 

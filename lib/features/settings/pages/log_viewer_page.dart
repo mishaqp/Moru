@@ -14,6 +14,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/section_card.dart';
 import '../../../shared/widgets/ios_switch.dart';
+import '../../../shared/widgets/ios_settings_rows.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../utils/app_directories.dart';
 import '../../../core/providers/settings_provider.dart';
@@ -2981,21 +2982,24 @@ class _LogSettingsSheet extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: ListView(
+          shrinkWrap: true,
           children: [
             // Drag handle
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: cs.onSurface.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(2),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: cs.onSurface.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             const SizedBox(height: 14),
             Text(
               l10n.logSettingsTitle,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontWeight: AppFontWeights.emphasis,
                 fontSize: 16,
@@ -3003,6 +3007,32 @@ class _LogSettingsSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+
+            SectionCard(
+              radius: 14,
+              dividers: true,
+              children: [
+                IosSwitchRow(
+                  label: l10n.requestLogSettingTitle,
+                  subtitle: l10n.requestLogSettingSubtitle,
+                  value: settings.requestLogEnabled,
+                  onChanged: settings.setRequestLogEnabled,
+                ),
+                IosSwitchRow(
+                  label: l10n.contextLogSettingTitle,
+                  subtitle: l10n.contextLogSettingSubtitle,
+                  value: settings.contextLogEnabled,
+                  onChanged: settings.setContextLogEnabled,
+                ),
+                IosSwitchRow(
+                  label: l10n.flutterLogSettingTitle,
+                  subtitle: l10n.flutterLogSettingSubtitle,
+                  value: settings.flutterLogEnabled,
+                  onChanged: settings.setFlutterLogEnabled,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
 
             // Save output toggle
             Container(
