@@ -43,21 +43,9 @@ import '../../theme/palettes.dart';
 import '../../theme/custom_theme.dart';
 import '../../theme/chat_bubble_style.dart';
 import '../models/tool_schema_override.dart';
-import '../services/app_exit_flush.dart';
 
-// Desktop: topic list position
-
-// Desktop: send message shortcut
+// Android hardware keyboard send shortcut (legacy storage key).
 enum DesktopSendShortcut { enter, ctrlEnter }
-
-// Desktop: message navigation buttons visibility mode
-enum DesktopMessageNavButtonsMode {
-  always,
-  scroll,
-  hover,
-  scrollAndHover,
-  never,
-}
 
 // Mobile: message navigation buttons visibility mode
 enum MobileMessageNavButtonsMode { always, scroll, never }
@@ -218,8 +206,6 @@ class SettingsProvider extends ChangeNotifier {
   static const String _chatEditAssistantKeepThinkingToolCardsKey =
       'chat_edit_assistant_keep_thinking_tool_cards_v1';
   static const String _displayShowMessageNavKey = 'display_show_message_nav_v1';
-  static const String _displayDesktopMessageNavButtonsModeKey =
-      'display_desktop_message_nav_buttons_mode_v1';
   static const String _displayMobileMessageNavButtonsModeKey =
       'display_mobile_message_nav_buttons_mode_v1';
   static const String _displayUseNewAssistantAvatarUxKey =
@@ -1154,10 +1140,6 @@ class SettingsProvider extends ChangeNotifier {
       prefs.getString(_displayMobileMessageNavButtonsModeKey),
       legacyEnabled: _showMessageNavButtons,
     );
-    _desktopMessageNavButtonsMode = _parseDesktopMessageNavButtonsMode(
-      prefs.getString(_displayDesktopMessageNavButtonsModeKey),
-      legacyEnabled: _showMessageNavButtons,
-    );
     _useNewAssistantAvatarUx =
         prefs.getBool(_displayUseNewAssistantAvatarUxKey) ?? false;
     _showProviderInModelCapsule =
@@ -1218,7 +1200,7 @@ class SettingsProvider extends ChangeNotifier {
     _newChatOnAssistantSwitch =
         prefs.getBool(_displayNewChatOnAssistantSwitchKey) ?? false;
     _newChatAfterDelete = prefs.getBool(_displayNewChatAfterDeleteKey) ?? false;
-    // Enter to send on mobile: iOS defaults to true, Android defaults to false
+    // Enter to send on Android defaults to false.
     final enterToSendPref = prefs.getBool(_displayEnterToSendOnMobileKey);
     if (enterToSendPref == null) {
       _enterToSendOnMobile = false;
@@ -1231,7 +1213,7 @@ class SettingsProvider extends ChangeNotifier {
         (prefs.getInt(_displayLongPasteAsFileThresholdKey) ??
                 defaultLongPasteAsFileThreshold)
             .clamp(minLongPasteAsFileThreshold, maxLongPasteAsFileThreshold);
-    // Desktop send shortcut: Enter (default) or Ctrl/Cmd+Enter
+    // Android hardware keyboard shortcut: Enter (default) or Ctrl/Meta+Enter
     final sendShortcutStr = prefs.getString(_desktopSendShortcutKey);
     switch (sendShortcutStr) {
       case 'ctrlEnter':
@@ -2174,9 +2156,6 @@ class SettingsProvider extends ChangeNotifier {
         bytes[3] == 0x00;
   }
 
-  // ===== Desktop UI setters =====
-  // Desktop: topic panel placement (left/right)
-  // Desktop: right sidebar visible state
   // ===== App locale (UI language) =====
   String? _appLocaleTag; // 'system', 'ru', 'zh_CN', 'zh_Hant', 'en_US'
   static String _readAppLocaleTag(BusinessPreferences preferences) {
@@ -3045,7 +3024,6 @@ class SettingsProvider extends ChangeNotifier {
 
   Timer? _toolSchemaOverridePersistTimer;
   bool _toolSchemaOverridePersistDirty = false;
-  Future<void> Function()? _toolSchemaOverrideExitFlushHandler;
 
   bool _applyToolSchemaOverrideInMemory(
     String toolName,
@@ -3101,7 +3079,6 @@ class SettingsProvider extends ChangeNotifier {
 
   void _scheduleDebouncedToolSchemaOverridePersist() {
     _toolSchemaOverridePersistDirty = true;
-    _ensureToolSchemaOverrideExitFlushRegistered();
     _toolSchemaOverridePersistTimer?.cancel();
     _toolSchemaOverridePersistTimer = Timer(
       toolSchemaOverridePersistDebounce,
@@ -3121,12 +3098,6 @@ class SettingsProvider extends ChangeNotifier {
     _toolSchemaOverridePersistTimer?.cancel();
     _toolSchemaOverridePersistTimer = null;
     await _persistToolSchemaOverrides();
-  }
-
-  void _ensureToolSchemaOverrideExitFlushRegistered() {
-    if (_toolSchemaOverrideExitFlushHandler != null) return;
-    _toolSchemaOverrideExitFlushHandler = flushPendingToolSchemaOverridePersist;
-    AppExitFlush.register(_toolSchemaOverrideExitFlushHandler!);
   }
 
   Future<void> _persistToolSchemaOverrides() async {
@@ -3150,11 +3121,6 @@ class SettingsProvider extends ChangeNotifier {
     _toolSchemaOverridePersistTimer = null;
     if (_toolSchemaOverridePersistDirty) {
       unawaited(_persistToolSchemaOverrides());
-    }
-    final handler = _toolSchemaOverrideExitFlushHandler;
-    if (handler != null) {
-      AppExitFlush.unregister(handler);
-      _toolSchemaOverrideExitFlushHandler = null;
     }
     super.dispose();
   }
@@ -4883,7 +4849,7 @@ Requirements:
     await prefs.setBool(_displayUseNewAssistantAvatarUxKey, v);
   }
 
-  // Display: show provider name in model capsule (desktop header)
+  // Display: show provider name in the wide Android model capsule
   bool _showProviderInModelCapsule = true;
   bool get showProviderInModelCapsule => _showProviderInModelCapsule;
   Future<void> setShowProviderInModelCapsule(bool v) async {
@@ -4938,7 +4904,7 @@ Requirements:
     await prefs.setBool(_displayNewChatAfterDeleteKey, v);
   }
 
-  // Display: enter key sends message on mobile (iOS defaults true, Android defaults false)
+  // Display: enter key sends message on Android (default false).
   bool _enterToSendOnMobile = false;
   bool get enterToSendOnMobile => _enterToSendOnMobile;
   Future<void> setEnterToSendOnMobile(bool v) async {
@@ -4990,7 +4956,7 @@ Requirements:
     await prefs.setInt(_displayLongPasteAsFileThresholdKey, next);
   }
 
-  // Desktop: send shortcut (Enter or Ctrl/Cmd+Enter)
+  // Android hardware keyboard: Enter or Ctrl/Meta+Enter (legacy storage key).
   DesktopSendShortcut _desktopSendShortcut = DesktopSendShortcut.enter;
   DesktopSendShortcut get desktopSendShortcut => _desktopSendShortcut;
   Future<void> setDesktopSendShortcut(DesktopSendShortcut v) async {
@@ -5000,64 +4966,6 @@ Requirements:
     final prefs = _preferences;
     final str = v == DesktopSendShortcut.ctrlEnter ? 'ctrlEnter' : 'enter';
     await prefs.setString(_desktopSendShortcutKey, str);
-  }
-
-  // Desktop: message navigation buttons visibility mode
-  DesktopMessageNavButtonsMode _desktopMessageNavButtonsMode =
-      DesktopMessageNavButtonsMode.scroll;
-  DesktopMessageNavButtonsMode get desktopMessageNavButtonsMode =>
-      _desktopMessageNavButtonsMode;
-
-  Future<void> setDesktopMessageNavButtonsMode(
-    DesktopMessageNavButtonsMode mode,
-  ) async {
-    if (_desktopMessageNavButtonsMode == mode) return;
-    _desktopMessageNavButtonsMode = mode;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setString(
-      _displayDesktopMessageNavButtonsModeKey,
-      _desktopMessageNavButtonsModeToString(mode),
-    );
-  }
-
-  DesktopMessageNavButtonsMode _parseDesktopMessageNavButtonsMode(
-    String? raw, {
-    required bool legacyEnabled,
-  }) {
-    switch (raw) {
-      case 'always':
-        return DesktopMessageNavButtonsMode.always;
-      case 'scroll':
-        return DesktopMessageNavButtonsMode.scroll;
-      case 'hover':
-        return DesktopMessageNavButtonsMode.hover;
-      case 'scrollAndHover':
-        return DesktopMessageNavButtonsMode.scrollAndHover;
-      case 'never':
-        return DesktopMessageNavButtonsMode.never;
-      default:
-        return legacyEnabled
-            ? DesktopMessageNavButtonsMode.scroll
-            : DesktopMessageNavButtonsMode.never;
-    }
-  }
-
-  String _desktopMessageNavButtonsModeToString(
-    DesktopMessageNavButtonsMode mode,
-  ) {
-    switch (mode) {
-      case DesktopMessageNavButtonsMode.always:
-        return 'always';
-      case DesktopMessageNavButtonsMode.scroll:
-        return 'scroll';
-      case DesktopMessageNavButtonsMode.hover:
-        return 'hover';
-      case DesktopMessageNavButtonsMode.scrollAndHover:
-        return 'scrollAndHover';
-      case DesktopMessageNavButtonsMode.never:
-        return 'never';
-    }
   }
 
   // Mobile: message navigation buttons visibility mode
@@ -5938,7 +5846,6 @@ Requirements:
     copy._longPasteAsFileThreshold = _longPasteAsFileThreshold;
     copy._mobileBackground = _mobileBackground;
     copy._desktopSendShortcut = _desktopSendShortcut;
-    copy._desktopMessageNavButtonsMode = _desktopMessageNavButtonsMode;
     copy._chatFontScale = _chatFontScale;
     copy._autoScrollEnabled = _autoScrollEnabled;
     copy._autoScrollIdleSeconds = _autoScrollIdleSeconds;

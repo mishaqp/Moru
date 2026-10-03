@@ -235,7 +235,6 @@ void main() {
     });
 
     test('rejects links without following them', () async {
-      if (Platform.isWindows) return;
       final outside = File(p.join(root.parent.path, 'outside_asset.txt'));
       await outside.writeAsBytes([1, 2, 3]);
       final upload = Directory(p.join(root.path, 'upload'));

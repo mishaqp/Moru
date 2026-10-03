@@ -524,7 +524,6 @@ void main() {
   test('openPty writes, resizes, closes, and maps exit', () async {
     await env.setProotOptions(shell: '/bin/sh', arguments: '-k\n5.10.0');
     expect(runtime.supportsPty, isTrue);
-    expect(runtime.supportsSystemTerminal, isFalse);
 
     final session = await runtime.openPty(
       mounts: const [Mount(host: '/data', guest: '/mnt/data')],

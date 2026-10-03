@@ -363,7 +363,7 @@ final class LocalSnapshotStore {
       await source.rename(target.path);
       return;
     } on FileSystemException {
-      // Temp and app data can sit on different volumes on desktop, where
+      // Temp and app data can sit on different volumes, where
       // rename cannot cross the boundary.
     }
     await source.copy(target.path);

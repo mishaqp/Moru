@@ -226,6 +226,23 @@ StreamingState _stateFor(
 )..fullContentRaw = content;
 
 void main() {
+  // The native Android background host is outside these persistence tests.
+  // Keep the real Android coordinator with a deterministic channel boundary.
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('app.mobile_background'),
+          (call) async => call.method == 'sync' ? <String, Object?>{} : null,
+        );
+  });
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('app.mobile_background'),
+          null,
+        );
+  });
+
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues(const {});
 
@@ -267,7 +284,7 @@ void main() {
       final settings = SettingsProvider(createBusinessTestPreferences());
       addTearDown(settings.dispose);
       final background = MobileBackgroundCoordinator(
-        platform: TargetPlatform.linux,
+        platform: TargetPlatform.android,
       );
       addTearDown(background.dispose);
       final actions = await pumpActions(
@@ -306,7 +323,7 @@ void main() {
       final settings = SettingsProvider(createBusinessTestPreferences());
       addTearDown(settings.dispose);
       final background = MobileBackgroundCoordinator(
-        platform: TargetPlatform.linux,
+        platform: TargetPlatform.android,
       );
       addTearDown(background.dispose);
       final actions = await pumpActions(
@@ -341,7 +358,7 @@ void main() {
       final settings = SettingsProvider(createBusinessTestPreferences());
       addTearDown(settings.dispose);
       final background = MobileBackgroundCoordinator(
-        platform: TargetPlatform.linux,
+        platform: TargetPlatform.android,
       );
       addTearDown(background.dispose);
       final actions = await pumpActions(
@@ -382,7 +399,7 @@ void main() {
     final settings = SettingsProvider(createBusinessTestPreferences());
     addTearDown(settings.dispose);
     final background = MobileBackgroundCoordinator(
-      platform: TargetPlatform.linux,
+      platform: TargetPlatform.android,
     );
     addTearDown(background.dispose);
     final actions = await pumpActions(
@@ -486,7 +503,7 @@ void main() {
               runtimeRunId: 'persisted-job',
             );
       final background = MobileBackgroundCoordinator(
-        platform: TargetPlatform.linux,
+        platform: TargetPlatform.android,
       );
       addTearDown(settings.dispose);
       addTearDown(registry.dispose);
@@ -571,7 +588,7 @@ void main() {
       final settings = SettingsProvider(createBusinessTestPreferences());
       final registry = ToolRunRegistry();
       final background = MobileBackgroundCoordinator(
-        platform: TargetPlatform.linux,
+        platform: TargetPlatform.android,
       );
       addTearDown(settings.dispose);
       addTearDown(registry.dispose);
@@ -669,7 +686,7 @@ void main() {
       final settings = SettingsProvider(createBusinessTestPreferences());
       final registry = ToolRunRegistry();
       final background = MobileBackgroundCoordinator(
-        platform: TargetPlatform.linux,
+        platform: TargetPlatform.android,
       );
       addTearDown(settings.dispose);
       addTearDown(registry.dispose);
@@ -957,7 +974,7 @@ void main() {
     final settings = SettingsProvider(createBusinessTestPreferences());
     final registry = ToolRunRegistry();
     final background = MobileBackgroundCoordinator(
-      platform: TargetPlatform.linux,
+      platform: TargetPlatform.android,
     );
     addTearDown(settings.dispose);
     addTearDown(registry.dispose);
@@ -1037,7 +1054,7 @@ void main() {
     final settings = SettingsProvider(createBusinessTestPreferences());
     final registry = ToolRunRegistry();
     final background = MobileBackgroundCoordinator(
-      platform: TargetPlatform.linux,
+      platform: TargetPlatform.android,
     );
     addTearDown(settings.dispose);
     addTearDown(registry.dispose);
@@ -1111,7 +1128,7 @@ void main() {
       final settings = SettingsProvider(createBusinessTestPreferences());
       addTearDown(settings.dispose);
       final background = MobileBackgroundCoordinator(
-        platform: TargetPlatform.linux,
+        platform: TargetPlatform.android,
       );
       addTearDown(background.dispose);
       final actions = await pumpActions(
@@ -1161,7 +1178,7 @@ void main() {
       final settings = SettingsProvider(createBusinessTestPreferences());
       addTearDown(settings.dispose);
       final background = MobileBackgroundCoordinator(
-        platform: TargetPlatform.linux,
+        platform: TargetPlatform.android,
       );
       addTearDown(background.dispose);
       final actions = await pumpActions(

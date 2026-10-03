@@ -211,7 +211,7 @@ void main() {
     return AppLocalizations.of(tester.element(find.byType(Scaffold)))!;
   }
 
-  for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+  for (final platform in [TargetPlatform.android]) {
     testWidgets(
       'workspace row settings opens the existing workspace and environment page on $platform',
       (tester) async {

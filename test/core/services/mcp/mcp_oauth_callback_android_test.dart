@@ -1,5 +1,5 @@
 import 'package:Kelivo/core/services/auth/oauth_callback_io.dart'
-    show createAndroidOAuthCallbackForTesting;
+    show openOAuthCallback;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -27,7 +27,7 @@ void main() {
       messenger.setMockMethodCallHandler(channel, null);
     });
 
-    final callback = createAndroidOAuthCallbackForTesting(
+    final callback = await openOAuthCallback(
       Uri.parse('https://auth.example.com'),
     );
     var fallbackLauncherCalled = false;

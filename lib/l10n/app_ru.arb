@@ -398,11 +398,8 @@
   "assistantEditChooseImageButton": "Выбрать изображение",
   "assistantEditClearButton": "Очистить",
   "desktopNavTranslateTooltip": "Перевести",
-  "desktopAvatarMenuUseEmoji": "Использовать эмодзи",
   "cameraPermissionDeniedMessage": "Камера недоступна: разрешение не предоставлено.",
   "openSystemSettings": "Открыть настройки",
-  "desktopAvatarMenuChangeFromImage": "Выбрать изображение…",
-  "desktopAvatarMenuReset": "Сбросить аватар",
   "assistantEditAvatarChooseImage": "Выбрать изображение",
   "assistantEditAvatarChooseEmoji": "Выбрать эмодзи",
   "assistantEditAvatarEnterLink": "Ввести ссылку",
@@ -3312,7 +3309,6 @@
   "migrationPerformanceNote": "После переноса запуск, загрузка истории и поиск используют индексы SQLite для более плавной работы с длинными чатами.",
   "migrationSourceDatabaseLabel": "Hive",
   "migrationTargetDatabaseLabel": "SQLite",
-  "migrationChooseFolderButton": "Выбрать папку и создать копию",
   "migrationSaveBackupButton": "Сохранить ZIP-копию",
   "migrationStartWithoutBackupButton": "Перенести без резервной копии",
   "migrationSkipChatsJsonOption": "Пропустить chats.json",
@@ -3908,14 +3904,6 @@
       }
     }
   },
-  "workspaceEnvEngineAlpine": "Alpine {version} (iSH)",
-  "@workspaceEnvEngineAlpine": {
-    "placeholders": {
-      "version": {
-        "type": "String"
-      }
-    }
-  },
   "workspaceEnvPhaseNotInstalled": "Не установлено",
   "workspaceEnvPhaseDownloading": "Загрузка",
   "workspaceEnvPhaseVerifying": "Проверка",
@@ -4049,8 +4037,6 @@
   "terminalNameLabel": "Имя",
   "terminalCancel": "Отмена",
   "workspaceDeskBarEmptyHint": "Привяжите рабочее пространство на панели инструментов для просмотра файлов",
-  "workspaceDeskOpenSystemTerminal": "Открыть в системном терминале",
-  "workspaceDeskReveal": "Показать в файловом менеджере",
   "workspaceEntryBind": "Привязать рабочее пространство",
   "workspaceEntryUnbind": "Отвязать",
   "workspaceEntryChange": "Изменить",
@@ -4062,8 +4048,6 @@
   "workspaceEntryCwdInvalid": "Путь некорректен или выходит за пределы рабочего пространства",
   "workspaceEntryFiles": "Файлы",
   "workspaceEntryTerminal": "Терминал",
-  "workspaceEntryOpenSystemTerminal": "Открыть в системном терминале",
-  "workspaceEntryReveal": "Показать в файловом менеджере",
   "workspaceEntrySessionSkills": "Навыки",
   "workspaceEntryAllowAll": "Разрешить всё в этой сессии",
   "workspaceEntryAllowAllSubtitle": "Команды Shell в этом диалоге будут выполняться без подтверждения.",
@@ -4168,7 +4152,6 @@
   "workspacePreviewLoadError": "Не удалось загрузить файл.",
   "workspacePreviewOpenInBrowser": "Открыть в браузере",
   "workspacePreviewTable": "Таблица",
-  "workspacePreviewRevealFailed": "Не удалось показать файл в файловом менеджере.",
   "workspacePreviewEmptyTable": "Эта таблица пуста.",
   "workspaceFilesNew": "Создать",
   "workspaceFilesFoldersFirst": "Сначала папки",
@@ -4376,7 +4359,6 @@
   "workspaceEnvSizeTimeout": "Время ожидания истекло",
   "workspacePreviewEmptyFile": "Этот файл пуст",
   "workspacePreviewEmptyHint": "Нет содержимого для предпросмотра.",
-  "workspacePreviewRevealInFileManager": "Показать в файловом менеджере",
   "workspaceBindingSetAssistantDefault": "Рабочее пространство по умолчанию для «{assistant}»",
   "@workspaceBindingSetAssistantDefault": {
     "placeholders": {

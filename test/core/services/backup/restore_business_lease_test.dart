@@ -94,10 +94,9 @@ void main() {
                 as Map<String, dynamic>;
         expect(ownerIdentity['instanceId'], first.instanceId);
         expect(ownerIdentity['probePort'], isA<int>());
-        if (!Platform.isWindows) {
-          expect((await leaseDirectory.stat()).mode & 0x1ff, 0x1c0);
-          expect((await first.lockFile.stat()).mode & 0x1ff, 0x180);
-        }
+
+        expect((await leaseDirectory.stat()).mode & 0x1ff, 0x1c0);
+        expect((await first.lockFile.stat()).mode & 0x1ff, 0x180);
 
         await first.close();
         expect(first.isClosed, isTrue);
@@ -426,28 +425,22 @@ void main() {
       await lease.close();
     });
 
-    test(
-      'rejects a link at the fixed lock-file path',
-      () async {
-        final leaseDirectory = Directory(
-          p.join(appData.path, RestoreBusinessLease.leaseDirectoryName),
-        );
-        await leaseDirectory.create(recursive: true);
-        final target = File(p.join(root.path, 'target.lock'));
-        await target.create();
-        await Link(
-          p.join(leaseDirectory.path, RestoreBusinessLease.lockFileName),
-        ).create(target.path);
+    test('rejects a link at the fixed lock-file path', () async {
+      final leaseDirectory = Directory(
+        p.join(appData.path, RestoreBusinessLease.leaseDirectoryName),
+      );
+      await leaseDirectory.create(recursive: true);
+      final target = File(p.join(root.path, 'target.lock'));
+      await target.create();
+      await Link(
+        p.join(leaseDirectory.path, RestoreBusinessLease.lockFileName),
+      ).create(target.path);
 
-        await expectLater(
-          RestoreBusinessLease.acquire(appDataDirectory: appData),
-          throwsA(isA<StateError>()),
-        );
-      },
-      skip: Platform.isWindows
-          ? 'Symlink setup is not portable on Windows.'
-          : false,
-    );
+      await expectLater(
+        RestoreBusinessLease.acquire(appDataDirectory: appData),
+        throwsA(isA<StateError>()),
+      );
+    });
   });
 }
 

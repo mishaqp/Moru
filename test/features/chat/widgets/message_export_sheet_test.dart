@@ -121,11 +121,11 @@ void main() {
     expect(transform.transform.getTranslation().y, -40);
   });
 
-  test('desktop export image config keeps enough source pixels for text', () {
-    final config = exportImageRenderConfigForTesting(isDesktop: true);
+  test('Android export image config preserves mobile dimensions', () {
+    final config = exportImageRenderConfigForTesting();
 
-    expect(config.width * config.pixelRatio, greaterThanOrEqualTo(2160));
-    expect(config.pixelRatio, greaterThanOrEqualTo(3.0));
+    expect(config.width, 480);
+    expect(config.pixelRatio, 3);
   });
 
   test('export capture keeps medium-long images on the whole-capture path', () {

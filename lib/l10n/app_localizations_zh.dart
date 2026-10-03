@@ -940,19 +940,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get desktopNavTranslateTooltip => '翻译';
 
   @override
-  String get desktopAvatarMenuUseEmoji => '使用表情符号';
-
-  @override
   String get cameraPermissionDeniedMessage => '未授予相机权限';
 
   @override
   String get openSystemSettings => '去设置';
-
-  @override
-  String get desktopAvatarMenuChangeFromImage => '从图片更换…';
-
-  @override
-  String get desktopAvatarMenuReset => '重置头像';
 
   @override
   String get assistantEditAvatarChooseImage => '选择图片';
@@ -7216,9 +7207,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get migrationTargetDatabaseLabel => 'SQLite';
 
   @override
-  String get migrationChooseFolderButton => '选择文件夹并备份';
-
-  @override
   String get migrationSaveBackupButton => '保存备份 ZIP';
 
   @override
@@ -8393,11 +8381,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String workspaceEnvEngineAlpine(String version) {
-    return 'Alpine $version (iSH)';
-  }
-
-  @override
   String get workspaceEnvPhaseNotInstalled => '未安装';
 
   @override
@@ -8686,12 +8669,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get workspaceDeskBarEmptyHint => '从工具栏绑定工作区后即可在此浏览文件';
 
   @override
-  String get workspaceDeskOpenSystemTerminal => '在系统终端中打开';
-
-  @override
-  String get workspaceDeskReveal => '在文件管理器中显示';
-
-  @override
   String get workspaceEntryBind => '绑定工作区';
 
   @override
@@ -8724,12 +8701,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get workspaceEntryTerminal => '终端';
-
-  @override
-  String get workspaceEntryOpenSystemTerminal => '在系统终端中打开';
-
-  @override
-  String get workspaceEntryReveal => '在文件管理器中显示';
 
   @override
   String get workspaceEntrySessionSkills => '技能';
@@ -8923,9 +8894,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get workspacePreviewTable => '表格';
-
-  @override
-  String get workspacePreviewRevealFailed => '无法在文件管理器中显示此文件。';
 
   @override
   String get workspacePreviewEmptyTable => '此表格为空。';
@@ -9252,9 +9220,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get workspacePreviewEmptyHint => '此文件没有任何可预览的内容。';
-
-  @override
-  String get workspacePreviewRevealInFileManager => '在文件管理器中显示';
 
   @override
   String workspaceBindingSetAssistantDefault(String assistant) {
@@ -13059,19 +13024,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get desktopNavTranslateTooltip => '翻译';
 
   @override
-  String get desktopAvatarMenuUseEmoji => '使用表情符号';
-
-  @override
   String get cameraPermissionDeniedMessage => '未授予相机权限';
 
   @override
   String get openSystemSettings => '去设置';
-
-  @override
-  String get desktopAvatarMenuChangeFromImage => '从图片更换…';
-
-  @override
-  String get desktopAvatarMenuReset => '重置头像';
 
   @override
   String get assistantEditAvatarChooseImage => '选择图片';
@@ -19264,9 +19220,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get migrationTargetDatabaseLabel => 'SQLite';
 
   @override
-  String get migrationChooseFolderButton => '选择文件夹并备份';
-
-  @override
   String get migrationSaveBackupButton => '保存备份 ZIP';
 
   @override
@@ -20441,11 +20394,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
-  String workspaceEnvEngineAlpine(String version) {
-    return 'Alpine $version (iSH)';
-  }
-
-  @override
   String get workspaceEnvPhaseNotInstalled => '未安装';
 
   @override
@@ -20734,12 +20682,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get workspaceDeskBarEmptyHint => '从工具栏绑定工作区后即可在此浏览文件';
 
   @override
-  String get workspaceDeskOpenSystemTerminal => '在系统终端中打开';
-
-  @override
-  String get workspaceDeskReveal => '在文件管理器中显示';
-
-  @override
   String get workspaceEntryBind => '绑定工作区';
 
   @override
@@ -20772,12 +20714,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get workspaceEntryTerminal => '终端';
-
-  @override
-  String get workspaceEntryOpenSystemTerminal => '在系统终端中打开';
-
-  @override
-  String get workspaceEntryReveal => '在文件管理器中显示';
 
   @override
   String get workspaceEntrySessionSkills => '技能';
@@ -20971,9 +20907,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get workspacePreviewTable => '表格';
-
-  @override
-  String get workspacePreviewRevealFailed => '无法在文件管理器中显示此文件。';
 
   @override
   String get workspacePreviewEmptyTable => '此表格为空。';
@@ -21300,9 +21233,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get workspacePreviewEmptyHint => '此文件没有任何可预览的内容。';
-
-  @override
-  String get workspacePreviewRevealInFileManager => '在文件管理器中显示';
 
   @override
   String workspaceBindingSetAssistantDefault(String assistant) {
@@ -25107,19 +25037,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get desktopNavTranslateTooltip => '翻譯';
 
   @override
-  String get desktopAvatarMenuUseEmoji => '使用表情符號';
-
-  @override
   String get cameraPermissionDeniedMessage => '未授予相機權限';
 
   @override
   String get openSystemSettings => '前往設定';
-
-  @override
-  String get desktopAvatarMenuChangeFromImage => '從圖片更換…';
-
-  @override
-  String get desktopAvatarMenuReset => '重置頭像';
 
   @override
   String get assistantEditAvatarChooseImage => '選擇圖片';
@@ -31384,9 +31305,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get migrationTargetDatabaseLabel => 'SQLite';
 
   @override
-  String get migrationChooseFolderButton => '選擇資料夾並備份';
-
-  @override
   String get migrationSaveBackupButton => '儲存備份 ZIP';
 
   @override
@@ -32561,11 +32479,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String workspaceEnvEngineAlpine(String version) {
-    return 'Alpine $version (iSH)';
-  }
-
-  @override
   String get workspaceEnvPhaseNotInstalled => '未安裝';
 
   @override
@@ -32854,12 +32767,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get workspaceDeskBarEmptyHint => '從工具列綁定工作區後即可在此瀏覽檔案';
 
   @override
-  String get workspaceDeskOpenSystemTerminal => '在系統終端機中開啟';
-
-  @override
-  String get workspaceDeskReveal => '在檔案管理員中顯示';
-
-  @override
   String get workspaceEntryBind => '綁定工作區';
 
   @override
@@ -32892,12 +32799,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get workspaceEntryTerminal => '終端機';
-
-  @override
-  String get workspaceEntryOpenSystemTerminal => '在系統終端機中開啟';
-
-  @override
-  String get workspaceEntryReveal => '在檔案管理員中顯示';
 
   @override
   String get workspaceEntrySessionSkills => '技能';
@@ -33091,9 +32992,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get workspacePreviewTable => '表格';
-
-  @override
-  String get workspacePreviewRevealFailed => '無法在檔案管理員中顯示此檔案。';
 
   @override
   String get workspacePreviewEmptyTable => '此表格為空。';
@@ -33420,9 +33318,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get workspacePreviewEmptyHint => '此檔案沒有任何可預覽的內容。';
-
-  @override
-  String get workspacePreviewRevealInFileManager => '在檔案管理員中顯示';
 
   @override
   String workspaceBindingSetAssistantDefault(String assistant) {

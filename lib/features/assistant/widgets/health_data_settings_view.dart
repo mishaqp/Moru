@@ -10,7 +10,7 @@ import '../../../theme/app_font_weights.dart';
 import '../../../theme/app_semantic_colors.dart';
 import '../../home/services/health_data_selection.dart';
 
-/// Presentational Health Data settings body (mobile, desktop, and previews).
+/// Presentational body for saved Health Data settings and previews.
 class HealthDataSettingsView extends StatefulWidget {
   const HealthDataSettingsView({
     super.key,

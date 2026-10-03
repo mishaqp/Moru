@@ -1,6 +1,6 @@
-/// HealthKit metric IDs stored per collaborator and sent to iOS.
+/// Legacy HealthKit metric IDs retained in assistant settings and backups.
 ///
-/// Values must match MethodChannel / Swift identifiers. New sensitive types
+/// Values preserve the stored identifiers. New sensitive types
 /// default OFF; [defaultSelected] is the original six-metric summary.
 enum HealthDataCategory { activity, rest, heart, body, reproductive }
 

@@ -58,17 +58,4 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
-
-  testWidgets('Browser row is absent where the Shared Browser is unsupported', (
-    tester,
-  ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-    try {
-      await pumpSettings(tester);
-
-      expect(find.text('Browser'), findsNothing);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
 }

@@ -38,7 +38,7 @@ void main() {
 
   group('workspaceEnvEngineIcon', () {
     test('uses the package icon for alpine and ubuntu', () {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
       expect(
@@ -46,7 +46,7 @@ void main() {
           state: const EnvironmentState(distro: 'alpine'),
           status: const RuntimeStatus(
             ready: true,
-            engine: 'ish',
+            engine: 'proot',
             sandboxed: true,
           ),
         ),

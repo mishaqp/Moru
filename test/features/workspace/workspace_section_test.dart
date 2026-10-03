@@ -325,7 +325,7 @@ void main() {
   testWidgets('toolsUsed still opens the menu and confirms before unbind', (
     tester,
   ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
     final workspace = await tester.runAsync(
@@ -488,7 +488,7 @@ void main() {
   testWidgets('tapping the bound row offers change and destructive unbind', (
     tester,
   ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
     final workspace = await tester.runAsync(
@@ -528,7 +528,7 @@ void main() {
   testWidgets('menu sets the bound workspace as the assistant default', (
     tester,
   ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     // Saving the assistant needs real async turns, which would also deliver
     // the menu's haptic calls to a plugin tests don't have.
@@ -578,7 +578,7 @@ void main() {
   });
 
   testWidgets('unbind clears only the conversation binding', (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
     final workspace = await tester.runAsync(
@@ -923,7 +923,7 @@ void main() {
   testWidgets(
     'closing files opened from a more sheet does not leave a blocking barrier',
     (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
       final workspace = await tester.runAsync(
@@ -1034,7 +1034,7 @@ void main() {
   );
 
   testWidgets('picker returns the chosen workspace id', (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
     final workspace = await tester.runAsync(

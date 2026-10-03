@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:Kelivo/features/settings/widgets/custom_theme_widgets.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/shared/widgets/form_sheet.dart';
 import 'package:Kelivo/shared/widgets/ios_settings_rows.dart';
@@ -24,8 +23,7 @@ class OptionSheetItem<T> {
   final Key? key;
 }
 
-/// Single-select list. Mobile uses the World Book form-sheet shell;
-/// desktop uses [showAppDialog] + [AppDialogHeader] (`maxWidth: 420`).
+/// Single-select list using the World Book form-sheet shell on Android.
 ///
 /// Returns the tapped [OptionSheetItem.value], or `null` if dismissed.
 Future<T?> showOptionSheet<T>(

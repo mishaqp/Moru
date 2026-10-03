@@ -2,11 +2,10 @@ import '../../../core/services/scheduled_tasks_service.dart';
 import '../../scheduled_tasks/scheduled_task_runner.dart';
 import '../../mini_apps/mini_app_launcher.dart';
 import 'dart:async';
-import 'package:flutter/foundation.dart' show listEquals, defaultTargetPlatform;
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../../core/database/chat_database_repository.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
@@ -106,7 +105,7 @@ class QueuedMessageEditState {
 /// This controller extracts the non-UI logic from _HomePageState to:
 /// - Centralize state management
 /// - Make the code more testable
-/// - Allow reuse across different page layouts (mobile/tablet/desktop)
+/// - Allow reuse across Android phone and wide-screen page layouts
 /// - Reduce the complexity of the State class
 ///
 /// The HomePage widget now only manages:
@@ -254,9 +253,6 @@ class HomePageController extends ChangeNotifier {
   bool _showThinkingTools = false;
   bool _showThinkingContent = false;
 
-  // Desktop drag-and-drop
-  bool _isDragHovering = false;
-
   // App and route visibility determine whether a completion notification
   // would add value or merely duplicate content already on screen.
   bool _homeRouteVisible = true;
@@ -266,7 +262,7 @@ class HomePageController extends ChangeNotifier {
   bool _openingNotificationConversation = false;
   String? _pendingNotificationConversationId;
 
-  // Sidebar state (tablet/desktop)
+  // Sidebar state for wide Android screens
   bool _tabletSidebarOpen = true;
   static const double _embeddedSidebarWidth = 300;
 
@@ -276,7 +272,7 @@ class HomePageController extends ChangeNotifier {
   /// Reveal a conversation opened from a notification or scheduled run history.
   VoidCallback? onRevealConversation;
 
-  // Desktop global-search mode
+  // Global-search mode for wide Android screens
   bool _isGlobalSearchMode = false;
   String _globalSearchQuery = '';
 
@@ -324,7 +320,6 @@ class HomePageController extends ChangeNotifier {
   int get selectedCount => _selectedItems.length;
   bool get showThinkingTools => _showThinkingTools;
   bool get showThinkingContent => _showThinkingContent;
-  bool get isDragHovering => _isDragHovering;
   bool get tabletSidebarOpen => _tabletSidebarOpen;
   double get embeddedSidebarWidth => _embeddedSidebarWidth;
   double get inputBarHeight => inputBarHeightListenable.value;
@@ -685,15 +680,7 @@ class HomePageController extends ChangeNotifier {
   }
 
   void _setupNotificationActions() {
-    if (!_isAndroid &&
-        !const {
-          TargetPlatform.iOS,
-          TargetPlatform.macOS,
-          TargetPlatform.windows,
-          TargetPlatform.linux,
-        }.contains(defaultTargetPlatform)) {
-      return;
-    }
+    if (!_isAndroid) return;
     MobileBackgroundCoordinator.instance.visibleConversation =
         _visibleBackgroundConversation;
     _notificationTapSub = NotificationService.conversationTaps.listen(
@@ -2448,11 +2435,6 @@ class HomePageController extends ChangeNotifier {
     }
   }
 
-  void setDragHovering(bool hovering) {
-    _isDragHovering = hovering;
-    notifyListeners();
-  }
-
   // ============================================================================
   // Public Methods - Sidebar Management
   // ============================================================================
@@ -2669,9 +2651,6 @@ class HomePageController extends ChangeNotifier {
     }
     if (_context.mounted) _inputFocus.requestFocus();
   }
-
-  Future<void> onFilesDroppedDesktop(List<XFile> files) =>
-      _fileUploadService.onFilesDroppedDesktop(files);
 
   // ============================================================================
   // Public Methods - Scroll

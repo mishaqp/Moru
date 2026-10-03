@@ -282,36 +282,27 @@ void main() {
         );
         expect(actionRan, isFalse);
       },
-      skip: Platform.isWindows
-          ? 'Symlink setup is not portable on Windows.'
-          : false,
     );
 
-    test(
-      'rejects a linked lock file without running the action',
-      () async {
-        await lock.workspaceRoot.create();
-        final linkedTarget = File(p.join(appDataDirectory.path, 'target.lock'));
-        await linkedTarget.create();
-        final lockPath = p.join(
-          lock.workspaceRoot.path,
-          RestoreWorkspaceLock.lockFileName,
-        );
-        await Link(lockPath).create(linkedTarget.path);
-        var actionRan = false;
+    test('rejects a linked lock file without running the action', () async {
+      await lock.workspaceRoot.create();
+      final linkedTarget = File(p.join(appDataDirectory.path, 'target.lock'));
+      await linkedTarget.create();
+      final lockPath = p.join(
+        lock.workspaceRoot.path,
+        RestoreWorkspaceLock.lockFileName,
+      );
+      await Link(lockPath).create(linkedTarget.path);
+      var actionRan = false;
 
-        await expectLater(
-          lock.synchronized<void>(() async {
-            actionRan = true;
-          }),
-          throwsStateError,
-        );
-        expect(actionRan, isFalse);
-      },
-      skip: Platform.isWindows
-          ? 'Symlink setup is not portable on Windows.'
-          : false,
-    );
+      await expectLater(
+        lock.synchronized<void>(() async {
+          actionRan = true;
+        }),
+        throwsStateError,
+      );
+      expect(actionRan, isFalse);
+    });
 
     test('rejects workspace and lock paths with the wrong type', () async {
       await File(lock.workspaceRoot.path).writeAsString('not a directory');

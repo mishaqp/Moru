@@ -11,7 +11,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('mobile time picker uses wheel selection', (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
       int? selectedMinutes;
 
@@ -71,7 +71,7 @@ void main() {
   });
 
   testWidgets('mobile time picker cancel returns null', (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
       int? selectedMinutes = -1;
 
@@ -116,7 +116,7 @@ void main() {
   });
 
   testWidgets('desktop time picker uses wheel selection', (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
       int? selectedMinutes;
 

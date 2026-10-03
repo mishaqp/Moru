@@ -123,7 +123,7 @@ class RuntimeStatus {
   final bool ready;
   final String? reason;
 
-  /// One of `proot`, `ish`, `process`, `fake`.
+  /// Android uses `proot`; deterministic host fixtures use `fake`.
   final String engine;
   final bool sandboxed;
 
@@ -147,7 +147,6 @@ abstract class WorkspaceRuntime {
   Future<void> cancel(String runId);
 
   bool get supportsPty => false;
-  bool get supportsSystemTerminal => false;
 
   Future<PtySession> openPty({
     required List<Mount> mounts,
@@ -157,16 +156,6 @@ abstract class WorkspaceRuntime {
     required int rows,
   }) {
     throw UnsupportedError('PTY is not supported by this runtime');
-  }
-
-  Future<void> openInSystemTerminal(String hostDir) {
-    throw UnsupportedError('System terminal is not supported by this runtime');
-  }
-
-  Future<void> revealInFileManager(String hostPath) {
-    throw UnsupportedError(
-      'Reveal in file manager is not supported by this runtime',
-    );
   }
 }
 

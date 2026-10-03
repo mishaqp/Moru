@@ -444,8 +444,8 @@ Future<DateTimeRange?> _showCustomRangePicker(
   required DateTime firstDate,
   required DateTime lastDate,
 }) {
-  final isDesktopWidth = MediaQuery.sizeOf(context).width >= 720;
-  if (isDesktopWidth) {
+  final isWideWidth = MediaQuery.sizeOf(context).width >= 720;
+  if (isWideWidth) {
     return showDialog<DateTimeRange>(
       context: context,
       builder: (context) => Dialog(

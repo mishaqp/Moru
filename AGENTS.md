@@ -11,10 +11,9 @@ Preserve the embedded PRoot/Linux environment, workspace, terminal/PTY and STDIO
 MCP: these are Android features. The native `ios/`, `macos/`, `windows/`,
 `linux/` and `web/` projects are removed and must not return; when merging
 upstream Kelivo, resolve its changes to those folders by deleting them, and do
-the same for upstream changes under `lib/desktop/`. The
-remaining desktop/iOS Dart code under `lib/` is removed in separate, reviewed
-steps. New UI work only needs Android/mobile layouts, not a parallel
-desktop implementation.
+the same for upstream changes under `lib/desktop/`. Platform-only desktop/iOS
+Dart branches and direct dependencies are removed. Preserve Android phone and
+wide-screen layouts; do not add a separate desktop implementation.
 
 Preserve explicit user settings, existing chat data, application ID and signing
 identity unless a task explicitly changes them. Never publish an unsigned or
@@ -29,7 +28,7 @@ package name does not require building other platforms.
 ## Architecture
 
 - **Feature-based structure**: `lib/features/<feature>/` with `pages/`, `widgets/`, `models/`, `utils/` subdirectories.
-- **Desktop code**: the desktop app shell (window, tray, hotkeys, desktop home and settings panes) and `lib/desktop/` are removed. The shared context menu, pointer anchor and select dropdown live in `lib/shared/widgets/`. Wide Android screens (tablet, foldable, landscape) still use `HomeDesktopScaffold` from `home_desktop_layout.dart`; scheduled tasks and a few screens keep `isDesktop` branches that are removed in later steps. Use the Android/mobile path for Moru tasks and do not add new desktop code.
+- **Desktop code**: PC/iOS application branches, unused dialogs, native terminal/file-manager actions and direct packages are removed. Shared context menus, pointer anchors and select dropdowns in `lib/shared/widgets/` serve Android too. Preserve `HomeDesktopScaffold`, `AppBreakpoints.tablet` and width-based `isWide` layouts for Android tablets, foldables and landscape. The legacy `desktop_send_shortcut_v1` setting still serves Android hardware keyboards; retired PC keys remain stored without migration. Linux process fixtures test Android shell/STDIO on CI; they are listed in `docs/MORU_ANDROID_ONLY.md`. Do not add desktop application code.
 - **State management**: Provider (`lib/core/providers/`).
 - **Database**: Drift (`lib/core/database/`). Schema versions tracked in `drift_schemas/`.
 - **Localization**: ARB-based (`lib/l10n/`), English template (`app_en.arb`). Edit source ARB, run `flutter gen-l10n`, and commit generated output. Preserve English and Chinese translations when adding Russian. Add new keys to every Chinese ARB, including `app_zh.arb`, `app_zh_Hans.arb` and `app_zh_Hant.arb`; inspect `desiredFileName.txt` for new untranslated messages before committing.
@@ -363,7 +362,8 @@ and land it through a PR; never push to `master` directly.
    `.github/`, `tool/`, `docs/releases/` and Russian ARB strings.
 3. Do not re-add the removed desktop packages (`bitsdojo_window`,
    `screen_retriever`, `tray_manager`, `hotkey_manager`,
-   `reorderable_grid_view`, `system_fonts`) or on-device LLM packages.
+   `reorderable_grid_view`, `system_fonts`, `window_manager`, `desktop_drop`),
+   direct iOS/desktop Sherpa packages, or on-device LLM packages.
 4. Add Russian translations for new ARB keys, run `flutter gen-l10n`, and run
    the whole pre-commit checklist before pushing.
 

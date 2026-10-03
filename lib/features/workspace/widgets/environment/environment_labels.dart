@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:Kelivo/core/models/environment_state.dart';
@@ -16,8 +15,7 @@ bool workspaceEnvIsAlpine({
   required EnvironmentState state,
   RuntimeStatus? status,
 }) {
-  final engine = status?.engine;
-  return engine == 'ish' || state.distro == 'alpine';
+  return state.distro == 'alpine';
 }
 
 bool workspaceEnvIsUbuntu({
@@ -63,10 +61,7 @@ String workspaceEnvEngineLabel({
   required EnvironmentState state,
   RuntimeStatus? status,
 }) {
-  if ((status?.engine == 'proot' ||
-          defaultTargetPlatform == TargetPlatform.android) &&
-      state.distro != null &&
-      state.distro != 'ubuntu') {
+  if (state.distro != null && state.distro != 'ubuntu') {
     final name = state.distro == 'alpine'
         ? 'Alpine'
         : state.distro == 'debian'
@@ -80,11 +75,6 @@ String workspaceEnvEngineLabel({
         state.version,
         fallback: RootfsCatalog.defaultImage.version,
       ),
-    );
-  }
-  if (workspaceEnvIsAlpine(state: state, status: status)) {
-    return l10n.workspaceEnvEngineAlpine(
-      workspaceEnvDisplayVersion(state.version, fallback: '3.21'),
     );
   }
   final engine = status?.engine;

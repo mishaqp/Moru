@@ -59,7 +59,7 @@ void main() {
   });
 
   test('useRealProcess runs echo on macOS/Linux', () async {
-    if (!(Platform.isMacOS || Platform.isLinux)) return;
+    if (!(Platform.isLinux)) return;
     final runtime = FakeWorkspaceRuntime(useRealProcess: true);
     final events = await runtime
         .run(
@@ -85,9 +85,5 @@ void main() {
     expect(status.engine, 'fake');
     expect(status.ready, isTrue);
     expect(FakeWorkspaceRuntime().supportsPty, isFalse);
-    expect(
-      () => FakeWorkspaceRuntime().openInSystemTerminal('/tmp'),
-      throwsA(isA<UnsupportedError>()),
-    );
   });
 }

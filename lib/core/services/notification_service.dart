@@ -124,11 +124,6 @@ class NotificationService {
         AndroidInitializationSettings('@drawable/ic_background_generation');
     const InitializationSettings init = InitializationSettings(
       android: androidInit,
-      iOS: DarwinInitializationSettings(
-        requestAlertPermission: false,
-        requestBadgePermission: false,
-        requestSoundPermission: false,
-      ),
     );
     await _plugin.initialize(
       init,
@@ -205,11 +200,6 @@ class NotificationService {
           styleInformation: BigTextStyleInformation(
             body ?? completionText.body,
           ),
-        ),
-        iOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentSound: true,
-          threadIdentifier: 'kelivo.chat-completion',
         ),
       ),
       payload: '$_chatCompletionPayloadPrefix$conversationId',

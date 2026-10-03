@@ -187,7 +187,7 @@ void main() {
   testWidgets(
     'mobile model selector uses explicit initial model over global current model',
     (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       try {
@@ -236,7 +236,7 @@ void main() {
   testWidgets(
     'mobile model selector keeps active provider sticky and bottom tab visible',
     (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       try {
@@ -297,7 +297,7 @@ void main() {
   testWidgets(
     'mobile model selector auto-scroll keeps current model below sticky provider header',
     (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       try {
@@ -337,7 +337,7 @@ void main() {
   testWidgets(
     'mobile model selector keeps bottom current model fully visible without top alignment',
     (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       try {
@@ -385,7 +385,7 @@ void main() {
   testWidgets(
     'mobile model selector keeps reachable current model near the top',
     (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       try {
@@ -425,7 +425,7 @@ void main() {
   testWidgets(
     'mobile model selector keeps provider headers visible with compact overlay',
     (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       try {
@@ -480,7 +480,7 @@ void main() {
   testWidgets(
     'mobile model selector does not reserve sticky space above favorites',
     (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       try {
@@ -526,7 +526,7 @@ void main() {
   testWidgets(
     'mobile model selector omits sticky provider header when limited to one provider',
     (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       try {
@@ -559,7 +559,7 @@ void main() {
       'mobile model selector paints every surface with the sheet colour '
       '(layered surfaces ${layered ? 'on' : 'off'})',
       (tester) async {
-        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
         tester.view.physicalSize = const Size(390, 844);
         tester.view.devicePixelRatio = 1;
         try {

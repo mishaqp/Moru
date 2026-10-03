@@ -512,9 +512,8 @@ class _SourceBody extends StatelessWidget {
 ///
 /// Both are the same widget even though only the code is ever selected:
 /// RenderParagraph and RenderEditable round a forced-strut line box
-/// differently - on iOS a 13px / 1.5 style measures 20.0 per line as a `Text`
-/// and 19.0 as a `SelectableText` - so a `Text` gutter beside selectable code
-/// drifts a pixel per line, which is a whole line every twenty.
+/// differently, so a `Text` gutter beside selectable code can drift a pixel
+/// per line. Using the same selectable widget keeps both columns aligned.
 Widget _column(
   TextSpan span, {
   required Key key,

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -7,7 +6,6 @@ import '../../../shared/widgets/form_sheet.dart';
 import '../../../shared/widgets/ios_form_text_field.dart';
 import '../../../shared/widgets/ios_settings_rows.dart';
 import '../../../shared/widgets/section_card.dart';
-import '../../settings/widgets/custom_theme_widgets.dart';
 
 class ScheduledTargetChoice {
   const ScheduledTargetChoice(this.id, this.title, this.subtitle);
@@ -20,21 +18,9 @@ Future<String?> showScheduledTargetPicker(
   required List<ScheduledTargetChoice> choices,
   String? selected,
 }) {
-  final desktop = switch (defaultTargetPlatform) {
-    TargetPlatform.macOS ||
-    TargetPlatform.windows ||
-    TargetPlatform.linux => true,
-    _ => false,
-  };
-  Widget content() => _TargetPicker(
-    title: title,
-    choices: choices,
-    selected: selected,
-    desktop: desktop,
-  );
-  if (desktop) {
-    return showAppDialog<String>(context, maxWidth: 520, child: content());
-  }
+  Widget content() =>
+      _TargetPicker(title: title, choices: choices, selected: selected);
+
   return showFormSheet<String>(context, builder: (_) => content());
 }
 
@@ -43,12 +29,10 @@ class _TargetPicker extends StatefulWidget {
     required this.title,
     required this.choices,
     required this.selected,
-    required this.desktop,
   });
   final String title;
   final List<ScheduledTargetChoice> choices;
   final String? selected;
-  final bool desktop;
   @override
   State<_TargetPicker> createState() => _TargetPickerState();
 }
@@ -110,22 +94,7 @@ class _TargetPickerState extends State<_TargetPicker> {
           ),
         ),
     ];
-    if (widget.desktop) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppDialogHeader(title: widget.title),
-          Flexible(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(children: children),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
+
     return FormSheet(title: widget.title, children: children);
   }
 }

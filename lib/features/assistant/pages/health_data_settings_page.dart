@@ -24,7 +24,7 @@ class HealthDataSettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (ResponsiveHelper.isDesktop(context)) {
+    if (ResponsiveHelper.isWide(context)) {
       return HealthDataSettingsDesktopLayout(assistantId: assistantId);
     }
     return HealthDataSettingsMobileLayout(assistantId: assistantId);

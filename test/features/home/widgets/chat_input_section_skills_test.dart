@@ -132,9 +132,6 @@ void main() {
         isNull,
       );
     },
-    variant: TargetPlatformVariant({
-      TargetPlatform.iOS,
-      TargetPlatform.android,
-    }),
+    variant: TargetPlatformVariant({TargetPlatform.android}),
   );
 }

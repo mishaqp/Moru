@@ -79,7 +79,6 @@ class VoiceServiceSectionHeader extends StatelessWidget {
     required this.title,
     required this.addTooltip,
     required this.onAdd,
-    this.desktop = false,
     this.first = false,
     this.leadingAction,
   });
@@ -87,7 +86,6 @@ class VoiceServiceSectionHeader extends StatelessWidget {
   final String title;
   final String addTooltip;
   final VoidCallback onAdd;
-  final bool desktop;
   final bool first;
   final Widget? leadingAction;
 
@@ -102,11 +100,9 @@ class VoiceServiceSectionHeader extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: desktop ? 14 : 13,
-              fontWeight: desktop
-                  ? AppFontWeights.regular
-                  : AppFontWeights.semibold,
-              color: cs.onSurface.withValues(alpha: desktop ? 0.9 : 0.8),
+              fontSize: 13,
+              fontWeight: AppFontWeights.semibold,
+              color: cs.onSurface.withValues(alpha: 0.8),
             ),
           ),
         ),
@@ -122,7 +118,6 @@ class VoiceServiceSectionHeader extends StatelessWidget {
       ],
     );
 
-    if (desktop) return SizedBox(height: 36, child: content);
     return Padding(
       padding: EdgeInsets.fromLTRB(12, first ? 6 : 18, 6, 6),
       child: content,
@@ -407,50 +402,6 @@ class _VoiceServiceSmallIconButtonState
   }
 }
 
-class VoiceServiceSelectRow<T> extends StatelessWidget {
-  const VoiceServiceSelectRow({
-    super.key,
-    required this.label,
-    required this.value,
-    required this.options,
-    required this.labelFor,
-    required this.onSelected,
-  });
-
-  final String label;
-  final T value;
-  final List<T> options;
-  final String Function(T value) labelFor;
-  final ValueChanged<T> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                color: cs.onSurface.withValues(alpha: 0.9),
-              ),
-            ),
-          ),
-          _VoiceServiceSelectButton<T>(
-            value: value,
-            options: options,
-            labelFor: labelFor,
-            onSelected: onSelected,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class VoiceServiceMobileSelectRow<T> extends StatelessWidget {
   const VoiceServiceMobileSelectRow({
     super.key,
@@ -594,136 +545,6 @@ Future<T?> _showVoiceServiceMobileOptions<T>(
                   ),
               ],
             ],
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-class _VoiceServiceSelectButton<T> extends StatefulWidget {
-  const _VoiceServiceSelectButton({
-    required this.value,
-    required this.options,
-    required this.labelFor,
-    required this.onSelected,
-  });
-
-  final T value;
-  final List<T> options;
-  final String Function(T value) labelFor;
-  final ValueChanged<T> onSelected;
-
-  @override
-  State<_VoiceServiceSelectButton<T>> createState() =>
-      _VoiceServiceSelectButtonState<T>();
-}
-
-class _VoiceServiceSelectButtonState<T>
-    extends State<_VoiceServiceSelectButton<T>> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () async {
-          if (widget.options.isEmpty) return;
-          final selected = await _showVoiceServiceOptions<T>(
-            context,
-            current: widget.value,
-            options: widget.options,
-            labelFor: widget.labelFor,
-          );
-          if (selected != null) widget.onSelected(selected);
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 130),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: _hovered
-                ? cs.onSurface.withValues(alpha: 0.05)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: cs.outlineVariant.withValues(alpha: 0.12),
-              width: 0.6,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.labelFor(widget.value),
-                style: TextStyle(
-                  fontSize: 14,
-                  color: cs.onSurface.withValues(alpha: 0.9),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Icon(
-                Lucide.ChevronDown,
-                size: 16,
-                color: cs.onSurface.withValues(alpha: 0.8),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-Future<T?> _showVoiceServiceOptions<T>(
-  BuildContext context, {
-  required T current,
-  required List<T> options,
-  required String Function(T value) labelFor,
-}) {
-  final cs = Theme.of(context).colorScheme;
-  return showDialog<T>(
-    context: context,
-    barrierDismissible: true,
-    builder: (dialogContext) => Dialog(
-      backgroundColor: context.overlaySurface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.sizeOf(dialogContext).height * 0.6,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (var index = 0; index < options.length; index++) ...[
-                    _VoiceServiceDialogOption(
-                      label: labelFor(options[index]),
-                      selected: options[index] == current,
-                      onTap: () =>
-                          Navigator.of(dialogContext).pop(options[index]),
-                    ),
-                    if (index != options.length - 1)
-                      Divider(
-                        height: 10,
-                        thickness: 0.6,
-                        indent: 4,
-                        endIndent: 4,
-                        color: cs.outlineVariant.withValues(alpha: 0.12),
-                      ),
-                  ],
-                ],
-              ),
-            ),
           ),
         ),
       ),

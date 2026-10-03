@@ -430,7 +430,7 @@ void main() {
     expect(find.byKey(BinaryFilePreview.openWithKey), findsOneWidget);
     expect(find.byKey(BinaryFilePreview.shareKey), findsOneWidget);
     expect(find.byKey(BinaryFilePreview.exportKey), findsOneWidget);
-    expect(find.byKey(BinaryFilePreview.revealKey), findsNothing);
+    expect(find.byIcon(Lucide.FolderOpen), findsNothing);
     expect(find.byKey(FilePreviewFrame.exportActionKey), findsOneWidget);
     expect(find.byIcon(Lucide.Copy), findsNothing);
     expect(find.text('Copy path'), findsNothing);
@@ -479,7 +479,7 @@ void main() {
     expect(iconParent, isA<Column>());
   });
 
-  testWidgets('binary zip preview uses an archive glyph and desktop actions', (
+  testWidgets('wide Android zip preview keeps its three supported actions', (
     tester,
   ) async {
     _setDesktopView(tester);
@@ -494,26 +494,19 @@ void main() {
     expect(find.byKey(BinaryFilePreview.openWithKey), findsOneWidget);
     expect(find.byKey(BinaryFilePreview.shareKey), findsOneWidget);
     expect(find.byKey(BinaryFilePreview.exportKey), findsOneWidget);
-    expect(find.byKey(BinaryFilePreview.revealKey), findsOneWidget);
+    expect(find.byIcon(Lucide.FolderOpen), findsNothing);
     expect(find.text('Open with…'), findsOneWidget);
     expect(find.text('Share'), findsOneWidget);
     expect(find.text('Export'), findsOneWidget);
-    final revealLabel = Platform.isMacOS
-        ? 'Show in Finder'
-        : Platform.isWindows
-        ? 'Show in File Explorer'
-        : 'Show in Files';
-    expect(find.text(revealLabel), findsOneWidget);
     final openRect = tester.getRect(find.byKey(BinaryFilePreview.openWithKey));
     final shareRect = tester.getRect(find.byKey(BinaryFilePreview.shareKey));
     final exportRect = tester.getRect(find.byKey(BinaryFilePreview.exportKey));
-    final revealRect = tester.getRect(find.byKey(BinaryFilePreview.revealKey));
     expect(openRect.height, closeTo(shareRect.height, 1));
-    expect(exportRect.height, closeTo(revealRect.height, 1));
+    expect(exportRect.height, closeTo(openRect.height, 1));
     final desktopButtons = tester
         .widgetList<IosTileButton>(find.byType(IosTileButton))
         .toList();
-    expect(desktopButtons, hasLength(4));
+    expect(desktopButtons, hasLength(3));
     expect(
       desktopButtons.every((button) => button.backgroundColor == null),
       isTrue,

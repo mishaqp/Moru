@@ -483,10 +483,10 @@ void main() {
   });
 
   testWidgets('formats alpine version in title and arch row', (tester) async {
-    await withPlatform(TargetPlatform.iOS, () async {
+    await withPlatform(TargetPlatform.android, () async {
       final harness = await createHarness(
         tester,
-        engine: 'ish',
+        engine: 'proot',
         state: const EnvironmentState(
           phase: EnvironmentPhase.ready,
           distro: 'alpine',
@@ -495,10 +495,7 @@ void main() {
         ),
       );
       final l10n = await pumpPane(tester, harness);
-      expect(
-        find.text(l10n.workspaceEnvEngineAlpine('3.21.3')),
-        findsOneWidget,
-      );
+      expect(find.text('Alpine 3.21.3 (PRoot)'), findsOneWidget);
       expect(
         find.text(l10n.workspaceEnvArchVersion('arm64', '3.21.3')),
         findsOneWidget,

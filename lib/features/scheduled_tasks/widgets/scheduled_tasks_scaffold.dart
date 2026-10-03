@@ -28,14 +28,8 @@ class ScheduledTasksScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    if (embedded ||
-        switch (Theme.of(context).platform) {
-          TargetPlatform.macOS ||
-          TargetPlatform.windows ||
-          TargetPlatform.linux => true,
-          _ => false,
-        }) {
-      return _desktopLayout(context);
+    if (embedded) {
+      return _embeddedLayout(context);
     }
     final bar = theme.appBarTheme;
     final dark = theme.brightness == Brightness.dark;
@@ -125,7 +119,7 @@ class ScheduledTasksScaffold extends StatelessWidget {
     );
   }
 
-  Widget _desktopLayout(BuildContext context) {
+  Widget _embeddedLayout(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
       color: theme.scaffoldBackgroundColor,

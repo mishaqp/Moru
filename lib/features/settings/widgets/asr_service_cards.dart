@@ -1,19 +1,14 @@
 part of 'asr_services_section.dart';
 
 class _EmptyAsrState extends StatelessWidget {
-  const _EmptyAsrState({required this.desktop});
-
-  final bool desktop;
+  const _EmptyAsrState();
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final content = Padding(
-      padding: EdgeInsets.symmetric(
-        vertical: desktop ? 40 : 22,
-        horizontal: 16,
-      ),
+      padding: EdgeInsets.symmetric(vertical: 22, horizontal: 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -37,9 +32,7 @@ class _EmptyAsrState extends StatelessWidget {
         ],
       ),
     );
-    return desktop
-        ? Center(child: content)
-        : VoiceServiceMobileCard(children: [content]);
+    return VoiceServiceMobileCard(children: [content]);
   }
 }
 
@@ -47,7 +40,6 @@ class _AsrServiceCard extends StatefulWidget {
   const _AsrServiceCard({
     required this.service,
     required this.selected,
-    required this.desktop,
     required this.modelManager,
     required this.onSelect,
     required this.onEdit,
@@ -56,7 +48,6 @@ class _AsrServiceCard extends StatefulWidget {
 
   final AsrServiceOptions service;
   final bool selected;
-  final bool desktop;
   final SherpaModelManager modelManager;
   final VoidCallback onSelect;
   final VoidCallback onEdit;
@@ -67,11 +58,9 @@ class _AsrServiceCard extends StatefulWidget {
 }
 
 class _AsrServiceCardState extends State<_AsrServiceCard> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
-    return widget.desktop ? _buildDesktop(context) : _buildMobile(context);
+    return _buildMobile(context);
   }
 
   Widget _buildMobile(BuildContext context) {
@@ -134,78 +123,6 @@ class _AsrServiceCardState extends State<_AsrServiceCard> {
                   )
                 : const SizedBox(width: 16),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDesktop(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final l10n = AppLocalizations.of(context)!;
-    final displayName = _serviceDisplayName(l10n, widget.service);
-    final background = context.appColors.surfaceCard;
-    final border = _hovered || widget.selected
-        ? cs.primary.withValues(alpha: isDark ? 0.35 : 0.45)
-        : cs.outlineVariant.withValues(alpha: isDark ? 0.12 : 0.08);
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onSelect,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 170),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.all(14),
-          constraints: const BoxConstraints(minHeight: 64),
-          decoration: BoxDecoration(
-            color: background,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: border, width: 1),
-          ),
-          child: Row(
-            children: [
-              _ProviderBadge(kind: widget.service.kind, size: 24),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      displayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: AppFontWeights.emphasis,
-                        color: cs.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    _ServiceSubtitle(
-                      service: widget.service,
-                      modelManager: widget.modelManager,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              VoiceServiceSmallIconButton(
-                icon: Lucide.Settings2,
-                tooltip: l10n.asrServicesEditAction,
-                onTap: widget.onEdit,
-              ),
-              const SizedBox(width: 6),
-              VoiceServiceSmallIconButton(
-                icon: Lucide.Trash2,
-                tooltip: l10n.asrServicesDeleteAction,
-                onTap: widget.onDelete,
-              ),
-            ],
-          ),
         ),
       ),
     );

@@ -25,8 +25,7 @@ import 'package:Kelivo/shared/widgets/ios_tile_button.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 
-/// Full-screen in-app terminal. On desktop without a PTY, shows a system
-/// terminal fallback card instead of the emulator.
+/// Android in-app PTY terminal with a disabled card while no session is open.
 class TerminalPage extends StatefulWidget {
   const TerminalPage({
     super.key,
@@ -407,22 +406,6 @@ class _TerminalPageState extends State<TerminalPage> {
     showAppSnackBar(context, message: uri.toString());
   }
 
-  Future<void> _openSystemTerminal() async {
-    final runtime = context.read<WorkspaceRuntimeProvider>().runtime;
-    final hostDir = widget.hostDir ?? _active?.hostDir;
-    if (runtime == null || hostDir == null || hostDir.isEmpty) {
-      final l10n = AppLocalizations.of(context)!;
-      showAppSnackBar(context, message: l10n.terminalNotAvailable);
-      return;
-    }
-    try {
-      await runtime.openInSystemTerminal(hostDir);
-    } catch (error) {
-      if (!mounted) return;
-      showAppSnackBar(context, message: error.toString());
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -432,9 +415,6 @@ class _TerminalPageState extends State<TerminalPage> {
     final supportsPty = runtime?.supportsPty ?? false;
     final session = _active;
     final hostDir = widget.hostDir ?? session?.hostDir ?? widget.cwd;
-    final canOpenSystem =
-        runtime != null && runtime.supportsSystemTerminal && hostDir.isNotEmpty;
-
     return Scaffold(
       backgroundColor: cs.surface,
       resizeToAvoidBottomInset: true,
@@ -481,12 +461,7 @@ class _TerminalPageState extends State<TerminalPage> {
             ),
           Expanded(
             child: !supportsPty || session == null
-                ? SystemTerminalCard(
-                    hostDir: hostDir,
-                    onOpen: canOpenSystem
-                        ? () => unawaited(_openSystemTerminal())
-                        : null,
-                  )
+                ? SystemTerminalCard(hostDir: hostDir)
                 : _buildEmulator(session),
           ),
           if (supportsPty && session != null)

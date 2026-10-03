@@ -609,7 +609,7 @@ void main() {
   test(
     'OpenCode uninstall removes both platform packages through npm',
     () async {
-      if (!Platform.isLinux && !Platform.isMacOS) return;
+      if (!Platform.isLinux) return;
       final dir = await Directory.systemTemp.createTemp('acp-uninstall-');
       addTearDown(() => dir.delete(recursive: true));
       final bin = await Directory('${dir.path}/bin').create();
@@ -698,7 +698,7 @@ void main() {
   test(
     'uninstall shell stops at npm failure before launcher cleanup',
     () async {
-      if (!Platform.isLinux && !Platform.isMacOS) return;
+      if (!Platform.isLinux) return;
       final dir = await Directory.systemTemp.createTemp('acp-uninstall-');
       addTearDown(() => dir.delete(recursive: true));
       final bin = await Directory('${dir.path}/bin').create();
@@ -905,7 +905,7 @@ void main() {
   });
 
   test('the settings script writes files byte for byte', () async {
-    if (!Platform.isLinux && !Platform.isMacOS) return;
+    if (!Platform.isLinux) return;
     final dir = await Directory.systemTemp.createTemp('acp-config-');
     addTearDown(() => dir.delete(recursive: true));
     const content = 'model = "gpt\'s \$HOME"\né中 `x`\n';

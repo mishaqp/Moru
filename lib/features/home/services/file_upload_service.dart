@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,7 +19,6 @@ import '../widgets/chat_input_bar.dart';
 /// 负责处理：
 /// - 图片选择 (相册/相机)
 /// - 文件选择
-/// - 桌面拖放处理
 /// - 文件复制到应用目录
 class FileUploadService {
   FileUploadService({
@@ -137,8 +134,6 @@ class FileUploadService {
   /// 从相册选取图片
   Future<void> onPickPhotos() async {
     try {
-      // On desktop, fall back to FilePicker as image_picker is not supported.
-
       final picker = ImagePicker();
       final files = await picker.pickMultiImage();
       if (files.isEmpty) return;
@@ -220,9 +215,6 @@ class FileUploadService {
               activeControlsWidgetColor: cs.primary,
               initAspectRatio: CropAspectRatioPreset.original,
               lockAspectRatio: false,
-            ),
-            IOSUiSettings(
-              title: l10n.displaySettingsPageEnableImageCropperTitle,
             ),
           ],
         );
@@ -310,38 +302,6 @@ class FileUploadService {
       if (docs.isNotEmpty) {
         mediaController.addFiles(docs);
       }
-    } catch (_) {}
-  }
-
-  /// 处理桌面端拖放的文件 (macOS/Windows/Linux)
-  Future<void> onFilesDroppedDesktop(List<XFile> files) async {
-    if (files.isEmpty) return;
-    try {
-      final docs = <DocumentAttachment>[];
-      final images = <XFile>[];
-      final documents = <XFile>[];
-      for (final f in files) {
-        final name = (f.name.isNotEmpty
-            ? f.name
-            : (f.path.split(Platform.pathSeparator).last));
-        if (isImageExtension(name)) {
-          images.add(f);
-        } else {
-          documents.add(f);
-        }
-      }
-      _enqueuePickedImages(images);
-
-      final saved = await _copyPickedFilesKeepingSlots(documents);
-      for (final savedPath in saved) {
-        if (savedPath == null) continue;
-        final savedName = p.basename(savedPath);
-        final mime = inferMimeByExtension(savedName);
-        docs.add(
-          DocumentAttachment(path: savedPath, fileName: savedName, mime: mime),
-        );
-      }
-      if (docs.isNotEmpty) mediaController.addFiles(docs);
     } catch (_) {}
   }
 }

@@ -900,23 +900,6 @@ void main() {
       },
     );
 
-    test('location is unavailable on desktop platforms', () {
-      addTearDown(() => debugDefaultTargetPlatformOverride = null);
-      for (final platform in [
-        TargetPlatform.macOS,
-        TargetPlatform.windows,
-        TargetPlatform.linux,
-      ]) {
-        debugDefaultTargetPlatformOverride = platform;
-        expect(
-          LocalToolsService.isAvailableOnThisPlatform(
-            LocalToolNames.currentLocation,
-          ),
-          isFalse,
-        );
-      }
-    });
-
     test(
       'Android location permissions and calls use the native channel',
       () async {

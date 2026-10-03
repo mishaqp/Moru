@@ -169,40 +169,18 @@ void main() {
     expect(await channel.sha256File('/data/a'), 'abcDEF');
   });
 
-  test('probe parses iOS fields', () async {
-    messenger.setMockMethodCallHandler(methodChannel, (call) async {
-      return <String, Object?>{
-        'supported': true,
-        'engine': 'ish',
-        'installed': true,
-        'booted': false,
-        'needsRestart': true,
-        'rootfsVersion': '1',
-        'bundledVersion': '2',
-        'reason': 'restart',
-      };
-    });
-    final result = await channel.probe();
-    expect(result.supported, isTrue);
-    expect(result.engine, 'ish');
-    expect(result.installed, isTrue);
-    expect(result.booted, isFalse);
-    expect(result.needsRestart, isTrue);
-    expect(result.rootfsVersion, '1');
-    expect(result.bundledVersion, '2');
-    expect(result.reason, 'restart');
-  });
-
   test('exec omits null rootfsDir and tmpDir', () async {
     Map<String, Object?>? args;
     messenger.setMockMethodCallHandler(methodChannel, (call) async {
       args = Map<String, Object?>.from(call.arguments as Map);
       return <String, Object?>{'started': true};
     });
-    await channel.exec(const ExecArgs(runId: 'ios', cwd: '/', command: 'true'));
+    await channel.exec(
+      const ExecArgs(runId: 'without-rootfs', cwd: '/', command: 'true'),
+    );
     expect(args!.containsKey('rootfsDir'), isFalse);
     expect(args!.containsKey('tmpDir'), isFalse);
-    expect(args!['runId'], 'ios');
+    expect(args!['runId'], 'without-rootfs');
     expect(args!['command'], 'true');
   });
 

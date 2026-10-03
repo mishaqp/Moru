@@ -211,14 +211,14 @@ Future<void> main() async {
         PaintingBinding.instance.imageCache.maximumSizeBytes =
             48 << 20; // ~48MB
       } catch (_) {}
-      // Avoid preloading all system fonts at launch (huge memory on desktop)
+      // Load selected fonts lazily to limit startup memory
       // Debug logging and global error handlers were enabled previously for diagnosis.
       // They are commented out now per request to reduce log noise.
       // FlutterError.onError = (FlutterErrorDetails details) { ... };
       // WidgetsBinding.instance.platformDispatcher.onError = (Object error, StackTrace stack) { ... };
       // logging.Logger.root.level = logging.Level.ALL;
       // logging.Logger.root.onRecord.listen((rec) { ... });
-      // Cache current Documents directory to fix sandboxed absolute paths on iOS
+      // Cache Documents to resolve imported legacy attachment paths
       await SandboxPathResolver.init();
       ChatDatabaseLease? processDatabaseLease;
       BusinessPreferences? businessPreferences;
@@ -834,7 +834,7 @@ class MyApp extends StatelessWidget {
                 debugShowCheckedModeBanner: false,
                 title: 'Moru',
                 navigatorKey: rootNavigatorKey,
-                // App UI language; null = follow system (respects iOS per-app language)
+                // App UI language; null = follow the Android system language
                 locale: themes.locale,
                 supportedLocales: AppLocalizations.supportedLocales,
                 localizationsDelegates: AppLocalizations.localizationsDelegates,

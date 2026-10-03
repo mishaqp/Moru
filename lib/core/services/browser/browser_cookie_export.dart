@@ -91,10 +91,8 @@ class BrowserCookieExport {
     final name = '${host.replaceAll(RegExp(r'[^a-zA-Z0-9.-]'), '_')}.txt';
     final file = File(p.join(dir.path, name));
     await file.writeAsString(content, flush: true);
-    if (!Platform.isWindows) {
-      // Only the app (and its terminal) may read a login.
-      await Process.run('chmod', ['600', file.path]);
-    }
+    // Only the app (and its terminal) may read a login.
+    await Process.run('chmod', ['600', file.path]);
     final modelPath = p.posix.join(modelDir, folder, name);
     return {
       'ok': true,

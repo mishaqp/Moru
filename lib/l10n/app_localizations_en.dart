@@ -973,20 +973,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopNavTranslateTooltip => 'Translate';
 
   @override
-  String get desktopAvatarMenuUseEmoji => 'Use emoji';
-
-  @override
   String get cameraPermissionDeniedMessage =>
       'Camera unavailable: permission not granted.';
 
   @override
   String get openSystemSettings => 'Open Settings';
-
-  @override
-  String get desktopAvatarMenuChangeFromImage => 'Change from image…';
-
-  @override
-  String get desktopAvatarMenuReset => 'Reset avatar';
 
   @override
   String get assistantEditAvatarChooseImage => 'Choose Image';
@@ -7523,9 +7514,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get migrationTargetDatabaseLabel => 'SQLite';
 
   @override
-  String get migrationChooseFolderButton => 'Choose Folder and Back Up';
-
-  @override
   String get migrationSaveBackupButton => 'Save Backup ZIP';
 
   @override
@@ -8766,11 +8754,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String workspaceEnvEngineAlpine(String version) {
-    return 'Alpine $version (iSH)';
-  }
-
-  @override
   String get workspaceEnvPhaseNotInstalled => 'Not installed';
 
   @override
@@ -9070,12 +9053,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Bind a workspace from the toolbar to browse files here';
 
   @override
-  String get workspaceDeskOpenSystemTerminal => 'Open in system terminal';
-
-  @override
-  String get workspaceDeskReveal => 'Reveal in file manager';
-
-  @override
   String get workspaceEntryBind => 'Bind workspace';
 
   @override
@@ -9109,12 +9086,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspaceEntryTerminal => 'Terminal';
-
-  @override
-  String get workspaceEntryOpenSystemTerminal => 'Open in system terminal';
-
-  @override
-  String get workspaceEntryReveal => 'Reveal in file manager';
 
   @override
   String get workspaceEntrySessionSkills => 'Skills';
@@ -9315,10 +9286,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspacePreviewTable => 'Table';
-
-  @override
-  String get workspacePreviewRevealFailed =>
-      'Couldn’t show this file in the file manager.';
 
   @override
   String get workspacePreviewEmptyTable => 'This table is empty.';
@@ -9654,9 +9621,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workspacePreviewEmptyHint => 'There\'s nothing to preview.';
-
-  @override
-  String get workspacePreviewRevealInFileManager => 'Show in Files';
 
   @override
   String workspaceBindingSetAssistantDefault(String assistant) {

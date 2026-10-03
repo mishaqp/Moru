@@ -292,7 +292,7 @@ void main() {
 
     final stripContext = tester.element(find.byType(TerminalTabStrip));
     final l10n = AppLocalizations.of(stripContext)!;
-    expect(ResponsiveHelper.isDesktop(stripContext), isTrue);
+    expect(ResponsiveHelper.isWide(stripContext), isTrue);
     expect(
       MediaQuery.sizeOf(stripContext).width,
       greaterThanOrEqualTo(AppBreakpoints.desktop),

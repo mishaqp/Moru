@@ -340,7 +340,7 @@ void main() {
       0,
     );
     expect(await outside.readAsString(), 'keep');
-  }, skip: Platform.isWindows);
+  });
 
   test(
     'root scan prunes environment and continues after an unreadable directory',

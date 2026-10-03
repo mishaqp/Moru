@@ -418,22 +418,16 @@ void main() {
       }
     });
 
-    test(
-      'rejects a linked run directory',
-      () async {
-        final outside = Directory('${root.path}/outside');
-        await outside.create(recursive: true);
-        await store.runDirectory.delete(recursive: true);
-        await Link(store.runDirectory.path).create(outside.path);
+    test('rejects a linked run directory', () async {
+      final outside = Directory('${root.path}/outside');
+      await outside.create(recursive: true);
+      await store.runDirectory.delete(recursive: true);
+      await Link(store.runDirectory.path).create(outside.path);
 
-        await expectLater(store.publish(prepared()), throwsStateError);
-        await expectLater(store.readLatest(), throwsStateError);
-        expect(await outside.list().toList(), isEmpty);
-      },
-      skip: Platform.isWindows
-          ? 'Creating a symbolic link requires elevated Windows privileges.'
-          : false,
-    );
+      await expectLater(store.publish(prepared()), throwsStateError);
+      await expectLater(store.readLatest(), throwsStateError);
+      expect(await outside.list().toList(), isEmpty);
+    });
 
     test('allows an identical retry but rejects a skipped sequence', () async {
       final first = prepared();

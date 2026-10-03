@@ -50,7 +50,7 @@ class MdnsResponder {
       InternetAddress.anyIPv4,
       port,
       reuseAddress: true,
-      reusePort: !Platform.isWindows,
+      reusePort: true,
     );
     socket
       ..multicastLoopback = false

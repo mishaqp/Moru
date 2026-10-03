@@ -229,36 +229,30 @@ void main() {
     },
   );
 
-  testWidgets('desktop ASR editor reuses the custom TTS-style selector', (
+  testWidgets('wide Android keeps the ASR page and provider grid', (
     tester,
   ) async {
     final settings = SettingsProvider(createBusinessTestPreferences());
     final fixture = _ModelManagerFixture.create();
     addTearDown(fixture.dispose);
-
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await _pumpSection(
       tester,
       settings: settings,
       modelManager: fixture.manager,
-      desktop: true,
     );
-
     await tester.tap(find.byTooltip('Add speech recognition service'));
     await tester.pumpAndSettle();
-
-    expect(find.byType(Dialog), findsOneWidget);
-    expect(find.byType(VoiceServiceSelectRow<AsrServiceKind>), findsOneWidget);
-    expect(find.byType(DropdownButton<dynamic>), findsNothing);
-    final nameField = tester.widget<TextField>(find.byType(TextField).first);
-    expect(nameField.decoration?.filled, isNot(isTrue));
-    final border = nameField.decoration?.border as OutlineInputBorder;
-    expect(border.borderRadius, BorderRadius.circular(10));
-    final nameRect = tester.getRect(find.byType(TextField).first);
-    final statusRect = tester.getRect(
-      find.byKey(const ValueKey('asr-system-status')),
+    expect(find.byType(Dialog), findsNothing);
+    expect(
+      find.byKey(const ValueKey('asr-provider-choice-grid')),
+      findsOneWidget,
     );
-    expect(statusRect.left, nameRect.left);
-    expect(statusRect.right, nameRect.right);
+    expect(find.text('Add Speech Recognition'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('mobile reorders speech recognition after a long press', (
@@ -306,49 +300,12 @@ void main() {
       'alpha',
     ]);
   });
-
-  testWidgets('desktop reorders speech recognition by dragging a card', (
-    tester,
-  ) async {
-    final settings = SettingsProvider(createBusinessTestPreferences());
-    await settings.loaded;
-    await settings.setAsrServices([
-      SystemAsrOptions(id: 'alpha', name: 'Alpha ASR'),
-      SystemAsrOptions(id: 'beta', name: 'Beta ASR'),
-    ]);
-    final fixture = _ModelManagerFixture.create();
-    addTearDown(fixture.dispose);
-    await _pumpSection(
-      tester,
-      settings: settings,
-      modelManager: fixture.manager,
-      desktop: true,
-    );
-
-    final first = tester.getCenter(find.text('Alpha ASR'));
-    final second = tester.getCenter(find.text('Beta ASR'));
-    final drag = await tester.startGesture(first);
-    await tester.pump();
-    final distance = second.dy - first.dy + 40;
-    for (double dy = 8; dy <= distance; dy += 8) {
-      await drag.moveTo(first + Offset(0, dy));
-      await tester.pump(const Duration(milliseconds: 30));
-    }
-    await drag.up();
-    await tester.pumpAndSettle();
-
-    expect(settings.asrServices.map((service) => service.id), [
-      'beta',
-      'alpha',
-    ]);
-  });
 }
 
 Future<void> _pumpSection(
   WidgetTester tester, {
   required SettingsProvider settings,
   required SherpaModelManager modelManager,
-  bool desktop = false,
 }) {
   return tester.pumpWidget(
     ChangeNotifierProvider<SettingsProvider>.value(
@@ -366,10 +323,7 @@ Future<void> _pumpSection(
             slivers: [
               SliverPadding(
                 padding: const EdgeInsets.all(16),
-                sliver: AsrServicesSection(
-                  desktop: desktop,
-                  modelManager: modelManager,
-                ),
+                sliver: AsrServicesSection(modelManager: modelManager),
               ),
             ],
           ),

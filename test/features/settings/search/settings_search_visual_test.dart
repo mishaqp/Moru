@@ -63,7 +63,7 @@ void main() {
         insets: const EdgeInsets.only(left: 47, right: 47, bottom: 21),
       ),
       (
-        name: 'desktop',
+        name: 'wide',
         size: const Size(640, 640),
         scale: 1.0,
         query: '',
@@ -82,9 +82,7 @@ void main() {
       testWidgets('${scenario.name} ${brightness.name} fits and renders', (
         tester,
       ) async {
-        debugDefaultTargetPlatformOverride = scenario.name == 'desktop'
-            ? TargetPlatform.macOS
-            : TargetPlatform.iOS;
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
         addTearDown(() => debugDefaultTargetPlatformOverride = null);
         tester.view.physicalSize = scenario.size;
         tester.view.devicePixelRatio = 1;

@@ -984,20 +984,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get desktopNavTranslateTooltip => 'Перевести';
 
   @override
-  String get desktopAvatarMenuUseEmoji => 'Использовать эмодзи';
-
-  @override
   String get cameraPermissionDeniedMessage =>
       'Камера недоступна: разрешение не предоставлено.';
 
   @override
   String get openSystemSettings => 'Открыть настройки';
-
-  @override
-  String get desktopAvatarMenuChangeFromImage => 'Выбрать изображение…';
-
-  @override
-  String get desktopAvatarMenuReset => 'Сбросить аватар';
 
   @override
   String get assistantEditAvatarChooseImage => 'Выбрать изображение';
@@ -7623,9 +7614,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get migrationTargetDatabaseLabel => 'SQLite';
 
   @override
-  String get migrationChooseFolderButton => 'Выбрать папку и создать копию';
-
-  @override
   String get migrationSaveBackupButton => 'Сохранить ZIP-копию';
 
   @override
@@ -8876,11 +8864,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String workspaceEnvEngineAlpine(String version) {
-    return 'Alpine $version (iSH)';
-  }
-
-  @override
   String get workspaceEnvPhaseNotInstalled => 'Не установлено';
 
   @override
@@ -9182,12 +9165,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Привяжите рабочее пространство на панели инструментов для просмотра файлов';
 
   @override
-  String get workspaceDeskOpenSystemTerminal => 'Открыть в системном терминале';
-
-  @override
-  String get workspaceDeskReveal => 'Показать в файловом менеджере';
-
-  @override
   String get workspaceEntryBind => 'Привязать рабочее пространство';
 
   @override
@@ -9222,13 +9199,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspaceEntryTerminal => 'Терминал';
-
-  @override
-  String get workspaceEntryOpenSystemTerminal =>
-      'Открыть в системном терминале';
-
-  @override
-  String get workspaceEntryReveal => 'Показать в файловом менеджере';
 
   @override
   String get workspaceEntrySessionSkills => 'Навыки';
@@ -9432,10 +9402,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspacePreviewTable => 'Таблица';
-
-  @override
-  String get workspacePreviewRevealFailed =>
-      'Не удалось показать файл в файловом менеджере.';
 
   @override
   String get workspacePreviewEmptyTable => 'Эта таблица пуста.';
@@ -9771,10 +9737,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get workspacePreviewEmptyHint => 'Нет содержимого для предпросмотра.';
-
-  @override
-  String get workspacePreviewRevealInFileManager =>
-      'Показать в файловом менеджере';
 
   @override
   String workspaceBindingSetAssistantDefault(String assistant) {

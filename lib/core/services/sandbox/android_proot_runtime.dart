@@ -30,9 +30,6 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
   bool get supportsPty => true;
 
   @override
-  bool get supportsSystemTerminal => false;
-
-  @override
   Future<RuntimeStatus> status() async {
     await env.loaded;
     if (!{
@@ -120,7 +117,7 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
     await _requireReady();
     // Unique per open, never a counter: the native session map lives on the
     // platform side and outlives the Dart isolate, so a hot restart would hand
-    // out ids that are still registered there — iSH rejects the open, proot
+    // out ids that are still registered there — PRoot
     // silently kills the older session.
     final sessionId = 'pty-${const Uuid().v4()}';
     final session = ChannelPtySession(channel: channel, sessionId: sessionId);
@@ -145,18 +142,6 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
     if (!current.ready) {
       throw StateError(current.reason ?? 'environment_not_installed');
     }
-  }
-
-  @override
-  Future<void> openInSystemTerminal(String hostDir) {
-    throw UnsupportedError('System terminal is not supported by this runtime');
-  }
-
-  @override
-  Future<void> revealInFileManager(String hostPath) {
-    throw UnsupportedError(
-      'Reveal in file manager is not supported by this runtime',
-    );
   }
 
   ExecArgs _execArgs(CommandRequest request) {
