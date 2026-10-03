@@ -278,7 +278,10 @@ class _ComputerStepThumbnailState extends State<ComputerStepThumbnail> {
         decoration: BoxDecoration(
           color: cs.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(widget.borderRadius),
-          border: Border.all(color: cs.outlineVariant),
+          border: Border.all(
+            color: chatSurfaceForegroundPalette(context).divider,
+            width: 0.5,
+          ),
         ),
         alignment: Alignment.center,
         child: Icon(step.icon, size: 18, color: cs.onSurfaceVariant),

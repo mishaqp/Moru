@@ -8,6 +8,7 @@ import 'package:image/image.dart' as img;
 import 'package:Kelivo/core/services/browser/browser_thumbnail_cache.dart';
 import 'package:Kelivo/core/services/api/tool_display_redaction.dart';
 import 'package:Kelivo/features/chat/models/computer_step.dart';
+import 'package:Kelivo/features/chat/widgets/chat_surface.dart';
 import 'package:Kelivo/features/chat/widgets/computer_step_thumbnail.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
 
@@ -42,6 +43,45 @@ void main() {
         ),
         isNotNull,
       );
+    });
+  }
+
+  for (final brightness in [Brightness.light, Brightness.dark]) {
+    testWidgets('blank browser border matches $brightness chat boundaries', (
+      tester,
+    ) async {
+      late Color expectedBorder;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(brightness: brightness),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                expectedBorder = chatSurfaceForegroundPalette(context).divider;
+                return ComputerStepThumbnail(
+                  step: ComputerStep(id: 'browser', toolName: 'browser_use'),
+                  width: 64,
+                  height: 40,
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final globe = find.byIcon(Lucide.Globe);
+      final fallback = tester.widget<Container>(
+        find.ancestor(of: globe, matching: find.byType(Container)).first,
+      );
+      final border = (fallback.decoration as BoxDecoration).border! as Border;
+      expect(border.top.width, 0.5);
+      expect(border.top.color, expectedBorder);
+      expect(border.isUniform, isTrue);
+      expect(
+        tester.getSize(find.byType(ComputerStepThumbnail)),
+        const Size(64, 40),
+      );
+      expect(tester.takeException(), isNull);
     });
   }
 
