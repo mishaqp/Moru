@@ -50,6 +50,8 @@ IconData localToolIcon(String id) {
       return Lucide.CheckCircle;
     case LocalToolNames.assistantManager:
       return Lucide.Bot;
+    case LocalToolNames.reportProblem:
+      return Lucide.Bug;
     case LocalToolNames.scheduledTasks:
       return Lucide.CalendarClock;
     case LocalToolNames.miniApps:
@@ -99,6 +101,8 @@ String localToolTitle(AppLocalizations l10n, String id) {
       return l10n.assistantEditLocalToolRemindersCompleteTitle;
     case LocalToolNames.assistantManager:
       return l10n.assistantManagerToolTitle;
+    case LocalToolNames.reportProblem:
+      return l10n.problemReportToolTitle;
     case LocalToolNames.scheduledTasks:
       return l10n.scheduledTaskToolTitle;
     case LocalToolNames.miniApps:

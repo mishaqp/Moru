@@ -34,6 +34,7 @@ class AcpMcpServer {
     'publish_mini_app',
     'mini_apps',
     'manage_scheduled_tasks',
+    'report_problem',
     ...MemoryTools.allToolNames,
     ...MemoryTools.legacyToolNames,
   };

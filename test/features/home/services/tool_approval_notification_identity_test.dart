@@ -72,6 +72,28 @@ void main() {
   );
 
   test(
+    'a notification cannot approve a report without the in-chat disclosure',
+    () async {
+      final service = ToolApprovalService();
+      addTearDown(service.dispose);
+      final pending = service.requestApproval(
+        toolCallId: 'report',
+        toolName: 'report_problem',
+        arguments: {},
+        conversationId: 'chat',
+        owner: owner('chat', 'run'),
+      );
+      expect(
+        resolve(service, service.pendingRequests.single),
+        ToolApprovalActionStatus.stale,
+      );
+      expect(service.pendingRequests, hasLength(1));
+      service.approve('report', conversationId: 'chat');
+      expect((await pending).approved, isTrue);
+    },
+  );
+
+  test(
     'old action cannot approve a successor with the same tool call id',
     () async {
       final service = ToolApprovalService();

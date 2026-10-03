@@ -12652,4 +12652,19 @@ class AppLocalizationsEn extends AppLocalizations {
     });
     return '$_temp0';
   }
+
+  @override
+  String get problemReportToolTitle => 'Problem report';
+
+  @override
+  String get problemReportToolSubtitle =>
+      'Create a private ZIP of technical diagnostics. Confirmation is required every time.';
+
+  @override
+  String get problemReportConsent =>
+      'The ZIP will contain:\n• App version and build number\n• Android version, manufacturer and device model\n• Environment mode: PRoot/root\n• Interface, tool and logging settings and provider types, without secrets\n• Technical events from this app run: event names, error types and stack frames (up to 128 KiB)\nChats, message text and request/context logs are excluded. Secrets are removed. The report is deleted at the next app launch or expires after 24 hours.';
+
+  @override
+  String get problemReportUnavailable =>
+      'This report was deleted or could not be shared. Create a new report.';
 }

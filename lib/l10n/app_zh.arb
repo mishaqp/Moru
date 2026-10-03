@@ -4491,5 +4491,9 @@
   "computerBrowserResultTitle": "标题",
   "computerParameterYes": "是",
   "computerParameterNo": "否",
-  "computerBrowserAction": "{action, select, open{打开} observe{查看} screenshot{截图} read{读取} collect{收集列表} outline{页面结构} wait_stable{等待加载} wait_for{等待元素} back{后退} forward{前进} reload{刷新} scroll{滚动} tabs{标签页} new_tab{新标签页} switch_tab{切换标签页} close_tab{关闭标签页} set_mode{网站模式} close{关闭浏览器} done{完成} click{点击} hover{悬停} type{输入} submit{提交表单} press_key{按键} eval_js{执行页面代码} fetch{页面请求} export_cookies{导出 Cookie} other{浏览器操作}}"
+  "computerBrowserAction": "{action, select, open{打开} observe{查看} screenshot{截图} read{读取} collect{收集列表} outline{页面结构} wait_stable{等待加载} wait_for{等待元素} back{后退} forward{前进} reload{刷新} scroll{滚动} tabs{标签页} new_tab{新标签页} switch_tab{切换标签页} close_tab{关闭标签页} set_mode{网站模式} close{关闭浏览器} done{完成} click{点击} hover{悬停} type{输入} submit{提交表单} press_key{按键} eval_js{执行页面代码} fetch{页面请求} export_cookies{导出 Cookie} other{浏览器操作}}",
+  "problemReportToolTitle": "问题报告",
+  "problemReportToolSubtitle": "将技术诊断信息收集到私密 ZIP 文件。每次都需要确认。",
+  "problemReportConsent": "ZIP 将包含：\n• 应用版本和构建号\n• Android 版本、制造商和设备型号\n• 环境模式：PRoot/root\n• 界面、工具、日志设置及服务商类型，不含机密信息\n• 本次启动的技术事件：事件名称、错误类型和堆栈帧（最多 128 KiB）\n不包含聊天、消息文本或请求/上下文日志。机密信息会被移除。报告将在下次启动时删除，或在 24 小时后过期。",
+  "problemReportUnavailable": "报告已删除或无法分享。请创建新报告。"
 }

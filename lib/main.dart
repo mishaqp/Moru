@@ -31,6 +31,7 @@ import 'core/providers/memory_provider.dart';
 import 'core/providers/memory_provider_v2.dart';
 import 'core/providers/backup_provider.dart';
 import 'core/providers/local_snapshot_provider.dart';
+import 'core/services/logging/problem_report_service.dart';
 import 'features/backup/local_snapshot_scheduler.dart';
 import 'core/services/memory/memory_pipeline.dart';
 import 'core/services/memory/memory_usage_meter.dart';
@@ -154,6 +155,11 @@ Future<void> main() async {
         } catch (_) {}
       }
       FlutterLogger.installGlobalHandlers();
+      // Diagnostic exports, including private Android share-cache copies,
+      // never survive the next launch. Cleanup touches only our report names.
+      try {
+        await ProblemReportService().cleanup(all: true);
+      } catch (_) {}
       final appDataDirectory = await AppDirectories.getAppDataDirectory();
       final RestoreReceipt? restoreOutcome;
       RestoreBusinessLease? businessLease;

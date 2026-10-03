@@ -57,6 +57,13 @@ package name does not require building other platforms.
   go through the tool approval prompt, and it cannot delete the assistant
   running the chat or the last one. Extend its settings schema when
   `Assistant` gains a user-facing field.
+- **Problem reports**: opt-in `report_problem` always asks for fresh consent,
+  even in full-trust mode. `ProblemReportService` exports a private ZIP with
+  app/device/runtime details, allowlisted settings and a bounded technical
+  journal from `FlutterLogger` (event names, error types and package frames,
+  never chat text, prints or request/context logs). ACP/log redactors remove
+  secrets before writing. The chat offers Share through a checked private
+  snapshot; exports and owned share-cache copies are removed on next launch.
 - **Browser and Computer**: `BrowserAgentSession.minimize` parks the live
   `WebViewController`; the next agent `WebViewPage` adopts it without reloading.
   `openSharedBrowser` opens or expands it. `BrowserMiniWindow` in `AppOverlays`

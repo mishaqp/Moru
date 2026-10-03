@@ -122,6 +122,32 @@ void main() {
   );
 
   test(
+    'report consent stays in the chat instead of generic notification buttons',
+    () async {
+      final pending = approvals.requestApproval(
+        toolCallId: 'report',
+        toolName: 'report_problem',
+        arguments: {},
+        conversationId: 'chat',
+        owner: ToolApprovalOwner(
+          conversationId: 'chat',
+          generationRunId: 'run',
+          assistantMessageId: 'message',
+          isActive: () => true,
+        ),
+      );
+      await coordinator.flush();
+      expect(lastApprovals()['pending'], isEmpty);
+      expect(approvals.pendingRequests, hasLength(1));
+      final request = approvals.pendingRequests.single;
+      expect(await action(request, 'allow'), {'status': 'stale'});
+      expect(approvals.pendingRequests, hasLength(1));
+      approvals.approve('report', conversationId: 'chat');
+      expect((await pending).approved, isTrue);
+    },
+  );
+
+  test(
     'native action reaches the existing gate and duplicates are stale',
     () async {
       final a = ask('a', 'run-a');
