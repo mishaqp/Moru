@@ -506,7 +506,6 @@ void main() {
           );
         }
       },
-      skip: Platform.isWindows ? 'requires symlink privileges' : false,
     );
 
     test(

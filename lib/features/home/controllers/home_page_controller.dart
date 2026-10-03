@@ -2,7 +2,7 @@ import '../../../core/services/scheduled_tasks_service.dart';
 import '../../scheduled_tasks/scheduled_task_runner.dart';
 import '../../mini_apps/mini_app_launcher.dart';
 import 'dart:async';
-import 'package:flutter/foundation.dart' show listEquals, defaultTargetPlatform;
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -685,15 +685,7 @@ class HomePageController extends ChangeNotifier {
   }
 
   void _setupNotificationActions() {
-    if (!_isAndroid &&
-        !const {
-          TargetPlatform.iOS,
-          TargetPlatform.macOS,
-          TargetPlatform.windows,
-          TargetPlatform.linux,
-        }.contains(defaultTargetPlatform)) {
-      return;
-    }
+    if (!_isAndroid) return;
     MobileBackgroundCoordinator.instance.visibleConversation =
         _visibleBackgroundConversation;
     _notificationTapSub = NotificationService.conversationTaps.listen(

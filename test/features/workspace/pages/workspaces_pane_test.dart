@@ -135,13 +135,9 @@ void main() {
     );
   }
 
-  for (final platform in [
-    TargetPlatform.android,
-    TargetPlatform.iOS,
-    TargetPlatform.macOS,
-  ]) {
+  for (final size in [const Size(390, 844), const Size(1280, 800)]) {
     testWidgets(
-      'workspace tools persist independently on $platform',
+      'Android workspace tools persist independently at $size',
       (tester) async {
         const haptics = MethodChannel('haptic_feedback');
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -152,11 +148,8 @@ void main() {
               .defaultBinaryMessenger
               .setMockMethodCallHandler(haptics, null),
         );
-        final desktop = platform == TargetPlatform.macOS;
         tester.view.devicePixelRatio = 1;
-        tester.view.physicalSize = desktop
-            ? const Size(1100, 800)
-            : const Size(390, 844);
+        tester.view.physicalSize = size;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
         late Workspace first;
@@ -214,7 +207,7 @@ void main() {
         expect(tester.widget<IosSwitch>(toggle).value, isTrue);
         expect(tester.takeException(), isNull);
       },
-      variant: TargetPlatformVariant.only(platform),
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
     );
   }
 

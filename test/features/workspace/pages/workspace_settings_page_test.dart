@@ -108,7 +108,7 @@ void main() {
   testWidgets('formats alpine hub version the same as the environment page', (
     tester,
   ) async {
-    await withPlatform(TargetPlatform.iOS, () async {
+    await withPlatform(TargetPlatform.android, () async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(400, 900);
       addTearDown(tester.view.resetPhysicalSize);
@@ -162,19 +162,13 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
-      final l10n = AppLocalizations.of(
-        tester.element(find.byType(WorkspaceSettingsPage)),
-      )!;
-      expect(
-        find.text(l10n.workspaceEnvEngineAlpine('3.21.3')),
-        findsOneWidget,
-      );
+      expect(find.text('Alpine 3.21.3 (PRoot)'), findsOneWidget);
       expect(find.textContaining('alpine-3.21.3-r4'), findsNothing);
       expect(
         tester
             .widget<IosNavRow>(
               find.ancestor(
-                of: find.text(l10n.workspaceEnvEngineAlpine('3.21.3')),
+                of: find.text('Alpine 3.21.3 (PRoot)'),
                 matching: find.byType(IosNavRow),
               ),
             )

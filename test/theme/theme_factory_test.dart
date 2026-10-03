@@ -15,12 +15,6 @@ void main() {
 
       expect(getPlatformFontFallback(), kAndroidFontFamilyFallback);
     });
-
-    test('keeps CJK fallback on iOS', () {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-
-      expect(getPlatformFontFallback(), kDefaultFontFamilyFallback);
-    });
   });
 
   group('overlay surface themes', () {

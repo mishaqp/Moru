@@ -903,7 +903,7 @@ void main() {
     testWidgets('tool card opens custom details and shows the full result', (
       tester,
     ) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       try {
         final settings = await _createSettings(
           ChatMessageBackgroundStyle.defaultStyle,
@@ -962,7 +962,7 @@ void main() {
     testWidgets('tool details stay mounted after the source card is removed', (
       tester,
     ) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       try {
         final settings = await _createSettings(
           ChatMessageBackgroundStyle.defaultStyle,

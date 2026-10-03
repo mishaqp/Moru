@@ -184,7 +184,7 @@ void main() {
     'iOS list stays pinned at top while content drag changes sheet height',
     (tester) async {
       setTallTestWindow(tester);
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       late ScrollController listController;
 
       try {

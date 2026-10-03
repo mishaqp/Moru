@@ -1,4 +1,4 @@
-import 'dart:io' show Platform, exit;
+import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
@@ -13,13 +13,9 @@ abstract final class PlatformUtils {
   static bool get isAndroid => Platform.isAndroid;
 
   static Future<void> restartApp() async {
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      final result = await Restart.restartApp(mode: RestartMode.process);
-      if (!result.success) {
-        throw StateError('restart_app:${result.code ?? 'unknown'}');
-      }
-    } else {
-      exit(0);
+    final result = await Restart.restartApp(mode: RestartMode.process);
+    if (!result.success) {
+      throw StateError('restart_app:${result.code ?? 'unknown'}');
     }
   }
 }

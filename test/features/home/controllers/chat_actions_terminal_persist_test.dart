@@ -261,7 +261,7 @@ void main() {
       final service = _ThrowingFinalizeChatService(failCompletion: false);
       final settings = SettingsProvider(createBusinessTestPreferences());
       final background = MobileBackgroundCoordinator(
-        platform: TargetPlatform.linux,
+        platform: TargetPlatform.android,
       );
       addTearDown(settings.dispose);
       addTearDown(background.dispose);
@@ -355,7 +355,7 @@ void main() {
       final service = _ThrowingFinalizeChatService(failCompletion: false);
       final settings = SettingsProvider(createBusinessTestPreferences());
       final background = MobileBackgroundCoordinator(
-        platform: TargetPlatform.linux,
+        platform: TargetPlatform.android,
       );
       addTearDown(settings.dispose);
       addTearDown(background.dispose);
@@ -417,7 +417,7 @@ void main() {
     final service = _ThrowingFinalizeChatService(failCompletion: false);
     final settings = SettingsProvider(createBusinessTestPreferences());
     final background = MobileBackgroundCoordinator(
-      platform: TargetPlatform.linux,
+      platform: TargetPlatform.android,
     );
     addTearDown(background.dispose);
     addTearDown(settings.dispose);
@@ -645,7 +645,7 @@ void main() {
       final service = _ThrowingFinalizeChatService(failCompletion: false);
       final settings = SettingsProvider(createBusinessTestPreferences());
       final background = MobileBackgroundCoordinator(
-        platform: TargetPlatform.linux,
+        platform: TargetPlatform.android,
       );
       addTearDown(background.dispose);
       addTearDown(settings.dispose);

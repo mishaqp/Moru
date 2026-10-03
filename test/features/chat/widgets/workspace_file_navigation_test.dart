@@ -192,10 +192,7 @@ void main() {
       expect(previewFile.existsSync(), isFalse);
       expect(tester.takeException(), isNull);
     },
-    variant: TargetPlatformVariant({
-      TargetPlatform.android,
-      TargetPlatform.macOS,
-    }),
+    variant: TargetPlatformVariant({TargetPlatform.android}),
   );
 
   testWidgets(
@@ -237,10 +234,7 @@ void main() {
         await settle(tester, () => find.byType(FileBrowser).evaluate().isEmpty);
       }
     },
-    variant: TargetPlatformVariant({
-      TargetPlatform.android,
-      TargetPlatform.macOS,
-    }),
+    variant: TargetPlatformVariant({TargetPlatform.android}),
   );
 
   testWidgets('linked HTML serves original page assets within its grant', (

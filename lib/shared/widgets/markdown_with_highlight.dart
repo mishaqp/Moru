@@ -19,7 +19,6 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:super_clipboard/super_clipboard.dart';
-import '../../utils/clipboard_images.dart';
 import '../../utils/svg_preview_html.dart';
 import '../../features/chat/pages/image_viewer_page.dart';
 import '../../features/chat/pages/html_preview_page.dart';
@@ -4159,18 +4158,6 @@ class _MarkdownTableBlockState extends State<_MarkdownTableBlock> {
     }
   }
 
-  Future<File> _writeTableImageTempFile(Uint8List bytes) async {
-    final dir = Directory.systemTemp;
-    final file = File(
-      p.join(
-        dir.path,
-        'kelivo-table-${DateTime.now().millisecondsSinceEpoch}.png',
-      ),
-    );
-    await file.writeAsBytes(bytes, flush: true);
-    return file;
-  }
-
   Future<String?> _savePngBytes({
     required String dialogTitle,
     required String filename,
@@ -4196,12 +4183,7 @@ class _MarkdownTableBlockState extends State<_MarkdownTableBlock> {
       }
     } catch (_) {}
 
-    try {
-      final file = await _writeTableImageTempFile(bytes);
-      return await ClipboardImages.setImagePath(file.path);
-    } catch (_) {
-      return false;
-    }
+    return false;
   }
 }
 

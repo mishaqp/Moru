@@ -69,16 +69,15 @@ void main() {
             .toList(),
         ['manifest.json'],
       );
-      if (!Platform.isWindows) {
-        expect((await store.pendingDirectory.stat()).mode & 0x1ff, 0x1c0);
-        expect(
-          (await File(
-                p.join(store.pendingDirectory.path, 'manifest.json'),
-              ).stat()).mode &
-              0x1ff,
-          0x180,
-        );
-      }
+
+      expect((await store.pendingDirectory.stat()).mode & 0x1ff, 0x1c0);
+      expect(
+        (await File(
+              p.join(store.pendingDirectory.path, 'manifest.json'),
+            ).stat()).mode &
+            0x1ff,
+        0x180,
+      );
     });
 
     test(

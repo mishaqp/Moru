@@ -87,11 +87,7 @@ void main() {
     await tmp.delete(recursive: true);
   });
 
-  for (final platform in [
-    TargetPlatform.android,
-    TargetPlatform.iOS,
-    TargetPlatform.macOS,
-  ]) {
+  for (final platform in [TargetPlatform.android]) {
     testWidgets(
       'agent changes refresh visible skill lists on $platform',
       (tester) async {
@@ -163,7 +159,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        final sandboxed = platform != TargetPlatform.macOS;
+        final sandboxed = true;
         final handler = ToolHandlerService(contextProvider: context)
             .buildToolCallHandler(
               settings,
@@ -174,17 +170,11 @@ void main() {
                   workspaceId: workspace.id,
                   allowAll: true,
                 ),
-                paths: sandboxed
-                    ? WorkspacePaths.sandboxed(
-                        workspaceHostRoot: workspaceDir.path,
-                        sessionHostDir: sessionDir.path,
-                        skillsHostDir: skills.skillsDirectory.path,
-                      )
-                    : WorkspacePaths.native(
-                        workspaceHostRoot: workspaceDir.path,
-                        sessionHostDir: sessionDir.path,
-                        skillsHostDir: skills.skillsDirectory.path,
-                      ),
+                paths: WorkspacePaths.sandboxed(
+                  workspaceHostRoot: workspaceDir.path,
+                  sessionHostDir: sessionDir.path,
+                  skillsHostDir: skills.skillsDirectory.path,
+                ),
                 sessionDir: sessionDir,
                 outputsDir: Directory(p.join(sessionDir.path, 'outputs')),
                 runtimeStatus: RuntimeStatus(

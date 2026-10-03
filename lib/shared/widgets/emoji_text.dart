@@ -26,9 +26,7 @@ class EmojiText extends StatelessWidget {
     // Ensure we render at most one grapheme (ZWJ sequences remain intact)
     final String glyph = text.characters.take(1).toString();
 
-    // Optional platform-specific scaling for Windows to reduce line jitter
-    final double scaleFactor = 1.0;
-    double fs = fontSize * scaleFactor;
+    final double fs = fontSize;
 
     // Compute effective height from figmaLineHeight or explicit lineHeight
     double? effectiveHeight;
@@ -36,8 +34,7 @@ class EmojiText extends StatelessWidget {
       // Height is ratio of line px to current font size
       effectiveHeight = figmaLineHeight! / fs;
     } else if (lineHeight != null && lineHeight! > 0) {
-      // Keep visual line height stable when scaling font
-      effectiveHeight = (lineHeight! / scaleFactor) / fs;
+      effectiveHeight = lineHeight! / fs;
     } else if (optimizeEmojiAlign) {
       // Default to 1.0 for stable, compact single-emoji rows
       effectiveHeight = 1.0;
@@ -46,8 +43,6 @@ class EmojiText extends StatelessWidget {
     // Common fallback families to improve emoji availability.
     // These only take effect if present on the system.
     const List<String> fallback = <String>[
-      'Apple Color Emoji',
-      'Segoe UI Emoji',
       'Noto Color Emoji',
       'Twemoji Mozilla',
       'EmojiOne Color',

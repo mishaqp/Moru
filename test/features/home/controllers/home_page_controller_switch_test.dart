@@ -194,10 +194,9 @@ void main() {
     }
   }
 
-  /// Runs [body] with the platform overridden to macOS so the desktop
-  /// (prepare/commit, no fade) switching pipeline is exercised.
-  Future<void> runAsDesktop(Future<void> Function() body) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+  /// Runs the same atomic switching assertions on Android.
+  Future<void> runAsAndroid(Future<void> Function() body) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
       await body();
     } finally {
@@ -278,7 +277,7 @@ void main() {
     await pumpUntilDone(tester, [future]);
   }
 
-  for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
+  for (final platform in [TargetPlatform.android]) {
     for (final temporary in [false, true]) {
       testWidgets(
         '$platform new conversation (temporary=$temporary) preserves ongoing reasoning',
@@ -359,7 +358,7 @@ void main() {
     testWidgets(
       'new chat releases completed reasoning (temporary=$temporary)',
       (tester) async {
-        await runAsDesktop(() async {
+        await runAsAndroid(() async {
           final service = _ControlledChatService({
             'empty': [],
             for (var i = 0; i < 5; i++)
@@ -737,7 +736,7 @@ void main() {
     });
   });
 
-  group('desktop conversation switch is atomic (macOS path)', () {
+  group('Android conversation switch is atomic', () {
     void enterSelection(HomePageController controller) {
       final messages = controller.messages.toList();
       expect(messages, isNotEmpty);
@@ -752,7 +751,7 @@ void main() {
     }
 
     testWidgets('successful switch clears selection', (tester) async {
-      await runAsDesktop(() async {
+      await runAsAndroid(() async {
         final service = _ControlledChatService({
           'conv-a': [_message('conv-a', 0), _message('conv-a', 1)],
           'conv-b': [_message('conv-b', 0)],
@@ -779,7 +778,7 @@ void main() {
     testWidgets(
       'loadTimelinePage error keeps conversation, messages, and selection',
       (tester) async {
-        await runAsDesktop(() async {
+        await runAsAndroid(() async {
           final service = _ControlledChatService({
             'conv-a': [_message('conv-a', 0), _message('conv-a', 1)],
             'conv-b': [_message('conv-b', 0)],
@@ -803,7 +802,7 @@ void main() {
           }
           expect(service.pageRequests.length, greaterThan(before));
           service.pageRequests.last.completer.completeError(
-            StateError('desktop_load_failed'),
+            StateError('load_failed'),
           );
           await expectLater(future, throwsA(isA<StateError>()));
           await tester.pump();
@@ -822,7 +821,7 @@ void main() {
     testWidgets(
       'missing target keeps ChatService and ChatController on prior conversation',
       (tester) async {
-        await runAsDesktop(() async {
+        await runAsAndroid(() async {
           final service = _ControlledChatService({
             'conv-a': [_message('conv-a', 0), _message('conv-a', 1)],
           });
@@ -845,7 +844,7 @@ void main() {
     );
 
     testWidgets('tap A then B then C: only C commits', (tester) async {
-      await runAsDesktop(() async {
+      await runAsAndroid(() async {
         final service = _ControlledChatService({
           'conv-a': [for (var i = 0; i < 3; i++) _message('conv-a', i)],
           'conv-b': [_message('conv-b', 0)],

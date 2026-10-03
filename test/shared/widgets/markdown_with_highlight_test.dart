@@ -3300,7 +3300,7 @@ final price = "$12";
   testWidgets(
     'SelectableHighlightView keeps stock menu when iOS translation is unavailable',
     (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
       const channel = MethodChannel('app.ios_translation');
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

@@ -498,11 +498,7 @@ void main() {
     expect(find.text('Open with…'), findsOneWidget);
     expect(find.text('Share'), findsOneWidget);
     expect(find.text('Export'), findsOneWidget);
-    final revealLabel = Platform.isMacOS
-        ? 'Show in Finder'
-        : Platform.isWindows
-        ? 'Show in File Explorer'
-        : 'Show in Files';
+    final revealLabel = 'Show in Files';
     expect(find.text(revealLabel), findsOneWidget);
     final openRect = tester.getRect(find.byKey(BinaryFilePreview.openWithKey));
     final shareRect = tester.getRect(find.byKey(BinaryFilePreview.shareKey));

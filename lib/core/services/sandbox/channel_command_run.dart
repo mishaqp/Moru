@@ -7,19 +7,15 @@ import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 
 /// Maps workspace channel exec events for [request.runId] into [CommandEvent]s.
 ///
-/// [before] / [after] wrap the exec lifetime (iOS background task). The stream
-/// closes after the matching `exit` event. If [WorkspaceChannel.exec] throws,
+/// The stream closes after the matching `exit` event. If [WorkspaceChannel.exec] throws,
 /// the stream errors.
 Stream<CommandEvent> runChannelCommand({
   required WorkspaceChannel channel,
   required CommandRequest request,
   required ExecArgs args,
-  Future<void> Function()? before,
-  Future<void> Function()? after,
 }) {
   final controller = StreamController<CommandEvent>();
   late final StreamSubscription<Map<String, Object?>> subscription;
-  var began = false;
   var finished = false;
   var closing = false;
   var execIssued = false;
@@ -31,11 +27,7 @@ Stream<CommandEvent> runChannelCommand({
     closing = true;
     await startupDone.future;
     await subscription.cancel();
-    if (began && after != null) {
-      try {
-        await after();
-      } catch (_) {}
-    }
+
     if (!controller.isClosed) {
       await controller.close();
     }
@@ -93,10 +85,6 @@ Stream<CommandEvent> runChannelCommand({
 
   unawaited(() async {
     try {
-      if (before != null) {
-        await before();
-        began = true;
-      }
       if (finished || request.isCancelled?.call() == true) {
         throw StateError('command_cancelled');
       }
@@ -130,7 +118,7 @@ CommandExited _exitFrom(Map<String, Object?> event) {
   );
 }
 
-/// Treats `true` and `1` as set. iOS `NSNumber` bools can decode as ints.
+/// Decodes boolean event flags from the channel wire format.
 bool _eventFlag(Object? value) {
   if (value == true || value == 1) return true;
   if (value is String) {

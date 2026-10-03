@@ -268,10 +268,8 @@ void main() {
   testWidgets('non-wrap gutter stays pinned while code scrolls horizontally', (
     tester,
   ) async {
-    // The code paragraph covers the whole scroll view, and on Android its own
-    // gesture detector claims horizontal drags before the scroll view sees
-    // them, so this only describes the iOS behaviour.
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
     final long = List.filled(80, 'M').join();
     final file = File(p.join(tempDir.path, 'pinned.py'))
       ..writeAsStringSync('$long\nshort\n');
@@ -290,10 +288,16 @@ void main() {
     final gutterBefore = tester.getTopLeft(_gutter);
     final codeBefore = tester.getTopLeft(_code);
 
-    await tester.dragFrom(
-      codeBefore + const Offset(40, 20),
-      const Offset(-100, 0),
+    // Verify the layout independently of Android text-selection gestures.
+    final horizontal = tester.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byKey(CodeFilePreview.horizontalScrollKey),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
+    horizontal.position.jumpTo(100);
     await tester.pumpAndSettle();
 
     final gutterAfter = tester.getTopLeft(_gutter);

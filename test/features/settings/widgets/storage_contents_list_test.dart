@@ -24,7 +24,7 @@ void main() {
     await root.delete(recursive: true);
   });
 
-  for (final platform in [TargetPlatform.android, TargetPlatform.macOS]) {
+  for (final platform in [TargetPlatform.android]) {
     testWidgets(
       '$platform session storage browses real files without a workspace binding',
       (tester) async {

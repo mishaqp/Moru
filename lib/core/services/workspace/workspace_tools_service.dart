@@ -2075,8 +2075,6 @@ class WorkspaceToolsService {
               'with destructive commands. Check /etc/os-release for distro';
         }
         return 'Engine: Linux (PRoot); check /etc/os-release for distro';
-      case 'ish':
-        return 'Engine: Alpine (iSH)';
       case 'process':
       case 'fake':
         return 'Engine: native shell';

@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 
 class AppFontWeights {
@@ -13,11 +11,7 @@ class AppFontWeights {
   static FontWeight get heavy => normalize(FontWeight.w800);
   static FontWeight get black => normalize(FontWeight.w900);
 
-  static FontWeight normalize(FontWeight weight, {TargetPlatform? platform}) {
-    final effectivePlatform = platform ?? defaultTargetPlatform;
-    if (effectivePlatform != TargetPlatform.android) {
-      return weight;
-    }
+  static FontWeight normalize(FontWeight weight) {
     if (weight == FontWeight.w500) {
       return FontWeight.w400;
     }

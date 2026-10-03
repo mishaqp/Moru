@@ -73,10 +73,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(McpErrorDetailsSheet), findsNothing);
       },
-      variant: TargetPlatformVariant({
-        TargetPlatform.iOS,
-        TargetPlatform.android,
-      }),
+      variant: TargetPlatformVariant({TargetPlatform.android}),
     );
   }
 }

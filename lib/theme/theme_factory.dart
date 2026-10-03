@@ -4,26 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 import 'package:Kelivo/theme/surface_ladder.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
-
-// CJK/Latin fallback to stabilize fontWeight (w100-w600) on iOS for Chinese
-const List<String> kDefaultFontFamilyFallback = <String>[
-  'PingFang SC',
-  'Heiti SC',
-  'Hiragino Sans GB',
-  'Roboto',
-];
 
 const List<String> kAndroidFontFamilyFallback = <String>['sans-serif'];
 
-// Get platform-appropriate font fallback list
-List<String> getPlatformFontFallback() {
-  if (defaultTargetPlatform == TargetPlatform.android) {
-    return kAndroidFontFamilyFallback;
-  }
-  return kDefaultFontFamilyFallback;
-}
+/// Android uses the system font stack, including its locale fallbacks.
+List<String> getPlatformFontFallback() => kAndroidFontFamilyFallback;
 
 /// Derive page `surface` and `surfaceContainer*` from the palette.
 ///

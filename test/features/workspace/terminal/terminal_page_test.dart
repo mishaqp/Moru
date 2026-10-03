@@ -161,35 +161,6 @@ void main() {
     expect(session.fontSize, greaterThanOrEqualTo(8));
   });
 
-  testWidgets('desktop fallback renders the system-terminal card', (
-    tester,
-  ) async {
-    final runtime = FakeWorkspaceRuntime(ptySupported: false);
-    final runtimeProvider = WorkspaceRuntimeProvider()..register(runtime);
-    final manager = TerminalSessionManager(setWakelock: (_) async {});
-    addTearDown(() async {
-      await manager.closeAll();
-      manager.dispose();
-    });
-
-    final l10n = await pumpPage(
-      tester,
-      manager: manager,
-      runtimeProvider: runtimeProvider,
-      hostDir: '/Users/me/project',
-      size: const Size(1280, 800),
-    );
-
-    expect(find.byKey(SystemTerminalCard.cardKey), findsOneWidget);
-    expect(find.byKey(TerminalKeyBar.barKey), findsNothing);
-    expect(find.text(l10n.terminalOpenInSystem), findsOneWidget);
-    expect(find.text('/Users/me/project'), findsOneWidget);
-
-    await tester.tap(find.byKey(SystemTerminalCard.openKey));
-    await tester.pump();
-    expect(runtime.lastSystemDir, '/Users/me/project');
-  });
-
   testWidgets('tab labels are center-aligned', (tester) async {
     final runtime = FakeWorkspaceRuntime();
     final runtimeProvider = WorkspaceRuntimeProvider()..register(runtime);
@@ -362,9 +333,7 @@ void main() {
     expect(button.enabled, isFalse);
   });
 
-  testWidgets('system-terminal open button is disabled when onOpen is null', (
-    tester,
-  ) async {
+  testWidgets('empty terminal card keeps its button disabled', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(400, 900);
     addTearDown(tester.view.resetPhysicalSize);

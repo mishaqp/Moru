@@ -91,7 +91,7 @@ class _ManualRuntime extends FakeWorkspaceRuntime {
 }
 
 void main() {
-  final canRunReal = Platform.isMacOS || Platform.isLinux;
+  final canRunReal = Platform.isLinux;
 
   late Directory tmp;
   late Directory workspaceDir;
@@ -1192,7 +1192,7 @@ void main() {
     () async {
       final tools = service();
       final context = ctx(sandboxed: true);
-      final fileName = Platform.isWindows ? 'report 报告.txt' : 'report:报告.txt';
+      final fileName = 'report:报告.txt';
       final path = '/workspace/$fileName';
       final write = metaOf(
         await tools.handle(context, 'write_file', {
@@ -1225,9 +1225,7 @@ void main() {
       );
       expect(
         write.files.single.link,
-        Platform.isWindows
-            ? 'kelivo://workspace/report%20%E6%8A%A5%E5%91%8A.txt'
-            : 'kelivo://workspace/report%3A%E6%8A%A5%E5%91%8A.txt',
+        'kelivo://workspace/report%3A%E6%8A%A5%E5%91%8A.txt',
       );
       expect(
         KelivoLink.tryParse(write.files.single.link!)?.relativePath,

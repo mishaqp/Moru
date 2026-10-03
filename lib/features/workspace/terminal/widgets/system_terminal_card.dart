@@ -7,19 +7,17 @@ import 'package:Kelivo/shared/widgets/section_card.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 
 class SystemTerminalCard extends StatelessWidget {
-  const SystemTerminalCard({super.key, required this.hostDir, this.onOpen});
+  const SystemTerminalCard({super.key, required this.hostDir});
 
   static const cardKey = ValueKey<String>('terminal-system-card');
   static const openKey = ValueKey<String>('terminal-open-system');
 
   final String hostDir;
-  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final canOpen = onOpen != null;
     return Center(
       child: ConstrainedBox(
         key: cardKey,
@@ -64,8 +62,8 @@ class SystemTerminalCard extends StatelessWidget {
                     child: IosTileButton(
                       icon: Lucide.Terminal,
                       label: l10n.terminalOpenInSystem,
-                      enabled: canOpen,
-                      onTap: onOpen ?? () {},
+                      enabled: false,
+                      onTap: () {},
                     ),
                   ),
                 ),

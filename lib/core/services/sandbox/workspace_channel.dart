@@ -10,8 +10,7 @@ const String kWorkspaceEventChannel = 'app.workspace/events';
 
 /// Thin typed client over the workspace method/event channels.
 ///
-/// Android (proot) and iOS (iSH) register the same channel names. Callers omit
-/// platform-specific keys (e.g. [ExecArgs.rootfsDir] on iOS) rather than
+/// Android PRoot uses these channel names. Callers omit optional keys rather than
 /// sending nulls.
 class WorkspaceChannel {
   WorkspaceChannel({
@@ -339,13 +338,6 @@ class ProbeResult {
     this.nativeLibDir,
     this.reason,
     this.uid,
-    this.engine,
-    this.installed,
-    this.booted,
-    this.needsRestart,
-    this.rootfsVersion,
-    this.bundledVersion,
-    this.rootfsDir,
   });
 
   final bool supported;
@@ -358,15 +350,6 @@ class ProbeResult {
   /// Present when a future plugin reports the app uid. Android probe does not.
   final int? uid;
 
-  /// iOS reports `ish`. Android omits this.
-  final String? engine;
-  final bool? installed;
-  final bool? booted;
-  final bool? needsRestart;
-  final String? rootfsVersion;
-  final String? bundledVersion;
-  final String? rootfsDir;
-
   factory ProbeResult.fromMap(Map<String, Object?> map) {
     return ProbeResult(
       supported: map['supported'] == true,
@@ -376,13 +359,6 @@ class ProbeResult {
       nativeLibDir: _readString(map['nativeLibDir']),
       reason: _readString(map['reason']),
       uid: _readInt(map['uid']),
-      engine: _readString(map['engine']),
-      installed: _readBool(map['installed']),
-      booted: _readBool(map['booted']),
-      needsRestart: _readBool(map['needsRestart']),
-      rootfsVersion: _readString(map['rootfsVersion']),
-      bundledVersion: _readString(map['bundledVersion']),
-      rootfsDir: _readString(map['rootfsDir']),
     );
   }
 }
@@ -495,10 +471,5 @@ int? _readInt(Object? value) {
   if (value is int) return value;
   if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value);
-  return null;
-}
-
-bool? _readBool(Object? value) {
-  if (value is bool) return value;
   return null;
 }

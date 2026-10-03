@@ -30,9 +30,6 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
   bool get supportsPty => true;
 
   @override
-  bool get supportsSystemTerminal => false;
-
-  @override
   Future<RuntimeStatus> status() async {
     await env.loaded;
     if (!{
@@ -145,18 +142,6 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
     if (!current.ready) {
       throw StateError(current.reason ?? 'environment_not_installed');
     }
-  }
-
-  @override
-  Future<void> openInSystemTerminal(String hostDir) {
-    throw UnsupportedError('System terminal is not supported by this runtime');
-  }
-
-  @override
-  Future<void> revealInFileManager(String hostPath) {
-    throw UnsupportedError(
-      'Reveal in file manager is not supported by this runtime',
-    );
   }
 
   ExecArgs _execArgs(CommandRequest request) {
