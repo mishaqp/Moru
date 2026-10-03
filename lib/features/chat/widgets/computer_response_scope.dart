@@ -10,6 +10,7 @@ import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/workspace/tool_run_registry.dart';
 import '../models/computer_step.dart';
 import 'computer_sheet.dart';
+import 'timeline_projection.dart' show decodeTimelineToolPart;
 
 /// A view over the existing message/tool state. Streaming tool events refresh
 /// only Computer surfaces; token updates do not rebuild the composer or page.
@@ -88,8 +89,8 @@ List<ComputerStep> computerStepsFromMessage(ChatMessage message) {
   final events = <Map<String, dynamic>>[];
   for (final part in message.parts.whereType<ToolCallPart>()) {
     try {
-      final event = jsonDecode(part.payloadJson);
-      if (event is Map) events.add(Map<String, dynamic>.from(event));
+      final event = decodeTimelineToolPart(part);
+      if (event != null) events.add(Map<String, dynamic>.from(event));
     } on FormatException {
       // Invalid legacy payloads cannot prevent other steps opening.
     }
@@ -130,7 +131,7 @@ ComputerStep _withRun(
       // Plain text is also a valid tool result.
     }
   }
-  jobId ??= toolCallBackgroundRuntimeId(step.metadata);
+  jobId ??= step.backgroundRuntimeId;
   var run = jobId == null
       ? step.run ?? registry?.of(step.id, conversationId: conversationId)
       : registry?.byRuntimeRunId(jobId, conversationId: conversationId) ??

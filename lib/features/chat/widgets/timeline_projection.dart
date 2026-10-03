@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../../core/models/message_part.dart';
 import '../../../core/models/tool_call_status.dart';
 import '../../home/services/ask_user_interaction_service.dart';
+import '../utils/chat_ui_work.dart';
 import '../utils/thinking_tag_parser.dart';
 import 'timeline_visibility.dart';
 
@@ -272,14 +273,35 @@ class TimelineVisibleBlock {
   bool get isThinking => thinkingSteps.isNotEmpty;
 }
 
+// Weak entries live only as long as the immutable persisted part. A changed
+// payload (even with the same message id/version) is a new part and decodes again.
+final _decodedToolParts = Expando<({Map<String, dynamic>? value})>();
+
+Map<String, dynamic>? decodeTimelineToolPart(ToolCallPart part) {
+  final cached = _decodedToolParts[part];
+  if (cached != null) return cached.value;
+  final decoded = _decodeJsonMap(part.payloadJson);
+  _decodedToolParts[part] = (value: decoded);
+  return decoded;
+}
+
 /// Parse a persisted tool_call payload the same way the renderer does.
 TimelineToolRef? parseTimelineToolPayload(
   String payloadJson, {
   int fallbackOrdinal = 0,
   bool isStreaming = true,
+}) => _timelineToolFromPayload(
+  _decodeJsonMap(payloadJson),
+  fallbackOrdinal: fallbackOrdinal,
+  isStreaming: isStreaming,
+);
+
+TimelineToolRef? _timelineToolFromPayload(
+  Map<String, dynamic>? decoded, {
+  required int fallbackOrdinal,
+  required bool isStreaming,
 }) {
   try {
-    final decoded = _decodeJsonMap(payloadJson);
     if (decoded == null) return null;
     final providerId = (decoded['id'] ?? '').toString().trim();
     final name = (decoded['name'] ?? '').toString();
@@ -321,7 +343,10 @@ TimelineToolRef? parseTimelineToolPayload(
 
 Map<String, dynamic>? _decodeJsonMap(String raw) {
   try {
-    final decoded = jsonDecode(raw);
+    final decoded = ChatUiWork.measure(
+      'timeline.jsonDecode',
+      () => jsonDecode(raw),
+    );
     if (decoded is Map<String, dynamic>) return decoded;
     if (decoded is Map) return decoded.cast<String, dynamic>();
   } catch (_) {}
@@ -736,9 +761,9 @@ List<TimelineProjectedBlock> _projectFromParts({
             reasoningOverlayIndex: provided == null ? null : overlayIndex,
           ),
         );
-      case ToolCallPart(:final payloadJson):
-        final parsed = parseTimelineToolPayload(
-          payloadJson,
+      case ToolCallPart():
+        final parsed = _timelineToolFromPayload(
+          decodeTimelineToolPart(part),
           fallbackOrdinal: toolCount,
           isStreaming: isStreaming,
         );

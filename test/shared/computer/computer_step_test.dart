@@ -12,6 +12,49 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
+    'card summaries defer large diffs and retain a filtered snapshot',
+    () async {
+      final diff = '+ changed line\n' * 1600;
+      final workspace = <String, dynamic>{
+        'path': 'lib/main.dart',
+        'status': 'ok',
+        'diff': diff,
+      };
+      var diffVisits = 0;
+      final step =
+          await ToolDisplayRedaction(
+            text: (text) => text,
+            value: (value) {
+              if (value is Map &&
+                  value['workspace'] is Map &&
+                  (value['workspace'] as Map).containsKey('diff')) {
+                diffVisits++;
+              }
+              return value;
+            },
+          ).run(
+            () async => ComputerStep(
+              id: 'edit',
+              toolName: 'edit_file',
+              content: 'File updated.',
+              metadata: {'workspace': workspace},
+            ),
+          );
+      expect(step.kind, ComputerStepKind.file);
+      expect(step.path, 'lib/main.dart');
+      expect(step.isError, isFalse);
+      expect(step.responseStopped, isFalse);
+      expect(step.result, 'File updated.');
+      expect(diffVisits, 0, reason: 'a summary never displays the full diff');
+      workspace['diff'] = 'later mutation';
+      expect((step.metadata!['workspace'] as Map)['diff'], diff);
+      expect(diffVisits, 1);
+      expect((step.metadata!['workspace'] as Map)['diff'], diff);
+      expect(diffVisits, 1);
+    },
+  );
+
+  test(
     'browser domain follows only preceding pages in the supplied response',
     () {
       final first = ComputerStep(

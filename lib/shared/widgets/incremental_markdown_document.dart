@@ -1,3 +1,4 @@
+import '../../features/chat/utils/chat_ui_work.dart';
 import 'markdown_line_lexer.dart';
 
 /// A source block in an append-only streaming Markdown document.
@@ -58,7 +59,13 @@ final class IncrementalMarkdownDocument {
 
   /// [appendOnly] may be supplied when the owner already compared this exact
   /// source with the preceding update. Omit it for independently rewritten text.
-  List<IncrementalMarkdownBlock> update(String source, {bool? appendOnly}) {
+  List<IncrementalMarkdownBlock> update(String source, {bool? appendOnly}) =>
+      ChatUiWork.measure(
+        'markdown.parse',
+        () => _update(source, appendOnly: appendOnly),
+      );
+
+  List<IncrementalMarkdownBlock> _update(String source, {bool? appendOnly}) {
     if (source == _rawSource) {
       _lastUpdateAppended = true;
       return _blocks;

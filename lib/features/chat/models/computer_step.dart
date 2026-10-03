@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart' show IconData;
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../core/models/tool_call_status.dart';
 import '../../../core/services/acp/acp_secret_redactor.dart';
 import '../../../core/services/api/tool_display_redaction.dart';
 import '../../../core/services/logging/log_redactor.dart';
@@ -14,6 +15,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/authentication_uri.dart';
 import '../../../utils/mcp_structured_image.dart';
+import '../utils/chat_ui_work.dart';
 import '../widgets/timeline_visibility.dart' show parseToolResultImages;
 
 enum ComputerStepKind { browser, command, file, image, tool }
@@ -50,7 +52,10 @@ Object? _safeValue(Object? value, ToolDisplayRedaction? filter) {
   };
   // Reuse the existing field-name rules for passwords, API keys and headers.
   try {
-    return copy(jsonDecode(LogRedactor.redactBody(jsonEncode(authSafe))));
+    return ChatUiWork.measure(
+      'computer.sanitize',
+      () => copy(jsonDecode(LogRedactor.redactBody(jsonEncode(authSafe)))),
+    );
   } on Object {
     return copy(authSafe);
   }
@@ -89,15 +94,18 @@ class ComputerStep {
     Map<String, dynamic>? metadata,
     this.loading = false,
     this.run,
-  }) : _displayFilter = _runDisplayFilter(ToolDisplayRedaction.current, run),
+  }) : _priorDisplayStep = null,
+       _displayFilter = _runDisplayFilter(ToolDisplayRedaction.current, run),
        _toolKey = _normalizedToolName(toolName) {
     this.toolName = _text(toolName);
     this.arguments =
         _safeValue(arguments, _displayFilter) as Map<String, dynamic>;
     this.content = content == null ? null : _text(content);
-    this.metadata = metadata == null
+    // Retain an immutable snapshot without scanning large strings in build.
+    // The compact surfaces never read workspace.diff; the sheet does on demand.
+    _rawMetadata = metadata == null
         ? null
-        : _safeValue(metadata, _displayFilter) as Map<String, dynamic>;
+        : _freezeMetadata(metadata) as Map<String, dynamic>;
     final rawBrowser = metadata?['browser'];
     _browserPageKey = _safeBrowserPageKey(
       rawBrowser is Map ? rawBrowser['pageKey'] : null,
@@ -126,15 +134,14 @@ class ComputerStep {
   ComputerStep._withRun(ComputerStep step, this.run)
     : id = step.id,
       loading = step.loading,
+      _priorDisplayStep = step,
       _toolKey = step._toolKey,
       _displayFilter = _runDisplayFilter(step._displayFilter, run) {
     toolName = _text(step.toolName);
     arguments =
         _safeValue(step.arguments, _displayFilter) as Map<String, dynamic>;
     content = step.content == null ? null : _text(step.content!);
-    metadata = step.metadata == null
-        ? null
-        : _safeValue(step.metadata, _displayFilter) as Map<String, dynamic>;
+    _rawMetadata = step._rawMetadata;
     _browserPageKey = _safeBrowserPageKey(step._browserPageKey);
     final originalPath = step.actionPath;
     actionPath = originalPath != null && _text(originalPath) == originalPath
@@ -144,7 +151,7 @@ class ComputerStep {
         step.allowsBrowserPreview &&
         [
           step.arguments['url'],
-          _decodeMap(_resultBody(step.content, step.metadata))['url'],
+          _decodeMap(_resultBody(step.content, step._summaryMetadata))['url'],
         ].every(
           (value) =>
               value is! String ||
@@ -160,7 +167,29 @@ class ComputerStep {
   late final String toolName;
   late final Map<String, dynamic> arguments;
   late final String? content;
-  late final Map<String, dynamic>? metadata;
+  late final Map<String, dynamic>? _rawMetadata;
+  final ComputerStep? _priorDisplayStep;
+
+  late final Map<String, dynamic>? _summaryMetadata = _prepareMetadata(
+    _priorDisplayStep == null
+        ? _withoutWorkspaceDiff(_rawMetadata)
+        : _priorDisplayStep._summaryMetadata,
+  );
+
+  /// Full filtered details, prepared only when a detail/copy surface reads them.
+  late final Map<String, dynamic>? metadata = _hasWorkspaceDiff(_rawMetadata)
+      ? _prepareMetadata(
+          _priorDisplayStep == null ? _rawMetadata : _priorDisplayStep.metadata,
+        )
+      : _summaryMetadata;
+
+  Map<String, dynamic>? _prepareMetadata(Map<String, dynamic>? source) =>
+      source == null
+      ? null
+      : _safeValue(source, _displayFilter) as Map<String, dynamic>;
+
+  String? get backgroundRuntimeId =>
+      toolCallBackgroundRuntimeId(_summaryMetadata);
   final bool loading;
   final ToolRun? run;
   final ToolDisplayRedaction? _displayFilter;
@@ -183,16 +212,16 @@ class ComputerStep {
       ? value
       : null;
 
-  Map get _workspace => switch (metadata?['workspace']) {
+  Map get _workspace => switch (_summaryMetadata?['workspace']) {
     Map workspace => workspace,
     _ => const {},
   };
 
-  late final String _resultText = _resultBody(content, metadata);
+  late final String _resultText = _resultBody(content, _summaryMetadata);
   late final Map _decodedResult = _decodeMap(_resultText);
   late final (String, List<String>) _images = parseToolResultImages(
     content,
-    metadata: metadata,
+    metadata: _summaryMetadata,
   );
 
   ComputerStepKind get kind {
@@ -218,13 +247,13 @@ class ComputerStep {
   /// Cancellation belongs to the response even if a completed/background
   /// step itself retains its original outcome.
   bool get responseStopped =>
-      metadata?['computer'] is Map &&
-      (metadata!['computer'] as Map)['responseStopped'] == true;
+      _summaryMetadata?['computer'] is Map &&
+      (_summaryMetadata!['computer'] as Map)['responseStopped'] == true;
 
   bool get isStopped =>
       run?.status == ToolRunStatus.cancelled ||
-      (metadata?['computer'] is Map &&
-          (metadata!['computer'] as Map)['status'] == 'stopped') ||
+      (_summaryMetadata?['computer'] is Map &&
+          (_summaryMetadata!['computer'] as Map)['status'] == 'stopped') ||
       _workspace['cancelled'] == true ||
       const {
         'stopped',
@@ -268,7 +297,7 @@ class ComputerStep {
     return null;
   }
 
-  Map get _browser => switch (metadata?['browser']) {
+  Map get _browser => switch (_summaryMetadata?['browser']) {
     Map browser => browser,
     _ => const {},
   };
@@ -333,7 +362,7 @@ class ComputerStep {
         (exitCode is num && exitCode != 0) ||
         _decodedResult['ok'] == false ||
         _decodedResult['isError'] == true ||
-        metadata?['isError'] == true;
+        _summaryMetadata?['isError'] == true;
   }
 
   String? get command => _firstText([
@@ -699,4 +728,28 @@ Map _decodeMap(String? value) {
   } on FormatException {
     return const {};
   }
+}
+
+Object? _freezeMetadata(Object? value) => switch (value) {
+  Map() => Map<String, dynamic>.unmodifiable({
+    for (final entry in value.entries)
+      entry.key.toString(): _freezeMetadata(entry.value),
+  }),
+  List() => List<Object?>.unmodifiable(value.map(_freezeMetadata)),
+  _ => value,
+};
+
+bool _hasWorkspaceDiff(Map<String, dynamic>? metadata) =>
+    metadata?['workspace'] is Map &&
+    (metadata!['workspace'] as Map).containsKey('diff');
+
+Map<String, dynamic>? _withoutWorkspaceDiff(Map<String, dynamic>? metadata) {
+  if (!_hasWorkspaceDiff(metadata)) return metadata;
+  return {
+    ...metadata!,
+    'workspace': {
+      for (final entry in (metadata['workspace'] as Map).entries)
+        if (entry.key != 'diff') entry.key.toString(): entry.value,
+    },
+  };
 }
