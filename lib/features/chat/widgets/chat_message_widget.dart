@@ -12,7 +12,9 @@ import 'package:open_filex/open_filex.dart';
 // import 'package:easy_image_viewer/easy_image_viewer.dart';
 import 'dart:convert';
 import '../../../core/models/tool_call_status.dart';
+import '../../../core/services/api/tool_display_redaction.dart';
 import '../../home/widgets/file_processing_indicator.dart';
+import '../utils/chat_ui_work.dart';
 import '../pages/image_viewer_page.dart';
 import 'bounded_large_text_view.dart';
 import '../../../shared/widgets/action_sheet.dart';
@@ -3554,7 +3556,13 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ChatUiWork.measure(
+    'message.build',
+    () => _buildMessage(context),
+    messageId: widget.message.id,
+  );
+
+  Widget _buildMessage(BuildContext context) {
     final isUser = widget.message.role == 'user';
     final palette = computeChatSurfaceForegroundPalette(
       context,
@@ -3977,17 +3985,36 @@ List<ComputerStep> computerStepsFromToolUi(List<ToolUIPart> parts) => [
     _computerStepFromUi(parts[i], fallbackOrdinal: i),
 ];
 
-ComputerStep _computerStepFromUi(ToolUIPart part, {int fallbackOrdinal = 0}) =>
-    ComputerStep(
-      id:
-          part.computerStepId ??
-          computerToolStepId(part.id, part.toolName, fallbackOrdinal),
-      toolName: part.toolName,
-      arguments: part.arguments,
-      content: part.content,
-      metadata: part.metadata,
-      loading: part.loading,
-    );
+// UI snapshots are replaced on a tool update. Weak per-version entries let the
+// response scope, composer and detail entry points share one prepared snapshot.
+final _computerUiSteps =
+    Expando<({int ordinal, ToolDisplayRedaction? filter, ComputerStep step})>();
+
+ComputerStep _computerStepFromUi(ToolUIPart part, {int fallbackOrdinal = 0}) {
+  final filter = ToolDisplayRedaction.current;
+  final cached = _computerUiSteps[part];
+  if (cached != null &&
+      cached.ordinal == fallbackOrdinal &&
+      identical(cached.filter, filter)) {
+    return cached.step;
+  }
+  final step = ComputerStep(
+    id:
+        part.computerStepId ??
+        computerToolStepId(part.id, part.toolName, fallbackOrdinal),
+    toolName: part.toolName,
+    arguments: part.arguments,
+    content: part.content,
+    metadata: part.metadata,
+    loading: part.loading,
+  );
+  _computerUiSteps[part] = (
+    ordinal: fallbackOrdinal,
+    filter: filter,
+    step: step,
+  );
+  return step;
+}
 
 void _showOriginalToolDetail(
   BuildContext context,

@@ -21,6 +21,7 @@ import 'interrupted_reply_notice.dart';
 import '../../chat/widgets/chat_message_widget.dart';
 import '../../chat/widgets/timeline_projection.dart';
 import '../../chat/widgets/timeline_visibility.dart';
+import '../../chat/utils/chat_ui_work.dart';
 import '../../chat/utils/thinking_tag_parser.dart';
 import '../../chat/widgets/message_more_sheet.dart';
 import '../controllers/stream_controller.dart' as stream_ctrl;
@@ -365,7 +366,10 @@ class _MessageListViewState extends State<MessageListView> {
     _snapshotToolSignatures();
   }
 
-  void _refreshRenderModels() {
+  void _refreshRenderModels() =>
+      ChatUiWork.measure('history.project', _projectRenderModels);
+
+  void _projectRenderModels() {
     _effectiveRenderModels =
         widget.renderModels ??
         MessageRenderModelProjector.project(
@@ -607,7 +611,16 @@ class _MessageListViewState extends State<MessageListView> {
     return _estimateMessageExtent(index, crossAxisExtent) + footerExtent;
   }
 
-  double _estimateMessageExtent(int? index, double crossAxisExtent) {
+  double _estimateMessageExtent(int? index, double crossAxisExtent) =>
+      ChatUiWork.measure(
+        'history.estimate',
+        () => _computeMessageExtent(index, crossAxisExtent),
+        messageId: index != null && index < _effectiveRenderModels.length
+            ? _effectiveRenderModels[index].message.id
+            : null,
+      );
+
+  double _computeMessageExtent(int? index, double crossAxisExtent) {
     // A null index asks whether one extent fits every item. Answering with a
     // positive number makes SuperSliverList apply it to the whole list without
     // ever consulting the per-item branch below, so this has to be 0.
@@ -2485,7 +2498,9 @@ class _MessageListViewState extends State<MessageListView> {
           : null,
       isProcessingFiles: isProcessingFiles,
       suggestions: suggestions,
-      onSuggestionTap: widget.onSuggestionTap,
+      onSuggestionTap: widget.onSuggestionTap == null
+          ? null
+          : (suggestion) => widget.onSuggestionTap!(suggestion),
       onRecoveredAskUserAnswer: widget.onRecoveredAskUserAnswer == null
           ? null
           : (part, result) =>
@@ -2496,7 +2511,65 @@ class _MessageListViewState extends State<MessageListView> {
         _onInlineImageAspect(message.id, imageKey, aspectRatio);
       },
     );
-    if (!widget.interruptedMessageIds.contains(message.id)) return chat;
+    final retained = _CachedChatMessage(
+      inputs: [
+        message,
+        index,
+        gid,
+        chat.showModelIcon,
+        chat.useAssistantAvatar,
+        chat.useAssistantName,
+        chat.assistantName,
+        chat.assistantAvatar,
+        chat.showUserAvatar,
+        chat.showTokenStats,
+        chat.versionIndex,
+        chat.versionCount,
+        chat.onPrevVersion != null,
+        chat.onNextVersion != null,
+        availableVersions.length,
+        ...availableVersions,
+        chat.reasoningText,
+        chat.reasoningExpanded,
+        chat.reasoningLoading,
+        chat.reasoningStartAt,
+        chat.reasoningFinishedAt,
+        chat.onToggleReasoning != null,
+        chat.translationExpanded,
+        chat.onToggleTranslation != null,
+        chat.hideStreamingIndicator,
+        chat.isProcessingFiles,
+        chat.retryStatus,
+        chat.enableStreamingTextMotion,
+        chat.showThinkingCards,
+        chat.showToolCards,
+        chat.onSuggestionTap != null,
+        chat.onRecoveredAskUserAnswer != null,
+        chat.suggestions.length,
+        ...chat.suggestions,
+        chat.toolParts?.length,
+        ...?chat.toolParts,
+        chat.contentSplitOffsets?.length,
+        ...?chat.contentSplitOffsets,
+        chat.reasoningCountAtSplit?.length,
+        ...?chat.reasoningCountAtSplit,
+        chat.toolCountAtSplit?.length,
+        ...?chat.toolCountAtSplit,
+        chat.reasoningSegments?.length,
+        for (final segment
+            in chat.reasoningSegments ?? const <ReasoningSegment>[])
+          (
+            segment.text,
+            segment.expanded,
+            segment.loading,
+            segment.startAt,
+            segment.finishedAt,
+            segment.toolStartIndex,
+          ),
+      ],
+      child: chat,
+    );
+    if (!widget.interruptedMessageIds.contains(message.id)) return retained;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -2506,7 +2579,7 @@ class _MessageListViewState extends State<MessageListView> {
               ? null
               : () => widget.onContinueInterruptedReply!(message),
         ),
-        chat,
+        retained,
       ],
     );
   }
@@ -2654,6 +2727,31 @@ final class _ExtentEstimate {
   final int partsSignature;
   final int streamingSignature;
   final double extent;
+}
+
+/// Retains a mounted message's widget when only the list/scroll state changed.
+/// Descendants still observe their theme, settings, TTS and approval providers.
+/// The cache belongs to the row, so callbacks never retain an unmounted context.
+class _CachedChatMessage extends StatefulWidget {
+  const _CachedChatMessage({required this.inputs, required this.child});
+  final List<Object?> inputs;
+  final ChatMessageWidget child;
+
+  @override
+  State<_CachedChatMessage> createState() => _CachedChatMessageState();
+}
+
+class _CachedChatMessageState extends State<_CachedChatMessage> {
+  ChatMessageWidget? _child;
+
+  @override
+  void didUpdateWidget(_CachedChatMessage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!listEquals(oldWidget.inputs, widget.inputs)) _child = null;
+  }
+
+  @override
+  Widget build(BuildContext context) => _child ??= widget.child;
 }
 
 final class _MessagePresentation {
