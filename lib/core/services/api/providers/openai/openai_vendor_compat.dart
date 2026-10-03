@@ -73,7 +73,9 @@ void applyCompatibleResponsesReasoning(
 
   if (config.oauthProvider == OAuthProvider.chatgpt) {
     if (isReasoning && isOff(thinkingBudget)) {
-      body['reasoning'] = {'effort': 'none'};
+      body['reasoning'] = {
+        'effort': openAINormalizeReasoningEffort('none', upstreamModelId),
+      };
     }
     return;
   }
