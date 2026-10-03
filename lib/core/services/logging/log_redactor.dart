@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../../utils/authentication_uri.dart';
+
 class LogRedactor {
   LogRedactor._();
 
@@ -117,6 +119,74 @@ class LogRedactor {
 
   static String redactText(String text) {
     return _redactKnownPrefixes(_redactUrlByRegex(_redactUserInfo(text)));
+  }
+
+  /// Export diagnostics remove whole credentials instead of leaving the
+  /// prefix/suffix used by the interactive log viewer. Callers first apply
+  /// their ACP redactor for known configured secrets.
+  static String redactDiagnosticText(String text) {
+    const marker = '[REDACTED]';
+    bool sensitive(String name) =>
+        _isSensitiveName(name) ||
+        const {
+          'code',
+          'oauthcode',
+          'devicecode',
+          'usercode',
+          'verificationcode',
+          'authorizationcode',
+          'logincode',
+          'onetimecode',
+          'codeverifier',
+        }.contains(name.toLowerCase().replaceAll(RegExp(r'[-_\s]'), ''));
+    Object? walk(Object? value) => switch (value) {
+      Map() => {
+        for (final entry in value.entries)
+          entry.key.toString(): sensitive(entry.key.toString())
+              ? marker
+              : walk(entry.value),
+      },
+      List() => value.map(walk).toList(),
+      _ => value,
+    };
+    try {
+      text = jsonEncode(walk(jsonDecode(text)));
+    } catch (_) {}
+    text = _redactUserInfo(text);
+    text = text.replaceAllMapped(RegExp(r'https?://[^\s"<>]+'), (match) {
+      final uri = Uri.tryParse(match[0]!);
+      if (uri == null) return marker;
+      if (isAuthenticationUri(uri)) return marker;
+      if (!uri.hasQuery) return match[0]!;
+      final query = uri.queryParametersAll;
+      if (!query.keys.any(sensitive)) return match[0]!;
+      return uri
+          .replace(
+            queryParameters: {
+              for (final entry in query.entries)
+                entry.key: sensitive(entry.key) ? marker : entry.value,
+            },
+          )
+          .toString();
+    });
+    final field = RegExp(
+      r'''(["']?([A-Za-z0-9_-]*(?:key|token|secret|auth|cookie|credential|password|signature|session|code)[A-Za-z0-9_-]*)["']?\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^,\r\n}\]&]+)''',
+      caseSensitive: false,
+    );
+    text = text.replaceAllMapped(
+      field,
+      (match) => sensitive(match[2]!) ? '${match[1]}"$marker"' : match[0]!,
+    );
+    text = text.replaceAll(_knownPrefixRe, marker);
+    text = text.replaceAll(RegExp(r'/(?:home|Users)/[^/\s"<>]+'), '/[USER]');
+    text = text.replaceAll(
+      RegExp(
+        r'[A-Za-z]:\\(?:Users|Documents and Settings)\\[^\\\s"<>]+',
+        caseSensitive: false,
+      ),
+      r'C:\[USER]',
+    );
+    return text;
   }
 
   static String maskSecret(String value) {

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:collection';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -16,6 +18,67 @@ class FlutterLogger {
   static bool _enabled = false;
   static bool get enabled => _enabled;
   static bool _writeErrorReported = false;
+
+  // Report diagnostics are independent of verbose logging. Never retain print
+  // output, exception messages, request bodies or chat/context data here.
+  static final _technicalEvents = ListQueue<String>();
+  static int _technicalBytes = 0;
+  static const int technicalTailMaxBytes = 128 * 1024;
+  static const _technicalTags = {
+    'FlutterError',
+    'Uncaught',
+    'HomeViewModel',
+    'HomePage',
+    'ChatActions',
+    'ModelOverride',
+    'ChatApiService',
+    'DecoderParseError',
+    'SseFramingRecovery',
+    'ImageFallback',
+    'ProviderTest',
+  };
+  static final _stackFrame = RegExp(
+    r'^#\d+\s+[A-Za-z0-9_$<>. ]+\s+\((?:package:[A-Za-z0-9_./-]+\.dart|dart:[A-Za-z0-9_./-]+)(?::\d+){0,2}\)$',
+  );
+
+  static String get technicalTail => _technicalEvents.join();
+
+  static List<String> get technicalSummary => _technicalEvents
+      .toList()
+      .reversed
+      .take(3)
+      .map((event) => event.split('\n').first)
+      .toList();
+
+  static void _recordTechnical(String tag, {String? type, String? stack}) {
+    final frames = (stack ?? '')
+        .split('\n')
+        .where((line) => _stackFrame.hasMatch(line.trim()))
+        .take(20);
+    final text =
+        '[${DateTime.now().toUtc().toIso8601String()}] [$tag]'
+        '${type == null ? '' : ' $type'}\n${frames.isEmpty ? '' : '${frames.join('\n')}\n'}';
+    final bytes = utf8.encode(text).length;
+    if (bytes > technicalTailMaxBytes) return;
+    _technicalEvents.add(text);
+    _technicalBytes += bytes;
+    while (_technicalBytes > technicalTailMaxBytes ||
+        _technicalEvents.length > 200) {
+      _technicalBytes -= utf8.encode(_technicalEvents.removeFirst()).length;
+    }
+  }
+
+  static void recordTechnicalError(
+    Object error,
+    StackTrace stack, {
+    bool flutter = false,
+  }) {
+    _recordTechnical(
+      flutter ? 'FlutterError' : 'Uncaught',
+      type: error.runtimeType.toString(),
+      stack: stack.toString(),
+    );
+  }
 
   static Future<void> setEnabled(bool v) async {
     if (_enabled == v) return;
@@ -45,6 +108,11 @@ class FlutterLogger {
     _originalFlutterOnError = FlutterError.onError;
     FlutterError.onError = (FlutterErrorDetails details) {
       try {
+        recordTechnicalError(
+          details.exception,
+          details.stack ?? StackTrace.empty,
+          flutter: true,
+        );
         log(details.toString().trimRight(), tag: 'FlutterError');
       } catch (_) {}
 
@@ -59,6 +127,7 @@ class FlutterLogger {
     _originalPlatformOnError = ui.PlatformDispatcher.instance.onError;
     ui.PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
       try {
+        recordTechnicalError(error, stack);
         log('$error\n$stack', tag: 'Uncaught');
       } catch (_) {}
 
@@ -129,6 +198,11 @@ class FlutterLogger {
   }
 
   static void log(String message, {String? tag}) {
+    if (_technicalTags.contains(tag)) {
+      // A provider error may contain request/message text, even a fake stack
+      // frame. Only structured errors below the global handler supply frames.
+      _recordTechnical(tag!);
+    }
     if (!_enabled) return;
     message = LogRedactor.redactText(message);
     final now = DateTime.now();

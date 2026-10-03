@@ -149,6 +149,7 @@ class MobileBackgroundCoordinator extends ChangeNotifier
               .where(
                 (request) =>
                     request.hasLiveOwner &&
+                    !request.requiresExplicitConsent &&
                     !(_foreground &&
                         visibleConversation?.call() == request.conversationId),
               )

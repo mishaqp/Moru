@@ -5401,5 +5401,9 @@
   "computerBrowserResultTitle": "Заголовок",
   "computerParameterYes": "Да",
   "computerParameterNo": "Нет",
-  "computerBrowserAction": "{action, select, open{Открыть} observe{Осмотр} screenshot{Скриншот} read{Чтение} collect{Сбор списка} outline{Структура страницы} wait_stable{Ожидание загрузки} wait_for{Ожидание элемента} back{Назад} forward{Вперёд} reload{Обновить} scroll{Прокрутка} tabs{Вкладки} new_tab{Новая вкладка} switch_tab{Смена вкладки} close_tab{Закрыть вкладку} set_mode{Режим сайта} close{Закрыть браузер} done{Готово} click{Нажать} hover{Наведение} type{Ввод} submit{Отправить форму} press_key{Нажать клавишу} eval_js{Выполнить код} fetch{Запрос со страницы} export_cookies{Экспорт куки} other{Действие браузера}}"
+  "computerBrowserAction": "{action, select, open{Открыть} observe{Осмотр} screenshot{Скриншот} read{Чтение} collect{Сбор списка} outline{Структура страницы} wait_stable{Ожидание загрузки} wait_for{Ожидание элемента} back{Назад} forward{Вперёд} reload{Обновить} scroll{Прокрутка} tabs{Вкладки} new_tab{Новая вкладка} switch_tab{Смена вкладки} close_tab{Закрыть вкладку} set_mode{Режим сайта} close{Закрыть браузер} done{Готово} click{Нажать} hover{Наведение} type{Ввод} submit{Отправить форму} press_key{Нажать клавишу} eval_js{Выполнить код} fetch{Запрос со страницы} export_cookies{Экспорт куки} other{Действие браузера}}",
+  "problemReportToolTitle": "Отчёт об ошибке",
+  "problemReportToolSubtitle": "Собрать приватный ZIP с техническими сведениями. Подтверждение нужно каждый раз.",
+  "problemReportConsent": "В ZIP войдут:\n• Версия приложения и номер сборки\n• Версия Android, производитель и модель устройства\n• Режим окружения: PRoot/root\n• Настройки интерфейса, инструментов и журналов, типы провайдеров — без секретов\n• Технические события текущего запуска: названия, типы ошибок и кадры стека (до 128 КиБ)\nЧаты, тексты сообщений и журналы запросов/контекста не входят. Секреты удаляются. Отчёт удаляется при следующем запуске или истекает через сутки.",
+  "problemReportUnavailable": "Отчёт удалён или им не удалось поделиться. Соберите новый отчёт."
 }

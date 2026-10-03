@@ -42,6 +42,7 @@ void main() {
       LocalToolNames.remindersCreate,
       LocalToolNames.remindersComplete,
       LocalToolNames.assistantManager,
+      LocalToolNames.reportProblem,
       LocalToolNames.scheduledTasks,
       LocalToolNames.miniApps,
       LocalToolNames.rootShell,

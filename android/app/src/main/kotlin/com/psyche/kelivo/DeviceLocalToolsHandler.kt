@@ -72,6 +72,12 @@ class DeviceLocalToolsHandler(private val context: Context) {
         channel.setMethodCallHandler { call, result ->
             val argsJson = call.arguments as? String ?: "{}"
             when (call.method) {
+                "problemReportDeviceInfo" -> result.success(mapOf(
+                    "android" to android.os.Build.VERSION.RELEASE,
+                    "sdk" to android.os.Build.VERSION.SDK_INT,
+                    "manufacturer" to android.os.Build.MANUFACTURER,
+                    "model" to android.os.Build.MODEL,
+                ))
                 "phoneControlStatus" -> result.success(PhoneControlService.status(context))
                 "phoneControl" -> PhoneControlService.execute(argsJson) { result.success(it) }
                 "openAccessibilitySettings" -> {

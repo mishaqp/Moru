@@ -63,6 +63,7 @@ import 'chat_surface.dart';
 import 'collapsible_user_text.dart';
 import 'chat_suggestion_bubbles.dart';
 import 'token_display_widget.dart';
+import 'problem_report_card.dart';
 import 'screen_time_tool_ui.dart';
 import 'weather_tool_ui.dart';
 import 'tool_detail_text_section.dart';
@@ -498,6 +499,7 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
     LocalToolNames.remindersCreate => Lucide.ListPlus,
     LocalToolNames.remindersComplete => Lucide.CheckCircle,
     LocalToolNames.assistantManager => Lucide.Bot,
+    LocalToolNames.reportProblem => Lucide.Bug,
     LocalToolNames.scheduledTasks => Lucide.CalendarClock,
     LocalToolNames.miniApps => Lucide.LayoutGrid,
     LocalToolNames.rootShell => Lucide.ShieldAlert,
@@ -543,6 +545,7 @@ String? _localToolTitleFor(
     LocalToolNames.remindersComplete =>
       l10n.assistantEditLocalToolRemindersCompleteTitle,
     LocalToolNames.assistantManager => _assistantManagerTitleFor(l10n, args),
+    LocalToolNames.reportProblem => l10n.problemReportToolTitle,
     LocalToolNames.scheduledTasks => switch (ScheduledTaskTool.actionOf(args)) {
       ScheduledTaskTool.actionList => l10n.scheduledTaskToolActionList,
       ScheduledTaskTool.actionCreate => l10n.scheduledTaskToolActionCreate,
@@ -5434,6 +5437,16 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
         : null;
     final Widget? summaryContent = _isAskUser
         ? _AskUserInlineBody(part: widget.part, compact: true)
+        : widget.part.toolName == LocalToolNames.reportProblem &&
+              isPendingApproval
+        ? Text(
+            AppLocalizations.of(context)!.problemReportConsent,
+            style: TextStyle(fontSize: 12, height: 1.4, color: fg.body),
+          )
+        : widget.part.toolName == LocalToolNames.reportProblem &&
+              !widget.part.loading &&
+              ProblemReportCard.fromContent(widget.part.content) != null
+        ? ProblemReportCard.fromContent(widget.part.content)
         : isWorkspace
         ? WorkspaceToolCardBody(
             part: workspacePart,
@@ -5924,8 +5937,20 @@ class _ToolCallItemState extends State<_ToolCallItem> {
               ),
             ],
             // Argument summary so users know what the tool is about to do
+            if (widget.part.toolName == LocalToolNames.reportProblem) ...[
+              const SizedBox(height: 8),
+              if (isPendingApproval)
+                Text(
+                  l10n.problemReportConsent,
+                  style: TextStyle(fontSize: 12, height: 1.4, color: fg.body),
+                )
+              else if (!widget.part.loading &&
+                  ProblemReportCard.fromContent(widget.part.content) != null)
+                ProblemReportCard.fromContent(widget.part.content)!,
+            ],
             if (!isWorkspace &&
                 isPendingApproval &&
+                widget.part.toolName != LocalToolNames.reportProblem &&
                 widget.part.arguments.isNotEmpty) ...[
               const SizedBox(height: 8),
               Container(

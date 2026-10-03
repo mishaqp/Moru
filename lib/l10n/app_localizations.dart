@@ -22496,6 +22496,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{action, select, open{Open} observe{Inspect} screenshot{Screenshot} read{Read} collect{Collect} outline{Page outline} wait_stable{Wait until loaded} wait_for{Wait for element} back{Back} forward{Forward} reload{Reload} scroll{Scroll} tabs{Tabs} new_tab{New tab} switch_tab{Switch tab} close_tab{Close tab} set_mode{Site mode} close{Close browser} done{Done} click{Click} hover{Hover} type{Type} submit{Submit form} press_key{Press key} eval_js{Run page code} fetch{Page request} export_cookies{Export cookies} other{Browser action}}'**
   String computerBrowserAction(String action);
+
+  /// No description provided for @problemReportToolTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Problem report'**
+  String get problemReportToolTitle;
+
+  /// No description provided for @problemReportToolSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a private ZIP of technical diagnostics. Confirmation is required every time.'**
+  String get problemReportToolSubtitle;
+
+  /// No description provided for @problemReportConsent.
+  ///
+  /// In en, this message translates to:
+  /// **'The ZIP will contain:\n• App version and build number\n• Android version, manufacturer and device model\n• Environment mode: PRoot/root\n• Interface, tool and logging settings and provider types, without secrets\n• Technical events from this app run: event names, error types and stack frames (up to 128 KiB)\nChats, message text and request/context logs are excluded. Secrets are removed. The report is deleted at the next app launch or expires after 24 hours.'**
+  String get problemReportConsent;
+
+  /// No description provided for @problemReportUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This report was deleted or could not be shared. Create a new report.'**
+  String get problemReportUnavailable;
 }
 
 class _AppLocalizationsDelegate

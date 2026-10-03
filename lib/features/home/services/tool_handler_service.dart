@@ -21,6 +21,7 @@ import '../../../core/services/mcp/mcp_tool_service.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
 import '../../../core/services/memory/memory_tools.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
+import '../../../core/services/logging/problem_report_service.dart';
 import '../../../core/services/scheduled_tasks_service.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import '../../../core/services/tools/tool_schema_overrides.dart';
@@ -575,7 +576,8 @@ class ToolHandlerService {
 
         // Mutating device tools and Shared Browser click/type actions modify
         // user-visible state, so they require explicit approval first.
-        if (LocalToolNames.requiresApprovalFor(name, args) &&
+        if (name != LocalToolNames.reportProblem &&
+            LocalToolNames.requiresApprovalFor(name, args) &&
             assistant != null &&
             LocalToolsService.isEnabledForAssistant(name, assistant) &&
             approvalService != null) {
@@ -615,6 +617,60 @@ class ToolHandlerService {
               tool: name,
             );
           }
+        }
+
+        if (name == LocalToolNames.reportProblem) {
+          bool isEnabled() {
+            final current = assistant == null
+                ? null
+                : assistantProvider.getById(assistant.id);
+            return current != null &&
+                LocalToolsService.isEnabledForAssistant(name, current) &&
+                LocalToolsService.isAvailableOnThisPlatform(name);
+          }
+
+          if (!isEnabled()) {
+            return _toolError(
+              error: 'permission_denied',
+              message: 'Problem reports are disabled for this assistant.',
+              tool: name,
+            );
+          }
+          if (approvalService == null) {
+            return _toolError(
+              error: 'approval_unavailable',
+              message: 'A problem report requires the user\'s confirmation.',
+              tool: name,
+            );
+          }
+          final approval = await approvalService.requestApproval(
+            toolCallId: approvalIdFor(name, toolCallId),
+            toolName: name,
+            arguments: const {},
+            conversationId: conversationId,
+          );
+          ensureLiveToolCall();
+          if (!approval.approved) {
+            return _toolError(
+              error: 'approval_denied',
+              message: approval.denyReason ?? 'User denied the tool call',
+              tool: name,
+            );
+          }
+          if (!isEnabled()) {
+            return _toolError(
+              error: 'permission_denied',
+              message: 'Problem reports are disabled for this assistant.',
+              tool: name,
+            );
+          }
+          return jsonEncode(
+            await ProblemReportService().create(
+              settings: settings,
+              environment: _optional<EnvironmentProvider>(),
+              checkCancelled: ensureLiveToolCall,
+            ),
+          );
         }
 
         if (name == LocalToolNames.assistantManager &&

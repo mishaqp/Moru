@@ -12086,6 +12086,19 @@ class AppLocalizationsZh extends AppLocalizations {
     });
     return '$_temp0';
   }
+
+  @override
+  String get problemReportToolTitle => '问题报告';
+
+  @override
+  String get problemReportToolSubtitle => '将技术诊断信息收集到私密 ZIP 文件。每次都需要确认。';
+
+  @override
+  String get problemReportConsent =>
+      'ZIP 将包含：\n• 应用版本和构建号\n• Android 版本、制造商和设备型号\n• 环境模式：PRoot/root\n• 界面、工具、日志设置及服务商类型，不含机密信息\n• 本次启动的技术事件：事件名称、错误类型和堆栈帧（最多 128 KiB）\n不包含聊天、消息文本或请求/上下文日志。机密信息会被移除。报告将在下次启动时删除，或在 24 小时后过期。';
+
+  @override
+  String get problemReportUnavailable => '报告已删除或无法分享。请创建新报告。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -24099,6 +24112,19 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
     });
     return '$_temp0';
   }
+
+  @override
+  String get problemReportToolTitle => '问题报告';
+
+  @override
+  String get problemReportToolSubtitle => '将技术诊断信息收集到私密 ZIP 文件。每次都需要确认。';
+
+  @override
+  String get problemReportConsent =>
+      'ZIP 将包含：\n• 应用版本和构建号\n• Android 版本、制造商和设备型号\n• 环境模式：PRoot/root\n• 界面、工具、日志设置及服务商类型，不含机密信息\n• 本次启动的技术事件：事件名称、错误类型和堆栈帧（最多 128 KiB）\n不包含聊天、消息文本或请求/上下文日志。机密信息会被移除。报告将在下次启动时删除，或在 24 小时后过期。';
+
+  @override
+  String get problemReportUnavailable => '报告已删除或无法分享。请创建新报告。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -36186,4 +36212,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
     });
     return '$_temp0';
   }
+
+  @override
+  String get problemReportToolTitle => '問題報告';
+
+  @override
+  String get problemReportToolSubtitle => '將技術診斷資訊收集到私密 ZIP 檔案。每次都需要確認。';
+
+  @override
+  String get problemReportConsent =>
+      'ZIP 將包含：\n• 應用版本和建置編號\n• Android 版本、製造商和裝置型號\n• 環境模式：PRoot/root\n• 介面、工具、日誌設定及服務商類型，不含機密資訊\n• 本次啟動的技術事件：事件名稱、錯誤類型和堆疊框架（最多 128 KiB）\n不包含聊天、訊息文字或請求/上下文日誌。機密資訊會被移除。報告將在下次啟動時刪除，或在 24 小時後過期。';
+
+  @override
+  String get problemReportUnavailable => '報告已刪除或無法分享。請建立新報告。';
 }

@@ -37,6 +37,7 @@ class LocalToolNames {
   static const String remindersCreate = 'reminders_create';
   static const String remindersComplete = 'reminders_complete';
   static const String assistantManager = AssistantManagerTool.toolName;
+  static const String reportProblem = 'report_problem';
   static const String scheduledTasks = ScheduledTaskTool.toolName;
   static const String miniApps = MiniAppDataTool.toolName;
   static const String rootShell = RootShellTool.toolName;
@@ -61,12 +62,14 @@ class LocalToolNames {
     remindersCreate,
     remindersComplete,
     assistantManager,
+    reportProblem,
     scheduledTasks,
     miniApps,
     rootShell,
   ];
 
   static const List<String> requiresUserApproval = [
+    reportProblem,
     calendarCreate,
     calendarUpdate,
     calendarDelete,
@@ -312,6 +315,7 @@ class LocalToolsService {
         return false;
       case LocalToolNames.miniApps:
       case LocalToolNames.rootShell:
+      case LocalToolNames.reportProblem:
         return defaultTargetPlatform == TargetPlatform.android;
       default:
         return true;
@@ -375,6 +379,20 @@ class LocalToolsService {
         return _remindersCompleteDefinition;
       case LocalToolNames.assistantManager:
         return AssistantManagerTool.definition;
+      case LocalToolNames.reportProblem:
+        return {
+          'type': 'function',
+          'function': {
+            'name': LocalToolNames.reportProblem,
+            'description':
+                'Collect a private Moru problem report when the user reports an app bug or asks for diagnostics. Always requires fresh confirmation. Creates a ZIP with app version/build, Android version and device model, PRoot/root mode, allowlisted settings without secrets and up to 128 KiB of technical events from this app run (event names, error types and package stack frames). Chat/message text, request/context logs and credentials are excluded. Returns file name/path, size, included categories and a brief diagnostic summary, never the full journal. The chat shows a Share button. Files are private, outside model file roots, and removed on the next app launch or expire after 24 hours. Use the summary to diagnose or draft an issue; do not try to open the private ZIP with file tools.',
+            'parameters': {
+              'type': 'object',
+              'properties': <String, dynamic>{},
+              'additionalProperties': false,
+            },
+          },
+        };
       case LocalToolNames.scheduledTasks:
         return ScheduledTaskTool.definition;
       case LocalToolNames.miniApps:

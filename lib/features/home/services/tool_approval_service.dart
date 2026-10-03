@@ -54,6 +54,8 @@ class ToolApprovalRequest {
   String? get generationRunId => owner?.generationRunId;
   String? get assistantMessageId => owner?.assistantMessageId;
   bool get hasLiveOwner => owner?.isActive() == true;
+  // Diagnostic exports always need fresh consent, including in trusted mode.
+  bool get requiresExplicitConsent => toolName == 'report_problem';
   final Completer<ToolApprovalResult> _completer;
 
   ToolApprovalRequest({
@@ -87,7 +89,7 @@ class ToolApprovalService extends ChangeNotifier {
   bool _autoApproveAll = false;
   bool _disposed = false;
 
-  /// Global trusted mode. When enabled, tool calls never create approval cards.
+  /// Global trusted mode. Private diagnostic exports still require consent.
   bool get autoApproveAll => _autoApproveAll;
 
   /// Synchronizes the global trusted mode from SettingsProvider.
@@ -100,9 +102,11 @@ class ToolApprovalService extends ChangeNotifier {
     _autoApproveAll = value;
     if (!value || _pending.isEmpty) return;
 
-    final waiting = _pending.values.toList(growable: false);
-    _pending.clear();
-    for (final req in waiting) {
+    final waiting = _pending.entries.toList(growable: false);
+    for (final entry in waiting) {
+      final req = entry.value;
+      if (req.requiresExplicitConsent) continue;
+      _pending.remove(entry.key);
       if (!req._completer.isCompleted) {
         req._completer.complete(
           req.owner != null && !req.hasLiveOwner
@@ -177,13 +181,14 @@ class ToolApprovalService extends ChangeNotifier {
                     _storedConversationId(conversationId)))) {
       return Future.value(ToolApprovalResult.denied('cancelled'));
     }
-    if (_autoApproveAll) {
+    if (_autoApproveAll && toolName != 'report_problem') {
       return Future<ToolApprovalResult>.value(ToolApprovalResult.approved());
     }
     final key = _storageKey(conversationId, toolCallId);
     final existing = _pending[key];
     if (existing != null) {
-      if (existing.generationRunId == owner?.generationRunId &&
+      if (existing.toolName == toolName &&
+          existing.generationRunId == owner?.generationRunId &&
           existing.assistantMessageId == owner?.assistantMessageId) {
         return existing.future;
       }
@@ -239,6 +244,10 @@ class ToolApprovalService extends ChangeNotifier {
     if (entries.isEmpty) return ToolApprovalActionStatus.stale;
     final entry = entries.first;
     final request = entry.value;
+    // A generic notification lacks the report's full disclosure in the chat.
+    if (approved && request.requiresExplicitConsent) {
+      return ToolApprovalActionStatus.stale;
+    }
     if (conversationId.isEmpty ||
         generationRunId.isEmpty ||
         assistantMessageId.isEmpty ||
