@@ -25,6 +25,9 @@ class BrowserThumbnail {
     required this.height,
     required this.sequence,
     required this.historical,
+    required this.pageUrl,
+    required this.pageKey,
+    required this.capturedAt,
     required this._retentionSequence,
   }) : bytes = bytes.asUnmodifiableView();
 
@@ -38,6 +41,12 @@ class BrowserThumbnail {
   /// Native snapshot order, reserved before disk work starts.
   final int sequence;
   final bool historical;
+
+  /// Display-safe identity captured with the screenshot, never the live page
+  /// read after asynchronous reduction finishes.
+  final String? pageUrl;
+  final String? pageKey;
+  final DateTime? capturedAt;
   final int _retentionSequence;
 }
 
@@ -94,6 +103,43 @@ class BrowserThumbnailCache extends ChangeNotifier {
   BrowserThumbnail? latestIn(String? conversationId) =>
       _chats[conversationId]?.latest;
 
+  /// A saved source owns its exact preview. Activity/latest snapshots may be
+  /// reused only for the same public page, captured after this step started.
+  /// Historical disk restoration cannot prove native capture time.
+  BrowserThumbnail? previewForStep(
+    String? conversationId, {
+    String? sourcePath,
+    String? activityId,
+    String? pageUrl,
+    String? pageKey,
+    DateTime? startedAt,
+  }) {
+    final exact = forSource(conversationId, sourcePath);
+    if (exact != null) return exact;
+    bool matches(BrowserThumbnail? candidate) {
+      if (candidate == null ||
+          candidate.historical ||
+          startedAt == null ||
+          candidate.capturedAt == null ||
+          candidate.capturedAt!.isBefore(startedAt) ||
+          pageUrl == null ||
+          !canPreviewPage(pageUrl)) {
+        return false;
+      }
+      final host = Uri.tryParse(pageUrl)?.host;
+      final capturedHost = Uri.tryParse(candidate.pageUrl ?? '')?.host;
+      if (host == null || host.isEmpty || host != capturedHost) return false;
+      return pageKey == null || candidate.pageKey == pageKey;
+    }
+
+    final activity = activityId == null
+        ? null
+        : forStep(conversationId, activityId);
+    if (matches(activity)) return activity;
+    final latest = latestIn(conversationId);
+    return matches(latest) ? latest : null;
+  }
+
   /// Reserve at native capture start, before asynchronous disk/decode work.
   /// Pass this as [captureSequence] to preserve actual snapshot chronology.
   int reserveCaptureSequence() => _sequence++;
@@ -123,6 +169,8 @@ class BrowserThumbnailCache extends ChangeNotifier {
   /// [historical] marks passive UI restoration: the requested entry is retained
   /// without changing an existing fallback. Native sessions may reserve a
   /// [captureSequence] before file writes, so a delayed older file stays older.
+  /// [capturedAt] and [pageKey] retain the ready page's native capture identity.
+  /// Historical restoration without that identity has no capture timestamp.
   /// Missing, oversized, invalid, auth-page and late-cleared images return null
   /// without replacing the last usable preview. This never modifies [sourcePath].
   Future<BrowserThumbnail?> capture({
@@ -133,6 +181,8 @@ class BrowserThumbnailCache extends ChangeNotifier {
     String? pageUrl,
     bool historical = false,
     int? captureSequence,
+    String? pageKey,
+    DateTime? capturedAt,
   }) {
     if (_disposed ||
         conversationId.isEmpty ||
@@ -161,6 +211,9 @@ class BrowserThumbnailCache extends ChangeNotifier {
       chat,
       sequence,
       historical,
+      pageUrl,
+      pageKey,
+      capturedAt ?? (historical ? null : DateTime.now()),
       retentionSequence,
     );
     _pending[key] = future;
@@ -185,6 +238,9 @@ class BrowserThumbnailCache extends ChangeNotifier {
     _ChatThumbnails chat,
     int sequence,
     bool historical,
+    String? pageUrl,
+    String? pageKey,
+    DateTime? capturedAt,
     int retentionSequence,
   ) async {
     try {
@@ -217,6 +273,9 @@ class BrowserThumbnailCache extends ChangeNotifier {
         height: reduced.$3,
         sequence: sequence,
         historical: historical,
+        pageUrl: pageUrl,
+        pageKey: pageKey,
+        capturedAt: capturedAt,
         retentionSequence: retentionSequence,
       );
       final previous = chat.entries[stepId];

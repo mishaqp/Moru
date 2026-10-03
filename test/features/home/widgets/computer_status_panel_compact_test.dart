@@ -9,6 +9,7 @@ import 'package:Kelivo/features/home/widgets/computer_status_panel.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget _host({
@@ -18,6 +19,7 @@ Widget _host({
   double width = 320,
   Locale locale = const Locale('en'),
   String? conversationId,
+  bool disableAnimations = true,
 }) => MaterialApp(
   localizationsDelegates: AppLocalizations.localizationsDelegates,
   supportedLocales: AppLocalizations.supportedLocales,
@@ -27,6 +29,7 @@ Widget _host({
     body: MediaQuery(
       data: MediaQueryData(
         size: Size(width, 240),
+        disableAnimations: disableAnimations,
         textScaler: TextScaler.linear(scale),
         viewInsets: const EdgeInsets.only(bottom: 100),
       ),
@@ -54,6 +57,196 @@ ComputerStep _command({bool loading = true, String? content}) => ComputerStep(
 );
 
 void main() {
+  testWidgets('a named step never borrows another live page identity', (
+    tester,
+  ) async {
+    final session = BrowserAgentSession.instance;
+    session.setOwnerConversationId('chat');
+    session.pageStarted('https://wttr.in/');
+    session.recordActivity(action: 'read');
+    addTearDown(() {
+      session.setOwnerConversationId(null);
+      session.pageUrl.value = null;
+      session.currentActivity.value = null;
+    });
+    final step = ComputerStep(
+      id: 'browser',
+      toolName: 'browser_use',
+      arguments: {'url': 'https://ya.ru', 'action': 'open'},
+      loading: true,
+    );
+    await tester.pumpWidget(_host(steps: [step], conversationId: 'chat'));
+    await tester.pumpAndSettle();
+    final thumbnail = tester.widget<ComputerStepThumbnail>(
+      find.byType(ComputerStepThumbnail),
+    );
+    expect(thumbnail.browserPageUrl, isNull);
+    expect(find.text('Browser · ya.ru'), findsOneWidget);
+    expect(find.text('Opening…'), findsOneWidget);
+    expect(find.text('wttr.in'), findsNothing);
+  });
+
+  testWidgets('an auth-page step never takes live public page labels', (
+    tester,
+  ) async {
+    final session = BrowserAgentSession.instance;
+    session.setOwnerConversationId('chat');
+    session.pageStarted('https://ya.ru');
+    session.recordActivity(action: 'read');
+    addTearDown(() {
+      session.setOwnerConversationId(null);
+      session.pageUrl.value = null;
+      session.currentActivity.value = null;
+    });
+    final step = ComputerStep(
+      id: 'browser',
+      toolName: 'browser_use',
+      arguments: {'url': 'https://auth.openai.com/authorize', 'action': 'open'},
+      loading: true,
+    );
+    await tester.pumpWidget(_host(steps: [step], conversationId: 'chat'));
+    await tester.pumpAndSettle();
+    expect(find.text('ya.ru'), findsNothing);
+    expect(find.text('Browser · ya.ru'), findsNothing);
+    expect(find.text('Opening…'), findsOneWidget);
+  });
+
+  testWidgets('browser done keeps the card with Done subtitle', (tester) async {
+    final step = ComputerStep(
+      id: 'browser',
+      toolName: 'browser_use',
+      arguments: {'action': 'done'},
+      content: '{"ok":true,"action":"done","summary":"finished"}',
+    );
+    await tester.pumpWidget(
+      _host(steps: [step], generating: false, locale: const Locale('ru')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Готово'), findsOneWidget);
+    expect(find.text('Действие браузера'), findsNothing);
+    expect(find.byType(ComputerStepThumbnail), findsOneWidget);
+  });
+
+  for (final scale in [1.0, 1.3]) {
+    testWidgets('browser card fits 320dp landscape at scale $scale', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 240);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final step = ComputerStep(
+        id: 'browser',
+        toolName: 'browser_use',
+        arguments: {'action': 'navigate', 'url': 'https://ya.ru'},
+        loading: true,
+      );
+      await tester.pumpWidget(
+        _host(steps: [step], scale: scale, locale: const Locale('ru')),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      if (scale == 1) {
+        expect(
+          tester.getSize(find.byKey(ComputerStatusPanel.panelKey)).height,
+          lessThanOrEqualTo(88),
+        );
+      }
+      expect(
+        tester.getSize(
+          find.byKey(const ValueKey('computer-step-thumbnail:browser')),
+        ),
+        const Size(112, 64),
+      );
+      expect(
+        find.byKey(const ValueKey('computer-browser-preview')),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('Остановить'), findsNothing);
+    });
+  }
+
+  testWidgets('browser address dot tracks running done error and stopped', (
+    tester,
+  ) async {
+    for (final status in ['running', 'done', 'error', 'stopped']) {
+      final step = ComputerStep(
+        id: 'browser',
+        toolName: 'browser_use',
+        arguments: {'action': 'read', 'url': 'https://ya.ru'},
+        loading: status == 'running',
+        content: status == 'error' ? '{"ok":false}' : '{"ok":true}',
+        metadata: status == 'stopped'
+            ? {
+                'computer': {'status': 'stopped'},
+              }
+            : null,
+      );
+      await tester.pumpWidget(
+        _host(steps: [step], generating: status == 'running'),
+      );
+      await tester.pumpAndSettle();
+      final dot = tester.widget<DecoratedBox>(
+        find.byKey(const ValueKey('computer-browser-status-dot')),
+      );
+      expect((dot.decoration as BoxDecoration).color, switch (status) {
+        'running' => const Color(0xFF3B82F6),
+        'done' => const Color(0xFF22C55E),
+        'error' => const Color(0xFFEF4444),
+        _ => const Color(0xFF9CA3AF),
+      });
+    }
+  });
+
+  testWidgets('browser dot pulses only during work and honors reduced motion', (
+    tester,
+  ) async {
+    ComputerStep step(bool loading) => ComputerStep(
+      id: 'browser',
+      toolName: 'browser_use',
+      arguments: {'action': 'read', 'url': 'https://ya.ru'},
+      loading: loading,
+    );
+    Finder pulse() => find.ancestor(
+      of: find.byKey(const ValueKey('computer-browser-status-dot')),
+      matching: find.byType(Animate),
+    );
+    await tester.pumpWidget(
+      _host(steps: [step(true)], disableAnimations: false),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(pulse(), findsOneWidget);
+    await tester.pumpWidget(
+      _host(steps: [step(false)], generating: false, disableAnimations: false),
+    );
+    await tester.pumpAndSettle();
+    expect(pulse(), findsNothing);
+    await tester.pumpWidget(_host(steps: [step(true)]));
+    await tester.pumpAndSettle();
+    expect(pulse(), findsNothing);
+    await tester.pumpWidget(
+      _host(steps: [step(true)], disableAnimations: false),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(pulse(), findsOneWidget);
+    final stopped = ComputerStep(
+      id: 'browser',
+      toolName: 'browser_use',
+      arguments: {'action': 'read', 'url': 'https://ya.ru'},
+      loading: true,
+      metadata: {
+        'computer': {'responseStopped': true},
+      },
+    );
+    await tester.pumpWidget(_host(steps: [stopped], disableAnimations: false));
+    await tester.pumpAndSettle();
+    expect(pulse(), findsNothing);
+    final dot = tester.widget<DecoratedBox>(
+      find.byKey(const ValueKey('computer-browser-status-dot')),
+    );
+    expect((dot.decoration as BoxDecoration).color, const Color(0xFF9CA3AF));
+    expect(find.text('Stopped'), findsOneWidget);
+  });
+
   testWidgets('a running browser step names the live page and action', (
     tester,
   ) async {
@@ -75,7 +268,7 @@ void main() {
     await tester.pumpWidget(_host(steps: [step], conversationId: 'chat'));
     await tester.pump();
     expect(find.text('Browser · dzen.ru'), findsOneWidget);
-    expect(find.text('Read'), findsOneWidget);
+    expect(find.text('Reading page'), findsOneWidget);
     expect(find.text('Browser action'), findsNothing);
 
     // Another chat's browser never names this chat's step.

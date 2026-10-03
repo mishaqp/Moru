@@ -12582,7 +12582,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get computerBrowserTyping => 'Typing…';
 
   @override
-  String get computerBrowserReading => 'Reading…';
+  String get computerBrowserReading => 'Reading page';
 
   @override
   String get computerAllParameters => 'All parameters (JSON)';
@@ -12632,6 +12632,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get browserCloseWhileAiMessage => 'The AI action will stop.';
+
+  @override
+  String get computerActionSummary => 'Summary';
+
+  @override
+  String get computerBrowserResultStatus => 'Status';
+
+  @override
+  String get computerBrowserResultTitle => 'Title';
 
   @override
   String get computerParameterYes => 'Yes';

@@ -5396,7 +5396,7 @@
   "computerBrowserOpening": "Открывает…",
   "computerBrowserClicking": "Нажимает…",
   "computerBrowserTyping": "Вводит…",
-  "computerBrowserReading": "Читает…",
+  "computerBrowserReading": "Читает страницу",
   "computerAllParameters": "Все параметры (JSON)",
   "computerParameterDirectory": "Папка",
   "computerParameterBackground": "Фон",
@@ -5412,6 +5412,9 @@
   "browserCloseBrowser": "Закрыть браузер",
   "browserCloseWhileAiTitle": "Закрыть браузер?",
   "browserCloseWhileAiMessage": "Действие ИИ будет остановлено.",
+  "computerActionSummary": "Итог",
+  "computerBrowserResultStatus": "Статус",
+  "computerBrowserResultTitle": "Заголовок",
   "computerParameterYes": "Да",
   "computerParameterNo": "Нет",
   "computerBrowserAction": "{action, select, open{Открыть} observe{Осмотр} screenshot{Скриншот} read{Чтение} collect{Сбор списка} outline{Структура страницы} wait_stable{Ожидание загрузки} wait_for{Ожидание элемента} back{Назад} forward{Вперёд} reload{Обновить} scroll{Прокрутка} tabs{Вкладки} new_tab{Новая вкладка} switch_tab{Смена вкладки} close_tab{Закрыть вкладку} set_mode{Режим сайта} close{Закрыть браузер} done{Готово} click{Нажать} hover{Наведение} type{Ввод} submit{Отправить форму} press_key{Нажать клавишу} eval_js{Выполнить код} fetch{Запрос со страницы} export_cookies{Экспорт куки} other{Действие браузера}}"

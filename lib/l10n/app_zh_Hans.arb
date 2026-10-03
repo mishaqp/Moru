@@ -4456,7 +4456,7 @@
   "computerBrowserOpening": "正在打开…",
   "computerBrowserClicking": "正在点击…",
   "computerBrowserTyping": "正在输入…",
-  "computerBrowserReading": "正在读取…",
+  "computerBrowserReading": "正在读取页面",
   "computerAllParameters": "所有参数（JSON）",
   "computerParameterDirectory": "目录",
   "computerParameterBackground": "后台",
@@ -4472,6 +4472,9 @@
   "browserCloseBrowser": "关闭浏览器",
   "browserCloseWhileAiTitle": "关闭浏览器？",
   "browserCloseWhileAiMessage": "AI 操作将停止。",
+  "computerActionSummary": "总结",
+  "computerBrowserResultStatus": "状态",
+  "computerBrowserResultTitle": "标题",
   "computerParameterYes": "是",
   "computerParameterNo": "否",
   "computerBrowserAction": "{action, select, open{打开} observe{查看} screenshot{截图} read{读取} collect{收集列表} outline{页面结构} wait_stable{等待加载} wait_for{等待元素} back{后退} forward{前进} reload{刷新} scroll{滚动} tabs{标签页} new_tab{新标签页} switch_tab{切换标签页} close_tab{关闭标签页} set_mode{网站模式} close{关闭浏览器} done{完成} click{点击} hover{悬停} type{输入} submit{提交表单} press_key{按键} eval_js{执行页面代码} fetch{页面请求} export_cookies{导出 Cookie} other{浏览器操作}}"

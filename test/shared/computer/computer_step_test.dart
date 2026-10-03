@@ -299,6 +299,137 @@ void main() {
     expect(step.title(AppLocalizationsEn()), 'Browser · example.com');
   });
 
+  test('completed browser done uses localized summary and done labels', () {
+    final step = ComputerStep(
+      id: 'browser-done',
+      toolName: 'browser_use',
+      arguments: {'action': 'done', 'summary': 'Found the answer'},
+      content: '{"ok":true,"summary":"Found the answer"}',
+    );
+    expect(step.actionLabel(AppLocalizationsEn()), 'Summary');
+    expect(step.actionLabel(AppLocalizationsRu()), 'Итог');
+    expect(step.subtitle(AppLocalizationsEn()), 'Done');
+    expect(step.subtitle(AppLocalizationsRu()), 'Готово');
+  });
+
+  test('running browser read names the page in its localized subtitle', () {
+    final step = ComputerStep(
+      id: 'browser-reading',
+      toolName: 'browser_use',
+      arguments: {'action': 'read'},
+      loading: true,
+    );
+    expect(step.subtitle(AppLocalizationsEn()), 'Reading page');
+    expect(step.subtitle(AppLocalizationsRu()), 'Читает страницу');
+  });
+
+  test('browser preview identity keeps the safe page and captured start', () {
+    final startedAt = DateTime.utc(2026, 10, 3, 1);
+    final pageKey = 'a' * 64;
+    final step = ComputerStep(
+      id: 'browser-page',
+      toolName: 'browser_use',
+      arguments: {'action': 'read', 'url': 'https://example.com/old'},
+      content: '{"ok":true,"url":"https://example.com/docs"}',
+      metadata: {
+        'browser': {
+          'pageKey': pageKey,
+          'startedAt': startedAt.toIso8601String(),
+        },
+      },
+    );
+    expect(step.browserPageUrl, 'https://example.com/docs');
+    expect(step.browserPageKey, pageKey);
+    expect(step.withRun(null).browserPageKey, pageKey);
+    expect(step.browserStartedAt, startedAt);
+    expect(
+      ComputerStep(
+        id: 'browser-native-time',
+        toolName: 'browser_use',
+        metadata: {
+          'browser': {'startedAt': startedAt},
+        },
+      ).browserStartedAt,
+      startedAt,
+    );
+    expect(
+      ComputerStep(
+        id: 'unknown-start',
+        toolName: 'browser_use',
+      ).browserStartedAt,
+      isNull,
+    );
+  });
+
+  test('browser authentication page never exposes preview identity', () {
+    final step = ComputerStep(
+      id: 'auth-page',
+      toolName: 'browser_use',
+      arguments: {
+        'action': 'read',
+        'url': 'https://auth.openai.com/authorize?code=private-code',
+      },
+      metadata: {
+        'browser': {'pageKey': 'auth-page-key'},
+      },
+    );
+    expect(step.browserPageUrl, isNull);
+    expect(step.browserPageKey, isNull);
+  });
+
+  test(
+    'live page validation retains the captured launch display filter',
+    () async {
+      const secret = 'private-launch-host';
+      final redactor = AcpSecretRedactor([secret]);
+      final step = await ToolDisplayRedaction(
+        text: redactor.text,
+        value: redactor.value,
+      ).run(() async => ComputerStep(id: 'live-page', toolName: 'browser_use'));
+      expect(step.canPreviewBrowserPage('https://example.com/docs'), isTrue);
+      expect(
+        step.canPreviewBrowserPage('https://$secret.example/docs'),
+        isFalse,
+      );
+      expect(
+        step.canPreviewBrowserPage(
+          'https://auth.openai.com/authorize?code=secret',
+        ),
+        isFalse,
+      );
+      expect(
+        step.canPreviewBrowserPage('file:///workspace/page.html'),
+        isFalse,
+      );
+    },
+  );
+
+  test(
+    'cached browser sources retain the captured launch display filter',
+    () async {
+      const secret = 'private-thumbnail-owner';
+      final redactor = AcpSecretRedactor([secret]);
+      final step =
+          await ToolDisplayRedaction(
+            text: redactor.text,
+            value: redactor.value,
+          ).run(
+            () async =>
+                ComputerStep(id: 'cached-source', toolName: 'browser_use'),
+          );
+      expect(
+        step.canPreviewBrowserSource('/workspace/images/browser/shot.jpg'),
+        isTrue,
+      );
+      expect(
+        step.canPreviewBrowserSource('/workspace/images/browser/$secret.jpg'),
+        isFalse,
+      );
+      expect(step.canPreviewBrowserSource('/images/[REDACTED].jpg'), isFalse);
+      expect(step.canPreviewBrowserSource(''), isFalse);
+    },
+  );
+
   test('failed shell subtitle keeps its exit code and localized duration', () {
     final step = ComputerStep(
       id: 'exit-subtitle',

@@ -22422,7 +22422,7 @@ abstract class AppLocalizations {
   /// No description provided for @computerBrowserReading.
   ///
   /// In en, this message translates to:
-  /// **'Reading…'**
+  /// **'Reading page'**
   String get computerBrowserReading;
 
   /// No description provided for @computerAllParameters.
@@ -22514,6 +22514,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The AI action will stop.'**
   String get browserCloseWhileAiMessage;
+
+  /// No description provided for @computerActionSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get computerActionSummary;
+
+  /// No description provided for @computerBrowserResultStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get computerBrowserResultStatus;
+
+  /// No description provided for @computerBrowserResultTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get computerBrowserResultTitle;
 
   /// No description provided for @computerParameterYes.
   ///

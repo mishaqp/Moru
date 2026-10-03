@@ -29,6 +29,11 @@ class ComputerStepThumbnail extends StatefulWidget {
     this.width = 72,
     this.height = 54,
     this.borderRadius = 10,
+    this.browserDomain,
+    this.browserPageUrl,
+    this.browserPageKey,
+    this.browserStartedAt,
+    this.browserActivityId,
   });
 
   final ComputerStep step;
@@ -36,6 +41,14 @@ class ComputerStepThumbnail extends StatefulWidget {
   final double width;
   final double height;
   final double borderRadius;
+
+  /// Captured live context supplied only by the owning browser activity.
+  /// The step's launch display filter still validates the page address.
+  final String? browserDomain;
+  final String? browserPageUrl;
+  final String? browserPageKey;
+  final DateTime? browserStartedAt;
+  final String? browserActivityId;
 
   @override
   State<ComputerStepThumbnail> createState() => _ComputerStepThumbnailState();
@@ -109,7 +122,7 @@ class _ComputerStepThumbnailState extends State<ComputerStepThumbnail> {
           // Tool IDs can repeat across replies; a saved image owns this entry.
           stepId: 'restored:$source',
           sourcePath: source,
-          pageUrl: step.arguments['url']?.toString(),
+          pageUrl: step.browserPageUrl,
           historical: true,
         ),
       );
@@ -170,38 +183,62 @@ class _ComputerStepThumbnailState extends State<ComputerStepThumbnail> {
       builder: (context, _) {
         final step = widget.step;
         final cache = BrowserThumbnailCache.instance;
+        final browser = step.kind == ComputerStepKind.browser;
+        final allowsLivePage =
+            widget.browserPageUrl != null &&
+            step.canPreviewBrowserPage(widget.browserPageUrl);
+        final candidate = browser && step.allowsBrowserPreview
+            ? cache.previewForStep(
+                widget.conversationId,
+                sourcePath: step.imagePath,
+                activityId: allowsLivePage ? widget.browserActivityId : null,
+                pageUrl: allowsLivePage
+                    ? widget.browserPageUrl
+                    : step.browserPageUrl,
+                pageKey: allowsLivePage
+                    ? widget.browserPageKey
+                    : step.browserPageKey,
+                startedAt: allowsLivePage
+                    ? widget.browserStartedAt
+                    : step.browserStartedAt,
+              )
+            : null;
+        // A snapshot may have been cached by an earlier launch with a
+        // different display filter. Validate its own identity before showing
+        // pixels, including an exact source match.
         final thumbnail =
-            step.kind == ComputerStepKind.browser && step.allowsBrowserPreview
-            ? cache.forSource(widget.conversationId, step.imagePath) ??
-                  cache.latestIn(widget.conversationId)
+            candidate != null &&
+                step.canPreviewBrowserSource(candidate.sourcePath) &&
+                (candidate.pageUrl == null ||
+                    step.canPreviewBrowserPage(candidate.pageUrl))
+            ? candidate
             : null;
         final bytes = thumbnail?.bytes ?? _imageBytes;
+        final preview = bytes == null
+            ? _fallback(context, step)
+            : Image(
+                image: _imageProvider(context, bytes, step.imagePath ?? ''),
+                fit: BoxFit.cover,
+                excludeFromSemantics: true,
+                errorBuilder: (context, _, _) => _fallback(context, step),
+              );
         return ClipRRect(
           borderRadius: BorderRadius.circular(widget.borderRadius),
           child: SizedBox(
             key: ValueKey('computer-step-thumbnail:${step.id}'),
             width: widget.width,
             height: widget.height,
-            child: buildSharedChatSurface(
-              context,
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-              padding: EdgeInsets.zero,
-              defaultColor: Theme.of(
-                context,
-              ).colorScheme.surfaceContainerHighest,
-              child: bytes == null
-                  ? _fallback(context, step)
-                  : Image(
-                      image: _imageProvider(
-                        context,
-                        bytes,
-                        step.imagePath ?? '',
-                      ),
-                      fit: BoxFit.cover,
-                      excludeFromSemantics: true,
-                      errorBuilder: (context, _, _) => _fallback(context, step),
-                    ),
-            ),
+            child: browser
+                ? preview
+                : buildSharedChatSurface(
+                    context,
+                    borderRadius: BorderRadius.circular(widget.borderRadius),
+                    padding: EdgeInsets.zero,
+                    defaultColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    child: preview,
+                  ),
           ),
         );
       },
@@ -228,6 +265,47 @@ class _ComputerStepThumbnailState extends State<ComputerStepThumbnail> {
 
   Widget _fallback(BuildContext context, ComputerStep step) {
     final cs = Theme.of(context).colorScheme;
+    if (step.kind == ComputerStepKind.browser) {
+      final liveUrl = widget.browserPageUrl;
+      final liveDomain = widget.browserDomain;
+      final domain = liveUrl != null && step.canPreviewBrowserPage(liveUrl)
+          ? liveDomain != null &&
+                    step.canPreviewBrowserPage('https://$liveDomain')
+                ? liveDomain
+                : Uri.tryParse(liveUrl)?.host
+          : step.browserDomain;
+      return Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          border: Border.all(color: const Color(0xFFD9E1E8)),
+        ),
+        padding: EdgeInsets.fromLTRB(4, widget.height >= 60 ? 22 : 14, 4, 2),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              step.icon,
+              size: widget.height >= 100 ? 36 : 18,
+              color: const Color(0xFF64748B),
+            ),
+            if (domain != null) ...[
+              const SizedBox(height: 3),
+              Text(
+                domain,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: widget.height >= 100 ? 11 : 8,
+                  height: 1.1,
+                  color: const Color(0xFF596579),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
     if (step.kind == ComputerStepKind.command) {
       final lines = const LineSplitter().convert(step.preview);
       final preview = lines
@@ -338,23 +416,6 @@ class _ComputerStepThumbnailState extends State<ComputerStepThumbnail> {
             size: widget.height >= 100 ? 36 : 22,
             color: cs.onSurfaceVariant,
           ),
-          if (step.kind == ComputerStepKind.browser &&
-              step.browserDomain != null) ...[
-            const SizedBox(height: 3),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                step.browserDomain!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: widget.height >= 100 ? 11 : 7,
-                  height: 1.1,
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
