@@ -285,7 +285,8 @@ void main() {
         ],
       );
       expect(find.text('Status'), findsOneWidget);
-      expect(find.text('Yes'), findsOneWidget);
+      expect(find.text('Success'), findsOneWidget);
+      expect(find.text('Yes'), findsNothing);
       expect(find.text('Summary'), findsOneWidget);
       expect(find.text('Page summary'), findsOneWidget);
       expect(find.text('Title'), findsOneWidget);
@@ -297,6 +298,153 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('"details"'), findsOneWidget);
       expect(find.textContaining('"ok"'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final ok in [true, false]) {
+    testWidgets('Russian browser status is readable for ok=$ok', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final cache = BrowserThumbnailCache.instance;
+      cache.clear();
+      addTearDown(cache.clear);
+      await _open(
+        tester,
+        locale: const Locale('ru'),
+        scale: 1.3,
+        steps: [
+          _step(
+            'browser-status',
+            toolName: 'browser_use',
+            arguments: {'action': 'read'},
+            content: jsonEncode({
+              'ok': ok,
+              'url': 'https://example.com/docs',
+              if (!ok) 'error': 'Page unavailable',
+            }),
+          ),
+        ],
+      );
+      final row = find
+          .ancestor(of: find.text('Статус'), matching: find.byType(Row))
+          .first;
+      final status = tester
+          .widgetList<Text>(
+            find.descendant(of: row, matching: find.byType(Text)),
+          )
+          .map((text) => text.data)
+          .join(': ');
+      expect(status, ok ? 'Статус: Успешно' : 'Статус: Ошибка');
+      expect(find.text('Да'), findsNothing);
+      expect(find.text('Нет'), findsNothing);
+      if (!ok) expect(find.text('Page unavailable'), findsOneWidget);
+      expect(find.byType(Image), findsNothing);
+      expect(
+        find.byKey(const ValueKey('computer-step-thumbnail:browser-status')),
+        findsNothing,
+      );
+      expect(
+        tester.getSize(find.byType(ComputerStepThumbnail)).height,
+        lessThanOrEqualTo(48),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets(
+    'browser sheet keeps saved and same-page images and omits unrelated preview',
+    (tester) async {
+      final cache = BrowserThumbnailCache.instance;
+      cache.clear();
+      addTearDown(cache.clear);
+      late Directory directory;
+      late String source;
+      late BrowserThumbnail snapshot;
+      await tester.runAsync(() async {
+        directory = await Directory.systemTemp.createTemp(
+          'computer-sheet-browser',
+        );
+        final image = img.Image(width: 12, height: 8);
+        img.fill(image, color: img.ColorRgb8(70, 150, 200));
+        source = (await File(
+          '${directory.path}/page.png',
+        ).writeAsBytes(img.encodePng(image))).path;
+        snapshot = (await cache.capture(
+          conversationId: 'chat-a',
+          stepId: 'captured-step',
+          sourcePath: source,
+          sourceDirectory: directory,
+          pageUrl: 'https://example.com/docs',
+        ))!;
+      });
+      addTearDown(() => directory.delete(recursive: true));
+      final session = BrowserAgentSession.instance;
+      final originalCapture = session.captureBytes;
+      var nativeCaptures = 0;
+      session.captureBytes = (controller) async {
+        nativeCaptures++;
+        throw StateError('UI must not capture');
+      };
+      addTearDown(() => session.captureBytes = originalCapture);
+      await _open(
+        tester,
+        initialStepId: 'saved-browser',
+        steps: [
+          _step(
+            'saved-browser',
+            toolName: 'browser_use',
+            arguments: {'action': 'screenshot'},
+            content: jsonEncode({
+              'ok': true,
+              'url': 'https://example.com/docs',
+            }),
+            metadata: {
+              kMcpResultMetadataKey: mcpResultMetadata([source]),
+            },
+          ),
+          for (final (id, url) in [
+            ('same-page', 'https://example.com/docs'),
+            ('other-page', 'https://other.example/docs'),
+          ])
+            _step(
+              id,
+              toolName: 'browser_use',
+              arguments: {'action': 'read', 'url': url},
+              content: jsonEncode({'ok': true, 'url': url}),
+              metadata: {
+                'browser': {'startedAt': '2020-01-01T00:00:00Z'},
+              },
+            ),
+        ],
+      );
+      for (final id in ['saved-browser', 'same-page']) {
+        final thumbnail = find.byKey(ValueKey('computer-step-thumbnail:$id'));
+        final image = tester.widget<Image>(
+          find.descendant(of: thumbnail, matching: find.byType(Image)),
+        );
+        expect(
+          ((image.image as SafeResizeImage).imageProvider as MemoryImage).bytes,
+          same(snapshot.bytes),
+        );
+        expect(tester.getSize(thumbnail).height, greaterThan(48));
+        await tester.tap(find.byKey(_next));
+        await tester.pumpAndSettle();
+      }
+      expect(find.byType(Image), findsNothing);
+      expect(
+        find.byKey(const ValueKey('computer-step-thumbnail:other-page')),
+        findsNothing,
+      );
+      expect(
+        tester.getSize(find.byType(ComputerStepThumbnail)).height,
+        lessThanOrEqualTo(48),
+      );
+      expect(nativeCaptures, 0);
       expect(tester.takeException(), isNull);
     },
   );

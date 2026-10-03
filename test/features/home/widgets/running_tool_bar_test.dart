@@ -154,7 +154,7 @@ void main() {
 
     await tester.pumpWidget(_host(registry: registry, runtime: runtime));
     expect(find.text('second'), findsOneWidget);
-    expect(find.text('2 / 2'), findsOneWidget);
+    expect(find.text('2/2'), findsOneWidget);
     expect(find.text('another response'), findsNothing);
   });
 

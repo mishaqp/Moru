@@ -20,6 +20,7 @@ Widget _host({
   String? conversationId = 'chat',
   String? responseId = 'reply',
   ComputerToolSource? source,
+  double keyboard = 0,
 }) {
   final strip = ComposerStatusStrip(
     conversationId: conversationId,
@@ -31,7 +32,10 @@ Widget _host({
     value: registry,
     child: MaterialApp(
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(disableAnimations: true),
+        data: MediaQuery.of(context).copyWith(
+          disableAnimations: true,
+          viewInsets: EdgeInsets.only(bottom: keyboard),
+        ),
         child: child!,
       ),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -246,7 +250,7 @@ void main() {
         find.byKey(const ValueKey('computer-step-thumbnail:current-browser')),
         findsOneWidget,
       );
-      expect(find.text('2 / 2'), findsOneWidget);
+      expect(find.text('2/2'), findsOneWidget);
       oldRun.complete(status: ToolRunStatus.succeeded);
       await tester.pumpAndSettle();
       await tester.pumpWidget(const SizedBox());
@@ -601,8 +605,18 @@ void main() {
     await tester.pumpWidget(_host(registry: registry));
     await tester.pumpAndSettle();
     expect(find.byKey(ComputerStatusPanel.panelKey), findsOneWidget);
-    expect(find.text('1 / 1'), findsOneWidget);
+    expect(find.text('1/1'), findsOneWidget);
     expect(find.text('echo ready'), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(ComputerStatusPanel.panelKey)).height,
+      inInclusiveRange(56, 60),
+    );
+    expect(
+      tester.getSize(
+        find.byKey(const ValueKey('computer-step-thumbnail:command')),
+      ),
+      const Size(64, 40),
+    );
     run.appendStdout(Uint8List.fromList(utf8.encode('first\nlatest line')));
     await tester.pump(ToolRun.notifyInterval);
     expect(find.textContaining('latest line'), findsOneWidget);
@@ -676,10 +690,10 @@ void main() {
       ];
       await tester.pumpWidget(_host(registry: registry, steps: steps));
       await tester.pumpAndSettle();
-      expect(find.text('2 / 2'), findsOneWidget);
+      expect(find.text('2/2'), findsOneWidget);
       await tester.tap(find.byKey(ComputerStatusPanel.previousKey));
       await tester.pumpAndSettle();
-      expect(find.text('1 / 2'), findsOneWidget);
+      expect(find.text('1/2'), findsOneWidget);
       steps = [
         ...steps,
         ComputerStep(
@@ -691,7 +705,7 @@ void main() {
       ];
       await tester.pumpWidget(_host(registry: registry, steps: steps));
       await tester.pumpAndSettle();
-      expect(find.text('1 / 3'), findsOneWidget);
+      expect(find.text('1/3'), findsOneWidget);
       steps = [
         ComputerStep(
           id: 'a',
@@ -703,7 +717,7 @@ void main() {
       ];
       await tester.pumpWidget(_host(registry: registry, steps: steps));
       await tester.pumpAndSettle();
-      expect(find.text('3 / 3'), findsOneWidget);
+      expect(find.text('3/3'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
       registry.dispose();
     },
@@ -807,34 +821,44 @@ void main() {
     },
   );
 
-  testWidgets('narrow scaled strip has compact 48dp pager controls', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(360, 740);
-    tester.view.devicePixelRatio = 1;
-    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
-    addTearDown(tester.view.reset);
-    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-    final registry = ToolRunRegistry();
-    final step = ComputerStep(
-      id: 'a',
-      toolName: 'shell',
-      arguments: {'command': 'a very long command with arguments'},
-      loading: true,
-    );
-    await tester.pumpWidget(_host(registry: registry, steps: [step]));
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-    for (final key in [
-      ComputerStatusPanel.previousKey,
-      ComputerStatusPanel.nextKey,
-    ]) {
-      final size = tester.getSize(find.byKey(key));
-      expect(size.width, greaterThanOrEqualTo(48));
-      expect(size.height, greaterThanOrEqualTo(48));
-    }
-    expect(find.byTooltip('Stop'), findsNothing);
-    await tester.pumpWidget(const SizedBox());
-    registry.dispose();
-  });
+  testWidgets(
+    'scaled landscape strip has inline 48dp pagers above the keyboard',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 240);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final registry = ToolRunRegistry();
+      final step = ComputerStep(
+        id: 'a',
+        toolName: 'shell',
+        arguments: {'command': 'a very long command with arguments'},
+        loading: true,
+      );
+      await tester.pumpWidget(
+        _host(registry: registry, steps: [step], keyboard: 100),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final panel = tester.getRect(find.byKey(ComputerStatusPanel.panelKey));
+      expect(panel.top, greaterThanOrEqualTo(0));
+      expect(panel.bottom, lessThanOrEqualTo(140));
+      for (final key in [
+        ComputerStatusPanel.previousKey,
+        ComputerStatusPanel.nextKey,
+      ]) {
+        final target = tester.getRect(find.byKey(key));
+        expect(target.width, greaterThanOrEqualTo(48));
+        expect(target.height, greaterThanOrEqualTo(48));
+        expect(target.center.dy, closeTo(panel.center.dy, 0.1));
+        expect(target.top, greaterThanOrEqualTo(panel.top));
+        expect(target.right, lessThanOrEqualTo(panel.right));
+        expect(target.bottom, lessThanOrEqualTo(panel.bottom));
+      }
+      expect(find.byTooltip('Stop'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      registry.dispose();
+    },
+  );
 }

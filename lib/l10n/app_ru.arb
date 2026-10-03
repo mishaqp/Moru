@@ -5414,6 +5414,8 @@
   "browserCloseWhileAiMessage": "Действие ИИ будет остановлено.",
   "computerActionSummary": "Итог",
   "computerBrowserResultStatus": "Статус",
+  "computerBrowserResultSuccess": "Успешно",
+  "computerBrowserResultError": "Ошибка",
   "computerBrowserResultTitle": "Заголовок",
   "computerParameterYes": "Да",
   "computerParameterNo": "Нет",

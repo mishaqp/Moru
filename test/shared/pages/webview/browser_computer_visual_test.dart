@@ -375,6 +375,13 @@ void main() {
         final rect = tester.getRect(find.byKey(ComputerStatusPanel.panelKey));
         expect(rect.bottom, lessThanOrEqualTo(844));
         expect(rect.width, greaterThan(300));
+        expect(rect.height, inInclusiveRange(56, 60));
+        expect(
+          tester.getSize(
+            find.byKey(const ValueKey('computer-step-thumbnail:command')),
+          ),
+          const Size(64, 40),
+        );
       }
       await _snapshot(tester, key, '$themeName-strip');
       await tester.pumpWidget(const SizedBox.shrink());

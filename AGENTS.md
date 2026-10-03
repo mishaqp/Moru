@@ -81,10 +81,15 @@ package name does not require building other platforms.
   and keeps the open plan (`TaskPlanChip`) nearby. It replaces the separate
   running-command chip in the composer, follows the newest working step,
   retains a manually selected working step and briefly shows the final result.
-  The working card is at most 88dp at text scale 1.0 (76x56 preview for
-  commands/files, 112x64 light page preview for browser steps). Browser cards
-  have a domain pill with a blue running pulse (disabled by reduced motion),
-  green success, red error or grey stopped dot. The preview expands the shared
+  Every working card is one 56–60dp row at text scale 1.0: a 64x40 preview
+  with 10dp corners, two text lines and an inline compact pager (16dp icons,
+  48dp touch targets). Browser cards have a domain/status pill beside the
+  action, with a blue running pulse (disabled by reduced motion), green
+  success, red error or grey stopped dot. Without a snapshot the preview is
+  a small themed Globe tile without domain text. URL-less browser steps,
+  including done, show the last preceding page domain from the same response,
+  validated by the selected step's display filter; this label never grants
+  access to an earlier step's snapshot. The preview expands the shared
   browser without reloading its controller; the rest opens ComputerSheet.
   Browser previews use an exact saved source or a proven same-page snapshot
   captured no earlier than the step start; a different site's latest chat image
@@ -103,7 +108,9 @@ package name does not require building other platforms.
   Preserve original specialized details on long press, reruns and approvals.
   The sheet centers its title between equal 44dp close/action slots, shows
   known parameters as labeled rows and hides other filtered JSON in a collapsed
-  section; empty JSON sections are hidden. Browser done actions use a Summary
+  section; empty JSON sections are hidden. Browser steps without a checked
+  snapshot have no large placeholder in the sheet. Boolean browser result
+  status reads Success/Error, never Yes/No. Browser done actions use a Summary
   chip and plain summary text; other browser results show readable status,
   summary, title and URL, with raw JSON only in the collapsed parameters.
   Commands fill the result area and follow output until the user

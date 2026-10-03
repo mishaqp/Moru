@@ -62,8 +62,8 @@ void main() {
               },
             ),
             conversationId: 'chat',
-            width: 112,
-            height: 64,
+            width: 64,
+            height: 40,
           ),
         ),
       ),
@@ -72,12 +72,11 @@ void main() {
 
     expect(find.byType(Image), findsNothing);
     expect(find.byIcon(Lucide.Globe), findsOneWidget);
-    expect(find.text('ya.ru'), findsOneWidget);
-    final previewTop = tester.getTopLeft(find.byType(ComputerStepThumbnail)).dy;
-    expect(
-      tester.getTopLeft(find.byIcon(Lucide.Globe)).dy,
-      greaterThanOrEqualTo(previewTop + 22),
-    );
+    expect(find.byType(Text), findsNothing);
+    final preview = tester.getRect(find.byType(ComputerStepThumbnail));
+    final globe = tester.getRect(find.byIcon(Lucide.Globe));
+    expect(preview.size, const Size(64, 40));
+    expect(globe.center, preview.center);
     final fallback = tester.widget<Container>(
       find
           .ancestor(
@@ -88,7 +87,9 @@ void main() {
     );
     expect(
       (fallback.decoration as BoxDecoration).color,
-      const Color(0xFFF9FAFB),
+      Theme.of(
+        tester.element(find.byIcon(Lucide.Globe)),
+      ).colorScheme.surfaceContainerHighest,
     );
     expect(tester.takeException(), isNull);
   });
@@ -132,8 +133,8 @@ void main() {
             conversationId: 'chat',
             browserPageUrl: 'https://ya.ru',
             browserDomain: 'launch-secret',
-            width: 112,
-            height: 64,
+            width: 64,
+            height: 40,
           ),
         ),
       ),
@@ -141,7 +142,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('launch-secret'), findsNothing);
-    expect(find.text('ya.ru'), findsOneWidget);
+    expect(find.byIcon(Lucide.Globe), findsOneWidget);
+    expect(find.byType(Text), findsNothing);
+    expect(step.canPreviewBrowserPage('https://launch-secret'), isFalse);
     expect(tester.takeException(), isNull);
   });
 
@@ -201,10 +204,62 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(Image), findsNothing);
-      expect(find.text('wttr.in'), findsOneWidget);
+      expect(find.byIcon(Lucide.Globe), findsOneWidget);
+      expect(find.byType(Text), findsNothing);
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('compact preview retains the checked screenshot pixels', (
+    tester,
+  ) async {
+    await cacheWeatherPage(tester);
+    final step = ComputerStep(
+      id: 'weather-read',
+      toolName: 'browser_use',
+      arguments: {'action': 'read', 'url': 'https://wttr.in/Paris'},
+      content: jsonEncode({
+        'ok': true,
+        'url': 'https://wttr.in/Paris',
+        'screenshot': cache.latestIn('chat')!.sourcePath,
+      }),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ComputerStepThumbnail(
+            step: step,
+            conversationId: 'chat',
+            width: 64,
+            height: 40,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(Image), findsOneWidget);
+    expect(find.byIcon(Lucide.Globe), findsNothing);
+    expect(find.byType(Text), findsNothing);
+    expect(
+      tester.getSize(
+        find.byKey(const ValueKey('computer-step-thumbnail:weather-read')),
+      ),
+      const Size(64, 40),
+    );
+    final clip = tester.widget<ClipRRect>(
+      find
+          .ancestor(
+            of: find.byKey(
+              const ValueKey('computer-step-thumbnail:weather-read'),
+            ),
+            matching: find.byType(ClipRRect),
+          )
+          .first,
+    );
+    expect(clip.borderRadius, BorderRadius.circular(10));
+    expect(tester.widget<Image>(find.byType(Image)).fit, BoxFit.cover);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 String _redactLaunchSecret(String value) =>

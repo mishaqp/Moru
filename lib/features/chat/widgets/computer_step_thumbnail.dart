@@ -34,6 +34,7 @@ class ComputerStepThumbnail extends StatefulWidget {
     this.browserPageKey,
     this.browserStartedAt,
     this.browserActivityId,
+    this.hideBrowserPlaceholder = false,
   });
 
   final ComputerStep step;
@@ -49,6 +50,9 @@ class ComputerStepThumbnail extends StatefulWidget {
   final String? browserPageKey;
   final DateTime? browserStartedAt;
   final String? browserActivityId;
+
+  /// Detail sheets omit the empty browser tile while retaining checked images.
+  final bool hideBrowserPlaceholder;
 
   @override
   State<ComputerStepThumbnail> createState() => _ComputerStepThumbnailState();
@@ -214,6 +218,9 @@ class _ComputerStepThumbnailState extends State<ComputerStepThumbnail> {
             ? candidate
             : null;
         final bytes = thumbnail?.bytes ?? _imageBytes;
+        if (browser && bytes == null && widget.hideBrowserPlaceholder) {
+          return const SizedBox.shrink();
+        }
         final preview = bytes == null
             ? _fallback(context, step)
             : Image(
@@ -266,44 +273,15 @@ class _ComputerStepThumbnailState extends State<ComputerStepThumbnail> {
   Widget _fallback(BuildContext context, ComputerStep step) {
     final cs = Theme.of(context).colorScheme;
     if (step.kind == ComputerStepKind.browser) {
-      final liveUrl = widget.browserPageUrl;
-      final liveDomain = widget.browserDomain;
-      final domain = liveUrl != null && step.canPreviewBrowserPage(liveUrl)
-          ? liveDomain != null &&
-                    step.canPreviewBrowserPage('https://$liveDomain')
-                ? liveDomain
-                : Uri.tryParse(liveUrl)?.host
-          : step.browserDomain;
+      if (widget.hideBrowserPlaceholder) return const SizedBox.shrink();
       return Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
+          color: cs.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(widget.borderRadius),
-          border: Border.all(color: const Color(0xFFD9E1E8)),
+          border: Border.all(color: cs.outlineVariant),
         ),
-        padding: EdgeInsets.fromLTRB(4, widget.height >= 60 ? 22 : 14, 4, 2),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              step.icon,
-              size: widget.height >= 100 ? 36 : 18,
-              color: const Color(0xFF64748B),
-            ),
-            if (domain != null) ...[
-              const SizedBox(height: 3),
-              Text(
-                domain,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: widget.height >= 100 ? 11 : 8,
-                  height: 1.1,
-                  color: const Color(0xFF596579),
-                ),
-              ),
-            ],
-          ],
-        ),
+        alignment: Alignment.center,
+        child: Icon(step.icon, size: 18, color: cs.onSurfaceVariant),
       );
     }
     if (step.kind == ComputerStepKind.command) {
@@ -380,9 +358,9 @@ class _ComputerStepThumbnailState extends State<ComputerStepThumbnail> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final factor in [0.9, 0.65, 0.8])
+                    for (final factor in [0.9, 0.65])
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
+                        padding: const EdgeInsets.only(bottom: 2),
                         child: FractionallySizedBox(
                           widthFactor: factor,
                           child: Container(

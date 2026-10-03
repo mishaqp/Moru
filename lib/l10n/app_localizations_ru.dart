@@ -12774,6 +12774,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get computerBrowserResultStatus => 'Статус';
 
   @override
+  String get computerBrowserResultSuccess => 'Успешно';
+
+  @override
+  String get computerBrowserResultError => 'Ошибка';
+
+  @override
   String get computerBrowserResultTitle => 'Заголовок';
 
   @override

@@ -281,6 +281,7 @@ class _ComputerSheetState extends State<ComputerSheet> {
                                   ComputerStepThumbnail(
                                     step: step,
                                     conversationId: widget.conversationId,
+                                    hideBrowserPlaceholder: true,
                                     width: constraints.maxWidth,
                                     height: math.min(
                                       220,
@@ -661,7 +662,9 @@ class _ComputerSheetState extends State<ComputerSheet> {
       if (result['ok'] case final bool ok)
         (
           l10n.computerBrowserResultStatus,
-          ok ? l10n.computerParameterYes : l10n.computerParameterNo,
+          ok
+              ? l10n.computerBrowserResultSuccess
+              : l10n.computerBrowserResultError,
         ),
       if (summary is String && summary.trim().isNotEmpty)
         (l10n.computerActionSummary, summary),

@@ -22527,6 +22527,18 @@ abstract class AppLocalizations {
   /// **'Status'**
   String get computerBrowserResultStatus;
 
+  /// No description provided for @computerBrowserResultSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Success'**
+  String get computerBrowserResultSuccess;
+
+  /// No description provided for @computerBrowserResultError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get computerBrowserResultError;
+
   /// No description provided for @computerBrowserResultTitle.
   ///
   /// In en, this message translates to:
