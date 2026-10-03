@@ -63,6 +63,11 @@ package name does not require building other platforms.
   privately on its approval card or in MCP settings, never in model arguments
   or results. Full trust cannot fill missing credentials. It reuses the MCP
   JSON importer and runtime; package installation stays in workspace `shell`.
+  Ordinary env/header values are visible; literal secret assignments in shell
+  arguments are rejected. New STDIO servers default to the chat workspace
+  unless explicitly bound elsewhere or unbound. Responses note that new tools
+  become available from the next message; listed tool availability also
+  requires an enabled, connected server.
 - **Problem reports**: opt-in `report_problem` asks for fresh consent unless
   global full-trust mode is enabled; individual "Always allow" is unavailable.
   `ProblemReportService` exports a private ZIP with

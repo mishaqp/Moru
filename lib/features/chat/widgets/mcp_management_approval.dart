@@ -54,6 +54,10 @@ class _McpManagementApprovalState extends State<McpManagementApproval> {
     final ready = _inputs.values.every(
       (c) => c.text.isNotEmpty && c.text.length <= 8192,
     );
+    String fieldValue(MapEntry entry) =>
+        entry.value is Map && entry.value.containsKey('value')
+        ? '${entry.key}=${entry.value['value']}'
+        : '${entry.key} (${entry.value is Map && entry.value['value_set'] == true ? l10n.mcpManagerValueSet : l10n.mcpManagerValueNeeded})';
     Widget description(Map server) {
       final rows = <String>[
         '${server['name']} · ${server['type'].toString().toUpperCase()}',
@@ -72,7 +76,7 @@ class _McpManagementApprovalState extends State<McpManagementApproval> {
           '${l10n.mcpWorkspaceBindingLabel}: ${server['workspaceId']}',
         for (final field in ['env', 'headers'])
           if (server[field] is Map && (server[field] as Map).isNotEmpty)
-            '${field == 'env' ? l10n.mcpServerEditSheetStdioEnvironmentTitle : l10n.mcpServerEditSheetCustomHeadersTitle}: ${(server[field] as Map).entries.map((e) => '${e.key} (${e.value is Map && e.value['value_set'] == true ? l10n.mcpManagerValueSet : l10n.mcpManagerValueNeeded})').join(', ')}',
+            '${field == 'env' ? l10n.mcpServerEditSheetStdioEnvironmentTitle : l10n.mcpServerEditSheetCustomHeadersTitle}: ${(server[field] as Map).entries.map(fieldValue).join(', ')}',
       ];
       return Text(
         rows.join('\n'),
