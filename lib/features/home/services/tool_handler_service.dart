@@ -636,27 +636,32 @@ class ToolHandlerService {
               tool: name,
             );
           }
-          if (approvalService == null) {
-            return _toolError(
-              error: 'approval_unavailable',
-              message: 'A problem report requires the user\'s confirmation.',
-              tool: name,
+          if (!settings.toolAutoApproveAll) {
+            if (approvalService == null) {
+              return _toolError(
+                error: 'approval_unavailable',
+                message: 'A problem report requires the user\'s confirmation.',
+                tool: name,
+              );
+            }
+            // The settings value changes before the provider's next rebuild.
+            approvalService.setAutoApproveAll(false);
+            final approval = await approvalService.requestApproval(
+              toolCallId: approvalIdFor(name, toolCallId),
+              toolName: name,
+              arguments: const {},
+              conversationId: conversationId,
             );
+            ensureLiveToolCall();
+            if (!approval.approved) {
+              return _toolError(
+                error: 'approval_denied',
+                message: approval.denyReason ?? 'User denied the tool call',
+                tool: name,
+              );
+            }
           }
-          final approval = await approvalService.requestApproval(
-            toolCallId: approvalIdFor(name, toolCallId),
-            toolName: name,
-            arguments: const {},
-            conversationId: conversationId,
-          );
           ensureLiveToolCall();
-          if (!approval.approved) {
-            return _toolError(
-              error: 'approval_denied',
-              message: approval.denyReason ?? 'User denied the tool call',
-              tool: name,
-            );
-          }
           if (!isEnabled()) {
             return _toolError(
               error: 'permission_denied',

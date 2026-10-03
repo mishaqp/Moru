@@ -23,7 +23,7 @@ void main() {
     final preferences = createBusinessTestPreferences();
     final settings = SettingsProvider(preferences);
     final tts = TtsProvider(preferences: preferences);
-    final approvals = ToolApprovalService()..setAutoApproveAll(true);
+    final approvals = ToolApprovalService();
     addTearDown(settings.dispose);
     addTearDown(tts.dispose);
     addTearDown(approvals.dispose);

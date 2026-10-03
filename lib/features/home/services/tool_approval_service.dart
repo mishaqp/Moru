@@ -54,7 +54,7 @@ class ToolApprovalRequest {
   String? get generationRunId => owner?.generationRunId;
   String? get assistantMessageId => owner?.assistantMessageId;
   bool get hasLiveOwner => owner?.isActive() == true;
-  // Diagnostic exports always need fresh consent, including in trusted mode.
+  // Outside global trusted mode, diagnostic exports need fresh in-chat consent.
   bool get requiresExplicitConsent => toolName == 'report_problem';
   final Completer<ToolApprovalResult> _completer;
 
@@ -89,7 +89,7 @@ class ToolApprovalService extends ChangeNotifier {
   bool _autoApproveAll = false;
   bool _disposed = false;
 
-  /// Global trusted mode. Private diagnostic exports still require consent.
+  /// Global trusted mode, including private diagnostic exports.
   bool get autoApproveAll => _autoApproveAll;
 
   /// Synchronizes the global trusted mode from SettingsProvider.
@@ -105,7 +105,6 @@ class ToolApprovalService extends ChangeNotifier {
     final waiting = _pending.entries.toList(growable: false);
     for (final entry in waiting) {
       final req = entry.value;
-      if (req.requiresExplicitConsent) continue;
       _pending.remove(entry.key);
       if (!req._completer.isCompleted) {
         req._completer.complete(
@@ -181,7 +180,7 @@ class ToolApprovalService extends ChangeNotifier {
                     _storedConversationId(conversationId)))) {
       return Future.value(ToolApprovalResult.denied('cancelled'));
     }
-    if (_autoApproveAll && toolName != 'report_problem') {
+    if (_autoApproveAll) {
       return Future<ToolApprovalResult>.value(ToolApprovalResult.approved());
     }
     final key = _storageKey(conversationId, toolCallId);

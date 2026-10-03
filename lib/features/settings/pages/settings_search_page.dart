@@ -242,12 +242,7 @@ class _SettingsSearchState extends State<_SettingsSearch> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final (logs, dynamicColor) = context.select<SettingsProvider, (bool, bool)>(
-      (settings) => (
-        settings.requestLogEnabled ||
-            settings.flutterLogEnabled ||
-            settings.contextLogEnabled,
-        settings.dynamicColorSupported,
-      ),
+      (settings) => (true, settings.dynamicColorSupported),
     );
     final configuration = (l10n, logs, dynamicColor);
     if (_configuration != configuration) {

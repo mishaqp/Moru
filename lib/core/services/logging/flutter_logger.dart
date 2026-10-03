@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../../../utils/app_directories.dart';
 import 'log_redactor.dart';
@@ -50,14 +51,21 @@ class FlutterLogger {
       .map((event) => event.split('\n').first)
       .toList();
 
-  static void _recordTechnical(String tag, {String? type, String? stack}) {
+  static void _recordTechnical(
+    String tag, {
+    String? type,
+    String? stack,
+    String? metrics,
+  }) {
     final frames = (stack ?? '')
         .split('\n')
         .where((line) => _stackFrame.hasMatch(line.trim()))
         .take(20);
     final text =
         '[${DateTime.now().toUtc().toIso8601String()}] [$tag]'
-        '${type == null ? '' : ' $type'}\n${frames.isEmpty ? '' : '${frames.join('\n')}\n'}';
+        '${type == null ? '' : ' $type'}'
+        '${metrics == null ? '' : ' $metrics'}\n'
+        '${frames.isEmpty ? '' : '${frames.join('\n')}\n'}';
     final bytes = utf8.encode(text).length;
     if (bytes > technicalTailMaxBytes) return;
     _technicalEvents.add(text);
@@ -80,10 +88,53 @@ class FlutterLogger {
     );
   }
 
+  static Timer? _slowFrameTimer;
+  static int _slowFrameCount = 0;
+  static ui.FrameTiming? _longestSlowFrame;
+
+  static void _onFrameTimings(List<ui.FrameTiming> timings) {
+    if (!_enabled) return;
+    for (final frame in timings) {
+      if (frame.totalSpan <= const Duration(milliseconds: 100)) continue;
+      _slowFrameCount++;
+      if (_longestSlowFrame == null ||
+          frame.totalSpan > _longestSlowFrame!.totalSpan) {
+        _longestSlowFrame = frame;
+      }
+    }
+    if (_longestSlowFrame != null) {
+      _slowFrameTimer ??= Timer(const Duration(seconds: 1), _recordSlowFrames);
+    }
+  }
+
+  static void _recordSlowFrames() {
+    final frame = _longestSlowFrame;
+    final count = _slowFrameCount;
+    _slowFrameTimer = null;
+    _longestSlowFrame = null;
+    _slowFrameCount = 0;
+    if (!_enabled || frame == null) return;
+
+    String milliseconds(Duration duration) =>
+        (duration.inMicroseconds / 1000).toStringAsFixed(1);
+    _recordTechnical(
+      'SlowFrames',
+      metrics:
+          'count=$count max_ms=${milliseconds(frame.totalSpan)} '
+          'build_ms=${milliseconds(frame.buildDuration)} '
+          'raster_ms=${milliseconds(frame.rasterDuration)}',
+    );
+  }
+
   static Future<void> setEnabled(bool v) async {
     if (_enabled == v) return;
     _enabled = v;
     if (!v) {
+      SchedulerBinding.instance.removeTimingsCallback(_onFrameTimings);
+      _slowFrameTimer?.cancel();
+      _slowFrameTimer = null;
+      _longestSlowFrame = null;
+      _slowFrameCount = 0;
       try {
         await _sink?.flush();
       } catch (_) {}
@@ -93,6 +144,7 @@ class FlutterLogger {
       _sink = null;
       _sinkDate = null;
     } else {
+      SchedulerBinding.instance.addTimingsCallback(_onFrameTimings);
       _writeErrorReported = false;
     }
   }

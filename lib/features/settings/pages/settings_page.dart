@@ -464,21 +464,17 @@ class SettingsPage extends StatelessWidget {
                   ).push(MaterialPageRoute(builder: (_) => const StatsPage()));
                 },
               ),
-              if (settings.requestLogEnabled ||
-                  settings.flutterLogEnabled ||
-                  settings.contextLogEnabled) ...[
-                _iosDivider(context),
-                _iosNavRow(
-                  context,
-                  icon: Lucide.FileText,
-                  label: l10n.settingsPageLogs,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const LogViewerPage()),
-                    );
-                  },
-                ),
-              ],
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.FileText,
+                label: l10n.settingsPageLogs,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const LogViewerPage()),
+                  );
+                },
+              ),
               _iosDivider(context),
               _iosNavRow(
                 context,

@@ -26,14 +26,13 @@ void main() {
       arguments: {},
       conversationId: 'chat',
     );
-    service.setAutoApproveAll(true);
     expect(service.pendingRequests, hasLength(1));
     await expectStillPending(report);
     expect((await other).approved, isFalse);
     service.approve('same', conversationId: 'chat');
     expect((await report).approved, isTrue);
   });
-  test('problem reports require consent even with full trust', () async {
+  test('problem reports bypass consent with full trust', () async {
     final service = ToolApprovalService()..setAutoApproveAll(true);
     addTearDown(service.dispose);
     final pending = service.requestApproval(
@@ -42,13 +41,11 @@ void main() {
       arguments: const {},
       conversationId: 'chat',
     );
-    expect(service.pendingRequests, hasLength(1));
-    await expectStillPending(pending);
-    service.approve('report', conversationId: 'chat');
+    expect(service.pendingRequests, isEmpty);
     expect((await pending).approved, isTrue);
   });
 
-  test('enabling full trust leaves a problem report waiting', () async {
+  test('enabling full trust approves a waiting problem report', () async {
     final service = ToolApprovalService();
     addTearDown(service.dispose);
     final pending = service.requestApproval(
@@ -58,10 +55,25 @@ void main() {
       conversationId: 'chat',
     );
     service.setAutoApproveAll(true);
-    expect(service.pendingRequests, hasLength(1));
-    await expectStillPending(pending);
-    service.deny('report', conversationId: 'chat');
-    expect((await pending).approved, isFalse);
+    expect(service.pendingRequests, isEmpty);
+    expect((await pending).approved, isTrue);
+  });
+
+  test('problem reports require fresh consent without full trust', () async {
+    final service = ToolApprovalService();
+    addTearDown(service.dispose);
+    for (var i = 0; i < 2; i++) {
+      final pending = service.requestApproval(
+        toolCallId: 'report',
+        toolName: 'report_problem',
+        arguments: const {},
+        conversationId: 'chat',
+      );
+      expect(service.pendingRequests.single.requiresExplicitConsent, isTrue);
+      await expectStillPending(pending);
+      service.approve('report', conversationId: 'chat');
+      expect((await pending).approved, isTrue);
+    }
   });
 
   test(

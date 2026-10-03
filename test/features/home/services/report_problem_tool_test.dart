@@ -1,8 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+// ignore: depend_on_referenced_packages
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:provider/provider.dart';
 import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/providers/assistant_provider.dart';
@@ -17,8 +22,23 @@ import 'package:Kelivo/features/home/services/tool_handler_service.dart';
 
 import '../../../support/business_test_harness.dart';
 
+class _ReportPathProvider extends PathProviderPlatform {
+  _ReportPathProvider(this.root);
+
+  final String root;
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => root;
+
+  @override
+  Future<String?> getApplicationSupportPath() async => root;
+
+  @override
+  Future<String?> getApplicationCachePath() async => '$root/cache';
+}
+
 void main() {
-  test('report_problem is reserved, opt-in and always requires approval', () {
+  test('report_problem is reserved, opt-in and marked for approval', () {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     const disabled = Assistant(id: 'test', name: 'Test');
@@ -47,7 +67,7 @@ void main() {
   });
 
   testWidgets(
-    'a newly enabled report still asks before collecting data',
+    'a newly enabled report asks with full trust disabled even before approval state sync',
     (tester) async {
       final preferences = createBusinessTestPreferences();
       final assistants = AssistantProvider(preferences: preferences);
@@ -60,6 +80,7 @@ void main() {
       }
       await assistants.loaded;
       await settings.loaded;
+      expect(settings.toolAutoApproveAll, isFalse);
       final id = await assistants.addAssistant(name: 'Test');
       final oldSnapshot = assistants.getById(id)!;
       await assistants.updateAssistant(
@@ -113,4 +134,110 @@ void main() {
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
+
+  for (final withApprovalService in [true, false]) {
+    testWidgets(
+      'full trust creates reports without consent (approval service: $withApprovalService)',
+      (tester) async {
+        final root = (await tester.runAsync(
+          () => Directory.systemTemp.createTemp('moru-trusted-report-'),
+        ))!;
+        final previousPathProvider = PathProviderPlatform.instance;
+        PathProviderPlatform.instance = _ReportPathProvider(root.path);
+        addTearDown(() async {
+          PathProviderPlatform.instance = previousPathProvider;
+          await root.delete(recursive: true);
+        });
+        PackageInfo.setMockInitialValues(
+          appName: 'Moru',
+          packageName: 'com.moru',
+          version: '0.1.47',
+          buildNumber: '48',
+          buildSignature: '',
+        );
+        const deviceChannel = MethodChannel('app.device_tools');
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          deviceChannel,
+          (_) async => {'android': '16', 'sdk': 36, 'model': 'Test Phone'},
+        );
+        addTearDown(() {
+          tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            deviceChannel,
+            null,
+          );
+        });
+        final preferences = createBusinessTestPreferences();
+        final assistants = AssistantProvider(preferences: preferences);
+        final settings = SettingsProvider(preferences);
+        final mcp = McpProvider(preferences: preferences);
+        final tools = McpToolService();
+        final approvals = ToolApprovalService()..setAutoApproveAll(true);
+        for (final notifier in [assistants, settings, mcp, tools, approvals]) {
+          addTearDown(notifier.dispose);
+        }
+        await assistants.loaded;
+        await settings.loaded;
+        await settings.setToolAutoApproveAll(true);
+        final id = await assistants.addAssistant(name: 'Test');
+        final assistant = assistants
+            .getById(id)!
+            .copyWith(localToolIds: ['report_problem']);
+        await assistants.updateAssistant(assistant);
+        try {
+          await tester.pumpWidget(
+            MultiProvider(
+              providers: [
+                ChangeNotifierProvider<AssistantProvider>.value(
+                  value: assistants,
+                ),
+                ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+                ChangeNotifierProvider<McpProvider>.value(value: mcp),
+                ChangeNotifierProvider<McpToolService>.value(value: tools),
+              ],
+              child: const SizedBox.shrink(),
+            ),
+          );
+          final handler =
+              ToolHandlerService(
+                contextProvider: tester.element(find.byType(SizedBox)),
+              ).buildToolCallHandler(
+                settings,
+                assistant,
+                approvalService: withApprovalService ? approvals : null,
+                conversationId: 'chat',
+              )!;
+          late Future<Object?> result;
+          await tester.runAsync(() async {
+            result = handler('report_problem', {}, toolCallId: 'trusted');
+            await Future<void>.delayed(Duration.zero);
+          });
+          expect(approvals.pendingRequests, isEmpty);
+          final report = (await tester.runAsync(
+            () async =>
+                jsonDecode(await result as String) as Map<String, dynamic>,
+          ))!;
+          expect(report['ok'], isTrue);
+          expect(report['name'], startsWith('moru-problem-'));
+          expect(
+            await tester.runAsync(
+              () => File(report['path'] as String).exists(),
+            ),
+            isTrue,
+          );
+
+          await assistants.updateAssistant(
+            assistant.copyWith(localToolIds: []),
+          );
+          final revoked = jsonDecode(
+            await handler('report_problem', {}) as String,
+          );
+          expect(revoked['error'], 'permission_denied');
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
 }

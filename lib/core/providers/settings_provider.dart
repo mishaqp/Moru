@@ -1177,9 +1177,9 @@ class SettingsProvider extends ChangeNotifier {
           in prefs.getStringList(_sidebarShortcutsKey) ?? const <String>[])
         ?SidebarShortcut.decode(raw),
     });
-    _requestLogEnabled = prefs.getBool(_requestLogEnabledKey) ?? true;
+    _requestLogEnabled = prefs.getBool(_requestLogEnabledKey) ?? false;
     await RequestLogger.setEnabled(_requestLogEnabled);
-    _contextLogEnabled = prefs.getBool(_contextLogEnabledKey) ?? true;
+    _contextLogEnabled = prefs.getBool(_contextLogEnabledKey) ?? false;
     await ContextLogger.setEnabled(_contextLogEnabled);
     _flutterLogEnabled =
         localPreferences.getBool(_flutterLogEnabledKey) ?? false;
@@ -5533,7 +5533,7 @@ Requirements:
   }
 
   // Network: request logging (debug)
-  bool _requestLogEnabled = true;
+  bool _requestLogEnabled = false;
   bool get requestLogEnabled => _requestLogEnabled;
   Future<void> setRequestLogEnabled(bool v) async {
     if (_requestLogEnabled == v) return;
@@ -5544,7 +5544,7 @@ Requirements:
     await RequestLogger.setEnabled(v);
   }
 
-  bool _contextLogEnabled = true;
+  bool _contextLogEnabled = false;
   bool get contextLogEnabled => _contextLogEnabled;
   Future<void> setContextLogEnabled(bool v) async {
     if (_contextLogEnabled == v) return;
