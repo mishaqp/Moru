@@ -613,7 +613,7 @@ void main() {
     );
     expect(
       tester.getSize(
-        find.byKey(const ValueKey('computer-step-thumbnail:command')),
+        find.byKey(ValueKey('computer-step-thumbnail:${run.runtimeRunId}')),
       ),
       const Size(64, 40),
     );

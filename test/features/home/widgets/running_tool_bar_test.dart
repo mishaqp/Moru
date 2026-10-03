@@ -156,6 +156,10 @@ void main() {
     expect(find.text('second'), findsOneWidget);
     expect(find.text('2/2'), findsOneWidget);
     expect(find.text('another response'), findsNothing);
+    // The status pulse schedules a zero-duration start timer on every build;
+    // unmount, then let the clock reach it so none outlives the test.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
   });
 
   testWidgets('shows the latest output line live', (tester) async {
