@@ -12640,6 +12640,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get computerBrowserResultStatus => 'Status';
 
   @override
+  String get computerBrowserResultSuccess => 'Success';
+
+  @override
+  String get computerBrowserResultError => 'Error';
+
+  @override
   String get computerBrowserResultTitle => 'Title';
 
   @override

@@ -12073,6 +12073,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get computerBrowserResultStatus => '状态';
 
   @override
+  String get computerBrowserResultSuccess => '成功';
+
+  @override
+  String get computerBrowserResultError => '错误';
+
+  @override
   String get computerBrowserResultTitle => '标题';
 
   @override
@@ -24113,6 +24119,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get computerBrowserResultStatus => '状态';
+
+  @override
+  String get computerBrowserResultSuccess => '成功';
+
+  @override
+  String get computerBrowserResultError => '错误';
 
   @override
   String get computerBrowserResultTitle => '标题';
@@ -36229,6 +36241,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get computerBrowserResultStatus => '狀態';
+
+  @override
+  String get computerBrowserResultSuccess => '成功';
+
+  @override
+  String get computerBrowserResultError => '錯誤';
 
   @override
   String get computerBrowserResultTitle => '標題';

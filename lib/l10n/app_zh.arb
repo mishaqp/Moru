@@ -4497,6 +4497,8 @@
   "browserCloseWhileAiMessage": "AI 操作将停止。",
   "computerActionSummary": "总结",
   "computerBrowserResultStatus": "状态",
+  "computerBrowserResultSuccess": "成功",
+  "computerBrowserResultError": "错误",
   "computerBrowserResultTitle": "标题",
   "computerParameterYes": "是",
   "computerParameterNo": "否",

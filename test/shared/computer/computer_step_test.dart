@@ -11,6 +11,81 @@ import 'package:Kelivo/utils/mcp_structured_image.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'browser domain follows only preceding pages in the supplied response',
+    () {
+      final first = ComputerStep(
+        id: 'first',
+        toolName: 'browser_use',
+        arguments: {'action': 'open', 'url': 'https://wttr.in/Moscow'},
+      );
+      final lastPage = ComputerStep(
+        id: 'page',
+        toolName: 'browser_use',
+        arguments: {'action': 'open', 'url': 'https://ya.ru'},
+      );
+      final read = ComputerStep(
+        id: 'read',
+        toolName: 'browser_use',
+        arguments: {'action': 'read'},
+      );
+      final done = ComputerStep(
+        id: 'done',
+        toolName: 'browser_use',
+        arguments: {'action': 'done'},
+      );
+      final response = [first, lastPage, read, done];
+      expect(read.browserDomainInResponse(response), 'ya.ru');
+      expect(done.browserDomainInResponse(response), 'ya.ru');
+      expect(first.browserDomainInResponse(response), 'wttr.in');
+      expect(done.browserDomainInResponse([done]), isNull);
+      expect(done.browserDomainInResponse([first, lastPage]), isNull);
+      expect(done.browserDomainInResponse([done, lastPage]), isNull);
+      // A display label does not grant access to earlier screenshot pixels.
+      expect(done.browserPageUrl, isNull);
+    },
+  );
+
+  test('inherited domains respect the selected step display filter', () async {
+    final page = ComputerStep(
+      id: 'page',
+      toolName: 'browser_use',
+      arguments: {'url': 'https://ya.ru'},
+    );
+    final done =
+        await ToolDisplayRedaction(
+          text: (value) => value.replaceAll('ya.ru', '[REDACTED]'),
+          value: (value) => value,
+        ).run(
+          () async => ComputerStep(
+            id: 'done',
+            toolName: 'browser_use',
+            arguments: {'action': 'done'},
+          ),
+        );
+    expect(done.browserDomainInResponse([page, done]), isNull);
+  });
+
+  test('an auth page prevents inheriting an older public domain', () {
+    final page = ComputerStep(
+      id: 'page',
+      toolName: 'browser_use',
+      arguments: {'url': 'https://ya.ru'},
+    );
+    final auth = ComputerStep(
+      id: 'auth',
+      toolName: 'browser_use',
+      arguments: {'url': 'https://auth.openai.com/authorize'},
+    );
+    final done = ComputerStep(
+      id: 'done',
+      toolName: 'browser_use',
+      arguments: {'action': 'done'},
+    );
+    expect(done.browserDomainInResponse([page, auth, done]), isNull);
+    expect(auth.browserDomainInResponse([page, auth]), isNull);
+  });
+
   test('classifies browser, foreground and background commands, and files', () {
     for (final name in ['browser_use', 'mcp__moru__browser_use']) {
       expect(

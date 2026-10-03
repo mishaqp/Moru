@@ -7,6 +7,7 @@ import 'package:Kelivo/features/home/services/browser_ask_ai_bridge.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
 import 'package:Kelivo/features/home/widgets/composer_status_strip.dart';
 import 'package:Kelivo/features/home/widgets/computer_status_panel.dart';
+import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/pages/webview/webview_page.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart';
@@ -90,9 +91,9 @@ Future<void> _pumpPanel(
   await tester.pumpAndSettle();
 }
 
-Color _domainFill(WidgetTester tester, Finder domain) {
+Color _previewFill(WidgetTester tester, Finder preview) {
   Color? fill;
-  tester.element(domain).visitAncestorElements((element) {
+  tester.element(preview).visitAncestorElements((element) {
     final widget = element.widget;
     if (widget is DecoratedBox && widget.decoration is BoxDecoration) {
       fill = (widget.decoration as BoxDecoration).color;
@@ -101,7 +102,7 @@ Color _domainFill(WidgetTester tester, Finder domain) {
     }
     return fill == null;
   });
-  expect(fill, isNotNull, reason: 'The browser fallback paints its own fill.');
+  expect(fill, isNotNull, reason: 'The globe tile paints its themed fill.');
   return fill!;
 }
 
@@ -174,6 +175,24 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the domain pill opens the Computer sheet outside the preview', (
+    tester,
+  ) async {
+    final settings = await _settings();
+    await _pumpPanel(tester, settings: settings);
+    final domain = find.text('ya.ru');
+    expect(domain, findsOneWidget);
+    expect(
+      find.descendant(of: find.byKey(_preview), matching: domain),
+      findsNothing,
+    );
+    await tester.tap(domain);
+    await tester.pumpAndSettle();
+    expect(find.byType(ComputerSheet), findsOneWidget);
+    expect(find.byType(WebViewPage), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final scale in [1.0, 1.3]) {
     testWidgets(
       'Dark Glass browser card fits 320dp with landscape keyboard at scale $scale',
@@ -201,7 +220,8 @@ void main() {
         final panel = tester.getRect(find.byKey(ComputerStatusPanel.panelKey));
         final preview = tester.getRect(find.byKey(_preview));
         final title = tester.getRect(find.text('Браузер · ya.ru'));
-        expect(tester.getSize(find.byKey(_thumbnail)), const Size(112, 64));
+        expect(tester.getSize(find.byKey(_thumbnail)), const Size(64, 40));
+        if (scale == 1) expect(panel.height, inInclusiveRange(56, 60));
         expect(panel.left, greaterThanOrEqualTo(0));
         expect(panel.right, lessThanOrEqualTo(320));
         expect(panel.top, greaterThanOrEqualTo(0));
@@ -227,6 +247,7 @@ void main() {
           expect(target.left, greaterThanOrEqualTo(preview.right));
           expect(target.right, lessThanOrEqualTo(panel.right));
           expect(target.bottom, lessThanOrEqualTo(panel.bottom));
+          expect(target.center.dy, closeTo(panel.center.dy, 0.1));
         }
         expect(find.byTooltip('Остановить'), findsNothing);
         expect(tester.takeException(), isNull);
@@ -260,8 +281,8 @@ void main() {
         expect(panel.bottom, strip.bottom - 6);
         expect(strip.top, greaterThanOrEqualTo(0));
         expect(strip.bottom, lessThanOrEqualTo(140));
-        if (scale == 1) expect(panel.height, lessThanOrEqualTo(88));
-        expect(tester.getSize(find.byKey(_thumbnail)), const Size(112, 64));
+        if (scale == 1) expect(panel.height, inInclusiveRange(56, 60));
+        expect(tester.getSize(find.byKey(_thumbnail)), const Size(64, 40));
         expect(preview.left, greaterThanOrEqualTo(panel.left));
         expect(preview.right, lessThanOrEqualTo(title.left));
         expect(title.right, lessThanOrEqualTo(panel.right));
@@ -284,6 +305,7 @@ void main() {
           expect(target.left, greaterThanOrEqualTo(preview.right));
           expect(target.right, lessThanOrEqualTo(panel.right));
           expect(target.bottom, lessThanOrEqualTo(panel.bottom));
+          expect(target.center.dy, closeTo(panel.center.dy, 0.1));
         }
         expect(find.byTooltip('Остановить'), findsNothing);
         expect(tester.takeException(), isNull);
@@ -291,27 +313,31 @@ void main() {
     );
   }
 
-  testWidgets(
-    'the light domain fallback keeps its palette with Glass enabled',
-    (tester) async {
-      final settings = await _settings();
-      await _pumpPanel(tester, settings: settings);
-      final domain = find.descendant(
-        of: find.byKey(_thumbnail),
-        matching: find.text('ya.ru'),
-      );
-      expect(domain, findsOneWidget);
-      final plainFill = _domainFill(tester, domain);
-      final plainText = tester.widget<Text>(domain).style!.color!;
-      expect(plainFill.a, 1);
-      expect(plainFill.computeLuminance(), greaterThan(0.8));
-      expect(plainText.computeLuminance(), lessThan(0.3));
+  testWidgets('the blank globe tile uses the dark theme with Glass enabled', (
+    tester,
+  ) async {
+    final settings = await _settings();
+    await _pumpPanel(tester, settings: settings);
+    final globe = find.descendant(
+      of: find.byKey(_thumbnail),
+      matching: find.byIcon(Lucide.Globe),
+    );
+    expect(globe, findsOneWidget);
+    expect(
+      find.descendant(of: find.byKey(_thumbnail), matching: find.byType(Text)),
+      findsNothing,
+    );
+    final plainFill = _previewFill(tester, globe);
+    final plainIcon = tester.widget<Icon>(globe).color!;
+    final cs = Theme.of(tester.element(globe)).colorScheme;
+    expect(plainFill.a, 1);
+    expect(plainFill, cs.surfaceContainerHighest);
+    expect(plainIcon, cs.onSurfaceVariant);
 
-      await settings.setGlassTheme(true);
-      await tester.pumpAndSettle();
-      expect(_domainFill(tester, domain), plainFill);
-      expect(tester.widget<Text>(domain).style!.color, plainText);
-      expect(tester.takeException(), isNull);
-    },
-  );
+    await settings.setGlassTheme(true);
+    await tester.pumpAndSettle();
+    expect(_previewFill(tester, globe), plainFill);
+    expect(tester.widget<Icon>(globe).color, plainIcon);
+    expect(tester.takeException(), isNull);
+  });
 }

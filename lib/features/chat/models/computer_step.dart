@@ -295,6 +295,27 @@ class ComputerStep {
     return value == null ? null : Uri.parse(value).host;
   }
 
+  /// Display-only page context from preceding steps of this response.
+  /// This does not authorize borrowing their snapshots or navigation targets.
+  String? browserDomainInResponse(List<ComputerStep> responseSteps) {
+    if (kind != ComputerStepKind.browser || !allowsBrowserPreview) return null;
+    final ownDomain = browserDomain;
+    if (ownDomain != null) return ownDomain;
+    final index = responseSteps.indexOf(this);
+    if (index < 0) return null;
+    for (var i = index - 1; i >= 0; i--) {
+      final previous = responseSteps[i];
+      if (previous.kind != ComputerStepKind.browser) continue;
+      if (!previous.allowsBrowserPreview) return null;
+      final url = previous.browserPageUrl;
+      if (url == null) continue;
+      if (!canPreviewBrowserPage(url)) return null;
+      final domain = Uri.parse(url).host;
+      return _text(domain) == domain ? domain : null;
+    }
+    return null;
+  }
+
   bool get isError {
     if (isStopped) return false;
     if (run != null) {
