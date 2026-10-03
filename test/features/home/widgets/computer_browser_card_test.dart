@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/browser/browser_agent_session.dart';
 import 'package:Kelivo/features/chat/models/computer_step.dart';
@@ -12,6 +15,8 @@ import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/pages/webview/webview_page.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
@@ -23,10 +28,10 @@ const _thumbnail = ValueKey('computer-step-thumbnail:browser');
 const _url = 'https://ya.ru/search';
 const _chat = 'browser-card-chat';
 
-ComputerStep _browserStep() => ComputerStep(
+ComputerStep _browserStep({String action = 'read'}) => ComputerStep(
   id: 'browser',
   toolName: 'browser_use',
-  arguments: {'action': 'read', 'url': _url},
+  arguments: {'action': action, 'url': _url},
   loading: true,
 );
 
@@ -106,7 +111,40 @@ Color _previewFill(WidgetTester tester, Finder preview) {
   return fill!;
 }
 
+Finder _statusPill() => find
+    .ancestor(
+      of: find.byKey(const ValueKey('computer-browser-status-dot')),
+      matching: find.byType(DecoratedBox),
+    )
+    .first;
+
+RenderParagraph _actionParagraph(WidgetTester tester, String action) =>
+    tester.renderObject<RenderParagraph>(
+      find.descendant(of: find.text(action), matching: find.byType(RichText)),
+    );
+
 void main() {
+  setUpAll(() async {
+    // Match Android's caption metrics rather than the synthetic test font.
+    final configFile = File('.dart_tool/package_config.json');
+    final config =
+        jsonDecode(await configFile.readAsString()) as Map<String, dynamic>;
+    final flutterPackage = (config['packages'] as List<dynamic>)
+        .cast<Map<String, dynamic>>()
+        .singleWhere((package) => package['name'] == 'flutter');
+    final flutterRoot = Directory.fromUri(
+      configFile.absolute.uri.resolve(flutterPackage['rootUri'] as String),
+    ).uri;
+    final bytes = await File.fromUri(
+      flutterRoot.resolve(
+        '../../bin/cache/artifacts/material_fonts/Roboto-Regular.ttf',
+      ),
+    ).readAsBytes();
+    await (FontLoader(
+      'Roboto',
+    )..addFont(Future.value(ByteData.sublistView(bytes)))).load();
+  });
+
   setUp(() {
     installFakeWebViewPlatform();
     FakeWebViewPlatform.onCreated = null;
@@ -175,21 +213,106 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the domain pill opens the Computer sheet outside the preview', (
+  testWidgets('the action pill opens the Computer sheet outside the preview', (
     tester,
   ) async {
     final settings = await _settings();
     await _pumpPanel(tester, settings: settings);
-    final domain = find.text('ya.ru');
-    expect(domain, findsOneWidget);
+    final action = find.text('Reading page');
+    expect(find.text('Browser · ya.ru'), findsOneWidget);
+    expect(find.text('ya.ru'), findsNothing);
+    expect(action, findsOneWidget);
     expect(
-      find.descendant(of: find.byKey(_preview), matching: domain),
+      find.descendant(of: find.byKey(_preview), matching: action),
       findsNothing,
     );
-    await tester.tap(domain);
+    expect(
+      find.descendant(of: _statusPill(), matching: action),
+      findsOneWidget,
+    );
+    await tester.tap(action);
     await tester.pumpAndSettle();
     expect(find.byType(ComputerSheet), findsOneWidget);
     expect(find.byType(WebViewPage), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final asComposerStrip in [false, true]) {
+    for (final sample in [
+      (action: 'open', label: 'Открывает…'),
+      (action: 'type', label: 'Вводит…'),
+      (action: 'click', label: 'Нажимает…'),
+    ]) {
+      testWidgets(
+        'Russian ${sample.action} fits the ${asComposerStrip ? 296 : 320}dp action pill at scale 1.3',
+        (tester) async {
+          tester.view.physicalSize = const Size(320, 240);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          final settings = await _settings(glass: true);
+          await _pumpPanel(
+            tester,
+            settings: settings,
+            steps: [_browserStep(action: sample.action)],
+            scale: 1.3,
+            keyboard: 100,
+            locale: const Locale('ru'),
+            asComposerStrip: asComposerStrip,
+          );
+          expect(
+            tester.getSize(find.byKey(ComputerStatusPanel.panelKey)),
+            Size(asComposerStrip ? 296 : 320, 56),
+          );
+          expect(tester.getSize(find.byKey(_thumbnail)), const Size(64, 40));
+          expect(find.text('Браузер · ya.ru'), findsOneWidget);
+          expect(find.text('ya.ru'), findsNothing);
+          expect(
+            find.descendant(
+              of: _statusPill(),
+              matching: find.text(sample.label),
+            ),
+            findsOneWidget,
+          );
+          final paragraph = _actionParagraph(tester, sample.label);
+          expect(
+            paragraph.didExceedMaxLines,
+            isFalse,
+            reason:
+                'The full short action needs '
+                '${paragraph.getMaxIntrinsicWidth(double.infinity)}dp; '
+                '${paragraph.size.width}dp is available.',
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
+  testWidgets('a long Russian action uses ellipsis in the composer pill', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 240);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final settings = await _settings();
+    await _pumpPanel(
+      tester,
+      settings: settings,
+      steps: [_browserStep(action: 'wait_for')],
+      scale: 1.3,
+      locale: const Locale('ru'),
+      asComposerStrip: true,
+    );
+    const action = 'Ожидание элемента';
+    expect(
+      find.descendant(of: _statusPill(), matching: find.text(action)),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<Text>(find.text(action)).overflow,
+      TextOverflow.ellipsis,
+    );
+    expect(_actionParagraph(tester, action).didExceedMaxLines, isTrue);
     expect(tester.takeException(), isNull);
   });
 

@@ -218,7 +218,7 @@ class _ComputerStatusPanelState extends State<ComputerStatusPanel> {
         return SizedBox(
           height: 56,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.all(4),
             child: Row(
               children: [
                 if (browser)
@@ -242,7 +242,7 @@ class _ComputerStatusPanelState extends State<ComputerStatusPanel> {
                   )
                 else
                   thumbnail,
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 Expanded(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -264,68 +264,39 @@ class _ComputerStatusPanelState extends State<ComputerStatusPanel> {
                         ),
                       ),
                       const SizedBox(height: 3),
-                      LayoutBuilder(
-                        builder: (context, constraints) => Row(
-                          children: [
-                            ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: constraints.maxWidth * 0.45,
-                              ),
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: cs.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 5,
-                                    vertical: 2,
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      dot,
-                                      if (browser && domain != null) ...[
-                                        const SizedBox(width: 4),
-                                        Flexible(
-                                          child: Text(
-                                            domain,
-                                            key: const ValueKey(
-                                              'computer-browser-domain',
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              height: 1.1,
-                                              color: cs.onSurfaceVariant,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 2,
+                            vertical: 2,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              dot,
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  stopped
+                                      ? l10n.computerStopped
+                                      : _subtitle(step, l10n),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    height: 1.1,
+                                    color: step.isError
+                                        ? cs.error
+                                        : cs.onSurfaceVariant,
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                stopped
-                                    ? l10n.computerStopped
-                                    : _subtitle(step, l10n),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  height: 1.1,
-                                  color: step.isError
-                                      ? cs.error
-                                      : cs.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ],

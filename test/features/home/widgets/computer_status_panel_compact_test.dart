@@ -58,7 +58,46 @@ ComputerStep _command({bool loading = true, String? content}) => ComputerStep(
   content: content,
 );
 
+Finder _browserStatusPill() => find
+    .ancestor(
+      of: find.byKey(const ValueKey('computer-browser-status-dot')),
+      matching: find.byType(DecoratedBox),
+    )
+    .first;
+
 void main() {
+  testWidgets(
+    'browser status pill contains its dot and action without domain',
+    (tester) async {
+      final step = ComputerStep(
+        id: 'browser',
+        toolName: 'browser_use',
+        arguments: {'action': 'open', 'url': 'https://ya.ru'},
+        loading: true,
+      );
+      await tester.pumpWidget(_host(steps: [step]));
+      await tester.pumpAndSettle();
+      expect(find.text('Browser · ya.ru'), findsOneWidget);
+      expect(find.text('ya.ru'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('computer-browser-domain')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: _browserStatusPill(), matching: find.byType(Text)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: _browserStatusPill(),
+          matching: find.text('Opening…'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('a named step never borrows another live page identity', (
     tester,
   ) async {
@@ -167,7 +206,7 @@ void main() {
     });
   }
 
-  testWidgets('browser address dot tracks running done error and stopped', (
+  testWidgets('browser status dot tracks running done error and stopped', (
     tester,
   ) async {
     for (final status in ['running', 'done', 'error', 'stopped']) {
@@ -392,10 +431,17 @@ void main() {
       expect(find.text('Browser · ya.ru'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('computer-browser-domain')),
+        findsNothing,
+      );
+      expect(find.text('ya.ru'), findsNothing);
+      expect(find.text('wttr.in'), findsNothing);
+      expect(
+        find.descendant(
+          of: _browserStatusPill(),
+          matching: find.text(action == 'done' ? 'Done' : 'Reading page'),
+        ),
         findsOneWidget,
       );
-      expect(find.text('ya.ru'), findsOneWidget);
-      expect(find.text('wttr.in'), findsNothing);
       final thumbnail = tester.widget<ComputerStepThumbnail>(
         find.byType(ComputerStepThumbnail),
       );
@@ -701,7 +747,7 @@ void main() {
         find.descendant(of: thumbnail, matching: find.text('example.com')),
         findsNothing,
       );
-      expect(find.text('example.com'), findsOneWidget);
+      expect(find.text('example.com'), findsNothing);
       expect(find.text('Browser · example.com'), findsOneWidget);
       expect(
         tester.getSize(
