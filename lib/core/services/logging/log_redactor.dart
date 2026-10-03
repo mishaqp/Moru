@@ -82,6 +82,25 @@ class LogRedactor {
   );
   static final RegExp _camelCaseRe = RegExp(r'(?<=[a-z0-9])(?=[A-Z])');
   static final RegExp _nameSepRe = RegExp(r'[-_.\s]+');
+  static final RegExp _diagnosticUrlRe = RegExp(r'https?://[^\s"<>]+');
+  static final RegExp _diagnosticFieldRe = RegExp(
+    r'''(["']?([A-Za-z0-9_-]*(?:key|token|secret|auth|cookie|credential|password|signature|session|code)[A-Za-z0-9_-]*)["']?\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^,\r\n}\]&]+)''',
+    caseSensitive: false,
+  );
+
+  static bool _isDiagnosticSensitiveName(String name) =>
+      _isSensitiveName(name) ||
+      const {
+        'code',
+        'oauthcode',
+        'devicecode',
+        'usercode',
+        'verificationcode',
+        'authorizationcode',
+        'logincode',
+        'onetimecode',
+        'codeverifier',
+      }.contains(name.toLowerCase().replaceAll(RegExp(r'[-_\s]'), ''));
 
   static Map<String, String> redactHeaders(Map<String, String> headers) {
     return headers.map((name, value) {
@@ -121,28 +140,28 @@ class LogRedactor {
     return _redactKnownPrefixes(_redactUrlByRegex(_redactUserInfo(text)));
   }
 
+  /// Credential shapes, without treating an ordinary path as private data.
+  static bool looksLikeSecret(String value) =>
+      _schemeRe.hasMatch(value.trim()) ||
+      redactText(value) != value ||
+      redactBody(value) != value ||
+      _diagnosticFieldRe
+          .allMatches(value)
+          .any((match) => _isDiagnosticSensitiveName(match[2]!)) ||
+      _diagnosticUrlRe.allMatches(value).any((match) {
+        final uri = Uri.tryParse(match[0]!);
+        return uri != null && isAuthenticationUri(uri);
+      });
+
   /// Export diagnostics remove whole credentials instead of leaving the
   /// prefix/suffix used by the interactive log viewer. Callers first apply
   /// their ACP redactor for known configured secrets.
   static String redactDiagnosticText(String text) {
     const marker = '[REDACTED]';
-    bool sensitive(String name) =>
-        _isSensitiveName(name) ||
-        const {
-          'code',
-          'oauthcode',
-          'devicecode',
-          'usercode',
-          'verificationcode',
-          'authorizationcode',
-          'logincode',
-          'onetimecode',
-          'codeverifier',
-        }.contains(name.toLowerCase().replaceAll(RegExp(r'[-_\s]'), ''));
     Object? walk(Object? value) => switch (value) {
       Map() => {
         for (final entry in value.entries)
-          entry.key.toString(): sensitive(entry.key.toString())
+          entry.key.toString(): _isDiagnosticSensitiveName(entry.key.toString())
               ? marker
               : walk(entry.value),
       },
@@ -153,29 +172,29 @@ class LogRedactor {
       text = jsonEncode(walk(jsonDecode(text)));
     } catch (_) {}
     text = _redactUserInfo(text);
-    text = text.replaceAllMapped(RegExp(r'https?://[^\s"<>]+'), (match) {
+    text = text.replaceAllMapped(_diagnosticUrlRe, (match) {
       final uri = Uri.tryParse(match[0]!);
       if (uri == null) return marker;
       if (isAuthenticationUri(uri)) return marker;
       if (!uri.hasQuery) return match[0]!;
       final query = uri.queryParametersAll;
-      if (!query.keys.any(sensitive)) return match[0]!;
+      if (!query.keys.any(_isDiagnosticSensitiveName)) return match[0]!;
       return uri
           .replace(
             queryParameters: {
               for (final entry in query.entries)
-                entry.key: sensitive(entry.key) ? marker : entry.value,
+                entry.key: _isDiagnosticSensitiveName(entry.key)
+                    ? marker
+                    : entry.value,
             },
           )
           .toString();
     });
-    final field = RegExp(
-      r'''(["']?([A-Za-z0-9_-]*(?:key|token|secret|auth|cookie|credential|password|signature|session|code)[A-Za-z0-9_-]*)["']?\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^,\r\n}\]&]+)''',
-      caseSensitive: false,
-    );
     text = text.replaceAllMapped(
-      field,
-      (match) => sensitive(match[2]!) ? '${match[1]}"$marker"' : match[0]!,
+      _diagnosticFieldRe,
+      (match) => _isDiagnosticSensitiveName(match[2]!)
+          ? '${match[1]}"$marker"'
+          : match[0]!,
     );
     text = text.replaceAll(_knownPrefixRe, marker);
     text = text.replaceAll(RegExp(r'/(?:home|Users)/[^/\s"<>]+'), '/[USER]');

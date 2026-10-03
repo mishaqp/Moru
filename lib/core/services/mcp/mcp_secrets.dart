@@ -40,6 +40,29 @@ class McpSecrets {
     caseSensitive: false,
   ).hasMatch(value);
 
+  static bool isSecret(String name, String value) =>
+      sensitiveName(name) || LogRedactor.looksLikeSecret(value);
+
+  static bool _privateProvenance(String name, String value) {
+    if (name.startsWith('env:') || name.startsWith('header:')) {
+      return isSecret(name.substring(name.indexOf(':') + 1), value);
+    }
+    return true;
+  }
+
+  static final _assignment = RegExp(
+    r'''(?<![A-Za-z0-9_])([A-Za-z_][A-Za-z0-9_]*)\+?=((?:"(?:\\.|[^"\\])*"|'[^']*'|\\.|[^\s;|&<>'"\\])*)''',
+  );
+
+  static String _assignmentValue(String value) {
+    if (value.length >= 2 &&
+        ((value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'")))) {
+      return value.substring(1, value.length - 1);
+    }
+    return value;
+  }
+
   /// Retain private provenance when a field changes: cached tool descriptions
   /// and delayed connection errors can still contain the previous credential.
   static Map<String, String> privateFields(
@@ -47,11 +70,15 @@ class McpSecrets {
     Map<String, String> retained = const {},
   }) {
     final fields = <String, String>{
-      ...retained,
-      ...server.managedSecrets,
-      for (final entry in server.env.entries) 'env:${entry.key}': entry.value,
+      for (final entry in retained.entries)
+        if (_privateProvenance(entry.key, entry.value)) entry.key: entry.value,
+      for (final entry in server.managedSecrets.entries)
+        if (_privateProvenance(entry.key, entry.value)) entry.key: entry.value,
+      for (final entry in server.env.entries)
+        if (isSecret(entry.key, entry.value)) 'env:${entry.key}': entry.value,
       for (final entry in server.headers.entries)
-        'header:${entry.key}': entry.value,
+        if (isSecret(entry.key, entry.value))
+          'header:${entry.key}': entry.value,
       for (final entry in _urlSecrets(server.url).indexed)
         'url:${entry.$1}': entry.$2,
       for (var i = 0; i < server.args.length; i++)
@@ -63,6 +90,10 @@ class McpSecrets {
             server.args[i].contains('=') &&
             sensitiveName(server.args[i].split('=').first))
           'arg:$i': server.args[i].substring(server.args[i].indexOf('=') + 1),
+      for (final arg in server.args.indexed)
+        for (final match in _assignment.allMatches(arg.$2))
+          if (sensitiveName(match[1]!))
+            'arg:${arg.$1}:${match.start}': _assignmentValue(match[2]!),
       if (server.oauth case final oauth?) ...{
         'oauth:accessToken': oauth.accessToken,
         'oauth:authorization': oauth.authorizationHeader,
@@ -75,7 +106,12 @@ class McpSecrets {
         'oauthClient:clientSecret': secret,
     };
     var index = 0;
-    for (final value in [...server.managedSecrets.values, ...retained.values]) {
+    for (final entry in [
+      ...server.managedSecrets.entries,
+      ...retained.entries,
+    ]) {
+      if (!_privateProvenance(entry.key, entry.value)) continue;
+      final value = entry.value;
       if (value.isEmpty || fields.containsValue(value)) continue;
       while (fields.containsKey('retained:$index')) {
         index++;
@@ -135,12 +171,20 @@ class McpSecrets {
     _ => input,
   };
 
-  /// Reject model-supplied credentials. Empty env/header values request private
-  /// user input; {{NAME}} is the only credential accepted in args or URLs.
+  /// Accept ordinary values; credentials request private user input instead.
+  /// {{NAME}} is the only credential accepted in args or URLs.
   static bool containsLiteralSecret(Map<String, dynamic> config) {
     for (final field in ['env', 'headers']) {
       final map = config[field];
-      if (map is Map && map.values.any((v) => v != '')) return true;
+      if (map is Map &&
+          map.entries.any(
+            (e) =>
+                e.value is String &&
+                (e.value as String).isNotEmpty &&
+                isSecret(e.key.toString(), e.value as String),
+          )) {
+        return true;
+      }
     }
     String withoutPlaceholders(String input) =>
         input.replaceAll(placeholder, '');
@@ -150,6 +194,12 @@ class McpSecrets {
       config['command'],
       ...?((config['args'] is List) ? config['args'] as List : null),
     ].whereType<String>()) {
+      for (final match in _assignment.allMatches(arg)) {
+        if (sensitiveName(match[1]!) &&
+            privateLiteral(_assignmentValue(match[2]!))) {
+          return true;
+        }
+      }
       if (privateNext && privateLiteral(arg)) return true;
       final split = arg.indexOf('=');
       final key = split < 0 ? arg : arg.substring(0, split);
@@ -161,7 +211,12 @@ class McpSecrets {
       }
       if (_urlSecrets(arg, redactPath: false).any(privateLiteral)) return true;
       final plain = withoutPlaceholders(arg);
-      final diagnostics = plain.replaceAll(RegExp(r'https?://[^\s]+'), '');
+      final diagnostics = withoutPlaceholders(
+        arg.replaceAllMapped(
+          _assignment,
+          (match) => sensitiveName(match[1]!) ? '' : match[0]!,
+        ),
+      ).replaceAll(RegExp(r'https?://[^\s]+'), '');
       if (LogRedactor.redactBody(plain) != plain ||
           LogRedactor.redactDiagnosticText(diagnostics) != diagnostics) {
         return true;

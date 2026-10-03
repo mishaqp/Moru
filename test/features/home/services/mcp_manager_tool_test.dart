@@ -74,6 +74,242 @@ void main() {
     return pending;
   }
 
+  test(
+    'ordinary env values are confirmed, saved and returned unchanged',
+    () async {
+      const path = '/workspace/mcp-memory.json';
+      final pending = run({
+        'action': 'add',
+        'name': 'Memory',
+        'config': {
+          'command': 'mcp-server-memory',
+          'disabled': true,
+          'env': {
+            'MEMORY_FILE_PATH': path,
+            'DATA_DIRECTORY': '/home/alice/mcp',
+            'MODE': '',
+          },
+        },
+      });
+      await Future<void>.delayed(Duration.zero);
+      expect(approvals.pendingRequests, hasLength(1));
+      final request = approvals.pendingRequests.single;
+      expect(request.secretFields, isEmpty);
+      expect(
+        request.arguments['server']['env']['MEMORY_FILE_PATH']['value'],
+        path,
+      );
+      expect(
+        request.arguments['server']['env']['DATA_DIRECTORY']['value'],
+        '/home/alice/mcp',
+      );
+      approvals.approve('call', conversationId: 'chat');
+      final added = await pending;
+      final id = added['server']['id'];
+      expect(added['ok'], isTrue);
+      expect(provider.getById(id)!.env['MEMORY_FILE_PATH'], path);
+      expect(added['server']['env']['MEMORY_FILE_PATH']['value'], path);
+      expect(
+        added['server']['env']['DATA_DIRECTORY']['value'],
+        '/home/alice/mcp',
+      );
+      expect(added['server']['env']['MODE']['value'], '');
+      approvals.setAutoApproveAll(true);
+      final updated = await run({
+        'action': 'update',
+        'server_id': id,
+        'config': {
+          'env': {'MEMORY_FILE_PATH': '/workspace/x.json'},
+        },
+      });
+      expect(
+        updated['server']['env']['MEMORY_FILE_PATH']['value'],
+        '/workspace/x.json',
+      );
+      expect(approvals.pendingRequests, isEmpty);
+    },
+  );
+
+  test(
+    'ordinary headers are visible and can be updated in full trust',
+    () async {
+      approvals.setAutoApproveAll(true);
+      final added = await run({
+        'action': 'add',
+        'name': 'Public',
+        'config': {
+          'type': 'http',
+          'url': 'https://example.test/mcp',
+          'disabled': true,
+          'headers': {'X-Transport': 'mcp', 'Accept': 'application/json'},
+        },
+      });
+      expect(added['ok'], isTrue);
+      final id = added['server']['id'];
+      expect(added['server']['headers']['Accept']['value'], 'application/json');
+      final updated = await run({
+        'action': 'update',
+        'server_id': id,
+        'config': {
+          'headers': {'Accept': 'text/event-stream'},
+        },
+      });
+      expect(
+        updated['server']['headers']['Accept']['value'],
+        'text/event-stream',
+      );
+      expect(provider.getById(id)!.headers['Accept'], 'text/event-stream');
+    },
+  );
+
+  test('old private metadata does not hide an ordinary file path', () async {
+    const path = '/workspace/x.json';
+    await provider.importServers([
+      McpServerConfig(
+        id: 'legacy',
+        name: 'Memory',
+        enabled: false,
+        transport: McpTransportType.stdio,
+        command: 'mcp-server-memory',
+        env: {'MEMORY_FILE_PATH': path},
+        managedSecrets: {'env:MEMORY_FILE_PATH': path},
+      ),
+    ]);
+    final result = await run({'action': 'get', 'server_id': 'legacy'});
+    expect(result['server']['env']['MEMORY_FILE_PATH']['value'], path);
+  });
+
+  test(
+    'diagnostic credential shapes are private regardless of field name',
+    () async {
+      const secret = 'PRIVATE_CONNECTION_SENTINEL';
+      approvals.setAutoApproveAll(true);
+      for (final field in ['env', 'headers']) {
+        for (final value in [
+          'Server=db;Password=$secret',
+          'Authorization: Bearer $secret',
+          'API_TOKEN=$secret',
+        ]) {
+          final rejected = await run({
+            'action': 'add',
+            'name': 'Rejected',
+            'config': {
+              'type': 'http',
+              'url': 'https://example.test/mcp',
+              'disabled': true,
+              field: {'CONFIG': value},
+            },
+          });
+          expect(rejected['error'], 'secret_required', reason: value);
+          expect(jsonEncode(rejected), isNot(contains(secret)));
+        }
+      }
+      await provider.importServers([
+        McpServerConfig(
+          id: 'saved-connection',
+          name: 'Saved',
+          enabled: false,
+          transport: McpTransportType.stdio,
+          command: 'srv',
+          env: {'DATABASE_CONNECTION_STRING': 'Server=db;Password=$secret'},
+        ),
+      ]);
+      final result = await run({
+        'action': 'get',
+        'server_id': 'saved-connection',
+      });
+      expect(result['server']['env']['DATABASE_CONNECTION_STRING'], {
+        'value_set': true,
+      });
+      expect(jsonEncode(result), isNot(contains(secret)));
+      approvals.setAutoApproveAll(false);
+      final renamed = run({
+        'action': 'update',
+        'server_id': 'saved-connection',
+        'name': 'Rename again',
+      });
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        jsonEncode(approvals.pendingRequests.single.arguments),
+        isNot(contains(secret)),
+      );
+      approvals.deny('call', conversationId: 'chat');
+      expect((await renamed)['error'], 'approval_denied');
+    },
+  );
+
+  test(
+    'secret assignments cannot bypass validation through shell or argv',
+    () async {
+      approvals.setAutoApproveAll(true);
+      for (final arg in [
+        'API_TOKEN=abc exec srv',
+        'export API_TOKEN="abc"; exec srv',
+        "env PWD='abc' srv",
+        'API_TOKEN={{TOKEN}}abc exec srv',
+        'export API_TOKEN+=abc; exec srv',
+      ]) {
+        final result = await run({
+          'action': 'add',
+          'name': 'Rejected',
+          'config': {
+            'command': '/bin/sh',
+            'args': ['-lc', arg],
+            'disabled': true,
+          },
+        });
+        expect(result['error'], 'secret_required', reason: arg);
+        expect(approvals.pendingRequests, isEmpty);
+      }
+      final direct = await run({
+        'action': 'add',
+        'name': 'Rejected',
+        'config': {
+          'command': 'env',
+          'args': ['API_TOKEN=abc', 'srv'],
+          'disabled': true,
+        },
+      });
+      expect(direct['error'], 'secret_required');
+    },
+  );
+
+  test(
+    'ordinary and private placeholder shell assignments remain usable',
+    () async {
+      const secret = 'PRIVATE_SHELL_SENTINEL';
+      final pending = run({
+        'action': 'add',
+        'name': 'Shell placeholders',
+        'config': {
+          'command': '/bin/sh',
+          'args': [
+            '-lc',
+            "MEMORY_FILE_PATH=/workspace/x.json API_TOKEN='{{TOKEN}}' exec srv",
+          ],
+          'disabled': true,
+        },
+      });
+      await Future<void>.delayed(Duration.zero);
+      final request = approvals.pendingRequests.single;
+      expect(request.secretFields, ['TOKEN']);
+      expect(jsonEncode(request.arguments), contains('/workspace/x.json'));
+      approvals.approve(
+        'call',
+        conversationId: 'chat',
+        secretValues: {'TOKEN': secret},
+      );
+      final result = await pending;
+      expect(result['ok'], isTrue);
+      expect(
+        provider.getById(result['server']['id'])!.args.last,
+        contains(secret),
+      );
+      expect(jsonEncode(result), isNot(contains(secret)));
+      expect(jsonEncode(result), contains('/workspace/x.json'));
+    },
+  );
+
   test('unknown ids are rejected before confirmation', () async {
     for (final action in [
       'get',
@@ -256,6 +492,19 @@ void main() {
         'env': {'TOKEN': secret},
       },
       {
+        'command': 'node',
+        'env': {'API_KEY': 'sk-privateSentinel'},
+      },
+      {
+        'command': 'node',
+        'env': {'ORDINARY': 'sk-privateSentinel'},
+      },
+      {
+        'type': 'http',
+        'url': 'https://example.test',
+        'headers': {'X-Value': 'Bearer x'},
+      },
+      {
         'type': 'http',
         'url': 'https://example.test',
         'headers': {'Authorization': 'Bearer $secret'},
@@ -281,7 +530,7 @@ void main() {
         'name': 'Rejected',
         'config': config,
       });
-      expect(result['error'], 'secret_in_arguments');
+      expect(result['error'], 'secret_required');
       expect(jsonEncode(result), isNot(contains(secret)));
       expect(approvals.pendingRequests, isEmpty);
     }
@@ -650,10 +899,26 @@ void main() {
       'config': {'type': 'http', 'url': 'http://127.0.0.1:${server.port}/mcp'},
     });
     final id = added['server']['id'];
+    expect(added['availability_notice'], contains('next message'));
     final tested = await run({'action': 'test', 'server_id': id});
     expect(tested['connected'], isTrue, reason: '$tested');
     expect(tested['tool_count'], 1);
     expect(tested['tools'].single['name'], 'echo');
+    expect(tested['availability_notice'], contains('next message'));
+    final updated = await run({
+      'action': 'update',
+      'server_id': id,
+      'name': 'Updated fixture',
+    });
+    expect(updated['availability_notice'], contains('next message'));
+    await run({'action': 'disable', 'server_id': id});
+    final listed = await run({'action': 'list'});
+    final disabled = (listed['servers'] as List).singleWhere(
+      (s) => s['id'] == id,
+    );
+    expect(disabled['tools'].single['enabled'], isFalse);
+    final enabled = await run({'action': 'enable', 'server_id': id});
+    expect(enabled['availability_notice'], contains('next message'));
     expect((await run({'action': 'remove', 'server_id': id}))['ok'], isTrue);
     expect(provider.getById(id), isNull);
   });

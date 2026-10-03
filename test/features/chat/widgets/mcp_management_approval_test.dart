@@ -39,6 +39,10 @@ void main() {
               'args': ['server.js'],
               'env': {
                 'API_KEY': {'value_set': false},
+                'MEMORY_FILE_PATH': {
+                  'value_set': true,
+                  'value': '/workspace/x.json',
+                },
               },
               'headers': {
                 'Authorization': {'value_set': false},
@@ -88,6 +92,10 @@ void main() {
         expect(find.textContaining('Private fixture'), findsOneWidget);
         expect(find.textContaining('STDIO'), findsOneWidget);
         expect(find.textContaining('server.js'), findsOneWidget);
+        expect(
+          find.textContaining('MEMORY_FILE_PATH=/workspace/x.json'),
+          findsOneWidget,
+        );
         expect(find.textContaining('Всегда разрешать'), findsNothing);
         expect(find.byTooltip('Всегда разрешать'), findsNothing);
         final fields = find.byType(TextField);

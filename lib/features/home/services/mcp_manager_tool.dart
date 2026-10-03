@@ -13,6 +13,7 @@ class McpManagerTool {
     this.approvals,
     this.autoApproveAll = false,
     this.checkAllowed,
+    this.defaultWorkspaceId,
   });
 
   static const toolName = 'manage_mcp';
@@ -30,6 +31,9 @@ class McpManagerTool {
   final ToolApprovalService? approvals;
   final bool autoApproveAll;
   final void Function()? checkAllowed;
+  final String? defaultWorkspaceId;
+  static const _availabilityNotice =
+      'New tools become available from the next message once this server is connected and selected for the assistant.';
 
   static String actionOf(Map<String, dynamic> args) =>
       (args['action'] ?? '').toString().trim().toLowerCase();
@@ -46,7 +50,7 @@ class McpManagerTool {
     'function': {
       'name': toolName,
       'description':
-          'Manage the user\'s MCP servers in Moru. list/get show saved configuration, status and tools without credentials. Use live server_id from list. add/update/enable/disable/remove need confirmation; test connects and lists tools using the existing MCP runtime. config uses the MCP JSON import format for one server. update only changes supplied fields. env and headers values MUST be empty strings: the user enters them privately on the approval card; existing values with the same name are preserved. For secret arguments or URL parts use {{NAME}}, never literal keys, tokens or passwords. Secrets are entered by the user, never requested in chat. Full-trust mode cannot supply missing secrets: direct the user to MCP settings. Install npm/pip packages separately with the workspace shell tool and its own approval; this tool has no installer or shell executor. New servers are available to assistants through their MCP selection (manage_assistants can change it).',
+          'Manage the user\'s MCP servers in Moru. list/get show saved configuration, status and tools without credentials. Use live server_id from list. add/update/enable/disable/remove need confirmation; test connects and lists tools using the existing MCP runtime. config uses the MCP JSON import format for one server. update only changes supplied fields. Ordinary env/header values such as MEMORY_FILE_PATH are accepted and shown; secret values MUST be empty strings for private user input on the approval card, preserving existing secrets with the same name. For secret arguments or URL parts use {{NAME}}, never literal keys, tokens or passwords, including shell assignments. Secrets are entered by the user, never requested in chat. Full-trust mode cannot supply missing secrets: direct the user to MCP settings. workspaceId binds STDIO /workspace to the chat\'s files; add defaults to the chat workspace unless explicitly overridden or null. Install npm/pip packages separately with the workspace shell tool and its own approval; this tool has no installer or shell executor. New servers are available to assistants through their MCP selection (manage_assistants can change it).',
       'parameters': {
         'type': 'object',
         'additionalProperties': false,
@@ -88,21 +92,15 @@ class McpManagerTool {
               },
               'env': {
                 'type': 'object',
-                'additionalProperties': {
-                  'type': 'string',
-                  'enum': [''],
-                },
+                'additionalProperties': {'type': 'string', 'maxLength': 2048},
                 'description':
-                    'Environment names mapped to empty strings; user supplies values.',
+                    'Ordinary values are allowed; use empty strings for secret names/values so the user can enter them privately.',
               },
               'headers': {
                 'type': 'object',
-                'additionalProperties': {
-                  'type': 'string',
-                  'enum': [''],
-                },
+                'additionalProperties': {'type': 'string', 'maxLength': 2048},
                 'description':
-                    'Header names mapped to empty strings; user supplies values, including the Bearer/Basic prefix.',
+                    'Ordinary values are allowed; use empty strings for secrets. User includes Bearer/Basic privately when needed.',
               },
               'cwd': {'type': 'string'},
               'workspaceId': {
@@ -124,9 +122,16 @@ class McpManagerTool {
     McpProvider provider,
   ) {
     final secrets = McpSecrets(server);
-    Map<String, Object?> names(Map<String, String> values) => {
+    Map<String, Object?> names(
+      Map<String, String> values, {
+      bool private = false,
+    }) => {
       for (final entry in values.entries)
-        secrets.text(entry.key): {'value_set': entry.value.isNotEmpty},
+        secrets.text(entry.key): {
+          'value_set': entry.value.isNotEmpty,
+          if (!private && !McpSecrets.isSecret(entry.key, entry.value))
+            'value': secrets.redactor.text(entry.value),
+        },
     };
     return {
       'id': server.id,
@@ -147,14 +152,17 @@ class McpManagerTool {
         'headers': names(server.headers),
         'authorization_set': server.oauth?.accessToken.isNotEmpty == true,
       },
-      'secrets': names(server.managedSecrets),
+      'secrets': names(server.managedSecrets, private: true),
       'tool_count': server.tools.length,
       'tools': [
         for (final tool in server.tools)
           {
             'name': secrets.text(tool.name),
             'description': secrets.value(tool.description),
-            'enabled': tool.enabled,
+            'enabled':
+                server.enabled &&
+                provider.isConnected(server.id) &&
+                tool.enabled,
           },
       ],
     };
@@ -230,15 +238,27 @@ class McpManagerTool {
           if (!patch.containsKey(field)) continue;
           final previous = field == 'env' ? existing?.env : existing?.headers;
           config[field] = {
-            for (final name in (patch[field] as Map).keys)
-              name: previous?[name] ?? '',
+            for (final entry in (patch[field] as Map).entries)
+              entry.key:
+                  entry.value == '' &&
+                      McpSecrets.isSecret(
+                        entry.key as String,
+                        (previous?[entry.key] ?? ''),
+                      )
+                  ? (previous?[entry.key] ?? '')
+                  : entry.value,
           };
         }
         if (patch.containsKey('baseUrl')) config['url'] = patch['baseUrl'];
         if (patch.containsKey('cwd')) config['workingDirectory'] = patch['cwd'];
-        final parsed = parseMcpConfigImport(
+        var parsed = parseMcpConfigImport(
           jsonEncode({name.trim(): config}),
         ).single;
+        if (action == 'add' &&
+            parsed.transport == McpTransportType.stdio &&
+            !patch.containsKey('workspaceId')) {
+          parsed = parsed.copyWith(workspaceId: defaultWorkspaceId);
+        }
         if (parsed.workspaceId != null &&
             provider.workspaces?.byId(parsed.workspaceId!) == null) {
           throw const FormatException(
@@ -261,7 +281,8 @@ class McpManagerTool {
         for (final field in ['env', 'headers']) {
           final values = field == 'env' ? next.env : next.headers;
           for (final entry in values.entries) {
-            if (entry.value.isEmpty) {
+            if (entry.value.isEmpty &&
+                McpSecrets.isSecret(entry.key, entry.value)) {
               secretFields.add(
                 '${field == 'env' ? 'env' : 'header'}:${entry.key}',
               );
@@ -348,6 +369,8 @@ class McpManagerTool {
       return jsonEncode({
         'ok': true,
         'server': serverSummary(provider.getById(next.id) ?? next, provider),
+        if (action == 'add' || action == 'update' || action == 'enable')
+          'availability_notice': _availabilityNotice,
       });
     } on _McpManagerError catch (error) {
       return _error(error.code, error.message);
@@ -415,8 +438,8 @@ class McpManagerTool {
     }
     if (McpSecrets.containsLiteralSecret(config)) {
       throw const _McpManagerError(
-        'secret_in_arguments',
-        'Never supply secret values. Use empty env/header values or {{NAME}} in arguments/URLs for private user input.',
+        'secret_required',
+        'Never supply secret values. Use empty secret env/header values or {{NAME}} in arguments/URLs for private user input; in full trust enter secrets in MCP settings.',
       );
     }
     for (final entry in config.entries) {
@@ -449,8 +472,13 @@ class McpManagerTool {
           : RegExp(r'^[A-Za-z0-9_-]{1,128}$');
       if (values is! Map ||
           values.length > 32 ||
-          values.keys.any((k) => k is! String || !pattern.hasMatch(k))) {
-        throw const FormatException('Invalid private field names');
+          values.keys.any((k) => k is! String || !pattern.hasMatch(k)) ||
+          values.values.any(
+            (v) => v is! String || v.length > 2048 || v.contains('\x00'),
+          )) {
+        throw const FormatException(
+          'Invalid environment/header names or values',
+        );
       }
     }
   }
@@ -513,6 +541,8 @@ class McpManagerTool {
     return jsonEncode({
       'ok': true,
       'connected': provider.isConnected(server.id),
+      if (provider.isConnected(server.id))
+        'availability_notice': _availabilityNotice,
       'tool_count': live.tools.length,
       'tools': summary['tools'],
       'error':

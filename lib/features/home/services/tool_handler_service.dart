@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/assistant.dart';
+import '../../../core/models/workspace_binding.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/environment_provider.dart';
 import '../../../core/providers/mcp_provider.dart';
@@ -703,8 +704,19 @@ class ToolHandlerService {
             );
           }
           approvalService?.setAutoApproveAll(settings.toolAutoApproveAll);
+          final conversation = conversationId == null
+              ? null
+              : _optional<ChatService>()?.getConversation(conversationId);
+          final binding = conversation != null
+              ? WorkspaceBinding.fromExtras(conversation.extras)
+              : (workspaceContext?.skillsOnly == false
+                    ? workspaceContext!.binding
+                    : null);
           return McpManagerTool(
             provider: mcp,
+            defaultWorkspaceId: binding?.isBound == true
+                ? binding!.workspaceId
+                : null,
             approvals: approvalService,
             autoApproveAll: settings.toolAutoApproveAll,
             checkAllowed: checkAllowed,
