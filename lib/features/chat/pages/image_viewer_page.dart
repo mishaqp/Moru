@@ -1064,7 +1064,7 @@ class _ImageViewerPageState extends State<ImageViewerPage>
                 ),
               ),
               if (_hasMultipleImages && !compact)
-                _buildDesktopPageArrows(context, opacity: chromeOpacity),
+                _buildWidePageArrows(context, opacity: chromeOpacity),
               _buildActionChrome(
                 context,
                 compact: compact,
@@ -1317,10 +1317,7 @@ class _ImageViewerPageState extends State<ImageViewerPage>
     );
   }
 
-  Widget _buildDesktopPageArrows(
-    BuildContext context, {
-    required double opacity,
-  }) {
+  Widget _buildWidePageArrows(BuildContext context, {required double opacity}) {
     final l10n = AppLocalizations.of(context)!;
     return IgnorePointer(
       ignoring: opacity <= 0.01,

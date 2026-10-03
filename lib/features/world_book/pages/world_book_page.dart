@@ -449,7 +449,6 @@ class _WorldBookPageState extends State<WorldBookPage> {
                           newIndex: newEntryIndex,
                         );
                       },
-                      isDesktop: false,
                     ),
                   ),
                 );
@@ -465,7 +464,7 @@ class _WorldBookSection extends StatelessWidget {
     required this.book,
     required this.bookIndex,
     required this.canReorderBooks,
-    required this.isDesktop,
+
     required this.collapsed,
     required this.onToggleCollapsed,
     required this.onAddEntry,
@@ -480,7 +479,6 @@ class _WorldBookSection extends StatelessWidget {
   final WorldBook book;
   final int bookIndex;
   final bool canReorderBooks;
-  final bool isDesktop;
   final bool collapsed;
   final VoidCallback onToggleCollapsed;
   final VoidCallback onAddEntry;
@@ -620,12 +618,10 @@ class _WorldBookSection extends StatelessWidget {
 
     Widget wrapBookReorder(Widget child) {
       if (!canReorderBooks) return child;
-      final wrapped = isDesktop
-          ? ReorderableDragStartListener(index: bookIndex, child: child)
-          : ReorderableDelayedDragStartListener(index: bookIndex, child: child);
-      return isDesktop
-          ? MouseRegion(cursor: SystemMouseCursors.grab, child: wrapped)
-          : wrapped;
+      return ReorderableDelayedDragStartListener(
+        index: bookIndex,
+        child: child,
+      );
     }
 
     final header = Padding(
@@ -807,12 +803,7 @@ class _WorldBookSection extends StatelessWidget {
                   index: index,
                   child: icon,
                 );
-                return isDesktop
-                    ? MouseRegion(
-                        cursor: SystemMouseCursors.grab,
-                        child: handle,
-                      )
-                    : handle;
+                return handle;
               },
             );
 

@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
 import 'package:intl/intl.dart';
 import '../../icons/lucide_adapter.dart';
 import '../../theme/app_font_weights.dart';
@@ -18,12 +16,7 @@ Future<DateTime?> showIosDatePicker(
   required DateTime lastDate,
   required DateTime initialDate,
 }) {
-  final useDialog = switch (defaultTargetPlatform) {
-    TargetPlatform.macOS ||
-    TargetPlatform.windows ||
-    TargetPlatform.linux => true,
-    _ => MediaQuery.sizeOf(context).width >= 720,
-  };
+  final useDialog = MediaQuery.sizeOf(context).width >= 720;
   final normalizedInitial = _calendarDate(initialDate);
   if (useDialog) {
     return showDialog<DateTime>(
@@ -35,7 +28,7 @@ Future<DateTime?> showIosDatePicker(
           firstDate: firstDate,
           lastDate: lastDate,
           initialDate: normalizedInitial,
-          desktop: true,
+          wide: true,
         ),
       ),
     );
@@ -58,13 +51,13 @@ class _IosDatePickerPanel extends StatefulWidget {
     required this.firstDate,
     required this.lastDate,
     required this.initialDate,
-    this.desktop = false,
+    this.wide = false,
   });
 
   final DateTime firstDate;
   final DateTime lastDate;
   final DateTime initialDate;
-  final bool desktop;
+  final bool wide;
 
   @override
   State<_IosDatePickerPanel> createState() => _IosDatePickerPanelState();
@@ -88,13 +81,13 @@ class _IosDatePickerPanelState extends State<_IosDatePickerPanel> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final content = Container(
-      width: widget.desktop ? 360 : double.infinity,
-      margin: widget.desktop
+      width: widget.wide ? 360 : double.infinity,
+      margin: widget.wide
           ? EdgeInsets.zero
           : EdgeInsets.only(left: 12, right: 12, bottom: 12 + bottomInset),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(widget.desktop ? 18 : 22),
+        borderRadius: BorderRadius.circular(widget.wide ? 18 : 22),
       ),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       child: Column(
@@ -200,7 +193,7 @@ class _IosDatePickerPanelState extends State<_IosDatePickerPanel> {
       ),
     );
 
-    if (widget.desktop) return content;
+    if (widget.wide) return content;
     return SafeArea(top: false, child: content);
   }
 

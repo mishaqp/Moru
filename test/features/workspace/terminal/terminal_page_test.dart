@@ -323,7 +323,7 @@ void main() {
     await flushIo(tester);
 
     final pageContext = tester.element(find.byType(TerminalPage));
-    expect(ResponsiveHelper.isDesktop(pageContext), isTrue);
+    expect(ResponsiveHelper.isWide(pageContext), isTrue);
     expect(
       MediaQuery.sizeOf(pageContext).width,
       greaterThanOrEqualTo(AppBreakpoints.desktop),

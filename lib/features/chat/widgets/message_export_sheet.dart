@@ -942,7 +942,7 @@ Future<File?> _renderAndSaveMessageImage(
     await preRenderDiagramCodesForExport(context, codes);
   } catch (_) {}
 
-  final exportConfig = _exportImageRenderConfig(isDesktop: false);
+  final exportConfig = _exportImageRenderConfig();
 
   Widget buildContent() => ExportCaptureScope(
     enabled: true,
@@ -953,7 +953,6 @@ Future<File?> _renderAndSaveMessageImage(
       chatFontScale: settings.chatFontScale,
       showThinkingAndToolCards: showThinkingAndToolCards,
       expandThinkingContent: expandThinkingContent,
-      isDesktop: false,
     ),
   );
   if (!context.mounted) return null;
@@ -986,7 +985,7 @@ Future<File?> _renderAndSaveChatImage(
     await preRenderDiagramCodesForExport(context, codes);
   } catch (_) {}
 
-  final exportConfig = _exportImageRenderConfig(isDesktop: false);
+  final exportConfig = _exportImageRenderConfig();
 
   Widget buildContent() => ExportCaptureScope(
     enabled: true,
@@ -1000,7 +999,6 @@ Future<File?> _renderAndSaveChatImage(
       timestamp: conversation.updatedAt,
       showThinkingAndToolCards: showThinkingAndToolCards,
       expandThinkingContent: expandThinkingContent,
-      isDesktop: false,
     ),
   );
   if (!context.mounted) return null;
@@ -1013,27 +1011,19 @@ Future<File?> _renderAndSaveChatImage(
   );
 }
 
-const double _desktopExportLogicalWidth = 720.0;
 const double _mobileExportLogicalWidth = 480.0;
 const double _exportImagePixelRatio = 3.0;
 const int _exportImageBlankTrimPreservePaddingPhysical = 48;
 const int _exportImageBlankAlphaTolerance = 8;
 const int _exportImageBlankColorTolerance = 3;
 
-({double width, double pixelRatio}) _exportImageRenderConfig({
-  required bool isDesktop,
-}) {
-  return (
-    width: isDesktop ? _desktopExportLogicalWidth : _mobileExportLogicalWidth,
-    pixelRatio: _exportImagePixelRatio,
-  );
+({double width, double pixelRatio}) _exportImageRenderConfig() {
+  return (width: _mobileExportLogicalWidth, pixelRatio: _exportImagePixelRatio);
 }
 
 @visibleForTesting
-({double width, double pixelRatio}) exportImageRenderConfigForTesting({
-  required bool isDesktop,
-}) {
-  return _exportImageRenderConfig(isDesktop: isDesktop);
+({double width, double pixelRatio}) exportImageRenderConfigForTesting() {
+  return _exportImageRenderConfig();
 }
 
 // New direct rendering approach without pagination
@@ -2764,7 +2754,6 @@ class _ExportedMessageCard extends StatelessWidget {
     required this.chatFontScale,
     this.showThinkingAndToolCards = false,
     this.expandThinkingContent = false,
-    this.isDesktop = false,
   });
   final ChatMessage message;
   final String title;
@@ -2772,7 +2761,6 @@ class _ExportedMessageCard extends StatelessWidget {
   final double chatFontScale;
   final bool showThinkingAndToolCards;
   final bool expandThinkingContent;
-  final bool isDesktop;
 
   @override
   Widget build(BuildContext context) {
@@ -2780,12 +2768,11 @@ class _ExportedMessageCard extends StatelessWidget {
     final headerFg = cs.onSurface;
     final time = DateFormat('yyyy-MM-dd HH:mm').format(message.timestamp);
 
-    // Desktop uses smaller font sizes for better proportions
-    final double titleFontSize = isDesktop ? 15.0 : 18.0;
-    final double timeFontSize = isDesktop ? 10.0 : 12.0;
+    final double titleFontSize = 18.0;
+    final double timeFontSize = 12.0;
     // Desktop uses smaller margins and paddings
-    final double containerMargin = isDesktop ? 12.0 : 16.0;
-    final double containerPadding = isDesktop ? 12.0 : 16.0;
+    final double containerMargin = 16.0;
+    final double containerPadding = 16.0;
 
     final messageForExport = messageForThinkingExport(
       message,
@@ -2844,7 +2831,7 @@ class _ExportedMessageCard extends StatelessWidget {
                 color: headerFg.withValues(alpha: 0.6),
               ),
             ),
-            SizedBox(height: isDesktop ? 10.0 : 12.0),
+            SizedBox(height: 12.0),
             ChatMessageWidget(
               message: messageForExport,
               collapseLongUserText: false,
@@ -2882,8 +2869,8 @@ class _ExportedMessageCard extends StatelessWidget {
               showThinkingCards: true,
               showToolCards: true,
             ),
-            SizedBox(height: isDesktop ? 12.0 : 16.0),
-            _ExportDisclaimer(isDesktop: isDesktop),
+            SizedBox(height: 16.0),
+            _ExportDisclaimer(),
           ],
         ),
       ),
@@ -2900,7 +2887,6 @@ class _ExportedChatImage extends StatelessWidget {
     required this.timestamp,
     this.showThinkingAndToolCards = false,
     this.expandThinkingContent = false,
-    this.isDesktop = false,
   });
   final String conversationTitle;
   final ColorScheme cs;
@@ -2909,15 +2895,13 @@ class _ExportedChatImage extends StatelessWidget {
   final DateTime timestamp;
   final bool showThinkingAndToolCards;
   final bool expandThinkingContent;
-  final bool isDesktop;
 
   @override
   Widget build(BuildContext context) {
-    // Desktop uses smaller font sizes for better proportions
-    final double titleFontSize = isDesktop ? 15.0 : 18.0;
-    final double timeFontSize = isDesktop ? 10.0 : 12.0;
-    final double containerMargin = isDesktop ? 5.0 : 6.0;
-    final double containerPadding = isDesktop ? 5.0 : 6.0;
+    final double titleFontSize = 18.0;
+    final double timeFontSize = 12.0;
+    final double containerMargin = 6.0;
+    final double containerPadding = 6.0;
 
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(
@@ -2931,7 +2915,7 @@ class _ExportedChatImage extends StatelessWidget {
           padding: EdgeInsets.all(containerPadding),
           decoration: BoxDecoration(
             color: context.appColors.surfaceCard,
-            borderRadius: BorderRadius.circular(isDesktop ? 12.0 : 16.0),
+            borderRadius: BorderRadius.circular(16.0),
             // removed outer border per UX
           ),
           child: Column(
@@ -2958,19 +2942,18 @@ class _ExportedChatImage extends StatelessWidget {
                   color: cs.onSurface.withValues(alpha: 0.6),
                 ),
               ),
-              SizedBox(height: isDesktop ? 10.0 : 12.0),
+              SizedBox(height: 12.0),
               for (final m in messages) ...[
                 _ExportedBubble(
                   message: m,
                   cs: cs,
                   showThinkingAndToolCards: showThinkingAndToolCards,
                   expandThinkingContent: expandThinkingContent,
-                  isDesktop: isDesktop,
                 ),
-                SizedBox(height: isDesktop ? 6.0 : 8.0),
+                SizedBox(height: 8.0),
               ],
-              SizedBox(height: isDesktop ? 10.0 : 12.0),
-              _ExportDisclaimer(isDesktop: isDesktop),
+              SizedBox(height: 12.0),
+              _ExportDisclaimer(),
             ],
           ),
         ),
@@ -2985,13 +2968,11 @@ class _ExportedBubble extends StatelessWidget {
     required this.cs,
     this.showThinkingAndToolCards = false,
     this.expandThinkingContent = false,
-    this.isDesktop = false,
   });
   final ChatMessage message;
   final ColorScheme cs;
   final bool showThinkingAndToolCards;
   final bool expandThinkingContent;
-  final bool isDesktop;
 
   @override
   Widget build(BuildContext context) {
@@ -2999,8 +2980,7 @@ class _ExportedBubble extends StatelessWidget {
     final bubbleBg = cs.primary.withValues(alpha: 0.08);
     final bubbleFg = cs.onSurface;
 
-    // Desktop uses smaller font sizes for better proportions
-    final double contentFontSize = isDesktop ? 13.0 : 15.7;
+    final double contentFontSize = 15.7;
 
     final messageForExport = messageForThinkingExport(
       message,
@@ -3045,7 +3025,7 @@ class _ExportedBubble extends StatelessWidget {
       return Align(
         alignment: Alignment.centerLeft,
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: isDesktop ? 760.0 : 860.0),
+          constraints: BoxConstraints(maxWidth: 860.0),
           child: ChatMessageWidget(
             message: messageForExport,
             modelIcon:
@@ -3085,12 +3065,12 @@ class _ExportedBubble extends StatelessWidget {
     return Align(
       alignment: Alignment.centerRight,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: isDesktop ? 600.0 : 680.0),
+        constraints: BoxConstraints(maxWidth: 680.0),
         child: Container(
-          padding: EdgeInsets.all(isDesktop ? 10.0 : 12.0),
+          padding: EdgeInsets.all(12.0),
           decoration: BoxDecoration(
             color: bubbleBg,
-            borderRadius: BorderRadius.circular(isDesktop ? 12.0 : 16.0),
+            borderRadius: BorderRadius.circular(16.0),
           ),
           child: contentWidget,
         ),
@@ -3100,20 +3080,16 @@ class _ExportedBubble extends StatelessWidget {
 }
 
 class _ExportDisclaimer extends StatelessWidget {
-  const _ExportDisclaimer({this.isDesktop = false});
-  final bool isDesktop;
+  const _ExportDisclaimer();
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final text = AppLocalizations.of(context)!.exportDisclaimerAiGenerated;
-    final double fontSize = isDesktop ? 10.0 : 12.0;
+    final double fontSize = 12.0;
     return Center(
       child: Padding(
-        padding: EdgeInsets.only(
-          top: isDesktop ? 3.0 : 4.0,
-          bottom: isDesktop ? 4.0 : 6.0,
-        ),
+        padding: EdgeInsets.only(top: 4.0, bottom: 6.0),
         child: Text(
           text,
           style: TextStyle(

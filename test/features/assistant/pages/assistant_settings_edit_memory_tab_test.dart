@@ -456,62 +456,63 @@ void main() {
     );
   });
 
-  testWidgets('desktop write-scope and dedupe menus show per-option help', (
-    tester,
-  ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-    try {
-      final (ap, chat, memoryV2, pipeline) = await _createProviders(tester);
-      _setLargeSurface(tester);
-      await ap.updateAssistant(
-        ap
-            .getById(_assistantId)!
-            .copyWith(enableMemory: true, autoOrganizeMemory: true),
-      );
+  testWidgets(
+    'wide Android write-scope and dedupe sheets show per-option help',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try {
+        final (ap, chat, memoryV2, pipeline) = await _createProviders(tester);
+        _setLargeSurface(tester);
+        await ap.updateAssistant(
+          ap
+              .getById(_assistantId)!
+              .copyWith(enableMemory: true, autoOrganizeMemory: true),
+        );
 
-      await tester.pumpWidget(
-        _buildHarness(
-          assistantProvider: ap,
-          chatService: chat,
-          memoryV2: memoryV2,
-          pipeline: pipeline,
-          child: const AssistantSettingsEditPage(assistantId: _assistantId),
-        ),
-      );
-      await _openMemoryTab(tester);
+        await tester.pumpWidget(
+          _buildHarness(
+            assistantProvider: ap,
+            chatService: chat,
+            memoryV2: memoryV2,
+            pipeline: pipeline,
+            child: const AssistantSettingsEditPage(assistantId: _assistantId),
+          ),
+        );
+        await _openMemoryTab(tester);
 
-      final writeScope = find.text('Always global').hitTestable();
-      await tester.ensureVisible(writeScope);
-      await tester.tap(writeScope);
-      await tester.pumpAndSettle();
-      expect(
-        find.text('New memories are shared with every assistant'),
-        findsOneWidget,
-      );
-      expect(
-        find.text('New memories stay private to this assistant'),
-        findsOneWidget,
-      );
+        final writeScope = find.text('Always global').hitTestable();
+        await tester.ensureVisible(writeScope);
+        await tester.tap(writeScope);
+        await tester.pumpAndSettle();
+        expect(
+          find.text('New memories are shared with every assistant'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('New memories stay private to this assistant'),
+          findsOneWidget,
+        );
 
-      await tester.tapAt(const Offset(8, 8));
-      await tester.pumpAndSettle();
+        await tester.tapAt(const Offset(8, 8));
+        await tester.pumpAndSettle();
 
-      final dedupe = find.text('Batched').hitTestable();
-      await tester.ensureVisible(dedupe);
-      await tester.tap(dedupe);
-      await tester.pumpAndSettle();
-      expect(
-        find.textContaining('Judge all new candidates in one request'),
-        findsOneWidget,
-      );
-      expect(
-        find.textContaining('Judge each candidate in its own request'),
-        findsOneWidget,
-      );
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
+        final dedupe = find.text('Batched').hitTestable();
+        await tester.ensureVisible(dedupe);
+        await tester.tap(dedupe);
+        await tester.pumpAndSettle();
+        expect(
+          find.textContaining('Judge all new candidates in one request'),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('Judge each candidate in its own request'),
+          findsOneWidget,
+        );
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
 
   testWidgets('memory tab links to memory settings page', (tester) async {
     final (ap, chat, memoryV2, pipeline) = await _createProviders(tester);

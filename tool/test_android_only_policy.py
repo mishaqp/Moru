@@ -45,6 +45,16 @@ class AndroidOnlyPolicyTest(unittest.TestCase):
         ).stdout.split()
         self.assertEqual(tracked, [])
 
+    def test_android_ui_has_no_desktop_flag(self):
+        # Width-based Android layouts use isWide; platform-only branches must
+        # not return when shared upstream UI is merged.
+        problems = []
+        for path in (ROOT / 'lib').rglob('*.dart'):
+            for number, line in enumerate(path.read_text().splitlines(), 1):
+                if 'isDesktop' in line:
+                    problems.append(f'{path.relative_to(ROOT)}:{number}')
+        self.assertEqual(problems, [], '\n'.join(problems))
+
     def test_on_device_llm_is_not_packaged(self):
         gradle = (ROOT / 'android/app/build.gradle.kts').read_text()
         manifest = (ROOT / 'android/app/src/main/AndroidManifest.xml').read_text()

@@ -302,38 +302,4 @@ void main() {
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
-
-  testWidgets('assistant desktop dialog shows MCP menu item', (tester) async {
-    final bundle = await _createAssistantProvider(tester);
-    final assistantProvider = bundle.assistantProvider;
-
-    await tester.pumpWidget(
-      _buildHarness(
-        assistantProvider: assistantProvider,
-        chatService: bundle.chatService,
-        memoryV2: bundle.memoryV2,
-        pipeline: bundle.pipeline,
-        child: Scaffold(
-          body: Builder(
-            builder: (context) {
-              return TextButton(
-                onPressed: () => showAssistantDesktopDialog(
-                  context,
-                  assistantId: _assistantId,
-                ),
-                child: const Text('open'),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-    await tester.pump();
-
-    await tester.tap(find.text('open'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-
-    expect(find.text('MCP'), findsOneWidget);
-  });
 }

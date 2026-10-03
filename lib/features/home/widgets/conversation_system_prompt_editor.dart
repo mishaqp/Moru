@@ -40,7 +40,7 @@ Future<String?> showConversationSystemPromptEditor(
   BuildContext context, {
   required String initial,
 }) {
-  if (ResponsiveHelper.isDesktop(context)) {
+  if (ResponsiveHelper.isWide(context)) {
     return showDialog<String>(
       context: context,
       builder: (ctx) => Dialog(
