@@ -22520,6 +22520,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This report was deleted or could not be shared. Create a new report.'**
   String get problemReportUnavailable;
+
+  /// No description provided for @mcpManagerToolTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage MCP servers'**
+  String get mcpManagerToolTitle;
+
+  /// No description provided for @mcpManagerToolSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let the model add, configure and test MCP servers after confirmation. Secrets are entered privately.'**
+  String get mcpManagerToolSubtitle;
+
+  /// No description provided for @mcpManagerActionList.
+  ///
+  /// In en, this message translates to:
+  /// **'List MCP servers'**
+  String get mcpManagerActionList;
+
+  /// No description provided for @mcpManagerActionGet.
+  ///
+  /// In en, this message translates to:
+  /// **'Read MCP server'**
+  String get mcpManagerActionGet;
+
+  /// No description provided for @mcpManagerActionAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add MCP server'**
+  String get mcpManagerActionAdd;
+
+  /// No description provided for @mcpManagerActionUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update MCP server'**
+  String get mcpManagerActionUpdate;
+
+  /// No description provided for @mcpManagerActionEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable MCP server'**
+  String get mcpManagerActionEnable;
+
+  /// No description provided for @mcpManagerActionDisable.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable MCP server'**
+  String get mcpManagerActionDisable;
+
+  /// No description provided for @mcpManagerActionRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove MCP server'**
+  String get mcpManagerActionRemove;
+
+  /// No description provided for @mcpManagerActionTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Test MCP server'**
+  String get mcpManagerActionTest;
+
+  /// No description provided for @mcpManagerSecretHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter secret values here. They are saved only in MCP settings and are never sent to the model or chat history. Include Bearer/Basic when needed for a header.'**
+  String get mcpManagerSecretHint;
+
+  /// No description provided for @mcpManagerPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Current configuration'**
+  String get mcpManagerPrevious;
+
+  /// No description provided for @mcpManagerValueSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Value set'**
+  String get mcpManagerValueSet;
+
+  /// No description provided for @mcpManagerValueNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Value needed'**
+  String get mcpManagerValueNeeded;
 }
 
 class _AppLocalizationsDelegate

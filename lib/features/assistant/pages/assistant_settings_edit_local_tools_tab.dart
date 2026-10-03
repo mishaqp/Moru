@@ -193,6 +193,17 @@ class _LocalToolsTab extends StatelessWidget {
               onChanged: (value) =>
                   toggleTool(LocalToolNames.scheduledTasks, value),
             ),
+            _iosDivider(context),
+            _LocalToolRow(
+              icon: Lucide.Server,
+              title: l10n.mcpManagerToolTitle,
+              subtitle: l10n.mcpManagerToolSubtitle,
+              enabled: assistant.localToolIds.contains(
+                LocalToolNames.mcpManager,
+              ),
+              onChanged: (value) =>
+                  toggleTool(LocalToolNames.mcpManager, value),
+            ),
             if (LocalToolsService.isAvailableOnThisPlatform(
               LocalToolNames.reportProblem,
             )) ...[

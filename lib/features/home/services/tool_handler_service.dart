@@ -40,6 +40,7 @@ import 'assistant_manager_tool.dart';
 import 'browser_agent_tool.dart';
 import 'built_in_tool_names.dart';
 import 'local_tools_service.dart';
+import 'mcp_manager_tool.dart';
 import 'mini_app_data_tool.dart';
 import 'root_phone_control.dart';
 import 'root_shell_tool.dart';
@@ -577,6 +578,7 @@ class ToolHandlerService {
         // Mutating device tools and Shared Browser click/type actions modify
         // user-visible state, so they require explicit approval first.
         if (name != LocalToolNames.reportProblem &&
+            name != LocalToolNames.mcpManager &&
             LocalToolNames.requiresApprovalFor(name, args) &&
             assistant != null &&
             LocalToolsService.isEnabledForAssistant(name, assistant) &&
@@ -672,9 +674,44 @@ class ToolHandlerService {
           return jsonEncode(
             await ProblemReportService().create(
               settings: settings,
+              mcp: mcp,
               environment: _optional<EnvironmentProvider>(),
               checkCancelled: ensureLiveToolCall,
             ),
+          );
+        }
+
+        if (name == LocalToolNames.mcpManager) {
+          void checkAllowed() {
+            ensureLiveToolCall();
+            final current = assistant == null
+                ? null
+                : assistantProvider.getById(assistant.id);
+            if (current == null ||
+                !LocalToolsService.isEnabledForAssistant(name, current)) {
+              throw StateError('permission_denied');
+            }
+          }
+
+          try {
+            checkAllowed();
+          } catch (_) {
+            return _toolError(
+              error: 'permission_denied',
+              message: 'MCP management is disabled for this assistant.',
+              tool: name,
+            );
+          }
+          approvalService?.setAutoApproveAll(settings.toolAutoApproveAll);
+          return McpManagerTool(
+            provider: mcp,
+            approvals: approvalService,
+            autoApproveAll: settings.toolAutoApproveAll,
+            checkAllowed: checkAllowed,
+          ).execute(
+            args,
+            toolCallId: approvalIdFor(name, toolCallId),
+            conversationId: conversationId,
           );
         }
 

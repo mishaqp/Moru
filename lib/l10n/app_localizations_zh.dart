@@ -12099,6 +12099,49 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get problemReportUnavailable => '报告已删除或无法分享。请创建新报告。';
+
+  @override
+  String get mcpManagerToolTitle => '管理 MCP 服务器';
+
+  @override
+  String get mcpManagerToolSubtitle => '允许模型在确认后添加、配置和测试 MCP 服务器。密钥需私下输入。';
+
+  @override
+  String get mcpManagerActionList => '列出 MCP 服务器';
+
+  @override
+  String get mcpManagerActionGet => '查看 MCP 服务器';
+
+  @override
+  String get mcpManagerActionAdd => '添加 MCP 服务器';
+
+  @override
+  String get mcpManagerActionUpdate => '更新 MCP 服务器';
+
+  @override
+  String get mcpManagerActionEnable => '启用 MCP 服务器';
+
+  @override
+  String get mcpManagerActionDisable => '停用 MCP 服务器';
+
+  @override
+  String get mcpManagerActionRemove => '删除 MCP 服务器';
+
+  @override
+  String get mcpManagerActionTest => '测试 MCP 服务器';
+
+  @override
+  String get mcpManagerSecretHint =>
+      '请在此输入密钥。密钥仅保存到 MCP 设置，不会发送给模型或写入聊天记录。请求头如有需要，请包含 Bearer/Basic 前缀。';
+
+  @override
+  String get mcpManagerPrevious => '当前配置';
+
+  @override
+  String get mcpManagerValueSet => '已设置值';
+
+  @override
+  String get mcpManagerValueNeeded => '需要输入值';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -24125,6 +24168,49 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get problemReportUnavailable => '报告已删除或无法分享。请创建新报告。';
+
+  @override
+  String get mcpManagerToolTitle => '管理 MCP 服务器';
+
+  @override
+  String get mcpManagerToolSubtitle => '允许模型在确认后添加、配置和测试 MCP 服务器。密钥需私下输入。';
+
+  @override
+  String get mcpManagerActionList => '列出 MCP 服务器';
+
+  @override
+  String get mcpManagerActionGet => '查看 MCP 服务器';
+
+  @override
+  String get mcpManagerActionAdd => '添加 MCP 服务器';
+
+  @override
+  String get mcpManagerActionUpdate => '更新 MCP 服务器';
+
+  @override
+  String get mcpManagerActionEnable => '启用 MCP 服务器';
+
+  @override
+  String get mcpManagerActionDisable => '停用 MCP 服务器';
+
+  @override
+  String get mcpManagerActionRemove => '删除 MCP 服务器';
+
+  @override
+  String get mcpManagerActionTest => '测试 MCP 服务器';
+
+  @override
+  String get mcpManagerSecretHint =>
+      '请在此输入密钥。密钥仅保存到 MCP 设置，不会发送给模型或写入聊天记录。请求头如有需要，请包含 Bearer/Basic 前缀。';
+
+  @override
+  String get mcpManagerPrevious => '当前配置';
+
+  @override
+  String get mcpManagerValueSet => '已设置值';
+
+  @override
+  String get mcpManagerValueNeeded => '需要输入值';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -36225,4 +36311,47 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get problemReportUnavailable => '報告已刪除或無法分享。請建立新報告。';
+
+  @override
+  String get mcpManagerToolTitle => '管理 MCP 伺服器';
+
+  @override
+  String get mcpManagerToolSubtitle => '允許模型在確認後新增、設定和測試 MCP 伺服器。密鑰需私下輸入。';
+
+  @override
+  String get mcpManagerActionList => '列出 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionGet => '查看 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionAdd => '新增 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionUpdate => '更新 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionEnable => '啟用 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionDisable => '停用 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionRemove => '刪除 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionTest => '測試 MCP 伺服器';
+
+  @override
+  String get mcpManagerSecretHint =>
+      '請在此輸入密鑰。密鑰僅儲存至 MCP 設定，不會傳送給模型或寫入聊天記錄。請求標頭如有需要，請包含 Bearer/Basic 前綴。';
+
+  @override
+  String get mcpManagerPrevious => '目前設定';
+
+  @override
+  String get mcpManagerValueSet => '已設定值';
+
+  @override
+  String get mcpManagerValueNeeded => '需要輸入值';
 }

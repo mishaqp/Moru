@@ -6,6 +6,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
+import 'package:Kelivo/core/providers/mcp_provider.dart';
 import 'package:Kelivo/core/services/logging/flutter_logger.dart';
 import 'package:Kelivo/core/services/logging/problem_report_service.dart';
 import 'package:Kelivo/core/services/search/search_service.dart';
@@ -103,6 +104,32 @@ void main() {
       }
     },
   );
+
+  test('MCP private inputs are removed from report data and ZIP', () async {
+    const secret = 'PRIVATE_MCP_REPORT_INPUT';
+    final mcp = McpProvider(preferences: createBusinessTestPreferences());
+    addTearDown(mcp.dispose);
+    await mcp.loaded;
+    await mcp.importServers([
+      McpServerConfig(
+        id: 'private',
+        enabled: false,
+        name: 'Private',
+        transport: McpTransportType.http,
+        url: 'https://example.test',
+        managedSecrets: {'TOKEN': secret},
+        headers: {'Authorization': 'Bearer $secret'},
+      ),
+    ]);
+    device['model'] = 'Phone $secret';
+    final result = await reports.create(settings: settings, mcp: mcp);
+    final zip = ZipDecoder().decodeBytes(
+      await reports.readReport(result['name'] as String),
+    );
+    final text = zip.files.map((file) => utf8.decode(file.content)).join('\n');
+    expect(text, isNot(contains(secret)));
+    expect(jsonEncode(result), isNot(contains(secret)));
+  });
 
   test('ZIP and uncompressed journal stay bounded', () async {
     for (var i = 0; i < 1000; i++) {

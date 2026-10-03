@@ -57,6 +57,12 @@ package name does not require building other platforms.
   go through the tool approval prompt, and it cannot delete the assistant
   running the chat or the last one. Extend its settings schema when
   `Assistant` gains a user-facing field.
+- **MCP manager tool**: the opt-in, default-off `manage_mcp` lists, reads and
+  tests live MCP servers; add/update/enable/disable/remove use ordinary tool
+  confirmation without individual "Always allow". Credentials are entered
+  privately on its approval card or in MCP settings, never in model arguments
+  or results. Full trust cannot fill missing credentials. It reuses the MCP
+  JSON importer and runtime; package installation stays in workspace `shell`.
 - **Problem reports**: opt-in `report_problem` asks for fresh consent unless
   global full-trust mode is enabled; individual "Always allow" is unavailable.
   `ProblemReportService` exports a private ZIP with

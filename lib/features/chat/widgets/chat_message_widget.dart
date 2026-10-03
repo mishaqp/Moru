@@ -50,6 +50,8 @@ import '../../../shared/widgets/emoji_text.dart';
 import '../../home/services/ask_user_interaction_service.dart';
 import '../utils/tool_timing.dart';
 import '../../home/services/assistant_manager_tool.dart';
+import '../../home/services/mcp_manager_tool.dart';
+import 'mcp_management_approval.dart';
 import '../../home/services/mini_app_data_tool.dart';
 import '../../home/services/scheduled_task_tool.dart';
 import '../../home/services/local_tools_service.dart';
@@ -499,6 +501,7 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
     LocalToolNames.remindersCreate => Lucide.ListPlus,
     LocalToolNames.remindersComplete => Lucide.CheckCircle,
     LocalToolNames.assistantManager => Lucide.Bot,
+    LocalToolNames.mcpManager => Lucide.Server,
     LocalToolNames.reportProblem => Lucide.Bug,
     LocalToolNames.scheduledTasks => Lucide.CalendarClock,
     LocalToolNames.miniApps => Lucide.LayoutGrid,
@@ -545,6 +548,10 @@ String? _localToolTitleFor(
     LocalToolNames.remindersComplete =>
       l10n.assistantEditLocalToolRemindersCompleteTitle,
     LocalToolNames.assistantManager => _assistantManagerTitleFor(l10n, args),
+    LocalToolNames.mcpManager => mcpManagerActionTitle(
+      l10n,
+      McpManagerTool.actionOf(args),
+    ),
     LocalToolNames.reportProblem => l10n.problemReportToolTitle,
     LocalToolNames.scheduledTasks => switch (ScheduledTaskTool.actionOf(args)) {
       ScheduledTaskTool.actionList => l10n.scheduledTaskToolActionList,
@@ -5437,6 +5444,18 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
         : null;
     final Widget? summaryContent = _isAskUser
         ? _AskUserInlineBody(part: widget.part, compact: true)
+        : widget.part.toolName == LocalToolNames.mcpManager &&
+              approvalRequest != null
+        ? McpManagementApproval(
+            key: ValueKey(approvalRequest.approvalId),
+            request: approvalRequest,
+            onDeny: () => showToolApprovalDenyDialog(
+              context,
+              approvalService,
+              approvalRequest.toolCallId,
+              conversationId: approvalRequest.conversationId,
+            ),
+          )
         : widget.part.toolName == LocalToolNames.reportProblem &&
               isPendingApproval
         ? Text(
@@ -5528,7 +5547,8 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
             AppLocalizations.of(context)!.computerStopped,
             style: TextStyle(fontSize: 11, color: fg.muted),
           )
-        : approvalRequest != null
+        : approvalRequest != null &&
+              widget.part.toolName != LocalToolNames.mcpManager
         ? Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -5948,9 +5968,24 @@ class _ToolCallItemState extends State<_ToolCallItem> {
                   ProblemReportCard.fromContent(widget.part.content) != null)
                 ProblemReportCard.fromContent(widget.part.content)!,
             ],
+            if (widget.part.toolName == LocalToolNames.mcpManager &&
+                pendingRequest != null) ...[
+              const SizedBox(height: 8),
+              McpManagementApproval(
+                key: ValueKey(pendingRequest.approvalId),
+                request: pendingRequest,
+                onDeny: () => _showDenyDialog(
+                  context,
+                  approvalService,
+                  pendingRequest.toolCallId,
+                  conversationId: pendingRequest.conversationId,
+                ),
+              ),
+            ],
             if (!isWorkspace &&
                 isPendingApproval &&
                 widget.part.toolName != LocalToolNames.reportProblem &&
+                widget.part.toolName != LocalToolNames.mcpManager &&
                 widget.part.arguments.isNotEmpty) ...[
               const SizedBox(height: 8),
               Container(
@@ -5978,6 +6013,7 @@ class _ToolCallItemState extends State<_ToolCallItem> {
             // Approval action buttons
             if (!isWorkspace &&
                 isPendingApproval &&
+                widget.part.toolName != LocalToolNames.mcpManager &&
                 pendingToolCallId != null) ...[
               const SizedBox(height: 10),
               Row(

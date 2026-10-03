@@ -12799,4 +12799,48 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get problemReportUnavailable =>
       'Отчёт удалён или им не удалось поделиться. Соберите новый отчёт.';
+
+  @override
+  String get mcpManagerToolTitle => 'Управление MCP-серверами';
+
+  @override
+  String get mcpManagerToolSubtitle =>
+      'Модель может добавлять, настраивать и проверять MCP-серверы с подтверждением. Секреты вводятся отдельно.';
+
+  @override
+  String get mcpManagerActionList => 'Список MCP-серверов';
+
+  @override
+  String get mcpManagerActionGet => 'Посмотреть MCP-сервер';
+
+  @override
+  String get mcpManagerActionAdd => 'Добавить MCP-сервер';
+
+  @override
+  String get mcpManagerActionUpdate => 'Изменить MCP-сервер';
+
+  @override
+  String get mcpManagerActionEnable => 'Включить MCP-сервер';
+
+  @override
+  String get mcpManagerActionDisable => 'Выключить MCP-сервер';
+
+  @override
+  String get mcpManagerActionRemove => 'Удалить MCP-сервер';
+
+  @override
+  String get mcpManagerActionTest => 'Проверить MCP-сервер';
+
+  @override
+  String get mcpManagerSecretHint =>
+      'Введите секреты здесь. Они сохраняются только в настройках MCP и не передаются модели или в историю чата. Для заголовка при необходимости добавьте Bearer/Basic.';
+
+  @override
+  String get mcpManagerPrevious => 'Текущая конфигурация';
+
+  @override
+  String get mcpManagerValueSet => 'Значение задано';
+
+  @override
+  String get mcpManagerValueNeeded => 'Нужно ввести значение';
 }

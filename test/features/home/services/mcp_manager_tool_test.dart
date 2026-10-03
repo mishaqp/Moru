@@ -1,0 +1,753 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:Kelivo/core/providers/mcp_provider.dart';
+import 'package:Kelivo/core/services/mcp/mcp_oauth_service.dart';
+import 'package:Kelivo/core/services/logging/flutter_logger.dart';
+import 'package:Kelivo/features/home/services/mcp_manager_tool.dart';
+import 'package:Kelivo/features/home/services/tool_approval_service.dart';
+
+import '../../../support/business_test_harness.dart';
+
+Future<HttpServer> _errorServer(String message) async {
+  HttpOverrides.global = null;
+  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  addTearDown(() => server.close(force: true));
+  server.listen((request) async {
+    final rpc = jsonDecode(await utf8.decoder.bind(request).join()) as Map;
+    request.response.headers.contentType = ContentType.json;
+    request.response.write(
+      jsonEncode({
+        'jsonrpc': '2.0',
+        'id': rpc['id'],
+        'error': {'code': -32000, 'message': message},
+      }),
+    );
+    await request.response.close();
+  });
+  return server;
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late McpProvider provider;
+  late ToolApprovalService approvals;
+  late McpManagerTool tool;
+
+  setUp(() async {
+    provider = McpProvider(preferences: createBusinessTestPreferences());
+    await provider.loaded;
+    approvals = ToolApprovalService();
+    tool = McpManagerTool(provider: provider, approvals: approvals);
+  });
+  tearDown(() {
+    provider.dispose();
+    approvals.dispose();
+  });
+
+  Future<Map<String, dynamic>> run(Map<String, dynamic> args) async =>
+      jsonDecode(
+            await tool.execute(
+              args,
+              toolCallId: 'call',
+              conversationId: 'chat',
+            ),
+          )
+          as Map<String, dynamic>;
+
+  Future<Map<String, dynamic>> addDisabled({
+    Map<String, dynamic>? config,
+  }) async {
+    final pending = run({
+      'action': 'add',
+      'name': 'Fixture',
+      'config':
+          config ??
+          {'type': 'http', 'url': 'https://example.test/mcp', 'disabled': true},
+    });
+    await Future<void>.delayed(Duration.zero);
+    approvals.approve('call', conversationId: 'chat');
+    return pending;
+  }
+
+  test('unknown ids are rejected before confirmation', () async {
+    for (final action in [
+      'get',
+      'update',
+      'remove',
+      'enable',
+      'disable',
+      'test',
+    ]) {
+      final result = await run({
+        'action': action,
+        'server_id': 'missing',
+        'config': {'url': 'https://example.test'},
+      });
+      expect(result['error'], 'unknown_server', reason: action);
+      expect(result['message'], contains('list'));
+      expect(approvals.pendingRequests, isEmpty);
+    }
+  });
+
+  test(
+    'mutations ask every time, describe the server and honor denial',
+    () async {
+      final result = await addDisabled();
+      final id = result['server']['id'];
+      for (final action in ['update', 'enable', 'disable', 'remove']) {
+        final pending = run({
+          'action': action,
+          'server_id': id,
+          if (action == 'update') 'name': 'Renamed',
+        });
+        await Future<void>.delayed(Duration.zero);
+        final request = approvals.pendingRequests.single;
+        expect(request.requiresExplicitConsent, isTrue);
+        expect(request.arguments['action'], action);
+        expect(
+          request.arguments['server']['name'],
+          action == 'update' ? 'Renamed' : 'Fixture',
+        );
+        expect(request.arguments['server']['type'], 'http');
+        expect(request.arguments['server']['url'], 'https://example.test/mcp');
+        approvals.deny('call', conversationId: 'chat');
+        expect((await pending)['error'], 'approval_denied');
+      }
+      expect(provider.getById(id), isNotNull);
+      expect((await run({'action': 'list'}))['ok'], isTrue);
+      expect((await run({'action': 'get', 'server_id': id}))['ok'], isTrue);
+      expect(
+        (await run({'action': 'test', 'server_id': id}))['connected'],
+        isFalse,
+      );
+      expect(approvals.pendingRequests, isEmpty);
+    },
+  );
+
+  test('full trust bypasses confirmation but cannot invent a secret', () async {
+    approvals.setAutoApproveAll(true);
+    final result = await run({
+      'action': 'add',
+      'name': 'Trusted',
+      'config': {
+        'type': 'http',
+        'url': 'https://example.test',
+        'disabled': true,
+      },
+    });
+    expect(result['ok'], isTrue);
+    expect(approvals.pendingRequests, isEmpty);
+    final missing = await run({
+      'action': 'add',
+      'name': 'Private',
+      'config': {
+        'type': 'http',
+        'url': 'https://example.test',
+        'headers': {'Authorization': ''},
+      },
+    });
+    expect(missing['error'], 'secret_required');
+    expect(missing['message'], contains('MCP settings'));
+    expect(provider.servers.where((s) => s.name == 'Private'), isEmpty);
+  });
+
+  test(
+    'enabling a saved server with missing secrets requires private input',
+    () async {
+      final id = await provider.addServer(
+        enabled: false,
+        name: 'Incomplete',
+        transport: McpTransportType.http,
+        url: 'https://example.test/mcp',
+        headers: {'Authorization': ''},
+      );
+      approvals.setAutoApproveAll(true);
+      final result = await run({'action': 'enable', 'server_id': id});
+      expect(result['error'], 'secret_required');
+      expect(provider.getById(id)!.enabled, isFalse);
+      approvals.setAutoApproveAll(false);
+      final pending = run({'action': 'enable', 'server_id': id});
+      await Future<void>.delayed(Duration.zero);
+      expect(approvals.pendingRequests.single.secretFields, [
+        'header:Authorization',
+      ]);
+      approvals.deny('call', conversationId: 'chat');
+      expect((await pending)['error'], 'approval_denied');
+    },
+  );
+
+  test(
+    'private values never enter arguments, results or diagnostics',
+    () async {
+      const secret = 'PRIVATE_MCP_SENTINEL';
+      final pending = run({
+        'action': 'add',
+        'name': 'Private',
+        'config': {
+          'type': 'http',
+          'url': 'https://example.test/mcp?token={{TOKEN}}',
+          'disabled': true,
+          'headers': {'Authorization': ''},
+        },
+      });
+      await Future<void>.delayed(Duration.zero);
+      final request = approvals.pendingRequests.single;
+      expect(
+        request.secretFields,
+        containsAll(['TOKEN', 'header:Authorization']),
+      );
+      final before = jsonEncode(request.arguments);
+      approvals.approve(
+        'call',
+        conversationId: 'chat',
+        secretValues: {
+          'TOKEN': secret,
+          'header:Authorization': 'Bearer $secret',
+        },
+      );
+      final result = await pending;
+      expect(result['ok'], isTrue, reason: '$result');
+      final id = result['server']['id'] as String;
+      expect(provider.getById(id)!.headers['Authorization'], 'Bearer $secret');
+      expect(provider.getById(id)!.url, contains(secret));
+      final outputs = [
+        before,
+        jsonEncode(result),
+        jsonEncode(await run({'action': 'list'})),
+        jsonEncode(await run({'action': 'get', 'server_id': id})),
+        FlutterLogger.technicalTail,
+      ];
+      for (final output in outputs) {
+        expect(output, isNot(contains(secret)));
+      }
+      expect(result['server']['headers']['Authorization'], {'value_set': true});
+      final renamed = run({
+        'action': 'update',
+        'server_id': id,
+        'name': 'Safe rename',
+      });
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        jsonEncode(approvals.pendingRequests.single.arguments),
+        isNot(contains(secret)),
+      );
+      expect(approvals.pendingRequests.single.secretFields, isEmpty);
+      approvals.approve('call', conversationId: 'chat');
+      expect((await renamed)['ok'], isTrue);
+      expect(provider.getById(id)!.headers['Authorization'], 'Bearer $secret');
+      final restored = McpServerConfig.fromJson(provider.getById(id)!.toJson());
+      expect(
+        jsonEncode(McpManagerTool.serverSummary(restored, provider)),
+        isNot(contains(secret)),
+      );
+    },
+  );
+
+  test('raw credentials are rejected without echoing them', () async {
+    const secret = 'PRIVATE_MCP_SENTINEL';
+    for (final config in [
+      {
+        'command': 'node',
+        'env': {'TOKEN': secret},
+      },
+      {
+        'type': 'http',
+        'url': 'https://example.test',
+        'headers': {'Authorization': 'Bearer $secret'},
+      },
+      {
+        'command': 'node',
+        'args': ['--password', secret],
+      },
+      {
+        'command': 'node',
+        'args': ['--token=$secret'],
+      },
+      {'type': 'http', 'url': 'https://user:$secret@example.test'},
+      {'type': 'http', 'url': 'https://example.test?api_key=$secret'},
+      {'type': 'http', 'url': 'https://example.test/mcp?sig=$secret'},
+      {
+        'command': 'node',
+        'args': ['--data=sk-secretABC/{{SAFE}}'],
+      },
+    ]) {
+      final result = await run({
+        'action': 'add',
+        'name': 'Rejected',
+        'config': config,
+      });
+      expect(result['error'], 'secret_in_arguments');
+      expect(jsonEncode(result), isNot(contains(secret)));
+      expect(approvals.pendingRequests, isEmpty);
+    }
+  });
+
+  test(
+    'STDIO is listed without a runtime and secrets stay private after edits',
+    () async {
+      const secret = 'PRIVATE_STDIO_SECRET';
+      final pending = run({
+        'action': 'add',
+        'name': 'STDIO',
+        'config': {
+          'command': 'node',
+          'args': ['server.js', '--token={{TOKEN}}'],
+          'env': {'API_KEY': ''},
+          'disabled': true,
+        },
+      });
+      await Future<void>.delayed(Duration.zero);
+      final description = jsonEncode(
+        approvals.pendingRequests.single.arguments,
+      );
+      expect(description, contains('node'));
+      expect(description, contains('server.js'));
+      expect(description, contains('API_KEY'));
+      approvals.approve(
+        'call',
+        conversationId: 'chat',
+        secretValues: {'TOKEN': secret, 'env:API_KEY': secret},
+      );
+      final added = await pending;
+      expect(added['ok'], isTrue, reason: '$added');
+      final id = added['server']['id'] as String;
+      expect(provider.getById(id)!.args.last, '--token=$secret');
+      expect(provider.getById(id)!.env['API_KEY'], secret);
+      expect(jsonEncode(await run({'action': 'list'})), contains(id));
+      expect(jsonEncode(added), isNot(contains(secret)));
+      await provider.updateServer(
+        provider
+            .getById(id)!
+            .copyWith(
+              tools: [
+                McpToolConfig(enabled: true, name: 'echo', description: secret),
+              ],
+            ),
+      );
+      approvals.setAutoApproveAll(true);
+      final edited = await run({
+        'action': 'update',
+        'server_id': id,
+        'config': {
+          'env': {},
+          'args': ['other.js'],
+        },
+      });
+      expect(edited['ok'], isTrue, reason: '$edited');
+      expect(jsonEncode(edited), isNot(contains(secret)));
+      await provider.replaceAllFromJson(provider.exportServersAsUiJson());
+      expect(provider.getById(id)!.managedSecrets['TOKEN'], secret);
+      expect(
+        jsonEncode(await run({'action': 'get', 'server_id': id})),
+        isNot(contains(secret)),
+      );
+    },
+  );
+
+  test(
+    'removing a saved header cannot expose its value through cached tools',
+    () async {
+      const secret = 'PRIVATE_SAVED_HEADER';
+      final id = await provider.addServer(
+        enabled: false,
+        name: 'Saved',
+        transport: McpTransportType.http,
+        url: 'https://example.test',
+        headers: {'Authorization': secret},
+      );
+      await provider.updateServer(
+        provider
+            .getById(id)!
+            .copyWith(
+              tools: [
+                McpToolConfig(enabled: true, name: 'echo', description: secret),
+              ],
+            ),
+      );
+      approvals.setAutoApproveAll(true);
+      final edited = await run({
+        'action': 'update',
+        'server_id': id,
+        'config': {'headers': {}},
+      });
+      expect(edited['ok'], isTrue);
+      expect(jsonEncode(edited), isNot(contains(secret)));
+    },
+  );
+
+  test(
+    'turning on full trust while a secret card is pending does not invent values',
+    () async {
+      final pending = run({
+        'action': 'add',
+        'name': 'Private',
+        'config': {
+          'type': 'http',
+          'url': 'https://example.test',
+          'headers': {'Authorization': ''},
+        },
+      });
+      await Future<void>.delayed(Duration.zero);
+      approvals.setAutoApproveAll(true);
+      expect((await pending)['error'], 'secret_required');
+      expect(approvals.pendingRequests, isEmpty);
+      expect(
+        provider.configuredServers.where((s) => s.name == 'Private'),
+        isEmpty,
+      );
+    },
+  );
+
+  test(
+    'a removed or changed server cannot reuse an old confirmation',
+    () async {
+      final result = await addDisabled();
+      final id = result['server']['id'] as String;
+      final pending = run({'action': 'remove', 'server_id': id});
+      await Future<void>.delayed(Duration.zero);
+      await provider.updateServerMetadata(
+        provider.getById(id)!.copyWith(name: 'Changed'),
+      );
+      approvals.approve('call', conversationId: 'chat');
+      expect((await pending)['error'], 'server_changed');
+      expect(provider.getById(id), isNotNull);
+    },
+  );
+
+  test(
+    'queued settings writes invalidate consent inside the mutation queue',
+    () async {
+      final fixture = McpServerConfig(
+        id: 'queued',
+        enabled: false,
+        name: 'Original',
+        transport: McpTransportType.http,
+        url: 'https://example.test',
+      );
+      final harness = await createBusinessTestHarness(
+        initial: {
+          'mcp_servers_v1': jsonEncode([
+            McpServerConfig(
+              id: 'kelivo_fetch',
+              enabled: false,
+              name: '@kelivo/fetch',
+              transport: McpTransportType.inmemory,
+            ).toJson(),
+            fixture.toJson(),
+          ]),
+        },
+      );
+      final queuedProvider = McpProvider(preferences: harness.preferences);
+      addTearDown(queuedProvider.dispose);
+      await queuedProvider.loaded;
+      final locked = Completer<void>();
+      final release = Completer<void>();
+      final transaction = harness.database.transaction(() async {
+        locked.complete();
+        await release.future;
+      });
+      await locked.future;
+      final writeStarted = Completer<void>();
+      final settingsWrite = queuedProvider.updateServerMetadata(
+        fixture.copyWith(name: 'Changed'),
+        beforeCommit: writeStarted.complete,
+      );
+      await writeStarted.future;
+      final removal =
+          McpManagerTool(
+            provider: queuedProvider,
+            autoApproveAll: true,
+          ).execute({
+            'action': 'remove',
+            'server_id': fixture.id,
+          }, toolCallId: 'queued');
+      release.complete();
+      await transaction;
+      await settingsWrite;
+      expect(jsonDecode(await removal)['error'], 'server_changed');
+      expect(queuedProvider.getById(fixture.id)!.name, 'Changed');
+    },
+  );
+
+  test('opaque endpoint path credentials from settings are hidden', () async {
+    const secret = 'PRIVATE_ENDPOINT_PATH';
+    final id = await provider.addServer(
+      enabled: false,
+      name: 'Endpoint',
+      transport: McpTransportType.http,
+      url: 'https://mcp.example.test/api/$secret/mcp',
+    );
+    expect(
+      jsonEncode(await run({'action': 'get', 'server_id': id})),
+      isNot(contains(secret)),
+    );
+    final pending = run({'action': 'remove', 'server_id': id});
+    await Future<void>.delayed(Duration.zero);
+    expect(
+      jsonEncode(approvals.pendingRequests.single.arguments),
+      isNot(contains(secret)),
+    );
+    approvals.deny('call', conversationId: 'chat');
+    await pending;
+  });
+
+  test(
+    'settings rotation and JSON removal retain former credentials',
+    () async {
+      const oldSecret = 'ROTATED_HEADER_OLD_SENTINEL';
+      const newSecret = 'ROTATED_HEADER_NEW_SENTINEL';
+      final id = await provider.addServer(
+        enabled: false,
+        name: 'Rotating',
+        transport: McpTransportType.http,
+        url: 'https://example.test/mcp',
+        headers: {'Authorization': oldSecret},
+      );
+      await provider.updateServer(
+        provider
+            .getById(id)!
+            .copyWith(
+              headers: {'Authorization': newSecret},
+              tools: [
+                McpToolConfig(
+                  enabled: true,
+                  name: 'echo',
+                  description: '$oldSecret $newSecret',
+                ),
+              ],
+            ),
+      );
+      final exported = jsonDecode(provider.exportServersAsUiJson()) as Map;
+      exported['mcpServers'][id]['headers'] = <String, String>{};
+      await provider.replaceAllFromJson(jsonEncode(exported));
+      final result = jsonEncode(await run({'action': 'get', 'server_id': id}));
+      expect(result, isNot(contains(oldSecret)));
+      expect(result, isNot(contains(newSecret)));
+      approvals.setAutoApproveAll(true);
+      final renamed = jsonEncode(
+        await run({'action': 'update', 'server_id': id, 'name': 'Renamed'}),
+      );
+      expect(renamed, isNot(contains(oldSecret)));
+      expect(renamed, isNot(contains(newSecret)));
+    },
+  );
+
+  test(
+    'changing an OAuth resource keeps former tokens out of cached tools',
+    () async {
+      const secret = 'FORMER_OAUTH_PRIVATE_SENTINEL';
+      final id = await provider.addServer(
+        enabled: false,
+        name: 'OAuth',
+        transport: McpTransportType.http,
+        url: 'https://example.test/mcp',
+      );
+      final saved = provider
+          .getById(id)!
+          .copyWith(
+            oauth: const McpOAuthState(
+              clientId: 'fixture',
+              authorizationServer: 'https://auth.test',
+              authorizationEndpoint: 'https://auth.test/authorize',
+              tokenEndpoint: 'https://auth.test/token',
+              resource: 'https://example.test/mcp',
+              accessToken: secret,
+            ),
+            tools: [
+              McpToolConfig(enabled: true, name: 'echo', description: secret),
+            ],
+          );
+      await provider.replaceAllFromJson(jsonEncode([saved.toJson()]));
+      expect(provider.getById(id)!.oauth, isNotNull);
+      approvals.setAutoApproveAll(true);
+      final result = await run({
+        'action': 'update',
+        'server_id': id,
+        'config': {'url': 'https://other.test/mcp'},
+      });
+      expect(result['ok'], isTrue);
+      expect(provider.getById(id)!.oauth, isNull);
+      expect(jsonEncode(result), isNot(contains(secret)));
+    },
+  );
+
+  test(
+    'public URL arguments are accepted independently of output masking',
+    () async {
+      final pending = run({
+        'action': 'add',
+        'name': 'Bridge',
+        'config': {
+          'command': 'node',
+          'args': [
+            'https://example.test/service/mcp',
+            'https://example.test/api/mcp/a/{{TOKEN}}/mcp',
+          ],
+          'disabled': true,
+        },
+      });
+      await Future<void>.delayed(Duration.zero);
+      expect(approvals.pendingRequests, hasLength(1));
+      approvals.approve(
+        'call',
+        conversationId: 'chat',
+        secretValues: {'TOKEN': 'PRIVATE_BRIDGE_SENTINEL'},
+      );
+      final result = await pending;
+      expect(result['ok'], isTrue);
+      expect(jsonEncode(result), isNot(contains('PRIVATE_BRIDGE_SENTINEL')));
+    },
+  );
+
+  test('add → test → remove uses a real connection to a fixture', () async {
+    HttpOverrides.global = null;
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(() => server.close(force: true));
+    server.listen((request) async {
+      if (request.method == 'DELETE') {
+        await request.response.close();
+        return;
+      }
+      final rpc = jsonDecode(await utf8.decoder.bind(request).join()) as Map;
+      final id = rpc['id'];
+      if (id == null) {
+        request.response.statusCode = 202;
+        await request.response.close();
+        return;
+      }
+      final result = switch (rpc['method']) {
+        'initialize' => {
+          'protocolVersion': '2025-03-26',
+          'capabilities': {'tools': {}},
+          'serverInfo': {'name': 'Fixture', 'version': '1'},
+        },
+        'tools/list' => {
+          'tools': [
+            {
+              'name': 'echo',
+              'description': 'Fixture tool',
+              'inputSchema': {'type': 'object'},
+            },
+          ],
+        },
+        _ => <String, dynamic>{},
+      };
+      request.response.headers.contentType = ContentType.json;
+      request.response.write(
+        jsonEncode({'jsonrpc': '2.0', 'id': id, 'result': result}),
+      );
+      await request.response.close();
+    });
+    approvals.setAutoApproveAll(true);
+    final added = await run({
+      'action': 'add',
+      'name': 'Fixture',
+      'config': {'type': 'http', 'url': 'http://127.0.0.1:${server.port}/mcp'},
+    });
+    final id = added['server']['id'];
+    final tested = await run({'action': 'test', 'server_id': id});
+    expect(tested['connected'], isTrue, reason: '$tested');
+    expect(tested['tool_count'], 1);
+    expect(tested['tools'].single['name'], 'echo');
+    expect((await run({'action': 'remove', 'server_id': id}))['ok'], isTrue);
+    expect(provider.getById(id), isNull);
+  });
+
+  test('test reports a connection error without echoed credentials', () async {
+    const secret = 'MCP_ERROR_PRIVATE_SENTINEL';
+    final server = await _errorServer('Fixture failed: $secret');
+    final pending = run({
+      'action': 'add',
+      'name': 'Failing fixture',
+      'config': {
+        'type': 'http',
+        'url': 'http://127.0.0.1:${server.port}/mcp',
+        'headers': {'Authorization': ''},
+      },
+    });
+    await Future<void>.delayed(Duration.zero);
+    approvals.approve(
+      'call',
+      conversationId: 'chat',
+      secretValues: {'header:Authorization': 'Bearer $secret'},
+    );
+    final added = await pending;
+    final result = await run({
+      'action': 'test',
+      'server_id': added['server']['id'],
+    });
+    expect(result['connected'], isFalse);
+    expect(result['tool_count'], 0);
+    expect(result['error'], contains('Fixture failed'));
+    expect(jsonEncode(result), isNot(contains(secret)));
+    expect(FlutterLogger.technicalTail, isNot(contains(secret)));
+    expect(approvals.pendingRequests, isEmpty);
+  });
+
+  test(
+    'automatic OAuth refresh keeps previous tokens private after failure',
+    () async {
+      const secret = 'EXPIRED_OAUTH_PRIVATE_SENTINEL';
+      final server = await _errorServer('Fixture failed: $secret');
+      var refreshCalls = 0;
+      final client = MockClient((request) async {
+        expect(request.url.toString(), 'https://auth.test/token');
+        refreshCalls++;
+        return http.Response(
+          jsonEncode({
+            'access_token': 'FRESH_OAUTH_PRIVATE_SENTINEL',
+            'token_type': 'Bearer',
+            'expires_in': 3600,
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+      addTearDown(client.close);
+      final oauth = McpOAuthService(httpClient: client);
+      final refreshedProvider = McpProvider(
+        preferences: createBusinessTestPreferences(),
+        oauthService: oauth,
+      );
+      addTearDown(refreshedProvider.dispose);
+      addTearDown(oauth.dispose);
+      await refreshedProvider.loaded;
+      final url = 'http://127.0.0.1:${server.port}/mcp';
+      final id = await refreshedProvider.addServer(
+        enabled: true,
+        name: 'Refreshing',
+        transport: McpTransportType.http,
+        url: url,
+        oauth: McpOAuthState(
+          clientId: 'fixture',
+          authorizationServer: 'https://auth.test',
+          authorizationEndpoint: 'https://auth.test/authorize',
+          tokenEndpoint: 'https://auth.test/token',
+          resource: url,
+          accessToken: secret,
+          refreshToken: 'PRIVATE_REFRESH_SENTINEL',
+          expiresAt: DateTime(2000),
+        ),
+      );
+      final result = jsonDecode(
+        await McpManagerTool(provider: refreshedProvider).execute({
+          'action': 'test',
+          'server_id': id,
+        }, toolCallId: 'refresh-test'),
+      );
+      expect(refreshCalls, 1);
+      expect(
+        refreshedProvider.getById(id)!.oauth!.accessToken,
+        'FRESH_OAUTH_PRIVATE_SENTINEL',
+      );
+      expect(result['connected'], isFalse);
+      expect(result['error'], contains('Fixture failed'));
+      expect(jsonEncode(result), isNot(contains(secret)));
+    },
+  );
+}
