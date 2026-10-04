@@ -25,6 +25,18 @@ Upstream Kelivo is a cross-platform Flutter LLM chat client. Moru's Dart package
 name remains `Kelivo`; imports use `package:Kelivo/...`. Keeping that internal
 package name does not require building other platforms.
 
+## Skills
+
+Repository skills live in `.agents/skills/`; `.claude/skills` links to that same
+directory. Load the matching skill for the task; user instructions take priority.
+
+- [moru-perf](.agents/skills/moru-perf/SKILL.md): investigate lag, slow frames or expensive rebuilds.
+- [moru-setting](.agents/skills/moru-setting/SKILL.md): add or change a saved user setting.
+- [moru-l10n](.agents/skills/moru-l10n/SKILL.md): add or change visible UI strings or ARB keys.
+- [moru-ui](.agents/skills/moru-ui/SKILL.md): add or change an Android screen, widget or layout.
+- [moru-local-tool](.agents/skills/moru-local-tool/SKILL.md): add or change a model-callable local tool or its schema.
+- [moru-release-notes](.agents/skills/moru-release-notes/SKILL.md): document a change users can notice.
+
 ## Architecture
 
 - **Feature-based structure**: `lib/features/<feature>/` with `pages/`, `widgets/`, `models/`, `utils/` subdirectories.
