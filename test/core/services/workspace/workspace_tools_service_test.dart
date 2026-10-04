@@ -38,6 +38,7 @@ class _RecordingApproval extends ToolApprovalService {
     String? conversationId,
     ToolApprovalOwner? owner,
     List<String> secretFields = const [],
+    bool secretInputOnly = false,
   }) async {
     calls++;
     lastName = toolName;

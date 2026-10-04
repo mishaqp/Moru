@@ -13,6 +13,7 @@ import '../../../../utils/markdown_media_sanitizer.dart';
 import '../../../../utils/sandbox_path_resolver.dart';
 import '../builtin_tools.dart';
 import '../chat_api_helpers.dart';
+import '../tool_call_argument_privacy.dart';
 import '../gemini_tool_config.dart';
 import '../generation/tool_loop_runner.dart';
 import '../generation/tool_result_images.dart';
@@ -915,7 +916,13 @@ Stream<StreamChunk> sendGoogleStream(
       append: (executed) {
         currentContents = [
           ...currentContents,
-          {'role': 'model', 'parts': lastParts},
+          {
+            'role': 'model',
+            'parts': ToolCallArgumentPrivacy.protocolValue(
+              onToolCall,
+              lastParts,
+            ),
+          },
           {
             'role': 'user',
             'parts': [
@@ -1500,7 +1507,13 @@ Stream<StreamChunk> sendGoogleStream(
     append: (executed) {
       if (retryMalformed) return;
       if (isGemini3) {
-        convo.add({'role': 'model', 'parts': lastRoundModelParts});
+        convo.add({
+          'role': 'model',
+          'parts': ToolCallArgumentPrivacy.protocolValue(
+            onToolCall,
+            lastRoundModelParts,
+          ),
+        });
         final responseParts = <Map<String, dynamic>>[];
         for (final c in lastRoundCalls) {
           final name = (c['name'] ?? '').toString();
@@ -1514,7 +1527,7 @@ Stream<StreamChunk> sendGoogleStream(
           }
           responseParts.add({
             'functionResponse': {
-              'name': name,
+              'name': ToolCallArgumentPrivacy.nameForModel(onToolCall, name),
               'response': responseObj,
               if (apiId != null) 'id': apiId,
             },
@@ -1541,7 +1554,14 @@ Stream<StreamChunk> sendGoogleStream(
         final thoughtSigVal = c['thoughtSigVal'];
 
         final part = <String, dynamic>{
-          'functionCall': {'name': name, 'args': args},
+          'functionCall': {
+            'name': ToolCallArgumentPrivacy.nameForModel(onToolCall, name),
+            'args': ToolCallArgumentPrivacy.argumentsForModel(
+              onToolCall,
+              name,
+              args,
+            ),
+          },
         };
         if (thoughtSigKey != null && thoughtSigVal != null) {
           part[thoughtSigKey] = thoughtSigVal;
@@ -1561,7 +1581,10 @@ Stream<StreamChunk> sendGoogleStream(
           'role': 'user',
           'parts': [
             {
-              'functionResponse': {'name': name, 'response': responseObj},
+              'functionResponse': {
+                'name': ToolCallArgumentPrivacy.nameForModel(onToolCall, name),
+                'response': responseObj,
+              },
             },
             if (takesImages)
               ...geminiToolImageParts(

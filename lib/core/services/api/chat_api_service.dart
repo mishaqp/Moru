@@ -27,6 +27,7 @@ import 'providers/openai_responses.dart';
 import 'providers/zhipu_layout_parsing.dart';
 import 'retry_policy.dart';
 import 'tool_call_cancellation.dart';
+import 'tool_call_argument_privacy.dart';
 import 'stream/retrying_stream.dart';
 import 'stream/stream_chunk_emit.dart';
 
@@ -153,7 +154,11 @@ class ChatApiService {
     );
   }
 
-  static http.Client _clientFor(ProviderConfig cfg, CancelToken cancelToken) {
+  static http.Client _clientFor(
+    ProviderConfig cfg,
+    CancelToken cancelToken, {
+    bool logResponsePayloads = true,
+  }) {
     final enabled = cfg.proxyEnabled == true;
     final host = (cfg.proxyHost ?? '').trim();
     final portStr = (cfg.proxyPort ?? '').trim();
@@ -171,9 +176,13 @@ class ChatApiService {
           password: pass.isEmpty ? null : pass,
         ),
         cancelToken: cancelToken,
+        logResponsePayloads: logResponsePayloads,
       );
     }
-    return DioHttpClient(cancelToken: cancelToken);
+    return DioHttpClient(
+      cancelToken: cancelToken,
+      logResponsePayloads: logResponsePayloads,
+    );
   }
 
   static Stream<StreamChunk> sendMessageStream({
@@ -267,6 +276,14 @@ class ChatApiService {
           ? const <String>[]
           : userImagePaths;
       final toolHandler = textOnly ? null : onToolCall;
+      final protectedHandler = toolHandler == null
+          ? null
+          : ToolCallArgumentPrivacy.propagate(
+              toolHandler,
+              (name, args, {toolCallId}) => toolCancellation.run(
+                () => toolHandler(name, args, toolCallId: toolCallId),
+              ),
+            );
 
       final imageOutput = effectiveModelInfo(
         config,
@@ -301,35 +318,40 @@ class ChatApiService {
         );
       }
 
-      yield* retryRound(
-        () => _sendOnce(
-          config: config,
-          modelId: modelId,
-          messages: safeMessages,
-          userImagePaths: safeUserImagePaths,
-          thinkingBudget: thinkingBudget,
-          temperature: temperature,
-          topP: topP,
-          maxTokens: maxTokens,
-          tools: textOnly ? null : tools,
-          onToolCall: toolHandler == null
-              ? null
-              : (name, args, {toolCallId}) => toolCancellation.run(
-                  () => toolHandler(name, args, toolCallId: toolCallId),
-                ),
-          extraHeaders: sessionHeaders,
-          extraBody: textOnly ? null : extraBody,
-          stream: stream,
-          builtInSearchOnly: builtInSearchOnly,
-          skipImageParsing:
-              textOnly || skipImageParsing || !parseMarkdownImageLinks,
-          kind: kind,
-          useOpenAIImagesApi: useOpenAIImagesApi,
-          useZhipuLayoutParsing: useZhipuLayoutParsing,
-          sessionToken: sessionToken,
-          retryRound: retryRound,
-          conversationId: conversationId,
+      yield* ToolCallArgumentPrivacy.publishStream(
+        retryRound(
+          () => _sendOnce(
+            config: config,
+            modelId: modelId,
+            messages:
+                (ToolCallArgumentPrivacy.protocolValue(
+                          protectedHandler,
+                          safeMessages,
+                        )
+                        as List)
+                    .cast<Map<String, dynamic>>(),
+            userImagePaths: safeUserImagePaths,
+            thinkingBudget: thinkingBudget,
+            temperature: temperature,
+            topP: topP,
+            maxTokens: maxTokens,
+            tools: textOnly ? null : tools,
+            onToolCall: protectedHandler,
+            extraHeaders: sessionHeaders,
+            extraBody: textOnly ? null : extraBody,
+            stream: stream,
+            builtInSearchOnly: builtInSearchOnly,
+            skipImageParsing:
+                textOnly || skipImageParsing || !parseMarkdownImageLinks,
+            kind: kind,
+            useOpenAIImagesApi: useOpenAIImagesApi,
+            useZhipuLayoutParsing: useZhipuLayoutParsing,
+            sessionToken: sessionToken,
+            retryRound: retryRound,
+            conversationId: conversationId,
+          ),
         ),
+        protectedHandler,
       );
     } finally {
       if (rid.isNotEmpty) {
@@ -403,7 +425,11 @@ class ChatApiService {
     final cancelToken = CancelToken();
     _bridgeCancel(sessionToken, cancelToken);
     final client = ProviderOAuthService.instance.authenticatedClient(
-      _clientFor(config, cancelToken),
+      _clientFor(
+        config,
+        cancelToken,
+        logResponsePayloads: !ToolCallArgumentPrivacy.hasPolicy(onToolCall),
+      ),
       config,
     );
     try {

@@ -79,7 +79,7 @@ class McpSecrets {
       for (final entry in server.headers.entries)
         if (isSecret(entry.key, entry.value))
           'header:${entry.key}': entry.value,
-      for (final entry in _urlSecrets(server.url).indexed)
+      for (final entry in urlCredentialValues(server.url).indexed)
         'url:${entry.$1}': entry.$2,
       for (var i = 0; i < server.args.length; i++)
         if (i > 0 &&
@@ -119,6 +119,30 @@ class McpSecrets {
       fields['retained:${index++}'] = value;
     }
     return fields;
+  }
+
+  /// Credential provenance excludes ordinary endpoint routes. Display redaction
+  /// below still hides opaque paths, without retaining those guesses as tokens.
+  static Iterable<String> urlCredentialValues(String input) sync* {
+    yield* _urlSecrets(input, redactPath: false);
+    final uri = Uri.tryParse(input);
+    if (uri == null ||
+        !const {'http', 'https'}.contains(uri.scheme) ||
+        uri.host.isEmpty) {
+      return;
+    }
+    for (final segment in uri.pathSegments) {
+      if (LogRedactor.looksLikeSecret(segment)) yield segment;
+    }
+    if (uri.host.toLowerCase() == 'mcp.zapier.com') {
+      final parts = uri.pathSegments;
+      final marker = parts.indexOf('mcp');
+      if (marker >= 0 && parts.take(marker).contains('api')) {
+        yield* parts
+            .skip(marker + 1)
+            .where((part) => part.isNotEmpty && part != 'mcp');
+      }
+    }
   }
 
   static Iterable<String> _urlSecrets(
@@ -218,7 +242,7 @@ class McpSecrets {
         ),
       ).replaceAll(RegExp(r'https?://[^\s]+'), '');
       if (LogRedactor.redactBody(plain) != plain ||
-          LogRedactor.redactDiagnosticText(diagnostics) != diagnostics) {
+          LogRedactor.looksLikeSecret(diagnostics)) {
         return true;
       }
     }

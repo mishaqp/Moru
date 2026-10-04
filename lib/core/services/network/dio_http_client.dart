@@ -81,6 +81,7 @@ class DioHttpClient extends http.BaseClient {
     CancelToken? cancelToken,
     Duration? timeout,
     this.logRequests = true,
+    this.logResponsePayloads = true,
     HttpClientAdapter? adapter,
   }) : _cancelToken = cancelToken ?? CancelToken(),
        _options = BaseOptions(
@@ -153,6 +154,10 @@ class DioHttpClient extends http.BaseClient {
   }
 
   final bool logRequests;
+
+  /// Tool-aware privacy happens after network decoding. Such requests retain
+  /// status/timing diagnostics but must not log raw response fragments.
+  final bool logResponsePayloads;
   final BaseOptions _options;
   late final HttpClientAdapter _adapter;
   final NetworkProxyConfig? _proxy;
@@ -242,7 +247,7 @@ class DioHttpClient extends http.BaseClient {
 
       if (logRequests && RequestLogger.enabled) {
         RequestLogger.logLine('[RES $reqId] status=$statusCode');
-        if (headers.isNotEmpty) {
+        if (logResponsePayloads && headers.isNotEmpty) {
           RequestLogger.logLine(
             '[RES $reqId] headers=${RequestLogger.encodeObject(LogRedactor.redactHeaders(headers))}',
           );
@@ -256,7 +261,9 @@ class DioHttpClient extends http.BaseClient {
       const maxErrorBodyBytes = 256 * 1024;
 
       final logChunks =
-          (logRequests && RequestLogger.enabled) && RequestLogger.saveOutput;
+          (logRequests && RequestLogger.enabled) &&
+          logResponsePayloads &&
+          RequestLogger.saveOutput;
       final controller = StreamController<List<int>>(sync: true);
       final responseState = _ResponseStreamState(body.stream, controller);
       controller.onListen = () {
@@ -294,7 +301,7 @@ class DioHttpClient extends http.BaseClient {
             responseState.finished = true;
             if (logRequests && RequestLogger.enabled) {
               RequestLogger.logLine(
-                '[RES $reqId] error=${RequestLogger.escape(LogRedactor.redactText(error.toString()))}',
+                '[RES $reqId] error=${RequestLogger.escape(LogRedactor.redactText(logResponsePayloads ? error.toString() : error.runtimeType.toString()))}',
               );
             }
             controller.addError(error, stack);
@@ -322,7 +329,9 @@ class DioHttpClient extends http.BaseClient {
 
       // Error payloads are small; read them now so the log does not depend
       // on the caller consuming the stream (and the viewer can parse body=).
-      if ((logRequests && RequestLogger.enabled) && statusCode >= 400) {
+      if ((logRequests && RequestLogger.enabled) &&
+          logResponsePayloads &&
+          statusCode >= 400) {
         final bytes = await _readLimited(controller.stream, maxErrorBodyBytes);
         final text = RequestLogger.safeDecodeUtf8(bytes);
         if (text.isNotEmpty) {
@@ -354,14 +363,14 @@ class DioHttpClient extends http.BaseClient {
     } on DioException catch (e) {
       if (logRequests && RequestLogger.enabled) {
         RequestLogger.logLine(
-          '[RES $reqId] dio_error=${RequestLogger.escape(LogRedactor.redactText(RequestLogger.elidePayloads(e.toString())))}',
+          '[RES $reqId] dio_error=${RequestLogger.escape(LogRedactor.redactText(RequestLogger.elidePayloads(logResponsePayloads ? e.toString() : e.runtimeType.toString())))}',
         );
         final status = e.response?.statusCode;
         if (status != null) {
           RequestLogger.logLine('[RES $reqId] status=$status');
         }
         final data = e.response?.data;
-        if (data != null && data is! ResponseBody) {
+        if (logResponsePayloads && data != null && data is! ResponseBody) {
           RequestLogger.logLine(
             '[RES $reqId] body=${RequestLogger.escape(LogRedactor.redactBody(RequestLogger.elidePayloads(data.toString())))}',
           );
@@ -371,7 +380,7 @@ class DioHttpClient extends http.BaseClient {
     } catch (e) {
       if (logRequests && RequestLogger.enabled) {
         RequestLogger.logLine(
-          '[RES $reqId] error=${RequestLogger.escape(LogRedactor.redactText(e.toString()))}',
+          '[RES $reqId] error=${RequestLogger.escape(LogRedactor.redactText(logResponsePayloads ? e.toString() : e.runtimeType.toString()))}',
         );
       }
       throw http.ClientException(e.toString(), uri);

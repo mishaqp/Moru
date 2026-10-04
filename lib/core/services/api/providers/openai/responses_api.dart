@@ -10,6 +10,7 @@ import '../../../../providers/settings_provider.dart';
 import '../../../../../utils/app_directories.dart';
 import '../../../../../utils/sandbox_path_resolver.dart';
 import '../../chat_api_helpers.dart';
+import '../../tool_call_argument_privacy.dart';
 import '../../generation/tool_loop_runner.dart';
 import '../../generation/tool_result_images.dart';
 import '../../stream/sse_decode_loop.dart';
@@ -225,9 +226,15 @@ Stream<StreamChunk> runOpenAIResponsesToolFollowUps({
     append: (executed) {
       currentInput = [
         ...currentInput,
-        ...withResponsesFunctionCallItems(outputItemsForAppend, [
-          for (final item in executed) item.call,
-        ]),
+        ...withResponsesFunctionCallItems(
+          (ToolCallArgumentPrivacy.protocolValue(
+                    onToolCall,
+                    outputItemsForAppend,
+                  )
+                  as List)
+              .cast<Map<String, dynamic>>(),
+          [for (final item in executed) item.call],
+        ),
         for (final item in executed)
           <String, dynamic>{
             'type': 'function_call_output',

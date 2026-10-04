@@ -15,6 +15,13 @@ String mcpManagerActionTitle(AppLocalizations l10n, String action) =>
       'disable' => l10n.mcpManagerActionDisable,
       'remove' => l10n.mcpManagerActionRemove,
       'test' => l10n.mcpManagerActionTest,
+      'select' => l10n.mcpManagerActionSelect,
+      'unselect' => l10n.mcpManagerActionUnselect,
+      'set_tool' => l10n.mcpManagerActionSetTool,
+      'refresh' => l10n.mcpServerEditSheetSyncToolsTooltip,
+      'reconnect' => l10n.mcpPageReconnect,
+      'import' => l10n.mcpImportConfirm,
+      'set_timeout' => l10n.mcpTimeoutDialogTitle,
       _ => l10n.mcpManagerToolTitle,
     };
 
@@ -51,6 +58,7 @@ class _McpManagementApprovalState extends State<McpManagementApproval> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
+    final arguments = widget.request.arguments;
     final ready = _inputs.values.every(
       (c) => c.text.isNotEmpty && c.text.length <= 8192,
     );
@@ -87,22 +95,48 @@ class _McpManagementApprovalState extends State<McpManagementApproval> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          mcpManagerActionTitle(
-            l10n,
-            (widget.request.arguments['action'] ?? '').toString(),
+        if (!widget.request.secretInputOnly) ...[
+          Text(
+            mcpManagerActionTitle(l10n, (arguments['action'] ?? '').toString()),
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        if (widget.request.arguments['previous_server']
-            case final Map previous) ...[
-          const SizedBox(height: 6),
-          Text(l10n.mcpManagerPrevious),
-          description(previous),
-        ],
-        if (widget.request.arguments['server'] case final Map server) ...[
-          const SizedBox(height: 6),
-          description(server),
+          if (arguments['previous_server'] case final Map previous) ...[
+            const SizedBox(height: 6),
+            Text(l10n.mcpManagerPrevious),
+            description(previous),
+          ],
+          if (arguments['server'] case final Map server) ...[
+            const SizedBox(height: 6),
+            description(server),
+          ],
+          if (arguments['servers'] case final List servers)
+            for (final server in servers.whereType<Map>()) ...[
+              const SizedBox(height: 6),
+              description(server),
+            ],
+          if (arguments['assistant_name'] ?? arguments['assistant_id']
+              case final String assistant) ...[
+            const SizedBox(height: 6),
+            Text('${l10n.assistantEditAssistantNameLabel}: $assistant'),
+          ],
+          if (arguments['tool_settings'] case final Map settings) ...[
+            const SizedBox(height: 6),
+            Text('${l10n.mcpServerEditSheetTabTools}: ${settings['name']}'),
+            if (settings['enabled'] case final bool enabled)
+              Text(
+                enabled
+                    ? l10n.mcpServerEditSheetEnabledLabel
+                    : l10n.mcpPageStatusDisabled,
+              ),
+            if (settings['needs_approval'] case final bool needsApproval)
+              Text(
+                '${l10n.mcpToolNeedsApproval}: ${needsApproval ? l10n.computerParameterYes : l10n.computerParameterNo}',
+              ),
+          ],
+          if (arguments['timeout_seconds'] case final num seconds) ...[
+            const SizedBox(height: 6),
+            Text('${l10n.mcpTimeoutSecondsLabel}: $seconds'),
+          ],
         ],
         if (_inputs.isNotEmpty) ...[
           const SizedBox(height: 10),
@@ -131,16 +165,31 @@ class _McpManagementApprovalState extends State<McpManagementApproval> {
           children: [
             Expanded(
               child: ToolApprovalButton(
-                label: l10n.toolApprovalDeny,
+                label: widget.request.secretInputOnly
+                    ? l10n.mcpPageCancel
+                    : l10n.toolApprovalDeny,
                 color: cs.error,
                 filled: false,
-                onTap: widget.onDeny,
+                onTap: widget.request.secretInputOnly
+                    ? () {
+                        context.read<ToolApprovalService>().deny(
+                          widget.request.toolCallId,
+                          conversationId: widget.request.conversationId,
+                          reason: 'cancelled',
+                        );
+                        for (final controller in _inputs.values) {
+                          controller.clear();
+                        }
+                      }
+                    : widget.onDeny,
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: ToolApprovalButton(
-                label: l10n.toolApprovalApprove,
+                label: widget.request.secretInputOnly
+                    ? l10n.mcpServerEditSheetSave
+                    : l10n.toolApprovalApprove,
                 color: cs.primary,
                 filled: true,
                 onTap: !ready

@@ -12131,6 +12131,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mcpManagerActionTest => '测试 MCP 服务器';
 
   @override
+  String get mcpManagerActionSelect => '为助手选择 MCP 服务器';
+
+  @override
+  String get mcpManagerActionUnselect => '取消助手的 MCP 服务器选择';
+
+  @override
+  String get mcpManagerActionSetTool => '配置 MCP 工具';
+
+  @override
   String get mcpManagerSecretHint =>
       '请在此输入密钥。密钥仅保存到 MCP 设置，不会发送给模型或写入聊天记录。请求头如有需要，请包含 Bearer/Basic 前缀。';
 
@@ -24287,6 +24296,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get mcpManagerActionTest => '测试 MCP 服务器';
+
+  @override
+  String get mcpManagerActionSelect => '为助手选择 MCP 服务器';
+
+  @override
+  String get mcpManagerActionUnselect => '取消助手的 MCP 服务器选择';
+
+  @override
+  String get mcpManagerActionSetTool => '配置 MCP 工具';
 
   @override
   String get mcpManagerSecretHint =>
@@ -36519,6 +36537,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get mcpManagerActionTest => '測試 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionSelect => '為助理選擇 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionUnselect => '取消助理的 MCP 伺服器選擇';
+
+  @override
+  String get mcpManagerActionSetTool => '設定 MCP 工具';
 
   @override
   String get mcpManagerSecretHint =>

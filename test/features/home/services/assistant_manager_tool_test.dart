@@ -63,6 +63,61 @@ void main() {
     );
   });
 
+  test('updating unrelated settings prunes inherited dead MCP ids', () async {
+    await assistants.updateAssistant(
+      assistants.getById(mainId)!.copyWith(mcpServerIds: ['mcp-1', 'removed']),
+    );
+    final result = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {'name': 'Renamed'},
+    });
+    expect(result['ok'], isTrue, reason: '$result');
+    expect(assistants.getById(mainId)!.mcpServerIds, ['mcp-1']);
+  });
+
+  test('explicitly retaining an old dead MCP id prunes it', () async {
+    await assistants.updateAssistant(
+      assistants.getById(mainId)!.copyWith(mcpServerIds: ['removed']),
+    );
+    final result = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {
+        'mcpServerIds': ['removed'],
+      },
+    });
+    expect(result['ok'], isTrue, reason: '$result');
+    expect(assistants.getById(mainId)!.mcpServerIds, isEmpty);
+    final invalid = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {
+        'mcpServerIds': ['new-unknown'],
+      },
+    });
+    expect(invalid['ok'], isFalse);
+    expect(invalid['error'], 'invalid_settings');
+  });
+
+  test('retaining old dead ids works after provider read filtering', () async {
+    await assistants.updateAssistant(
+      assistants.getById(mainId)!.copyWith(mcpServerIds: ['mcp-1', 'removed']),
+    );
+    assistants.bindMcpServers(liveMcpServerIds: () => {'mcp-1'});
+    expect(assistants.getById(mainId)!.mcpServerIds, ['mcp-1']);
+    final result = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {
+        'name': 'Renamed',
+        'mcpServerIds': ['mcp-1', 'removed'],
+      },
+    });
+    expect(result['ok'], isTrue, reason: '$result');
+    expect(assistants.getStoredMcpServerIds(mainId), ['mcp-1']);
+  });
+
   test('only changes need approval', () {
     for (final action in ['create', 'update', 'duplicate', 'delete']) {
       expect(

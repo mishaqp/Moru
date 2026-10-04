@@ -22581,6 +22581,24 @@ abstract class AppLocalizations {
   /// **'Test MCP server'**
   String get mcpManagerActionTest;
 
+  /// No description provided for @mcpManagerActionSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Select MCP server for assistant'**
+  String get mcpManagerActionSelect;
+
+  /// No description provided for @mcpManagerActionUnselect.
+  ///
+  /// In en, this message translates to:
+  /// **'Unselect MCP server for assistant'**
+  String get mcpManagerActionUnselect;
+
+  /// No description provided for @mcpManagerActionSetTool.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure MCP tool'**
+  String get mcpManagerActionSetTool;
+
   /// No description provided for @mcpManagerSecretHint.
   ///
   /// In en, this message translates to:

@@ -12700,6 +12700,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mcpManagerActionTest => 'Test MCP server';
 
   @override
+  String get mcpManagerActionSelect => 'Select MCP server for assistant';
+
+  @override
+  String get mcpManagerActionUnselect => 'Unselect MCP server for assistant';
+
+  @override
+  String get mcpManagerActionSetTool => 'Configure MCP tool';
+
+  @override
   String get mcpManagerSecretHint =>
       'Enter secret values here. They are saved only in MCP settings and are never sent to the model or chat history. Include Bearer/Basic when needed for a header.';
 

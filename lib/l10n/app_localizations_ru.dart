@@ -12832,6 +12832,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mcpManagerActionTest => 'Проверить MCP-сервер';
 
   @override
+  String get mcpManagerActionSelect => 'Выбрать MCP-сервер для ассистента';
+
+  @override
+  String get mcpManagerActionUnselect =>
+      'Отменить выбор MCP-сервера у ассистента';
+
+  @override
+  String get mcpManagerActionSetTool => 'Настроить MCP-инструмент';
+
+  @override
   String get mcpManagerSecretHint =>
       'Введите секреты здесь. Они сохраняются только в настройках MCP и не передаются модели или в историю чата. Для заголовка при необходимости добавьте Bearer/Basic.';
 

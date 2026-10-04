@@ -75,6 +75,9 @@ class ToolApprovalRequest {
       toolName == 'manage_mcp' ||
       toolName == 'spend_control';
   final List<String> secretFields;
+
+  /// Collect private inputs without asking for consent in global trusted mode.
+  final bool secretInputOnly;
   final Completer<ToolApprovalResult> _completer;
 
   ToolApprovalRequest({
@@ -85,10 +88,23 @@ class ToolApprovalRequest {
     this.conversationId,
     this.owner,
     this.secretFields = const [],
+    this.secretInputOnly = false,
     required this._completer,
   });
 
   Future<ToolApprovalResult> get future => _completer.future;
+
+  ToolApprovalRequest _withSecretInputOnly(bool value) => ToolApprovalRequest(
+    approvalId: approvalId,
+    toolCallId: toolCallId,
+    toolName: toolName,
+    arguments: arguments,
+    conversationId: conversationId,
+    owner: owner,
+    secretFields: secretFields,
+    secretInputOnly: value,
+    completer: _completer,
+  );
 }
 
 /// Manages approval state for MCP tool calls that require user confirmation.
@@ -114,17 +130,24 @@ class ToolApprovalService extends ChangeNotifier {
 
   /// Synchronizes the global trusted mode from SettingsProvider.
   ///
-  /// Turning it on also approves requests that were already waiting, so an
-  /// agent cannot remain stuck behind a confirmation card after the user
-  /// enables trusted mode.
+  /// Turning it on approves waiting consent requests. Missing private inputs
+  /// remain pending and their card switches to Save/Cancel without losing input.
   void setAutoApproveAll(bool value) {
     if (_autoApproveAll == value) return;
     _autoApproveAll = value;
-    if (!value || _pending.isEmpty) return;
+    if (_pending.isEmpty) return;
 
     final waiting = _pending.entries.toList(growable: false);
     for (final entry in waiting) {
       final req = entry.value;
+      if (req.secretFields.isNotEmpty &&
+          (req.owner == null || req.hasLiveOwner)) {
+        if (req.toolName == 'manage_mcp') {
+          _pending[entry.key] = req._withSecretInputOnly(value);
+        }
+        continue;
+      }
+      if (!value) continue;
       _pending.remove(entry.key);
       if (!req._completer.isCompleted) {
         req._completer.complete(
@@ -191,6 +214,7 @@ class ToolApprovalService extends ChangeNotifier {
     String? conversationId,
     ToolApprovalOwner? owner,
     List<String> secretFields = const [],
+    bool secretInputOnly = false,
   }) {
     owner ??= ToolApprovalOwner.current;
     conversationId ??= owner?.conversationId;
@@ -201,7 +225,7 @@ class ToolApprovalService extends ChangeNotifier {
                     _storedConversationId(conversationId)))) {
       return Future.value(ToolApprovalResult.denied('cancelled'));
     }
-    if (_autoApproveAll) {
+    if (_autoApproveAll && secretFields.isEmpty) {
       return Future<ToolApprovalResult>.value(ToolApprovalResult.approved());
     }
     final key = _storageKey(conversationId, toolCallId);
@@ -248,6 +272,7 @@ class ToolApprovalService extends ChangeNotifier {
       conversationId: _storedConversationId(conversationId),
       owner: owner,
       secretFields: List.unmodifiable(secretFields),
+      secretInputOnly: secretInputOnly || _autoApproveAll,
       completer: completer,
     );
     notifyListeners();
@@ -270,7 +295,8 @@ class ToolApprovalService extends ChangeNotifier {
     final entry = entries.first;
     final request = entry.value;
     // A generic notification lacks the report's full disclosure in the chat.
-    if (approved && request.requiresExplicitConsent) {
+    if (approved &&
+        (request.requiresExplicitConsent || request.secretFields.isNotEmpty)) {
       return ToolApprovalActionStatus.stale;
     }
     if (conversationId.isEmpty ||
@@ -323,6 +349,7 @@ class ToolApprovalService extends ChangeNotifier {
       conversationId: conversationId,
     );
     if (pending != null &&
+        (pending.owner == null || pending.hasLiveOwner) &&
         pending.secretFields.any(
           (name) =>
               secretValues[name]?.isNotEmpty != true ||
