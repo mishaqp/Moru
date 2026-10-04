@@ -167,6 +167,34 @@ void main() {
       },
     );
   }
+  test(
+    'status ignores set_limits fields sent by strict function calling',
+    () async {
+      await settings.setSpendLimits(const SpendLimits(dailyUsd: 5));
+      final result = decode(
+        await tool().execute(
+          {
+            'action': 'status',
+            'limits': {
+              'chat_usd': 1,
+              'chat_tokens': 100000,
+              'daily_usd': 1,
+              'daily_tokens': 100000,
+              'warning_percent': 80,
+              'hard_stop': false,
+            },
+            'clear': <String>[],
+          },
+          toolCallId: 'strict',
+          conversationId: 'c',
+        ),
+      );
+      expect(result['ok'], isTrue);
+      expect(settings.spendLimits.dailyUsd, 5);
+      expect(settings.spendLimits.chatUsd, isNull);
+    },
+  );
+
   test('set_limits validates atomically and preserves other budgets', () async {
     await settings.setToolAutoApproveAll(true);
     await settings.setSpendLimits(const SpendLimits(dailyUsd: 5));

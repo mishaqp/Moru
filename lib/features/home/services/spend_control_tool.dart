@@ -116,10 +116,13 @@ class SpendControlTool {
       if (!['status', 'compact', 'set_limits'].contains(action) ||
           args.keys.any(
             (key) => !['action', 'limits', 'clear'].contains(key),
-          ) ||
-          (action != 'set_limits' &&
-              (args.containsKey('limits') || args.containsKey('clear')))) {
+          )) {
         throw const FormatException('Use status, compact or set_limits.');
+      }
+      // Strict-mode function calling (e.g. ChatGPT sign-in) fills every
+      // schema field, so status and compact ignore set_limits-only fields.
+      if (action != 'set_limits') {
+        args = {'action': action};
       }
       Map<String, dynamic>? changes;
       if (action == 'set_limits') {
