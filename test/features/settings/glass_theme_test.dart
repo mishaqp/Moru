@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:Kelivo/core/providers/assistant_provider.dart';
+import 'package:Kelivo/core/models/chat_appearance.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/features/chat/widgets/chat_surface.dart';
 import 'package:Kelivo/features/chat/widgets/frosted/chat_frosted_backdrop.dart';
@@ -115,30 +116,42 @@ void main() {
     },
   );
 
-  testWidgets('glass puts the gradient behind a chat without wallpaper', (
-    tester,
-  ) async {
-    final settings = await _settings();
-    late ChatBackdropSpec spec;
-    await tester.pumpWidget(
-      _app(
-        settings,
-        Builder(
-          builder: (context) {
-            spec = ChatBackdropSpec.resolve(context);
-            return const SizedBox.shrink();
-          },
+  testWidgets(
+    'glass respects global none and an explicitly selected gradient',
+    (tester) async {
+      final settings = await _settings();
+      addTearDown(settings.dispose);
+      await settings.setChatAppearance(const ChatAppearanceSettings());
+      late ChatBackdropSpec spec;
+      await tester.pumpWidget(
+        _app(
+          settings,
+          Builder(
+            builder: (context) {
+              spec = ChatBackdropSpec.resolve(context);
+              return const SizedBox.shrink();
+            },
+          ),
         ),
-      ),
-    );
-    expect(spec.active, isFalse);
-    expect(spec.useGradientBackground, isFalse);
+      );
+      expect(spec.active, isFalse);
+      expect(spec.useGradientBackground, isFalse);
 
-    await settings.setGlassTheme(true);
-    await tester.pump();
-    expect(spec.active, isTrue);
-    expect(spec.useGradientBackground, isTrue);
-  });
+      await settings.setGlassTheme(true);
+      await tester.pump();
+      expect(spec.active, isFalse);
+      expect(spec.useGradientBackground, isFalse);
+
+      await settings.setChatAppearance(
+        const ChatAppearanceSettings(
+          light: ChatBackgroundSettings(type: ChatBackgroundType.gradient),
+        ),
+      );
+      await tester.pump();
+      expect(spec.active, isTrue);
+      expect(spec.useGradientBackground, isTrue);
+    },
+  );
 
   testWidgets('glass bubbles are frosted; economy drops the blur', (
     tester,

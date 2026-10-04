@@ -5,10 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/providers/assistant_provider.dart';
+import '../../../../core/models/chat_appearance.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../../utils/sandbox_path_resolver.dart';
-import '../chat_gradient_background.dart';
 
 /// When true, [FrostedSurface] always uses a live [BackdropFilter].
 ///
@@ -50,6 +49,7 @@ class ChatBackdropSpec {
     this.gradientBackgroundAnimated = true,
     this.gradientBackgroundPhase = 0,
     this.gradientBackgroundOffset = Offset.zero,
+    this.configuration = const ChatBackgroundSettings(),
   });
 
   final bool useGradientBackground;
@@ -58,6 +58,12 @@ class ChatBackdropSpec {
   final Offset gradientBackgroundOffset;
   bool get animatedGradient =>
       useGradientBackground && gradientBackgroundAnimated;
+  final ChatBackgroundSettings configuration;
+  bool get animatedBackdrop =>
+      active &&
+      (animatedGradient ||
+          configuration.type == ChatBackgroundType.gif ||
+          configuration.type == ChatBackgroundType.video);
   final String backgroundRaw;
   final bool active;
   final double maskStrength;
@@ -87,6 +93,7 @@ class ChatBackdropSpec {
       logicalSize: logicalSize,
       dpr: dpr,
       revision: revision,
+      configuration: configuration,
     );
   }
 
@@ -94,46 +101,44 @@ class ChatBackdropSpec {
   ///
   /// Lifted from [HomePage]'s `_assistantBackgroundActive` so "has wallpaper"
   /// is decided in one place.
-  static ChatBackdropSpec resolve(BuildContext context) {
+  static ChatBackdropSpec resolve(
+    BuildContext context, {
+    ChatBackgroundSettings? configuration,
+  }) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final mq = MediaQuery.of(context);
-    final backgroundRaw = context.select<AssistantProvider, String>(
-      (p) => (p.currentAssistant?.background ?? '').trim(),
-    );
-    final assistantGradient = context.select<AssistantProvider, bool>(
-      (p) => p.currentAssistant?.useGradientBackground ?? false,
-    );
-    final glass = context.select<SettingsProvider, bool>((s) => s.glassTheme);
-    // The Glass theme puts the gradient behind every chat; an assistant's own
-    // wallpaper still wins.
-    final useGradientBackground =
-        assistantGradient || (glass && !isBackgroundActive(backgroundRaw));
-    final gradientOptions = context
-        .select<AssistantProvider, (bool, double, double, double)>(
-          (p) => (
-            p.currentAssistant?.gradientBackgroundAnimated ?? true,
-            p.currentAssistant?.gradientBackgroundOffsetX ?? 0,
-            p.currentAssistant?.gradientBackgroundOffsetY ?? 0,
-            p.currentAssistant?.gradientBackgroundPhase ?? 0,
-          ),
+    final options =
+        configuration ??
+        context.select<SettingsProvider, ChatBackgroundSettings>(
+          (s) => s.chatAppearance.backgroundFor(theme.brightness),
         );
-    final maskStrength = context.select<SettingsProvider, double>(
-      (s) => s.chatBackgroundMaskStrength,
+    final backgroundRaw = (options.path ?? '').trim();
+    final useGradientBackground = options.type == ChatBackgroundType.gradient;
+    final economy = context.select<SettingsProvider, bool>(
+      (s) => s.glassTheme && s.glassEconomy,
     );
     return ChatBackdropSpec(
       backgroundRaw: useGradientBackground ? '' : backgroundRaw,
       useGradientBackground: useGradientBackground,
-      gradientBackgroundAnimated: gradientOptions.$1 && !mq.disableAnimations,
-      gradientBackgroundPhase: gradientOptions.$4,
-      gradientBackgroundOffset: Offset(gradientOptions.$2, gradientOptions.$3),
-      active: useGradientBackground || isBackgroundActive(backgroundRaw),
-      maskStrength: useGradientBackground ? 1 : maskStrength,
-      surface: useGradientBackground ? Colors.transparent : cs.surface,
-      shadow: useGradientBackground ? Colors.transparent : cs.shadow,
+      gradientBackgroundAnimated:
+          options.gradientAnimated && !mq.disableAnimations && !economy,
+      gradientBackgroundPhase: options.gradientPhase,
+      gradientBackgroundOffset: Offset(
+        options.gradientOffsetX,
+        options.gradientOffsetY,
+      ),
+      active:
+          useGradientBackground ||
+          (options.type != ChatBackgroundType.none &&
+              isBackgroundActive(backgroundRaw)),
+      maskStrength: options.maskStrength,
+      surface: cs.surface,
+      shadow: cs.shadow,
       brightness: theme.brightness,
       logicalSize: mq.size,
       dpr: mq.devicePixelRatio,
+      configuration: options,
     );
   }
 
@@ -163,7 +168,8 @@ class ChatBackdropSpec {
       other.brightness == brightness &&
       other.logicalSize == logicalSize &&
       other.dpr == dpr &&
-      other.revision == revision;
+      other.revision == revision &&
+      other.configuration == configuration;
 
   @override
   int get hashCode => Object.hash(
@@ -180,6 +186,7 @@ class ChatBackdropSpec {
     logicalSize,
     dpr,
     revision,
+    configuration,
   );
 }
 
@@ -455,10 +462,12 @@ class ChatFrostedBackdropScope extends InheritedWidget {
   const ChatFrostedBackdropScope({
     super.key,
     required this.controller,
+    this.onPixelsChanged,
     required super.child,
   });
 
   final ChatFrostedBackdropController controller;
+  final VoidCallback? onPixelsChanged;
 
   static ChatFrostedBackdropScope? maybeOf(BuildContext context) {
     return context
@@ -481,10 +490,14 @@ class ChatFrostedBackdrop extends StatefulWidget {
     super.key,
     required this.backdrop,
     required this.child,
+    this.configuration,
+    this.active = true,
   });
 
   final Widget backdrop;
   final Widget child;
+  final ChatBackgroundSettings? configuration;
+  final bool active;
 
   @override
   State<ChatFrostedBackdrop> createState() => _ChatFrostedBackdropState();
@@ -516,7 +529,7 @@ class _ChatFrostedBackdropState extends State<ChatFrostedBackdrop> {
   }
 
   bool get _canCapture =>
-      !(_lastSpec?.animatedGradient ?? false) &&
+      !(_lastSpec?.animatedBackdrop ?? false) &&
       (_controller.mode == FrostedRenderMode.cached ||
           _controller.liveTransition);
 
@@ -641,7 +654,7 @@ class _ChatFrostedBackdropState extends State<ChatFrostedBackdrop> {
 
   void _maybeEndLiveAfterSettle(int revision) {
     if (!mounted || _controller.isDisposed) return;
-    if (_revision != revision || (_lastSpec?.animatedGradient ?? false)) {
+    if (_revision != revision || (_lastSpec?.animatedBackdrop ?? false)) {
       return;
     }
     if (!_controller.hasAllCurrentSnapshots) {
@@ -719,7 +732,10 @@ class _ChatFrostedBackdropState extends State<ChatFrostedBackdrop> {
   @override
   Widget build(BuildContext context) {
     _frame++;
-    final incoming = ChatBackdropSpec.resolve(context).withRevision(_revision);
+    final incoming = ChatBackdropSpec.resolve(
+      context,
+      configuration: widget.configuration,
+    ).withRevision(_revision);
     final specChanged = _lastSpec != incoming;
     if (specChanged) {
       _revision += 1;
@@ -728,7 +744,7 @@ class _ChatFrostedBackdropState extends State<ChatFrostedBackdrop> {
     _lastSpec = spec;
     _specChangedThisBuild = specChanged;
 
-    if (spec.animatedGradient) {
+    if (spec.animatedBackdrop) {
       if (specChanged) _controller.invalidateSnapshots();
       _controller.applyBackdropState(wallpaperActive: true, enterLive: true);
       _awaitingStableSpec = false;
@@ -776,11 +792,12 @@ class _ChatFrostedBackdropState extends State<ChatFrostedBackdrop> {
       _requestCapture();
     };
     _onDirty ??= () {
-      if (_lastSpec?.animatedGradient ?? false) return;
+      if (_lastSpec?.animatedBackdrop ?? false) return;
       if (_controller.snapshotUnsupported) return;
       if (_controller.mode == FrostedRenderMode.uniform) return;
       if (_lastSpec?.useGradientBackground ?? false) {
-        _requestCapture(pixelsChanged: true);
+        // A static gradient changes only with its spec. Parent rebuilds and
+        // scrolling may repaint the boundary without changing artwork pixels.
         return;
       }
       // Spec-driven live (theme / wallpaper identity) is settled by
@@ -801,13 +818,12 @@ class _ChatFrostedBackdropState extends State<ChatFrostedBackdrop> {
       _requestCapture(pixelsChanged: true);
     };
 
-    final glass = context.select<SettingsProvider, bool>((s) => s.glassTheme);
-    return ChatGradientBackgroundHost(
-      enabled: spec.animatedGradient,
-      active: spec.useGradientBackground,
-      offset: spec.gradientBackgroundOffset,
-      phase: spec.gradientBackgroundPhase,
-      accent: glass ? Theme.of(context).colorScheme.primary : null,
+    final economy = context.select<SettingsProvider, bool>(
+      (s) => s.glassTheme && s.glassEconomy,
+    );
+    return ChatFrostedBackdropScope(
+      controller: _controller,
+      onPixelsChanged: () => _requestCapture(pixelsChanged: true),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -817,17 +833,17 @@ class _ChatFrostedBackdropState extends State<ChatFrostedBackdrop> {
               onPainted: _onDirty!,
               child: CompositedTransformTarget(
                 link: _controller.link,
-                child: ColoredBox(color: spec.surface, child: widget.backdrop),
+                child: ColoredBox(
+                  color: spec.surface,
+                  child: TickerMode(
+                    enabled: widget.active && !economy,
+                    child: widget.backdrop,
+                  ),
+                ),
               ),
             ),
           ),
-          BackdropGroup(
-            backdropKey: _backdropKey,
-            child: ChatFrostedBackdropScope(
-              controller: _controller,
-              child: widget.child,
-            ),
-          ),
+          BackdropGroup(backdropKey: _backdropKey, child: widget.child),
         ],
       ),
     );

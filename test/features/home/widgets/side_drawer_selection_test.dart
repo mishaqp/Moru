@@ -10,11 +10,13 @@ import 'package:Kelivo/core/providers/tag_provider.dart';
 import 'package:Kelivo/core/providers/user_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/models/chat_folder.dart';
+import 'package:Kelivo/core/models/chat_appearance.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/features/chat/pages/chat_archive_page.dart';
 import 'package:Kelivo/features/home/widgets/chat_thumbnails.dart';
 import 'package:Kelivo/features/chat/widgets/chat_gradient_background.dart';
+import 'package:Kelivo/features/chat/widgets/chat_background.dart';
 import 'package:Kelivo/features/home/widgets/sidebar_glass.dart';
 import 'package:Kelivo/features/home/widgets/side_drawer.dart';
 import 'package:Kelivo/features/home/widgets/sidebar_selection_bars.dart';
@@ -31,6 +33,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
   _FakePathProviderPlatform(this.path);
@@ -484,6 +487,48 @@ void main() {
     await settings.setGlassTheme(false);
     await tester.pump();
     expect(find.byType(ChatGradientBackground), findsNothing);
+  });
+
+  testWidgets('global video does not replace the legacy sidebar image', (
+    tester,
+  ) async {
+    final service = createService();
+    await tester.runAsync(service.init);
+    await pumpDrawer(tester, service, embedded: false);
+    final context = tester.element(find.byType(SideDrawer));
+    final assistants = context.read<AssistantProvider>();
+    final settings = context.read<SettingsProvider>();
+    await assistants.loaded;
+    await settings.loaded;
+    final assistantId = await assistants.addAssistant(
+      name: 'Sidebar wallpaper',
+    );
+    await assistants.setCurrentAssistant(assistantId);
+    await assistants.updateAssistant(
+      assistants.currentAssistant!.copyWith(
+        background: 'https://example.com/sidebar-wallpaper.png',
+      ),
+    );
+    await settings.setChatAppearance(
+      const ChatAppearanceSettings(
+        light: ChatBackgroundSettings(
+          type: ChatBackgroundType.video,
+          path: '/tmp/global-video.mp4',
+        ),
+      ),
+    );
+    await settings.setGlassTheme(true);
+    await tester.pump();
+    final background = tester.widget<ChatBackground>(
+      find.byType(ChatBackground),
+    );
+    expect(background.configuration.type, ChatBackgroundType.image);
+    expect(
+      background.configuration.path,
+      'https://example.com/sidebar-wallpaper.png',
+    );
+    expect(background.active, isFalse);
+    expect(find.byType(VideoPlayer), findsNothing);
   });
 
   testWidgets('on glass the chat rows and the bottom bar have no solid fill', (

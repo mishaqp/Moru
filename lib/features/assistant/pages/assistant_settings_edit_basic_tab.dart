@@ -12,7 +12,6 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _thinkingCtrl;
   late final TextEditingController _maxTokensCtrl;
-  late final TextEditingController _backgroundCtrl;
 
   @override
   void initState() {
@@ -24,7 +23,6 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
       text: a.thinkingBudget?.toString() ?? '',
     );
     _maxTokensCtrl = TextEditingController(text: a.maxTokens?.toString() ?? '');
-    _backgroundCtrl = TextEditingController(text: a.background ?? '');
   }
 
   @override
@@ -36,7 +34,6 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
       _nameCtrl.text = a.name;
       _thinkingCtrl.text = a.thinkingBudget?.toString() ?? '';
       _maxTokensCtrl.text = a.maxTokens?.toString() ?? '';
-      _backgroundCtrl.text = a.background ?? '';
     }
   }
 
@@ -45,7 +42,6 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
     _nameCtrl.dispose();
     _thinkingCtrl.dispose();
     _maxTokensCtrl.dispose();
-    _backgroundCtrl.dispose();
     super.dispose();
   }
 
@@ -396,131 +392,6 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         ),
         const SizedBox(height: 16),
         AssistantAgentCard(assistant: a),
-        const SizedBox(height: 8),
-
-        // Chat background (separate iOS card)
-        SectionCard(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Lucide.Image, size: 18, color: cs.onSurface),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      l10n.assistantEditChatBackgroundTitle,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: AppFontWeights.semibold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              AssistantGradientSettings(assistant: a),
-              if (!a.useGradientBackground) ...[
-                const SizedBox(height: 6),
-                Text(
-                  l10n.assistantEditChatBackgroundDescription,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: cs.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if ((a.background ?? '').isEmpty) ...[
-                  // Single button when no background (full width)
-                  _TactileRow(
-                    onTap: () => _pickBackground(context, a),
-                    pressedScale: 0.98,
-                    builder: (pressed) {
-                      final bg = context.appColors.surfaceFill;
-                      final overlay = cs.onSurface.withValues(
-                        alpha: isDark ? 0.06 : 0.05,
-                      );
-                      final pressedBg = Color.alphaBlend(overlay, bg);
-                      final iconColor = cs.onSurface.withValues(alpha: 0.75);
-                      final textColor = cs.onSurface.withValues(alpha: 0.9);
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 160),
-                        curve: Curves.easeOutCubic,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: pressed ? pressedBg : bg,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: cs.outlineVariant.withValues(alpha: 0.35),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                left: 2.0,
-                              ), // Material icon spacing
-                              child: Icon(
-                                Icons.image,
-                                size: 18,
-                                color: iconColor,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              l10n.assistantEditChooseImageButton,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: AppFontWeights.semibold,
-                                color: textColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ] else ...[
-                  // Two buttons when background exists
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _IosButton(
-                          label: l10n.assistantEditChooseImageButton,
-                          icon: Icons.image,
-                          onTap: () => _pickBackground(context, a),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _IosButton(
-                          label: l10n.assistantEditClearButton,
-                          icon: Lucide.X,
-                          onTap: () =>
-                              context.read<AssistantProvider>().updateAssistant(
-                                a.copyWith(clearBackground: true),
-                              ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-                if ((a.background ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: _BackgroundPreview(path: a.background!),
-                  ),
-                ],
-              ],
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -625,22 +496,6 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         );
       },
     );
-  }
-
-  Future<void> _pickBackground(BuildContext context, Assistant a) async {
-    try {
-      final assistantProvider = context.read<AssistantProvider>();
-      final picker = ImagePicker();
-      final XFile? file = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1920,
-        imageQuality: 85,
-      );
-      if (!context.mounted || file == null) return;
-      await assistantProvider.updateAssistant(
-        a.copyWith(background: file.path),
-      );
-    } catch (_) {}
   }
 
   Future<void> _showTemperatureSheet(BuildContext context, Assistant a) async {
@@ -1137,90 +992,6 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
           ),
         );
       },
-    );
-  }
-}
-
-class _BackgroundPreview extends StatefulWidget {
-  const _BackgroundPreview({required this.path});
-  final String path;
-
-  @override
-  State<_BackgroundPreview> createState() => _BackgroundPreviewState();
-}
-
-class _BackgroundPreviewState extends State<_BackgroundPreview> {
-  Size? _size;
-
-  @override
-  void initState() {
-    super.initState();
-    _resolveSize();
-  }
-
-  @override
-  void didUpdateWidget(covariant _BackgroundPreview oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.path != widget.path) {
-      _size = null;
-      _resolveSize();
-    }
-  }
-
-  Future<void> _resolveSize() async {
-    try {
-      if (widget.path.startsWith('http')) {
-        // Skip network size probe; render with a sensible max height
-        setState(() => _size = null);
-        return;
-      }
-      final file = File(SandboxPathResolver.fix(widget.path));
-      if (!await file.exists()) {
-        setState(() => _size = null);
-        return;
-      }
-      final bytes = await file.readAsBytes();
-      final img = await decodeImageFromList(bytes);
-      final s = Size(img.width.toDouble(), img.height.toDouble());
-      if (mounted) setState(() => _size = s);
-    } catch (_) {
-      if (mounted) setState(() => _size = null);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isNetwork = widget.path.startsWith('http');
-    final imageWidget = isNetwork
-        ? Image.network(widget.path, fit: BoxFit.contain)
-        : (() {
-            final fixed = SandboxPathResolver.fix(widget.path);
-            final f = File(fixed);
-            if (!f.existsSync()) {
-              // Gracefully fallback to empty box when local file missing (e.g., imported from mobile)
-              return const SizedBox.shrink();
-            }
-            return Image.file(f, fit: BoxFit.contain);
-          })();
-    // When size known, maintain aspect ratio; otherwise cap the height to avoid overflow
-    if (_size != null && _size!.width > 0 && _size!.height > 0) {
-      final ratio = _size!.width / _size!.height;
-      return SizedBox(
-        width: double.infinity,
-        child: AspectRatio(aspectRatio: ratio, child: imageWidget),
-      );
-    }
-    return ConstrainedBox(
-      constraints: const BoxConstraints(
-        maxHeight: 280,
-        minHeight: 100,
-        minWidth: double.infinity,
-      ),
-      child: FittedBox(
-        fit: BoxFit.contain,
-        alignment: Alignment.centerLeft,
-        child: SizedBox(width: 400, height: 240, child: imageWidget),
-      ),
     );
   }
 }

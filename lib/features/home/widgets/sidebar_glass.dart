@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/providers/assistant_provider.dart';
+import '../../../core/models/chat_appearance.dart';
 import '../../../core/providers/settings_provider.dart';
-import '../../chat/widgets/chat_assistant_background.dart';
+import '../../chat/widgets/chat_background.dart';
 import '../../chat/widgets/chat_gradient_background.dart';
 import '../../chat/widgets/frosted/chat_frosted_backdrop.dart';
 
@@ -35,7 +36,16 @@ class SidebarGlassBackdrop extends StatelessWidget {
     // A wallpaper is static; the gradient animates in the chat, so the panel
     // takes one still frame of it and never repaints while it slides.
     Widget scene = ChatBackdropSpec.isBackgroundActive(wallpaper)
-        ? const ChatAssistantBackground()
+        ? ChatBackground(
+            configuration: ChatBackgroundSettings(
+              type: ChatBackgroundType.image,
+              path: wallpaper,
+              maskStrength: context.select<SettingsProvider, double>(
+                (s) => s.chatBackgroundMaskStrength,
+              ),
+            ),
+            active: false,
+          )
         : ChatGradientBackgroundHost(
             enabled: false,
             phase: 7,

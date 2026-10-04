@@ -19,7 +19,6 @@ import 'package:syncfusion_flutter_sliders/sliders.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../chat/widgets/chat_message_widget.dart';
-import '../../chat/widgets/chat_gradient_background.dart';
 import '../../home/widgets/assistant_avatar.dart';
 import '../../chat/widgets/reasoning_budget_sheet.dart';
 import '../../model/widgets/model_select_sheet.dart';
@@ -65,7 +64,6 @@ import 'package:Kelivo/shared/widgets/section_card.dart';
 import '../../agents/widgets/assistant_agent_card.dart';
 
 part 'assistant_settings_edit_basic_tab.dart';
-part '../widgets/assistant_gradient_settings.dart';
 part 'assistant_settings_edit_prompt_tab.dart';
 part 'assistant_settings_edit_memory_tab.dart';
 part 'assistant_settings_edit_memory_tab_legacy.dart';

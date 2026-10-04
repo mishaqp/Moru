@@ -16,6 +16,7 @@ import '../../workspace/pages/workspace_settings_page.dart';
 import '../../world_book/pages/world_book_page.dart';
 import '../pages/about_page.dart';
 import '../pages/auto_retry_page.dart';
+import '../pages/appearance_settings_page.dart';
 import '../pages/display_settings_page.dart';
 import '../pages/image_settings_page.dart';
 import '../pages/log_viewer_page.dart';
@@ -44,6 +45,7 @@ Future<void> openMobileSettingsSearchResult(
     SettingsSearchDestination.theme => const ThemeSettingsPage(),
     SettingsSearchDestination.themeAdvanced =>
       const ThemeAdvancedSettingsPage(),
+    SettingsSearchDestination.appearance => const AppearanceSettingsPage(),
     SettingsSearchDestination.chatDisplay =>
       const ChatItemDisplaySettingsPage(),
     SettingsSearchDestination.rendering => const RenderingSettingsPage(),

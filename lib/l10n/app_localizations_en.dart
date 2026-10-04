@@ -9,6 +9,85 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get appearanceSettingsPageTitle => 'Appearance';
+
+  @override
+  String get appearanceChatWindow => 'Chat window';
+
+  @override
+  String get appearanceSidebar => 'Sidebar';
+
+  @override
+  String get appearanceSidebarComingSoon =>
+      'Sidebar appearance will be available in a future update.';
+
+  @override
+  String get appearanceSameBackground => 'Same for light and dark';
+
+  @override
+  String get appearanceSameBackgroundHint =>
+      'Use one background in both themes.';
+
+  @override
+  String get appearanceBackground => 'Background';
+
+  @override
+  String get appearanceNone => 'None';
+
+  @override
+  String get appearancePhoto => 'Photo gallery';
+
+  @override
+  String get appearanceGif => 'GIF';
+
+  @override
+  String get appearanceVideo => 'Video';
+
+  @override
+  String get appearanceAnimatedGradient => 'Animated gradient';
+
+  @override
+  String get appearanceChooseMedia => 'Choose media';
+
+  @override
+  String get appearanceReplaceMedia => 'Replace media';
+
+  @override
+  String get appearanceFit => 'Fit';
+
+  @override
+  String get appearanceFitCover => 'Cover';
+
+  @override
+  String get appearanceFitContain => 'Contain';
+
+  @override
+  String get appearanceFitFill => 'Fill';
+
+  @override
+  String get appearanceFitTile => 'Tile';
+
+  @override
+  String get appearanceFocusHint =>
+      'Drag the preview to position the background.';
+
+  @override
+  String get appearanceCenterFocus => 'Center background';
+
+  @override
+  String get appearanceBrightness => 'Brightness';
+
+  @override
+  String get appearanceSaturation => 'Saturation';
+
+  @override
+  String get appearanceMediaError =>
+      'Could not use this file. Choose another image, GIF or video.';
+
+  @override
+  String get appearanceReset => 'Reset backgrounds';
+
+  @override
   String get settingsSearchHint => 'Search settings';
 
   @override

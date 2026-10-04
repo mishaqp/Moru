@@ -9,6 +9,85 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get appearanceSettingsPageTitle => 'Внешний вид';
+
+  @override
+  String get appearanceChatWindow => 'Окно чата';
+
+  @override
+  String get appearanceSidebar => 'Боковая панель';
+
+  @override
+  String get appearanceSidebarComingSoon =>
+      'Настройка боковой панели появится в следующем обновлении.';
+
+  @override
+  String get appearanceSameBackground => 'Одинаковый для светлой и тёмной темы';
+
+  @override
+  String get appearanceSameBackgroundHint =>
+      'Использовать один фон в обеих темах.';
+
+  @override
+  String get appearanceBackground => 'Фон';
+
+  @override
+  String get appearanceNone => 'Нет';
+
+  @override
+  String get appearancePhoto => 'Фото из галереи';
+
+  @override
+  String get appearanceGif => 'GIF-анимация';
+
+  @override
+  String get appearanceVideo => 'Видео';
+
+  @override
+  String get appearanceAnimatedGradient => 'Анимированный градиент';
+
+  @override
+  String get appearanceChooseMedia => 'Выбрать файл';
+
+  @override
+  String get appearanceReplaceMedia => 'Заменить файл';
+
+  @override
+  String get appearanceFit => 'Размещение';
+
+  @override
+  String get appearanceFitCover => 'С обрезкой';
+
+  @override
+  String get appearanceFitContain => 'Целиком';
+
+  @override
+  String get appearanceFitFill => 'Растянуть';
+
+  @override
+  String get appearanceFitTile => 'Замостить';
+
+  @override
+  String get appearanceFocusHint =>
+      'Перетащите фон в превью, чтобы изменить его положение.';
+
+  @override
+  String get appearanceCenterFocus => 'Центрировать фон';
+
+  @override
+  String get appearanceBrightness => 'Яркость';
+
+  @override
+  String get appearanceSaturation => 'Насыщенность';
+
+  @override
+  String get appearanceMediaError =>
+      'Не удалось использовать файл. Выберите другое изображение, GIF или видео.';
+
+  @override
+  String get appearanceReset => 'Сбросить фоны';
+
+  @override
   String get settingsSearchHint => 'Поиск настроек';
 
   @override

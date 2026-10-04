@@ -51,6 +51,7 @@ class HomeDesktopScaffold extends StatelessWidget {
     required this.buildAssistantBackground,
     this.appBarOverride,
     required this.body,
+    this.backgroundActive = true,
   });
 
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -81,6 +82,7 @@ class HomeDesktopScaffold extends StatelessWidget {
   final Widget Function(BuildContext context) buildAssistantBackground;
   final PreferredSizeWidget? appBarOverride;
   final Widget body;
+  final bool backgroundActive;
 
   static const Duration _sidebarAnimDuration = Duration(milliseconds: 260);
   static const Curve _sidebarAnimCurve = Curves.easeOutCubic;
@@ -90,6 +92,7 @@ class HomeDesktopScaffold extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return ChatFrostedBackdrop(
+      active: backgroundActive,
       backdrop: buildAssistantBackground(context),
       child: SizedBox.expand(
         child: Row(

@@ -4,6 +4,7 @@ import 'package:syncfusion_flutter_core/theme.dart';
 import 'package:syncfusion_flutter_sliders/sliders.dart';
 
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/models/chat_appearance.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../icons/reasoning_icons.dart';
 import '../../../l10n/app_localizations.dart';

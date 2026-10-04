@@ -1,19 +1,11 @@
-import 'dart:io' show File;
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/providers/assistant_provider.dart';
+import '../../../core/models/chat_appearance.dart';
 import '../../../core/providers/settings_provider.dart';
-import '../../../utils/sandbox_path_resolver.dart';
-import 'chat_gradient_background.dart';
-import 'frosted/chat_frosted_backdrop.dart';
+import 'chat_background.dart';
 
-/// Shared assistant wallpaper + surface-mask gradient for chat surfaces.
-///
-/// Mobile uses a 0.20→0.50 mask; desktop/tablet uses a lighter 0.08→0.36 mask.
-/// All image tinting scales with [SettingsProvider.chatBackgroundMaskStrength]
-/// so zero shows the unmodified wallpaper in either layout.
+/// Global chat artwork. The legacy name is kept for the shared home layouts.
 class ChatAssistantBackground extends StatelessWidget {
   const ChatAssistantBackground({
     super.key,
@@ -23,124 +15,27 @@ class ChatAssistantBackground extends StatelessWidget {
     this.expand = true,
   });
 
-  /// Desktop chat uses a lighter mask so the wallpaper stays more visible.
   final bool desktop;
-
   final bool pinnedToBackdrop;
-
-  /// Desktop layout paints [ColorScheme.surface] under the wallpaper.
   final bool includeSurfaceFill;
-
-  /// When false, an empty background is [SizedBox.shrink] (home mobile body).
   final bool expand;
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final assistant = context.watch<AssistantProvider>().currentAssistant;
-    final bg = assistant?.background;
-    final glass = context.select<SettingsProvider, bool>((s) => s.glassTheme);
-    if ((assistant?.useGradientBackground ?? false) ||
-        (glass && !ChatBackdropSpec.isBackgroundActive(bg ?? ''))) {
-      return ChatGradientBackground(pinned: pinnedToBackdrop);
-    }
-    final maskStrength = context
-        .watch<SettingsProvider>()
-        .chatBackgroundMaskStrength;
-    final empty = expand ? const SizedBox.expand() : const SizedBox.shrink();
-
-    if (bg == null || bg.trim().isEmpty) {
-      return includeSurfaceFill ? ColoredBox(color: cs.surface) : empty;
-    }
-
-    ImageProvider? provider;
-    Widget? imageWidget;
-    if (bg.startsWith('http')) {
-      if (includeSurfaceFill) {
-        imageWidget = Image.network(
-          bg,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+    final brightness = Theme.of(context).brightness;
+    final configuration = context
+        .select<SettingsProvider, ChatBackgroundSettings>(
+          (settings) => settings.chatAppearance.backgroundFor(brightness),
         );
-      } else {
-        provider = NetworkImage(bg);
-      }
-    } else {
-      try {
-        final localPath = SandboxPathResolver.fix(bg);
-        final file = File(localPath);
-        if (!file.existsSync()) {
-          return includeSurfaceFill ? ColoredBox(color: cs.surface) : empty;
-        }
-        if (includeSurfaceFill) {
-          imageWidget = Image(image: FileImage(file), fit: BoxFit.cover);
-        } else {
-          provider = FileImage(file);
-        }
-      } catch (_) {
-        return includeSurfaceFill ? ColoredBox(color: cs.surface) : empty;
-      }
+    if (!expand &&
+        configuration.type == ChatBackgroundType.none &&
+        !includeSurfaceFill) {
+      return const SizedBox.shrink();
     }
-
-    final topAlpha = ((desktop ? 0.08 : 0.20) * maskStrength).clamp(0.0, 1.0);
-    final bottomAlpha = ((desktop ? 0.36 : 0.50) * maskStrength).clamp(
-      0.0,
-      1.0,
-    );
-    final mask = IgnorePointer(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              cs.surface.withValues(alpha: topAlpha),
-              cs.surface.withValues(alpha: bottomAlpha),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (includeSurfaceFill) {
-      return IgnorePointer(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            ColoredBox(color: cs.surface),
-            if (imageWidget != null)
-              Opacity(
-                opacity: (1.0 - 0.1 * maskStrength).clamp(0.0, 1.0),
-                child: imageWidget,
-              ),
-            mask,
-          ],
-        ),
-      );
-    }
-
-    final wallpaper = DecoratedBox(
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: provider!,
-          fit: BoxFit.cover,
-          colorFilter: ColorFilter.mode(
-            cs.shadow.withValues(alpha: (0.04 * maskStrength).clamp(0.0, 1.0)),
-            BlendMode.srcATop,
-          ),
-        ),
-      ),
-    );
-
-    if (expand) {
-      return Stack(fit: StackFit.expand, children: [wallpaper, mask]);
-    }
-
-    return Stack(
-      children: [
-        Positioned.fill(child: wallpaper),
-        Positioned.fill(child: mask),
-      ],
+    return ChatBackground(
+      configuration: configuration,
+      desktop: desktop,
+      includeSurfaceFill: includeSurfaceFill,
     );
   }
 }
