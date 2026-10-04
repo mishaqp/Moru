@@ -43,6 +43,7 @@ void main() {
       LocalToolNames.remindersComplete,
       LocalToolNames.assistantManager,
       LocalToolNames.mcpManager,
+      LocalToolNames.spendControl,
       LocalToolNames.reportProblem,
       LocalToolNames.scheduledTasks,
       LocalToolNames.miniApps,
