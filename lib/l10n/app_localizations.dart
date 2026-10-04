@@ -22604,6 +22604,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Value needed'**
   String get mcpManagerValueNeeded;
+
+  /// No description provided for @spendControlTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spend control'**
+  String get spendControlTitle;
+
+  /// No description provided for @spendControlSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Check spending and compact context. Changes ask for confirmation.'**
+  String get spendControlSubtitle;
+
+  /// No description provided for @spendLimitsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending limits'**
+  String get spendLimitsTitle;
+
+  /// No description provided for @spendLimitsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional budgets for each chat and the device’s local day. Clear a value to disable it. Tokens count input + output; cached tokens are part of input. Prices may be incomplete.'**
+  String get spendLimitsNote;
+
+  /// No description provided for @spendChatUsd.
+  ///
+  /// In en, this message translates to:
+  /// **'Per chat · USD'**
+  String get spendChatUsd;
+
+  /// No description provided for @spendChatTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Per chat · tokens'**
+  String get spendChatTokens;
+
+  /// No description provided for @spendDailyUsd.
+  ///
+  /// In en, this message translates to:
+  /// **'Per day · USD'**
+  String get spendDailyUsd;
+
+  /// No description provided for @spendDailyTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Per day · tokens'**
+  String get spendDailyTokens;
+
+  /// No description provided for @spendWarningThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'Warning threshold'**
+  String get spendWarningThreshold;
+
+  /// No description provided for @spendHardStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Hard stop'**
+  String get spendHardStop;
+
+  /// No description provided for @spendHardStopNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Block new requests only after an enabled budget is exhausted. Unknown costs cannot enforce a dollar limit.'**
+  String get spendHardStopNote;
+
+  /// No description provided for @spendHardStopMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending limit reached. Change the limits or turn off Hard stop in Statistics.'**
+  String get spendHardStopMessage;
+
+  /// No description provided for @spendDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get spendDisabled;
+
+  /// No description provided for @spendValueHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty means no limit'**
+  String get spendValueHint;
+
+  /// No description provided for @spendInvalidValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a positive number, or clear to disable. Token limits need whole numbers.'**
+  String get spendInvalidValue;
+
+  /// No description provided for @spendInvalidThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a whole percentage from 1 to 100.'**
+  String get spendInvalidThreshold;
+
+  /// No description provided for @spendChatRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat: {remaining} left'**
+  String spendChatRemaining(String remaining);
+
+  /// No description provided for @spendDailyRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Today: {remaining} left'**
+  String spendDailyRemaining(String remaining);
+
+  /// No description provided for @spendWarningHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget warning · {remaining}'**
+  String spendWarningHint(String remaining);
+
+  /// No description provided for @spendLimitReachedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget reached · {remaining}'**
+  String spendLimitReachedHint(String remaining);
+
+  /// No description provided for @spendTokenAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tokens'**
+  String spendTokenAmount(String count);
+
+  /// No description provided for @spendPartialPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price incomplete; remaining USD is an upper bound.'**
+  String get spendPartialPrice;
+
+  /// No description provided for @spendCompactAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact context'**
+  String get spendCompactAction;
+
+  /// No description provided for @spendSetLimitsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Change spending limits'**
+  String get spendSetLimitsAction;
+
+  /// No description provided for @spendStatusAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Check spending'**
+  String get spendStatusAction;
+
+  /// No description provided for @spendCompactNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Compression creates a new chat with a summary using your compression settings. The original chat stays available; this reply finishes there.'**
+  String get spendCompactNote;
 }
 
 class _AppLocalizationsDelegate

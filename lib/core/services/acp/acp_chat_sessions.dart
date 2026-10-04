@@ -31,6 +31,7 @@ class AcpChatTurn {
     required this.cwd,
     this.mounts = const [],
     required this.prompt,
+    this.spendWarning,
     this.userImagePaths = const [],
     this.imageNotSentMessage = "An image was not sent to the agent.",
     this.history = '',
@@ -52,6 +53,9 @@ class AcpChatTurn {
 
   /// ACP content blocks of the new message.
   final List<Map<String, Object?>> prompt;
+
+  /// Per-turn service context, excluded from Moru's saved/replayed history.
+  final String? spendWarning;
   final List<String> userImagePaths;
   final String imageNotSentMessage;
 
@@ -160,6 +164,23 @@ class AcpChatSessions extends ChangeNotifier {
         ];
       }
       prompt = [
+        if (turn.spendWarning case final warning?)
+          chat.agent.info.embeddedContextPrompts
+              ? {
+                  'type': 'resource',
+                  'resource': {
+                    'uri': 'moru://spend-control',
+                    'mimeType': 'text/plain',
+                    'text': warning,
+                  },
+                  'annotations': {
+                    'audience': ['assistant'],
+                  },
+                }
+              : {
+                  'type': 'text',
+                  'text': 'Moru service notice for this turn: $warning',
+                },
         ...prompt,
         ...await acpImagePromptBlocks(
           turn.userImagePaths,

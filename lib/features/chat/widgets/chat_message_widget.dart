@@ -17,6 +17,7 @@ import '../../home/widgets/file_processing_indicator.dart';
 import '../utils/chat_ui_work.dart';
 import '../pages/image_viewer_page.dart';
 import 'bounded_large_text_view.dart';
+import 'spend_control_approval_details.dart';
 import '../../../shared/widgets/action_sheet.dart';
 import 'reasoning_window.dart';
 import '../../../core/models/chat_message.dart';
@@ -504,6 +505,7 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
     LocalToolNames.remindersComplete => Lucide.CheckCircle,
     LocalToolNames.assistantManager => Lucide.Bot,
     LocalToolNames.mcpManager => Lucide.Server,
+    LocalToolNames.spendControl => Lucide.Gauge,
     LocalToolNames.reportProblem => Lucide.Bug,
     LocalToolNames.scheduledTasks => Lucide.CalendarClock,
     LocalToolNames.miniApps => Lucide.LayoutGrid,
@@ -555,6 +557,11 @@ String? _localToolTitleFor(
       McpManagerTool.actionOf(args),
     ),
     LocalToolNames.reportProblem => l10n.problemReportToolTitle,
+    LocalToolNames.spendControl => switch (args['action']) {
+      'compact' => l10n.spendCompactAction,
+      'set_limits' => l10n.spendSetLimitsAction,
+      _ => l10n.spendStatusAction,
+    },
     LocalToolNames.scheduledTasks => switch (ScheduledTaskTool.actionOf(args)) {
       ScheduledTaskTool.actionList => l10n.scheduledTaskToolActionList,
       ScheduledTaskTool.actionCreate => l10n.scheduledTaskToolActionCreate,
@@ -5471,6 +5478,9 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
         : null;
     final Widget? summaryContent = _isAskUser
         ? _AskUserInlineBody(part: widget.part, compact: true)
+        : widget.part.toolName == LocalToolNames.spendControl &&
+              approvalRequest != null
+        ? SpendControlApprovalDetails(arguments: approvalRequest.arguments)
         : widget.part.toolName == LocalToolNames.mcpManager &&
               approvalRequest != null
         ? McpManagementApproval(
@@ -6009,10 +6019,16 @@ class _ToolCallItemState extends State<_ToolCallItem> {
                 ),
               ),
             ],
+            if (widget.part.toolName == LocalToolNames.spendControl &&
+                pendingRequest != null) ...[
+              const SizedBox(height: 8),
+              SpendControlApprovalDetails(arguments: pendingRequest.arguments),
+            ],
             if (!isWorkspace &&
                 isPendingApproval &&
                 widget.part.toolName != LocalToolNames.reportProblem &&
                 widget.part.toolName != LocalToolNames.mcpManager &&
+                widget.part.toolName != LocalToolNames.spendControl &&
                 widget.part.arguments.isNotEmpty) ...[
               const SizedBox(height: 8),
               Container(

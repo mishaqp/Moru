@@ -78,6 +78,15 @@ package name does not require building other platforms.
   longest frame, build and raster durations). ACP/log redactors remove
   secrets before writing. The chat offers Share through a checked private
   snapshot; exports and owned share-cache copies are removed on next launch.
+- **Spend control**: default-off `spend_control` reuses `ChatTokenSummary` and
+  the model catalog for chat/day spending (all paid versions, cached input
+  counted once); partial prices stay marked incomplete. Optional USD/token
+  limits live in `SettingsProvider`, with an 80% warning and opt-in hard stop.
+  Warnings are request-only service context, never saved history, frozen
+  prompts or problem reports; the composer shows the same remaining limits.
+  `compact` uses existing compression to create a summarized chat, preserving
+  the source and not charging retained replies again; `set_limits` and
+  `compact` require ordinary confirmation without individual "Always allow".
 - **Browser and Computer**: `BrowserAgentSession.minimize` parks the live
   `WebViewController`; the next agent `WebViewPage` adopts it without reloading.
   `openSharedBrowser` opens or expands it. `BrowserMiniWindow` in `AppOverlays`

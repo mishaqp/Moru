@@ -3631,6 +3631,49 @@ class ChatDatabaseRepository {
         .toList(growable: false);
   }
 
+  /// All paid revisions, without message bodies, parts or provider artifacts.
+  Future<List<ChatMessage>> querySpendMessages({
+    String? conversationId,
+    DateTime? start,
+    DateTime? endExclusive,
+  }) async {
+    final rows = await _db
+        .customSelect(
+          '''
+      SELECT id, conversation_id, timestamp, model_id, provider_id,
+        prompt_tokens, completion_tokens, cached_tokens
+      FROM message_rows WHERE role = 'assistant'
+        ${conversationId == null ? '' : 'AND conversation_id = ?'}
+        ${start == null ? '' : 'AND timestamp >= ?'}
+        ${endExclusive == null ? '' : 'AND timestamp < ?'};
+    ''',
+          variables: [
+            if (conversationId != null) Variable<String>(conversationId),
+            if (start != null) Variable<int>(start.microsecondsSinceEpoch),
+            if (endExclusive != null)
+              Variable<int>(endExclusive.microsecondsSinceEpoch),
+          ],
+        )
+        .get();
+    return [
+      for (final row in rows)
+        ChatMessage(
+          id: row.read<String>('id'),
+          conversationId: row.read<String>('conversation_id'),
+          role: 'assistant',
+          content: '',
+          timestamp: DateTime.fromMicrosecondsSinceEpoch(
+            row.read<int>('timestamp'),
+          ),
+          modelId: row.readNullable<String>('model_id'),
+          providerId: row.readNullable<String>('provider_id'),
+          promptTokens: row.readNullable<int>('prompt_tokens'),
+          completionTokens: row.readNullable<int>('completion_tokens'),
+          cachedTokens: row.readNullable<int>('cached_tokens'),
+        ),
+    ];
+  }
+
   Future<ChatStatsAggregate> queryStatsAggregate({
     required DateTime? rangeStart,
     required DateTime? rangeEndExclusive,

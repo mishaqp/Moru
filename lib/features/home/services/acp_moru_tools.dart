@@ -14,6 +14,7 @@ import '../../../core/services/workspace/workspace_tools_service.dart';
 import '../../../utils/mcp_structured_image.dart';
 import 'tool_approval_service.dart';
 import 'tool_handler_service.dart';
+import 'spend_control_tool.dart';
 
 /// Reuses the model's definitions, policy and handlers with the agent's chat.
 class AcpMoruTools {
@@ -29,8 +30,12 @@ class AcpMoruTools {
     required WorkspaceToolContext? workspace,
     required ToolApprovalService? approvals,
     ToolApprovalOwner? approvalOwner,
+    SpendCompactHandler? compactContext,
   }) {
-    final service = ToolHandlerService(contextProvider: context);
+    final service = ToolHandlerService(
+      contextProvider: context,
+      compactContext: compactContext,
+    );
     Assistant? current() {
       if (!context.mounted || chats.getConversation(conversationId) == null) {
         return null;

@@ -24,6 +24,7 @@ import '../../../core/services/workspace/workspace_tools_service.dart';
 import '../../../l10n/app_localizations.dart';
 import 'tool_approval_service.dart';
 import 'acp_moru_tools.dart';
+import 'spend_control_tool.dart';
 
 /// Extras key of a chat's agent session: `{agent, id}`.
 const String acpSessionKey = 'acp.session';
@@ -47,8 +48,10 @@ class AcpChatBridge {
     required String providerKey,
     required String modelId,
     required List<Map<String, dynamic>> apiMessages,
+    String? spendWarning,
     List<String> userImagePaths = const [],
     ToolApprovalOwner? approvalOwner,
+    SpendCompactHandler? compactContext,
   }) async {
     if (assistant is! Assistant || assistant.agentId?.isNotEmpty != true) {
       return null;
@@ -81,8 +84,10 @@ class AcpChatBridge {
         providerKey: providerKey,
         modelId: modelId,
         apiMessages: apiMessages,
+        spendWarning: spendWarning,
         userImagePaths: userImagePaths,
         approvalOwner: approvalOwner,
+        compactContext: compactContext,
       );
       return stream?.handleError((Object error, StackTrace stackTrace) {
         Error.throwWithStackTrace(translate(error), stackTrace);
@@ -107,8 +112,10 @@ class AcpChatBridge {
     required String providerKey,
     required String modelId,
     required List<Map<String, dynamic>> apiMessages,
+    String? spendWarning,
     List<String> userImagePaths = const [],
     ToolApprovalOwner? approvalOwner,
+    SpendCompactHandler? compactContext,
   }) async {
     if (assistant is! Assistant) return null;
     final agentId = assistant.agentId;
@@ -179,6 +186,7 @@ class AcpChatBridge {
         cwd: workspace?.cwd ?? '/root',
         mounts: workspace?.paths.mounts ?? const [],
         prompt: message.prompt,
+        spendWarning: spendWarning,
         moruTools: AcpMoruTools.create(
           context: context,
           assistant: assistant,
@@ -191,6 +199,7 @@ class AcpChatBridge {
           workspace: workspace,
           approvals: approvals,
           approvalOwner: approvalOwner,
+          compactContext: compactContext,
         ),
         userImagePaths: userImagePaths,
         imageNotSentMessage: l10n.agentsImageNotSent,

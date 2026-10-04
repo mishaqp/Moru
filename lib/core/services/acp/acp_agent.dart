@@ -21,6 +21,7 @@ class AcpAgentInfo {
     this.loadSession = false,
     this.resumeSession = false,
     this.imagePrompts = false,
+    this.embeddedContextPrompts = false,
     this.mcpHttp = false,
     this.authMethods = const [],
   });
@@ -35,6 +36,7 @@ class AcpAgentInfo {
       loadSession: caps['loadSession'] == true,
       resumeSession: _map(caps['sessionCapabilities'])['resume'] != null,
       imagePrompts: prompt['image'] == true,
+      embeddedContextPrompts: prompt['embeddedContext'] == true,
       mcpHttp: _map(caps['mcpCapabilities'])['http'] == true,
       authMethods: [
         for (final method in result['authMethods'] as List? ?? const [])
@@ -59,6 +61,9 @@ class AcpAgentInfo {
 
   /// Prompts may carry images.
   final bool imagePrompts;
+
+  /// Prompts may carry embedded resources as context.
+  final bool embeddedContextPrompts;
   final bool mcpHttp;
   final List<AcpAuthMethod> authMethods;
 }

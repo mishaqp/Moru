@@ -204,6 +204,17 @@ class _LocalToolsTab extends StatelessWidget {
               onChanged: (value) =>
                   toggleTool(LocalToolNames.mcpManager, value),
             ),
+            _iosDivider(context),
+            _LocalToolRow(
+              icon: Lucide.Gauge,
+              title: l10n.spendControlTitle,
+              subtitle: l10n.spendControlSubtitle,
+              enabled: assistant.localToolIds.contains(
+                LocalToolNames.spendControl,
+              ),
+              onChanged: (value) =>
+                  toggleTool(LocalToolNames.spendControl, value),
+            ),
             if (LocalToolsService.isAvailableOnThisPlatform(
               LocalToolNames.reportProblem,
             )) ...[

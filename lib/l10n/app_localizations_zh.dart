@@ -12142,6 +12142,95 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mcpManagerValueNeeded => '需要输入值';
+
+  @override
+  String get spendControlTitle => '費用控制';
+
+  @override
+  String get spendControlSubtitle => '查看費用並壓縮上下文。修改需要確認。';
+
+  @override
+  String get spendLimitsTitle => '費用限額';
+
+  @override
+  String get spendLimitsNote =>
+      '可設定每個聊天和裝置本地一天的限額。清空數值可關閉限額。Token 為輸入加輸出；快取屬於輸入。價格可能不完整。';
+
+  @override
+  String get spendChatUsd => '每個聊天 · 美元';
+
+  @override
+  String get spendChatTokens => '每個聊天 · Token';
+
+  @override
+  String get spendDailyUsd => '每天 · 美元';
+
+  @override
+  String get spendDailyTokens => '每天 · Token';
+
+  @override
+  String get spendWarningThreshold => '提醒閾值';
+
+  @override
+  String get spendHardStop => '達到限額時停止';
+
+  @override
+  String get spendHardStopNote => '已啟用的限額用盡後阻止新請求。未知費用無法用於執行美元限額。';
+
+  @override
+  String get spendHardStopMessage => '已達到費用限額。請在統計中調整限額或關閉達到限額時停止。';
+
+  @override
+  String get spendDisabled => '關閉';
+
+  @override
+  String get spendValueHint => '留空表示不限額';
+
+  @override
+  String get spendInvalidValue => '請輸入正數或清空。Token 限額必須為整數。';
+
+  @override
+  String get spendInvalidThreshold => '請輸入 1 至 100 的整數百分比。';
+
+  @override
+  String spendChatRemaining(String remaining) {
+    return '聊天：剩餘 $remaining';
+  }
+
+  @override
+  String spendDailyRemaining(String remaining) {
+    return '今天：剩餘 $remaining';
+  }
+
+  @override
+  String spendWarningHint(String remaining) {
+    return '限額提醒 · $remaining';
+  }
+
+  @override
+  String spendLimitReachedHint(String remaining) {
+    return '已達到限額 · $remaining';
+  }
+
+  @override
+  String spendTokenAmount(String count) {
+    return '$count Token';
+  }
+
+  @override
+  String get spendPartialPrice => '價格不完整；剩餘美元為上限。';
+
+  @override
+  String get spendCompactAction => '壓縮上下文';
+
+  @override
+  String get spendSetLimitsAction => '修改費用限額';
+
+  @override
+  String get spendStatusAction => '查看費用';
+
+  @override
+  String get spendCompactNote => '壓縮將依你的壓縮設定建立包含摘要的新聊天。原聊天會保留；目前回覆仍在原聊天中完成。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -24211,6 +24300,95 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get mcpManagerValueNeeded => '需要输入值';
+
+  @override
+  String get spendControlTitle => '费用控制';
+
+  @override
+  String get spendControlSubtitle => '查看费用并压缩上下文。修改需要确认。';
+
+  @override
+  String get spendLimitsTitle => '费用限额';
+
+  @override
+  String get spendLimitsNote =>
+      '可设置每个聊天和设备本地一天的限额。清空数值可关闭限额。Token 为输入加输出；缓存属于输入。价格可能不完整。';
+
+  @override
+  String get spendChatUsd => '每个聊天 · 美元';
+
+  @override
+  String get spendChatTokens => '每个聊天 · Token';
+
+  @override
+  String get spendDailyUsd => '每天 · 美元';
+
+  @override
+  String get spendDailyTokens => '每天 · Token';
+
+  @override
+  String get spendWarningThreshold => '提醒阈值';
+
+  @override
+  String get spendHardStop => '达到限额时停止';
+
+  @override
+  String get spendHardStopNote => '已启用的限额用尽后阻止新请求。未知费用无法用于执行美元限额。';
+
+  @override
+  String get spendHardStopMessage => '已达到费用限额。请在统计中调整限额或关闭达到限额时停止。';
+
+  @override
+  String get spendDisabled => '关闭';
+
+  @override
+  String get spendValueHint => '留空表示不限额';
+
+  @override
+  String get spendInvalidValue => '请输入正数或清空。Token 限额必须为整数。';
+
+  @override
+  String get spendInvalidThreshold => '请输入 1 至 100 的整数百分比。';
+
+  @override
+  String spendChatRemaining(String remaining) {
+    return '聊天：剩余 $remaining';
+  }
+
+  @override
+  String spendDailyRemaining(String remaining) {
+    return '今天：剩余 $remaining';
+  }
+
+  @override
+  String spendWarningHint(String remaining) {
+    return '限额提醒 · $remaining';
+  }
+
+  @override
+  String spendLimitReachedHint(String remaining) {
+    return '已达到限额 · $remaining';
+  }
+
+  @override
+  String spendTokenAmount(String count) {
+    return '$count Token';
+  }
+
+  @override
+  String get spendPartialPrice => '价格不完整；剩余美元为上限。';
+
+  @override
+  String get spendCompactAction => '压缩上下文';
+
+  @override
+  String get spendSetLimitsAction => '修改费用限额';
+
+  @override
+  String get spendStatusAction => '查看费用';
+
+  @override
+  String get spendCompactNote => '压缩将按你的压缩设置创建包含摘要的新聊天。原聊天会保留；当前回复仍在原聊天中完成。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -36354,4 +36532,93 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get mcpManagerValueNeeded => '需要輸入值';
+
+  @override
+  String get spendControlTitle => '費用控制';
+
+  @override
+  String get spendControlSubtitle => '查看費用並壓縮上下文。修改需要確認。';
+
+  @override
+  String get spendLimitsTitle => '費用限額';
+
+  @override
+  String get spendLimitsNote =>
+      '可設定每個聊天和裝置本地一天的限額。清空數值可關閉限額。Token 為輸入加輸出；快取屬於輸入。價格可能不完整。';
+
+  @override
+  String get spendChatUsd => '每個聊天 · 美元';
+
+  @override
+  String get spendChatTokens => '每個聊天 · Token';
+
+  @override
+  String get spendDailyUsd => '每天 · 美元';
+
+  @override
+  String get spendDailyTokens => '每天 · Token';
+
+  @override
+  String get spendWarningThreshold => '提醒閾值';
+
+  @override
+  String get spendHardStop => '達到限額時停止';
+
+  @override
+  String get spendHardStopNote => '已啟用的限額用盡後阻止新請求。未知費用無法用於執行美元限額。';
+
+  @override
+  String get spendHardStopMessage => '已達到費用限額。請在統計中調整限額或關閉達到限額時停止。';
+
+  @override
+  String get spendDisabled => '關閉';
+
+  @override
+  String get spendValueHint => '留空表示不限額';
+
+  @override
+  String get spendInvalidValue => '請輸入正數或清空。Token 限額必須為整數。';
+
+  @override
+  String get spendInvalidThreshold => '請輸入 1 至 100 的整數百分比。';
+
+  @override
+  String spendChatRemaining(String remaining) {
+    return '聊天：剩餘 $remaining';
+  }
+
+  @override
+  String spendDailyRemaining(String remaining) {
+    return '今天：剩餘 $remaining';
+  }
+
+  @override
+  String spendWarningHint(String remaining) {
+    return '限額提醒 · $remaining';
+  }
+
+  @override
+  String spendLimitReachedHint(String remaining) {
+    return '已達到限額 · $remaining';
+  }
+
+  @override
+  String spendTokenAmount(String count) {
+    return '$count Token';
+  }
+
+  @override
+  String get spendPartialPrice => '價格不完整；剩餘美元為上限。';
+
+  @override
+  String get spendCompactAction => '壓縮上下文';
+
+  @override
+  String get spendSetLimitsAction => '修改費用限額';
+
+  @override
+  String get spendStatusAction => '查看費用';
+
+  @override
+  String get spendCompactNote => '壓縮將依你的壓縮設定建立包含摘要的新聊天。原聊天會保留；目前回覆仍在原聊天中完成。';
 }

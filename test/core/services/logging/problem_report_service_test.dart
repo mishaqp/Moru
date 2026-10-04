@@ -11,6 +11,9 @@ import 'package:Kelivo/core/services/logging/flutter_logger.dart';
 import 'package:Kelivo/core/services/logging/problem_report_service.dart';
 import 'package:Kelivo/core/services/search/search_service.dart';
 import 'package:Kelivo/core/services/workspace/workspace_file_access.dart';
+import 'package:Kelivo/core/models/spend_limits.dart';
+import 'package:Kelivo/features/home/services/spend_control_service.dart';
+import 'package:Kelivo/features/home/widgets/chat_token_sheet.dart';
 
 import '../../../support/business_test_harness.dart';
 
@@ -48,13 +51,31 @@ void main() {
     'ZIP contains technical data and no chat, requests or custom text',
     () async {
       const chat = 'PRIVATE_CHAT_SENTINEL';
+      await settings.setSpendLimits(const SpendLimits(chatTokens: 100));
+      final spendLine = SpendControlStatus(
+        chat: const ChatTokenSummary(
+          input: 80,
+          output: 0,
+          cached: 0,
+          replies: 1,
+        ),
+        today: const ChatTokenSummary(
+          input: 80,
+          output: 0,
+          cached: 0,
+          replies: 1,
+        ),
+        limits: settings.spendLimits,
+        day: DateTime(2026, 10, 4),
+      ).systemWarning!;
       final logs = await Directory(
         '${root.path}/support/logs',
       ).create(recursive: true);
       for (final name in ['logs.txt', 'context_logs.txt', 'flutter_logs.txt']) {
-        await File('${logs.path}/$name').writeAsString(chat);
+        await File('${logs.path}/$name').writeAsString('$chat\n$spendLine');
       }
       FlutterLogger.logPrint(chat);
+      FlutterLogger.logPrint(spendLine);
       FlutterLogger.recordTechnicalError(StateError(chat), StackTrace.empty);
       final result = await reports.create(settings: settings);
       final name = result['name'] as String;
@@ -68,6 +89,8 @@ void main() {
       expect(text, contains('Test Phone'));
       expect(text, contains('StateError'));
       expect(text, isNot(contains(chat)));
+      expect(text, isNot(contains('Spend control')));
+      expect(text, isNot(contains('spend_limits')));
       expect(text, isNot(contains('PRIVATE_USER_SENTINEL')));
       expect(result['size_bytes'], bytes.length);
       expect(jsonEncode(result), isNot(contains('events.txt\n')));
