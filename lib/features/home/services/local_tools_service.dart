@@ -13,6 +13,7 @@ import 'browser_agent_tool.dart';
 import 'mini_app_data_tool.dart';
 import 'root_shell_tool.dart';
 import 'scheduled_task_tool.dart';
+import 'spend_control_tool.dart';
 
 typedef TextToSpeechStarter = Future<void> Function(String text);
 
@@ -39,6 +40,7 @@ class LocalToolNames {
   static const String remindersComplete = 'reminders_complete';
   static const String assistantManager = AssistantManagerTool.toolName;
   static const String mcpManager = McpManagerTool.toolName;
+  static const String spendControl = SpendControlTool.toolName;
   static const String reportProblem = 'report_problem';
   static const String scheduledTasks = ScheduledTaskTool.toolName;
   static const String miniApps = MiniAppDataTool.toolName;
@@ -65,6 +67,7 @@ class LocalToolNames {
     remindersComplete,
     assistantManager,
     mcpManager,
+    spendControl,
     reportProblem,
     scheduledTasks,
     miniApps,
@@ -86,6 +89,9 @@ class LocalToolNames {
       return AssistantManagerTool.requiresApproval(arguments);
     }
     if (name == mcpManager) return McpManagerTool.requiresApproval(arguments);
+    if (name == spendControl) {
+      return SpendControlTool.requiresApproval(arguments);
+    }
     if (name == scheduledTasks) {
       return ScheduledTaskTool.requiresApproval(arguments);
     }
@@ -385,6 +391,8 @@ class LocalToolsService {
         return AssistantManagerTool.definition;
       case LocalToolNames.mcpManager:
         return McpManagerTool.definition;
+      case LocalToolNames.spendControl:
+        return SpendControlTool.definition;
       case LocalToolNames.reportProblem:
         return {
           'type': 'function',

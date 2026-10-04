@@ -27,6 +27,7 @@ import '../../../core/models/chat_message.dart';
 import '../../../core/services/api/chat_api_helpers.dart';
 import 'chat_token_sheet.dart';
 import 'context_usage_ring.dart';
+import 'spend_warning_hint.dart';
 import '../../../core/models/model_context_window.dart';
 import '../../../core/services/model_catalog/model_catalog.dart';
 
@@ -320,6 +321,8 @@ class ChatInputSection extends StatelessWidget {
           conversationId: conversationId,
           generating: isLoading,
         ),
+        if (settings.spendLimits.enabled && conversationId != null)
+          SpendWarningHint(conversationId: conversationId!),
         if (showEnvChip)
           Padding(
             padding: const EdgeInsets.fromLTRB(

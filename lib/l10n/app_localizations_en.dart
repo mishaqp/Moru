@@ -12711,4 +12711,99 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mcpManagerValueNeeded => 'Value needed';
+
+  @override
+  String get spendControlTitle => 'Spend control';
+
+  @override
+  String get spendControlSubtitle =>
+      'Check spending and compact context. Changes ask for confirmation.';
+
+  @override
+  String get spendLimitsTitle => 'Spending limits';
+
+  @override
+  String get spendLimitsNote =>
+      'Optional budgets for each chat and the device’s local day. Clear a value to disable it. Tokens count input + output; cached tokens are part of input. Prices may be incomplete.';
+
+  @override
+  String get spendChatUsd => 'Per chat · USD';
+
+  @override
+  String get spendChatTokens => 'Per chat · tokens';
+
+  @override
+  String get spendDailyUsd => 'Per day · USD';
+
+  @override
+  String get spendDailyTokens => 'Per day · tokens';
+
+  @override
+  String get spendWarningThreshold => 'Warning threshold';
+
+  @override
+  String get spendHardStop => 'Hard stop';
+
+  @override
+  String get spendHardStopNote =>
+      'Block new requests only after an enabled budget is exhausted. Unknown costs cannot enforce a dollar limit.';
+
+  @override
+  String get spendHardStopMessage =>
+      'Spending limit reached. Change the limits or turn off Hard stop in Statistics.';
+
+  @override
+  String get spendDisabled => 'Off';
+
+  @override
+  String get spendValueHint => 'Empty means no limit';
+
+  @override
+  String get spendInvalidValue =>
+      'Enter a positive number, or clear to disable. Token limits need whole numbers.';
+
+  @override
+  String get spendInvalidThreshold => 'Enter a whole percentage from 1 to 100.';
+
+  @override
+  String spendChatRemaining(String remaining) {
+    return 'Chat: $remaining left';
+  }
+
+  @override
+  String spendDailyRemaining(String remaining) {
+    return 'Today: $remaining left';
+  }
+
+  @override
+  String spendWarningHint(String remaining) {
+    return 'Budget warning · $remaining';
+  }
+
+  @override
+  String spendLimitReachedHint(String remaining) {
+    return 'Budget reached · $remaining';
+  }
+
+  @override
+  String spendTokenAmount(String count) {
+    return '$count tokens';
+  }
+
+  @override
+  String get spendPartialPrice =>
+      'Price incomplete; remaining USD is an upper bound.';
+
+  @override
+  String get spendCompactAction => 'Compact context';
+
+  @override
+  String get spendSetLimitsAction => 'Change spending limits';
+
+  @override
+  String get spendStatusAction => 'Check spending';
+
+  @override
+  String get spendCompactNote =>
+      'Compression creates a new chat with a summary using your compression settings. The original chat stays available; this reply finishes there.';
 }

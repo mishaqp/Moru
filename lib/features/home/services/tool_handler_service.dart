@@ -46,6 +46,8 @@ import 'mini_app_data_tool.dart';
 import 'root_phone_control.dart';
 import 'root_shell_tool.dart';
 import 'scheduled_task_tool.dart';
+import 'spend_control_service.dart';
+import 'spend_control_tool.dart';
 import 'tool_approval_service.dart';
 import '../../../core/services/acp/acp_agent_manager.dart';
 
@@ -56,7 +58,9 @@ import '../../../core/services/acp/acp_agent_manager.dart';
 /// - Memory 工具 (§10)
 /// - Search 工具
 class ToolHandlerService {
-  ToolHandlerService({required this.contextProvider});
+  ToolHandlerService({required this.contextProvider, this.compactContext});
+
+  SpendCompactHandler? compactContext;
 
   /// Build context (used for accessing providers)
   final BuildContext contextProvider;
@@ -580,6 +584,7 @@ class ToolHandlerService {
         // user-visible state, so they require explicit approval first.
         if (name != LocalToolNames.reportProblem &&
             name != LocalToolNames.mcpManager &&
+            name != LocalToolNames.spendControl &&
             LocalToolNames.requiresApprovalFor(name, args) &&
             assistant != null &&
             LocalToolsService.isEnabledForAssistant(name, assistant) &&
@@ -720,6 +725,51 @@ class ToolHandlerService {
             approvals: approvalService,
             autoApproveAll: settings.toolAutoApproveAll,
             checkAllowed: checkAllowed,
+          ).execute(
+            args,
+            toolCallId: approvalIdFor(name, toolCallId),
+            conversationId: conversationId,
+          );
+        }
+
+        if (name == LocalToolNames.spendControl) {
+          final chats = _optional<ChatService>();
+          if (chats == null ||
+              conversationId == null ||
+              chats.getConversation(conversationId) == null) {
+            return _toolError(
+              error: 'no_conversation',
+              message: 'Spend control needs an existing chat.',
+              tool: name,
+            );
+          }
+          void checkAllowed() {
+            ensureLiveToolCall();
+            final current = assistant == null
+                ? null
+                : assistantProvider.getById(assistant.id);
+            if (current == null ||
+                !LocalToolsService.isEnabledForAssistant(name, current) ||
+                chats.getConversation(conversationId) == null) {
+              throw StateError('permission_denied');
+            }
+          }
+
+          final compress = compactContext;
+          return SpendControlTool(
+            settings: settings,
+            approvals: approvalService,
+            checkAllowed: checkAllowed,
+            readStatus: () =>
+                SpendControlService(chats: chats, settings: settings).status(
+                  conversationId,
+                  assistant: assistant == null
+                      ? null
+                      : assistantProvider.getById(assistant.id),
+                ),
+            compact: compress == null
+                ? null
+                : () => compress(conversationId, checkAllowed: checkAllowed),
           ).execute(
             args,
             toolCallId: approvalIdFor(name, toolCallId),

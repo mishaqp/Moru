@@ -46,6 +46,7 @@ import '../../../core/utils/multimodal_input_utils.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
 import 'ocr_service.dart';
+import 'spend_control_service.dart';
 
 /// Result of §7.6 memory-prefix resolution.
 ///
@@ -2311,6 +2312,15 @@ When asked what you are or what you can do, answer in terms of this app and whic
       }
       apiMessages.insert(0, message);
     }
+  }
+
+  /// Request-only: never mutate history or write a frozen message prompt.
+  void injectSpendWarning(
+    List<Map<String, dynamic>> apiMessages,
+    SpendControlStatus status,
+  ) {
+    final warning = status.systemWarning;
+    if (warning != null) _appendToSystemMessage(apiMessages, warning);
   }
 
   /// Apply context message limit based on assistant settings.

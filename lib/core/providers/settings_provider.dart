@@ -22,6 +22,7 @@ import '../services/learning_mode_store.dart';
 import '../models/api_keys.dart';
 import '../models/backup.dart';
 import '../models/compress_context_options.dart';
+import '../models/spend_limits.dart';
 import '../models/auto_retry_options.dart';
 import '../models/provider_group.dart';
 import '../models/chat_folder.dart';
@@ -110,6 +111,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _compressKeepUserMessagesKey =
       'compress_keep_user_messages_v1';
   static const String _compressMaxCharsKey = 'compress_max_chars_v1';
+  static const String _spendLimitsKey = 'spend_limits_v1';
   static const String _themePaletteKey = 'theme_palette_v1';
   static const String _useDynamicColorKey = 'use_dynamic_color_v1';
   static const String _customThemesKey = 'custom_themes_v1';
@@ -793,6 +795,16 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> _load() async {
     final prefs = _preferences;
     await prefs.load();
+    try {
+      final raw = prefs.getString(_spendLimitsKey);
+      _spendLimits = raw == null
+          ? const SpendLimits()
+          : SpendLimits.fromJson(
+              Map<String, dynamic>.from(jsonDecode(raw) as Map),
+            );
+    } catch (_) {
+      _spendLimits = const SpendLimits();
+    }
     final localPreferences = await SharedPreferences.getInstance();
     _providersOrder = prefs.getStringList(_providersOrderKey) ?? [];
     final m = prefs.getString(_themeModeKey);
@@ -4027,6 +4039,19 @@ Requirements:
   int _compressMaxChars = CompressContextOptions.defaultMaxChars;
   int get compressMaxChars => _compressMaxChars;
 
+  SpendLimits _spendLimits = const SpendLimits();
+  SpendLimits get spendLimits => _spendLimits;
+
+  Future<void> setSpendLimits(SpendLimits limits) async {
+    final validated = const SpendLimits().patch(limits.toJson());
+    await _preferences.setString(
+      _spendLimitsKey,
+      jsonEncode(validated.toJson()),
+    );
+    _spendLimits = validated;
+    notifyListeners();
+  }
+
   Future<void> setCompressModel(String providerKey, String modelId) async {
     _compressModelProvider = providerKey;
     _compressModelId = modelId;
@@ -5750,6 +5775,7 @@ Requirements:
     copy._compressLimitMode = _compressLimitMode;
     copy._compressKeepUserMessages = _compressKeepUserMessages;
     copy._compressMaxChars = _compressMaxChars;
+    copy._spendLimits = _spendLimits;
     copy._translateModelProvider = _translateModelProvider;
     copy._translateModelId = _translateModelId;
     copy._translatePrompt = _translatePrompt;

@@ -24,6 +24,9 @@ import '../widgets/stats_metric_grid.dart';
 import '../widgets/stats_rank_section.dart';
 import '../widgets/stats_section_card.dart';
 import '../widgets/stats_usage_chart.dart';
+import '../widgets/spend_limits_settings.dart';
+import '../../../shared/widgets/ios_settings_rows.dart';
+import '../../../shared/widgets/section_card.dart';
 import '../../../theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
@@ -84,6 +87,19 @@ class _StatsPageState extends State<StatsPage> {
           selected: _range.preset,
           onChanged: _setPreset,
           onCustom: _pickCustomRange,
+        ),
+        const SizedBox(height: 8),
+        SectionCard(
+          children: [
+            IosNavRow(
+              icon: Lucide.DollarSign,
+              label: l10n.spendLimitsTitle,
+              detailText: context.watch<SettingsProvider>().spendLimits.enabled
+                  ? '${context.read<SettingsProvider>().spendLimits.warningPercent}%'
+                  : l10n.spendDisabled,
+              onTap: () => showSpendLimitsSettings(context),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         SizedBox(

@@ -1574,6 +1574,7 @@ class GenerationContext {
   GenerationContext({
     required this.assistantMessage,
     required this.apiMessages,
+    this.spendWarning,
     required this.userImagePaths,
     required this.allowImagesApiRouting,
     required this.providerKey,
@@ -1599,6 +1600,7 @@ class GenerationContext {
 
   final ChatMessage assistantMessage;
   final List<Map<String, dynamic>> apiMessages;
+  final String? spendWarning;
   final List<String> userImagePaths;
   final bool allowImagesApiRouting;
   final String providerKey;

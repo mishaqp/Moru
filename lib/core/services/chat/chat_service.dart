@@ -1413,6 +1413,34 @@ class ChatService extends ChangeNotifier {
     );
   }
 
+  Future<List<ChatMessage>> loadSpendMessages({
+    String? conversationId,
+    DateTime? start,
+    DateTime? endExclusive,
+  }) async {
+    if (!_initialized) await init();
+    final persisted = await _repo.querySpendMessages(
+      conversationId: conversationId,
+      start: start,
+      endExclusive: endExclusive,
+    );
+    final byId = {for (final message in persisted) message.id: message};
+    // Include temporary chats and newer live checkpoints, without hydrating history.
+    for (final entry in _messagesCache.entries) {
+      if (conversationId != null && entry.key != conversationId) continue;
+      for (final message in entry.value) {
+        if (message.role != 'assistant' ||
+            (start != null && message.timestamp.isBefore(start)) ||
+            (endExclusive != null &&
+                !message.timestamp.isBefore(endExclusive))) {
+          continue;
+        }
+        byId[message.id] = message;
+      }
+    }
+    return byId.values.toList(growable: false);
+  }
+
   Future<ChatStatsAggregate> loadStatsAggregate({
     required DateTime? rangeStart,
     required DateTime? rangeEndExclusive,
@@ -3622,6 +3650,8 @@ class ChatService extends ChangeNotifier {
     if (!_initialized) return null;
     if (isTemporaryConversation(message.conversationId)) {
       await updateStreamingCheckpointSilent(message, toolEvents);
+      _statisticsRevision++;
+      notifyListeners();
       return null;
     }
     if (generationRunId == null) {
@@ -3891,6 +3921,8 @@ class ChatService extends ChangeNotifier {
     required String title,
     required String? assistantId,
     required List<ChatMessage> sourceMessages,
+    bool activate = true,
+    bool copyUsage = true,
   }) async {
     if (!_initialized) await init();
     Map<String, dynamic> sourceExtras = const <String, dynamic>{};
@@ -3904,21 +3936,27 @@ class ChatService extends ChangeNotifier {
     final persisted = await createConversation(
       title: title,
       assistantId: assistantId,
+      activate: activate,
     );
     await _copyConversationSettingsFrom(persisted.id, sourceExtras);
     _messagesCache[persisted.id] = <ChatMessage>[];
     _messageOrderIds[persisted.id] = <String>[];
     _messageCounts[persisted.id] = 0;
-    await _cloneMessagesInto(persisted.id, sourceMessages);
-    _currentConversationId = persisted.id;
+    await _cloneMessagesInto(
+      persisted.id,
+      sourceMessages,
+      copyUsage: copyUsage,
+    );
+    if (activate) _currentConversationId = persisted.id;
     notifyListeners();
     return getConversation(persisted.id) ?? persisted;
   }
 
   Future<void> _cloneMessagesInto(
     String targetConversationId,
-    List<ChatMessage> sourceMessages,
-  ) async {
+    List<ChatMessage> sourceMessages, {
+    bool copyUsage = true,
+  }) async {
     final sourceIds = [
       for (final message in sourceMessages)
         if (message.id.isNotEmpty) message.id,
@@ -3947,7 +3985,7 @@ class ChatService extends ChangeNotifier {
         timestamp: message.timestamp,
         modelId: message.modelId,
         providerId: message.providerId,
-        totalTokens: message.totalTokens,
+        totalTokens: copyUsage ? message.totalTokens : null,
         conversationId: targetConversationId,
         isStreaming: false,
         reasoningText: message.reasoningText,
@@ -3955,9 +3993,9 @@ class ChatService extends ChangeNotifier {
         reasoningFinishedAt: message.reasoningFinishedAt,
         translation: message.translation,
         reasoningSegmentsJson: message.reasoningSegmentsJson,
-        promptTokens: message.promptTokens,
-        completionTokens: message.completionTokens,
-        cachedTokens: message.cachedTokens,
+        promptTokens: copyUsage ? message.promptTokens : null,
+        completionTokens: copyUsage ? message.completionTokens : null,
+        cachedTokens: copyUsage ? message.cachedTokens : null,
         durationMs: message.durationMs,
       );
       await addMessageDirectly(targetConversationId, forked);

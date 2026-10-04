@@ -29,6 +29,7 @@ class _ScriptedAgent extends AcpChannel {
     this.resumeSession = false,
     this.resumeFails = false,
     this.images = false,
+    this.embeddedContext = false,
     this.mcpHttp = false,
     this.toolArguments,
     this.toolStyle = 'title',
@@ -42,6 +43,7 @@ class _ScriptedAgent extends AcpChannel {
   final bool resumeSession;
   final bool resumeFails;
   final bool images;
+  final bool embeddedContext;
   final bool mcpHttp;
   final Map<String, dynamic>? toolArguments;
   final String toolStyle;
@@ -136,7 +138,10 @@ class _ScriptedAgent extends AcpChannel {
             'sessionCapabilities': {
               if (resumeSession) 'resume': <String, Object?>{},
             },
-            'promptCapabilities': {'image': images},
+            'promptCapabilities': {
+              'image': images,
+              'embeddedContext': embeddedContext,
+            },
             'mcpCapabilities': {'http': mcpHttp},
           },
         });
@@ -351,6 +356,7 @@ void main() {
     bool resumeSession = false,
     bool resumeFails = false,
     bool images = false,
+    bool embeddedContext = false,
     bool mcpHttp = false,
     Future<void>? firstInitializeAfter,
     bool holdFirstPrompt = false,
@@ -369,6 +375,7 @@ void main() {
               resumeSession: resumeSession,
               resumeFails: resumeFails,
               images: images,
+              embeddedContext: embeddedContext,
               mcpHttp: mcpHttp,
               initializeAfter: started.isEmpty ? firstInitializeAfter : null,
               holdPrompts: started.isEmpty && holdFirstPrompt,
@@ -389,6 +396,7 @@ void main() {
     Map<String, String> config = const {},
     List<String> images = const [],
     String history = '',
+    String? spendWarning,
     String cwd = '/workspace',
     AcpProviderInput? using,
     AcpAgentSpec? agentSpec,
@@ -405,6 +413,7 @@ void main() {
       if (text.isNotEmpty) {'type': 'text', 'text': text},
     ],
     history: history,
+    spendWarning: spendWarning,
     savedSessionId: saved,
     savedModeId: mode,
     savedConfig: config,
@@ -1630,6 +1639,46 @@ void main() {
     expect(long.history.length, 21);
     expect(long.history, startsWith('…'));
   });
+
+  for (final embedded in [false, true]) {
+    test('spend notice uses supported ACP context and is not replayed '
+        '(embedded=$embedded)', () async {
+      final sessions = sessionsWith(embeddedContext: embedded);
+      addTearDown(sessions.closeAll);
+      const warning = 'Spend control: today remaining 20 tokens.';
+      final current = turn(
+        'Next task',
+        history: 'Previous answer',
+        spendWarning: warning,
+      );
+      final originalPrompt = jsonEncode(current.prompt);
+      await answer(sessions, current);
+      final first = started.single.sent.firstWhere(
+        (m) => m['method'] == 'session/prompt',
+      );
+      final prompt = (first['params'] as Map)['prompt'] as List;
+      final notice =
+          prompt.singleWhere((p) => jsonEncode(p).contains(warning)) as Map;
+      expect(notice['type'], embedded ? 'resource' : 'text');
+      if (embedded) {
+        expect((notice['resource'] as Map)['mimeType'], 'text/plain');
+        expect((notice['resource'] as Map)['text'], warning);
+      }
+      expect(current.history, 'Previous answer');
+      expect(jsonEncode(current.prompt), originalPrompt);
+      await answer(sessions, turn('Below threshold'));
+      final last = started.single.sent.lastWhere(
+        (m) => m['method'] == 'session/prompt',
+      );
+      expect(
+        jsonEncode((last['params'] as Map)['prompt']),
+        isNot(contains(warning)),
+      );
+      expect((last['params'] as Map)['prompt'], [
+        {'type': 'text', 'text': 'Below threshold'},
+      ]);
+    });
+  }
 
   group('permission on the tool card', () {
     const request = AcpPermissionRequest(

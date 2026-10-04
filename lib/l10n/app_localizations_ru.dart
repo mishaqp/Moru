@@ -12843,4 +12843,99 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get mcpManagerValueNeeded => 'Нужно ввести значение';
+
+  @override
+  String get spendControlTitle => 'Контроль расходов';
+
+  @override
+  String get spendControlSubtitle =>
+      'Посмотреть расход и сжать контекст. Изменения требуют подтверждения.';
+
+  @override
+  String get spendLimitsTitle => 'Лимиты расходов';
+
+  @override
+  String get spendLimitsNote =>
+      'Необязательные лимиты на чат и день по времени устройства. Пустое значение выключает лимит. Токены — вход + выход; кэш входит во вход. Цена может быть неполной.';
+
+  @override
+  String get spendChatUsd => 'На чат · USD';
+
+  @override
+  String get spendChatTokens => 'На чат · токены';
+
+  @override
+  String get spendDailyUsd => 'На день · USD';
+
+  @override
+  String get spendDailyTokens => 'На день · токены';
+
+  @override
+  String get spendWarningThreshold => 'Порог предупреждения';
+
+  @override
+  String get spendHardStop => 'Жёсткий стоп';
+
+  @override
+  String get spendHardStopNote =>
+      'Блокировать новые запросы после исчерпания включённого лимита. Неизвестная цена не позволяет проверить долларовый лимит.';
+
+  @override
+  String get spendHardStopMessage =>
+      'Лимит расходов достигнут. Измените лимиты или выключите жёсткий стоп в Статистике.';
+
+  @override
+  String get spendDisabled => 'Выключен';
+
+  @override
+  String get spendValueHint => 'Пусто — без лимита';
+
+  @override
+  String get spendInvalidValue =>
+      'Введите положительное число или очистите поле. Лимит токенов — целое число.';
+
+  @override
+  String get spendInvalidThreshold => 'Введите целый процент от 1 до 100.';
+
+  @override
+  String spendChatRemaining(String remaining) {
+    return 'Чат: осталось $remaining';
+  }
+
+  @override
+  String spendDailyRemaining(String remaining) {
+    return 'Сегодня: осталось $remaining';
+  }
+
+  @override
+  String spendWarningHint(String remaining) {
+    return 'Лимит близко · $remaining';
+  }
+
+  @override
+  String spendLimitReachedHint(String remaining) {
+    return 'Лимит достигнут · $remaining';
+  }
+
+  @override
+  String spendTokenAmount(String count) {
+    return '$count токенов';
+  }
+
+  @override
+  String get spendPartialPrice =>
+      'Цена неполная; остаток USD — верхняя граница.';
+
+  @override
+  String get spendCompactAction => 'Сжать контекст';
+
+  @override
+  String get spendSetLimitsAction => 'Изменить лимиты расходов';
+
+  @override
+  String get spendStatusAction => 'Посмотреть расход';
+
+  @override
+  String get spendCompactNote =>
+      'Сжатие создаст новый чат с резюме по вашим настройкам сжатия. Исходный чат сохранится; текущий ответ завершится в нём.';
 }

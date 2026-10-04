@@ -20,6 +20,8 @@ import '../../chat/widgets/chat_message_widget.dart' show ToolUIPart;
 import '../services/message_builder_service.dart';
 import '../services/message_generation_service.dart';
 import '../services/chat_suggestion_service.dart';
+import '../services/tool_approval_service.dart';
+import '../../../core/services/api/tool_call_cancellation.dart';
 import '../utils/model_display_helper.dart';
 import 'chat_actions.dart';
 import 'queued_input_queue.dart';
@@ -146,6 +148,8 @@ class HomeViewModel extends ChangeNotifier {
     _chatActions.onAssistantMessageFinished = _onAssistantMessageFinished;
     _chatActions.onFileProcessingStarted = _onFileProcessingStarted;
     _chatActions.onFileProcessingFinished = _onFileProcessingFinished;
+    _generationController.toolHandlerService.compactContext =
+        compactForSpendControl;
   }
 
   // ============================================================================
@@ -623,6 +627,7 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   Future<ChatInputSubmissionResult> sendMessage(ChatInputData input) async {
+    final settings = _contextProvider.read<SettingsProvider>();
     final initialId = currentConversation?.id;
     final initialHoldRevision = initialId == null
         ? null
@@ -647,6 +652,16 @@ class HomeViewModel extends ChangeNotifier {
     }
 
     final activeConversation = currentConversation!;
+    if (_chatController.isConversationLoading(activeConversation.id)) {
+      final error = await _chatActions.spendStopError(
+        settings,
+        activeConversation.id,
+      );
+      if (error != null) {
+        onError?.call(error);
+        return ChatInputSubmissionResult.rejected;
+      }
+    }
     final holdRevision = activeConversation.id == initialId
         ? initialHoldRevision!
         : _chatService.queueHoldRevisionFor(activeConversation.id);
@@ -1631,12 +1646,60 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> compactForSpendControl(
+    String conversationId, {
+    void Function()? checkAllowed,
+  }) async {
+    if (!_contextProvider.mounted) {
+      return {'ok': false, 'error': 'compact_unavailable'};
+    }
+    final settings = _contextProvider.read<SettingsProvider>();
+    final owner = ToolApprovalOwner.current;
+    void checkActive() {
+      checkAllowed?.call();
+      ToolCallCancellation.current?.throwIfCancelled();
+      if (!_contextProvider.mounted || (owner != null && !owner.isActive())) {
+        throw StateError('tool_call_cancelled');
+      }
+    }
+
+    checkActive();
+    Conversation? created;
+    final error = await compressContext(
+      conversationId: conversationId,
+      options: CompressContextOptions(
+        mode: settings.compressLimitMode,
+        maxChars: settings.compressMaxChars,
+        keepUserMessages: settings.compressKeepUserMessages,
+      ),
+      onCreated: (conversation) => created = conversation,
+      checkActive: checkActive,
+    );
+    return error == null && created != null
+        ? {
+            'ok': true,
+            'conversation_id': created!.id,
+            'message':
+                'Created a summarized chat. This reply stays in the original chat; use the summarized chat for the next message.',
+          }
+        : {
+            'ok': false,
+            'error': 'compact_failed',
+            'message': error ?? 'No summarized chat was created.',
+          };
+  }
+
   /// Compress context: summarize messages via LLM, create new conversation with summary.
   /// Returns null on success, or an error key string on failure.
   Future<String?> compressContext({
     required CompressContextOptions options,
+    String? conversationId,
+    ValueChanged<Conversation>? onCreated,
+    void Function()? checkActive,
   }) async {
-    final convo = currentConversation;
+    final convo = conversationId == null
+        ? currentConversation
+        : _chatService.getConversation(conversationId);
     if (convo == null) return 'no_conversation';
 
     final locale = Localizations.localeOf(_contextProvider).toLanguageTag();
@@ -1647,9 +1710,17 @@ class HomeViewModel extends ChangeNotifier {
         : ap.currentAssistant;
 
     // Get messages and collapse to selected versions
-    final allMsgs = await _chatController
-        .allMessagesForCurrentConversationContext();
-    final collapsed = collapseVersions(allMsgs);
+    final allMsgs = await _chatController.messagesForCompleteHistoryContext(
+      convo,
+    );
+    final collapsed = _messageBuilderService.collapseVersions(
+      conversationId == null
+          ? allMsgs
+          : allMsgs.where((message) => !message.isStreaming).toList(),
+      currentConversation?.id == convo.id
+          ? _chatController.versionSelections
+          : convo.versionSelections,
+    );
     if (collapsed.isEmpty) return 'no_messages';
 
     List<ChatMessage>? keptMessages;
@@ -1695,22 +1766,26 @@ class HomeViewModel extends ChangeNotifier {
     );
 
     Future<String> summarizeContent(String content, String label) async {
+      checkActive?.call();
       return summarizeWithContextRetry(
         content,
         summarize: (text) async {
+          checkActive?.call();
           stage = label;
           inputLength = text.length;
           final prompt = settings.compressPrompt
               .replaceAll('{content}', text)
               .replaceAll('{locale}', locale);
-          return (await ChatApiService.generateText(
+          final result = await ChatApiService.generateText(
             conversationId: convo.id,
             config: cfg,
             modelId: mdlId,
             prompt: prompt,
             thinkingBudget: budget,
             skipImageParsing: true,
-          )).trim();
+          );
+          checkActive?.call();
+          return result.trim();
         },
         onSplitRetry: (e, st, text) {
           FlutterLogger.log(
@@ -1779,6 +1854,10 @@ class HomeViewModel extends ChangeNotifier {
       }
 
       if (summary.isEmpty) return 'empty_summary';
+      checkActive?.call();
+      if (_chatService.getConversation(convo.id) == null) {
+        return 'no_conversation';
+      }
 
       if (keptMessages != null) {
         final summaryMsg = ChatMessage(
@@ -1791,14 +1870,27 @@ class HomeViewModel extends ChangeNotifier {
           title: convo.title,
           assistantId: convo.assistantId,
           sourceMessages: [summaryMsg, ...keptMessages],
+          activate: conversationId == null,
+          // Retained replies are context, not new paid generations.
+          copyUsage: conversationId == null,
         );
+
+        onCreated?.call(newConvo);
+        checkActive?.call();
+        if (conversationId != null &&
+            (currentConversation?.id != convo.id ||
+                _chatService.isTemporaryConversation(convo.id))) {
+          return null;
+        }
 
         _chatService.setCurrentConversation(newConvo.id);
         await _chatController.setCurrentConversationAndLoad(
           _chatService.getConversation(newConvo.id) ?? newConvo,
         );
         _restoreMessageUiState();
-        _streamController.clearAllState();
+        _streamController.clearAllState(
+          keepMessageIds: _chatActions.activeStreamingMessageIds,
+        );
         onConversationSwitched?.call();
         notifyListeners();
         onScrollToBottom?.call();
@@ -1807,10 +1899,16 @@ class HomeViewModel extends ChangeNotifier {
       }
 
       // Create new conversation with the summary as first user message
-      final newConvo = await _chatService.createDraftConversation(
-        title: convo.title,
-        assistantId: convo.assistantId,
-      );
+      final newConvo = conversationId != null
+          ? await _chatService.createConversation(
+              title: convo.title,
+              assistantId: convo.assistantId,
+              activate: false,
+            )
+          : await _chatService.createDraftConversation(
+              title: convo.title,
+              assistantId: convo.assistantId,
+            );
 
       await _chatService.addMessage(
         conversationId: newConvo.id,
@@ -1818,12 +1916,22 @@ class HomeViewModel extends ChangeNotifier {
         content: summary,
       );
 
+      onCreated?.call(newConvo);
+      checkActive?.call();
+      if (conversationId != null &&
+          (currentConversation?.id != convo.id ||
+              _chatService.isTemporaryConversation(convo.id))) {
+        return null;
+      }
+
       // Switch to the new conversation
       _chatService.setCurrentConversation(newConvo.id);
       await _chatController.setCurrentConversationAndLoad(
         _chatService.getConversation(newConvo.id) ?? newConvo,
       );
-      _streamController.clearAllState();
+      _streamController.clearAllState(
+        keepMessageIds: _chatActions.activeStreamingMessageIds,
+      );
       onConversationSwitched?.call();
       notifyListeners();
       onScrollToBottom?.call();

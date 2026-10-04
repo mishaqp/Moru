@@ -38,6 +38,7 @@ import '../../chat/utils/thinking_tag_parser.dart';
 import '../../chat/widgets/chat_message_widget.dart' show ToolUIPart;
 import '../services/message_generation_service.dart';
 import '../services/tool_approval_service.dart';
+import '../services/spend_control_service.dart';
 import '../utils/model_display_helper.dart';
 import 'active_streaming_message_store.dart';
 import 'chat_controller.dart';
@@ -1618,6 +1619,25 @@ class ChatActions {
   // Send Message
   // ============================================================================
 
+  /// Check before committing a send pair or modifying a regeneration target.
+  Future<String?> spendStopError(
+    SettingsProvider settings,
+    String conversationId,
+  ) async {
+    final stopMessage = AppLocalizations.of(
+      contextProvider,
+    )!.spendHardStopMessage;
+    await settings.loaded;
+    if (!settings.spendLimits.enabled || !settings.spendLimits.hardStop) {
+      return null;
+    }
+    final status = await SpendControlService(
+      chats: chatService,
+      settings: settings,
+    ).status(conversationId, includeContext: false);
+    return status.blocked ? stopMessage : null;
+  }
+
   /// Send a new message and start generating assistant response.
   ///
   /// Returns [ChatActionResult] with success status and the assistant message.
@@ -1709,6 +1729,8 @@ class ChatActions {
       askUserService = contextProvider.read<AskUserInteractionService>();
     } catch (_) {}
     final plans = _taskPlans();
+    final spendError = await spendStopError(settings, conversation.id);
+    if (spendError != null) return ChatActionResult.error(spendError);
     try {
       await assistantProvider.loaded;
     } catch (e) {
@@ -2197,6 +2219,8 @@ class ChatActions {
       regenAskUserService = contextProvider.read<AskUserInteractionService>();
     } catch (_) {}
     final plans = _taskPlans();
+    final spendError = await spendStopError(settings, conversation.id);
+    if (spendError != null) return ChatActionResult.error(spendError);
     try {
       await assistantProvider.loaded;
     } catch (e) {
@@ -2555,6 +2579,8 @@ class ChatActions {
     try {
       askUserService = contextProvider.read<AskUserInteractionService>();
     } catch (_) {}
+    final spendError = await spendStopError(settings, conversation.id);
+    if (spendError != null) return ChatActionResult.error(spendError);
     try {
       await assistantProvider.loaded;
     } catch (e) {
@@ -3069,8 +3095,10 @@ class ChatActions {
         providerKey: ctx.providerKey,
         modelId: ctx.modelId,
         apiMessages: ctx.apiMessages,
+        spendWarning: ctx.spendWarning,
         userImagePaths: ctx.userImagePaths,
         approvalOwner: approvalOwner,
+        compactContext: generationController.toolHandlerService.compactContext,
       );
       if (!approvalOwner.isActive()) return;
       if (agentStream != null) {

@@ -5709,5 +5709,66 @@
   "mcpManagerSecretHint": "Enter secret values here. They are saved only in MCP settings and are never sent to the model or chat history. Include Bearer/Basic when needed for a header.",
   "mcpManagerPrevious": "Current configuration",
   "mcpManagerValueSet": "Value set",
-  "mcpManagerValueNeeded": "Value needed"
+  "mcpManagerValueNeeded": "Value needed",
+  "spendControlTitle": "Spend control",
+  "spendControlSubtitle": "Check spending and compact context. Changes ask for confirmation.",
+  "spendLimitsTitle": "Spending limits",
+  "spendLimitsNote": "Optional budgets for each chat and the device’s local day. Clear a value to disable it. Tokens count input + output; cached tokens are part of input. Prices may be incomplete.",
+  "spendChatUsd": "Per chat · USD",
+  "spendChatTokens": "Per chat · tokens",
+  "spendDailyUsd": "Per day · USD",
+  "spendDailyTokens": "Per day · tokens",
+  "spendWarningThreshold": "Warning threshold",
+  "spendHardStop": "Hard stop",
+  "spendHardStopNote": "Block new requests only after an enabled budget is exhausted. Unknown costs cannot enforce a dollar limit.",
+  "spendHardStopMessage": "Spending limit reached. Change the limits or turn off Hard stop in Statistics.",
+  "spendDisabled": "Off",
+  "spendValueHint": "Empty means no limit",
+  "spendInvalidValue": "Enter a positive number, or clear to disable. Token limits need whole numbers.",
+  "spendInvalidThreshold": "Enter a whole percentage from 1 to 100.",
+  "spendChatRemaining": "Chat: {remaining} left",
+  "spendDailyRemaining": "Today: {remaining} left",
+  "spendWarningHint": "Budget warning · {remaining}",
+  "spendLimitReachedHint": "Budget reached · {remaining}",
+  "spendTokenAmount": "{count} tokens",
+  "spendPartialPrice": "Price incomplete; remaining USD is an upper bound.",
+  "spendCompactAction": "Compact context",
+  "spendSetLimitsAction": "Change spending limits",
+  "spendStatusAction": "Check spending",
+  "@spendChatRemaining": {
+    "placeholders": {
+      "remaining": {
+        "type": "String"
+      }
+    }
+  },
+  "@spendDailyRemaining": {
+    "placeholders": {
+      "remaining": {
+        "type": "String"
+      }
+    }
+  },
+  "@spendWarningHint": {
+    "placeholders": {
+      "remaining": {
+        "type": "String"
+      }
+    }
+  },
+  "@spendLimitReachedHint": {
+    "placeholders": {
+      "remaining": {
+        "type": "String"
+      }
+    }
+  },
+  "@spendTokenAmount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "spendCompactNote": "Compression creates a new chat with a summary using your compression settings. The original chat stays available; this reply finishes there."
 }

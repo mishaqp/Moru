@@ -71,7 +71,9 @@ class ToolApprovalRequest {
   bool get hasLiveOwner => owner?.isActive() == true;
   // Outside global trusted mode, these tools need fresh in-chat consent.
   bool get requiresExplicitConsent =>
-      toolName == 'report_problem' || toolName == 'manage_mcp';
+      toolName == 'report_problem' ||
+      toolName == 'manage_mcp' ||
+      toolName == 'spend_control';
   final List<String> secretFields;
   final Completer<ToolApprovalResult> _completer;
 
@@ -208,6 +210,7 @@ class ToolApprovalService extends ChangeNotifier {
       // MCP consent describes one prepared change and private inputs are
       // consumed once. A repeated backend id must get a fresh request.
       if (toolName != 'manage_mcp' &&
+          toolName != 'spend_control' &&
           existing.toolName == toolName &&
           existing.generationRunId == owner?.generationRunId &&
           existing.assistantMessageId == owner?.assistantMessageId) {
