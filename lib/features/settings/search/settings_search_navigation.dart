@@ -45,7 +45,14 @@ Future<void> openMobileSettingsSearchResult(
     SettingsSearchDestination.theme => const ThemeSettingsPage(),
     SettingsSearchDestination.themeAdvanced =>
       const ThemeAdvancedSettingsPage(),
-    SettingsSearchDestination.appearance => const AppearanceSettingsPage(),
+    SettingsSearchDestination.appearance => AppearanceSettingsPage(
+      initialTab:
+          item.id.startsWith('appearanceSidebar') ||
+              item.id == 'displaySettingsPageSidebarThumbnailsTitle' ||
+              item.id == 'sideDrawerShortcutsTitle'
+          ? 1
+          : 0,
+    ),
     SettingsSearchDestination.chatDisplay =>
       const ChatItemDisplaySettingsPage(),
     SettingsSearchDestination.rendering => const RenderingSettingsPage(),

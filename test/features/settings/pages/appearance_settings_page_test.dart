@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/models/chat_appearance.dart';
 import 'package:Kelivo/features/chat/widgets/chat_background.dart';
+import 'package:Kelivo/features/settings/widgets/sidebar_appearance_preview.dart';
 import 'package:Kelivo/features/settings/pages/appearance_settings_page.dart';
 import 'package:Kelivo/features/settings/pages/display_settings_page.dart';
 import 'package:Kelivo/features/settings/search/settings_search_index.dart';
@@ -101,17 +102,20 @@ void main() {
   });
 
   testWidgets(
-    'Sidebar is a placeholder and does not alter the chat background',
+    'Sidebar has a live panel preview and does not alter the chat background',
     (tester) async {
       final settings = await createSettings();
       await pumpAppearance(tester, settings);
       final before = settings.chatAppearance;
       await tester.tap(find.text('Sidebar'));
       await tester.pump(const Duration(milliseconds: 250));
+      expect(find.byType(SidebarAppearancePreview), findsOneWidget);
       expect(
-        find.text('Sidebar appearance will be available in a future update.'),
+        find.byKey(const ValueKey('appearanceSidebarPreviewCurrentCard')),
         findsOneWidget,
       );
+      expect(find.text('Sidebar background'), findsOneWidget);
+      expect(find.text('Same as chat'), findsOneWidget);
       expect(settings.chatAppearance, before);
       expect(find.byKey(const ValueKey('appearanceSource.none')), findsNothing);
     },

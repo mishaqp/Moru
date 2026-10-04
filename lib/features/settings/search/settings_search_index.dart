@@ -594,6 +594,113 @@ class SettingsSearchIndex {
       keywords: 'background saturation насыщенность 饱和度 飽和度',
     );
     add(
+      'appearanceSidebarBackground',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarBackground,
+      keywords:
+          'sidebar wallpaper same chat custom theme фон боковая панель обои 侧栏 背景 側欄',
+    );
+    add(
+      'appearanceSidebarMask',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarMask,
+      keywords: 'sidebar overlay mask маска боковая панель 侧栏 遮罩 側欄',
+    );
+    add(
+      'appearanceSidebarBlur',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarBlur,
+      keywords: 'sidebar blur размытие боковая панель 侧栏 模糊 側欄',
+    );
+    add(
+      'appearanceSidebarOpacity',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarOpacity,
+      keywords: 'sidebar opacity прозрачность боковая панель 侧栏 不透明度 側欄',
+    );
+    add(
+      'appearanceSidebarPhoneWidth',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarPhoneWidth,
+      keywords:
+          'sidebar phone width ширина телефона боковая панель 手机 侧栏 宽度 手機 側欄 寬度',
+    );
+    add(
+      'appearanceSidebarWideWidth',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarWideWidth,
+      keywords:
+          'sidebar tablet landscape width ширина планшет 侧栏 宽屏 宽度 側欄 寬螢幕 寬度',
+    );
+    add(
+      'appearanceSidebarDensity',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarDensity,
+      keywords:
+          'sidebar list compact spacious density плотность список 侧栏 列表 密度 側欄 清單',
+    );
+    add(
+      'appearanceSidebarCardRadius',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarCardRadius,
+      keywords:
+          'sidebar card radius corners скругление карточки 侧栏 卡片 圆角 側欄 圓角',
+    );
+    add(
+      'appearanceSidebarCardColor',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarCardColor,
+      keywords: 'sidebar card color цвет карточки 侧栏 卡片 颜色 側欄 顏色',
+    );
+    add(
+      'appearanceSidebarActiveCardColor',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarActiveCardColor,
+      keywords:
+          'sidebar active card color цвет активный чат 侧栏 当前 卡片 颜色 側欄 目前 顏色',
+    );
+    add(
+      'appearanceSidebarTimestamp',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarTimestamp,
+      keywords: 'sidebar timestamp time дата время сообщения 侧栏 消息 时间 側欄 訊息 時間',
+    );
+    add(
+      'appearanceSidebarAssistant',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarAssistant,
+      keywords:
+          'sidebar assistant icon name ассистент значок имя 侧栏 助手 图标 名称 側欄 圖示 名稱',
+    );
+    add(
+      'appearanceSidebarModel',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarModel,
+      keywords:
+          'sidebar model icon name модель значок название 侧栏 模型 图标 名称 側欄 圖示 名稱',
+    );
+    add(
+      'appearanceSidebarLastPreview',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarLastPreview,
+      keywords:
+          'sidebar last message preview последнее сообщение превью 侧栏 消息 预览 側欄 訊息 預覽',
+    );
+    add(
+      'appearanceSidebarGrouping',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarGrouping,
+      keywords:
+          'sidebar grouping date assistant group группировка дата ассистент 侧栏 分组 日期 助手 側欄 分組',
+    );
+    add(
+      'appearanceSidebarDock',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarDock,
+      keywords:
+          'sidebar dock buttons reorder profile settings memory apps environment translate tasks кнопки нижняя панель порядок 侧栏 按钮 排序 側欄 按鈕',
+    );
+    add(
       'displaySettingsPageChatInputBackgroundOpacityTitle',
       SettingsSearchDestination.display,
       (l) => l.displaySettingsPageChatInputBackgroundOpacityTitle,
@@ -772,12 +879,12 @@ class SettingsSearchIndex {
     );
     add(
       'displaySettingsPageSidebarThumbnailsTitle',
-      SettingsSearchDestination.behavior,
+      SettingsSearchDestination.appearance,
       (l) => l.displaySettingsPageSidebarThumbnailsTitle,
     );
     add(
       'sideDrawerShortcutsTitle',
-      SettingsSearchDestination.behavior,
+      SettingsSearchDestination.appearance,
       (l) => l.sideDrawerShortcutsTitle,
     );
     add(

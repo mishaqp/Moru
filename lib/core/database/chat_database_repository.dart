@@ -14,6 +14,7 @@ import 'package:uuid/uuid.dart';
 import '../models/chat_message.dart';
 import '../models/chat_input_data.dart';
 import '../models/conversation.dart';
+import '../models/conversation_list_metadata.dart';
 import '../models/message_part.dart';
 import '../utils/multimodal_input_utils.dart';
 import '../../utils/sandbox_path_resolver.dart';
@@ -2069,14 +2070,21 @@ class ChatDatabaseRepository {
     return _observer.measure(
       ChatDatabaseOperation.queryConversationList,
       () async {
-        final rows =
-            await (_db.select(_db.conversationRows)..orderBy([
-                  (t) => OrderingTerm(
-                    expression: t.updatedAt,
-                    mode: OrderingMode.desc,
-                  ),
-                ]))
-                .get();
+        final rows = await _db
+            .customSelect(
+              '''
+          SELECT c.*, $_conversationListMetadataColumns
+          FROM conversation_rows c
+          $_conversationListMetadataJoins
+          ORDER BY c.updated_at DESC
+        ''',
+              readsFrom: {
+                _db.conversationRows,
+                _db.messageRows,
+                _db.messagePartRows,
+              },
+            )
+            .get();
         // One bulk read instead of a per-conversation query; the ordinal
         // ordering is preserved by the in-Dart bucketing below.
         final mcpRows = await (_db.select(
@@ -2092,16 +2100,106 @@ class ChatDatabaseRepository {
         for (final row in rows) {
           out.add(
             await _conversationFromRow(
-              row,
+              _db.conversationRows.map(row.data),
               includeMessageIds: false,
               mcpServerIds:
-                  mcpServerIdsByConversation[row.id] ?? const <String>[],
+                  mcpServerIdsByConversation[row.read<String>('id')] ??
+                  const <String>[],
+              listMetadata: _conversationListMetadataFromRow(row),
             ),
           );
         }
         return out;
       },
       resultCount: (rows) => rows.length,
+    );
+  }
+
+  // Each join resolves one row through the existing conversation/order index.
+  // Only a bounded prefix of the first text part crosses the SQLite boundary;
+  // reasoning, tools, attachments and full message bodies are never hydrated.
+  static const _conversationListMetadataColumns = '''
+    latest.id AS list_last_message_id,
+    latest.timestamp AS list_last_message_at,
+    latest.model_id AS list_last_message_model_id,
+    latest.provider_id AS list_last_message_provider_id,
+    (
+      SELECT substr(p.payload, 1, 240)
+      FROM message_part_rows p
+      WHERE p.revision_id = latest.id AND p.kind = 'text'
+      ORDER BY p.ordinal
+      LIMIT 1
+    ) AS list_last_message_preview,
+    answer.id AS list_last_assistant_message_id,
+    answer.model_id AS list_last_assistant_model_id,
+    answer.provider_id AS list_last_assistant_provider_id
+  ''';
+
+  static const _conversationListMetadataJoins = '''
+    LEFT JOIN message_rows latest ON latest.id = (
+      SELECT m.id FROM message_rows m
+      WHERE m.conversation_id = c.id
+      ORDER BY m.message_order DESC
+      LIMIT 1
+    )
+    LEFT JOIN message_rows answer ON answer.id = (
+      SELECT m.id FROM message_rows m
+      WHERE m.conversation_id = c.id AND m.role = 'assistant'
+      ORDER BY m.message_order DESC
+      LIMIT 1
+    )
+  ''';
+
+  /// Refreshes one derived list snapshot after deletion, duplication or a fork.
+  /// Sidebar reads use the already loaded snapshots and never call this method.
+  Future<ConversationListMetadata?> getConversationListMetadata(
+    String id,
+  ) async {
+    final row = await _db
+        .customSelect(
+          '''
+      SELECT $_conversationListMetadataColumns
+      FROM conversation_rows c
+      $_conversationListMetadataJoins
+      WHERE c.id = ?
+    ''',
+          variables: [Variable.withString(id)],
+          readsFrom: {
+            _db.conversationRows,
+            _db.messageRows,
+            _db.messagePartRows,
+          },
+        )
+        .getSingleOrNull();
+    return row == null ? null : _conversationListMetadataFromRow(row);
+  }
+
+  ConversationListMetadata? _conversationListMetadataFromRow(QueryRow row) {
+    final lastMessageId = row.readNullable<String>('list_last_message_id');
+    if (lastMessageId == null) return null;
+    return ConversationListMetadata(
+      lastMessageId: lastMessageId,
+      lastMessageAt: DateTime.fromMicrosecondsSinceEpoch(
+        row.read<int>('list_last_message_at'),
+      ),
+      lastMessagePreview: ConversationListMetadata.previewFromText(
+        row.readNullable<String>('list_last_message_preview') ?? '',
+      ),
+      lastMessageModelId: row.readNullable<String>(
+        'list_last_message_model_id',
+      ),
+      lastMessageProviderId: row.readNullable<String>(
+        'list_last_message_provider_id',
+      ),
+      lastAssistantMessageId: row.readNullable<String>(
+        'list_last_assistant_message_id',
+      ),
+      lastAssistantModelId: row.readNullable<String>(
+        'list_last_assistant_model_id',
+      ),
+      lastAssistantProviderId: row.readNullable<String>(
+        'list_last_assistant_provider_id',
+      ),
     );
   }
 
@@ -7338,6 +7436,7 @@ class ChatDatabaseRepository {
     ConversationRow row, {
     bool includeMessageIds = true,
     List<String>? mcpServerIds,
+    ConversationListMetadata? listMetadata,
   }) async {
     final resolvedMcpServerIds = mcpServerIds ?? await _getMcpServerIds(row.id);
     final messageRows = includeMessageIds
@@ -7365,6 +7464,7 @@ class ChatDatabaseRepository {
       chatModelProvider: row.chatModelProvider,
       chatModelId: row.chatModelId,
       extras: _decodeExtrasJson(row.extrasJson),
+      listMetadata: listMetadata,
     );
   }
 

@@ -214,15 +214,6 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
               _iosDivider(context),
               _iosSwitchRow(
                 context,
-                icon: Lucide.Image,
-                label: l10n.displaySettingsPageSidebarThumbnailsTitle,
-                value: sp.sidebarThumbnails,
-                onChanged: (v) =>
-                    context.read<SettingsProvider>().setSidebarThumbnails(v),
-              ),
-              _iosDivider(context),
-              _iosSwitchRow(
-                context,
                 icon: Lucide.panelLeft,
                 label:
                     l10n.displaySettingsPageKeepSidebarOpenOnAssistantTapTitle,

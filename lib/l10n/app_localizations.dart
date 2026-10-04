@@ -102,6 +102,210 @@ abstract class AppLocalizations {
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
+  /// No description provided for @appearanceSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save appearance. Try again.'**
+  String get appearanceSaveError;
+
+  /// No description provided for @appearanceSidebarBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar background'**
+  String get appearanceSidebarBackground;
+
+  /// No description provided for @appearanceSidebarSameAsChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Same as chat'**
+  String get appearanceSidebarSameAsChat;
+
+  /// No description provided for @appearanceSidebarCustomBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom background'**
+  String get appearanceSidebarCustomBackground;
+
+  /// No description provided for @appearanceSidebarThemeBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme background'**
+  String get appearanceSidebarThemeBackground;
+
+  /// No description provided for @appearanceSidebarMask.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar background mask'**
+  String get appearanceSidebarMask;
+
+  /// No description provided for @appearanceSidebarBlur.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar background blur'**
+  String get appearanceSidebarBlur;
+
+  /// No description provided for @appearanceSidebarOpacity.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar background opacity'**
+  String get appearanceSidebarOpacity;
+
+  /// No description provided for @appearanceSidebarPhoneWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar width on phones'**
+  String get appearanceSidebarPhoneWidth;
+
+  /// No description provided for @appearanceSidebarWideWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar width on wide screens'**
+  String get appearanceSidebarWideWidth;
+
+  /// No description provided for @appearanceSidebarDensity.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat list density'**
+  String get appearanceSidebarDensity;
+
+  /// No description provided for @appearanceSidebarCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact'**
+  String get appearanceSidebarCompact;
+
+  /// No description provided for @appearanceSidebarNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get appearanceSidebarNormal;
+
+  /// No description provided for @appearanceSidebarSpacious.
+  ///
+  /// In en, this message translates to:
+  /// **'Spacious'**
+  String get appearanceSidebarSpacious;
+
+  /// No description provided for @appearanceSidebarCardRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat card corner radius'**
+  String get appearanceSidebarCardRadius;
+
+  /// No description provided for @appearanceSidebarCardColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat card color'**
+  String get appearanceSidebarCardColor;
+
+  /// No description provided for @appearanceSidebarActiveCardColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Active chat card color'**
+  String get appearanceSidebarActiveCardColor;
+
+  /// No description provided for @appearanceSidebarResetColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Use theme color'**
+  String get appearanceSidebarResetColor;
+
+  /// No description provided for @appearanceSidebarTimestamp.
+  ///
+  /// In en, this message translates to:
+  /// **'Message timestamp'**
+  String get appearanceSidebarTimestamp;
+
+  /// No description provided for @appearanceSidebarAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant icon and name'**
+  String get appearanceSidebarAssistant;
+
+  /// No description provided for @appearanceSidebarModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model icon and name'**
+  String get appearanceSidebarModel;
+
+  /// No description provided for @appearanceSidebarLastPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Last message preview'**
+  String get appearanceSidebarLastPreview;
+
+  /// No description provided for @appearanceSidebarGrouping.
+  ///
+  /// In en, this message translates to:
+  /// **'Group chats'**
+  String get appearanceSidebarGrouping;
+
+  /// No description provided for @appearanceSidebarGroupingDate.
+  ///
+  /// In en, this message translates to:
+  /// **'By date'**
+  String get appearanceSidebarGroupingDate;
+
+  /// No description provided for @appearanceSidebarGroupingAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'By assistant'**
+  String get appearanceSidebarGroupingAssistant;
+
+  /// No description provided for @appearanceSidebarGroupingNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No grouping'**
+  String get appearanceSidebarGroupingNone;
+
+  /// No description provided for @appearanceSidebarDock.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar dock buttons'**
+  String get appearanceSidebarDock;
+
+  /// No description provided for @appearanceSidebarDockHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose buttons and drag their handles to reorder.'**
+  String get appearanceSidebarDockHint;
+
+  /// No description provided for @appearanceSidebarShortcutsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose pinned apps and pages, then drag to reorder.'**
+  String get appearanceSidebarShortcutsHint;
+
+  /// No description provided for @appearanceSidebarPreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip plans'**
+  String get appearanceSidebarPreviewTitle;
+
+  /// No description provided for @appearanceSidebarPreviewOtherTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New ideas'**
+  String get appearanceSidebarPreviewOtherTitle;
+
+  /// No description provided for @appearanceSidebarPreviewMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Here are a few ideas to get started.'**
+  String get appearanceSidebarPreviewMessage;
+
+  /// No description provided for @appearanceSidebarPreviewModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get appearanceSidebarPreviewModel;
+
+  /// No description provided for @appearanceSidebarReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset sidebar appearance'**
+  String get appearanceSidebarReset;
+
   /// No description provided for @appearanceSettingsPageTitle.
   ///
   /// In en, this message translates to:

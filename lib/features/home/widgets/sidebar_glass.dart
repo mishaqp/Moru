@@ -3,84 +3,133 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/providers/assistant_provider.dart';
 import '../../../core/models/chat_appearance.dart';
+import '../../../core/models/sidebar_appearance.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../shared/widgets/interactive_drawer.dart';
 import '../../chat/widgets/chat_background.dart';
-import '../../chat/widgets/chat_gradient_background.dart';
-import '../../chat/widgets/frosted/chat_frosted_backdrop.dart';
 
-/// Frosted glass behind the sidebar in the glass theme: the chat's own
-/// backdrop (the assistant's wallpaper, or a still frame of the glass
-/// gradient) blurred under a veil, so the panel reads as a sheet of glass
-/// over the same scene. Economy mode keeps the translucency without the
-/// blur.
-class SidebarGlassBackdrop extends StatelessWidget {
-  const SidebarGlassBackdrop({super.key});
+/// The sidebar's selected artwork and independent panel effects.
+/// Glass blurs this same scene; economy mode omits the extra Glass blur.
+class SidebarGlassBackdrop extends StatefulWidget {
+  const SidebarGlassBackdrop({
+    super.key,
+    this.configuration,
+    this.backgroundConfiguration,
+    this.active = true,
+  });
+
+  final SidebarAppearanceSettings? configuration;
+  final ChatBackgroundSettings? backgroundConfiguration;
+  final bool active;
 
   static const double blurSigma = 26;
 
   @override
+  State<SidebarGlassBackdrop> createState() => _SidebarGlassBackdropState();
+}
+
+class _SidebarGlassBackdropState extends State<SidebarGlassBackdrop> {
+  late final _glassBlurFilter = ui.ImageFilter.blur(
+    sigmaX: SidebarGlassBackdrop.blurSigma,
+    sigmaY: SidebarGlassBackdrop.blurSigma,
+    tileMode: TileMode.clamp,
+  );
+  InteractiveDrawerController? _drawer;
+  var _drawerVisible = true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final drawer = InteractiveDrawer.maybeControllerOf(context);
+    if (identical(drawer, _drawer)) return;
+    _drawer?.removeListener(_onDrawerChanged);
+    _drawer = drawer;
+    _drawerVisible = drawer == null || drawer.value > 0;
+    drawer?.addListener(_onDrawerChanged);
+  }
+
+  void _onDrawerChanged() {
+    final visible = _drawer == null || _drawer!.value > 0;
+    if (visible == _drawerVisible) return;
+    setState(() => _drawerVisible = visible);
+  }
+
+  @override
+  void dispose() {
+    _drawer?.removeListener(_onDrawerChanged);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final economy = context.select<SettingsProvider, bool>(
-      (s) => s.glassEconomy,
+    final brightness = Theme.of(context).brightness;
+    final appearance =
+        widget.configuration ??
+        context.select<SettingsProvider, SidebarAppearanceSettings>(
+          (s) => s.sidebarAppearance,
+        );
+    final background =
+        widget.backgroundConfiguration ??
+        context.select<SettingsProvider, ChatBackgroundSettings>(
+          (s) => appearance.backgroundFor(brightness, s.chatAppearance),
+        );
+    final (glass, economy) = context.select<SettingsProvider, (bool, bool)>(
+      (s) => (s.glassTheme, s.glassEconomy),
     );
-    final wallpaper =
-        context.select<AssistantProvider, String?>(
-          (p) => p.currentAssistant?.background,
-        ) ??
-        '';
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    // A wallpaper is static; the gradient animates in the chat, so the panel
-    // takes one still frame of it and never repaints while it slides.
-    Widget scene = ChatBackdropSpec.isBackgroundActive(wallpaper)
-        ? ChatBackground(
-            configuration: ChatBackgroundSettings(
-              type: ChatBackgroundType.image,
-              path: wallpaper,
-              maskStrength: context.select<SettingsProvider, double>(
-                (s) => s.chatBackgroundMaskStrength,
-              ),
-            ),
-            active: false,
-          )
-        : ChatGradientBackgroundHost(
-            enabled: false,
-            phase: 7,
-            accent: cs.primary,
-            child: const ChatGradientBackground(),
-          );
-    if (!economy) {
+    final dark = brightness == Brightness.dark;
+    // The panel owns masking and blur independently of the chat's settings.
+    Widget scene = ChatBackground(
+      configuration: background.copyWith(
+        maskStrength: appearance.maskStrength,
+        blur: appearance.blur,
+      ),
+      includeSurfaceFill: true,
+      active: widget.active && _drawerVisible && appearance.opacity > 0,
+    );
+    if (glass && !economy) {
       scene = ImageFiltered(
-        imageFilter: ui.ImageFilter.blur(
-          sigmaX: blurSigma,
-          sigmaY: blurSigma,
-          tileMode: TileMode.clamp,
-        ),
+        imageFilter: _glassBlurFilter,
         child: RepaintBoundary(child: scene),
       );
     }
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        ClipRect(child: scene),
-        ColoredBox(
-          color: cs.surface.withValues(
-            alpha: economy ? (dark ? 0.58 : 0.5) : (dark ? 0.42 : 0.36),
+    return IgnorePointer(
+      child: Opacity(
+        opacity: appearance.opacity,
+        child: ClipRect(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              scene,
+              if (glass)
+                ColoredBox(
+                  color: cs.surface.withValues(
+                    alpha: economy ? (dark ? 0.58 : 0.5) : (dark ? 0.42 : 0.36),
+                  ),
+                ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
 
-/// Whether sidebar rows and bars go without their own fill: in the tablet
-/// side panel, and on the glass theme, where a solid fill would cover the
-/// frosted backdrop with dark slabs.
-bool sidebarSurfacesClear(BuildContext context, {required bool embedded}) =>
-    embedded || context.select<SettingsProvider, bool>((s) => s.glassTheme);
+/// Keeps chosen artwork and translucent panel effects visible behind rows.
+bool sidebarSurfacesClear(BuildContext context, {required bool embedded}) {
+  final brightness = Theme.of(context).brightness;
+  return embedded ||
+      context.select<SettingsProvider, bool>(
+        (s) =>
+            s.glassTheme ||
+            s.sidebarAppearance
+                    .backgroundFor(brightness, s.chatAppearance)
+                    .type !=
+                ChatBackgroundType.none ||
+            s.sidebarAppearance.opacity < 1,
+      );
+}
 
 /// A light glass tile on the sidebar glass (search, buttons): a brighter
 /// veil and a hairline edge. Plain surfaces without the glass theme.

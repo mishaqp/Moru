@@ -10,6 +10,8 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/backup_reminder_provider.dart';
 import '../../../core/models/chat_folder.dart';
 import '../../../core/models/chat_item.dart';
+import '../../../core/models/sidebar_appearance.dart';
+import '../../../core/models/conversation_list_metadata.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../backup/pages/backup_page.dart';
 import '../../../core/providers/assistant_provider.dart';
@@ -28,7 +30,6 @@ import 'package:animations/animations.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/search_highlight.dart';
 import '../../../utils/avatar_cache.dart';
-import 'dart:ui' as ui;
 import '../../../shared/widgets/ios_checkbox.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../core/services/haptics.dart';
@@ -174,6 +175,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   String? _cachedSidebarRowsQuery;
   String? _cachedSidebarRowsAssistantId;
   List<ChatFolder>? _cachedSidebarRowsFolders;
+  SidebarGrouping? _cachedSidebarRowsGrouping;
   List<_SidebarRow>? _cachedSidebarRows;
 
   bool _selectionMode = false;
@@ -1287,12 +1289,15 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   }) {
     // The folder list is replaced, never changed in place, so a new list
     // means new folders.
-    final folders = context.read<SettingsProvider>().sidebarFolders;
+    final settings = context.read<SettingsProvider>();
+    final folders = settings.sidebarFolders;
+    final grouping = settings.sidebarAppearance.grouping;
     if (_cachedSidebarRows != null &&
         _cachedSidebarRowsRevision == revision &&
         _cachedSidebarRowsInitialized == initialized &&
         _cachedSidebarRowsQuery == query &&
         _cachedSidebarRowsAssistantId == assistantId &&
+        _cachedSidebarRowsGrouping == grouping &&
         identical(_cachedSidebarRowsFolders, folders)) {
       return _cachedSidebarRows!;
     }
@@ -1302,6 +1307,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       assistantId: assistantId,
       query: query,
       folders: folders,
+      grouping: grouping,
     );
     _cachedSidebarRowsFolders = folders;
     _cachedSidebarRows = rows;
@@ -1309,6 +1315,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     _cachedSidebarRowsInitialized = initialized;
     _cachedSidebarRowsQuery = query;
     _cachedSidebarRowsAssistantId = assistantId;
+    _cachedSidebarRowsGrouping = grouping;
     return rows;
   }
 
@@ -1317,17 +1324,23 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     required String? assistantId,
     required String query,
     required List<ChatFolder> folders,
+    required SidebarGrouping grouping,
   }) {
     final q = query.trim().toLowerCase();
     final pinned = <ChatItem>[];
     final rest = <ChatItem>[];
+    final byAssistant = <String?, List<ChatItem>>{};
     final folderIds = {for (final f in folders) f.id};
     final inFolders = <String, List<ChatItem>>{
       for (final f in folders) f.id: <ChatItem>[],
     };
     // Single pass: filter assistant + query, split pinned/rest via ChatItem.isPinned.
     for (final c in chatService.getAllConversations()) {
-      if (c.assistantId != assistantId && c.assistantId != null) continue;
+      if (grouping != SidebarGrouping.assistant &&
+          c.assistantId != assistantId &&
+          c.assistantId != null) {
+        continue;
+      }
       if (ChatService.isArchived(c)) continue;
       final title = c.title;
       if (q.isNotEmpty && !title.toLowerCase().contains(q)) continue;
@@ -1346,10 +1359,12 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         inFolders[item.folderId]!.add(item);
       } else {
         rest.add(item);
+        if (grouping == SidebarGrouping.assistant) {
+          byAssistant.putIfAbsent(c.assistantId, () => []).add(item);
+        }
       }
     }
     pinned.sort((a, b) => b.created.compareTo(a.created));
-    final groups = _groupByDate(rest);
 
     final rows = <_SidebarRow>[];
     if (pinned.isNotEmpty) {
@@ -1393,7 +1408,47 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         );
       }
     }
-    for (final group in groups) {
+    if (grouping == SidebarGrouping.none) {
+      rest.sort((a, b) => b.created.compareTo(a.created));
+      for (var i = 0; i < rest.length; i++) {
+        rows.add(
+          _SidebarTileRow(
+            chat: rest[i],
+            indexInSection: i,
+            kind: _SidebarHeaderKind.ungrouped,
+          ),
+        );
+      }
+      return rows;
+    }
+    if (grouping == SidebarGrouping.assistant) {
+      // Recent sections first, preserving each assistant's chat order.
+      final groups = byAssistant.entries.toList()
+        ..sort(
+          (a, b) => b.value.first.created.compareTo(a.value.first.created),
+        );
+      for (final group in groups) {
+        rows.add(
+          _SidebarHeaderRow(
+            kind: _SidebarHeaderKind.assistant,
+            count: group.value.length,
+            assistantId: group.key,
+          ),
+        );
+        for (var i = 0; i < group.value.length; i++) {
+          rows.add(
+            _SidebarTileRow(
+              chat: group.value[i],
+              indexInSection: i,
+              kind: _SidebarHeaderKind.assistant,
+              assistantId: group.key,
+            ),
+          );
+        }
+      }
+      return rows;
+    }
+    for (final group in _groupByDate(rest)) {
       rows.add(
         _SidebarHeaderRow(
           kind: _SidebarHeaderKind.date,
@@ -1529,6 +1584,12 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       // Subscribe to list revision so an external delete rebuilds them too.
       context.select<ChatService, int>(
         (service) => service.conversationListRevision,
+      );
+      context.select<SettingsProvider, SidebarGrouping>(
+        (settings) => settings.sidebarAppearance.grouping,
+      );
+      context.select<SettingsProvider, List<ChatFolder>>(
+        (settings) => settings.sidebarFolders,
       );
       if (_selectionAssistantId != null &&
           _selectionAssistantId != currentAssistantId) {
@@ -2006,6 +2067,12 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       final assistantId = context
                           .watch<AssistantProvider>()
                           .currentAssistantId;
+                      context.select<SettingsProvider, SidebarGrouping>(
+                        (settings) => settings.sidebarAppearance.grouping,
+                      );
+                      context.select<SettingsProvider, List<ChatFolder>>(
+                        (settings) => settings.sidebarFolders,
+                      );
                       // Use last-activity time (updatedAt) for ordering and grouping.
                       // Flattened + memoized by
                       // (revision, initialized, query, assistantId).
@@ -2020,9 +2087,9 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         assistantsExpanded: _assistantsExpanded,
                         buildAssistants: () =>
                             _buildAssistantsList(context, inlineMode: true),
-                        buildConversations: (leading, padding) =>
+                        buildConversations: (listContext, leading, padding) =>
                             _buildConversationsList(
-                              context,
+                              listContext,
                               cs,
                               textBase,
                               chatService,
@@ -2154,36 +2221,22 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             child: drawerBody,
           );
 
+    final panel = Stack(
+      fit: StackFit.expand,
+      children: [
+        const SidebarGlassBackdrop(),
+        Material(color: Colors.transparent, child: inner),
+      ],
+    );
     if (widget.embedded) {
       return ClipRect(
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-          child: Material(
-            color: cs.surface.withValues(alpha: 0.60),
-            child: SizedBox(width: widget.embeddedWidth ?? 300, child: inner),
-          ),
-        ),
+        child: SizedBox(width: widget.embeddedWidth ?? 300, child: panel),
       );
     }
-
-    final glass = context.select<SettingsProvider, bool>((s) => s.glassTheme);
-    if (glass) {
-      // Glass: the list sits on a still copy of the colour backdrop under a
-      // translucent veil, instead of a solid panel.
-      return Drawer(
-        backgroundColor: Colors.transparent,
-        width: MediaQuery.sizeOf(context).width,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [const SidebarGlassBackdrop(), inner],
-        ),
-      );
-    }
-
     return Drawer(
-      backgroundColor: cs.surface,
+      backgroundColor: Colors.transparent,
       width: MediaQuery.sizeOf(context).width,
-      child: inner,
+      child: panel,
     );
   }
 
@@ -3251,17 +3304,20 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       }
     }
 
-    // Folded sections keep their header and hide their chats.
-    // Built inside another widget's build (the list host), where only watch
-    // is allowed, as for the other settings read here.
-    final collapsed = context
-        .watch<SettingsProvider>()
-        .sidebarCollapsedSections;
+    // A card or background preference does not change list membership.
+    final collapsed = context.select<SettingsProvider, Set<String>>(
+      (settings) => settings.sidebarCollapsedSections,
+    );
     final visibleRows = <_SidebarRow>[
       for (final row in rows)
         if (row is! _SidebarTileRow ||
             !collapsed.contains(
-              _sidebarSectionKey(row.kind, row.dateBucket, row.folderId),
+              _sidebarSectionKey(
+                row.kind,
+                row.dateBucket,
+                row.folderId,
+                row.assistantId,
+              ),
             ))
           row,
     ];
@@ -3309,6 +3365,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                 row.kind,
                 row.dateBucket,
                 row.folder?.id,
+                row.assistantId,
               );
               final headerLabel = switch (row.kind) {
                 _SidebarHeaderKind.pinned => AppLocalizations.of(
@@ -3316,6 +3373,17 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                 )!.sideDrawerPinnedLabel,
                 _SidebarHeaderKind.folder => row.folder!.name,
                 _SidebarHeaderKind.date => _dateLabel(context, row.dateBucket!),
+                _SidebarHeaderKind.assistant =>
+                  row.assistantId == null
+                      ? AppLocalizations.of(context)!.memoryEntryScopeGlobal
+                      : context
+                                .read<AssistantProvider>()
+                                .getById(row.assistantId!)
+                                ?.name ??
+                            AppLocalizations.of(
+                              context,
+                            )!.homePageDefaultAssistant,
+                _SidebarHeaderKind.ungrouped => '',
               };
               return Padding(
                 // Sections stand 14 apart, as in OmniBot.
@@ -3328,6 +3396,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       row.folder!.icon,
                     ),
                     _SidebarHeaderKind.date => headerIcons[key]!,
+                    _SidebarHeaderKind.assistant => Lucide.Bot,
+                    _SidebarHeaderKind.ungrouped => Lucide.MessagesSquare,
                   },
                   onLongPress: row.folder == null
                       ? null
@@ -3403,7 +3473,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                   key: ValueKey(
                     isPinnedSection
                         ? 'pin-${tile.chat.id}'
-                        : 'grp-${_sidebarDateBucketKey(tile.dateBucket)}-${tile.chat.id}',
+                        : 'grp-${_sidebarSectionKey(tile.kind, tile.dateBucket, tile.folderId, tile.assistantId)}-${tile.chat.id}',
                   ),
                 )
                 .fadeIn(duration: 220.ms, delay: staggerDelay)
@@ -3426,10 +3496,13 @@ String _sidebarSectionKey(
   _SidebarHeaderKind kind,
   DateTime? day, [
   String? folderId,
+  String? assistantId,
 ]) => switch (kind) {
   _SidebarHeaderKind.pinned => 'pinned',
   _SidebarHeaderKind.folder => 'folder:$folderId',
   _SidebarHeaderKind.date => 'date:${_sidebarDateBucketKey(day)}',
+  _SidebarHeaderKind.assistant => 'assistant:${assistantId ?? 'shared'}',
+  _SidebarHeaderKind.ungrouped => 'ungrouped',
 };
 
 /// Max absolute index that still contributes to tile enter stagger.
@@ -3450,7 +3523,7 @@ class _ChatGroup {
   _ChatGroup({required this.date, required this.items});
 }
 
-enum _SidebarHeaderKind { pinned, folder, date }
+enum _SidebarHeaderKind { pinned, folder, date, assistant, ungrouped }
 
 sealed class _SidebarRow {
   const _SidebarRow();
@@ -3462,6 +3535,7 @@ class _SidebarHeaderRow extends _SidebarRow {
     required this.count,
     this.dateBucket,
     this.folder,
+    this.assistantId,
   }) : assert(
          (kind == _SidebarHeaderKind.date) == (dateBucket != null) &&
              (kind == _SidebarHeaderKind.folder) == (folder != null),
@@ -3471,6 +3545,7 @@ class _SidebarHeaderRow extends _SidebarRow {
 
   /// The folder of a folder header.
   final ChatFolder? folder;
+  final String? assistantId;
 
   /// Chats in the section.
   final int count;
@@ -3487,6 +3562,7 @@ class _SidebarTileRow extends _SidebarRow {
     required this.kind,
     this.dateBucket,
     this.folderId,
+    this.assistantId,
   });
   final ChatItem chat;
   final int indexInSection;
@@ -3497,6 +3573,7 @@ class _SidebarTileRow extends _SidebarRow {
 
   /// The folder section the row is in; null outside folders.
   final String? folderId;
+  final String? assistantId;
 }
 
 class _ChatTile extends StatefulWidget {
@@ -3529,96 +3606,151 @@ class _ChatTile extends StatefulWidget {
 class _ChatTileState extends State<_ChatTile> {
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     // Per-tile current-conversation subscription (cache plan measure 16):
     // switching the open chat rebuilds only the affected tiles, not the list.
     final isCurrent = context.select<ChatService, bool>(
       (service) => service.currentConversationId == widget.chat.id,
     );
-    // As in OmniBot the rows have no fill; only a chat picked in selection
-    // mode is tinted, and the open chat shows in the accent color.
-    final base = widget.selectionMode && widget.selected
-        ? cs.primary.withValues(alpha: 0.16)
-        : Colors.transparent;
-    final showThumbs = context.select<SettingsProvider, bool>(
-      (s) => s.sidebarThumbnails,
-    );
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: GestureDetector(
-        onLongPress: () {
-          if (widget.selectionMode) return;
-          widget.onLongPress?.call();
-        },
-        child: IosCardPress(
-          baseColor: base,
-          borderRadius: BorderRadius.circular(14),
-          haptics: false,
-          onTap: widget.selectionMode
-              ? () {
-                  Haptics.light();
-                  widget.onToggleSelect?.call();
-                }
-              : widget.onTap,
-          onLongPress: widget.selectionMode ? null : widget.onLongPress,
-          padding: const EdgeInsets.fromLTRB(4, 9, 2, 9),
-          child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(end: widget.selectionMode ? 1 : 0),
-            duration: const Duration(milliseconds: 240),
-            curve: Curves.easeOutCubic,
-            builder: (context, t, child) {
-              return Row(
-                children: [
-                  ClipRect(
-                    child: SizedBox(
-                      width: 28 * t,
-                      child: Opacity(
-                        opacity: t,
-                        child: Transform.scale(
-                          scale: 0.8 + 0.2 * t,
-                          child: IgnorePointer(
-                            child: IosCheckbox(
-                              value: widget.selected,
-                              size: 20,
-                              hitTestSize: 20,
-                              enableHaptics: false,
-                              onChanged: (_) {},
-                            ),
-                          ),
+    final presentation = context.select((SettingsProvider settings) {
+      final value = settings.sidebarAppearance;
+      // Only presentation fields used by this row participate in equality.
+      return (
+        density: value.density,
+        cardRadius: value.cardRadius,
+        cardColor: value.cardColor,
+        activeCardColor: value.activeCardColor,
+        showTimestamp: value.showTimestamp,
+        showAssistant: value.showAssistant,
+        showModel: value.showModel,
+        showPreview: value.showPreview,
+        showThumbnails: settings.sidebarThumbnails,
+      );
+    });
+    final appearance = context.read<SettingsProvider>().sidebarAppearance;
+    final showThumbs = presentation.showThumbnails;
+    ConversationListMetadata? metadata;
+    if (appearance.showPreview ||
+        appearance.showTimestamp ||
+        appearance.showModel) {
+      metadata = context.select<ChatService, ConversationListMetadata?>(
+        (service) => service.getConversationListMetadata(widget.chat.id),
+      );
+    }
+    Assistant? assistant;
+    String? modelName;
+    if (appearance.showAssistant || appearance.showModel) {
+      final summary = context
+          .select<
+            ChatService,
+            ({String? assistantId, String? modelId, String? providerId})
+          >((service) {
+            final conversation = service.getConversation(widget.chat.id);
+            return (
+              assistantId: conversation?.assistantId,
+              modelId: conversation?.chatModelId,
+              providerId: conversation?.chatModelProvider,
+            );
+          });
+      assistant = context.select<AssistantProvider, Assistant?>(
+        (provider) =>
+            provider.getById(summary.assistantId ?? '') ??
+            (summary.assistantId == null ? provider.currentAssistant : null),
+      );
+      if (appearance.showModel) {
+        final conversation = context.read<ChatService>().getConversation(
+          widget.chat.id,
+        );
+        modelName = context.select<SettingsProvider, String?>((settings) {
+          final modelId =
+              metadata?.lastAssistantModelId ?? metadata?.lastMessageModelId;
+          final providerId =
+              metadata?.lastAssistantProviderId ??
+              metadata?.lastMessageProviderId;
+          if (modelId == null || modelId.isEmpty) {
+            return getModelDisplayInfo(
+              settings,
+              conversation: conversation,
+              assistant: assistant,
+            ).modelDisplay;
+          }
+          if (providerId == null) return modelId;
+          final override = settings
+              .getProviderConfig(providerId)
+              .modelOverrides[modelId];
+          if (override is Map) {
+            final name = override['name']?.toString().trim();
+            if (name != null && name.isNotEmpty) return name;
+            final apiId = (override['apiModelId'] ?? override['api_model_id'])
+                ?.toString()
+                .trim();
+            if (apiId != null && apiId.isNotEmpty) return apiId;
+          }
+          return modelId;
+        });
+      }
+    }
+    String? timestamp;
+    if (appearance.showTimestamp && metadata?.lastMessageAt != null) {
+      final locale = Localizations.localeOf(context);
+      final tag = locale.toLanguageTag();
+      timestamp = DateFormat.yMMMd(
+        DateFormat.localeExists(tag) ? tag : locale.languageCode,
+      ).add_Hm().format(metadata!.lastMessageAt.toLocal());
+    }
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: widget.selectionMode ? 1 : 0),
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+      builder: (context, t, _) => SidebarConversationCard(
+        appearance: appearance,
+        title: widget.chat.title,
+        isCurrent: isCurrent,
+        isSelected: widget.selected,
+        selectionMode: widget.selectionMode,
+        preview: metadata?.lastMessagePreview,
+        timestamp: timestamp,
+        assistantName: appearance.showAssistant
+            ? assistant?.name ??
+                  AppLocalizations.of(context)!.homePageDefaultAssistant
+            : null,
+        assistantIcon: appearance.showAssistant && assistant != null
+            ? AssistantAvatar(assistant: assistant, size: 12)
+            : null,
+        modelName: modelName,
+        thumbnails: showThumbs ? ChatThumbnails(chatId: widget.chat.id) : null,
+        loadingIndicator: widget.loading ? _LoadingDot() : null,
+        // Preserve the checkbox's row height without mounting its invisible
+        // render subtree. Selection entry initializes it on the first frame;
+        // exit keeps it mounted until the transition reaches zero.
+        selectionIndicator: t == 0 && !widget.selectionMode
+            ? const SizedBox(width: 0, height: 20)
+            : ClipRect(
+                child: SizedBox(
+                  width: 28 * t,
+                  child: Opacity(
+                    opacity: t,
+                    child: Transform.scale(
+                      scale: 0.8 + 0.2 * t,
+                      child: IgnorePointer(
+                        child: IosCheckbox(
+                          value: widget.selected,
+                          size: 20,
+                          hitTestSize: 20,
+                          enableHaptics: false,
+                          onChanged: (_) {},
                         ),
                       ),
                     ),
                   ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.chat.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13,
-                            height: 1.35,
-                            color: isCurrent ? cs.primary : widget.textColor,
-                            fontWeight: isCurrent
-                                ? FontWeight.w600
-                                : FontWeight.w500,
-                          ),
-                        ),
-                        if (showThumbs) ChatThumbnails(chatId: widget.chat.id),
-                      ],
-                    ),
-                  ),
-                  if (widget.loading) ...[
-                    const SizedBox(width: 8),
-                    _LoadingDot(),
-                  ],
-                ],
-              );
-            },
-          ),
-        ),
+                ),
+              ),
+        onTap: widget.selectionMode
+            ? () {
+                Haptics.light();
+                widget.onToggleSelect?.call();
+              }
+            : widget.onTap,
+        onLongPress: widget.selectionMode ? null : widget.onLongPress,
       ),
     );
   }
@@ -3727,7 +3859,12 @@ class _LegacyListArea extends StatelessWidget {
 
   /// Builds the virtualized conversations list that owns scrolling, with the
   /// inline assistants [leading] widget and shared [padding].
-  final Widget Function(Widget leading, EdgeInsets padding) buildConversations;
+  final Widget Function(
+    BuildContext context,
+    Widget leading,
+    EdgeInsets padding,
+  )
+  buildConversations;
 
   @override
   Widget build(BuildContext context) {
@@ -3756,7 +3893,7 @@ class _LegacyListArea extends StatelessWidget {
               ),
       ),
     );
-    return buildConversations(leading, padding);
+    return buildConversations(context, leading, padding);
   }
 }
 

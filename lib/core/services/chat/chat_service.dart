@@ -26,6 +26,7 @@ import '../api/providers/claude/claude_history.dart';
 import '../api/providers/google_gemini.dart';
 import '../../models/message_part.dart';
 import '../../models/conversation.dart';
+import '../../models/conversation_list_metadata.dart';
 import '../../models/workspace_binding.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/app_directories.dart';
@@ -145,6 +146,7 @@ class ChatService extends ChangeNotifier {
   String? _currentConversationId;
   final Map<String, List<ChatMessage>> _messagesCache = {};
   final Map<String, Conversation> _conversationsCache = {};
+  final Map<String, ConversationListMetadata> _conversationListMetadata = {};
   final Map<String, Conversation> _draftConversations = {};
   final Set<String> _interruptedMessageIds = {};
   final Set<String> _interruptedQueueHolds = {};
@@ -556,6 +558,16 @@ class ChatService extends ChangeNotifier {
 
   Future<void> _loadConversationsCache() async {
     final conversations = await _repo.getAllConversationSummaries();
+    _conversationListMetadata
+      ..clear()
+      ..addEntries(
+        conversations
+            .where((conversation) => conversation.listMetadata != null)
+            .map(
+              (conversation) =>
+                  MapEntry(conversation.id, conversation.listMetadata!),
+            ),
+      );
     _toolEventsCache.clear();
     _providerArtifactsCache.clear();
     _messageOrderIds.clear();
@@ -1278,6 +1290,85 @@ class ChatService extends ChangeNotifier {
     _sortedConversationsCache = conversations;
     _sortedConversationsCacheRevision = _conversationListRevision;
     return conversations.map(_withLiveMcpServers).toList();
+  }
+
+  /// Synchronous sidebar data from the initial list query or existing writes.
+  /// Reading it never loads messages, parts, message IDs or counts.
+  ConversationListMetadata? getConversationListMetadata(String id) =>
+      _conversationListMetadata[id];
+
+  void _noteConversationListMessage(
+    ChatMessage message, {
+    bool appended = false,
+    bool newestAssistant = false,
+  }) {
+    final previous = _conversationListMetadata[message.conversationId];
+    final isLast = appended || previous?.lastMessageId == message.id;
+    final isLastAssistant =
+        message.role == 'assistant' &&
+        (appended ||
+            newestAssistant ||
+            previous?.lastAssistantMessageId == message.id);
+    if (!isLast && !isLastAssistant) return;
+
+    var preview = previous?.lastMessagePreview ?? '';
+    if (isLast) {
+      preview = '';
+      for (final part in message.parts) {
+        if (part is TextPart) {
+          preview = ConversationListMetadata.previewFromText(part.text);
+          break;
+        }
+      }
+    }
+    final next = ConversationListMetadata(
+      lastMessageId: isLast ? message.id : previous!.lastMessageId,
+      lastMessageAt: isLast ? message.timestamp : previous!.lastMessageAt,
+      lastMessagePreview: preview,
+      lastMessageModelId: isLast
+          ? message.modelId
+          : previous?.lastMessageModelId,
+      lastMessageProviderId: isLast
+          ? message.providerId
+          : previous?.lastMessageProviderId,
+      lastAssistantMessageId: isLastAssistant
+          ? message.id
+          : previous?.lastAssistantMessageId,
+      lastAssistantModelId: isLastAssistant
+          ? message.modelId
+          : previous?.lastAssistantModelId,
+      lastAssistantProviderId: isLastAssistant
+          ? message.providerId
+          : previous?.lastAssistantProviderId,
+    );
+    // Keep the same snapshot when only text beyond the first line changed.
+    if (next != previous) {
+      _conversationListMetadata[message.conversationId] = next;
+    }
+  }
+
+  Future<void> _refreshConversationListMetadata(String id) async {
+    final metadata = await _repo.getConversationListMetadata(id);
+    if (metadata == null) {
+      _conversationListMetadata.remove(id);
+    } else {
+      _conversationListMetadata[id] = metadata;
+    }
+  }
+
+  void _resetConversationListMetadataFromMessages(
+    String conversationId,
+    List<ChatMessage> messages,
+  ) {
+    _conversationListMetadata.remove(conversationId);
+    if (messages.isEmpty) return;
+    for (final message in messages.reversed) {
+      if (message.role == 'assistant') {
+        _noteConversationListMessage(message, appended: true);
+        break;
+      }
+    }
+    _noteConversationListMessage(messages.last, appended: true);
   }
 
   List<Conversation> getAllCompleteConversations() {
@@ -2089,6 +2180,7 @@ class ChatService extends ChangeNotifier {
     final conversation = await _repo.getConversation(conversationId);
     if (conversation == null) {
       _conversationsCache.remove(conversationId);
+      _conversationListMetadata.remove(conversationId);
     } else {
       _conversationsCache[conversationId] = conversation;
     }
@@ -2133,6 +2225,7 @@ class ChatService extends ChangeNotifier {
       _temporaryProviderArtifacts.remove(message.id);
     }
     _draftConversations.remove(id);
+    _conversationListMetadata.remove(id);
     _messagesCache.remove(id);
     if (_currentConversationId == id) {
       _currentConversationId = null;
@@ -2160,6 +2253,7 @@ class ChatService extends ChangeNotifier {
     await _prepareMcpServersForSave(duplicate);
 
     _conversationsCache[duplicate.id] = duplicate;
+    await _refreshConversationListMetadata(duplicate.id);
     _messageOrderIds[duplicate.id] = List<String>.of(duplicate.messageIds);
     _messageCounts[duplicate.id] = duplicate.messageIds.length;
     _bumpConversationListRevision();
@@ -2171,6 +2265,7 @@ class ChatService extends ChangeNotifier {
     if (!_draftConversations.containsKey(id)) return false;
 
     _draftConversations.remove(id);
+    _conversationListMetadata.remove(id);
     if (_temporaryConversationIds.remove(id)) {
       _rememberDiscardedTemporaryConversation(id);
     }
@@ -2196,6 +2291,7 @@ class ChatService extends ChangeNotifier {
     await _repo.deleteConversation(id);
     _interruptedQueueHolds.remove(id);
     _conversationsCache.remove(id);
+    _conversationListMetadata.remove(id);
     // Stop any deferred/in-flight order backfill before clearing caches so a
     // late getMessageIds cannot resurrect order/count for a deleted id.
     _abortMessageOrderBackfill(id);
@@ -2626,6 +2722,7 @@ class ChatService extends ChangeNotifier {
         .map((message) => message.id)
         .toList(growable: true);
     _messageCounts[restored.id] = messages.length;
+    _resetConversationListMetadataFromMessages(restored.id, messages);
     _bumpConversationListRevision();
     notifyListeners();
   }
@@ -2807,6 +2904,7 @@ class ChatService extends ChangeNotifier {
     _conversationsCache[conversationId] = persisted;
     order.add(message.id);
     _messageCounts[conversationId] = order.length;
+    _noteConversationListMessage(message, appended: true);
 
     // Update cache
     if (_messagesCache.containsKey(conversationId)) {
@@ -3325,6 +3423,14 @@ class ChatService extends ChangeNotifier {
     }
     _touchMessageCache(conversationId);
 
+    if (temporaryInsertIndex == null) {
+      _noteConversationListMessage(message, appended: true);
+    } else {
+      _resetConversationListMetadataFromMessages(
+        conversationId,
+        _messagesCache[conversationId]!,
+      );
+    }
     notifyListeners();
     return message;
   }
@@ -3494,6 +3600,18 @@ class ChatService extends ChangeNotifier {
     );
     for (final message in messages) {
       if (!order.contains(message.id)) order.add(message.id);
+      final isLast = order.last == message.id;
+      final previousAssistantId =
+          _conversationListMetadata[conversationId]?.lastAssistantMessageId;
+      _noteConversationListMessage(
+        message,
+        appended: isLast,
+        newestAssistant:
+            !isLast &&
+            message.role == 'assistant' &&
+            (previousAssistantId == null ||
+                order.indexOf(message.id) > order.indexOf(previousAssistantId)),
+      );
     }
     _messageCounts[conversationId] = order.length;
     if (_messagesCache.containsKey(conversationId)) {
@@ -3519,6 +3637,7 @@ class ChatService extends ChangeNotifier {
   }
 
   void _replaceCachedMessage(ChatMessage updatedMessage) {
+    _noteConversationListMessage(updatedMessage);
     final messages = _messagesCache[updatedMessage.conversationId];
     if (messages == null) return;
     final index = messages.indexWhere((m) => m.id == updatedMessage.id);
@@ -3954,6 +4073,7 @@ class ChatService extends ChangeNotifier {
       );
       if (forked == null) throw StateError('linear_fork_target_missing');
       _conversationsCache[forked.id] = forked;
+      await _refreshConversationListMetadata(forked.id);
       _messageOrderIds[forked.id] = List<String>.of(forked.messageIds);
       _messageCounts[forked.id] = forked.messageIds.length;
       _bumpConversationListRevision();
@@ -4201,6 +4321,7 @@ class ChatService extends ChangeNotifier {
     final arr = _messagesCache[cid];
     if (arr != null) arr.add(newMsg);
     _touchMessageCache(cid);
+    _noteConversationListMessage(newMsg, appended: true);
     _bumpConversationListRevision();
     notifyListeners();
     return newMsg;
@@ -4519,6 +4640,10 @@ class ChatService extends ChangeNotifier {
       conversation?.chatSuggestions = const <String>[];
       final messages = _messagesCache[message.conversationId];
       messages?.removeWhere((m) => m.id == messageId);
+      _resetConversationListMetadataFromMessages(
+        message.conversationId,
+        messages ?? const [],
+      );
       _temporaryToolEvents.remove(messageId);
       _temporaryProviderArtifacts.remove(messageId);
       notifyListeners();
@@ -4549,6 +4674,7 @@ class ChatService extends ChangeNotifier {
           .toSet();
       if (deletedIds.isEmpty) return const <String>{};
       messages.removeWhere((message) => deletedIds.contains(message.id));
+      _resetConversationListMetadataFromMessages(conversationId, messages);
       conversation.messageIds.removeWhere(deletedIds.contains);
       conversation.chatSuggestions = const <String>[];
       for (final entry in versionSelectionChanges.entries) {
@@ -4581,6 +4707,7 @@ class ChatService extends ChangeNotifier {
       _evictMessageCaches(message.id);
     }
     _messagesCache.remove(conversationId);
+    await _refreshConversationListMetadata(conversationId);
     _messageOrderIds.remove(conversationId);
     _firstGroupIndicesCache.remove(conversationId);
     await _loadMessageOrder(conversationId);
@@ -4608,6 +4735,7 @@ class ChatService extends ChangeNotifier {
     }
     _messagesCache.clear();
     _conversationsCache.clear();
+    _conversationListMetadata.clear();
     _draftConversations.clear();
     _interruptedMessageIds.clear();
     _interruptedQueueHolds.clear();

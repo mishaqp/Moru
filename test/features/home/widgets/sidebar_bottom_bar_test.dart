@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import 'package:Kelivo/core/models/sidebar_shortcut.dart';
+import 'package:Kelivo/core/models/sidebar_appearance.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/browser/browser_library.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
@@ -134,7 +135,8 @@ void main() {
           reason: label,
         );
       }
-      await tester.tap(find.byKey(const ValueKey('avatar')));
+      expect(find.byKey(const ValueKey('avatar')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('sidebar-dock-profile')));
       expect(avatarTaps, 1);
       // Nothing to pin yet: no shortcut row at all.
       expect(find.byKey(SidebarBottomBar.shortcutsKey), findsNothing);
@@ -145,6 +147,37 @@ void main() {
       await pump(tester, width: 295);
       expect(tester.takeException(), isNull);
       expect(find.byKey(SidebarBottomBar.dockKey), findsOneWidget);
+    });
+
+    testWidgets('the dock follows saved order and can be fully hidden', (
+      tester,
+    ) async {
+      await tester.runAsync(
+        () => settings.setSidebarAppearance(
+          const SidebarAppearanceSettings(
+            dockItems: [SidebarDockItem.memory, SidebarDockItem.settings],
+          ),
+        ),
+      );
+      await pump(tester);
+      final memory = find.byKey(const ValueKey('sidebar-dock-memory'));
+      final settingsAction = find.byKey(
+        const ValueKey('sidebar-dock-settings'),
+      );
+      expect(
+        tester.getRect(memory).left,
+        lessThan(tester.getRect(settingsAction).left),
+      );
+      expect(find.byKey(SidebarBottomBar.avatarKey), findsNothing);
+      expect(find.byTooltip('My Apps'), findsNothing);
+
+      await tester.runAsync(
+        () => settings.setSidebarAppearance(
+          const SidebarAppearanceSettings(dockItems: []),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(SidebarBottomBar.dockKey), findsNothing);
     });
 
     testWidgets('a mini app and a bookmark are pinned from the picker, '

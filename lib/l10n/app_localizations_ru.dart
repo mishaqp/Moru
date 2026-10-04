@@ -9,6 +9,112 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get appearanceSaveError =>
+      'Не удалось сохранить внешний вид. Попробуйте ещё раз.';
+
+  @override
+  String get appearanceSidebarBackground => 'Фон боковой панели';
+
+  @override
+  String get appearanceSidebarSameAsChat => 'Как в чате';
+
+  @override
+  String get appearanceSidebarCustomBackground => 'Свой фон';
+
+  @override
+  String get appearanceSidebarThemeBackground => 'Фон темы';
+
+  @override
+  String get appearanceSidebarMask => 'Маска фона панели';
+
+  @override
+  String get appearanceSidebarBlur => 'Размытие фона панели';
+
+  @override
+  String get appearanceSidebarOpacity => 'Непрозрачность фона панели';
+
+  @override
+  String get appearanceSidebarPhoneWidth => 'Ширина панели на телефоне';
+
+  @override
+  String get appearanceSidebarWideWidth => 'Ширина панели на широком экране';
+
+  @override
+  String get appearanceSidebarDensity => 'Плотность списка чатов';
+
+  @override
+  String get appearanceSidebarCompact => 'Компактная';
+
+  @override
+  String get appearanceSidebarNormal => 'Обычная';
+
+  @override
+  String get appearanceSidebarSpacious => 'Просторная';
+
+  @override
+  String get appearanceSidebarCardRadius => 'Скругление карточек чата';
+
+  @override
+  String get appearanceSidebarCardColor => 'Цвет карточек чата';
+
+  @override
+  String get appearanceSidebarActiveCardColor => 'Цвет активного чата';
+
+  @override
+  String get appearanceSidebarResetColor => 'Использовать цвет темы';
+
+  @override
+  String get appearanceSidebarTimestamp => 'Время сообщения';
+
+  @override
+  String get appearanceSidebarAssistant => 'Значок и имя ассистента';
+
+  @override
+  String get appearanceSidebarModel => 'Значок и название модели';
+
+  @override
+  String get appearanceSidebarLastPreview => 'Превью последнего сообщения';
+
+  @override
+  String get appearanceSidebarGrouping => 'Группировать чаты';
+
+  @override
+  String get appearanceSidebarGroupingDate => 'По дате';
+
+  @override
+  String get appearanceSidebarGroupingAssistant => 'По ассистенту';
+
+  @override
+  String get appearanceSidebarGroupingNone => 'Без группировки';
+
+  @override
+  String get appearanceSidebarDock => 'Кнопки нижней панели';
+
+  @override
+  String get appearanceSidebarDockHint =>
+      'Выберите кнопки и перетащите их за значок, чтобы изменить порядок.';
+
+  @override
+  String get appearanceSidebarShortcutsHint =>
+      'Выберите закреплённые приложения и страницы, затем перетащите их для изменения порядка.';
+
+  @override
+  String get appearanceSidebarPreviewTitle => 'Планы на поездку';
+
+  @override
+  String get appearanceSidebarPreviewOtherTitle => 'Новые идеи';
+
+  @override
+  String get appearanceSidebarPreviewMessage =>
+      'Вот несколько идей для начала.';
+
+  @override
+  String get appearanceSidebarPreviewModel => 'Модель';
+
+  @override
+  String get appearanceSidebarReset => 'Сбросить вид боковой панели';
+
+  @override
   String get appearanceSettingsPageTitle => 'Внешний вид';
 
   @override

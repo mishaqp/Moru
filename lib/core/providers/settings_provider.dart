@@ -28,6 +28,7 @@ import '../models/auto_retry_options.dart';
 import '../models/provider_group.dart';
 import '../models/chat_folder.dart';
 import '../models/sidebar_shortcut.dart';
+import '../models/sidebar_appearance.dart';
 import '../services/haptics.dart';
 import '../services/chat/chat_appearance_storage.dart';
 import '../services/chat/chat_background_video.dart';
@@ -275,6 +276,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayEnableAssistantMarkdownKey =
       'display_enable_assistant_markdown_v1';
   static const String _sidebarThumbnailsKey = 'sidebar_thumbnails_v1';
+  static const String _sidebarAppearanceKey = 'display_sidebar_appearance_v1';
   static const String _sidebarFoldersKey = 'sidebar_folders_v1';
   static const String _sidebarCollapsedSectionsKey =
       'sidebar_collapsed_sections_v1';
@@ -1246,6 +1248,7 @@ class SettingsProvider extends ChangeNotifier {
     _chatBackgroundMaskStrength =
         prefs.getDouble(_displayChatBackgroundMaskStrengthKey) ?? 1.0;
     await _loadChatAppearance();
+    _loadSidebarAppearance();
     _chatInputBackgroundOpacityLight =
         (prefs.getDouble(_displayChatInputBackgroundOpacityLightKey) ??
                 defaultChatInputBackgroundOpacityLight)
@@ -5154,7 +5157,7 @@ Requirements:
       }
       rethrow;
     }
-    final retained = {_chatAppearance.light.path, _chatAppearance.dark.path};
+    final retained = _retainedAppearancePaths;
     for (final path in {previous.light.path, previous.dark.path}) {
       if (!retained.contains(path)) {
         await ChatAppearanceStorage.removeIfOwned(path);
@@ -5188,12 +5191,103 @@ Requirements:
       await setChatAppearance(next);
       return true;
     } catch (_) {
-      if (candidate != _chatAppearance.light.path &&
-          candidate != _chatAppearance.dark.path) {
+      if (!_retainedAppearancePaths.contains(candidate)) {
         await ChatAppearanceStorage.removeIfOwned(candidate);
       }
       return false;
     }
+  }
+
+  SidebarAppearanceSettings _sidebarAppearance =
+      const SidebarAppearanceSettings();
+  bool _sidebarAppearanceInitialized = false;
+  SidebarAppearanceSettings get sidebarAppearance => _sidebarAppearance;
+
+  void _loadSidebarAppearance() {
+    final raw = _preferences.get(_sidebarAppearanceKey);
+    if (raw is String) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) {
+          _sidebarAppearance = SidebarAppearanceSettings.fromJson(
+            Map<String, dynamic>.from(decoded),
+          );
+        }
+      } catch (_) {
+        // Damaged or newer data uses defaults without changing saved choices.
+      }
+    }
+    _sidebarAppearanceInitialized = true;
+  }
+
+  Set<String?> get _retainedAppearancePaths => {
+    _chatAppearance.light.path,
+    _chatAppearance.dark.path,
+    _sidebarAppearance.customBackground.path,
+  };
+
+  Future<void> setSidebarAppearance(SidebarAppearanceSettings value) async {
+    if (!_sidebarAppearanceInitialized) await loaded;
+    final next = SidebarAppearanceSettings.fromJson(value.toJson());
+    if (_sidebarAppearance == next &&
+        _preferences.containsKey(_sidebarAppearanceKey)) {
+      return;
+    }
+    final previous = _sidebarAppearance;
+    _sidebarAppearance = next;
+    notifyListeners();
+    try {
+      await _preferences.setString(
+        _sidebarAppearanceKey,
+        jsonEncode(next.toJson()),
+      );
+    } catch (_) {
+      if (identical(_sidebarAppearance, next)) {
+        _sidebarAppearance = previous;
+        notifyListeners();
+      }
+      rethrow;
+    }
+    if (!_retainedAppearancePaths.contains(previous.customBackground.path)) {
+      await ChatAppearanceStorage.removeIfOwned(previous.customBackground.path);
+    }
+  }
+
+  /// Reuses the backed-up chat media directory and Android preparation pipeline.
+  Future<bool> importSidebarBackground(
+    String sourcePath,
+    ChatBackgroundType type,
+  ) async {
+    if (!_sidebarAppearanceInitialized) await loaded;
+    String? candidate;
+    try {
+      final copied = await ChatAppearanceStorage.copyMedia(sourcePath, type);
+      candidate = copied.reference;
+      if (type == ChatBackgroundType.video) {
+        await ChatBackgroundVideo.prepare(copied.path);
+      }
+      await setSidebarAppearance(
+        _sidebarAppearance.copyWith(
+          backgroundMode: SidebarBackgroundMode.custom,
+          customBackground: _sidebarAppearance.customBackground.copyWith(
+            type: type,
+            path: candidate,
+          ),
+        ),
+      );
+      return true;
+    } catch (_) {
+      if (!_retainedAppearancePaths.contains(candidate)) {
+        await ChatAppearanceStorage.removeIfOwned(candidate);
+      }
+      return false;
+    }
+  }
+
+  /// Restore presentation defaults without changing folders or pinned targets.
+  Future<void> resetSidebarAppearance() async {
+    await setSidebarAppearance(const SidebarAppearanceSettings());
+    await setSidebarThumbnails(true);
   }
 
   // Display: chat input background opacity by theme brightness.
@@ -5975,6 +6069,8 @@ Requirements:
     copy._chatFontScale = _chatFontScale;
     copy._chatAppearance = _chatAppearance;
     copy._chatAppearanceInitialized = _chatAppearanceInitialized;
+    copy._sidebarAppearance = _sidebarAppearance;
+    copy._sidebarAppearanceInitialized = _sidebarAppearanceInitialized;
     copy._autoScrollEnabled = _autoScrollEnabled;
     copy._autoScrollIdleSeconds = _autoScrollIdleSeconds;
     copy._enableDollarLatex = _enableDollarLatex;
@@ -5983,6 +6079,7 @@ Requirements:
     copy._enableReasoningMarkdown = _enableReasoningMarkdown;
     copy._enableAssistantMarkdown = _enableAssistantMarkdown;
     copy._sidebarThumbnails = _sidebarThumbnails;
+    copy._sidebarShortcuts = _sidebarShortcuts;
     copy._autoCollapseCodeBlock = _autoCollapseCodeBlock;
     copy._autoCollapseCodeBlockLines = _autoCollapseCodeBlockLines;
     copy._collapseLongUserMessages = _collapseLongUserMessages;

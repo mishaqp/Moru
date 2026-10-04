@@ -13,6 +13,8 @@ import 'package:Kelivo/core/models/chat_folder.dart';
 import 'package:Kelivo/core/models/chat_appearance.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/core/models/message_part.dart';
+import 'package:Kelivo/core/models/sidebar_appearance.dart';
+import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/features/chat/pages/chat_archive_page.dart';
 import 'package:Kelivo/features/home/widgets/chat_thumbnails.dart';
 import 'package:Kelivo/features/chat/widgets/chat_gradient_background.dart';
@@ -20,9 +22,11 @@ import 'package:Kelivo/features/chat/widgets/chat_background.dart';
 import 'package:Kelivo/features/home/widgets/sidebar_glass.dart';
 import 'package:Kelivo/features/home/widgets/side_drawer.dart';
 import 'package:Kelivo/features/home/widgets/sidebar_selection_bars.dart';
+import 'package:Kelivo/features/home/widgets/sidebar_omni_parts.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/snackbar.dart';
 import 'package:Kelivo/shared/widgets/ios_tactile.dart';
+import 'package:Kelivo/shared/widgets/ios_checkbox.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,7 +37,6 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
-import 'package:video_player/video_player.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
   _FakePathProviderPlatform(this.path);
@@ -56,11 +59,18 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
 class _TestChatService extends ChatService {
   final List<String> timelineCalls = <String>[];
   int notifyCount = 0;
+  int allMessageReads = 0;
   List<Conversation>? _stubConversations;
   int? _stubRevision;
   bool? _stubInitialized;
 
   void poke() => notifyListeners();
+
+  @override
+  List<ChatMessage> getMessages(String conversationId) {
+    allMessageReads++;
+    return super.getMessages(conversationId);
+  }
 
   void seedConversationsForTest(List<Conversation> conversations) {
     _stubConversations = conversations;
@@ -262,6 +272,66 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
   }
 
+  testWidgets('hidden row checkboxes stay unmounted outside selection', (
+    tester,
+  ) async {
+    await asAndroid(() async {
+      final service = createService();
+      late final String alphaId;
+      await tester.runAsync(() async {
+        await service.init();
+        alphaId = (await service.createConversation(title: 'Alpha')).id;
+        await service.createConversation(title: 'Beta');
+      });
+      await pumpDrawer(tester, service);
+
+      final tiles = find.byType(SideDrawer.debugChatTileType);
+      final checkboxes = find.descendant(
+        of: tiles,
+        matching: find.byType(IosCheckbox),
+      );
+      final alphaTile = find.ancestor(of: find.text('Alpha'), matching: tiles);
+      final titleLeft = tester.getTopLeft(find.text('Alpha')).dx;
+      final rowHeight = tester.getSize(alphaTile).height;
+      expect(rowHeight, 40);
+      expect(checkboxes, findsNothing);
+
+      SideDrawer.debugEnterSelectionMode!(alphaId);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(checkboxes, findsNWidgets(2));
+      expect(tester.getTopLeft(find.text('Alpha')).dx, greaterThan(titleLeft));
+      expect(tester.getSize(alphaTile).height, rowHeight);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(checkboxes, findsNWidgets(2));
+      expect(
+        tester
+            .widget<IosCheckbox>(
+              find.descendant(
+                of: alphaTile,
+                matching: find.byType(IosCheckbox),
+              ),
+            )
+            .value,
+        isTrue,
+      );
+
+      tester
+          .widget<SidebarSelectionHeader>(find.byType(SidebarSelectionHeader))
+          .onCancel();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(checkboxes, findsNothing);
+      expect(tester.getTopLeft(find.text('Alpha')).dx, titleLeft);
+      expect(tester.getSize(alphaTile).height, rowHeight);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(checkboxes, findsNothing);
+      expect(tester.getTopLeft(find.text('Alpha')).dx, titleLeft);
+      expect(tester.getSize(alphaTile).height, rowHeight);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   testWidgets(
     'entering selection does not recompute sidebar rows or bump revision',
     (tester) async {
@@ -452,7 +522,7 @@ void main() {
     },
   );
 
-  testWidgets('glass drawer shows the colour backdrop under a veil', (
+  testWidgets('glass drawer blurs the selected colour backdrop under a veil', (
     tester,
   ) async {
     final service = createService();
@@ -465,6 +535,14 @@ void main() {
       listen: false,
     );
     await settings.loaded;
+    await settings.setChatAppearance(
+      const ChatAppearanceSettings(
+        light: ChatBackgroundSettings(
+          type: ChatBackgroundType.gradient,
+          gradientAnimated: false,
+        ),
+      ),
+    );
     await settings.setGlassTheme(true);
     await tester.pump();
     expect(find.byType(ChatGradientBackground), findsOneWidget);
@@ -486,50 +564,48 @@ void main() {
 
     await settings.setGlassTheme(false);
     await tester.pump();
-    expect(find.byType(ChatGradientBackground), findsNothing);
+    expect(find.byType(ChatGradientBackground), findsOneWidget);
+    expect(blur, findsNothing);
   });
 
-  testWidgets('global video does not replace the legacy sidebar image', (
-    tester,
-  ) async {
-    final service = createService();
-    await tester.runAsync(service.init);
-    await pumpDrawer(tester, service, embedded: false);
-    final context = tester.element(find.byType(SideDrawer));
-    final assistants = context.read<AssistantProvider>();
-    final settings = context.read<SettingsProvider>();
-    await assistants.loaded;
-    await settings.loaded;
-    final assistantId = await assistants.addAssistant(
-      name: 'Sidebar wallpaper',
-    );
-    await assistants.setCurrentAssistant(assistantId);
-    await assistants.updateAssistant(
-      assistants.currentAssistant!.copyWith(
-        background: 'https://example.com/sidebar-wallpaper.png',
-      ),
-    );
-    await settings.setChatAppearance(
-      const ChatAppearanceSettings(
-        light: ChatBackgroundSettings(
-          type: ChatBackgroundType.video,
-          path: '/tmp/global-video.mp4',
+  testWidgets(
+    'sidebar follows global video instead of the legacy assistant image',
+    (tester) async {
+      final service = createService();
+      await tester.runAsync(service.init);
+      await pumpDrawer(tester, service, embedded: false);
+      final context = tester.element(find.byType(SideDrawer));
+      final assistants = context.read<AssistantProvider>();
+      final settings = context.read<SettingsProvider>();
+      await assistants.loaded;
+      await settings.loaded;
+      final assistantId = await assistants.addAssistant(
+        name: 'Sidebar wallpaper',
+      );
+      await assistants.setCurrentAssistant(assistantId);
+      await assistants.updateAssistant(
+        assistants.currentAssistant!.copyWith(
+          background: 'https://example.com/sidebar-wallpaper.png',
         ),
-      ),
-    );
-    await settings.setGlassTheme(true);
-    await tester.pump();
-    final background = tester.widget<ChatBackground>(
-      find.byType(ChatBackground),
-    );
-    expect(background.configuration.type, ChatBackgroundType.image);
-    expect(
-      background.configuration.path,
-      'https://example.com/sidebar-wallpaper.png',
-    );
-    expect(background.active, isFalse);
-    expect(find.byType(VideoPlayer), findsNothing);
-  });
+      );
+      await settings.setChatAppearance(
+        const ChatAppearanceSettings(
+          light: ChatBackgroundSettings(
+            type: ChatBackgroundType.video,
+            path: '/tmp/global-video.mp4',
+          ),
+        ),
+      );
+      await settings.setGlassTheme(true);
+      await tester.pump();
+      final background = tester.widget<ChatBackground>(
+        find.byType(ChatBackground),
+      );
+      expect(background.configuration.type, ChatBackgroundType.video);
+      expect(background.configuration.path, '/tmp/global-video.mp4');
+      expect(background.active, isTrue);
+    },
+  );
 
   testWidgets('on glass the chat rows and the bottom bar have no solid fill', (
     tester,
@@ -888,6 +964,245 @@ void main() {
     expect(find.text(label), findsOneWidget);
     // Russian month, not "Sep".
     expect(label, isNot(contains(DateFormat('MMM', 'en').format(day))));
+  });
+
+  group('sidebar grouping and metadata', () {
+    testWidgets(
+      'group modes retain pinned folders archive and assistant scope',
+      (tester) async {
+        final service = createService();
+        await tester.runAsync(service.init);
+        await pumpDrawer(tester, service);
+        final context = tester.element(find.byType(SideDrawer));
+        final settings = context.read<SettingsProvider>();
+        final assistants = context.read<AssistantProvider>();
+        late String alpha;
+        late String beta;
+        await settings.loaded;
+        await assistants.loaded;
+        alpha = await assistants.addAssistant(name: 'Alpha assistant');
+        beta = await assistants.addAssistant(name: 'Beta assistant');
+        await assistants.setCurrentAssistant(alpha);
+        await settings.setSidebarThumbnails(false);
+        await settings.setSidebarFolders(const [
+          ChatFolder(id: 'work', name: 'Work folder', icon: 'briefcase'),
+        ]);
+        final now = DateTime.now();
+        service.seedConversationsForTest([
+          Conversation(
+            id: 'pinned',
+            title: 'Pinned alpha',
+            assistantId: alpha,
+            isPinned: true,
+            updatedAt: now,
+          ),
+          Conversation(
+            id: 'folder',
+            title: 'Folder alpha',
+            assistantId: alpha,
+            extras: {ChatService.folderKey: 'work'},
+            updatedAt: now,
+          ),
+          Conversation(
+            id: 'alpha',
+            title: 'Alpha chat',
+            assistantId: alpha,
+            updatedAt: now,
+          ),
+          Conversation(
+            id: 'beta',
+            title: 'Beta chat',
+            assistantId: beta,
+            updatedAt: now.subtract(const Duration(minutes: 1)),
+          ),
+          Conversation(id: 'shared', title: 'Shared chat', updatedAt: now),
+          Conversation(
+            id: 'archived',
+            title: 'Archived beta',
+            assistantId: beta,
+            extras: {ChatService.archivedAtKey: now.millisecondsSinceEpoch},
+            updatedAt: now,
+          ),
+        ]);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        final pinned = find.byKey(const ValueKey('sidebar-section-pinned'));
+        final folder = find.byKey(
+          const ValueKey('sidebar-section-folder:work'),
+        );
+        final alphaHeader = find.byKey(
+          ValueKey('sidebar-section-assistant:$alpha'),
+        );
+        final betaHeader = find.byKey(
+          ValueKey('sidebar-section-assistant:$beta'),
+        );
+        final dateHeaders = find.byWidgetPredicate(
+          (widget) =>
+              widget.key is ValueKey<String> &&
+              (widget.key! as ValueKey<String>).value.startsWith(
+                'sidebar-section-date:',
+              ),
+        );
+        expect(find.text('Alpha chat'), findsOneWidget);
+        expect(find.text('Shared chat'), findsOneWidget);
+        expect(find.text('Beta chat'), findsNothing);
+        expect(dateHeaders, findsOneWidget);
+
+        await settings.setSidebarAppearance(
+          settings.sidebarAppearance.copyWith(
+            grouping: SidebarGrouping.assistant,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.text('Beta chat'), findsOneWidget);
+        expect(find.text('Archived beta'), findsNothing);
+        expect(alphaHeader, findsOneWidget);
+        expect(betaHeader, findsOneWidget);
+        expect(dateHeaders, findsNothing);
+        expect(
+          tester.getRect(pinned).top,
+          lessThan(tester.getRect(folder).top),
+        );
+        expect(
+          tester.getRect(folder).top,
+          lessThan(tester.getRect(alphaHeader).top),
+        );
+        expect(find.byKey(const ValueKey('sidebar-archive')), findsOneWidget);
+
+        await tester.tap(betaHeader);
+        await settleUntil(
+          tester,
+          () => settings.sidebarCollapsedSections.contains('assistant:$beta'),
+        );
+        expect(find.text('Beta chat'), findsNothing);
+
+        await settings.setSidebarAppearance(
+          settings.sidebarAppearance.copyWith(grouping: SidebarGrouping.none),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.text('Alpha chat'), findsOneWidget);
+        expect(find.text('Shared chat'), findsOneWidget);
+        expect(find.text('Beta chat'), findsNothing);
+        expect(dateHeaders, findsNothing);
+        expect(alphaHeader, findsNothing);
+        expect(pinned, findsOneWidget);
+        expect(folder, findsOneWidget);
+        await tester.tap(folder);
+        await settleUntil(
+          tester,
+          () => settings.sidebarCollapsedSections.contains('folder:work'),
+        );
+        expect(find.text('Folder alpha'), findsNothing);
+
+        SideDrawer.debugEnterSelectionMode!('alpha');
+        await tester.pump(const Duration(milliseconds: 400));
+        tester
+            .widget<SidebarSelectionHeader>(find.byType(SidebarSelectionHeader))
+            .onToggleSelectAll();
+        await tester.pump();
+        expect(
+          tester
+              .widget<SidebarSelectionHeader>(
+                find.byType(SidebarSelectionHeader),
+              )
+              .allSelected,
+          isTrue,
+        );
+        await settings.setSidebarAppearance(
+          settings.sidebarAppearance.copyWith(
+            grouping: SidebarGrouping.assistant,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        final selectionHeader = tester.widget<SidebarSelectionHeader>(
+          find.byType(SidebarSelectionHeader),
+        );
+        expect(selectionHeader.allSelected, isFalse);
+        selectionHeader.onCancel();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(betaHeader, findsOneWidget);
+        expect(find.text('Beta chat'), findsNothing);
+        expect(find.text('Folder alpha'), findsNothing);
+        expect(
+          settings.sidebarCollapsedSections,
+          containsAll(['assistant:$beta', 'folder:work']),
+        );
+        expect(service.timelineCalls, isEmpty);
+        expect(service.allMessageReads, 0);
+      },
+    );
+
+    testWidgets(
+      'enabled metadata updates its row without rescanning history or list',
+      (tester) async {
+        final service = createService();
+        late String chatId;
+        late ChatMessage latest;
+        await tester.runAsync(() async {
+          await service.init();
+          chatId = (await service.createConversation(
+            title: 'Metadata chat',
+          )).id;
+          await service.addMessage(
+            conversationId: chatId,
+            role: 'assistant',
+            content: 'An earlier answer',
+            modelId: 'model-from-answer',
+            providerId: 'provider-from-answer',
+          );
+          latest = await service.addMessage(
+            conversationId: chatId,
+            role: 'user',
+            content: 'Newest first line\nA second line that stays hidden',
+          );
+        });
+        await pumpDrawer(tester, service);
+        final settings = tester
+            .element(find.byType(SideDrawer))
+            .read<SettingsProvider>();
+        await settings.setSidebarThumbnails(false);
+        await settings.setSidebarAppearance(
+          const SidebarAppearanceSettings(
+            showPreview: true,
+            showTimestamp: true,
+            showAssistant: true,
+            showModel: true,
+          ),
+        );
+        final reads = service.allMessageReads;
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.text('Newest first line'), findsOneWidget);
+        expect(find.text('A second line that stays hidden'), findsNothing);
+        expect(find.text('model-from-answer'), findsOneWidget);
+        final card = tester.widget<SidebarConversationCard>(
+          find.byType(SidebarConversationCard),
+        );
+        expect(card.timestamp, isNotEmpty);
+        expect(card.assistantName, isNotEmpty);
+        expect(service.allMessageReads, reads);
+        expect(service.timelineCalls, isEmpty);
+        final listBuilds = SideDrawer.debugConversationListBuildCount;
+        final rowComputes = SideDrawer.debugSidebarRowsComputeCount;
+        await tester.runAsync(
+          () => service.updateMessage(
+            latest.id,
+            content: 'Edited first line\nHidden',
+          ),
+        );
+        await tester.pump();
+        expect(find.text('Edited first line'), findsOneWidget);
+        expect(find.text('Newest first line'), findsNothing);
+        expect(SideDrawer.debugConversationListBuildCount, listBuilds);
+        expect(SideDrawer.debugSidebarRowsComputeCount, rowComputes);
+        expect(service.allMessageReads, reads);
+        expect(service.timelineCalls, isEmpty);
+      },
+    );
   });
 
   group('folders', () {

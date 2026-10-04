@@ -9,6 +9,111 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get appearanceSaveError => 'Could not save appearance. Try again.';
+
+  @override
+  String get appearanceSidebarBackground => 'Sidebar background';
+
+  @override
+  String get appearanceSidebarSameAsChat => 'Same as chat';
+
+  @override
+  String get appearanceSidebarCustomBackground => 'Custom background';
+
+  @override
+  String get appearanceSidebarThemeBackground => 'Theme background';
+
+  @override
+  String get appearanceSidebarMask => 'Sidebar background mask';
+
+  @override
+  String get appearanceSidebarBlur => 'Sidebar background blur';
+
+  @override
+  String get appearanceSidebarOpacity => 'Sidebar background opacity';
+
+  @override
+  String get appearanceSidebarPhoneWidth => 'Sidebar width on phones';
+
+  @override
+  String get appearanceSidebarWideWidth => 'Sidebar width on wide screens';
+
+  @override
+  String get appearanceSidebarDensity => 'Chat list density';
+
+  @override
+  String get appearanceSidebarCompact => 'Compact';
+
+  @override
+  String get appearanceSidebarNormal => 'Normal';
+
+  @override
+  String get appearanceSidebarSpacious => 'Spacious';
+
+  @override
+  String get appearanceSidebarCardRadius => 'Chat card corner radius';
+
+  @override
+  String get appearanceSidebarCardColor => 'Chat card color';
+
+  @override
+  String get appearanceSidebarActiveCardColor => 'Active chat card color';
+
+  @override
+  String get appearanceSidebarResetColor => 'Use theme color';
+
+  @override
+  String get appearanceSidebarTimestamp => 'Message timestamp';
+
+  @override
+  String get appearanceSidebarAssistant => 'Assistant icon and name';
+
+  @override
+  String get appearanceSidebarModel => 'Model icon and name';
+
+  @override
+  String get appearanceSidebarLastPreview => 'Last message preview';
+
+  @override
+  String get appearanceSidebarGrouping => 'Group chats';
+
+  @override
+  String get appearanceSidebarGroupingDate => 'By date';
+
+  @override
+  String get appearanceSidebarGroupingAssistant => 'By assistant';
+
+  @override
+  String get appearanceSidebarGroupingNone => 'No grouping';
+
+  @override
+  String get appearanceSidebarDock => 'Sidebar dock buttons';
+
+  @override
+  String get appearanceSidebarDockHint =>
+      'Choose buttons and drag their handles to reorder.';
+
+  @override
+  String get appearanceSidebarShortcutsHint =>
+      'Choose pinned apps and pages, then drag to reorder.';
+
+  @override
+  String get appearanceSidebarPreviewTitle => 'Trip plans';
+
+  @override
+  String get appearanceSidebarPreviewOtherTitle => 'New ideas';
+
+  @override
+  String get appearanceSidebarPreviewMessage =>
+      'Here are a few ideas to get started.';
+
+  @override
+  String get appearanceSidebarPreviewModel => 'Model';
+
+  @override
+  String get appearanceSidebarReset => 'Reset sidebar appearance';
+
+  @override
   String get appearanceSettingsPageTitle => 'Appearance';
 
   @override
