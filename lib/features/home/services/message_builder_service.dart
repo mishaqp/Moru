@@ -45,6 +45,7 @@ import '../../../core/models/assistant_regex.dart';
 import '../../../core/utils/multimodal_input_utils.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
+import '../../chat/utils/chat_ui_work.dart';
 import 'ocr_service.dart';
 import 'spend_control_service.dart';
 
@@ -222,6 +223,21 @@ class MessageBuilderService {
     required Map<String, int> versionSelections,
     required Conversation? currentConversation,
     bool includeToolMessages = false,
+  }) => ChatUiWork.measure(
+    'send.buildApiMessages',
+    () => _buildApiMessages(
+      messages: messages,
+      versionSelections: versionSelections,
+      currentConversation: currentConversation,
+      includeToolMessages: includeToolMessages,
+    ),
+  );
+
+  List<Map<String, dynamic>> _buildApiMessages({
+    required List<ChatMessage> messages,
+    required Map<String, int> versionSelections,
+    required Conversation? currentConversation,
+    required bool includeToolMessages,
   }) {
     final tIndex = currentConversation?.truncateIndex ?? -1;
     final List<ChatMessage> sourceAll =

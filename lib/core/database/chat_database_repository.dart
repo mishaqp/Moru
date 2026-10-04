@@ -1,11 +1,13 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'dart:isolate';
 
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
-import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
+import 'package:flutter/foundation.dart'
+    show compute, debugPrint, visibleForTesting;
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:uuid/uuid.dart';
 
@@ -151,6 +153,10 @@ class ChatDatabaseRepository {
     ChatDatabaseObserver? observer,
   }) : _databaseFile = databaseFile?.absolute,
        _observer = observer ?? ChatDatabaseObserver.instance;
+
+  /// Debug-only observations of batches decoded on this isolate.
+  @visibleForTesting
+  static void Function(int payloads, int microseconds)? debugToolEventDecode;
 
   final AppDatabase _db;
   final File? _databaseFile;
@@ -6775,16 +6781,25 @@ class ChatDatabaseRepository {
               )
               ..orderBy([(row) => OrderingTerm.asc(row.ordinal)]))
             .get();
-    final result = <String, List<Map<String, dynamic>>>{};
-    for (final row in partRows) {
-      final decoded = jsonDecode(row.payload);
-      if (decoded is Map) {
-        result
-            .putIfAbsent(row.revisionId, () => <Map<String, dynamic>>[])
-            .add(Map<String, dynamic>.from(decoded));
-      }
+    final payloads = [
+      for (final row in partRows)
+        (revisionId: row.revisionId, payload: row.payload),
+    ];
+    final characters = payloads.fold<int>(
+      0,
+      (total, row) => total + row.payload.length,
+    );
+    // A single card is cheap; a long history with diffs can occupy the UI
+    // isolate for hundreds of milliseconds after the background SQL returns.
+    // Send only raw strings to the worker, retaining the same decode/order.
+    if (characters > 128 * 1024) {
+      return compute(
+        _decodeToolEventPayloads,
+        payloads,
+        debugLabel: 'chat.toolEvents.decode',
+      );
     }
-    return result;
+    return _decodeToolEventPayloads(payloads);
   }
 
   Future<void> setToolEvents(
@@ -8578,5 +8593,37 @@ class _ToolPayloadEntry {
       return true;
     }
     return a == b;
+  }
+}
+
+// A capture-free decoder: database objects and display filters never enter it.
+Map<String, List<Map<String, dynamic>>> _decodeToolEventPayloads(
+  List<({String revisionId, String payload})> rows,
+) {
+  void Function(int, int)? observer;
+  assert(() {
+    observer = ChatDatabaseRepository.debugToolEventDecode;
+    return true;
+  }());
+  final watch = observer == null ? null : (Stopwatch()..start());
+  if (observer != null) {
+    developer.Timeline.startSync('send.toolEvents.jsonDecode');
+  }
+  try {
+    final result = <String, List<Map<String, dynamic>>>{};
+    for (final row in rows) {
+      final decoded = jsonDecode(row.payload);
+      if (decoded is Map) {
+        result
+            .putIfAbsent(row.revisionId, () => <Map<String, dynamic>>[])
+            .add(Map<String, dynamic>.from(decoded));
+      }
+    }
+    return result;
+  } finally {
+    if (observer != null) {
+      developer.Timeline.finishSync();
+      observer!(rows.length, watch!.elapsedMicroseconds);
+    }
   }
 }

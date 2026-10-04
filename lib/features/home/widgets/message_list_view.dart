@@ -2113,7 +2113,6 @@ class _MessageListViewState extends State<MessageListView> {
                               context,
                               isStreaming: isStreaming,
                               message: message,
-                              index: index,
                               r: r,
                               t: t,
                               useAssistAvatar: useAssistAvatar,
@@ -2131,7 +2130,6 @@ class _MessageListViewState extends State<MessageListView> {
                           : _buildChatMessageWidget(
                               context,
                               message: message,
-                              index: index,
                               r: r,
                               t: t,
                               useAssistAvatar: useAssistAvatar,
@@ -2238,7 +2236,6 @@ class _MessageListViewState extends State<MessageListView> {
     BuildContext context, {
     required bool isStreaming,
     required ChatMessage message,
-    required int index,
     required stream_ctrl.ReasoningData? r,
     required TranslationUiState? t,
     required bool useAssistAvatar,
@@ -2303,7 +2300,6 @@ class _MessageListViewState extends State<MessageListView> {
           child: _buildChatMessageWidget(
             context,
             message: streamingMessage,
-            index: index,
             r: streamingReasoning,
             t: t,
             useAssistAvatar: useAssistAvatar,
@@ -2332,7 +2328,6 @@ class _MessageListViewState extends State<MessageListView> {
   Widget _buildChatMessageWidget(
     BuildContext context, {
     required ChatMessage message,
-    required int index,
     required stream_ctrl.ReasoningData? r,
     required TranslationUiState? t,
     required bool useAssistAvatar,
@@ -2451,9 +2446,15 @@ class _MessageListViewState extends State<MessageListView> {
         } else if (action == MessageMoreAction.fork) {
           await widget.onForkConversation?.call(message);
         } else if (action == MessageMoreAction.share) {
-          widget.onShareMessage?.call(index, widget.messages);
+          final currentIndex = _messageIndexById[message.id];
+          if (currentIndex != null) {
+            widget.onShareMessage?.call(currentIndex, widget.messages);
+          }
         } else if (action == MessageMoreAction.selectMessages) {
-          widget.onSelectMessages?.call(index, widget.messages);
+          final currentIndex = _messageIndexById[message.id];
+          if (currentIndex != null) {
+            widget.onSelectMessages?.call(currentIndex, widget.messages);
+          }
         }
       },
       toolParts: message.role == 'assistant'
@@ -2512,9 +2513,9 @@ class _MessageListViewState extends State<MessageListView> {
       },
     );
     final retained = _CachedChatMessage(
+      // Position is not a visual input; menu actions resolve the current index.
       inputs: [
         message,
-        index,
         gid,
         chat.showModelIcon,
         chat.useAssistantAvatar,
