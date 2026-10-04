@@ -62,6 +62,9 @@ class McpManagerTool {
     'type': 'function',
     'function': {
       'name': toolName,
+      // cwd/workspaceId distinguish omission from an explicit null reset.
+      // Strict normalization would turn omitted values into destructive clears.
+      'strict': false,
       'description':
           'Manage MCP servers, assistant selection and tool settings using live ids from list. select/unselect target assistant_id or this chat\'s assistant; add/enable/import select it automatically. update changes only supplied config fields. workspaceId binds STDIO /workspace to chat files; add/import default to the chat workspace, explicit null unbinds. Selected tools become available from the next message. Full trust skips confirmations; other mutations require consent. Ordinary env/headers are visible. Never supply or request secrets in chat: use empty secret env/header values or {{NAME}} in args/URL for the user\'s private input card, also in full trust; this server\'s saved secrets are reused by name. import takes Claude Desktop mcpServers JSON. set_timeout changes the global MCP request timeout. Install packages separately through workspace shell; this tool has no installer.',
       'parameters': {
@@ -250,6 +253,8 @@ class McpManagerTool {
           'Use a supported action and at most 16 KiB of arguments.',
         );
       }
+      args = Map<String, dynamic>.of(args)
+        ..removeWhere((_, value) => value == null);
       if (action == 'list') {
         return jsonEncode({
           'ok': true,
@@ -325,6 +330,19 @@ class McpManagerTool {
         }
         final patch = Map<String, dynamic>.of(
           input as Map<String, dynamic>? ?? const {},
+        );
+        patch.removeWhere(
+          (key, value) =>
+              value == null &&
+              const {
+                'type',
+                'command',
+                'args',
+                'url',
+                'env',
+                'headers',
+                'disabled',
+              }.contains(key),
         );
         _validateConfig(patch);
         final config = <String, dynamic>{
@@ -939,7 +957,7 @@ class McpManagerTool {
       'tool_count': live.tools.length,
       'tools': summary['tools'],
       'error':
-          provider.errorFor(server.id) ??
+          summary['error'] ??
           (live.transport == McpTransportType.stdio && !provider.supportsStdio
               ? 'Workspace environment is not ready.'
               : null),

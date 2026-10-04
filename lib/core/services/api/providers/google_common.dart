@@ -13,6 +13,7 @@ import '../../../../utils/markdown_media_sanitizer.dart';
 import '../../../../utils/sandbox_path_resolver.dart';
 import '../builtin_tools.dart';
 import '../chat_api_helpers.dart';
+import '../tool_schema_normalizer.dart';
 import '../tool_call_argument_privacy.dart';
 import '../gemini_tool_config.dart';
 import '../generation/spend_round_control.dart';
@@ -684,7 +685,7 @@ Stream<StreamChunk> sendGoogleStream(
           if (desc.isNotEmpty) 'description': desc,
         };
         if (params != null) {
-          d['parameters'] = cleanSchemaForGemini(params, stringEnumOnly: true);
+          d['parameters'] = params;
         }
         decls.add(d);
       }
@@ -758,6 +759,7 @@ Stream<StreamChunk> sendGoogleStream(
     };
     final extraG = customBody(config, modelId, assistantBody: extraBody);
     if (extraG.isNotEmpty) baseBody.addAll(extraG);
+    normalizeNativeToolSchemas(baseBody, ToolSchemaTarget.gemini);
 
     TokenUsage? totalUsage;
     List<Map<String, dynamic>> currentContents =
@@ -1178,13 +1180,7 @@ Stream<StreamChunk> sendGoogleStream(
         if (desc.isNotEmpty) 'description': desc,
       };
       if (params != null) {
-        // Google Gemini requires strict JSON Schema compliance
-        // Fix array properties that are missing 'items' field
-        final cleanedParams = cleanSchemaForGemini(
-          params,
-          stringEnumOnly: true,
-        );
-        d['parameters'] = cleanedParams;
+        d['parameters'] = params;
       }
       decls.add(d);
     }
@@ -1293,6 +1289,7 @@ Stream<StreamChunk> sendGoogleStream(
         body.addAll(extra);
       }
       body['contents'] = _googleApiContents(convo);
+      normalizeNativeToolSchemas(body, ToolSchemaTarget.gemini);
       request.body = jsonEncode(spendControl?.decorateRequest(body) ?? body);
 
       final resp = await client.send(request);

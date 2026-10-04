@@ -6,7 +6,6 @@ void main() {
     'Gemini cleaning filters constraints inside supported anyOf schemas',
     () {
       final cleaned = cleanSchemaForGemini({
-        'type': 'object',
         'anyOf': [
           {'type': 'number', 'minimum': 1, 'exclusiveMinimum': 0, 'default': 2},
           {'type': 'string', 'minLength': 1, 'unknown': true},
@@ -14,7 +13,12 @@ void main() {
       }, stringEnumOnly: true);
 
       expect(cleaned['anyOf'], [
-        {'type': 'number', 'minimum': 1, 'default': 2},
+        {
+          'type': 'number',
+          'minimum': 1,
+          'default': 2,
+          'description': 'Source constraint exclusiveMinimum: 0.',
+        },
         {'type': 'string', 'minLength': 1},
       ]);
     },
@@ -62,11 +66,14 @@ void main() {
         'type': 'number',
         'minimum': 1,
         'maximum': 10,
+        'description':
+            'Source constraint exclusiveMinimum: 0.\nSource constraint exclusiveMaximum: 11.',
       });
       expect(cleaned['properties']['hosts'], {
         'type': 'array',
         'minItems': 1,
         'maxItems': 3,
+        'description': 'Source constraint uniqueItems: true.',
         'items': {
           'type': 'string',
           'minLength': 1,

@@ -245,7 +245,10 @@ class BrowserAgentTool {
             await session.hover(elementId: id, x: at?.x, y: at?.y),
           );
         case 'type':
-          final text = (args['text'] ?? '').toString();
+          final text = args['text'];
+          if (text is! String) {
+            throw ArgumentError('text must be a string for action=type.');
+          }
           return jsonEncode(
             _boolArg(args, 'human', false)
                 ? await session.typeLikeHuman(_elementId(args), text)
@@ -393,7 +396,11 @@ class BrowserAgentTool {
                   for (final entry in rawHeaders.entries)
                     '${entry.key}': '${entry.value}',
               },
-              maxChars: _intArg(args, 'max_chars', 20000),
+              maxChars: _intArg(
+                args,
+                'max_chars',
+                20000,
+              ).clamp(browserReadMinChars, browserReadMaxChars),
             ),
           );
         case 'close':

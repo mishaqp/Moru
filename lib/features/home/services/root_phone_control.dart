@@ -127,6 +127,11 @@ class RootPhoneControl {
     var height = 0;
     final bounds = RegExp(r'^\[(\d+),(\d+)\]\[(\d+),(\d+)\]$');
     for (final node in XmlDocument.parse(xml).findAllElements('node')) {
+      if (node.ancestors.whereType<XmlElement>().any(
+        (ancestor) => ancestor.getAttribute('password') == 'true',
+      )) {
+        continue;
+      }
       final match = bounds.firstMatch(node.getAttribute('bounds') ?? '');
       if (match == null) continue;
       final [left, top, right, bottom] = [
@@ -141,12 +146,17 @@ class RootPhoneControl {
       }
 
       bool flag(String name) => node.getAttribute(name) == 'true';
-      final text = attribute('text');
-      final description = attribute('content-desc');
+      final password = flag('password');
+      final text = password ? null : attribute('text');
+      final description = password ? null : attribute('content-desc');
       final clickable = flag('clickable') || flag('long-clickable');
       final scrollable = flag('scrollable');
       final editable = attribute('class')?.contains('EditText') ?? false;
-      if (text == null && description == null && !clickable && !scrollable) {
+      if (text == null &&
+          description == null &&
+          !clickable &&
+          !scrollable &&
+          !password) {
         continue;
       }
       if (nodes.length >= maxNodes) break;
@@ -155,6 +165,7 @@ class RootPhoneControl {
         'description': ?description,
         'id': ?attribute('resource-id'),
         'class': ?attribute('class')?.split('.').last,
+        if (password) 'password': true,
         if (clickable) 'clickable': true,
         if (scrollable) 'scrollable': true,
         if (editable) 'editable': true,
@@ -191,6 +202,12 @@ class RootPhoneControl {
       '-a android.intent.action.MAIN -c android.intent.category.LAUNCHER',
     );
     if (result == null) return _noRoot();
+    if (result.exitCode != 0 || result.timedOut) {
+      return _error(
+        'ROOT_FAILED',
+        (result.stderr.isEmpty ? result.stdout : result.stderr).trim(),
+      );
+    }
     final packages = <String>{
       for (final line in const LineSplitter().convert(result.stdout))
         if (line.trim().contains('/')) line.trim().split('/').first,

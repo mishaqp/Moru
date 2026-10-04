@@ -912,14 +912,14 @@ class BrowserAgentSession {
   ];
 
   Future<void> _refreshTitle(BrowserTab tab) async {
+    final url = tab.url;
     String? title;
     try {
       title = await tab.controller.getTitle();
     } catch (_) {
       // No title (the page went away meanwhile); the visit still counts.
     }
-    if (!_tabs.contains(tab)) return;
-    final url = tab.url;
+    if (!_tabs.contains(tab) || tab.url != url) return;
     if (url != null) onVisit(url, title);
     if (title == null || title == tab.title) return;
     tab.title = title;

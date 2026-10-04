@@ -17,6 +17,18 @@ import 'support/fake_webview_platform.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('tool descriptions match full access and all-day defaults', () {
+    final report = LocalToolsService
+        .definitions[LocalToolNames.reportProblem]!['function'];
+    expect(report['description'], contains('global full access'));
+    final calendar = LocalToolsService
+        .definitions[LocalToolNames.calendarCreate]!['function'];
+    expect(
+      calendar['parameters']['properties']['end']['description'],
+      contains('next local day'),
+    );
+  });
+
   test('manage_mcp is opt-in and only mutations require approval', () {
     const disabled = Assistant(id: 'mcp', name: 'MCP');
     final enabled = disabled.copyWith(localToolIds: ['manage_mcp']);
@@ -991,6 +1003,62 @@ void main() {
         expect(calls, isEmpty);
       },
     );
+
+    test('device tools omit null slots and preserve explicit clears', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      const channel = MethodChannel('app.device_tools');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      addTearDown(() {
+        debugDefaultTargetPlatformOverride = null;
+        messenger.setMockMethodCallHandler(channel, null);
+      });
+      final calls = <Map<String, dynamic>>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(jsonDecode(call.arguments as String) as Map<String, dynamic>);
+        return '{"success":true}';
+      });
+      const assistant = Assistant(
+        id: 'a1',
+        name: 'Assistant',
+        localToolIds: [
+          LocalToolNames.calendarUpdate,
+          LocalToolNames.screenTime,
+          LocalToolNames.phoneControl,
+        ],
+      );
+
+      await LocalToolsService.tryHandleToolCall(LocalToolNames.calendarUpdate, {
+        'event_id': 7,
+        'title': null,
+        'description': '',
+        'location': null,
+        'start': null,
+        'end': null,
+        'all_day': null,
+        'reminders': <int>[],
+      }, assistant);
+      await LocalToolsService.tryHandleToolCall(LocalToolNames.screenTime, {
+        'begin': null,
+        'end': null,
+        'range': 'today',
+        'top': null,
+      }, assistant);
+      await LocalToolsService.tryHandleToolCall(LocalToolNames.phoneControl, {
+        'action': 'tap',
+        'snapshot_id': 's1',
+        'x': 10,
+        'y': 20,
+        'node_id': null,
+        'duration_ms': null,
+      }, assistant);
+
+      expect(calls, [
+        {'event_id': 7, 'description': '', 'reminders': <int>[]},
+        {'range': 'today'},
+        {'action': 'tap', 'snapshot_id': 's1', 'x': 10, 'y': 20},
+      ]);
+    });
 
     test(
       'Android permanent denial reaches the UI and settings can open',

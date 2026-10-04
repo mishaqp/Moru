@@ -48,10 +48,18 @@ class MemoryStore extends JsonBlobStore<AssistantMemory> {
     });
   }
 
-  Future<AssistantMemory?> update({required int id, required String content}) {
+  Future<AssistantMemory?> update({
+    required int id,
+    required String content,
+    String? assistantId,
+  }) {
     return runExclusive(() async {
       final all = await readAll();
-      final index = all.indexWhere((memory) => memory.id == id);
+      final index = all.indexWhere(
+        (memory) =>
+            memory.id == id &&
+            (assistantId == null || memory.assistantId == assistantId),
+      );
       if (index == -1) return null;
       final updated = all[index].copyWith(content: content);
       all[index] = updated;
@@ -60,11 +68,15 @@ class MemoryStore extends JsonBlobStore<AssistantMemory> {
     });
   }
 
-  Future<bool> delete({required int id}) {
+  Future<bool> delete({required int id, String? assistantId}) {
     return runExclusive(() async {
       final all = await readAll();
       final before = all.length;
-      all.removeWhere((memory) => memory.id == id);
+      all.removeWhere(
+        (memory) =>
+            memory.id == id &&
+            (assistantId == null || memory.assistantId == assistantId),
+      );
       if (all.length == before) return false;
       await writeAll(all);
       return true;

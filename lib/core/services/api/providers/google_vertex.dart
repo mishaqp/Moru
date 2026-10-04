@@ -12,6 +12,7 @@ import '../../../../utils/mcp_structured_image.dart';
 import '../../../../utils/sandbox_path_resolver.dart';
 import '../builtin_tools.dart';
 import '../chat_api_helpers.dart';
+import '../tool_schema_normalizer.dart';
 import '../tool_call_argument_privacy.dart';
 import '../generation/spend_round_control.dart';
 import '../generation/tool_loop_runner.dart';
@@ -521,6 +522,7 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
         if (outputConfig != null) 'output_config': outputConfig,
       };
       body.addAll(customBody(config, modelId, assistantBody: extraBody));
+      normalizeNativeToolSchemas(body, ToolSchemaTarget.claude);
 
       final request = http.Request('POST', url);
       request.headers.addAll(headers);

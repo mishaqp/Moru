@@ -910,6 +910,13 @@ class WorkspaceToolsService {
       conversationId: conversationId ?? ctx.conversationId,
     );
     if (denied != null) return denied;
+    if (!_enabled(ctx, tool)) {
+      return _errorResult(
+        tool: tool,
+        error: 'tool_disabled',
+        message: 'This tool is disabled for the workspace',
+      );
+    }
 
     final background = _boolArg(args, 'background');
     final timeoutSeconds = background
@@ -1347,6 +1354,26 @@ class WorkspaceToolsService {
     String? conversationId,
   ) {
     const tool = planTool;
+    final entries = args['plan'];
+    if (entries is! List ||
+        entries.any(
+          (entry) =>
+              entry is! Map ||
+              entry['step'] is! String ||
+              (entry['step'] as String).trim().isEmpty ||
+              !const {
+                'pending',
+                'in_progress',
+                'completed',
+              }.contains(entry['status']),
+        )) {
+      return _errorResult(
+        tool: tool,
+        error: 'invalid_arguments',
+        message:
+            'Each plan entry must have a non-empty string step and a valid status',
+      );
+    }
     final plan = TaskPlan.fromArguments(args);
     if (plan == null) {
       return _errorResult(
@@ -1498,14 +1525,12 @@ class WorkspaceToolsService {
         message: 'path is required',
       );
     }
-    final content = args.containsKey('content')
-        ? args['content']?.toString() ?? ''
-        : null;
-    if (content == null) {
+    final content = args['content'];
+    if (content is! String) {
       return _errorResult(
         tool: tool,
         error: 'invalid_arguments',
-        message: 'content is required',
+        message: 'content must be a string',
       );
     }
     late final ResolvedPath resolved;
@@ -1582,11 +1607,13 @@ class WorkspaceToolsService {
         message: 'path is required',
       );
     }
-    if (!args.containsKey('old_string') || !args.containsKey('new_string')) {
+    final oldString = args['old_string'];
+    final newString = args['new_string'];
+    if (oldString is! String || newString is! String) {
       return _errorResult(
         tool: tool,
         error: 'invalid_arguments',
-        message: 'old_string and new_string are required',
+        message: 'old_string and new_string must be strings',
       );
     }
     late final ResolvedPath resolved;
@@ -1614,8 +1641,8 @@ class WorkspaceToolsService {
             checkCancelled: ToolCallCancellation.current?.throwIfCancelled,
           ).editFile(
             path,
-            args['old_string']?.toString() ?? '',
-            args['new_string']?.toString() ?? '',
+            oldString,
+            newString,
             replaceAll: _boolArg(args, 'replace_all'),
             cwd: ctx.cwd,
           );
@@ -1664,7 +1691,14 @@ class WorkspaceToolsService {
     Map<String, dynamic> args,
   ) async {
     const tool = miniAppTool;
-    final path = _stringArg(args, 'path', fallback: ctx.cwd);
+    final path = args['path'];
+    if (path is! String || path.trim().isEmpty) {
+      return _errorResult(
+        tool: tool,
+        error: 'invalid_arguments',
+        message: 'path must be a non-empty string',
+      );
+    }
     try {
       final resolved = await ctx.paths.resolveReal(path, cwd: ctx.cwd);
       if (resolved.zone == WorkspaceZone.outside ||

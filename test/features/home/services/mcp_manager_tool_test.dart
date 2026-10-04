@@ -75,6 +75,104 @@ void main() {
   }
 
   test(
+    'MCP schema preserves omission separately from explicit null resets',
+    () {
+      final function = McpManagerTool.definition['function'] as Map;
+      expect(function['strict'], isFalse);
+      final config =
+          function['parameters']['properties']['config']['properties'] as Map;
+      expect(config['cwd']['type'], ['string', 'null']);
+      expect(config['workspaceId']['type'], ['string', 'null']);
+    },
+  );
+
+  test('strict nullable config fields preserve an update patch', () async {
+    final added = await addDisabled();
+    final id = added['server']['id'];
+    approvals.setAutoApproveAll(true);
+    final updated = await run({
+      'action': 'update',
+      'server_id': id,
+      'name': 'Renamed',
+      'config': {
+        'type': null,
+        'command': null,
+        'args': null,
+        'url': null,
+        'env': null,
+        'headers': null,
+        'disabled': null,
+      },
+    });
+    expect(updated['ok'], isTrue, reason: '$updated');
+    final saved = provider.getById(id)!;
+    expect(saved.name, 'Renamed');
+    expect(saved.transport, McpTransportType.http);
+    expect(saved.url, 'https://example.test/mcp');
+    expect(saved.enabled, isFalse);
+  });
+
+  test(
+    'strict nullable set_tool fields preserve the other tool setting',
+    () async {
+      await provider.importServers([
+        McpServerConfig(
+          id: 'nullable-tool',
+          name: 'Fixture',
+          enabled: false,
+          transport: McpTransportType.http,
+          url: 'https://example.test/mcp',
+          tools: [
+            McpToolConfig(name: 'echo', enabled: true, needsApproval: true),
+          ],
+        ),
+      ]);
+      approvals.setAutoApproveAll(true);
+      for (final edit in [
+        {'enabled': false, 'needs_approval': null},
+        {'enabled': null, 'needs_approval': false},
+      ]) {
+        final result = await run({
+          'action': 'set_tool',
+          'server_id': 'nullable-tool',
+          'tool_name': 'echo',
+          ...edit,
+        });
+        expect(result['ok'], isTrue, reason: '$result');
+      }
+      final saved = provider.getById('nullable-tool')!.tools.single;
+      expect(saved.enabled, isFalse);
+      expect(saved.needsApproval, isFalse);
+    },
+  );
+
+  test('test hides credentials belonging to another saved server', () async {
+    const secret = 'OTHER_MCP_SERVER_PRIVATE_SENTINEL';
+    final server = await _errorServer('Fixture failed: $secret');
+    await provider.importServers([
+      McpServerConfig(
+        id: 'private-owner',
+        name: 'Private',
+        enabled: false,
+        transport: McpTransportType.http,
+        url: 'https://example.test/mcp',
+        headers: {'Authorization': 'Bearer $secret'},
+      ),
+      McpServerConfig(
+        id: 'public-failure',
+        name: 'Failure',
+        enabled: true,
+        transport: McpTransportType.http,
+        url: 'http://127.0.0.1:${server.port}/mcp',
+      ),
+    ]);
+    final result = await run({'action': 'test', 'server_id': 'public-failure'});
+    expect(result['connected'], isFalse);
+    expect(result['error'], contains('Fixture failed'));
+    expect(jsonEncode(result), isNot(contains(secret)));
+  });
+
+  test(
     'ordinary env values are confirmed, saved and returned unchanged',
     () async {
       const path = '/workspace/mcp-memory.json';

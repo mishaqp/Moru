@@ -10,6 +10,7 @@ import '../../../../providers/settings_provider.dart';
 import '../../../../utils/multimodal_input_utils.dart';
 import '../../../../../utils/sandbox_path_resolver.dart';
 import '../../chat_api_helpers.dart';
+import '../../tool_schema_normalizer.dart';
 import '../../generation/spend_round_control.dart';
 import '../../generation/tool_loop_runner.dart';
 import '../../generation/tool_result_images.dart';
@@ -96,23 +97,10 @@ Map<String, dynamic> copyChatCompletionMessage(Map<String, dynamic> m) {
 List<Map<String, dynamic>> cleanToolsForCompatibility(
   List<Map<String, dynamic>> tools,
 ) {
-  final cleaned = tools.map((tool) {
-    final result = Map<String, dynamic>.from(tool);
-    final fn = result['function'];
-    if (fn is Map) {
-      final fnMap = Map<String, dynamic>.from(fn);
-      final params = fnMap['parameters'];
-      if (params is Map) {
-        fnMap['parameters'] = cleanSchemaForGemini(
-          Map<String, dynamic>.from(params),
-        );
-      }
-      result['function'] = fnMap;
-    }
-    return result;
-  }).toList();
-  // print('[ChatApi/Tools] Cleaned ${cleaned.length} tools: ${jsonEncode(cleaned)}');
-  return cleaned;
+  return [
+    for (final tool in tools)
+      normalizeToolDefinition(tool, ToolSchemaTarget.openai),
+  ];
 }
 
 bool _isRemoteImageContentPart(dynamic part) {
@@ -814,8 +802,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
         if (topP != null) 'top_p': topP,
         if (isReasoning && effort != 'off' && effort != 'auto')
           'reasoning_effort': effort,
-        if (tools != null && tools.isNotEmpty)
-          'tools': cleanToolsForCompatibility(tools),
+        if (tools != null && tools.isNotEmpty) 'tools': tools,
         if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
       };
       applyMaxTokens(body2);
@@ -867,6 +854,12 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
         isReasoning: isReasoning,
         thinkingBudget: thinkingBudget,
       );
+      if (body2['tools'] is List) {
+        body2['tools'] = cleanToolsForCompatibility([
+          for (final tool in (body2['tools'] as List).whereType<Map>())
+            Map<String, dynamic>.from(tool),
+        ]);
+      }
       final req2 = http.Request('POST', url);
       req2.headers.addAll(
         customHeaders(

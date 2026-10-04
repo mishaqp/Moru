@@ -18,7 +18,7 @@ import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/api/tool_call_cancellation.dart';
 import '../../../core/services/api/tool_call_argument_privacy.dart';
 import '../../../core/services/mcp/mcp_tool_privacy.dart';
-import '../../../core/services/api/json_schema_utils.dart';
+import '../../../core/services/api/tool_schema_normalizer.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/mcp/mcp_tool_service.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
@@ -125,168 +125,15 @@ class ToolHandlerService {
   // Tool Schema Sanitization
   // ============================================================================
 
-  /// Sanitize/translate JSON Schema to each provider's accepted subset.
-  ///
-  /// Different providers (Google, OpenAI, Claude) have different requirements
-  /// for tool parameter schemas. This method normalizes schemas to work across
-  /// all providers.
+  /// Compatibility entry point; all provider conversion lives in the normalizer.
   static Map<String, dynamic> sanitizeToolParametersForProvider(
     Map<String, dynamic> schema,
     ProviderKind kind,
-  ) {
-    Map<String, dynamic> clone = _deepCloneMap(schema);
-    // Inline local $ref targets first: the allow-list below drops $ref/$defs,
-    // so an unresolved reference would reach the model as an empty schema and
-    // the whole nested object would silently vanish from the tool call.
-    clone = resolveJsonSchemaRefs(
-      clone,
-      expandAdditionalProperties: kind != ProviderKind.google,
-    );
-    clone = _sanitizeNode(clone, kind) as Map<String, dynamic>;
-    return clone;
-  }
-
-  static dynamic _sanitizeNode(dynamic node, ProviderKind kind) {
-    if (node is List) {
-      return node.map((e) => _sanitizeNode(e, kind)).toList();
-    }
-    if (node is! Map) return node;
-
-    final m = Map<String, dynamic>.from(node);
-    // Remove $schema as it's not needed for tool definitions
-    m.remove(r'$schema');
-
-    // Convert 'const' to 'enum' for compatibility
-    if (m.containsKey('const')) {
-      final v = m['const'];
-      if (v is String || v is num || v is bool) {
-        m['enum'] = [v];
-        // Keep the declared type in sync so a non-string const is not mistaken
-        // for a string enum downstream.
-        if (m['type'] == null) {
-          if (v is bool) {
-            m['type'] = 'boolean';
-          } else if (v is int) {
-            m['type'] = 'integer';
-          } else if (v is num) {
-            m['type'] = 'number';
-          } else {
-            m['type'] = 'string';
-          }
-        }
-      }
-      m.remove('const');
-    }
-
-    // Flatten anyOf/oneOf/allOf to first variant for simplicity
-    for (final key in [
-      'anyOf',
-      'oneOf',
-      'allOf',
-      'any_of',
-      'one_of',
-      'all_of',
-    ]) {
-      if (m[key] is List && (m[key] as List).isNotEmpty) {
-        final first = (m[key] as List).first;
-        final flattened = _sanitizeNode(first, kind);
-        m.remove(key);
-        if (flattened is Map<String, dynamic>) {
-          m
-            ..remove('type')
-            ..remove('properties')
-            ..remove('items');
-          m.addAll(flattened);
-        }
-      }
-    }
-
-    // Normalize type array to single type
-    final t = m['type'];
-    if (t is List && t.isNotEmpty) m['type'] = t.first.toString();
-
-    // Normalize items array to single item
-    final items = m['items'];
-    if (items is List && items.isNotEmpty) m['items'] = items.first;
-    if (m['items'] is Map) m['items'] = _sanitizeNode(m['items'], kind);
-
-    // Recursively sanitize properties
-    if (m['properties'] is Map) {
-      final props = Map<String, dynamic>.from(m['properties']);
-      final norm = <String, dynamic>{};
-      props.forEach((k, v) {
-        norm[k] = _sanitizeNode(v, kind);
-      });
-      m['properties'] = norm;
-    }
-
-    // additionalProperties can itself be a schema.
-    if (m['additionalProperties'] is Map) {
-      m['additionalProperties'] = _sanitizeNode(
-        m['additionalProperties'],
-        kind,
-      );
-    }
-
-    // Keep only allowed keys based on provider
-    Set<String> allowed;
-    switch (kind) {
-      case ProviderKind.google:
-        allowed = {
-          'type',
-          'description',
-          'properties',
-          'required',
-          'items',
-          'enum',
-          // Gemini's Schema supports these JSON Schema constraints and
-          // annotations, but not exclusive bounds or uniqueItems.
-          'minimum',
-          'maximum',
-          'minLength',
-          'maxLength',
-          'pattern',
-          'format',
-          'minItems',
-          'maxItems',
-          'default',
-          'title',
-        };
-        break;
-      case ProviderKind.openai:
-      case ProviderKind.claude:
-      case ProviderKind.local:
-        allowed = {
-          'type',
-          'description',
-          'properties',
-          'required',
-          'items',
-          'enum',
-          'additionalProperties',
-          'minimum',
-          'maximum',
-          'exclusiveMinimum',
-          'exclusiveMaximum',
-          'minLength',
-          'maxLength',
-          'pattern',
-          'format',
-          'minItems',
-          'maxItems',
-          'uniqueItems',
-          'default',
-          'title',
-        };
-        break;
-    }
-    m.removeWhere((k, v) => !allowed.contains(k));
-    return m;
-  }
-
-  static Map<String, dynamic> _deepCloneMap(Map<String, dynamic> input) {
-    return jsonDecode(jsonEncode(input)) as Map<String, dynamic>;
-  }
+  ) => normalizeToolSchema(schema, switch (kind) {
+    ProviderKind.google => ToolSchemaTarget.gemini,
+    ProviderKind.claude => ToolSchemaTarget.claude,
+    _ => ToolSchemaTarget.openai,
+  }).parameters;
 
   static String _toolError({
     required String error,
@@ -425,39 +272,14 @@ class ToolHandlerService {
 
     if (tools.isEmpty) return [];
 
-    final providerCfg = settings.getProviderConfig(providerKey);
-    final providerKind = ProviderConfig.classify(
-      providerCfg.id,
-      explicitType: providerCfg.providerType,
-    );
-
     return tools.map((t) {
-      Map<String, dynamic> baseSchema;
-      if (t.schema != null && t.schema!.isNotEmpty) {
-        baseSchema = Map<String, dynamic>.from(t.schema!);
-      } else {
-        final props = <String, dynamic>{
-          for (final p in t.params) p.name: {'type': (p.type ?? 'string')},
-        };
-        final required = [
-          for (final p in t.params.where((e) => e.required)) p.name,
-        ];
-        baseSchema = {
-          'type': 'object',
-          'properties': props,
-          if (required.isNotEmpty) 'required': required,
-        };
-      }
-      final sanitized = sanitizeToolParametersForProvider(
-        baseSchema,
-        providerKind,
-      );
+      final baseSchema = McpToolService.sourceParameters(t);
       return {
         'type': 'function',
         'function': {
           'name': t.name,
           if ((t.description ?? '').isNotEmpty) 'description': t.description,
-          'parameters': sanitized,
+          'parameters': baseSchema,
         },
       };
     }).toList();
@@ -512,6 +334,14 @@ class ToolHandlerService {
     }
 
     final privacy = McpToolPrivacy(mcp);
+    final assistantCredentials = <String>{};
+    Map<String, dynamic> publicAssistantArguments(Map<String, dynamic> args) =>
+        AssistantManagerTool.argumentsForModel(
+          args,
+          assistants: assistantProvider.assistants,
+          catalog: _assistantManagerCatalog(settings, mcp),
+          retainedCredentials: assistantCredentials,
+        );
 
     Future<Object?> approveAndExecuteMcp(
       String name,
@@ -527,8 +357,8 @@ class ToolHandlerService {
           tool: privacy.text(name),
         );
       }
-      if (!settings.toolAutoApproveAll &&
-          approvalService != null &&
+      final needsApproval =
+          !settings.toolAutoApproveAll &&
           toolSvc.toolNeedsApprovalForAssistant(
             mcp,
             assistantProvider,
@@ -536,7 +366,16 @@ class ToolHandlerService {
             toolName: name,
             routeSnapshot: routes,
             reservedNames: BuiltInToolNames.all,
-          )) {
+          );
+      if (needsApproval) {
+        if (approvalService == null) {
+          return _toolError(
+            error: 'approval_unavailable',
+            message: 'This MCP tool requires the user\'s confirmation.',
+            tool: privacy.text(name),
+          );
+        }
+        approvalService.setAutoApproveAll(false);
         final result = await approvalService.requestApproval(
           toolCallId: approvalIdFor(name, toolCallId),
           toolName: name,
@@ -593,10 +432,33 @@ class ToolHandlerService {
           return await approveAndExecuteMcp(name, args, toolCallId: toolCallId);
         }
 
+        final liveAssistant = assistant == null
+            ? null
+            : assistantProvider.getById(assistant.id);
+        bool localPermissionIsLive() =>
+            liveAssistant != null &&
+            LocalToolsService.isAvailableOnThisPlatform(name) &&
+            LocalToolsService.isEnabledForAssistant(name, liveAssistant);
+        if (LocalToolNames.all.contains(name) && !localPermissionIsLive()) {
+          return _toolError(
+            error: 'permission_denied',
+            message: 'This tool is disabled for the current assistant.',
+            tool: name,
+          );
+        }
+
         // Search tool
         if (name == SearchToolService.toolName &&
-            assistant?.searchEnabled == true) {
-          final q = (args['query'] ?? '').toString();
+            liveAssistant?.searchEnabled == true) {
+          final query = args['query'];
+          if (query is! String || query.trim().isEmpty) {
+            return _toolError(
+              error: 'invalid_arguments',
+              message: 'query must be a non-empty string.',
+              tool: name,
+            );
+          }
+          final q = query.trim();
           return await SearchToolService.executeSearch(q, settings);
         }
 
@@ -604,7 +466,7 @@ class ToolHandlerService {
         final memoryResult = await _handleMemoryToolCall(
           name,
           args,
-          assistant,
+          liveAssistant,
           conversationId: conversationId,
         );
         ensureLiveToolCall();
@@ -626,26 +488,30 @@ class ToolHandlerService {
           });
         }
 
-        // Mutating device tools and Shared Browser click/type actions modify
-        // user-visible state, so they require explicit approval first.
+        // Mutations require consent unless the saved global full access is on.
         if (name != LocalToolNames.reportProblem &&
             name != LocalToolNames.mcpManager &&
             name != LocalToolNames.spendControl &&
             LocalToolNames.requiresApprovalFor(name, args) &&
-            assistant != null &&
-            LocalToolsService.isEnabledForAssistant(name, assistant) &&
-            approvalService != null) {
+            localPermissionIsLive() &&
+            !settings.toolAutoApproveAll) {
+          if (approvalService == null) {
+            return _toolError(
+              error: 'approval_unavailable',
+              message: 'This action requires the user\'s confirmation.',
+              tool: name,
+            );
+          }
+          approvalService.setAutoApproveAll(false);
           if (name == LocalToolNames.browserUse) {
-            // Set before the prompt is created (not just inside
-            // BrowserAgentTool.execute, which only runs after approval) so
-            // the browser page can already pick the matching request out of
-            // ToolApprovalService.pendingRequests instead of guessing.
             BrowserAgentSession.instance.setOwnerConversationId(conversationId);
           }
           final approval = await approvalService.requestApproval(
             toolCallId: approvalIdFor(name, toolCallId),
             toolName: name,
-            arguments: args,
+            arguments: name == LocalToolNames.assistantManager
+                ? publicAssistantArguments(args)
+                : args,
             conversationId: conversationId,
           );
           ensureLiveToolCall();
@@ -656,6 +522,30 @@ class ToolHandlerService {
               tool: name,
             );
           }
+        }
+        if (LocalToolNames.all.contains(name)) {
+          final current = assistant == null
+              ? null
+              : assistantProvider.getById(assistant.id);
+          if (current == null ||
+              !LocalToolsService.isEnabledForAssistant(name, current)) {
+            return _toolError(
+              error: 'permission_denied',
+              message: 'This tool was disabled while awaiting confirmation.',
+              tool: name,
+            );
+          }
+        }
+        if (name == LocalToolNames.browserUse &&
+            settings.disabledBrowserActions.contains(
+              (args['action'] ?? '').toString().trim().toLowerCase(),
+            )) {
+          return jsonEncode({
+            'ok': false,
+            'error': 'action_disabled',
+            'message':
+                'This browser action is turned off in Settings > Browser.',
+          });
         }
 
         // Re-read phone-control permission on every call so disabling it also
@@ -831,7 +721,8 @@ class ToolHandlerService {
             LocalToolsService.isEnabledForAssistant(name, assistant)) {
           // Changes are only made after the approval prompt above; a caller
           // without one (e.g. a background run) may only read.
-          if (approvalService == null &&
+          if (!settings.toolAutoApproveAll &&
+              approvalService == null &&
               AssistantManagerTool.requiresApproval(args)) {
             return _toolError(
               error: 'approval_unavailable',
@@ -853,7 +744,8 @@ class ToolHandlerService {
             LocalToolsService.isEnabledForAssistant(name, assistant)) {
           // Changes are only made after the approval prompt above; a caller
           // without one (e.g. a background run) may only read.
-          if (approvalService == null &&
+          if (!settings.toolAutoApproveAll &&
+              approvalService == null &&
               ScheduledTaskTool.requiresApproval(args)) {
             return _toolError(
               error: 'approval_unavailable',
@@ -893,7 +785,8 @@ class ToolHandlerService {
               tool: name,
             );
           }
-          if (approvalService == null &&
+          if (!settings.toolAutoApproveAll &&
+              approvalService == null &&
               LocalToolNames.requiresApprovalFor(name, args)) {
             return _toolError(
               error: 'approval_unavailable',
@@ -911,7 +804,8 @@ class ToolHandlerService {
             LocalToolsService.isEnabledForAssistant(name, assistant)) {
           // Deleting is only done after the approval prompt above; a caller
           // without one (e.g. a background run) may not delete.
-          if (approvalService == null &&
+          if (!settings.toolAutoApproveAll &&
+              approvalService == null &&
               MiniAppDataTool.requiresApproval(args)) {
             return _toolError(
               error: 'approval_unavailable',
@@ -930,7 +824,11 @@ class ToolHandlerService {
 
         if (name == LocalToolNames.browserUse &&
             '${args['action']}'.trim().toLowerCase() == 'export_cookies') {
-          return _exportBrowserCookies(conversationId, approvalService);
+          return _exportBrowserCookies(
+            conversationId,
+            approvalService,
+            fullAccess: settings.toolAutoApproveAll,
+          );
         }
 
         // Local tools
@@ -998,6 +896,15 @@ class ToolHandlerService {
               arguments: args,
               conversationId: conversationId,
             );
+            ensureLiveToolCall();
+            final current = assistantProvider.getById(assistant.id);
+            if (current == null || !current.localToolIds.contains(name)) {
+              return _toolError(
+                error: 'permission_denied',
+                message: 'Ask user was disabled while awaiting an answer.',
+                tool: name,
+              );
+            }
             return result.toJsonString();
           } on AskUserInvalidRequestException catch (e) {
             return _toolError(
@@ -1042,6 +949,9 @@ class ToolHandlerService {
             ),
           ],
         );
+      }
+      if (name == LocalToolNames.assistantManager) {
+        return publicAssistantArguments(args);
       }
       if (routes.containsExposedName(name) ||
           !BuiltInToolNames.all.contains(name)) {
@@ -1125,9 +1035,10 @@ class ToolHandlerService {
   /// after the user's approval, which [handleToolCall] asked for already.
   Future<String> _exportBrowserCookies(
     String? conversationId,
-    ToolApprovalService? approvalService,
-  ) async {
-    if (approvalService == null) {
+    ToolApprovalService? approvalService, {
+    required bool fullAccess,
+  }) async {
+    if (approvalService == null && !fullAccess) {
       return _toolError(
         error: 'approval_unavailable',
         message:
@@ -1179,7 +1090,12 @@ class ToolHandlerService {
     final settings = contextProvider.read<SettingsProvider>();
     if (settings.legacyMemoryMode) {
       if (MemoryTools.allToolNames.contains(name)) return null;
-      return _handleLegacyMemoryToolCall(name, args, assistant);
+      return _handleLegacyMemoryToolCall(
+        name,
+        args,
+        assistant,
+        conversationId: conversationId,
+      );
     }
 
     if (assistant == null) return null;
@@ -1248,8 +1164,9 @@ class ToolHandlerService {
   Future<String?> _handleLegacyMemoryToolCall(
     String name,
     Map<String, dynamic> args,
-    Assistant? assistant,
-  ) async {
+    Assistant? assistant, {
+    String? conversationId,
+  }) async {
     if (assistant?.enableMemory != true) return null;
     if (name != 'create_memory' &&
         name != 'edit_memory' &&
@@ -1258,37 +1175,49 @@ class ToolHandlerService {
     }
 
     try {
+      if (_optional<ChatService>()?.isTemporaryConversation(conversationId) ??
+          false) {
+        return _toolError(
+          error: 'temporary_conversation',
+          message: 'Memory cannot be written from a temporary conversation.',
+          tool: name,
+        );
+      }
       final mp = contextProvider.read<MemoryProvider>();
 
       if (name == 'create_memory') {
-        final content = (args['content'] ?? '').toString();
-        if (content.isEmpty) {
+        final content = args['content'];
+        if (content is! String || content.isEmpty) {
           return _toolError(
             error: 'invalid_memory_content',
-            message: 'Memory content must not be empty.',
+            message: 'Memory content must be a non-empty string.',
             tool: name,
           );
         }
         final m = await mp.add(assistantId: assistant!.id, content: content);
         return m.content;
       } else if (name == 'edit_memory') {
-        final id = (args['id'] as num?)?.toInt() ?? -1;
-        final content = (args['content'] ?? '').toString();
-        if (id <= 0) {
+        final id = args['id'];
+        final content = args['content'];
+        if (id is! num || !id.isFinite || id <= 0 || id != id.toInt()) {
           return _toolError(
             error: 'invalid_memory_id',
             message: 'Memory id must be a positive integer.',
             tool: name,
           );
         }
-        if (content.isEmpty) {
+        if (content is! String || content.isEmpty) {
           return _toolError(
             error: 'invalid_memory_content',
-            message: 'Memory content must not be empty.',
+            message: 'Memory content must be a non-empty string.',
             tool: name,
           );
         }
-        final m = await mp.update(id: id, content: content);
+        final m = await mp.update(
+          id: id.toInt(),
+          content: content,
+          assistantId: assistant!.id,
+        );
         if (m == null) {
           return _toolError(
             error: 'memory_not_found',
@@ -1300,15 +1229,15 @@ class ToolHandlerService {
         }
         return m.content;
       } else if (name == 'delete_memory') {
-        final id = (args['id'] as num?)?.toInt() ?? -1;
-        if (id <= 0) {
+        final id = args['id'];
+        if (id is! num || !id.isFinite || id <= 0 || id != id.toInt()) {
           return _toolError(
             error: 'invalid_memory_id',
             message: 'Memory id must be a positive integer.',
             tool: name,
           );
         }
-        final ok = await mp.delete(id: id);
+        final ok = await mp.delete(id: id.toInt(), assistantId: assistant!.id);
         if (!ok) {
           return _toolError(
             error: 'memory_not_found',

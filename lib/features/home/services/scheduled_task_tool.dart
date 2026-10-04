@@ -334,7 +334,7 @@ class ScheduledTaskTool {
         case 'weekdays':
           weekdays = const [1, 2, 3, 4, 5];
       }
-      if (repeat == 'custom' || args.containsKey('weekdays')) {
+      if (repeat == 'custom' || args['weekdays'] != null) {
         final raw = args['weekdays'];
         final days = raw is List
             ? {
@@ -350,8 +350,8 @@ class ScheduledTaskTool {
         }
         weekdays = days.toList()..sort();
       }
-      if (args.containsKey('start_date')) startDate = _date(args, 'start_date');
-      if (args.containsKey('end_date')) endDate = _date(args, 'end_date');
+      if (args['start_date'] != null) startDate = _date(args, 'start_date');
+      if (args['end_date'] != null) endDate = _date(args, 'end_date');
     }
 
     var mode = base.mode;

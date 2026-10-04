@@ -138,6 +138,22 @@ void main() {
       expect(result['keys'], ['big']);
       expect(result.containsKey('data'), isFalse);
     });
+
+    test('a supplied null is stored as data and keeps the key', () async {
+      final result = await run({
+        'action': 'write',
+        'app_id': 'water',
+        'key': 'optional',
+        'value': null,
+      });
+
+      expect(result['ok'], isTrue);
+      expect(await store.storageKeys('water'), ['optional']);
+      expect(
+        await run({'action': 'read', 'app_id': 'water', 'key': 'optional'}),
+        {'ok': true, 'key': 'optional', 'value': null},
+      );
+    });
   });
 
   group('bridge host', () {
