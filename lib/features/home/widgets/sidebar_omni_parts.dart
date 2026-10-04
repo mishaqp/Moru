@@ -10,6 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/models/sidebar_appearance.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import 'sidebar_glass.dart';
 
 /// The same conversation presentation is used by the drawer and its preview.
 /// Provider subscriptions and history reads belong to the drawer's tile.
@@ -243,7 +244,9 @@ class SidebarDockCapsule extends StatelessWidget {
 Color sidebarSecondarySurface(BuildContext context, {required bool glass}) {
   final cs = Theme.of(context).colorScheme;
   final dark = Theme.of(context).brightness == Brightness.dark;
-  if (glass) return cs.surface.withValues(alpha: dark ? 0.34 : 0.55);
+  if (glass || sidebarSurfacesClear(context, embedded: false)) {
+    return cs.surface.withValues(alpha: dark ? 0.34 : 0.55);
+  }
   return dark
       ? Color.lerp(cs.surface, cs.onSurface, 0.07)!
       : Color.lerp(cs.surface, cs.onSurface, 0.04)!;
@@ -255,6 +258,13 @@ Color sidebarElevatedSurface(BuildContext context) {
   final cs = Theme.of(context).colorScheme;
   final dark = Theme.of(context).brightness == Brightness.dark;
   return Color.lerp(cs.surface, cs.onSurface, dark ? 0.12 : 0.08)!;
+}
+
+Color _sidebarSearchFocusSurface(BuildContext context) {
+  final surface = sidebarElevatedSurface(context);
+  if (!sidebarSurfacesClear(context, embedded: false)) return surface;
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  return surface.withValues(alpha: dark ? 0.6 : 0.75);
 }
 
 /// OmniBot's `textTertiary`, for section headers and hints.
@@ -300,7 +310,7 @@ class SidebarSearchField extends StatelessWidget {
     final background = focused && !glass
         ? Color.lerp(
             sidebarSecondarySurface(context, glass: glass),
-            sidebarElevatedSurface(context),
+            _sidebarSearchFocusSurface(context),
             0.9,
           )!
         : sidebarSecondarySurface(context, glass: glass);

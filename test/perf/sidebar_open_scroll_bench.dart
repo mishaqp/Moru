@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import '../support/business_test_harness.dart';
 
+import 'package:Kelivo/core/models/chat_appearance.dart';
 import 'package:Kelivo/core/models/conversation.dart';
+import 'package:Kelivo/core/models/sidebar_appearance.dart';
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/backup_reminder_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
@@ -10,6 +13,7 @@ import 'package:Kelivo/core/providers/tag_provider.dart';
 import 'package:Kelivo/core/providers/update_provider.dart';
 import 'package:Kelivo/core/providers/user_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
+import 'package:Kelivo/features/chat/widgets/chat_background.dart';
 import 'package:Kelivo/features/home/widgets/side_drawer.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
@@ -23,8 +27,13 @@ import 'package:provider/provider.dart';
 /// Android raster, database hydration or image decoding. The service supplies
 /// already-loaded summaries, as it does when the user opens the drawer.
 /// Run explicitly: flutter test test/perf/sidebar_open_scroll_bench.dart
+/// Add --dart-define=SIDEBAR_PHOTO=true for a precached static photo with blur.
+/// SIDEBAR_OPEN_WARMUPS controls disposable openings before 10 timed samples
+/// (default 1); use --dart-define=SIDEBAR_OPEN_WARMUPS=15 for longer warmup.
 void main() {
   final binding = _FrameBinding();
+  const photo = bool.fromEnvironment('SIDEBAR_PHOTO');
+  const warmups = int.fromEnvironment('SIDEBAR_OPEN_WARMUPS', defaultValue: 1);
 
   for (final count in const [200, 1000]) {
     for (final tablet in const [false, true]) {
@@ -53,6 +62,7 @@ void main() {
           late final TagProvider tags;
           late final UserProvider user;
           late final UpdateProvider update;
+          File? photoFile;
           await tester.runAsync(() async {
             // Native SQLite work and its write queue must start in the real
             // async zone; otherwise Glass's writes can wait on the fake clock.
@@ -70,6 +80,20 @@ void main() {
             await assistants.loaded;
             await backup.load(startTimer: false);
             if (glass) await settings.setGlassTheme(true);
+            if (photo) {
+              photoFile = await _createPhoto(directory);
+              await settings.setChatAppearance(
+                ChatAppearanceSettings(
+                  light: ChatBackgroundSettings(
+                    type: ChatBackgroundType.image,
+                    path: photoFile!.path,
+                  ),
+                ),
+              );
+              await settings.setSidebarAppearance(
+                const SidebarAppearanceSettings(maskStrength: 1, blur: 12),
+              );
+            }
           });
 
           final openUi = <int>[];
@@ -80,6 +104,8 @@ void main() {
           var openListReads = 0;
           var openConversationReads = 0;
           var openThumbnailReads = 0;
+          var openBackgroundFilters = 0;
+          var openBackgroundProviders = 0;
           _SummaryChatService? service;
 
           Widget root(_SummaryChatService chat, {bool opened = true}) =>
@@ -116,10 +142,18 @@ void main() {
 
           debugDefaultTargetPlatformOverride = TargetPlatform.android;
           try {
+            if (photoFile != null) {
+              final screenSize =
+                  tester.view.physicalSize / tester.view.devicePixelRatio;
+              await _precachePhoto(tester, photoFile!, [
+                screenSize,
+                Size(tablet ? 300 : screenSize.width, screenSize.height),
+              ]);
+            }
             // Prime framework/font work with a disposable drawer. Every timed
             // opening gets fresh Conversation and service objects and a new
             // SideDrawer state, so its row memo cannot survive the last opening.
-            for (var opening = 0; opening < 11; opening++) {
+            for (var opening = 0; opening < warmups + 10; opening++) {
               final previousService = service;
               service = _SummaryChatService(count);
               // Keep the app/localizations mounted, as they are when opening
@@ -128,6 +162,9 @@ void main() {
               previousService?.dispose();
               final listBefore = SideDrawer.debugConversationListBuildCount;
               final rowsBefore = SideDrawer.debugSidebarRowsComputeCount;
+              final filtersBefore = debugChatBackgroundFilterBuildCount;
+              final providersBefore =
+                  debugChatBackgroundImageProviderBuildCount;
               var builds = 0;
               debugOnRebuildDirtyWidget = (_, _) => builds++;
               binding.lastBuildUs = 0;
@@ -135,7 +172,7 @@ void main() {
               await tester.pumpWidget(root(service));
               watch.stop();
               debugOnRebuildDirtyWidget = null;
-              if (opening > 0) {
+              if (opening >= warmups) {
                 openUi.add(watch.elapsedMicroseconds);
                 openBuild.add(binding.lastBuildUs);
                 openWidgetBuilds += builds;
@@ -146,6 +183,11 @@ void main() {
                 openListReads += service.listReads;
                 openConversationReads += service.conversationReads;
                 openThumbnailReads += service.thumbnailReads;
+                openBackgroundFilters +=
+                    debugChatBackgroundFilterBuildCount - filtersBefore;
+                openBackgroundProviders +=
+                    debugChatBackgroundImageProviderBuildCount -
+                    providersBefore;
               }
               await tester.pump(const Duration(milliseconds: 500));
               await tester.pump();
@@ -171,6 +213,8 @@ void main() {
             chat.resetReads();
             final listBefore = SideDrawer.debugConversationListBuildCount;
             final rowsBefore = SideDrawer.debugSidebarRowsComputeCount;
+            final filtersBefore = debugChatBackgroundFilterBuildCount;
+            final providersBefore = debugChatBackgroundImageProviderBuildCount;
             var scrollWidgetBuilds = 0;
             debugOnRebuildDirtyWidget = (_, _) => scrollWidgetBuilds++;
             final scrollUi = <int>[];
@@ -196,12 +240,15 @@ void main() {
             // ignore: avoid_print
             print(
               'SIDEBAR_RESULT count=$count layout=${tablet ? 'tablet' : 'phone'} '
-              'glass=$glass size=${tablet ? '800x600' : '390x844'} '
+              'glass=$glass photo=$photo warmups=$warmups '
+              'size=${tablet ? '800x600' : '390x844'} '
               'openSamples=${openUi.length} ${_stats('openUi', openUi)} '
               '${_stats('openBuild', openBuild)} '
               'openWidgetBuilds=$openWidgetBuilds openListBuilds=$openListBuilds '
               'openRowsComputes=$openRowsComputes openListReads=$openListReads '
               'openConversationReads=$openConversationReads openThumbnailReads=$openThumbnailReads '
+              'openBackgroundFilters=$openBackgroundFilters '
+              'openBackgroundProviders=$openBackgroundProviders '
               'elements=$elements tiles=$tiles maxTiles=$maxTiles '
               'scrollSamples=${scrollUi.length} ${_stats('scrollUi', scrollUi)} '
               '${_stats('scrollBuild', scrollBuild)} '
@@ -210,7 +257,9 @@ void main() {
               'scrollRowsComputes=${SideDrawer.debugSidebarRowsComputeCount - rowsBefore} '
               'scrollListReads=${chat.listReads} '
               'scrollConversationReads=${chat.conversationReads} '
-              'scrollThumbnailReads=${chat.thumbnailReads}',
+              'scrollThumbnailReads=${chat.thumbnailReads} '
+              'scrollBackgroundFilters=${debugChatBackgroundFilterBuildCount - filtersBefore} '
+              'scrollBackgroundProviders=${debugChatBackgroundImageProviderBuildCount - providersBefore}',
             );
           } finally {
             debugOnRebuildDirtyWidget = null;
@@ -228,6 +277,71 @@ void main() {
         });
       }
     }
+  }
+}
+
+Future<File> _createPhoto(Directory directory) async {
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  canvas.drawRect(
+    const Rect.fromLTWH(0, 0, 960, 640),
+    Paint()
+      ..shader = ui.Gradient.linear(
+        Offset.zero,
+        const Offset(960, 640),
+        [
+          const Color(0xfff0b572),
+          const Color(0xff327771),
+          const Color(0xff294967),
+        ],
+        [0, .5, 1],
+      ),
+  );
+  for (var i = 0; i < 16; i++) {
+    canvas.drawCircle(
+      Offset(60.0 * i, 160 + (i % 4) * 100.0),
+      50 + (i % 3) * 20.0,
+      Paint()..color = Colors.white.withValues(alpha: .08 + (i % 3) * .06),
+    );
+  }
+  final picture = recorder.endRecording();
+  final image = await picture.toImage(960, 640);
+  try {
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    return await File(
+      '${directory.path}/photo.png',
+    ).writeAsBytes(bytes!.buffer.asUint8List(), flush: true);
+  } finally {
+    image.dispose();
+    picture.dispose();
+  }
+}
+
+Future<void> _precachePhoto(
+  WidgetTester tester,
+  File file,
+  List<Size> sizes,
+) async {
+  const cacheKey = ValueKey('sidebar-photo-precache');
+  await tester.pumpWidget(const MaterialApp(home: SizedBox(key: cacheKey)));
+  final context = tester.element(find.byKey(cacheKey));
+  final dpr = tester.view.devicePixelRatio;
+  // Warm both the full-screen shared artwork and the older panel-local fit
+  // before mounting the real drawer. Decoding FileImage in the fake async zone
+  // can otherwise stall, and decode time is outside this benchmark's scope.
+  for (final size in sizes.toSet()) {
+    await tester.runAsync(
+      () => precacheImage(
+        ResizeImage(
+          FileImage(file),
+          width: (size.width * dpr).ceil(),
+          height: (size.height * dpr).ceil(),
+          policy: ResizeImagePolicy.fit,
+          allowUpscaling: false,
+        ),
+        context,
+      ),
+    );
   }
 }
 
