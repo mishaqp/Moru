@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:mcp_client/mcp_client.dart' as mcp;
 import '../../providers/mcp_provider.dart';
+import 'mcp_tool_privacy.dart';
 import '../chat/chat_service.dart';
 import '../../providers/assistant_provider.dart';
 import '../../../utils/app_directories.dart';
@@ -21,8 +22,10 @@ class _McpToolRoute {
 }
 
 class McpToolRouteSnapshot {
-  McpToolRouteSnapshot._(List<_McpToolRoute> routes)
+  McpToolRouteSnapshot._(List<_McpToolRoute> routes, this._privacy)
     : _routes = List.unmodifiable(routes);
+
+  final McpToolPrivacy _privacy;
 
   final List<_McpToolRoute> _routes;
 
@@ -56,7 +59,11 @@ class McpToolService extends ChangeNotifier {
     Set<String> reservedNames = const {},
   }) {
     if (routeSnapshot != null) {
-      return _exposedToolsForRoutes(routeSnapshot._routes);
+      routeSnapshot._privacy.capture(mcpProvider);
+      return _exposedToolsForRoutes(
+        routeSnapshot._routes,
+        routeSnapshot._privacy,
+      );
     }
     final a = (assistantId != null)
         ? assistants.getById(assistantId)
@@ -77,7 +84,7 @@ class McpToolService extends ChangeNotifier {
 
     final route = _findRoute(mcpProvider, selected, toolName);
     if (route == null) return null;
-    return mcpProvider.callTool(route.server.id, route.tool.name, arguments);
+    return _callPrivate(mcpProvider, route, arguments);
   }
 
   Future<McpToolResult> callFlattenedToolForConversation(
@@ -89,21 +96,18 @@ class McpToolService extends ChangeNotifier {
   }) async {
     final selected = chat.getConversationMcpServers(conversationId).toSet();
     final route = _findRoute(mcpProvider, selected, toolName);
+    final privacy = McpToolPrivacy(mcpProvider);
     final res = route == null
         ? null
-        : await mcpProvider.callTool(
-            route.server.id,
-            route.tool.name,
-            arguments,
-          );
+        : await _callPrivate(mcpProvider, route, arguments, privacy: privacy);
     if (res == null) {
       if (route != null) {
-        final errMsg =
-            mcpProvider.errorFor(route.server.id) ??
-            'MCP server is unavailable.';
+        final errMsg = privacy.text(
+          mcpProvider.errorFor(route.server.id) ?? 'MCP server is unavailable.',
+        );
         return McpToolResult(
           markdown: _renderToolErrorForModel(
-            serverName: route.server.name,
+            serverName: privacy.text(route.server.name),
             toolName: toolName,
             errorMessage: errMsg,
           ),
@@ -159,17 +163,20 @@ class McpToolService extends ChangeNotifier {
         );
         if (route == null) return const McpToolResult();
         final s = route.server;
-        final res = await mcpProvider.callTool(
-          s.id,
-          route.tool.name,
+        final privacy = McpToolPrivacy(mcpProvider);
+        final res = await _callPrivate(
+          mcpProvider,
+          route,
           arguments,
+          privacy: privacy,
         );
         if (res == null) {
-          final errMsg =
-              mcpProvider.errorFor(s.id) ?? 'MCP server is unavailable.';
+          final errMsg = privacy.text(
+            mcpProvider.errorFor(s.id) ?? 'MCP server is unavailable.',
+          );
           return McpToolResult(
             markdown: _renderToolErrorForModel(
-              serverName: s.name,
+              serverName: privacy.text(s.name),
               toolName: toolName,
               errorMessage: errMsg,
             ),
@@ -242,7 +249,44 @@ class McpToolService extends ChangeNotifier {
     final selected = (assistant?.mcpServerIds ?? const <String>[]).toSet();
     return McpToolRouteSnapshot._(
       _toolRoutes(mcpProvider, selected, reservedNames: reservedNames),
+      McpToolPrivacy(mcpProvider),
     );
+  }
+
+  bool argumentsContainCredentials(
+    McpProvider provider,
+    Map<String, dynamic> arguments,
+  ) => McpToolPrivacy(provider).containsCredential(arguments);
+
+  Future<mcp.CallToolResult?> _callPrivate(
+    McpProvider provider,
+    _McpToolRoute route,
+    Map<String, dynamic> arguments, {
+    McpToolPrivacy? privacy,
+  }) async {
+    final filter = privacy ?? McpToolPrivacy(provider);
+    if (filter.containsCredential(arguments)) {
+      return mcp.CallToolResult([
+        const mcp.TextContent(
+          text:
+              'MCP credential literals are not accepted in tool arguments. Configure credentials privately in MCP settings.',
+        ),
+      ], isError: true);
+    }
+    try {
+      final result = await provider.callTool(
+        route.server.id,
+        route.tool.name,
+        arguments,
+      );
+      filter.capture(provider);
+      return result == null ? null : filter.result(result);
+    } catch (error) {
+      filter.capture(provider);
+      return mcp.CallToolResult([
+        mcp.TextContent(text: filter.text(error.toString())),
+      ], isError: true);
+    }
   }
 
   Future<McpToolResult> _flattenToolResult(mcp.CallToolResult res) async {
@@ -342,12 +386,17 @@ class McpToolService extends ChangeNotifier {
   }) {
     return _exposedToolsForRoutes(
       _toolRoutes(provider, selected, reservedNames: reservedNames),
+      McpToolPrivacy(provider),
     );
   }
 
-  List<McpToolConfig> _exposedToolsForRoutes(Iterable<_McpToolRoute> routes) {
+  List<McpToolConfig> _exposedToolsForRoutes(
+    Iterable<_McpToolRoute> routes,
+    McpToolPrivacy privacy,
+  ) {
     return [
-      for (final route in routes) route.tool.copyWith(name: route.exposedName),
+      for (final route in routes)
+        privacy.tool(route.tool).copyWith(name: route.exposedName),
     ];
   }
 
@@ -396,6 +445,7 @@ class McpToolService extends ChangeNotifier {
     Set<String> selected, {
     Set<String> reservedNames = const {},
   }) {
+    final privacy = McpToolPrivacy(provider);
     final entries = <({McpServerConfig server, McpToolConfig tool})>[];
     for (final server in provider.servers) {
       if (!server.enabled || !selected.contains(server.id)) continue;
@@ -431,7 +481,20 @@ class McpToolService extends ChangeNotifier {
       if (!conflicted) {
         usedNames.remove(entry.tool.name);
       }
-      final uniqueName = _claimUniqueName(base, usedNames, entry.server.id);
+      var uniqueName = _claimUniqueName(base, usedNames, entry.server.id);
+      if (privacy.nameContainsCredential(entry.tool.name) ||
+          (conflicted && privacy.nameContainsCredential(entry.server.name)) ||
+          privacy.nameContainsCredential(uniqueName)) {
+        final privateName = McpToolPrivacy.privateToolName(
+          entry.server.id,
+          entry.tool.name,
+        );
+        uniqueName = _claimUniqueName(
+          privateName,
+          usedNames,
+          privateName.substring(9),
+        );
+      }
       routes.add(
         _McpToolRoute(
           server: entry.server,

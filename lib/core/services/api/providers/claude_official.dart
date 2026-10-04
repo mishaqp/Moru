@@ -13,6 +13,7 @@ import '../../../utils/multimodal_input_utils.dart';
 import '../../../../utils/mcp_structured_image.dart';
 import '../builtin_tools.dart';
 import '../chat_api_helpers.dart';
+import '../tool_call_argument_privacy.dart';
 import '../generation/tool_loop_runner.dart';
 import '../generation/tool_result_images.dart';
 import '../stream/sse_framing.dart';
@@ -259,7 +260,10 @@ Stream<StreamChunk> sendClaudeStream(
   // replays from its text alone and stores nothing.
   final turnResponses = <List<Map<String, dynamic>>>[];
   Stream<StreamChunk> recordTurn(List<Map<String, dynamic>> response) async* {
-    turnResponses.add(response);
+    turnResponses.add(
+      (ToolCallArgumentPrivacy.protocolValue(onToolCall, response) as List)
+          .cast<Map<String, dynamic>>(),
+    );
     if (toolUseIdsInBlocks(turnResponses.expand((b) => b)).isNotEmpty) {
       yield ProviderArtifact(
         kind: claudeTurnArtifactKind,
@@ -498,7 +502,11 @@ Stream<StreamChunk> sendClaudeStream(
         }
         // The continuation round sends these, so they go through the same
         // sanitising as replayed history; the stored copy stays whole.
-        lastAssistantBlocks = history.sanitize(assistantBlocks);
+        lastAssistantBlocks = history.sanitize(
+          (ToolCallArgumentPrivacy.protocolValue(onToolCall, assistantBlocks)
+                  as List)
+              .cast<Map<String, dynamic>>(),
+        );
         nonStreamText.write(joinedTextOfBlocks(assistantBlocks));
         final decoder = ClaudeStreamDecoder(
           skipRedactedThinkingBlocks: skipRedactedThinkingBlocks,
@@ -629,7 +637,11 @@ Stream<StreamChunk> sendClaudeStream(
 
       // The continuation round sends these as they are, so they go through the
       // same sanitising as replayed history — the stored copy stays whole.
-      lastAssistantBlocks = history.sanitize(assistantBlocks);
+      lastAssistantBlocks = history.sanitize(
+        (ToolCallArgumentPrivacy.protocolValue(onToolCall, assistantBlocks)
+                as List)
+            .cast<Map<String, dynamic>>(),
+      );
       yield* recordTurn(assistantBlocks);
       if (decoder.clientTools.isEmpty) {
         pauseTurn = (lastStopReason ?? '') == 'pause_turn';

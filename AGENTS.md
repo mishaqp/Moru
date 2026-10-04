@@ -58,16 +58,19 @@ package name does not require building other platforms.
   running the chat or the last one. Extend its settings schema when
   `Assistant` gains a user-facing field.
 - **MCP manager tool**: the opt-in, default-off `manage_mcp` lists, reads and
-  tests live MCP servers; add/update/enable/disable/remove use ordinary tool
-  confirmation without individual "Always allow". Credentials are entered
-  privately on its approval card or in MCP settings, never in model arguments
-  or results. Full trust cannot fill missing credentials. It reuses the MCP
-  JSON importer and runtime; package installation stays in workspace `shell`.
-  Ordinary env/header values are visible; literal secret assignments in shell
-  arguments are rejected. New STDIO servers default to the chat workspace
-  unless explicitly bound elsewhere or unbound. Responses note that new tools
-  become available from the next message; listed tool availability also
-  requires an enabled, connected server.
+  tests live servers, imports/configures them, selects them for assistants,
+  configures individual tools, refreshes/reconnects and sets the existing
+  global timeout. Mutations require consent without individual "Always allow";
+  full trust skips consent, including MCP tools marked as requiring approval.
+  Missing credentials use private user fields (Save/Cancel in full trust),
+  and saved credentials are reused by name without entering model arguments,
+  results, history or logs. Ordinary env/header values stay visible. It reuses
+  the MCP importer/runtime; package installation stays in workspace `shell`.
+  New STDIO servers default to the chat workspace unless explicitly unbound;
+  add/enable/import select the chat assistant. New tools appear from the next
+  message; availability requires an enabled, connected server. Removed ids
+  are cleared from assistants/chats; old dead ids are ignored on read and
+  pruned on save without a migration.
 - **Problem reports**: opt-in `report_problem` asks for fresh consent unless
   global full-trust mode is enabled; individual "Always allow" is unavailable.
   `ProblemReportService` exports a private ZIP with

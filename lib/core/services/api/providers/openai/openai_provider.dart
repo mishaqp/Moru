@@ -12,6 +12,7 @@ import '../../../../utils/multimodal_input_utils.dart';
 import '../../../../../utils/sandbox_path_resolver.dart';
 import '../../builtin_tools.dart';
 import '../../chat_api_helpers.dart';
+import '../../tool_call_argument_privacy.dart';
 import '../../generation/tool_loop_runner.dart';
 import '../../kimi_formula_search.dart';
 import '../../stream/sse_framing.dart';
@@ -210,7 +211,9 @@ Stream<StreamChunk> sendOpenAIStream(
 
   final ToolCallHandler? effectiveOnToolCall =
       (onToolCall != null || kimiFormulaTools.isNotEmpty)
-      ? resolveToolCall
+      ? (onToolCall == null
+            ? resolveToolCall
+            : ToolCallArgumentPrivacy.propagate(onToolCall, resolveToolCall))
       : null;
 
   Map<String, dynamic> body;

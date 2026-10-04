@@ -16,6 +16,8 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/tts_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/api/tool_call_cancellation.dart';
+import '../../../core/services/api/tool_call_argument_privacy.dart';
+import '../../../core/services/mcp/mcp_tool_privacy.dart';
 import '../../../core/services/api/json_schema_utils.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/mcp/mcp_tool_service.dart';
@@ -237,6 +239,18 @@ class ToolHandlerService {
           'required',
           'items',
           'enum',
+          // Gemini's Schema supports these JSON Schema constraints and
+          // annotations, but not exclusive bounds or uniqueItems.
+          'minimum',
+          'maximum',
+          'minLength',
+          'maxLength',
+          'pattern',
+          'format',
+          'minItems',
+          'maxItems',
+          'default',
+          'title',
         };
         break;
       case ProviderKind.openai:
@@ -250,6 +264,19 @@ class ToolHandlerService {
           'items',
           'enum',
           'additionalProperties',
+          'minimum',
+          'maximum',
+          'exclusiveMinimum',
+          'exclusiveMaximum',
+          'minLength',
+          'maxLength',
+          'pattern',
+          'format',
+          'minItems',
+          'maxItems',
+          'uniqueItems',
+          'default',
+          'title',
         };
         break;
     }
@@ -484,12 +511,24 @@ class ToolHandlerService {
       }
     }
 
+    final privacy = McpToolPrivacy(mcp);
+
     Future<Object?> approveAndExecuteMcp(
       String name,
       Map<String, dynamic> args, {
       String? toolCallId,
     }) async {
-      if (approvalService != null &&
+      privacy.capture(mcp);
+      if (privacy.containsCredential(args)) {
+        return _toolError(
+          error: 'credential_arguments',
+          message:
+              'MCP credential literals are not accepted in tool arguments. Configure credentials privately in MCP settings.',
+          tool: privacy.text(name),
+        );
+      }
+      if (!settings.toolAutoApproveAll &&
+          approvalService != null &&
           toolSvc.toolNeedsApprovalForAssistant(
             mcp,
             assistantProvider,
@@ -504,11 +543,14 @@ class ToolHandlerService {
           arguments: args,
           conversationId: conversationId,
         );
+        privacy.capture(mcp);
         if (!result.approved) {
           return _toolError(
             error: 'approval_denied',
-            message: result.denyReason ?? 'User denied the tool call',
-            tool: name,
+            message: privacy.text(
+              result.denyReason ?? 'User denied the tool call',
+            ),
+            tool: privacy.text(name),
           );
         }
       }
@@ -527,7 +569,11 @@ class ToolHandlerService {
 
     final workspaceTools = workspaceContext == null ? null : _workspaceTools();
 
-    return (name, args, {toolCallId}) async {
+    Future<Object?> handler(
+      String name,
+      Map<String, dynamic> args, {
+      String? toolCallId,
+    }) async {
       try {
         ensureLiveToolCall();
         if (workspaceContext != null &&
@@ -719,6 +765,9 @@ class ToolHandlerService {
                     : null);
           return McpManagerTool(
             provider: mcp,
+            assistants: assistantProvider,
+            chat: _optional<ChatService>(),
+            currentAssistantId: conversation?.assistantId ?? assistant?.id,
             defaultWorkspaceId: binding?.isBound == true
                 ? binding!.workspaceId
                 : null,
@@ -963,15 +1012,44 @@ class ToolHandlerService {
       } catch (e) {
         // Catch unexpected exceptions and return error JSON to LLM
         // This prevents tool failures from terminating the chat flow
+        privacy.capture(mcp);
         return _toolError(
           error: 'execution_error',
-          message: e.toString(),
-          tool: name,
+          message: privacy.text(e.toString()),
+          tool: privacy.text(name),
           instruction:
               'The tool execution failed unexpectedly. You may try again with different parameters or inform the user about the issue.',
         );
       }
-    };
+    }
+
+    return ToolCallArgumentPrivacy.register(handler, (name, args) {
+      final publicName = args['value'];
+      if (name == '__mcp_private_name__' &&
+          publicName is String &&
+          (BuiltInToolNames.all.contains(publicName) ||
+              routes.containsExposedName(publicName))) {
+        return args;
+      }
+      if (name == LocalToolNames.mcpManager) {
+        privacy.capture(mcp);
+        return privacy.managerArgumentsForModel(
+          args,
+          publicIds: [
+            ...assistantProvider.assistants.map((assistant) => assistant.id),
+            ...?_optional<WorkspaceProvider>()?.workspaces.map(
+              (workspace) => workspace.id,
+            ),
+          ],
+        );
+      }
+      if (routes.containsExposedName(name) ||
+          !BuiltInToolNames.all.contains(name)) {
+        privacy.capture(mcp);
+        return privacy.argumentsForModel(args);
+      }
+      return args;
+    });
   }
 
   AcpAgentManager? _agentManager() {
@@ -987,6 +1065,7 @@ class ToolHandlerService {
     McpProvider mcp,
   ) {
     final configs = settings.providerConfigs;
+    final privacy = McpToolPrivacy(mcp);
     final keys = [
       ...settings.providersOrder.where(configs.containsKey),
       ...configs.keys.where((k) => !settings.providersOrder.contains(k)),
@@ -1002,10 +1081,10 @@ class ToolHandlerService {
           ),
       ],
       mcpServers: [
-        for (final server in mcp.servers)
+        for (final server in mcp.configuredServers)
           AssistantManagerOption(
             id: server.id,
-            name: server.name,
+            name: privacy.text(server.name),
             enabled: server.enabled,
           ),
       ],

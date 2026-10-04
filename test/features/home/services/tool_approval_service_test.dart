@@ -11,6 +11,132 @@ Future<void> expectStillPending(Future<dynamic> future) async {
 }
 
 void main() {
+  test('full trust still waits for missing private MCP inputs', () async {
+    final service = ToolApprovalService()..setAutoApproveAll(true);
+    addTearDown(service.dispose);
+    final pending = service.requestApproval(
+      toolCallId: 'private',
+      toolName: 'manage_mcp',
+      arguments: const {'action': 'add'},
+      conversationId: 'chat',
+      secretFields: const ['env:API_KEY'],
+      secretInputOnly: true,
+    );
+    expect(service.pendingRequests, hasLength(1));
+    expect(service.pendingRequests.single.secretInputOnly, isTrue);
+    await expectStillPending(pending);
+    service.approve('private', conversationId: 'chat');
+    await expectStillPending(pending);
+    service.approve(
+      'private',
+      conversationId: 'chat',
+      secretValues: const {'env:API_KEY': 'PRIVATE_INPUT'},
+    );
+    final result = await pending;
+    expect(result.approved, isTrue);
+    expect(result.takeSecretValues(), {'env:API_KEY': 'PRIVATE_INPUT'});
+    expect(result.takeSecretValues(), isEmpty);
+    expect(service.pendingRequests, isEmpty);
+  });
+
+  test(
+    'enabling full trust preserves missing private input requests',
+    () async {
+      final service = ToolApprovalService();
+      addTearDown(service.dispose);
+      final pending = service.requestApproval(
+        toolCallId: 'private',
+        toolName: 'manage_mcp',
+        arguments: const {'action': 'update'},
+        conversationId: 'chat',
+        secretFields: const ['header:Authorization'],
+      );
+      final approvalId = service.pendingRequests.single.approvalId;
+      expect(service.pendingRequests.single.secretInputOnly, isFalse);
+      service.setAutoApproveAll(true);
+      expect(service.pendingRequests.single.approvalId, approvalId);
+      expect(service.pendingRequests.single.secretInputOnly, isTrue);
+      await expectStillPending(pending);
+      service.setAutoApproveAll(false);
+      expect(service.pendingRequests.single.secretInputOnly, isFalse);
+      expect(service.pendingRequests.single.approvalId, approvalId);
+      await expectStillPending(pending);
+      service.cancelForConversation('chat');
+      final result = await pending;
+      expect(result.approved, isFalse);
+      expect(result.denyReason, 'cancelled');
+      expect(result.takeSecretValues(), isEmpty);
+    },
+  );
+
+  for (final throughTrust in [false, true]) {
+    test(
+      'inactive private input owner is cancelled (trust: $throughTrust)',
+      () async {
+        var active = true;
+        final service = ToolApprovalService();
+        addTearDown(service.dispose);
+        final pending = service.requestApproval(
+          toolCallId: 'private',
+          toolName: 'manage_mcp',
+          arguments: const {'action': 'add'},
+          secretFields: const ['env:API_KEY'],
+          owner: ToolApprovalOwner(
+            conversationId: 'chat',
+            generationRunId: 'run',
+            assistantMessageId: 'message',
+            isActive: () => active,
+          ),
+        );
+        active = false;
+        if (throughTrust) {
+          service.setAutoApproveAll(true);
+        } else {
+          service.approve('private', conversationId: 'chat');
+        }
+        final result = await pending;
+        expect(result.approved, isFalse);
+        expect(result.denyReason, 'cancelled');
+        expect(result.takeSecretValues(), isEmpty);
+        expect(service.pendingRequests, isEmpty);
+      },
+    );
+  }
+
+  test(
+    'private input requests cannot be completed by notification approval',
+    () async {
+      final service = ToolApprovalService()..setAutoApproveAll(true);
+      addTearDown(service.dispose);
+      final pending = service.requestApproval(
+        toolCallId: 'private',
+        toolName: 'manage_mcp',
+        arguments: const {},
+        secretFields: const ['env:API_KEY'],
+        secretInputOnly: true,
+        owner: const ToolApprovalOwner(
+          conversationId: 'chat',
+          generationRunId: 'run',
+          assistantMessageId: 'message',
+          isActive: _liveOwner,
+        ),
+      );
+      expect(
+        service.resolveNotificationApproval(
+          approvalId: service.pendingRequests.single.approvalId,
+          conversationId: 'chat',
+          generationRunId: 'run',
+          assistantMessageId: 'message',
+          approved: true,
+        ),
+        ToolApprovalActionStatus.stale,
+      );
+      await expectStillPending(pending);
+      service.cancelForRun('chat', 'run');
+      expect((await pending).approved, isFalse);
+    },
+  );
+
   test(
     'reused MCP call ids cannot apply consent to a different change',
     () async {
@@ -283,3 +409,5 @@ void main() {
     expect(service.pendingRequests, isEmpty);
   });
 }
+
+bool _liveOwner() => true;

@@ -4509,6 +4509,26 @@ class ChatDatabaseRepository {
     _messageSearchFtsReady = true;
   }
 
+  /// Removes only selections, including conversations absent from service caches.
+  Future<void> removeMcpServerId(String serverId) async {
+    await (_db.delete(
+      _db.conversationMcpServerRows,
+    )..where((row) => row.serverId.equals(serverId))).go();
+  }
+
+  /// Prunes a saved selection without writing conversation metadata or messages.
+  Future<void> pruneConversationMcpServers(
+    String conversationId,
+    Set<String> liveServerIds,
+  ) async {
+    await (_db.delete(_db.conversationMcpServerRows)..where(
+          (row) =>
+              row.conversationId.equals(conversationId) &
+              row.serverId.isNotIn(liveServerIds),
+        ))
+        .go();
+  }
+
   Future<void> putConversation(Conversation conversation) async {
     await _db.transaction(() async {
       // Existing rows keep the database-owned hash written by prompt freeze;

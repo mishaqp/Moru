@@ -77,6 +77,40 @@ class ChatService extends ChangeNotifier {
        _existingRepository = existingRepository,
        _assetContentHash = assetContentHash ?? _hashAssetFile;
 
+  Set<String>? Function()? _liveMcpServerIds;
+  Future<void>? _mcpServersLoaded;
+
+  /// Bound after MCP construction to avoid the workspace/assistant dependency cycle.
+  void bindMcpServers({
+    required Set<String>? Function() liveMcpServerIds,
+    Future<void>? mcpServersLoaded,
+  }) {
+    _liveMcpServerIds = liveMcpServerIds;
+    _mcpServersLoaded = mcpServersLoaded;
+  }
+
+  Conversation _withLiveMcpServers(Conversation conversation) {
+    final live = _liveMcpServerIds?.call();
+    if (live == null) return conversation;
+    final ids = conversation.mcpServerIds.where(live.contains).toList();
+    return listEquals(ids, conversation.mcpServerIds)
+        ? conversation
+        : conversation.copyWith(mcpServerIds: ids);
+  }
+
+  Future<void> _prepareMcpServersForSave(Conversation conversation) async {
+    await _mcpServersLoaded;
+    final live = _liveMcpServerIds?.call();
+    if (live == null) return;
+    conversation.mcpServerIds = conversation.mcpServerIds
+        .where(live.contains)
+        .toList();
+    if (!_draftConversations.containsKey(conversation.id) &&
+        !_temporaryConversationIds.contains(conversation.id)) {
+      await _repo.pruneConversationMcpServers(conversation.id, live);
+    }
+  }
+
   static const int defaultInitialMessageMin = 2;
   static const int defaultInitialMessageMax = 240;
   static const int defaultTimelineInitialSlots = 40;
@@ -1231,13 +1265,13 @@ class ChatService extends ChangeNotifier {
     final cached = _sortedConversationsCache;
     if (cached != null &&
         _sortedConversationsCacheRevision == _conversationListRevision) {
-      return List<Conversation>.of(cached);
+      return cached.map(_withLiveMcpServers).toList();
     }
     final conversations = _conversationsCache.values.toList();
     conversations.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     _sortedConversationsCache = conversations;
     _sortedConversationsCacheRevision = _conversationListRevision;
-    return List<Conversation>.of(conversations);
+    return conversations.map(_withLiveMcpServers).toList();
   }
 
   List<Conversation> getAllCompleteConversations() {
@@ -1250,14 +1284,14 @@ class ChatService extends ChangeNotifier {
 
   Conversation? getConversation(String id) {
     if (!_initialized) return null;
-    return _conversationsCache[id] ?? _draftConversations[id];
+    final conversation = _conversationsCache[id] ?? _draftConversations[id];
+    return conversation == null ? null : _withLiveMcpServers(conversation);
   }
 
   Conversation? getCompleteConversation(String id) {
     if (!_initialized) return null;
-    final draft = _draftConversations[id];
-    if (draft != null) return draft;
-    return _conversationsCache[id];
+    final conversation = _draftConversations[id] ?? _conversationsCache[id];
+    return conversation == null ? null : _withLiveMcpServers(conversation);
   }
 
   Conversation? _conversationForMessages(String conversationId) {
@@ -2035,6 +2069,7 @@ class ChatService extends ChangeNotifier {
   }
 
   Future<void> _saveConversation(Conversation conversation) async {
+    await _prepareMcpServersForSave(conversation);
     if (_temporaryConversationIds.contains(conversation.id)) {
       _draftConversations[conversation.id] = conversation;
       return;
@@ -2116,6 +2151,7 @@ class ChatService extends ChangeNotifier {
     if (!_initialized) await init();
     final duplicate = await _repo.duplicateConversation(id);
     if (duplicate == null) return null;
+    await _prepareMcpServersForSave(duplicate);
 
     _conversationsCache[duplicate.id] = duplicate;
     _messageOrderIds[duplicate.id] = List<String>.of(duplicate.messageIds);
@@ -2565,6 +2601,7 @@ class ChatService extends ChangeNotifier {
       chatModelId: conversation.chatModelId,
       extras: conversation.extras,
     );
+    await _prepareMcpServersForSave(restored);
     await _repo.putMigrationBatch(
       conversations: [restored],
       messages: [
@@ -2599,10 +2636,17 @@ class ChatService extends ChangeNotifier {
     transformBusiness,
   }) async {
     if (!_initialized) await init();
+    await _mcpServersLoaded;
     await _repo.commitParsedImport(
       businessRepository: businessRepository,
       overwrite: overwrite,
-      conversationBatches: conversationBatches,
+      conversationBatches: [
+        for (final batch in conversationBatches)
+          (
+            conversation: _withLiveMcpServers(batch.conversation),
+            messages: batch.messages,
+          ),
+      ],
       messagesToAppend: messagesToAppend,
       transformBusiness: transformBusiness,
     );
@@ -2637,8 +2681,9 @@ class ChatService extends ChangeNotifier {
       orderedMessages.add((message: message, messageOrder: messageOrder));
     }
 
+    await _mcpServersLoaded;
     await _repo.replaceBackupData(
-      conversations: conversations,
+      conversations: conversations.map(_withLiveMcpServers).toList(),
       messages: orderedMessages,
       toolEventsByMessageId: toolEventsByMessageId,
       geminiSignaturesByMessageId: geminiSignaturesByMessageId,
@@ -2744,6 +2789,7 @@ class ChatService extends ChangeNotifier {
     if (conversation == null) return;
     final order = await _loadMessageOrder(conversationId);
     if (order.contains(message.id)) return;
+    await _prepareMcpServersForSave(conversation);
     final persisted = await _repo.appendLinearMessageToConversation(
       conversation: conversation,
       message: message,
@@ -2772,7 +2818,7 @@ class ChatService extends ChangeNotifier {
     final c =
         _conversationsCache[conversationId] ??
         _draftConversations[conversationId];
-    return c?.mcpServerIds ?? const <String>[];
+    return c == null ? const <String>[] : _withLiveMcpServers(c).mcpServerIds;
   }
 
   Future<void> setConversationMcpServers(
@@ -2780,18 +2826,40 @@ class ChatService extends ChangeNotifier {
     List<String> serverIds,
   ) async {
     if (!_initialized) await init();
+    await _mcpServersLoaded;
+    final live = _liveMcpServerIds?.call();
+    final selected = live == null
+        ? serverIds
+        : serverIds.where(live.contains).toList();
     if (_draftConversations.containsKey(conversationId)) {
       final draft = _draftConversations[conversationId]!;
-      draft.mcpServerIds = List.of(serverIds);
+      draft.mcpServerIds = List.of(selected);
       draft.updatedAt = DateTime.now();
       notifyListeners();
       return;
     }
     final c = _conversationsCache[conversationId];
     if (c == null) return;
-    c.mcpServerIds = List.of(serverIds);
+    c.mcpServerIds = List.of(selected);
     c.updatedAt = DateTime.now();
     await _saveConversation(c);
+    _bumpConversationListRevision();
+    notifyListeners();
+  }
+
+  Future<void> removeMcpServerId(String id) async {
+    if (!_initialized) await init();
+    await _repo.removeMcpServerId(id);
+    for (final conversation in [
+      ..._conversationsCache.values,
+      ..._draftConversations.values,
+    ]) {
+      if (conversation.mcpServerIds.contains(id)) {
+        conversation.mcpServerIds = conversation.mcpServerIds
+            .where((value) => value != id)
+            .toList();
+      }
+    }
     _bumpConversationListRevision();
     notifyListeners();
   }
@@ -2906,6 +2974,8 @@ class ChatService extends ChangeNotifier {
       return;
     }
     if (!_initialized) return;
+    final conversation = _conversationsCache[conversationId];
+    if (conversation != null) await _prepareMcpServersForSave(conversation);
     await _repo.updateConversationExtras(conversationId, update);
     await _refreshConversation(conversationId);
     notifyListeners();
@@ -3020,6 +3090,7 @@ class ChatService extends ChangeNotifier {
       if (id.isEmpty || !seen.add(id)) continue;
       final conversation = _conversationsCache[id];
       if (conversation == null || folderOf(conversation) == folderId) continue;
+      await _prepareMcpServersForSave(conversation);
       await _repo.updateConversationExtras(id, (extras) {
         if (folderId == null) {
           extras.remove(folderKey);
@@ -3078,6 +3149,7 @@ class ChatService extends ChangeNotifier {
       if (conversation == null || isArchived(conversation) == archived) {
         continue;
       }
+      await _prepareMcpServersForSave(conversation);
       await _repo.updateConversationExtras(id, (extras) {
         if (archived) {
           extras[archivedAtKey] = at;
@@ -3213,6 +3285,7 @@ class ChatService extends ChangeNotifier {
       if (_conversationsCache.containsKey(conversationId)) {
         await _loadMessageOrder(conversationId);
       }
+      await _prepareMcpServersForSave(conversation);
       final persisted = await _repo.appendLinearMessageToConversation(
         conversation: conversation,
         message: message,
@@ -3281,6 +3354,7 @@ class ChatService extends ChangeNotifier {
       providerId: providerId,
       isStreaming: true,
     );
+    await _prepareMcpServersForSave(conversation);
     final result = await _repo.beginSendGeneration(
       conversation: conversation,
       userMessage: userMessage,
@@ -3341,6 +3415,7 @@ class ChatService extends ChangeNotifier {
       groupId: groupId,
       version: version,
     );
+    await _prepareMcpServersForSave(conversation);
     final result = await _repo.beginRegeneration(
       conversation: conversation,
       assistantMessage: assistantMessage,
@@ -3379,6 +3454,7 @@ class ChatService extends ChangeNotifier {
       providerId: providerId,
       isStreaming: true,
     );
+    await _prepareMcpServersForSave(conversation);
     final result = await _repo.beginAssistantGeneration(
       conversation: conversation,
       assistantMessage: assistantMessage,
@@ -4603,6 +4679,7 @@ class ChatService extends ChangeNotifier {
     if (c == null) return false;
     if (c.assistantId == assistantId) return true;
     final updatedAt = DateTime.now();
+    await _prepareMcpServersForSave(c);
     final moved = await _repo.moveConversationToAssistant(
       conversationId: conversationId,
       assistantId: assistantId,

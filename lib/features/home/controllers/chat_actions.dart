@@ -19,6 +19,7 @@ import '../../../core/models/token_usage.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
+import '../../../core/services/api/tool_call_argument_privacy.dart';
 import '../../../core/services/acp/acp_connection.dart';
 import '../../../core/services/api/retry_policy.dart';
 import '../../../core/services/api/stream/stream_chunk.dart';
@@ -3030,7 +3031,11 @@ class ChatActions {
     final toolHandler = ctx.onToolCall;
     final onToolCall = toolHandler == null
         ? null
-        : (String name, Map<String, dynamic> args, {String? toolCallId}) async {
+        : ToolCallArgumentPrivacy.propagate(toolHandler, (
+            String name,
+            Map<String, dynamic> args, {
+            String? toolCallId,
+          }) async {
             if (!approvalOwner.isActive()) {
               throw StateError('tool_call_cancelled');
             }
@@ -3038,7 +3043,7 @@ class ChatActions {
               _backgroundTaskId(ctx),
               phase: BackgroundTaskPhase.tool,
               tokens: state.totalTokens,
-              toolName: name,
+              toolName: ToolCallArgumentPrivacy.nameForModel(toolHandler, name),
             );
             try {
               return await approvalOwner.run(
@@ -3047,7 +3052,7 @@ class ChatActions {
             } finally {
               _scheduleBackgroundGenerationUpdate(state);
             }
-          };
+          });
     try {
       _background.update(
         ctx.executionId,

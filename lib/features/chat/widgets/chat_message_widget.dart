@@ -5872,7 +5872,9 @@ class _ToolCallItemState extends State<_ToolCallItem> {
                         ),
                       ),
                       // "Waiting for approval" subtitle
-                      if (isPendingApproval && !isWorkspace) ...[
+                      if (isPendingApproval &&
+                          !isWorkspace &&
+                          !pendingRequest.secretInputOnly) ...[
                         const SizedBox(height: 2),
                         Text(
                           l10n.toolApprovalPending,

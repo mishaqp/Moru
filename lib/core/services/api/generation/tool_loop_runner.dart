@@ -1,6 +1,7 @@
 import '../../../../utils/mcp_structured_image.dart';
 import '../../../models/token_usage.dart';
 import '../chat_api_helpers.dart';
+import '../tool_call_argument_privacy.dart';
 import '../stream/stream_chunk.dart';
 import '../stream/stream_chunk_emit.dart';
 import 'tool_result_images.dart';
@@ -51,7 +52,14 @@ Stream<StreamChunk> executeClientTools({
 }) async* {
   if (calls.isEmpty) return;
   if (emitCalls) {
-    yield* emitToolCalls(calls, usage: usage, totalTokens: totalTokens);
+    yield* emitToolCalls(
+      [
+        for (final call in calls)
+          ToolCallArgumentPrivacy.callForModel(onToolCall, call),
+      ],
+      usage: usage,
+      totalTokens: totalTokens,
+    );
   }
   final executed = <ExecutedClientTool>[];
   for (final call in calls) {
@@ -94,7 +102,14 @@ Stream<StreamChunk> runClientToolFollowUps({
     // follow-ups have no decoder emitting ToolCall*, so later rounds would
     // otherwise land as ToolCallResult-only cards with empty name/args.
     if (emitCalls) {
-      yield* emitToolCalls(calls, usage: usage, totalTokens: totalTokens);
+      yield* emitToolCalls(
+        [
+          for (final call in calls)
+            ToolCallArgumentPrivacy.callForModel(onToolCall, call),
+        ],
+        usage: usage,
+        totalTokens: totalTokens,
+      );
     }
     for (final call in calls) {
       executed.add(await _executeClientTool(call, onToolCall));
@@ -138,7 +153,14 @@ Stream<StreamChunk> runProviderToolRounds({
       final usage = usageOf?.call();
       final totalTokens = usage?.totalTokens ?? 0;
       if (emitCalls) {
-        yield* emitToolCalls(calls, usage: usage, totalTokens: totalTokens);
+        yield* emitToolCalls(
+          [
+            for (final call in calls)
+              ToolCallArgumentPrivacy.callForModel(onToolCall, call),
+          ],
+          usage: usage,
+          totalTokens: totalTokens,
+        );
       }
       for (final call in calls) {
         executed.add(await _executeClientTool(call, onToolCall));
@@ -160,7 +182,7 @@ Future<ExecutedClientTool> _executeClientTool(
   final raw = await onToolCall(call.name, call.arguments, toolCallId: call.id);
   final parsed = ClientToolResult.fromHandler(raw);
   return ExecutedClientTool(
-    call: call,
+    call: ToolCallArgumentPrivacy.callForModel(onToolCall, call),
     content: parsed.content,
     metadata: parsed.metadata,
     images: await loadToolResultImages(parsed.metadata),

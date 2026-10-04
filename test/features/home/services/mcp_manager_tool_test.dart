@@ -365,32 +365,55 @@ void main() {
     },
   );
 
-  test('full trust bypasses confirmation but cannot invent a secret', () async {
-    approvals.setAutoApproveAll(true);
-    final result = await run({
-      'action': 'add',
-      'name': 'Trusted',
-      'config': {
-        'type': 'http',
-        'url': 'https://example.test',
-        'disabled': true,
-      },
-    });
-    expect(result['ok'], isTrue);
-    expect(approvals.pendingRequests, isEmpty);
-    final missing = await run({
-      'action': 'add',
-      'name': 'Private',
-      'config': {
-        'type': 'http',
-        'url': 'https://example.test',
-        'headers': {'Authorization': ''},
-      },
-    });
-    expect(missing['error'], 'secret_required');
-    expect(missing['message'], contains('MCP settings'));
-    expect(provider.servers.where((s) => s.name == 'Private'), isEmpty);
-  });
+  test(
+    'full trust skips consent and collects missing secrets privately',
+    () async {
+      approvals.setAutoApproveAll(true);
+      final result = await run({
+        'action': 'add',
+        'name': 'Trusted',
+        'config': {
+          'type': 'http',
+          'url': 'https://example.test',
+          'disabled': true,
+        },
+      });
+      expect(result['ok'], isTrue);
+      expect(approvals.pendingRequests, isEmpty);
+      final pending = run({
+        'action': 'add',
+        'name': 'Private',
+        'config': {
+          'type': 'http',
+          'url': 'https://example.test',
+          'headers': {'Authorization': ''},
+          'disabled': true,
+        },
+      });
+      await Future<void>.delayed(Duration.zero);
+      final request = approvals.pendingRequests.single;
+      expect(request.secretInputOnly, isTrue);
+      expect(request.secretFields, ['header:Authorization']);
+      expect(provider.servers.where((s) => s.name == 'Private'), isEmpty);
+      const secret = 'PRIVATE_TRUSTED_INPUT';
+      approvals.approve(
+        'call',
+        conversationId: 'chat',
+        secretValues: {'header:Authorization': 'Bearer $secret'},
+      );
+      final saved = await pending;
+      expect(saved['ok'], isTrue);
+      expect(jsonEncode(saved), isNot(contains(secret)));
+      expect(jsonEncode(request.arguments), isNot(contains(secret)));
+      expect(FlutterLogger.technicalTail, isNot(contains(secret)));
+      expect(
+        provider
+            .getById(saved['server']['id'])!
+            .managedSecrets['header:Authorization'],
+        'Bearer $secret',
+      );
+    },
+  );
 
   test(
     'enabling a saved server with missing secrets requires private input',
@@ -403,9 +426,12 @@ void main() {
         headers: {'Authorization': ''},
       );
       approvals.setAutoApproveAll(true);
-      final result = await run({'action': 'enable', 'server_id': id});
-      expect(result['error'], 'secret_required');
+      final trusted = run({'action': 'enable', 'server_id': id});
+      await Future<void>.delayed(Duration.zero);
+      expect(approvals.pendingRequests.single.secretInputOnly, isTrue);
       expect(provider.getById(id)!.enabled, isFalse);
+      approvals.deny('call', conversationId: 'chat');
+      expect((await trusted)['error'], 'approval_denied');
       approvals.setAutoApproveAll(false);
       final pending = run({'action': 'enable', 'server_id': id});
       await Future<void>.delayed(Duration.zero);
@@ -643,12 +669,13 @@ void main() {
       });
       await Future<void>.delayed(Duration.zero);
       approvals.setAutoApproveAll(true);
-      expect((await pending)['error'], 'secret_required');
-      expect(approvals.pendingRequests, isEmpty);
+      expect(approvals.pendingRequests.single.secretInputOnly, isTrue);
       expect(
         provider.configuredServers.where((s) => s.name == 'Private'),
         isEmpty,
       );
+      approvals.deny('call', conversationId: 'chat');
+      expect((await pending)['error'], 'approval_denied');
     },
   );
 
@@ -668,15 +695,15 @@ void main() {
     },
   );
 
-  test(
-    'queued settings writes invalidate consent inside the mutation queue',
-    () async {
+  for (final action in ['remove', 'set_tool', 'cancel_set_tool']) {
+    test('queued settings writes guard the mutation: $action', () async {
       final fixture = McpServerConfig(
         id: 'queued',
         enabled: false,
         name: 'Original',
         transport: McpTransportType.http,
         url: 'https://example.test',
+        tools: [McpToolConfig(name: 'echo', enabled: true)],
       );
       final harness = await createBusinessTestHarness(
         initial: {
@@ -703,25 +730,47 @@ void main() {
       await locked.future;
       final writeStarted = Completer<void>();
       final settingsWrite = queuedProvider.updateServerMetadata(
-        fixture.copyWith(name: 'Changed'),
+        fixture.copyWith(
+          name: action == 'cancel_set_tool' ? 'Original' : 'Changed',
+        ),
         beforeCommit: writeStarted.complete,
       );
       await writeStarted.future;
-      final removal =
+      var allowed = true;
+      final mutation =
           McpManagerTool(
             provider: queuedProvider,
             autoApproveAll: true,
+            checkAllowed: () {
+              if (!allowed) throw StateError('permission_denied');
+            },
           ).execute({
-            'action': 'remove',
+            'action': action == 'remove' ? 'remove' : 'set_tool',
             'server_id': fixture.id,
+            if (action != 'remove') ...{
+              'tool_name': 'echo',
+              'enabled': false,
+              'needs_approval': true,
+            },
           }, toolCallId: 'queued');
+      await Future<void>.delayed(Duration.zero);
+      if (action == 'cancel_set_tool') allowed = false;
       release.complete();
       await transaction;
       await settingsWrite;
-      expect(jsonDecode(await removal)['error'], 'server_changed');
-      expect(queuedProvider.getById(fixture.id)!.name, 'Changed');
-    },
-  );
+      expect(
+        jsonDecode(await mutation)['error'],
+        action == 'cancel_set_tool' ? 'permission_denied' : 'server_changed',
+      );
+      final tool = queuedProvider.getById(fixture.id)!.tools.single;
+      expect(tool.enabled, isTrue);
+      expect(tool.needsApproval, isFalse);
+      expect(
+        queuedProvider.getById(fixture.id)!.name,
+        action == 'cancel_set_tool' ? 'Original' : 'Changed',
+      );
+    });
+  }
 
   test('opaque endpoint path credentials from settings are hidden', () async {
     const secret = 'PRIVATE_ENDPOINT_PATH';
@@ -744,6 +793,111 @@ void main() {
     approvals.deny('call', conversationId: 'chat');
     await pending;
   });
+
+  test('private tool names can be managed using safe aliases', () async {
+    const secret = 'OPAQUE_TOOL_NAME_CREDENTIAL';
+    final id = await provider.addServer(
+      enabled: false,
+      name: 'Private tool',
+      transport: McpTransportType.stdio,
+      command: 'srv',
+      env: {'API_KEY': secret},
+    );
+    await provider.updateServer(
+      provider
+          .getById(id)!
+          .copyWith(
+            tools: [McpToolConfig(name: 'lookup_$secret', enabled: true)],
+          ),
+    );
+    final listed = await run({'action': 'get', 'server_id': id});
+    final name = listed['server']['tools'].single['name'] as String;
+    expect(name, startsWith('mcp_tool_'));
+    expect(name, isNot(contains(secret)));
+    final pending = run({
+      'action': 'set_tool',
+      'server_id': id,
+      'tool_name': name,
+      'enabled': false,
+      'needs_approval': true,
+    });
+    await Future<void>.delayed(Duration.zero);
+    final request = approvals.pendingRequests.single;
+    expect(request.arguments['tool_settings']['name'], name);
+    expect(jsonEncode(request.arguments), isNot(contains(secret)));
+    approvals.approve('call', conversationId: 'chat');
+    final result = await pending;
+    expect(result['ok'], isTrue, reason: '$result');
+    expect(jsonEncode(result), isNot(contains(secret)));
+    final tool = provider.getById(id)!.tools.single;
+    expect(tool.name, 'lookup_$secret');
+    expect(tool.enabled, isFalse);
+    expect(tool.needsApproval, isTrue);
+    expect(
+      (await run({
+        'action': 'set_tool',
+        'server_id': id,
+        'tool_name': tool.name,
+        'enabled': true,
+      }))['error'],
+      'unknown_tool',
+    );
+  });
+
+  test(
+    'another server credential cannot leak through manager summaries',
+    () async {
+      const secret = 'OPAQUE_OTHER_SERVER_CREDENTIAL';
+      await provider.addServer(
+        enabled: false,
+        name: 'Private',
+        transport: McpTransportType.stdio,
+        command: 'srv',
+        env: {'API_KEY': secret},
+      );
+      final id = await provider.addServer(
+        enabled: false,
+        name: 'Other',
+        transport: McpTransportType.http,
+        url: 'https://example.test/mcp',
+      );
+      await provider.updateServer(
+        provider
+            .getById(id)!
+            .copyWith(
+              tools: [
+                McpToolConfig(name: 'echo', description: secret, enabled: true),
+              ],
+            ),
+      );
+      expect(
+        jsonEncode(await run({'action': 'get', 'server_id': id})),
+        isNot(contains(secret)),
+      );
+      final pending = run({'action': 'remove', 'server_id': id});
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        jsonEncode(approvals.pendingRequests.single.arguments),
+        isNot(contains(secret)),
+      );
+      approvals.deny('call', conversationId: 'chat');
+      await pending;
+      final literal =
+          await McpManagerTool(
+            provider: provider,
+            autoApproveAll: true,
+          ).execute({
+            'action': 'add',
+            'name': 'Copied private value',
+            'config': {
+              'command': 'srv',
+              'disabled': true,
+              'env': {'ORDINARY_NAME': secret},
+            },
+          }, toolCallId: 'copy');
+      expect(jsonDecode(literal)['error'], 'secret_required');
+    },
+  );
 
   test(
     'settings rotation and JSON removal retain former credentials',
@@ -905,6 +1059,12 @@ void main() {
     expect(tested['tool_count'], 1);
     expect(tested['tools'].single['name'], 'echo');
     expect(tested['availability_notice'], contains('next message'));
+    for (final action in ['refresh', 'reconnect']) {
+      final refreshed = await run({'action': action, 'server_id': id});
+      expect(refreshed['ok'], isTrue, reason: '$refreshed');
+      expect(refreshed['server']['tool_count'], 1);
+      expect(refreshed['server']['tools'].single['name'], 'echo');
+    }
     final updated = await run({
       'action': 'update',
       'server_id': id,

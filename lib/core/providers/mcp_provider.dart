@@ -7,6 +7,7 @@ import '../database/business_preferences.dart';
 import '../services/mcp/kelivo_fetch/kelivo_fetch_server.dart';
 import '../services/mcp/mcp_oauth_service.dart';
 import '../services/mcp/mcp_secrets.dart';
+import '../services/mcp/mcp_tool_privacy.dart';
 import '../services/mcp/workspace_stdio_transport.dart';
 import '../services/mcp/workspace_stdio_command.dart';
 import '../services/workspace/workspace_runtime.dart';
@@ -386,6 +387,7 @@ class McpProvider extends ChangeNotifier {
   final WorkspaceRuntimeProvider? workspaceRuntime;
   final EnvironmentProvider? environment;
   final WorkspaceProvider? workspaces;
+  final Future<void> Function(String id)? onServerRemoved;
   bool _stdioWasAvailable = false;
 
   bool get supportsStdioWorkspaceBinding => workspaces != null;
@@ -444,6 +446,7 @@ class McpProvider extends ChangeNotifier {
     this.workspaceRuntime,
     this.environment,
     this.workspaces,
+    this.onServerRemoved,
   }) : _oauthService = oauthService ?? McpOAuthService(),
        _ownsOAuthService = oauthService == null {
     _stdioWasAvailable = supportsStdio;
@@ -1083,6 +1086,7 @@ class McpProvider extends ChangeNotifier {
     if (committedConnection != null) {
       await _finishDisconnect(committedConnection, terminateSession: true);
     }
+    await onServerRemoved?.call(id);
   }
 
   Future<void> reorderServers(int oldIndex, int newIndex) async {
@@ -1122,40 +1126,39 @@ class McpProvider extends ChangeNotifier {
     });
   }
 
-  Future<void> setToolEnabled(
-    String serverId,
-    String toolName,
-    bool enabled,
-  ) async {
-    await _serializeServerMutation(() async {
-      final idx = _servers.indexWhere((e) => e.id == serverId);
-      if (idx < 0) return;
-      final server = _servers[idx];
-      final tools = server.tools
-          .map((t) => t.name == toolName ? t.copyWith(enabled: enabled) : t)
-          .toList();
-      final next = List<McpServerConfig>.of(_servers)
-        ..[idx] = server.copyWith(tools: tools);
-      await _persistServers(next);
-      _servers = next;
-      _notify();
-    });
-  }
+  Future<void> setToolEnabled(String serverId, String toolName, bool enabled) =>
+      setToolSettings(serverId, toolName, enabled: enabled);
 
   /// Set whether a tool requires user approval before execution.
   Future<void> setToolNeedsApproval(
     String serverId,
     String toolName,
     bool needsApproval,
-  ) async {
+  ) => setToolSettings(serverId, toolName, needsApproval: needsApproval);
+
+  /// Applies both tool flags atomically, checking consent inside the write queue.
+  Future<void> setToolSettings(
+    String serverId,
+    String toolName, {
+    bool? enabled,
+    bool? needsApproval,
+    McpServerConfig? expected,
+    void Function()? beforeCommit,
+  }) async {
     await _serializeServerMutation(() async {
+      _requireExpectedServer(expected);
+      beforeCommit?.call();
       final idx = _servers.indexWhere((e) => e.id == serverId);
       if (idx < 0) return;
       final server = _servers[idx];
+      if (!server.tools.any((tool) => tool.name == toolName)) {
+        if (expected != null) throw StateError('mcp_tool_missing');
+        return;
+      }
       final tools = server.tools
           .map(
             (t) => t.name == toolName
-                ? t.copyWith(needsApproval: needsApproval)
+                ? t.copyWith(enabled: enabled, needsApproval: needsApproval)
                 : t,
           )
           .toList();
@@ -2653,129 +2656,154 @@ class McpProvider extends ChangeNotifier {
     String toolName,
     Map<String, dynamic> args,
   ) async {
-    await ensureConnected(serverId);
-    final state = _connections[serverId];
-    if (state == null) return null;
-    final cooldown = _activeCooldown(state);
-    if (cooldown != null) {
-      return _toolError(
-        'MCP server is temporarily unavailable; retry after '
-        '${cooldown.until.difference(DateTime.now()).inSeconds + 1} seconds.',
+    final privacy = McpToolPrivacy(this);
+    mcp.CallToolResult privateResult(mcp.CallToolResult result) {
+      privacy.capture(this);
+      return privacy.result(result);
+    }
+
+    mcp.CallToolResult privateError(String message) =>
+        privateResult(_toolError(message));
+    if (privacy.containsCredential(args)) {
+      return privateError(
+        'MCP credential literals are not accepted in tool arguments. Configure credentials privately in MCP settings.',
       );
     }
-    final client = state.client;
-    if (client == null) return null;
-    final scopeOperation = _scopeOperationForTool(toolName);
-    final normalized = _normalizeArgsForTool(serverId, toolName, args);
-    final startedAt = DateTime.now();
     try {
-      final result = await client.callTool(toolName, normalized);
-      _finishScopeUpgrade(state, scopeOperation);
-      _clearCooldownAfterSuccess(state, startedAt);
-      return result;
-    } catch (error) {
-      if (error is mcp.McpError && error.code == -32602) {
-        return _toolError(error.toString());
+      await ensureConnected(serverId);
+      privacy.capture(this);
+      final state = _connections[serverId];
+      if (state == null) return null;
+      final cooldown = _activeCooldown(state);
+      if (cooldown != null) {
+        return privateError(
+          'MCP server is temporarily unavailable; retry after '
+          '${cooldown.until.difference(DateTime.now()).inSeconds + 1} seconds.',
+        );
       }
-      Object effectiveError = error;
-      _rememberOAuthChallenge(state, error);
-      if (_isHttpUnauthorized(error)) {
-        try {
-          final replacement = await _recoverOAuthClientAfterUnauthorized(
+      final client = state.client;
+      if (client == null) return null;
+      final scopeOperation = _scopeOperationForTool(toolName);
+      final normalized = _normalizeArgsForTool(serverId, toolName, args);
+      if (privacy.containsCredential(normalized)) {
+        return privateError(
+          'MCP credential literals are not accepted in tool arguments. Configure credentials privately in MCP settings.',
+        );
+      }
+      final startedAt = DateTime.now();
+      try {
+        final result = await client.callTool(toolName, normalized);
+        _finishScopeUpgrade(state, scopeOperation);
+        _clearCooldownAfterSuccess(state, startedAt);
+        return privateResult(result);
+      } catch (error) {
+        if (error is mcp.McpError && error.code == -32602) {
+          return privateError(error.toString());
+        }
+        Object effectiveError = error;
+        _rememberOAuthChallenge(state, error);
+        if (_isHttpUnauthorized(error)) {
+          try {
+            final replacement = await _recoverOAuthClientAfterUnauthorized(
+              serverId,
+              state,
+              client,
+            );
+            if (replacement != null &&
+                (error as mcp.McpHttpError).canRetryRequest) {
+              try {
+                final result = await replacement.callTool(toolName, normalized);
+                _finishScopeUpgrade(state, scopeOperation);
+                return privateResult(result);
+              } catch (retryError) {
+                effectiveError = retryError;
+              }
+            }
+          } catch (refreshError) {
+            effectiveError = refreshError;
+          }
+        }
+        final server = getById(serverId);
+        if (server != null &&
+            await _requiresOAuthAuthorization(
+              server,
+              state,
+              effectiveError,
+              operation: scopeOperation,
+            )) {
+          final activeClient = state.client;
+          state.client = null;
+          activeClient?.dispose();
+          state.status = McpStatus.needsAuthorization;
+          privacy.capture(this);
+          state.error = privacy.text(effectiveError.toString());
+          _notify();
+          return privateError('MCP OAuth authorization is required.');
+        }
+        if (effectiveError is McpOAuthException && effectiveError.isTransient) {
+          final activeClient = state.client;
+          state.client = null;
+          activeClient?.dispose();
+          state.status = McpStatus.error;
+          privacy.capture(this);
+          state.error = privacy.text(effectiveError.toString());
+          _notify();
+          return privateError(
+            'MCP OAuth token refresh failed temporarily. Please retry.',
+          );
+        }
+        if (effectiveError is mcp.McpHttpError &&
+            _requiresCooldown(effectiveError)) {
+          _enterCooldown(state, effectiveError.retryAfter);
+          _notify();
+          if (effectiveError.statusCode == 429) {
+            return privateError('MCP server rate limited this request.');
+          }
+        }
+        if (_isRejectedSession(effectiveError)) {
+          final replacement = await _recoverExpiredSession(
             serverId,
             state,
             client,
           );
-          if (replacement != null &&
-              (error as mcp.McpHttpError).canRetryRequest) {
+          if (replacement != null) {
             try {
               final result = await replacement.callTool(toolName, normalized);
               _finishScopeUpgrade(state, scopeOperation);
-              return result;
+              return privateResult(result);
             } catch (retryError) {
-              effectiveError = retryError;
-            }
-          }
-        } catch (refreshError) {
-          effectiveError = refreshError;
-        }
-      }
-      final server = getById(serverId);
-      if (server != null &&
-          await _requiresOAuthAuthorization(
-            server,
-            state,
-            effectiveError,
-            operation: scopeOperation,
-          )) {
-        final activeClient = state.client;
-        state.client = null;
-        activeClient?.dispose();
-        state.status = McpStatus.needsAuthorization;
-        state.error = effectiveError.toString();
-        _notify();
-        return _toolError('MCP OAuth authorization is required.');
-      }
-      if (effectiveError is McpOAuthException && effectiveError.isTransient) {
-        final activeClient = state.client;
-        state.client = null;
-        activeClient?.dispose();
-        state.status = McpStatus.error;
-        state.error = effectiveError.toString();
-        _notify();
-        return _toolError(
-          'MCP OAuth token refresh failed temporarily. Please retry.',
-        );
-      }
-      if (effectiveError is mcp.McpHttpError &&
-          _requiresCooldown(effectiveError)) {
-        _enterCooldown(state, effectiveError.retryAfter);
-        _notify();
-        if (effectiveError.statusCode == 429) {
-          return _toolError('MCP server rate limited this request.');
-        }
-      }
-      if (_isRejectedSession(effectiveError)) {
-        final replacement = await _recoverExpiredSession(
-          serverId,
-          state,
-          client,
-        );
-        if (replacement != null) {
-          try {
-            final result = await replacement.callTool(toolName, normalized);
-            _finishScopeUpgrade(state, scopeOperation);
-            return result;
-          } catch (retryError) {
-            if (retryError is mcp.McpHttpError &&
-                _requiresCooldown(retryError)) {
-              _enterCooldown(state, retryError.retryAfter);
-              _notify();
-              if (retryError.statusCode == 429) {
-                return _toolError('MCP server rate limited this request.');
+              if (retryError is mcp.McpHttpError &&
+                  _requiresCooldown(retryError)) {
+                _enterCooldown(state, retryError.retryAfter);
+                _notify();
+                if (retryError.statusCode == 429) {
+                  return privateError('MCP server rate limited this request.');
+                }
               }
+              if (retryError is mcp.McpError && retryError.code != null) {
+                return privateError(retryError.toString());
+              }
+              return privateError(
+                'The MCP tool request may have been executed, but its result is '
+                'unknown. It was not retried. $retryError',
+              );
             }
-            if (retryError is mcp.McpError && retryError.code != null) {
-              return _toolError(retryError.toString());
-            }
-            return _toolError(
-              'The MCP tool request may have been executed, but its result is '
-              'unknown. It was not retried. $retryError',
-            );
           }
         }
+        if (effectiveError is mcp.McpHttpError &&
+            effectiveError.statusCode == 403) {
+          return privateError('MCP permission denied: $effectiveError');
+        }
+        if (effectiveError is mcp.McpError && effectiveError.code != null) {
+          return privateError(effectiveError.toString());
+        }
+        return privateError(
+          'The MCP tool request may have been executed, but its result is '
+          'unknown. It was not retried. $effectiveError',
+        );
       }
-      if (effectiveError is mcp.McpHttpError &&
-          effectiveError.statusCode == 403) {
-        return _toolError('MCP permission denied: $effectiveError');
-      }
-      if (effectiveError is mcp.McpError && effectiveError.code != null) {
-        return _toolError(effectiveError.toString());
-      }
-      return _toolError(
-        'The MCP tool request may have been executed, but its result is '
-        'unknown. It was not retried. $effectiveError',
-      );
+    } catch (error) {
+      return privateError(error.toString());
     }
   }
 

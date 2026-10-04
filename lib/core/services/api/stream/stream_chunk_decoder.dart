@@ -41,7 +41,9 @@ void logDecoderParseError({
   required String eventType,
   required Object error,
 }) {
-  final message = 'provider=$provider eventType=$eventType error=$error';
+  // FormatException includes the malformed response source, which may contain
+  // private tool arguments. The event name is untrusted provider input too.
+  final message = 'provider=$provider errorType=${error.runtimeType}';
   debugPrint('[DecoderParseError] $message');
   FlutterLogger.log(message, tag: 'DecoderParseError');
 }

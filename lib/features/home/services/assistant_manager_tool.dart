@@ -736,10 +736,12 @@ class AssistantManagerTool {
       );
     }
 
+    final liveMcpIds = {for (final o in catalog.mcpServers) o.id};
     final mcpServerIds = s.stringList('mcpServerIds');
     if (mcpServerIds != null) {
       _checkIds('mcpServerIds', mcpServerIds, {
-        for (final o in catalog.mcpServers) o.id,
+        ...liveMcpIds,
+        ...assistants.getStoredMcpServerIds(base.id),
       });
     }
     final localToolIds = s.stringList('localToolIds');
@@ -810,7 +812,9 @@ class AssistantManagerTool {
       limitContextMessages: s.boolean('limitContextMessages'),
       streamOutput: s.boolean('streamOutput'),
       searchEnabled: s.boolean('searchEnabled'),
-      mcpServerIds: mcpServerIds,
+      mcpServerIds: (mcpServerIds ?? next.mcpServerIds)
+          .where(liveMcpIds.contains)
+          .toList(),
       localToolIds: localToolIds,
       skillIds: skillIds,
       defaultWorkspaceId: workspaceId,

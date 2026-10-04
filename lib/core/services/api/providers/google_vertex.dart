@@ -12,6 +12,7 @@ import '../../../../utils/mcp_structured_image.dart';
 import '../../../../utils/sandbox_path_resolver.dart';
 import '../builtin_tools.dart';
 import '../chat_api_helpers.dart';
+import '../tool_call_argument_privacy.dart';
 import '../generation/tool_loop_runner.dart';
 import '../generation/tool_result_images.dart';
 import '../google_service_account_auth.dart';
@@ -577,7 +578,10 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
             }
           }
         }
-        lastAssistantBlocks = assistantBlocks;
+        lastAssistantBlocks =
+            (ToolCallArgumentPrivacy.protocolValue(onToolCall, assistantBlocks)
+                    as List)
+                .cast<Map<String, dynamic>>();
         lastText = buf.toString();
         if (toolUses.isNotEmpty && onToolCall != null) {
           pendingCalls = [
@@ -650,7 +654,10 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
 
       totalUsage = usage ?? totalUsage;
 
-      lastAssistantBlocks = assistantBlocks;
+      lastAssistantBlocks =
+          (ToolCallArgumentPrivacy.protocolValue(onToolCall, assistantBlocks)
+                  as List)
+              .cast<Map<String, dynamic>>();
       if (decoder.clientTools.isEmpty) {
         pauseTurn = (lastStopReason ?? '') == 'pause_turn';
         return;

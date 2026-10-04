@@ -691,12 +691,34 @@ class MyApp extends StatelessWidget {
           },
         ),
         ChangeNotifierProvider(
-          create: (ctx) => McpProvider(
-            preferences: businessPreferences,
-            workspaceRuntime: ctx.read<WorkspaceRuntimeProvider>(),
-            environment: ctx.read<EnvironmentProvider>(),
-            workspaces: ctx.read<WorkspaceProvider>(),
-          ),
+          create: (ctx) {
+            final assistants = ctx.read<AssistantProvider>();
+            final chats = ctx.read<ChatService>();
+            final mcp = McpProvider(
+              preferences: businessPreferences,
+              workspaceRuntime: ctx.read<WorkspaceRuntimeProvider>(),
+              environment: ctx.read<EnvironmentProvider>(),
+              workspaces: ctx.read<WorkspaceProvider>(),
+              onServerRemoved: (id) async {
+                await assistants.removeMcpServerId(id);
+                await chats.removeMcpServerId(id);
+              },
+            );
+            var ready = false;
+            unawaited(mcp.loaded.then((_) => ready = true));
+            Set<String>? liveIds() => ready
+                ? mcp.configuredServers.map((server) => server.id).toSet()
+                : null;
+            assistants.bindMcpServers(
+              liveMcpServerIds: liveIds,
+              mcpServersLoaded: mcp.loaded,
+            );
+            chats.bindMcpServers(
+              liveMcpServerIds: liveIds,
+              mcpServersLoaded: mcp.loaded,
+            );
+            return mcp;
+          },
         ),
         ChangeNotifierProvider(
           create: (ctx) {

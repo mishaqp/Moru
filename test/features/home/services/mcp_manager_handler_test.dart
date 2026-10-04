@@ -331,17 +331,26 @@ void main() {
             );
             expect(added['ok'], isTrue);
             expect(approvals.pendingRequests, isEmpty);
-            final missing = jsonDecode(
-              await handler('manage_mcp', {
-                    'action': 'update',
-                    'server_id': added['server']['id'],
-                    'config': {
-                      'headers': {'Authorization': ''},
-                    },
-                  })
-                  as String,
+            final privateInput = handler('manage_mcp', {
+              'action': 'update',
+              'server_id': added['server']['id'],
+              'config': {
+                'headers': {'Authorization': ''},
+              },
+            });
+            if (withApprovals) {
+              await Future<void>.delayed(Duration.zero);
+              expect(approvals.pendingRequests.single.secretInputOnly, isTrue);
+              approvals.deny(
+                approvals.pendingRequests.single.toolCallId,
+                conversationId: 'chat',
+              );
+            }
+            final missing = jsonDecode(await privateInput as String);
+            expect(
+              missing['error'],
+              withApprovals ? 'approval_denied' : 'secret_required',
             );
-            expect(missing['error'], 'secret_required');
             expect(mcp.getById(added['server']['id'])!.headers, isEmpty);
             final removed = jsonDecode(
               await handler('manage_mcp', {

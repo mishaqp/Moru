@@ -681,6 +681,8 @@ double? claudeCompatibleTopP(String modelId, int? budget, double? topP) {
 // Clean JSON Schema for Google Gemini API strict validation
 // Google requires array types to have 'items' field, and only accepts `enum`
 // on string-typed schemas (values must be strings too).
+// stringEnumOnly also limits fields to the Gemini REST Schema subset; the
+// default compatibility mode preserves other providers' JSON Schema fields.
 Map<String, dynamic> cleanSchemaForGemini(
   Map<String, dynamic> schema, {
   bool stringEnumOnly = false,
@@ -731,6 +733,41 @@ String? _inferScalarType(List<dynamic> values) {
 dynamic _cleanSchemaNode(dynamic node, bool stringEnumOnly) {
   if (node is! Map) return node;
   final result = Map<String, dynamic>.from(node);
+  if (stringEnumOnly) {
+    // REST Schema fields: https://ai.google.dev/api/generate-content#Schema
+    // The OpenAI compatibility caller uses stringEnumOnly: false and needs
+    // the full JSON Schema constraints, including exclusive bounds.
+    const supported = {
+      'type',
+      'format',
+      'title',
+      'description',
+      'nullable',
+      'enum',
+      'maxItems',
+      'minItems',
+      'properties',
+      'required',
+      'minProperties',
+      'maxProperties',
+      'minLength',
+      'maxLength',
+      'pattern',
+      'example',
+      'anyOf',
+      'propertyOrdering',
+      'default',
+      'items',
+      'minimum',
+      'maximum',
+    };
+    result.removeWhere((key, value) => !supported.contains(key));
+    if (result['anyOf'] is List) {
+      result['anyOf'] = (result['anyOf'] as List)
+          .map((variant) => _cleanSchemaNode(variant, stringEnumOnly))
+          .toList();
+    }
+  }
 
   final declaredType = (result['type'] ?? '').toString();
 
