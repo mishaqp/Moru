@@ -1,5 +1,45 @@
 part of 'message_style_settings_page.dart';
 
+/// The existing bubble scene, also used while editing the chat background.
+class MessageStylePreview extends StatelessWidget {
+  const MessageStylePreview({
+    super.key,
+    required this.theme,
+    this.backdrop,
+    this.backgroundConfiguration,
+    this.height = 220,
+  });
+
+  final ThemeData theme;
+  final Widget? backdrop;
+  final ChatBackgroundSettings? backgroundConfiguration;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    context.select<SettingsProvider, Object>(
+      (s) => (
+        s.chatMessageBackgroundStyle,
+        s.userChatBubbleStyleOverrides,
+        s.assistantChatBubbleStyleOverrides,
+      ),
+    );
+    final settings = context.read<SettingsProvider>();
+    return _PreviewPanel(
+      theme: theme,
+      editingDark: theme.brightness == Brightness.dark,
+      editingUser: true,
+      style: settings.chatMessageBackgroundStyle,
+      userOverrides: settings.userChatBubbleStyleOverrides,
+      assistantOverrides: settings.assistantChatBubbleStyleOverrides,
+      backdrop: backdrop,
+      backgroundConfiguration: backgroundConfiguration,
+      dimInactive: false,
+      height: height,
+    );
+  }
+}
+
 class _PreviewPanel extends StatelessWidget {
   const _PreviewPanel({
     required this.theme,
@@ -8,6 +48,10 @@ class _PreviewPanel extends StatelessWidget {
     required this.style,
     required this.userOverrides,
     required this.assistantOverrides,
+    this.backdrop,
+    this.backgroundConfiguration,
+    this.dimInactive = true,
+    this.height = 220,
   });
 
   final ThemeData theme;
@@ -16,6 +60,10 @@ class _PreviewPanel extends StatelessWidget {
   final ChatMessageBackgroundStyle style;
   final ChatBubbleStyleOverrides userOverrides;
   final ChatBubbleStyleOverrides assistantOverrides;
+  final Widget? backdrop;
+  final ChatBackgroundSettings? backgroundConfiguration;
+  final bool dimInactive;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +80,7 @@ class _PreviewPanel extends StatelessWidget {
         ),
       ),
       child: SizedBox(
-        height: 220,
+        height: height,
         child: Theme(
           key: ValueKey<bool>(editingDark),
           data: theme,
@@ -41,6 +89,9 @@ class _PreviewPanel extends StatelessWidget {
             userOverrides: userOverrides,
             assistantOverrides: assistantOverrides,
             editingUser: editingUser,
+            backdrop: backdrop,
+            backgroundConfiguration: backgroundConfiguration,
+            dimInactive: dimInactive,
           ),
         ),
       ),
@@ -54,12 +105,18 @@ class _PreviewScene extends StatelessWidget {
     required this.userOverrides,
     required this.assistantOverrides,
     required this.editingUser,
+    this.backdrop,
+    this.backgroundConfiguration,
+    this.dimInactive = true,
   });
 
   final ChatMessageBackgroundStyle style;
   final ChatBubbleStyleOverrides userOverrides;
   final ChatBubbleStyleOverrides assistantOverrides;
   final bool editingUser;
+  final Widget? backdrop;
+  final ChatBackgroundSettings? backgroundConfiguration;
+  final bool dimInactive;
 
   @override
   Widget build(BuildContext context) {
@@ -78,20 +135,24 @@ class _PreviewScene extends StatelessWidget {
       style,
       assistantOverrides,
     );
-    final dimInactive = style != ChatMessageBackgroundStyle.defaultStyle;
+    final shouldDim =
+        dimInactive && style != ChatMessageBackgroundStyle.defaultStyle;
     Widget maybeDim({required bool active, required Widget child}) {
-      if (!dimInactive || active) return child;
+      if (!shouldDim || active) return child;
       return Opacity(opacity: 0.45, child: child);
     }
 
     return ChatFrostedBackdrop(
-      backdrop: Stack(
-        fit: StackFit.expand,
-        children: [
-          ColoredBox(color: cs.surface),
-          const MobileBackgroundLayer(),
-        ],
-      ),
+      configuration: backgroundConfiguration,
+      backdrop:
+          backdrop ??
+          Stack(
+            fit: StackFit.expand,
+            children: [
+              ColoredBox(color: cs.surface),
+              const MobileBackgroundLayer(),
+            ],
+          ),
       child: Stack(
         fit: StackFit.expand,
         children: [

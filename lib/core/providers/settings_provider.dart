@@ -1,5 +1,6 @@
 import '../services/auth/provider_oauth_service.dart';
 import '../models/mobile_background_settings.dart';
+import '../models/chat_appearance.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,6 +29,8 @@ import '../models/provider_group.dart';
 import '../models/chat_folder.dart';
 import '../models/sidebar_shortcut.dart';
 import '../services/haptics.dart';
+import '../services/chat/chat_appearance_storage.dart';
+import '../services/chat/chat_background_video.dart';
 import '../services/api/retry_policy.dart';
 import '../services/screen_wakelock.dart';
 import '../../utils/app_directories.dart';
@@ -1242,6 +1245,7 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getInt(_displayAutoScrollIdleSecondsKey) ?? 8;
     _chatBackgroundMaskStrength =
         prefs.getDouble(_displayChatBackgroundMaskStrengthKey) ?? 1.0;
+    await _loadChatAppearance();
     _chatInputBackgroundOpacityLight =
         (prefs.getDouble(_displayChatInputBackgroundOpacityLightKey) ??
                 defaultChatInputBackgroundOpacityLight)
@@ -5096,6 +5100,102 @@ Requirements:
     );
   }
 
+  ChatAppearanceSettings _chatAppearance = const ChatAppearanceSettings();
+  bool _chatAppearanceInitialized = false;
+  ChatAppearanceSettings get chatAppearance => _chatAppearance;
+
+  Future<void> _loadChatAppearance() async {
+    final legacy = ChatBackgroundSettings.fromJson({
+      'maskStrength': _chatBackgroundMaskStrength,
+    });
+    _chatAppearance = ChatAppearanceSettings(light: legacy, dark: legacy);
+    if (_preferences.containsKey(ChatAppearanceStorage.preferenceKey)) {
+      try {
+        final raw = _preferences.getString(ChatAppearanceStorage.preferenceKey);
+        final decoded = jsonDecode(raw!);
+        if (decoded is Map) {
+          _chatAppearance = ChatAppearanceSettings.fromJson(
+            Map<String, dynamic>.from(decoded),
+          );
+        }
+      } catch (_) {
+        // An existing explicit choice, including none, blocks legacy migration.
+      }
+    } else {
+      _chatAppearance =
+          await ChatAppearanceStorage.migrateLegacy(
+            preferences: _preferences,
+            legacyMaskStrength: legacy.maskStrength,
+          ) ??
+          _chatAppearance;
+    }
+    _chatAppearanceInitialized = true;
+  }
+
+  Future<void> setChatAppearance(ChatAppearanceSettings value) async {
+    if (!_chatAppearanceInitialized) await loaded;
+    final next = ChatAppearanceSettings.fromJson(value.toJson());
+    if (_chatAppearance == next &&
+        _preferences.containsKey(ChatAppearanceStorage.preferenceKey)) {
+      return;
+    }
+    final previous = _chatAppearance;
+    _chatAppearance = next;
+    notifyListeners();
+    try {
+      await _preferences.setString(
+        ChatAppearanceStorage.preferenceKey,
+        jsonEncode(next.toJson()),
+      );
+    } catch (_) {
+      if (identical(_chatAppearance, next)) {
+        _chatAppearance = previous;
+        notifyListeners();
+      }
+      rethrow;
+    }
+    final retained = {_chatAppearance.light.path, _chatAppearance.dark.path};
+    for (final path in {previous.light.path, previous.dark.path}) {
+      if (!retained.contains(path)) {
+        await ChatAppearanceStorage.removeIfOwned(path);
+      }
+    }
+  }
+
+  /// Copies the picked media before applying it. External originals stay intact.
+  Future<bool> importChatBackground(
+    String sourcePath,
+    ChatBackgroundType type, {
+    Brightness? brightness,
+  }) async {
+    if (!_chatAppearanceInitialized) await loaded;
+    String? candidate;
+    try {
+      final copied = await ChatAppearanceStorage.copyMedia(sourcePath, type);
+      candidate = copied.reference;
+      if (type == ChatBackgroundType.video) {
+        await ChatBackgroundVideo.prepare(copied.path);
+      }
+      final selectedBrightness = brightness ?? Brightness.light;
+      final selected = _chatAppearance
+          .backgroundFor(selectedBrightness)
+          .copyWith(type: type, path: candidate);
+      final next = _chatAppearance.shared
+          ? _chatAppearance.copyWith(light: selected, dark: selected)
+          : selectedBrightness == Brightness.dark
+          ? _chatAppearance.copyWith(dark: selected)
+          : _chatAppearance.copyWith(light: selected);
+      await setChatAppearance(next);
+      return true;
+    } catch (_) {
+      if (candidate != _chatAppearance.light.path &&
+          candidate != _chatAppearance.dark.path) {
+        await ChatAppearanceStorage.removeIfOwned(candidate);
+      }
+      return false;
+    }
+  }
+
   // Display: chat input background opacity by theme brightness.
   static const double defaultChatInputBackgroundOpacityLight = 0.8236;
   static const double defaultChatInputBackgroundOpacityDark = 0.7396;
@@ -5873,6 +5973,8 @@ Requirements:
     copy._mobileBackground = _mobileBackground;
     copy._desktopSendShortcut = _desktopSendShortcut;
     copy._chatFontScale = _chatFontScale;
+    copy._chatAppearance = _chatAppearance;
+    copy._chatAppearanceInitialized = _chatAppearanceInitialized;
     copy._autoScrollEnabled = _autoScrollEnabled;
     copy._autoScrollIdleSeconds = _autoScrollIdleSeconds;
     copy._enableDollarLatex = _enableDollarLatex;

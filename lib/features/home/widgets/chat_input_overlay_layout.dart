@@ -64,7 +64,7 @@ class ChatInputOverlayLayout extends StatelessWidget {
                     ),
                   ),
                 )
-              else if (!backgroundImageActive)
+              else
                 Positioned(
                   left: 0,
                   right: 0,
@@ -96,7 +96,7 @@ class ChatInputOverlayLayout extends StatelessWidget {
                     ),
                   ),
                 )
-              else if (!backgroundImageActive)
+              else
                 const Positioned(
                   left: 0,
                   right: 0,

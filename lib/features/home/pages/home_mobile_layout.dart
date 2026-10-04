@@ -59,6 +59,7 @@ class HomeMobileScaffold extends StatelessWidget {
     required this.onOpenGlobalSearchResult,
     this.appBarOverride,
     required this.body,
+    this.backgroundActive = true,
   });
 
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -87,6 +88,7 @@ class HomeMobileScaffold extends StatelessWidget {
   onOpenGlobalSearchResult;
   final PreferredSizeWidget? appBarOverride;
   final Widget body;
+  final bool backgroundActive;
 
   @override
   Widget build(BuildContext context) {
@@ -125,6 +127,7 @@ class HomeMobileScaffold extends StatelessWidget {
         },
       ),
       child: ChatFrostedBackdrop(
+        active: backgroundActive,
         backdrop: const MobileBackgroundLayer(),
         child: Scaffold(
           key: scaffoldKey,

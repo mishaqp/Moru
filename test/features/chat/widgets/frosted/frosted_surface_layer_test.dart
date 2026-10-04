@@ -10,6 +10,7 @@ import 'package:Kelivo/features/chat/widgets/frosted/frosted_surface.dart';
 import 'package:Kelivo/theme/chat_bubble_style.dart';
 
 import '../../../../support/business_test_harness.dart';
+import '../../../../support/chat_background_test_harness.dart';
 
 const _style = ResolvedBubbleStyle(
   background: Color(0xA8FFFFFF),
@@ -38,16 +39,14 @@ void main() {
       preferences: createBusinessTestPreferences(),
     );
     await assistants.loaded;
-    final id = await assistants.addAssistant(name: 'Frosted');
-    await assistants.setCurrentAssistant(id);
-    await assistants.updateAssistant(
-      assistants.currentAssistant!.copyWith(
-        background: 'https://example.com/wallpaper.png',
-      ),
-    );
-
     final settings = SettingsProvider(createBusinessTestPreferences());
     await settings.loaded;
+    final id = await assistants.addAssistant(name: 'Frosted');
+    await assistants.setCurrentAssistant(id);
+    await setTestChatBackground(
+      settings,
+      path: 'https://example.com/wallpaper.png',
+    );
 
     await tester.pumpWidget(
       _frostedApp(

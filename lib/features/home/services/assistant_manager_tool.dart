@@ -71,8 +71,8 @@ class _ToolFailure implements Exception {
 /// The `manage_assistants` local tool: lets the model list, inspect, create,
 /// configure, copy, switch and delete the user's assistants.
 ///
-/// Settings use the same keys as [Assistant.toJson]. Avatar images and chat
-/// backgrounds are left to the settings page, which picks the files.
+/// Settings use the same keys as [Assistant.toJson]. Avatar images are left to
+/// the settings page, which picks the files.
 class AssistantManagerTool {
   AssistantManagerTool({
     required this.assistants,
@@ -160,8 +160,8 @@ class AssistantManagerTool {
           '"update", "duplicate" and "delete" ask the user for confirmation. '
           'Changes apply from the next message. Deleting an assistant also '
           'deletes its conversations; the assistant running this chat and '
-          'the last remaining assistant cannot be deleted. Avatar images and '
-          'chat backgrounds are set by the user in the settings page.',
+          'the last remaining assistant cannot be deleted. Avatar images '
+          'are set by the user in the settings page.',
       'parameters': {
         'type': 'object',
         'properties': {

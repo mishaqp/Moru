@@ -10,6 +10,7 @@ enum SettingsSearchDestination {
   colorMode,
   theme,
   themeAdvanced,
+  appearance,
   chatDisplay,
   rendering,
   behavior,
@@ -52,6 +53,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.colorMode => l.settingsPageColorMode,
     SettingsSearchDestination.theme => l.displaySettingsPageThemeSettingsTitle,
     SettingsSearchDestination.themeAdvanced => l.themeAdvancedSettingsPageTitle,
+    SettingsSearchDestination.appearance => l.appearanceSettingsPageTitle,
     SettingsSearchDestination.chatDisplay =>
       l.displaySettingsPageChatItemDisplayTitle,
     SettingsSearchDestination.rendering =>
@@ -98,6 +100,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.colorMode => LucideIcons.sunMoon,
     SettingsSearchDestination.theme => LucideIcons.palette,
     SettingsSearchDestination.themeAdvanced => LucideIcons.layers,
+    SettingsSearchDestination.appearance => LucideIcons.image,
     SettingsSearchDestination.chatDisplay => LucideIcons.messageCircle,
     SettingsSearchDestination.rendering => LucideIcons.textInitial,
     SettingsSearchDestination.behavior => LucideIcons.settings2,
@@ -137,6 +140,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
   bool get isDisplaySection => switch (this) {
     SettingsSearchDestination.theme ||
     SettingsSearchDestination.themeAdvanced ||
+    SettingsSearchDestination.appearance ||
     SettingsSearchDestination.chatDisplay ||
     SettingsSearchDestination.rendering ||
     SettingsSearchDestination.behavior ||
@@ -268,6 +272,14 @@ class SettingsSearchIndex {
       page: true,
       keywords: 'layered surface 分层 分層 高级 高級',
       targetLabel: null,
+    );
+    add(
+      'appearance',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSettingsPageTitle,
+      page: true,
+      keywords:
+          'appearance background wallpaper photo gif video animated gradient внешний вид фон обои фото видео градиент 外观 外觀 背景 壁纸 壁紙 视频 影片 动态渐变 動態漸層',
     );
     add(
       'chatDisplay',
@@ -545,9 +557,41 @@ class SettingsSearchIndex {
     );
     add(
       'displaySettingsPageChatBackgroundMaskTitle',
-      SettingsSearchDestination.display,
+      SettingsSearchDestination.appearance,
       (l) => l.displaySettingsPageChatBackgroundMaskTitle,
       keywords: 'background wallpaper opacity 背景 壁纸 壁紙 蒙版 透明度',
+    );
+    add(
+      'appearanceSameBackground',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSameBackground,
+      keywords:
+          'shared light dark same theme общий светлая тёмная одинаковый 浅色 深色 淺色 深色 相同',
+    );
+    add(
+      'appearanceBackground',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceBackground,
+      keywords:
+          'photo gallery gif video gradient wallpaper фон обои галерея видео градиент 图片 圖片 视频 影片 渐变 漸層',
+    );
+    add(
+      'appearanceBlur',
+      SettingsSearchDestination.appearance,
+      (l) => l.messageStyleSettingsPageBlur,
+      keywords: 'background blur размытие 模糊',
+    );
+    add(
+      'appearanceBrightness',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceBrightness,
+      keywords: 'background brightness яркость 亮度',
+    );
+    add(
+      'appearanceSaturation',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSaturation,
+      keywords: 'background saturation насыщенность 饱和度 飽和度',
     );
     add(
       'displaySettingsPageChatInputBackgroundOpacityTitle',

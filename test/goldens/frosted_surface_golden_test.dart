@@ -10,6 +10,7 @@ import 'package:Kelivo/features/chat/widgets/frosted/frosted_surface.dart';
 import 'package:Kelivo/theme/chat_bubble_style.dart';
 
 import '../support/business_test_harness.dart';
+import '../support/chat_background_test_harness.dart';
 
 /// Pixel goldens that call [ui.Image.toByteData] hang in this test VM.
 /// These cases lock the layer/widget contract the goldens were meant to guard:
@@ -71,15 +72,14 @@ void main() {
         preferences: createBusinessTestPreferences(),
       );
       await assistants.loaded;
-      final id = await assistants.addAssistant(name: 'Wallpaper');
-      await assistants.setCurrentAssistant(id);
-      await assistants.updateAssistant(
-        assistants.currentAssistant!.copyWith(
-          background: 'https://example.com/wallpaper.png',
-        ),
-      );
       final settings = SettingsProvider(createBusinessTestPreferences());
       await settings.loaded;
+      final id = await assistants.addAssistant(name: 'Wallpaper');
+      await assistants.setCurrentAssistant(id);
+      await setTestChatBackground(
+        settings,
+        path: 'https://example.com/wallpaper.png',
+      );
 
       await tester.pumpWidget(
         _app(

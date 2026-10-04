@@ -9,6 +9,81 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get appearanceSettingsPageTitle => '外观';
+
+  @override
+  String get appearanceChatWindow => '聊天窗口';
+
+  @override
+  String get appearanceSidebar => '侧边栏';
+
+  @override
+  String get appearanceSidebarComingSoon => '侧边栏外观设置将在后续更新中提供。';
+
+  @override
+  String get appearanceSameBackground => '浅色与深色使用相同背景';
+
+  @override
+  String get appearanceSameBackgroundHint => '在两种主题中使用同一个背景。';
+
+  @override
+  String get appearanceBackground => '背景';
+
+  @override
+  String get appearanceNone => '无';
+
+  @override
+  String get appearancePhoto => '从相册选择照片';
+
+  @override
+  String get appearanceGif => 'GIF';
+
+  @override
+  String get appearanceVideo => '视频';
+
+  @override
+  String get appearanceAnimatedGradient => '动态渐变';
+
+  @override
+  String get appearanceChooseMedia => '选择媒体';
+
+  @override
+  String get appearanceReplaceMedia => '更换媒体';
+
+  @override
+  String get appearanceFit => '适配方式';
+
+  @override
+  String get appearanceFitCover => '覆盖';
+
+  @override
+  String get appearanceFitContain => '完整显示';
+
+  @override
+  String get appearanceFitFill => '拉伸';
+
+  @override
+  String get appearanceFitTile => '平铺';
+
+  @override
+  String get appearanceFocusHint => '拖动预览来调整背景位置。';
+
+  @override
+  String get appearanceCenterFocus => '背景居中';
+
+  @override
+  String get appearanceBrightness => '亮度';
+
+  @override
+  String get appearanceSaturation => '饱和度';
+
+  @override
+  String get appearanceMediaError => '无法使用此文件。请选择其他图片、GIF 或视频。';
+
+  @override
+  String get appearanceReset => '重置背景';
+
+  @override
   String get settingsSearchHint => '搜索设置';
 
   @override
@@ -12255,6 +12330,81 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   AppLocalizationsZhHans() : super('zh_Hans');
 
   @override
+  String get appearanceSettingsPageTitle => '外观';
+
+  @override
+  String get appearanceChatWindow => '聊天窗口';
+
+  @override
+  String get appearanceSidebar => '侧边栏';
+
+  @override
+  String get appearanceSidebarComingSoon => '侧边栏外观设置将在后续更新中提供。';
+
+  @override
+  String get appearanceSameBackground => '浅色与深色使用相同背景';
+
+  @override
+  String get appearanceSameBackgroundHint => '在两种主题中使用同一个背景。';
+
+  @override
+  String get appearanceBackground => '背景';
+
+  @override
+  String get appearanceNone => '无';
+
+  @override
+  String get appearancePhoto => '从相册选择照片';
+
+  @override
+  String get appearanceGif => 'GIF';
+
+  @override
+  String get appearanceVideo => '视频';
+
+  @override
+  String get appearanceAnimatedGradient => '动态渐变';
+
+  @override
+  String get appearanceChooseMedia => '选择媒体';
+
+  @override
+  String get appearanceReplaceMedia => '更换媒体';
+
+  @override
+  String get appearanceFit => '适配方式';
+
+  @override
+  String get appearanceFitCover => '覆盖';
+
+  @override
+  String get appearanceFitContain => '完整显示';
+
+  @override
+  String get appearanceFitFill => '拉伸';
+
+  @override
+  String get appearanceFitTile => '平铺';
+
+  @override
+  String get appearanceFocusHint => '拖动预览来调整背景位置。';
+
+  @override
+  String get appearanceCenterFocus => '背景居中';
+
+  @override
+  String get appearanceBrightness => '亮度';
+
+  @override
+  String get appearanceSaturation => '饱和度';
+
+  @override
+  String get appearanceMediaError => '无法使用此文件。请选择其他图片、GIF 或视频。';
+
+  @override
+  String get appearanceReset => '重置背景';
+
+  @override
   String get settingsSearchHint => '搜索设置';
 
   @override
@@ -24428,6 +24578,81 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 /// The translations for Chinese, using the Han script (`zh_Hant`).
 class AppLocalizationsZhHant extends AppLocalizationsZh {
   AppLocalizationsZhHant() : super('zh_Hant');
+
+  @override
+  String get appearanceSettingsPageTitle => '外觀';
+
+  @override
+  String get appearanceChatWindow => '聊天視窗';
+
+  @override
+  String get appearanceSidebar => '側邊欄';
+
+  @override
+  String get appearanceSidebarComingSoon => '側邊欄外觀設定將在後續更新中提供。';
+
+  @override
+  String get appearanceSameBackground => '淺色與深色使用相同背景';
+
+  @override
+  String get appearanceSameBackgroundHint => '在兩種主題中使用同一個背景。';
+
+  @override
+  String get appearanceBackground => '背景';
+
+  @override
+  String get appearanceNone => '無';
+
+  @override
+  String get appearancePhoto => '從相簿選擇照片';
+
+  @override
+  String get appearanceGif => 'GIF';
+
+  @override
+  String get appearanceVideo => '影片';
+
+  @override
+  String get appearanceAnimatedGradient => '動態漸層';
+
+  @override
+  String get appearanceChooseMedia => '選擇媒體';
+
+  @override
+  String get appearanceReplaceMedia => '更換媒體';
+
+  @override
+  String get appearanceFit => '適配方式';
+
+  @override
+  String get appearanceFitCover => '覆蓋';
+
+  @override
+  String get appearanceFitContain => '完整顯示';
+
+  @override
+  String get appearanceFitFill => '拉伸';
+
+  @override
+  String get appearanceFitTile => '平鋪';
+
+  @override
+  String get appearanceFocusHint => '拖動預覽來調整背景位置。';
+
+  @override
+  String get appearanceCenterFocus => '背景置中';
+
+  @override
+  String get appearanceBrightness => '亮度';
+
+  @override
+  String get appearanceSaturation => '飽和度';
+
+  @override
+  String get appearanceMediaError => '無法使用此檔案。請選擇其他圖片、GIF 或影片。';
+
+  @override
+  String get appearanceReset => '重設背景';
 
   @override
   String get settingsSearchHint => '搜尋設定';

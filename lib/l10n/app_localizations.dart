@@ -102,6 +102,156 @@ abstract class AppLocalizations {
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
+  /// No description provided for @appearanceSettingsPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get appearanceSettingsPageTitle;
+
+  /// No description provided for @appearanceChatWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat window'**
+  String get appearanceChatWindow;
+
+  /// No description provided for @appearanceSidebar.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar'**
+  String get appearanceSidebar;
+
+  /// No description provided for @appearanceSidebarComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar appearance will be available in a future update.'**
+  String get appearanceSidebarComingSoon;
+
+  /// No description provided for @appearanceSameBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Same for light and dark'**
+  String get appearanceSameBackground;
+
+  /// No description provided for @appearanceSameBackgroundHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use one background in both themes.'**
+  String get appearanceSameBackgroundHint;
+
+  /// No description provided for @appearanceBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get appearanceBackground;
+
+  /// No description provided for @appearanceNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get appearanceNone;
+
+  /// No description provided for @appearancePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo gallery'**
+  String get appearancePhoto;
+
+  /// No description provided for @appearanceGif.
+  ///
+  /// In en, this message translates to:
+  /// **'GIF'**
+  String get appearanceGif;
+
+  /// No description provided for @appearanceVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get appearanceVideo;
+
+  /// No description provided for @appearanceAnimatedGradient.
+  ///
+  /// In en, this message translates to:
+  /// **'Animated gradient'**
+  String get appearanceAnimatedGradient;
+
+  /// No description provided for @appearanceChooseMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose media'**
+  String get appearanceChooseMedia;
+
+  /// No description provided for @appearanceReplaceMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace media'**
+  String get appearanceReplaceMedia;
+
+  /// No description provided for @appearanceFit.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit'**
+  String get appearanceFit;
+
+  /// No description provided for @appearanceFitCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover'**
+  String get appearanceFitCover;
+
+  /// No description provided for @appearanceFitContain.
+  ///
+  /// In en, this message translates to:
+  /// **'Contain'**
+  String get appearanceFitContain;
+
+  /// No description provided for @appearanceFitFill.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill'**
+  String get appearanceFitFill;
+
+  /// No description provided for @appearanceFitTile.
+  ///
+  /// In en, this message translates to:
+  /// **'Tile'**
+  String get appearanceFitTile;
+
+  /// No description provided for @appearanceFocusHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag the preview to position the background.'**
+  String get appearanceFocusHint;
+
+  /// No description provided for @appearanceCenterFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Center background'**
+  String get appearanceCenterFocus;
+
+  /// No description provided for @appearanceBrightness.
+  ///
+  /// In en, this message translates to:
+  /// **'Brightness'**
+  String get appearanceBrightness;
+
+  /// No description provided for @appearanceSaturation.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturation'**
+  String get appearanceSaturation;
+
+  /// No description provided for @appearanceMediaError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not use this file. Choose another image, GIF or video.'**
+  String get appearanceMediaError;
+
+  /// No description provided for @appearanceReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset backgrounds'**
+  String get appearanceReset;
+
   /// No description provided for @settingsSearchHint.
   ///
   /// In en, this message translates to:

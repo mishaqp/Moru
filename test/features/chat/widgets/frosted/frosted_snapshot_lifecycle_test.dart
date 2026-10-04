@@ -17,6 +17,7 @@ import 'package:Kelivo/features/chat/widgets/frosted/frosted_surface.dart';
 import 'package:Kelivo/theme/chat_bubble_style.dart';
 
 import '../../../../support/business_test_harness.dart';
+import '../../../../support/chat_background_test_harness.dart';
 
 ResolvedBubbleStyle _style(double sigma) => ResolvedBubbleStyle(
   background: const Color(0xA8FFFFFF),
@@ -42,15 +43,13 @@ void main() {
         preferences: createBusinessTestPreferences(),
       );
       await assistants.loaded;
-      final id = await assistants.addAssistant(name: 'Gradient');
-      await assistants.setCurrentAssistant(id);
       final settings = SettingsProvider(createBusinessTestPreferences());
       await settings.loaded;
+      final id = await assistants.addAssistant(name: 'Gradient');
+      await assistants.setCurrentAssistant(id);
       addTearDown(assistants.dispose);
       addTearDown(settings.dispose);
-      await assistants.updateAssistant(
-        assistants.currentAssistant!.copyWith(useGradientBackground: true),
-      );
+      await setTestChatBackground(settings, gradient: true);
       await tester.pumpWidget(
         _app(
           assistants: assistants,
@@ -76,9 +75,7 @@ void main() {
         expect(controller.debugCaptureCount, 0);
       }
       expect(_countLayers<BackdropFilterLayer>(tester), greaterThan(0));
-      await assistants.updateAssistant(
-        assistants.currentAssistant!.copyWith(useGradientBackground: false),
-      );
+      await setTestChatBackground(settings, gradient: false);
       await tester.pumpAndSettle();
       expect(controller.mode, FrostedRenderMode.uniform);
       expect(_countLayers<BackdropFilterLayer>(tester), 0);
@@ -94,16 +91,15 @@ void main() {
       preferences: createBusinessTestPreferences(),
     );
     await assistants.loaded;
-    final id = await assistants.addAssistant(name: 'Gradient');
-    await assistants.setCurrentAssistant(id);
     final settings = SettingsProvider(createBusinessTestPreferences());
     await settings.loaded;
+    final id = await assistants.addAssistant(name: 'Gradient');
+    await assistants.setCurrentAssistant(id);
     addTearDown(assistants.dispose);
     addTearDown(settings.dispose);
-    await assistants.updateAssistant(
-      assistants.currentAssistant!.copyWith(
-        background: 'https://example.com/wallpaper.png',
-      ),
+    await setTestChatBackground(
+      settings,
+      path: 'https://example.com/wallpaper.png',
     );
     await tester.pumpWidget(
       _app(
@@ -125,23 +121,19 @@ void main() {
     expect(controller.mode, FrostedRenderMode.cached);
     final captures = controller.debugCaptureCount;
     expect(captures, greaterThan(0));
-    await assistants.updateAssistant(
-      assistants.currentAssistant!.copyWith(useGradientBackground: true),
-    );
+    await setTestChatBackground(settings, gradient: true);
     await tester.pump();
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
     expect(controller.mode, FrostedRenderMode.liveBackdropFilter);
     expect(controller.debugCaptureCount, captures);
-    await assistants.updateAssistant(
-      assistants.currentAssistant!.copyWith(useGradientBackground: false),
-    );
+    await setTestChatBackground(settings, gradient: false);
     await tester.pumpAndSettle();
     expect(controller.mode, FrostedRenderMode.cached);
     expect(controller.debugCaptureCount, greaterThan(captures));
     expect(
-      assistants.currentAssistant!.background,
+      settings.chatAppearance.light.path,
       'https://example.com/wallpaper.png',
     );
     await tester.pumpWidget(const SizedBox.shrink());
@@ -155,16 +147,15 @@ void main() {
           preferences: createBusinessTestPreferences(),
         );
         await assistants.loaded;
-        final id = await assistants.addAssistant(name: 'Gradient');
-        await assistants.setCurrentAssistant(id);
-        await assistants.updateAssistant(
-          assistants.currentAssistant!.copyWith(
-            useGradientBackground: true,
-            gradientBackgroundAnimated: animated,
-          ),
-        );
         final settings = SettingsProvider(createBusinessTestPreferences());
         await settings.loaded;
+        final id = await assistants.addAssistant(name: 'Gradient');
+        await assistants.setCurrentAssistant(id);
+        await setTestChatBackground(
+          settings,
+          gradient: true,
+          gradientAnimated: animated,
+        );
         final tokens = ValueNotifier<int>(0);
         final scroll = ScrollController();
         addTearDown(assistants.dispose);
@@ -184,9 +175,6 @@ void main() {
                 return ChatInputOverlayLayout(
                   topInset: 80,
                   backgroundImageActive: true,
-                  topBackground: const ChatAssistantBackground(
-                    pinnedToBackdrop: true,
-                  ),
                   bottomOverlay: const SizedBox(height: 60, width: 200),
                   content: ListView.builder(
                     controller: scroll,
@@ -238,19 +226,13 @@ void main() {
         if (!animated) {
           expect(_countLayers<BackdropFilterLayer>(tester), 0);
           final generation = controller.generation;
-          await assistants.updateAssistant(
-            assistants.currentAssistant!.copyWith(
-              gradientBackgroundOffsetY: 0.5,
-            ),
-          );
+          await setTestChatBackground(settings, gradientOffsetY: 0.5);
           await tester.pumpAndSettle();
           expect(controller.generation, greaterThan(generation));
           expect(controller.debugCaptureCount, greaterThan(captures));
           expect(controller.mode, FrostedRenderMode.cached);
           final previousFrameCaptures = controller.debugCaptureCount;
-          await assistants.updateAssistant(
-            assistants.currentAssistant!.copyWith(gradientBackgroundPhase: 16),
-          );
+          await setTestChatBackground(settings, gradientPhase: 16);
           await tester.pumpAndSettle();
           expect(
             controller.debugCaptureCount,
@@ -274,15 +256,14 @@ void main() {
       preferences: createBusinessTestPreferences(),
     );
     await assistants.loaded;
-    final id = await assistants.addAssistant(name: 'Frosted');
-    await assistants.setCurrentAssistant(id);
-    await assistants.updateAssistant(
-      assistants.currentAssistant!.copyWith(
-        background: 'https://example.com/wallpaper-a.png',
-      ),
-    );
     final settings = SettingsProvider(createBusinessTestPreferences());
     await settings.loaded;
+    final id = await assistants.addAssistant(name: 'Frosted');
+    await assistants.setCurrentAssistant(id);
+    await setTestChatBackground(
+      settings,
+      path: 'https://example.com/wallpaper-a.png',
+    );
 
     Future<void> pumpSigma(double sigma) async {
       await tester.pumpWidget(
@@ -343,15 +324,14 @@ void main() {
       preferences: createBusinessTestPreferences(),
     );
     await assistants.loaded;
-    final id = await assistants.addAssistant(name: 'Frosted');
-    await assistants.setCurrentAssistant(id);
-    await assistants.updateAssistant(
-      assistants.currentAssistant!.copyWith(
-        background: 'https://example.com/wallpaper-a.png',
-      ),
-    );
     final settings = SettingsProvider(createBusinessTestPreferences());
     await settings.loaded;
+    final id = await assistants.addAssistant(name: 'Frosted');
+    await assistants.setCurrentAssistant(id);
+    await setTestChatBackground(
+      settings,
+      path: 'https://example.com/wallpaper-a.png',
+    );
 
     await tester.pumpWidget(
       _app(
@@ -373,10 +353,9 @@ void main() {
     final generationA = controller.generation;
     expect(find.byType(RawImage), findsOneWidget);
 
-    await assistants.updateAssistant(
-      assistants.currentAssistant!.copyWith(
-        background: 'https://example.com/wallpaper-b.png',
-      ),
+    await setTestChatBackground(
+      settings,
+      path: 'https://example.com/wallpaper-b.png',
     );
     await tester.pump();
 
@@ -406,15 +385,14 @@ void main() {
         preferences: createBusinessTestPreferences(),
       );
       await assistants.loaded;
-      final id = await assistants.addAssistant(name: 'Frosted');
-      await assistants.setCurrentAssistant(id);
-      await assistants.updateAssistant(
-        assistants.currentAssistant!.copyWith(
-          background: 'https://example.com/wallpaper-a.png',
-        ),
-      );
       final settings = SettingsProvider(createBusinessTestPreferences());
       await settings.loaded;
+      final id = await assistants.addAssistant(name: 'Frosted');
+      await assistants.setCurrentAssistant(id);
+      await setTestChatBackground(
+        settings,
+        path: 'https://example.com/wallpaper-a.png',
+      );
 
       await tester.pumpWidget(
         _app(
@@ -471,10 +449,9 @@ void main() {
 
       // A missing local file is "no wallpaper" without hitting
       // AssistantProvider's path_provider cleanup (hangs in this VM).
-      await assistants.updateAssistant(
-        assistants.currentAssistant!.copyWith(
-          background: 'missing-local-wallpaper.png',
-        ),
+      await setTestChatBackground(
+        settings,
+        path: 'missing-local-wallpaper.png',
       );
       await tester.pump();
       await tester.pump();
@@ -497,15 +474,14 @@ void main() {
       preferences: createBusinessTestPreferences(),
     );
     await assistants.loaded;
-    final id = await assistants.addAssistant(name: 'Frosted');
-    await assistants.setCurrentAssistant(id);
-    await assistants.updateAssistant(
-      assistants.currentAssistant!.copyWith(
-        background: 'https://example.com/wallpaper-a.png',
-      ),
-    );
     final settings = SettingsProvider(createBusinessTestPreferences());
     await settings.loaded;
+    final id = await assistants.addAssistant(name: 'Frosted');
+    await assistants.setCurrentAssistant(id);
+    await setTestChatBackground(
+      settings,
+      path: 'https://example.com/wallpaper-a.png',
+    );
 
     final backdropKey = GlobalKey<_TwoToneBackdropState>();
     await tester.pumpWidget(
@@ -556,15 +532,14 @@ void main() {
       preferences: createBusinessTestPreferences(),
     );
     await assistants.loaded;
-    final id = await assistants.addAssistant(name: 'Frosted');
-    await assistants.setCurrentAssistant(id);
-    await assistants.updateAssistant(
-      assistants.currentAssistant!.copyWith(
-        background: 'https://example.com/wallpaper-a.png',
-      ),
-    );
     final settings = SettingsProvider(createBusinessTestPreferences());
     await settings.loaded;
+    final id = await assistants.addAssistant(name: 'Frosted');
+    await assistants.setCurrentAssistant(id);
+    await setTestChatBackground(
+      settings,
+      path: 'https://example.com/wallpaper-a.png',
+    );
 
     final backdropKey = GlobalKey<_TwoToneBackdropState>();
     await tester.pumpWidget(
@@ -609,15 +584,14 @@ void main() {
       preferences: createBusinessTestPreferences(),
     );
     await assistants.loaded;
-    final id = await assistants.addAssistant(name: 'Frosted');
-    await assistants.setCurrentAssistant(id);
-    await assistants.updateAssistant(
-      assistants.currentAssistant!.copyWith(
-        background: 'https://example.com/wallpaper-a.png',
-      ),
-    );
     final settings = SettingsProvider(createBusinessTestPreferences());
     await settings.loaded;
+    final id = await assistants.addAssistant(name: 'Frosted');
+    await assistants.setCurrentAssistant(id);
+    await setTestChatBackground(
+      settings,
+      path: 'https://example.com/wallpaper-a.png',
+    );
 
     final completer = Completer<ImageInfo>();
     final provider = _DelayedImageProvider(completer);
@@ -679,15 +653,14 @@ void main() {
       preferences: createBusinessTestPreferences(),
     );
     await assistants.loaded;
-    final id = await assistants.addAssistant(name: 'Frosted');
-    await assistants.setCurrentAssistant(id);
-    await assistants.updateAssistant(
-      assistants.currentAssistant!.copyWith(
-        background: 'https://example.com/wallpaper-a.png',
-      ),
-    );
     final settings = SettingsProvider(createBusinessTestPreferences());
     await settings.loaded;
+    final id = await assistants.addAssistant(name: 'Frosted');
+    await assistants.setCurrentAssistant(id);
+    await setTestChatBackground(
+      settings,
+      path: 'https://example.com/wallpaper-a.png',
+    );
 
     var dark = false;
     late void Function(void Function()) rebuild;
@@ -746,15 +719,14 @@ void main() {
       preferences: createBusinessTestPreferences(),
     );
     await assistants.loaded;
-    final id = await assistants.addAssistant(name: 'Frosted');
-    await assistants.setCurrentAssistant(id);
-    await assistants.updateAssistant(
-      assistants.currentAssistant!.copyWith(
-        background: 'https://example.com/wallpaper-a.png',
-      ),
-    );
     final settings = SettingsProvider(createBusinessTestPreferences());
     await settings.loaded;
+    final id = await assistants.addAssistant(name: 'Frosted');
+    await assistants.setCurrentAssistant(id);
+    await setTestChatBackground(
+      settings,
+      path: 'https://example.com/wallpaper-a.png',
+    );
 
     final flicker = GlobalKey<_FlickerBackdropState>();
     await tester.pumpWidget(

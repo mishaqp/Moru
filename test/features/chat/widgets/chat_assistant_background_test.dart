@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:Kelivo/core/providers/assistant_provider.dart';
+import 'package:Kelivo/core/models/chat_appearance.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/features/chat/widgets/chat_assistant_background.dart';
 import 'package:flutter/material.dart';
@@ -46,7 +47,12 @@ void main() {
           await tester.pumpWidget(const SizedBox());
           await tester.runAsync(
             () => precacheImage(
-              FileImage(file),
+              ResizeImage(
+                FileImage(file),
+                width: config.$2.width.ceil(),
+                height: config.$2.height.ceil(),
+                policy: ResizeImagePolicy.fit,
+              ),
               tester.element(find.byType(SizedBox)),
             ),
           );
@@ -63,6 +69,14 @@ void main() {
           await assistants.loaded;
           final settings = SettingsProvider(createBusinessTestPreferences());
           await settings.loaded;
+          await settings.setChatAppearance(
+            ChatAppearanceSettings(
+              light: ChatBackgroundSettings(
+                type: ChatBackgroundType.image,
+                path: file.path,
+              ),
+            ),
+          );
           addTearDown(assistants.dispose);
           addTearDown(settings.dispose);
           final boundaryKey = GlobalKey();
@@ -85,9 +99,6 @@ void main() {
               ),
             ),
           );
-          await tester.runAsync(() async {
-            await precacheImage(FileImage(file), boundaryKey.currentContext!);
-          });
           await tester.pumpAndSettle();
 
           Future<List<Color>> sample() async {
@@ -111,11 +122,18 @@ void main() {
           }
 
           final defaultColors = await sample();
-          await settings.setChatBackgroundMaskStrength(0);
+          Future<void> setMask(double strength) => settings.setChatAppearance(
+            settings.chatAppearance.copyWith(
+              light: settings.chatAppearance.light.copyWith(
+                maskStrength: strength,
+              ),
+            ),
+          );
+          await setMask(0);
           await tester.pumpAndSettle();
           expect(await sample(), everyElement(_wallpaperColor));
 
-          await settings.setChatBackgroundMaskStrength(0.5);
+          await setMask(0.5);
           await tester.pumpAndSettle();
           final halfwayColors = await sample();
           for (var i = 0; i < halfwayColors.length; i++) {
@@ -126,7 +144,7 @@ void main() {
             expect(actual, lessThan(original > masked ? original : masked));
           }
 
-          await settings.setChatBackgroundMaskStrength(1);
+          await setMask(1);
           await tester.pumpAndSettle();
           expect(await sample(), defaultColors);
           await tester.pumpWidget(const SizedBox.shrink());

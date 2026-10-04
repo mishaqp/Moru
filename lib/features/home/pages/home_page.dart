@@ -716,6 +716,7 @@ class _HomePageState extends State<HomePage>
   IncomingShareService? _incomingShares;
   late final Future<void> _chatReady;
   bool _readingIncomingShares = false;
+  bool _backgroundRouteActive = true;
   bool _incomingShareChanged = false;
 
   // ============================================================================
@@ -800,11 +801,13 @@ class _HomePageState extends State<HomePage>
 
   @override
   void didPushNext() {
+    if (_backgroundRouteActive) setState(() => _backgroundRouteActive = false);
     _controller.onDidPushNext();
   }
 
   @override
   void didPopNext() {
+    if (!_backgroundRouteActive) setState(() => _backgroundRouteActive = true);
     _controller.onDidPopNext();
   }
 
@@ -1098,6 +1101,7 @@ class _HomePageState extends State<HomePage>
     final allSelected = _controller.allSelectableMessagesSelected;
 
     return HomeMobileScaffold(
+      backgroundActive: _backgroundRouteActive,
       scaffoldKey: _scaffoldKey,
       drawerController: _drawerController,
       assistantPickerCloseTick: _assistantPickerCloseTick,
@@ -1164,12 +1168,6 @@ class _HomePageState extends State<HomePage>
 
     return ChatInputOverlayLayout(
       topInset: _chatTopOverlayInset(context),
-      // The full-window artwork already sits behind the Scaffold
-      // (MobileBackgroundLayer); painting it again inside the body would only
-      // duplicate it in a box that shrinks with the keyboard.
-      topBackground: backgroundImageActive
-          ? const ChatAssistantBackground(expand: false, pinnedToBackdrop: true)
-          : null,
       backgroundImageActive: backgroundImageActive,
       frostedTopSigma: _glassHeaderSigma(context),
       content: Builder(
@@ -1225,6 +1223,7 @@ class _HomePageState extends State<HomePage>
     final allSelected = _controller.allSelectableMessagesSelected;
 
     return HomeDesktopScaffold(
+      backgroundActive: _backgroundRouteActive,
       scaffoldKey: _scaffoldKey,
       assistantPickerCloseTick: _assistantPickerCloseTick,
       loadingConversationIds: _controller.loadingConversationIds,
@@ -1333,13 +1332,6 @@ class _HomePageState extends State<HomePage>
 
     return ChatInputOverlayLayout(
       topInset: _chatTopOverlayInset(context),
-      topBackground: backgroundImageActive
-          ? const ChatAssistantBackground(
-              desktop: true,
-              includeSurfaceFill: true,
-              pinnedToBackdrop: true,
-            )
-          : null,
       backgroundImageActive: backgroundImageActive,
       frostedTopSigma: _glassHeaderSigma(context),
       content: FadeTransition(

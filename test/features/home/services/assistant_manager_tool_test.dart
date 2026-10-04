@@ -10,6 +10,15 @@ import 'package:Kelivo/features/home/services/local_tools_service.dart';
 
 import '../../../support/business_test_harness.dart';
 
+const _legacyBackgroundSettings = {
+  'background': '/legacy/assistant-background.jpg',
+  'useGradientBackground': true,
+  'gradientBackgroundAnimated': false,
+  'gradientBackgroundPhase': 7.0,
+  'gradientBackgroundOffsetX': 0.4,
+  'gradientBackgroundOffsetY': -0.6,
+};
+
 const _catalog = AssistantManagerCatalog(
   providers: [
     AssistantManagerProvider(
@@ -148,6 +157,94 @@ void main() {
     expect(settings['agentAuthMode']['type'], 'string');
     expect(settings['agentAuthMode']['enum'], ['provider', 'subscription']);
   });
+
+  test('retired assistant backgrounds are absent from tool settings', () async {
+    await assistants.updateAssistant(
+      Assistant.fromJson({
+        ...assistants.getById(mainId)!.toJson(),
+        ..._legacyBackgroundSettings,
+      }),
+    );
+    final schema =
+        AssistantManagerTool
+                .definition['function']['parameters']['properties']['settings']['properties']
+            as Map;
+    final result = await _run(tool, {'action': 'get', 'assistant_id': mainId});
+    expect(result['ok'], isTrue, reason: '$result');
+    final settings = result['settings'] as Map;
+    for (final key in _legacyBackgroundSettings.keys) {
+      expect(schema.containsKey(key), isFalse, reason: key);
+      expect(settings.containsKey(key), isFalse, reason: key);
+      expect(AssistantManagerTool.clearableSettings, isNot(contains(key)));
+    }
+  });
+
+  test('background changes and resets are rejected atomically', () async {
+    await assistants.updateAssistant(
+      Assistant.fromJson({
+        ...assistants.getById(mainId)!.toJson(),
+        ..._legacyBackgroundSettings,
+      }),
+    );
+    final original = assistants.getById(mainId)!.toJson();
+    for (final action in ['create', 'update', 'duplicate']) {
+      for (final entry in _legacyBackgroundSettings.entries) {
+        for (final change in [
+          {
+            'settings': {'name': 'Rejected change', entry.key: entry.value},
+          },
+          {
+            'settings': {'name': 'Rejected change'},
+            'clear': [entry.key],
+          },
+        ]) {
+          final result = await _run(tool, {
+            'action': action,
+            if (action != 'create') 'assistant_id': mainId,
+            ...change,
+          });
+          expect(result['ok'], isFalse, reason: '$action $change');
+          expect(result['error'], 'invalid_settings', reason: '$result');
+          expect(assistants.assistants.map((a) => a.id), [mainId]);
+          expect(assistants.getById(mainId)!.toJson(), original);
+        }
+      }
+    }
+  });
+
+  test(
+    'updates and copies preserve stored retired background values',
+    () async {
+      await assistants.updateAssistant(
+        Assistant.fromJson({
+          ...assistants.getById(mainId)!.toJson(),
+          ..._legacyBackgroundSettings,
+        }),
+      );
+      final updated = await _run(tool, {
+        'action': 'update',
+        'assistant_id': mainId,
+        'settings': {'name': 'Renamed', 'temperature': 0.8},
+      });
+      expect(updated['ok'], isTrue, reason: '$updated');
+      final copied = await _run(tool, {
+        'action': 'duplicate',
+        'assistant_id': mainId,
+        'settings': {'name': 'Copy'},
+      });
+      expect(copied['ok'], isTrue, reason: '$copied');
+      final copyId = copied['created']['id'] as String;
+      for (final id in [mainId, copyId]) {
+        final json = assistants.getById(id)!.toJson();
+        for (final entry in _legacyBackgroundSettings.entries) {
+          expect(json[entry.key], entry.value, reason: '$id ${entry.key}');
+        }
+        expect(json['temperature'], 0.8);
+      }
+      expect(assistants.getById(mainId)!.name, 'Renamed');
+      expect(assistants.getById(copyId)!.name, 'Copy');
+    },
+  );
 
   for (final agentId in ['claude-code', 'codex']) {
     test('creates a $agentId assistant using its own account', () async {
