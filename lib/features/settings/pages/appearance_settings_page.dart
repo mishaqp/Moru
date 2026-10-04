@@ -4,12 +4,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
-import 'package:syncfusion_flutter_core/theme.dart';
-import 'package:syncfusion_flutter_sliders/sliders.dart';
 
 import '../../../core/models/chat_appearance.dart';
+import '../../../core/models/sidebar_appearance.dart';
+import '../../../core/models/sidebar_shortcut.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_settings_rows.dart';
@@ -20,11 +19,16 @@ import '../../../theme/custom_theme.dart';
 import '../../../theme/palettes.dart';
 import '../../../theme/theme_factory.dart';
 import '../../chat/widgets/chat_background.dart';
+import '../widgets/background_appearance_editor.dart';
 import '../widgets/settings_search_target.dart';
+import '../widgets/sidebar_appearance_editor.dart';
+import '../widgets/sidebar_appearance_preview.dart';
 import 'message_style_settings_page.dart';
 
 class AppearanceSettingsPage extends StatefulWidget {
-  const AppearanceSettingsPage({super.key});
+  const AppearanceSettingsPage({super.key, this.initialTab = 0});
+
+  final int initialTab;
 
   @override
   State<AppearanceSettingsPage> createState() => _AppearanceSettingsPageState();
@@ -33,10 +37,14 @@ class AppearanceSettingsPage extends StatefulWidget {
 class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
   late ChatAppearanceSettings _saved;
   late ChatAppearanceSettings _draft;
+  late SidebarAppearanceSettings _sidebarSaved;
+  late SidebarAppearanceSettings _sidebarDraft;
   bool _dirty = false;
+  bool _sidebarDirty = false;
   bool _importing = false;
   bool _editingDark = false;
-  int _tab = 0;
+  bool _initializedBrightness = false;
+  late int _tab;
   String? _error;
   Object? _themeKey;
   ThemeData? _lightTheme;
@@ -44,14 +52,26 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
 
   Brightness get _brightness =>
       _editingDark ? Brightness.dark : Brightness.light;
-
   ChatBackgroundSettings get _background => _draft.backgroundFor(_brightness);
 
   @override
   void initState() {
     super.initState();
-    _saved = context.read<SettingsProvider>().chatAppearance;
+    final settings = context.read<SettingsProvider>();
+    _saved = settings.chatAppearance;
     _draft = _saved;
+    _sidebarSaved = settings.sidebarAppearance;
+    _sidebarDraft = _sidebarSaved;
+    _tab = widget.initialTab.clamp(0, 1);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initializedBrightness) {
+      _editingDark = Theme.of(context).brightness == Brightness.dark;
+      _initializedBrightness = true;
+    }
   }
 
   void _changeBackground(ChatBackgroundSettings value) {
@@ -66,6 +86,14 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
     });
   }
 
+  void _changeSidebar(SidebarAppearanceSettings value) {
+    setState(() {
+      _sidebarDraft = value;
+      _sidebarDirty = true;
+      _error = null;
+    });
+  }
+
   Future<void> _commit() async {
     if (!_dirty) return;
     final value = _draft;
@@ -76,11 +104,29 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => _error = AppLocalizations.of(context)!.appearanceMediaError,
+          () => _error = AppLocalizations.of(context)!.appearanceSaveError,
         );
       }
     }
   }
+
+  Future<void> _commitSidebar() async {
+    if (!_sidebarDirty) return;
+    final value = _sidebarDraft;
+    _sidebarSaved = value;
+    _sidebarDirty = false;
+    try {
+      await context.read<SettingsProvider>().setSidebarAppearance(value);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = AppLocalizations.of(context)!.appearanceSaveError,
+        );
+      }
+    }
+  }
+
+  Future<void> _commitCurrent() => _tab == 1 ? _commitSidebar() : _commit();
 
   void _selectSource(ChatBackgroundType type) {
     if (_importing) return;
@@ -90,22 +136,40 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
       unawaited(_pickMedia(type));
       return;
     }
-    _changeBackground(
-      _background.copyWith(type: type, clearPath: true, gradientAnimated: true),
-    );
-    unawaited(_commit());
+    if (_tab == 1) {
+      _changeSidebar(
+        _sidebarDraft.copyWith(
+          customBackground: _sidebarDraft.customBackground.copyWith(
+            type: type,
+            clearPath: true,
+            gradientAnimated: true,
+          ),
+        ),
+      );
+    } else {
+      _changeBackground(
+        _background.copyWith(
+          type: type,
+          clearPath: true,
+          gradientAnimated: true,
+        ),
+      );
+    }
+    unawaited(_commitCurrent());
   }
 
+  /// Both editors use the existing Android picker and owned-media import path.
   Future<void> _pickMedia(ChatBackgroundType type) async {
     if (_importing) return;
     final settings = context.read<SettingsProvider>();
     final brightness = _brightness;
+    final sidebar = _tab == 1;
     setState(() {
       _importing = true;
       _error = null;
     });
     try {
-      await _commit();
+      await _commitCurrent();
       if (!mounted) return;
       String? path;
       if (type == ChatBackgroundType.gif) {
@@ -124,15 +188,22 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
         ))?.path;
       }
       if (path == null || !mounted) return;
-      final ok = await settings.importChatBackground(
-        path,
-        type,
-        brightness: brightness,
-      );
+      final ok = sidebar
+          ? await settings.importSidebarBackground(path, type)
+          : await settings.importChatBackground(
+              path,
+              type,
+              brightness: brightness,
+            );
       if (!mounted) return;
       setState(() {
-        _saved = settings.chatAppearance;
-        _draft = _saved;
+        if (sidebar) {
+          _sidebarSaved = settings.sidebarAppearance;
+          _sidebarDraft = _sidebarSaved;
+        } else {
+          _saved = settings.chatAppearance;
+          _draft = _saved;
+        }
         if (!ok) _error = AppLocalizations.of(context)!.appearanceMediaError;
       });
     } catch (_) {
@@ -146,14 +217,32 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
     }
   }
 
-  void _reset() {
+  Future<void> _reset() async {
     if (_importing) return;
-    setState(() {
-      _draft = const ChatAppearanceSettings();
-      _dirty = true;
-      _error = null;
-    });
-    unawaited(_commit());
+    if (_tab == 1) {
+      final before = _sidebarSaved;
+      _changeSidebar(const SidebarAppearanceSettings());
+      _sidebarSaved = _sidebarDraft;
+      _sidebarDirty = false;
+      try {
+        await context.read<SettingsProvider>().resetSidebarAppearance();
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          _sidebarDraft = before;
+          _sidebarSaved = context.read<SettingsProvider>().sidebarAppearance;
+          _sidebarDirty = _sidebarDraft != _sidebarSaved;
+          _error = AppLocalizations.of(context)!.appearanceSaveError;
+        });
+      }
+    } else {
+      setState(() {
+        _draft = const ChatAppearanceSettings();
+        _dirty = true;
+        _error = null;
+      });
+      unawaited(_commit());
+    }
   }
 
   ThemeData _previewTheme(BuildContext context, SettingsProvider settings) {
@@ -194,10 +283,20 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
     final saved = context.select<SettingsProvider, ChatAppearanceSettings>(
       (s) => s.chatAppearance,
     );
+    final sidebarSaved = context
+        .select<SettingsProvider, SidebarAppearanceSettings>(
+          (s) => s.sidebarAppearance,
+        );
+    final thumbnails = context.select<SettingsProvider, bool>(
+      (s) => s.sidebarThumbnails,
+    );
+    final shortcuts = context.select<SettingsProvider, List<SidebarShortcut>>(
+      (s) => s.sidebarShortcuts,
+    );
+    final glass = context.select<SettingsProvider, bool>((s) => s.glassTheme);
     context.select<SettingsProvider, Object>(
       (s) => (
         s.selectedCustomTheme,
@@ -210,23 +309,28 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
       _saved = saved;
       if (!_dirty) _draft = saved;
     }
-    final background = _background;
-    final media = switch (background.type) {
-      ChatBackgroundType.image ||
-      ChatBackgroundType.gif ||
-      ChatBackgroundType.video => true,
-      _ => false,
-    };
-    final positioned =
-        background.type == ChatBackgroundType.gradient ||
-        (media &&
-            (background.fit == ChatBackgroundFit.cover ||
-                background.fit == ChatBackgroundFit.contain));
+    if (sidebarSaved != _sidebarSaved) {
+      _sidebarSaved = sidebarSaved;
+      if (!_sidebarDirty) _sidebarDraft = sidebarSaved;
+    }
     final previewTheme = _previewTheme(
       context,
       context.read<SettingsProvider>(),
     );
+    final sidebarTheme = Theme.of(context);
     final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final chatHeight =
+        ((MediaQuery.sizeOf(context).height -
+                    MediaQuery.paddingOf(context).vertical -
+                    kToolbarHeight) *
+                .32)
+            .clamp(100.0, 220.0);
+    final sidebarHeight =
+        ((MediaQuery.sizeOf(context).height -
+                    MediaQuery.paddingOf(context).vertical -
+                    kToolbarHeight) *
+                .38)
+            .clamp(100.0, 300.0);
 
     return Scaffold(
       appBar: AppBar(
@@ -243,8 +347,10 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
             key: const ValueKey('appearanceReset'),
             icon: LucideIcons.rotateCcw,
             minSize: 48,
-            tooltip: l.appearanceReset,
-            semanticLabel: l.appearanceReset,
+            tooltip: _tab == 1 ? l.appearanceSidebarReset : l.appearanceReset,
+            semanticLabel: _tab == 1
+                ? l.appearanceSidebarReset
+                : l.appearanceReset,
             enabled: !_importing,
             onTap: _reset,
           ),
@@ -256,299 +362,157 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) => GestureDetector(
-                      key: const ValueKey('appearancePreview'),
-                      behavior: HitTestBehavior.opaque,
-                      onPanUpdate: !positioned || _importing
-                          ? null
-                          : (details) {
-                              final dx =
-                                  details.delta.dx * 2 / constraints.maxWidth;
-                              final dy =
-                                  details.delta.dy * 2 / (240 * textScale);
-                              final value = _background;
-                              final focusDirection =
-                                  value.fit == ChatBackgroundFit.cover ? -1 : 1;
-                              _changeBackground(
-                                value.type == ChatBackgroundType.gradient
-                                    ? value.copyWith(
-                                        gradientOffsetX:
-                                            value.gradientOffsetX + dx,
-                                        gradientOffsetY:
-                                            value.gradientOffsetY + dy,
-                                      )
-                                    : value.copyWith(
-                                        focusX:
-                                            (value.focusX + dx * focusDirection)
-                                                .clamp(-1.0, 1.0),
-                                        focusY:
-                                            (value.focusY + dy * focusDirection)
-                                                .clamp(-1.0, 1.0),
-                                      ),
-                              );
-                            },
-                      onPanEnd: !positioned || _importing
-                          ? null
-                          : (_) => unawaited(_commit()),
-                      onPanCancel: !positioned || _importing
-                          ? null
-                          : () => unawaited(_commit()),
-                      child: MessageStylePreview(
-                        theme: previewTheme,
-                        height: 240 * textScale,
-                        backgroundConfiguration: background,
-                        backdrop: ChatBackground(
-                          configuration: background,
-                          includeSurfaceFill: true,
-                          active: _tab == 0,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SegmentedTabs(
-                    height: 48,
-                    tabs: [
-                      SegmentedTab(
-                        label: l.appearanceChatWindow,
-                        icon: LucideIcons.messageSquare,
-                      ),
-                      SegmentedTab(
-                        label: l.appearanceSidebar,
-                        icon: LucideIcons.panelLeft,
-                      ),
-                    ],
-                    index: _tab,
-                    onChanged: _importing
-                        ? (_) {}
-                        : (value) => setState(() => _tab = value),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_tab == 1)
-                    SectionCard(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(
-                        l.appearanceSidebarComingSoon,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: cs.onSurfaceVariant,
-                          height: 1.4,
-                        ),
-                      ),
-                    )
-                  else ...[
-                    SettingsSearchTarget.wrap(
-                      context,
-                      l.appearanceSameBackground,
-                      SectionCard(
-                        child: IosSwitchRow(
-                          key: const ValueKey('appearanceShared'),
-                          label: l.appearanceSameBackground,
-                          subtitle: l.appearanceSameBackgroundHint,
-                          value: _draft.shared,
-                          onChanged: (value) {
-                            if (_importing) return;
-                            setState(() {
-                              _draft = _draft.copyWith(shared: value);
-                              _dirty = true;
-                            });
-                            unawaited(_commit());
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SegmentedTabs(
-                      key: const ValueKey('appearanceBrightnessMode'),
-                      height: 48,
-                      tabs: [
-                        SegmentedTab(
-                          label: l.messageStyleSettingsPageLight,
-                          icon: LucideIcons.sun,
-                        ),
-                        SegmentedTab(
-                          label: l.messageStyleSettingsPageDark,
-                          icon: LucideIcons.moon,
-                        ),
-                      ],
-                      index: _editingDark ? 1 : 0,
-                      onChanged: (value) {
-                        if (_importing) return;
-                        unawaited(_commit());
-                        setState(() => _editingDark = value == 1);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    SettingsSearchTarget.wrap(
-                      context,
-                      l.appearanceBackground,
-                      SectionCard(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l.appearanceBackground,
-                              style: const TextStyle(fontSize: 15),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: _tab == 1
+                      ? BackgroundPositioningPreview(
+                          key: const ValueKey('appearanceSidebarPreview'),
+                          configuration: _sidebarDraft.customBackground,
+                          currentConfiguration: () =>
+                              _sidebarDraft.customBackground,
+                          height: sidebarHeight,
+                          enabled:
+                              !_importing &&
+                              _sidebarDraft.backgroundMode ==
+                                  SidebarBackgroundMode.custom,
+                          onChanged: (background) => _changeSidebar(
+                            _sidebarDraft.copyWith(
+                              customBackground: background,
                             ),
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 6,
-                              children: [
-                                for (final type in ChatBackgroundType.values)
-                                  ChoiceChip(
-                                    key: ValueKey(
-                                      'appearanceSource.${type.name}',
+                          ),
+                          onCommit: () => unawaited(_commitSidebar()),
+                          child: SidebarAppearancePreview(
+                            appearance: _sidebarDraft,
+                            backgroundConfiguration: _sidebarDraft
+                                .backgroundFor(sidebarTheme.brightness, _draft),
+                            theme: sidebarTheme,
+                            height: sidebarHeight,
+                            showThumbnails: thumbnails,
+                            shortcuts: shortcuts,
+                            glass: glass,
+                          ),
+                        )
+                      : BackgroundPositioningPreview(
+                          key: const ValueKey('appearancePreview'),
+                          configuration: _background,
+                          currentConfiguration: () => _background,
+                          height: chatHeight,
+                          enabled: !_importing,
+                          onChanged: _changeBackground,
+                          onCommit: () => unawaited(_commit()),
+                          child: SizedBox(
+                            height: chatHeight,
+                            child: LayoutBuilder(
+                              builder: (context, constraints) => FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: SizedBox(
+                                  width: constraints.maxWidth,
+                                  child: MessageStylePreview(
+                                    theme: previewTheme,
+                                    height: 240 * textScale,
+                                    backgroundConfiguration: _background,
+                                    backdrop: ChatBackground(
+                                      configuration: _background,
+                                      includeSurfaceFill: true,
                                     ),
-                                    label: Text(_sourceLabel(l, type)),
-                                    selected: background.type == type,
-                                    onSelected: _importing
-                                        ? null
-                                        : (_) => _selectSource(type),
                                   ),
-                              ],
-                            ),
-                            if (_importing) ...[
-                              const SizedBox(height: 12),
-                              const LinearProgressIndicator(),
-                            ],
-                            if (media) ...[
-                              const SizedBox(height: 8),
-                              IosNavRow(
-                                icon: LucideIcons.folderOpen,
-                                label: background.path == null
-                                    ? l.appearanceChooseMedia
-                                    : l.appearanceReplaceMedia,
-                                subtitle: background.path == null
-                                    ? null
-                                    : p.basename(background.path!),
-                                onTap: _importing
-                                    ? null
-                                    : () => unawaited(
-                                        _pickMedia(background.type),
-                                      ),
+                                ),
                               ),
-                            ],
-                            if (_error != null) ...[
-                              const SizedBox(height: 8),
-                              Text(_error!, style: TextStyle(color: cs.error)),
-                            ],
-                          ],
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    if (media) ...[
-                      const SizedBox(height: 12),
-                      SectionCard(
-                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l.appearanceFit,
-                              style: const TextStyle(fontSize: 15),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: _tabs(l),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                    child: _tab == 1
+                        ? SidebarAppearanceEditor(
+                            value: _sidebarDraft,
+                            onChanged: _changeSidebar,
+                            onCommit: () => unawaited(_commitSidebar()),
+                            onSelectSource: _selectSource,
+                            onPickMedia: (type) => unawaited(_pickMedia(type)),
+                            importing: _importing,
+                            error: _error,
+                            showThumbnails: thumbnails,
+                            onThumbnailsChanged: (value) => unawaited(
+                              context
+                                  .read<SettingsProvider>()
+                                  .setSidebarThumbnails(value),
                             ),
-                            DropdownButton<ChatBackgroundFit>(
-                              key: const ValueKey('appearanceFit'),
-                              isExpanded: true,
-                              value: background.fit,
-                              icon: const Icon(
-                                LucideIcons.chevronDown,
-                                size: 18,
-                              ),
-                              items: [
-                                for (final fit in ChatBackgroundFit.values)
-                                  if (fit != ChatBackgroundFit.tile ||
-                                      background.type !=
-                                          ChatBackgroundType.video)
-                                    DropdownMenuItem(
-                                      value: fit,
-                                      child: Text(_fitLabel(l, fit)),
-                                    ),
-                              ],
-                              onChanged: _importing
-                                  ? null
-                                  : (value) {
-                                      if (value == null) return;
-                                      _changeBackground(
-                                        _background.copyWith(fit: value),
-                                      );
+                            shortcuts: shortcuts,
+                            onShortcutsChanged: (value) => unawaited(
+                              context
+                                  .read<SettingsProvider>()
+                                  .setSidebarShortcuts(value),
+                            ),
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              SettingsSearchTarget.wrap(
+                                context,
+                                l.appearanceSameBackground,
+                                SectionCard(
+                                  child: IosSwitchRow(
+                                    key: const ValueKey('appearanceShared'),
+                                    label: l.appearanceSameBackground,
+                                    subtitle: l.appearanceSameBackgroundHint,
+                                    value: _draft.shared,
+                                    onChanged: (value) {
+                                      if (_importing) return;
+                                      setState(() {
+                                        _draft = _draft.copyWith(shared: value);
+                                        _dirty = true;
+                                      });
                                       unawaited(_commit());
                                     },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    if (positioned) ...[
-                      const SizedBox(height: 12),
-                      SectionCard(
-                        child: IosNavRow(
-                          key: const ValueKey('appearanceCenter'),
-                          icon: LucideIcons.scan,
-                          label: l.appearanceCenterFocus,
-                          subtitle: l.appearanceFocusHint,
-                          subtitleMaxLines: null,
-                          onTap: _importing
-                              ? null
-                              : () {
-                                  _changeBackground(
-                                    _background.copyWith(
-                                      focusX: 0,
-                                      focusY: 0,
-                                      gradientOffsetX: 0,
-                                      gradientOffsetY: 0,
-                                    ),
-                                  );
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SegmentedTabs(
+                                key: const ValueKey('appearanceBrightnessMode'),
+                                height: 48,
+                                tabs: [
+                                  SegmentedTab(
+                                    label: l.messageStyleSettingsPageLight,
+                                    icon: LucideIcons.sun,
+                                  ),
+                                  SegmentedTab(
+                                    label: l.messageStyleSettingsPageDark,
+                                    icon: LucideIcons.moon,
+                                  ),
+                                ],
+                                index: _editingDark ? 1 : 0,
+                                onChanged: (value) {
+                                  if (_importing) return;
                                   unawaited(_commit());
+                                  setState(() => _editingDark = value == 1);
                                 },
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-                    SectionCard(
-                      children: [
-                        _slider(
-                          'appearanceMask',
-                          l.displaySettingsPageChatBackgroundMaskTitle,
-                          background.maskStrength,
-                          2,
-                          (v) => _background.copyWith(maskStrength: v),
-                        ),
-                        _slider(
-                          'appearanceBlur',
-                          l.messageStyleSettingsPageBlur,
-                          background.blur,
-                          30,
-                          (v) => _background.copyWith(blur: v),
-                          percentage: false,
-                        ),
-                        _slider(
-                          'appearanceBrightness',
-                          l.appearanceBrightness,
-                          background.brightness,
-                          2,
-                          (v) => _background.copyWith(brightness: v),
-                        ),
-                        _slider(
-                          'appearanceSaturation',
-                          l.appearanceSaturation,
-                          background.saturation,
-                          2,
-                          (v) => _background.copyWith(saturation: v),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
+                              ),
+                              const SizedBox(height: 12),
+                              BackgroundAppearanceEditor(
+                                configuration: _background,
+                                onChanged: _changeBackground,
+                                onCommit: () => unawaited(_commit()),
+                                onSelectSource: _selectSource,
+                                onPickMedia: (type) =>
+                                    unawaited(_pickMedia(type)),
+                                importing: _importing,
+                                error: _error,
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -556,75 +520,24 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
     );
   }
 
-  Widget _slider(
-    String key,
-    String label,
-    double value,
-    double max,
-    ChatBackgroundSettings Function(double) change, {
-    bool percentage = true,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    return SettingsSearchTarget.wrap(
-      context,
-      label,
-      Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(label, style: const TextStyle(fontSize: 14)),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  percentage
-                      ? '${(value * 100).round()}%'
-                      : value.round().toString(),
-                  style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
-                ),
-              ],
-            ),
-            SfSliderTheme(
-              data: SfSliderThemeData(
-                activeTrackHeight: 6,
-                inactiveTrackHeight: 6,
-                activeTrackColor: cs.primary,
-                inactiveTrackColor: cs.onSurface.withValues(alpha: .12),
-                thumbColor: cs.primary,
-              ),
-              child: SfSlider(
-                key: ValueKey(key),
-                value: value,
-                min: 0.0,
-                max: max,
-                stepSize: percentage ? .01 : 1,
-                onChanged: _importing
-                    ? null
-                    : (dynamic v) => _changeBackground(change(v as double)),
-                onChangeEnd: _importing ? null : (_) => unawaited(_commit()),
-              ),
-            ),
-          ],
-        ),
+  Widget _tabs(AppLocalizations l) => SegmentedTabs(
+    height: 48,
+    tabs: [
+      SegmentedTab(
+        label: l.appearanceChatWindow,
+        icon: LucideIcons.messageSquare,
       ),
-    );
-  }
+      SegmentedTab(label: l.appearanceSidebar, icon: LucideIcons.panelLeft),
+    ],
+    index: _tab,
+    onChanged: _importing
+        ? (_) {}
+        : (value) {
+            unawaited(_commitCurrent());
+            setState(() {
+              _tab = value;
+              _error = null;
+            });
+          },
+  );
 }
-
-String _sourceLabel(AppLocalizations l, ChatBackgroundType type) =>
-    switch (type) {
-      ChatBackgroundType.none => l.appearanceNone,
-      ChatBackgroundType.image => l.appearancePhoto,
-      ChatBackgroundType.gif => l.appearanceGif,
-      ChatBackgroundType.video => l.appearanceVideo,
-      ChatBackgroundType.gradient => l.appearanceAnimatedGradient,
-    };
-
-String _fitLabel(AppLocalizations l, ChatBackgroundFit fit) => switch (fit) {
-  ChatBackgroundFit.cover => l.appearanceFitCover,
-  ChatBackgroundFit.contain => l.appearanceFitContain,
-  ChatBackgroundFit.fill => l.appearanceFitFill,
-  ChatBackgroundFit.tile => l.appearanceFitTile,
-};

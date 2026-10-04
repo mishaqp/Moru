@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/models/sidebar_shortcut.dart';
+import '../../../core/models/sidebar_appearance.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/browser/browser_library.dart';
 import '../../../core/services/haptics.dart';
@@ -127,7 +128,7 @@ class _SidebarBottomBarState extends State<SidebarBottomBar> {
             if (visible.isEmpty) return const SizedBox.shrink();
             final cards = <Widget>[
               for (final item in visible)
-                _ShortcutCard(
+                SidebarShortcutCard(
                   key: SidebarBottomBar.shortcutKey(item.shortcut),
                   glass: widget.glass,
                   leading: item.app == null
@@ -190,23 +191,24 @@ String _pageName(SidebarShortcut shortcut) {
 // OmniBot's quick-launch chips and footer capsule.
 const double _cardHeight = 48;
 const double _gridGap = 8;
-const double _dockHeight = 44;
 
-class _ShortcutCard extends StatelessWidget {
-  const _ShortcutCard({
+class SidebarShortcutCard extends StatelessWidget {
+  const SidebarShortcutCard({
     super.key,
     required this.glass,
     required this.leading,
     required this.label,
-    required this.onTap,
+    this.onTap,
     this.onLongPress,
   });
 
   final bool glass;
   final Widget leading;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  static const double height = _cardHeight;
+  static const double gridGap = _gridGap;
 
   @override
   Widget build(BuildContext context) {
@@ -381,6 +383,28 @@ class _ShortcutPicker extends StatelessWidget {
   }
 }
 
+/// The labels and icons shared by the actual dock and its settings preview.
+String sidebarDockLabel(AppLocalizations l10n, SidebarDockItem item) =>
+    switch (item) {
+      SidebarDockItem.profile => l10n.sideDrawerSetNicknameTitle,
+      SidebarDockItem.settings => l10n.settingsPageTitle,
+      SidebarDockItem.memory => l10n.memorySettingsPageTitle,
+      SidebarDockItem.miniApps => l10n.miniAppsTitle,
+      SidebarDockItem.environment => l10n.workspaceEnvTitle,
+      SidebarDockItem.translate => l10n.desktopNavTranslateTooltip,
+      SidebarDockItem.scheduledTasks => l10n.scheduledTasksTitle,
+    };
+
+IconData sidebarDockIcon(SidebarDockItem item) => switch (item) {
+  SidebarDockItem.profile => Lucide.User,
+  SidebarDockItem.settings => Lucide.Settings,
+  SidebarDockItem.memory => Lucide.Brain,
+  SidebarDockItem.miniApps => Lucide.LayoutGrid,
+  SidebarDockItem.environment => Lucide.SquareTerminal,
+  SidebarDockItem.translate => Lucide.Languages,
+  SidebarDockItem.scheduledTasks => Lucide.CalendarClock,
+};
+
 /// The avatar and one-tap icons for the app's main screens.
 class _Dock extends StatelessWidget {
   const _Dock({
@@ -397,82 +421,59 @@ class _Dock extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final color = Theme.of(context).colorScheme.onSurface;
+    final items = context.select<SettingsProvider, List<SidebarDockItem>>(
+      (settings) => settings.sidebarAppearance.dockItems,
+    );
+    if (items.isEmpty) return const SizedBox.shrink();
 
     void push(Widget page) => Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => page));
 
-    // OmniBot's footer: one capsule, every icon an equal share of it. The
-    // avatar (profile) leads, as Moru keeps the name and picture here.
-    Widget slot(String label, VoidCallback onTap, Widget icon) => Expanded(
-      child: Tooltip(
-        message: label,
-        child: Semantics(
-          button: true,
-          label: label,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(_dockHeight / 2),
-            child: SizedBox(
-              height: _dockHeight,
-              child: Center(child: icon),
-            ),
-          ),
-        ),
-      ),
-    );
-    Widget item(IconData icon, String label, VoidCallback onTap) =>
-        slot(label, onTap, Icon(icon, size: 17, color: color));
+    VoidCallback action(SidebarDockItem item) => switch (item) {
+      SidebarDockItem.profile => onAvatarTap,
+      SidebarDockItem.settings => () => push(const SettingsPage()),
+      SidebarDockItem.memory => () => push(const MemorySettingsPage()),
+      SidebarDockItem.miniApps => () => push(const MiniAppsPage()),
+      SidebarDockItem.environment =>
+        () => WorkspaceNavigation.openEnvironmentPage(context),
+      SidebarDockItem.translate => () => push(const TranslatePage()),
+      SidebarDockItem.scheduledTasks => () => push(const ScheduledTasksPage()),
+    };
 
     return Padding(
       key: SidebarBottomBar.dockKey,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Material(
-        color: sidebarSecondarySurface(context, glass: glass),
-        borderRadius: BorderRadius.circular(_dockHeight / 2),
-        clipBehavior: Clip.antiAlias,
-        child: SizedBox(
-          height: _dockHeight,
-          child: Row(
-            children: [
-              slot(
-                l10n.sideDrawerSetNicknameTitle,
-                onAvatarTap,
-                KeyedSubtree(key: SidebarBottomBar.avatarKey, child: avatar),
+      child: SidebarDockCapsule(
+        glass: glass,
+        children: [
+          for (final item in items)
+            Tooltip(
+              key: ValueKey<String>('sidebar-dock-${item.name}'),
+              message: sidebarDockLabel(l10n, item),
+              child: Semantics(
+                button: true,
+                label: sidebarDockLabel(l10n, item),
+                child: InkWell(
+                  onTap: action(item),
+                  borderRadius: BorderRadius.circular(
+                    SidebarDockCapsule.height / 2,
+                  ),
+                  child: SizedBox(
+                    height: SidebarDockCapsule.height,
+                    child: Center(
+                      child: item == SidebarDockItem.profile
+                          ? KeyedSubtree(
+                              key: SidebarBottomBar.avatarKey,
+                              child: avatar,
+                            )
+                          : Icon(sidebarDockIcon(item), size: 17, color: color),
+                    ),
+                  ),
+                ),
               ),
-              item(
-                Lucide.Settings,
-                l10n.settingsPageTitle,
-                () => push(const SettingsPage()),
-              ),
-              item(
-                Lucide.Brain,
-                l10n.memorySettingsPageTitle,
-                () => push(const MemorySettingsPage()),
-              ),
-              item(
-                Lucide.LayoutGrid,
-                l10n.miniAppsTitle,
-                () => push(const MiniAppsPage()),
-              ),
-              item(
-                Lucide.SquareTerminal,
-                l10n.workspaceEnvTitle,
-                () => WorkspaceNavigation.openEnvironmentPage(context),
-              ),
-              item(
-                Lucide.Languages,
-                l10n.desktopNavTranslateTooltip,
-                () => push(const TranslatePage()),
-              ),
-              item(
-                Lucide.CalendarClock,
-                l10n.scheduledTasksTitle,
-                () => push(const ScheduledTasksPage()),
-              ),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }

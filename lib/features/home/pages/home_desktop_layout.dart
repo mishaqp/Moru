@@ -129,9 +129,14 @@ class HomeDesktopScaffold extends StatelessWidget {
   }
 
   Widget _buildLeftSidebar(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final sidebarWidth = context.select<SettingsProvider, double>(
+      (settings) =>
+          settings.sidebarAppearance.widthFor(screenWidth, wide: true),
+    );
     final sidebar = SideDrawer(
       embedded: true,
-      embeddedWidth: embeddedSidebarWidth,
+      embeddedWidth: sidebarWidth,
       userName: context.watch<UserProvider>().name,
       assistantName: _getAssistantName(context),
       closePickerTicker: assistantPickerCloseTick,
@@ -154,14 +159,17 @@ class HomeDesktopScaffold extends StatelessWidget {
     return AnimatedContainer(
       duration: _sidebarAnimDuration,
       curve: _sidebarAnimCurve,
-      width: tabletSidebarOpen ? embeddedSidebarWidth : 0,
+      width: tabletSidebarOpen ? sidebarWidth : 0,
       color: Colors.transparent,
       child: ClipRect(
         child: OverflowBox(
           alignment: Alignment.centerLeft,
           minWidth: 0,
-          maxWidth: embeddedSidebarWidth,
-          child: SizedBox(width: embeddedSidebarWidth, child: sidebar),
+          maxWidth: sidebarWidth,
+          child: TickerMode(
+            enabled: tabletSidebarOpen,
+            child: SizedBox(width: sidebarWidth, child: sidebar),
+          ),
         ),
       ),
     );

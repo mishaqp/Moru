@@ -9,6 +9,108 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get appearanceSaveError => '无法保存外观。请重试。';
+
+  @override
+  String get appearanceSidebarBackground => '侧栏背景';
+
+  @override
+  String get appearanceSidebarSameAsChat => '与聊天相同';
+
+  @override
+  String get appearanceSidebarCustomBackground => '自定义背景';
+
+  @override
+  String get appearanceSidebarThemeBackground => '主题背景';
+
+  @override
+  String get appearanceSidebarMask => '侧栏背景遮罩';
+
+  @override
+  String get appearanceSidebarBlur => '侧栏背景模糊';
+
+  @override
+  String get appearanceSidebarOpacity => '侧栏背景不透明度';
+
+  @override
+  String get appearanceSidebarPhoneWidth => '手机侧栏宽度';
+
+  @override
+  String get appearanceSidebarWideWidth => '宽屏侧栏宽度';
+
+  @override
+  String get appearanceSidebarDensity => '聊天列表密度';
+
+  @override
+  String get appearanceSidebarCompact => '紧凑';
+
+  @override
+  String get appearanceSidebarNormal => '标准';
+
+  @override
+  String get appearanceSidebarSpacious => '宽松';
+
+  @override
+  String get appearanceSidebarCardRadius => '聊天卡片圆角';
+
+  @override
+  String get appearanceSidebarCardColor => '聊天卡片颜色';
+
+  @override
+  String get appearanceSidebarActiveCardColor => '当前聊天卡片颜色';
+
+  @override
+  String get appearanceSidebarResetColor => '使用主题颜色';
+
+  @override
+  String get appearanceSidebarTimestamp => '消息时间';
+
+  @override
+  String get appearanceSidebarAssistant => '助手图标和名称';
+
+  @override
+  String get appearanceSidebarModel => '模型图标和名称';
+
+  @override
+  String get appearanceSidebarLastPreview => '最后一条消息预览';
+
+  @override
+  String get appearanceSidebarGrouping => '聊天分组';
+
+  @override
+  String get appearanceSidebarGroupingDate => '按日期';
+
+  @override
+  String get appearanceSidebarGroupingAssistant => '按助手';
+
+  @override
+  String get appearanceSidebarGroupingNone => '不分组';
+
+  @override
+  String get appearanceSidebarDock => '侧栏底部按钮';
+
+  @override
+  String get appearanceSidebarDockHint => '选择按钮并拖动手柄调整顺序。';
+
+  @override
+  String get appearanceSidebarShortcutsHint => '选择置顶应用和页面，然后拖动调整顺序。';
+
+  @override
+  String get appearanceSidebarPreviewTitle => '旅行计划';
+
+  @override
+  String get appearanceSidebarPreviewOtherTitle => '新想法';
+
+  @override
+  String get appearanceSidebarPreviewMessage => '这里有一些可以开始的想法。';
+
+  @override
+  String get appearanceSidebarPreviewModel => '模型';
+
+  @override
+  String get appearanceSidebarReset => '重置侧栏外观';
+
+  @override
   String get appearanceSettingsPageTitle => '外观';
 
   @override
@@ -12330,6 +12432,108 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   AppLocalizationsZhHans() : super('zh_Hans');
 
   @override
+  String get appearanceSaveError => '无法保存外观。请重试。';
+
+  @override
+  String get appearanceSidebarBackground => '侧栏背景';
+
+  @override
+  String get appearanceSidebarSameAsChat => '与聊天相同';
+
+  @override
+  String get appearanceSidebarCustomBackground => '自定义背景';
+
+  @override
+  String get appearanceSidebarThemeBackground => '主题背景';
+
+  @override
+  String get appearanceSidebarMask => '侧栏背景遮罩';
+
+  @override
+  String get appearanceSidebarBlur => '侧栏背景模糊';
+
+  @override
+  String get appearanceSidebarOpacity => '侧栏背景不透明度';
+
+  @override
+  String get appearanceSidebarPhoneWidth => '手机侧栏宽度';
+
+  @override
+  String get appearanceSidebarWideWidth => '宽屏侧栏宽度';
+
+  @override
+  String get appearanceSidebarDensity => '聊天列表密度';
+
+  @override
+  String get appearanceSidebarCompact => '紧凑';
+
+  @override
+  String get appearanceSidebarNormal => '标准';
+
+  @override
+  String get appearanceSidebarSpacious => '宽松';
+
+  @override
+  String get appearanceSidebarCardRadius => '聊天卡片圆角';
+
+  @override
+  String get appearanceSidebarCardColor => '聊天卡片颜色';
+
+  @override
+  String get appearanceSidebarActiveCardColor => '当前聊天卡片颜色';
+
+  @override
+  String get appearanceSidebarResetColor => '使用主题颜色';
+
+  @override
+  String get appearanceSidebarTimestamp => '消息时间';
+
+  @override
+  String get appearanceSidebarAssistant => '助手图标和名称';
+
+  @override
+  String get appearanceSidebarModel => '模型图标和名称';
+
+  @override
+  String get appearanceSidebarLastPreview => '最后一条消息预览';
+
+  @override
+  String get appearanceSidebarGrouping => '聊天分组';
+
+  @override
+  String get appearanceSidebarGroupingDate => '按日期';
+
+  @override
+  String get appearanceSidebarGroupingAssistant => '按助手';
+
+  @override
+  String get appearanceSidebarGroupingNone => '不分组';
+
+  @override
+  String get appearanceSidebarDock => '侧栏底部按钮';
+
+  @override
+  String get appearanceSidebarDockHint => '选择按钮并拖动手柄调整顺序。';
+
+  @override
+  String get appearanceSidebarShortcutsHint => '选择置顶应用和页面，然后拖动调整顺序。';
+
+  @override
+  String get appearanceSidebarPreviewTitle => '旅行计划';
+
+  @override
+  String get appearanceSidebarPreviewOtherTitle => '新想法';
+
+  @override
+  String get appearanceSidebarPreviewMessage => '这里有一些可以开始的想法。';
+
+  @override
+  String get appearanceSidebarPreviewModel => '模型';
+
+  @override
+  String get appearanceSidebarReset => '重置侧栏外观';
+
+  @override
   String get appearanceSettingsPageTitle => '外观';
 
   @override
@@ -24578,6 +24782,108 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 /// The translations for Chinese, using the Han script (`zh_Hant`).
 class AppLocalizationsZhHant extends AppLocalizationsZh {
   AppLocalizationsZhHant() : super('zh_Hant');
+
+  @override
+  String get appearanceSaveError => '無法儲存外觀。請再試一次。';
+
+  @override
+  String get appearanceSidebarBackground => '側欄背景';
+
+  @override
+  String get appearanceSidebarSameAsChat => '與聊天相同';
+
+  @override
+  String get appearanceSidebarCustomBackground => '自訂背景';
+
+  @override
+  String get appearanceSidebarThemeBackground => '主題背景';
+
+  @override
+  String get appearanceSidebarMask => '側欄背景遮罩';
+
+  @override
+  String get appearanceSidebarBlur => '側欄背景模糊';
+
+  @override
+  String get appearanceSidebarOpacity => '側欄背景不透明度';
+
+  @override
+  String get appearanceSidebarPhoneWidth => '手機側欄寬度';
+
+  @override
+  String get appearanceSidebarWideWidth => '寬螢幕側欄寬度';
+
+  @override
+  String get appearanceSidebarDensity => '聊天清單密度';
+
+  @override
+  String get appearanceSidebarCompact => '緊湊';
+
+  @override
+  String get appearanceSidebarNormal => '標準';
+
+  @override
+  String get appearanceSidebarSpacious => '寬鬆';
+
+  @override
+  String get appearanceSidebarCardRadius => '聊天卡片圓角';
+
+  @override
+  String get appearanceSidebarCardColor => '聊天卡片顏色';
+
+  @override
+  String get appearanceSidebarActiveCardColor => '目前聊天卡片顏色';
+
+  @override
+  String get appearanceSidebarResetColor => '使用主題顏色';
+
+  @override
+  String get appearanceSidebarTimestamp => '訊息時間';
+
+  @override
+  String get appearanceSidebarAssistant => '助手圖示與名稱';
+
+  @override
+  String get appearanceSidebarModel => '模型圖示與名稱';
+
+  @override
+  String get appearanceSidebarLastPreview => '最後一則訊息預覽';
+
+  @override
+  String get appearanceSidebarGrouping => '聊天分組';
+
+  @override
+  String get appearanceSidebarGroupingDate => '依日期';
+
+  @override
+  String get appearanceSidebarGroupingAssistant => '依助手';
+
+  @override
+  String get appearanceSidebarGroupingNone => '不分組';
+
+  @override
+  String get appearanceSidebarDock => '側欄底部按鈕';
+
+  @override
+  String get appearanceSidebarDockHint => '選擇按鈕並拖曳把手調整順序。';
+
+  @override
+  String get appearanceSidebarShortcutsHint => '選擇置頂應用程式與頁面，再拖曳調整順序。';
+
+  @override
+  String get appearanceSidebarPreviewTitle => '旅行計畫';
+
+  @override
+  String get appearanceSidebarPreviewOtherTitle => '新點子';
+
+  @override
+  String get appearanceSidebarPreviewMessage => '這裡有一些可以開始的想法。';
+
+  @override
+  String get appearanceSidebarPreviewModel => '模型';
+
+  @override
+  String get appearanceSidebarReset => '重設側欄外觀';
 
   @override
   String get appearanceSettingsPageTitle => '外觀';

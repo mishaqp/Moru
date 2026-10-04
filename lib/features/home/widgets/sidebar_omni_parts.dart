@@ -8,6 +8,236 @@ import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/models/sidebar_appearance.dart';
+import '../../../shared/widgets/ios_tactile.dart';
+
+/// The same conversation presentation is used by the drawer and its preview.
+/// Provider subscriptions and history reads belong to the drawer's tile.
+class SidebarConversationCard extends StatelessWidget {
+  const SidebarConversationCard({
+    super.key,
+    required this.appearance,
+    required this.title,
+    this.isCurrent = false,
+    this.isSelected = false,
+    this.selectionMode = false,
+    this.preview,
+    this.timestamp,
+    this.assistantName,
+    this.modelName,
+    this.assistantIcon,
+    this.modelIcon,
+    this.thumbnails,
+    this.loadingIndicator,
+    this.selectionIndicator,
+    this.onTap,
+    this.onLongPress,
+  });
+
+  final SidebarAppearanceSettings appearance;
+  final String title;
+  final bool isCurrent;
+  final bool isSelected;
+  final bool selectionMode;
+  final String? preview;
+  final String? timestamp;
+  final String? assistantName;
+  final String? modelName;
+  final Widget? assistantIcon;
+  final Widget? modelIcon;
+  final Widget? thumbnails;
+  final Widget? loadingIndicator;
+  final Widget? selectionIndicator;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final (verticalPadding, fontSize) = switch (appearance.density) {
+      SidebarDensity.compact => (6.0, 12.0),
+      SidebarDensity.normal => (9.0, 13.0),
+      SidebarDensity.spacious => (12.0, 14.0),
+    };
+    final selected = selectionMode && isSelected;
+    final fill = (isCurrent || selected)
+        ? appearance.activeCardColor ?? appearance.cardColor
+        : appearance.cardColor;
+    final base = fill != null
+        ? Color(fill)
+        : selected
+        ? cs.primary.withValues(alpha: 0.16)
+        : Colors.transparent;
+    Color? customForeground;
+    if (fill != null) {
+      final luminance = Color.alphaBlend(base, cs.surface).computeLuminance();
+      final blackContrast = (luminance + 0.05) / 0.05;
+      final whiteContrast = 1.05 / (luminance + 0.05);
+      customForeground = blackContrast >= whiteContrast
+          ? Colors.black
+          : Colors.white;
+    }
+    final showPreview =
+        appearance.showPreview && (preview?.isNotEmpty ?? false);
+    final showTimestamp =
+        appearance.showTimestamp && (timestamp?.isNotEmpty ?? false);
+    final showAssistant =
+        appearance.showAssistant && (assistantName?.isNotEmpty ?? false);
+    final showModel = appearance.showModel && (modelName?.isNotEmpty ?? false);
+    final hasMetadata = showTimestamp || showAssistant || showModel;
+    final secondary =
+        customForeground ??
+        (showPreview || hasMetadata
+            ? cs.onSurface.withValues(alpha: 0.62)
+            : cs.onSurface);
+    final metadata = hasMetadata
+        ? <({Widget icon, String text})>[
+            if (showTimestamp)
+              (
+                icon: Icon(LucideIcons.clock, size: 11, color: secondary),
+                text: timestamp!,
+              ),
+            if (showAssistant)
+              (
+                icon:
+                    assistantIcon ??
+                    Icon(LucideIcons.bot, size: 11, color: secondary),
+                text: assistantName!,
+              ),
+            if (showModel)
+              (
+                icon:
+                    modelIcon ??
+                    Icon(LucideIcons.cpu, size: 11, color: secondary),
+                text: modelName!,
+              ),
+          ]
+        : const <({Widget icon, String text})>[];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: IosCardPress(
+        baseColor: base,
+        borderRadius: BorderRadius.circular(appearance.cardRadius),
+        haptics: false,
+        onTap: onTap,
+        onLongPress: onLongPress,
+        padding: EdgeInsets.fromLTRB(4, verticalPadding, 2, verticalPadding),
+        child: Row(
+          children: [
+            if (selectionIndicator != null) selectionIndicator!,
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: fontSize,
+                      height: 1.35,
+                      color:
+                          customForeground ??
+                          (isCurrent ? cs.primary : cs.onSurface),
+                      fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
+                  if (showPreview)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        preview!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: fontSize - 1,
+                          height: 1.3,
+                          color: secondary,
+                        ),
+                      ),
+                    ),
+                  if (metadata.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: LayoutBuilder(
+                        builder: (context, box) => Wrap(
+                          spacing: 9,
+                          runSpacing: 4,
+                          children: [
+                            for (final item in metadata)
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: box.maxWidth,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    item.icon,
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        item.text,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: fontSize - 2,
+                                          height: 1.3,
+                                          color: secondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (thumbnails != null) thumbnails!,
+                ],
+              ),
+            ),
+            if (loadingIndicator != null) ...[
+              const SizedBox(width: 8),
+              loadingIndicator!,
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A footer capsule whose visible actions receive equal space in saved order.
+class SidebarDockCapsule extends StatelessWidget {
+  const SidebarDockCapsule({
+    super.key,
+    required this.glass,
+    required this.children,
+  });
+
+  final bool glass;
+  final List<Widget> children;
+  static const double height = 44;
+
+  @override
+  Widget build(BuildContext context) {
+    if (children.isEmpty) return const SizedBox.shrink();
+    return Material(
+      color: sidebarSecondarySurface(context, glass: glass),
+      borderRadius: BorderRadius.circular(height / 2),
+      clipBehavior: Clip.antiAlias,
+      child: SizedBox(
+        height: height,
+        child: Row(
+          children: [for (final child in children) Expanded(child: child)],
+        ),
+      ),
+    );
+  }
+}
+
 /// OmniBot's `surfaceSecondary`: the fill of the search field, the round
 /// buttons, the shortcut cards and the dock, a step above the panel.
 Color sidebarSecondarySurface(BuildContext context, {required bool glass}) {
