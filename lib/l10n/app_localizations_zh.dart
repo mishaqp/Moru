@@ -12184,10 +12184,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get spendHardStop => '達到限額時停止';
 
   @override
-  String get spendHardStopNote => '已啟用的限額用盡後阻止新請求。未知費用無法用於執行美元限額。';
+  String get spendHardStopNote => '已啟用的限額用盡時停止目前回覆並阻止新請求。未知費用無法用於執行美元限額。';
 
   @override
   String get spendHardStopMessage => '已達到費用限額。請在統計中調整限額或關閉達到限額時停止。';
+
+  @override
+  String spendCacheShare(String percent) {
+    return '快取 $percent%';
+  }
+
+  @override
+  String get spendResponseStopped => '回覆已停止：已達到費用限額。請在統計中調整限額以繼續。';
 
   @override
   String get spendDisabled => '關閉';
@@ -24351,10 +24359,18 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get spendHardStop => '达到限额时停止';
 
   @override
-  String get spendHardStopNote => '已启用的限额用尽后阻止新请求。未知费用无法用于执行美元限额。';
+  String get spendHardStopNote => '已启用的限额用尽时停止当前回复并阻止新请求。未知费用无法用于执行美元限额。';
 
   @override
   String get spendHardStopMessage => '已达到费用限额。请在统计中调整限额或关闭达到限额时停止。';
+
+  @override
+  String spendCacheShare(String percent) {
+    return '缓存 $percent%';
+  }
+
+  @override
+  String get spendResponseStopped => '回复已停止：已达到费用限额。请在统计中调整限额以继续。';
 
   @override
   String get spendDisabled => '关闭';
@@ -36592,10 +36608,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get spendHardStop => '達到限額時停止';
 
   @override
-  String get spendHardStopNote => '已啟用的限額用盡後阻止新請求。未知費用無法用於執行美元限額。';
+  String get spendHardStopNote => '已啟用的限額用盡時停止目前回覆並阻止新請求。未知費用無法用於執行美元限額。';
 
   @override
   String get spendHardStopMessage => '已達到費用限額。請在統計中調整限額或關閉達到限額時停止。';
+
+  @override
+  String spendCacheShare(String percent) {
+    return '快取 $percent%';
+  }
+
+  @override
+  String get spendResponseStopped => '回覆已停止：已達到費用限額。請在統計中調整限額以繼續。';
 
   @override
   String get spendDisabled => '關閉';

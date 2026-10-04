@@ -11,10 +11,12 @@ import '../logging/context_log_models.dart';
 import '../../utils/multimodal_input_utils.dart';
 import 'generation/text_generation_result.dart';
 import 'generation/tool_loop_runner.dart';
+import 'generation/spend_round_control.dart';
 import 'stream/stream_chunk.dart';
 import 'stream/stream_chunk_handler.dart';
 
 import '../../models/auto_retry_options.dart';
+import '../../models/token_usage.dart';
 import 'chat_api_helpers.dart';
 import 'provider_request_headers.dart';
 import 'providers/claude_official.dart';
@@ -158,6 +160,7 @@ class ChatApiService {
     ProviderConfig cfg,
     CancelToken cancelToken, {
     bool logResponsePayloads = true,
+    bool logRequests = true,
   }) {
     final enabled = cfg.proxyEnabled == true;
     final host = (cfg.proxyHost ?? '').trim();
@@ -177,11 +180,13 @@ class ChatApiService {
         ),
         cancelToken: cancelToken,
         logResponsePayloads: logResponsePayloads,
+        logRequests: logRequests,
       );
     }
     return DioHttpClient(
       cancelToken: cancelToken,
       logResponsePayloads: logResponsePayloads,
+      logRequests: logRequests,
     );
   }
 
@@ -209,6 +214,7 @@ class ChatApiService {
     // Disallow media, tools and body overrides for detached text generation.
     bool textOnly = false,
     AutoRetryOptions? retryOverride,
+    SpendRoundControl? spendControl,
   }) async* {
     if (config.id == SettingsProvider.retiredLocalModelProviderKey ||
         config.providerType == ProviderKind.local) {
@@ -318,7 +324,9 @@ class ChatApiService {
         );
       }
 
-      yield* ToolCallArgumentPrivacy.publishStream(
+      await spendControl?.beforeRequest();
+      TokenUsage? finalUsage;
+      await for (final chunk in ToolCallArgumentPrivacy.publishStream(
         retryRound(
           () => _sendOnce(
             config: config,
@@ -349,10 +357,24 @@ class ChatApiService {
             sessionToken: sessionToken,
             retryRound: retryRound,
             conversationId: conversationId,
+            spendControl: spendControl,
           ),
         ),
         protectedHandler,
-      );
+      )) {
+        if (chunk is Usage) {
+          finalUsage = (finalUsage ?? const TokenUsage()).merge(chunk.usage);
+          if (spendControl != null && spendControl.completedRounds == 0) {
+            spendControl.pendingUsage = finalUsage;
+          }
+        }
+        if (chunk is Finish &&
+            spendControl != null &&
+            spendControl.completedRounds == 0) {
+          spendControl.recordInitialUsage(finalUsage);
+        }
+        yield chunk;
+      }
     } finally {
       if (rid.isNotEmpty) {
         final cur = _activeCancelTokens[rid];
@@ -417,6 +439,7 @@ class ChatApiService {
     required bool useZhipuLayoutParsing,
     required CancelToken sessionToken,
     required StreamRoundRunner retryRound,
+    SpendRoundControl? spendControl,
     String? conversationId,
   }) async* {
     if (sessionToken.isCancelled) {
@@ -429,6 +452,7 @@ class ChatApiService {
         config,
         cancelToken,
         logResponsePayloads: !ToolCallArgumentPrivacy.hasPolicy(onToolCall),
+        logRequests: spendControl == null,
       ),
       config,
     );
@@ -472,6 +496,7 @@ class ChatApiService {
             builtInSearchOnly: builtInSearchOnly,
             skipImageParsing: skipImageParsing,
             retryRound: retryRound,
+            spendControl: spendControl,
           );
         } else {
           yield* sendOpenAIChatCompletionsStream(
@@ -492,6 +517,7 @@ class ChatApiService {
             builtInSearchOnly: builtInSearchOnly,
             skipImageParsing: skipImageParsing,
             retryRound: retryRound,
+            spendControl: spendControl,
           );
         }
       } else if (kind == ProviderKind.claude) {
@@ -513,6 +539,7 @@ class ChatApiService {
           builtInSearchOnly: builtInSearchOnly,
           skipImageParsing: skipImageParsing,
           retryRound: retryRound,
+          spendControl: spendControl,
         );
       } else if (kind == ProviderKind.google) {
         final isVertex = config.vertexAI == true;
@@ -536,6 +563,7 @@ class ChatApiService {
             stream: stream,
             skipImageParsing: skipImageParsing,
             retryRound: retryRound,
+            spendControl: spendControl,
           );
         } else if (isVertex) {
           yield* sendGoogleVertexStream(
@@ -555,6 +583,7 @@ class ChatApiService {
             stream: stream,
             skipImageParsing: skipImageParsing,
             retryRound: retryRound,
+            spendControl: spendControl,
           );
         } else {
           yield* sendGoogleGeminiStream(
@@ -574,6 +603,7 @@ class ChatApiService {
             stream: stream,
             skipImageParsing: skipImageParsing,
             retryRound: retryRound,
+            spendControl: spendControl,
           );
         }
       }
@@ -605,6 +635,7 @@ class ChatApiService {
     bool parseMarkdownImageLinks = true,
     bool textOnly = false,
     AutoRetryOptions? retryOverride,
+    SpendRoundControl? spendControl,
     void Function(RetryPending? pending)? onRetry,
   }) async {
     final handler = StreamChunkHandler(
@@ -633,6 +664,7 @@ class ChatApiService {
       parseMarkdownImageLinks: parseMarkdownImageLinks,
       textOnly: textOnly,
       retryOverride: retryOverride,
+      spendControl: spendControl,
     )) {
       if (chunk is RetryAttemptStart) {
         onRetry?.call(null);

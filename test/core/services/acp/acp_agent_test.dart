@@ -938,6 +938,39 @@ void main() {
     agent.close();
   });
 
+  for (final reportsTurnUsage in [false, true]) {
+    test('context usage updates are not billable token usage '
+        '(turn usage=$reportsTurnUsage)', () async {
+      final (agent, channel) = await _started();
+      addTearDown(agent.close);
+      final done = agent.prompt('s1', const []).toList();
+      final prompt = await channel.next('session/prompt');
+      // ACP `used` describes context occupancy. It can repeat or shrink
+      // after compaction and does not describe tokens paid for this turn.
+      for (final used in [8000, 8000, 2000]) {
+        channel.update('s1', {
+          'sessionUpdate': 'usage_update',
+          'used': used,
+          'size': 10000,
+        });
+      }
+      channel.reply(prompt, {
+        'stopReason': 'end_turn',
+        if (reportsTurnUsage) 'usage': {'inputTokens': 100, 'outputTokens': 20},
+      });
+      final chunks = await done;
+      final usage = chunks.whereType<Usage>();
+      if (reportsTurnUsage) {
+        expect(usage, hasLength(1));
+        expect(usage.single.usage.promptTokens, 100);
+        expect(usage.single.usage.completionTokens, 20);
+      } else {
+        expect(usage, isEmpty);
+      }
+      expect(chunks.last, isA<Finish>());
+    });
+  }
+
   test('an edit becomes a file card with the diff', () async {
     final (agent, channel) = await _started();
     final chunks = <StreamChunk>[];

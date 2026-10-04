@@ -409,6 +409,12 @@ class ChatService extends ChangeNotifier {
   int _statisticsRevision = 0;
   int get statisticsRevision => _statisticsRevision;
 
+  /// Refresh spending hints when completed model rounds are still in memory.
+  void notifySpendUsageChanged() {
+    _statisticsRevision++;
+    notifyListeners();
+  }
+
   // Bumped only when sidebar list semantics change (conversation add/remove,
   // rename, pin, ordering via updatedAt, assistant/MCP association). Message
   // content and streaming updates must not bump it.

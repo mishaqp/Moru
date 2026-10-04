@@ -10,6 +10,7 @@ import '../../../../providers/settings_provider.dart';
 import '../../../../utils/multimodal_input_utils.dart';
 import '../../../../../utils/sandbox_path_resolver.dart';
 import '../../chat_api_helpers.dart';
+import '../../generation/spend_round_control.dart';
 import '../../generation/tool_loop_runner.dart';
 import '../../generation/tool_result_images.dart';
 import '../../stream/sse_decode_loop.dart';
@@ -756,6 +757,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
   required int approxCompletionChars,
   required bool includeReasoningDetailsOnDone,
   StreamRoundRunner? retryRound,
+  SpendRoundControl? spendControl,
 }) async* {
   var usage = initialUsage;
   var chars = approxCompletionChars;
@@ -878,7 +880,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
           assistantHeaders: extraHeaders,
         ),
       );
-      req2.body = jsonEncode(body2);
+      req2.body = jsonEncode(spendControl?.decorateRequest(body2) ?? body2);
       final http.StreamedResponse resp2;
       try {
         resp2 = await client.send(req2);
@@ -886,6 +888,8 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
           final errorBody = await resp2.stream.bytesToString();
           throw HttpException('HTTP ${resp2.statusCode}: $errorBody');
         }
+      } on SpendLimitExceeded {
+        rethrow;
       } on ProviderOAuthException {
         rethrow;
       } on HttpException {
@@ -900,7 +904,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
         wantsImageOutput: wantsImageOutput,
         needsReasoningEcho: needsReasoningEcho,
         allowReasoningSnapshots: reasoningDetailsAllowSnapshots,
-        initialUsage: usage,
+        initialUsage: spendControl == null ? usage : null,
         sourceId: 'round-${round++}',
       );
       yield* decodeSseEvents(
@@ -908,6 +912,9 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
         roundDecoder,
       );
       usage = roundDecoder.usage ?? usage;
+      if (spendControl != null && roundDecoder.usage != null) {
+        yield Usage(roundDecoder.usage!);
+      }
       // Add this round. `=` would drop earlier rounds when usage is absent.
       chars += roundDecoder.approxCompletionChars;
       lastRound = roundDecoder;
@@ -933,6 +940,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
       );
     },
     retryRound: retryRound,
+    spendControl: spendControl,
     usageOf: () => usage,
   );
 }
@@ -958,6 +966,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
   required Map<String, String>? extraHeaders,
   required TokenUsage? initialUsage,
   StreamRoundRunner? retryRound,
+  SpendRoundControl? spendControl,
 }) async* {
   var usage = initialUsage;
   var lastObj = firstObj;
@@ -1019,7 +1028,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
         skipImageParsing: skipImageParsing,
       );
       reqBody.remove('stream');
-      req.body = jsonEncode(reqBody);
+      req.body = jsonEncode(spendControl?.decorateRequest(reqBody) ?? reqBody);
       final resp2 = await client.send(req);
       if (resp2.statusCode < 200 || resp2.statusCode >= 300) {
         final errorBody = await resp2.stream.bytesToString();
@@ -1031,6 +1040,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
       final roundUsage = openaiUsageFromObj(lastObj);
       if (roundUsage != null) {
         usage = (usage ?? const TokenUsage()).merge(roundUsage);
+        if (spendControl != null) yield Usage(roundUsage);
       }
     },
     takeCallsAfterRound: () =>
@@ -1065,6 +1075,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
       );
     },
     retryRound: retryRound,
+    spendControl: spendControl,
     usageOf: () => usage,
   );
 }

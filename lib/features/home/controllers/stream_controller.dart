@@ -15,6 +15,7 @@ import '../../chat/utils/tool_timing.dart';
 import '../../chat/widgets/chat_message_widget.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
 import 'streaming_content_notifier.dart';
+import '../services/spend_control_service.dart';
 
 export 'streaming_content_notifier.dart';
 
@@ -1640,6 +1641,7 @@ class StreamingState {
   void appendContent(String delta) => _content.add(delta);
   int totalTokens = 0;
   TokenUsage? usage;
+  SpendControlSession? spendSession;
   final StreamTextBuffer _bufferedReasoning = StreamTextBuffer();
   String get bufferedReasoning => _bufferedReasoning.value;
   set bufferedReasoning(String text) => _bufferedReasoning.value = text;

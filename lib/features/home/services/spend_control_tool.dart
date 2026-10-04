@@ -43,6 +43,8 @@ class SpendControlTool {
       'description':
           'Inspect chat and today\'s spending and context usage to save tokens before budgets run out. '
           'status reads all paid reply versions, with cached input included once and incomplete prices marked. '
+          'Check status during long tasks; near the threshold reply briefly and offer compact or a new chat. '
+          'used_percent compares each budget, cached_percent is the share of input, and current_response explains pending usage. '
           'compact uses the app\'s existing compression settings to create a summarized chat, preserving the original; '
           'the current reply still belongs to the original chat. set_limits edits global budgets. '
           'compact and set_limits require confirmation unless full trust is enabled. Dollar costs may be lower bounds; '

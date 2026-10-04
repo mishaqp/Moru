@@ -136,6 +136,19 @@ class _SpendWarningHintState extends State<SpendWarningHint>
         final color = status.exceeded
             ? Theme.of(context).colorScheme.error
             : Theme.of(context).colorScheme.primary;
+        final hint = [
+          status.blocked
+              ? l10n.spendHardStopMessage
+              : status.exceeded
+              ? l10n.spendLimitReachedHint(text)
+              : l10n.spendWarningHint(text),
+          if (partial) l10n.spendPartialPrice,
+        ].join(' ');
+        final cachePercent = SpendControlStatus.cachedPercent(status.chat);
+        final cache = cachePercent == null
+            ? null
+            : l10n.spendCacheShare(cachePercent.toStringAsFixed(0));
+        final style = TextStyle(fontSize: 12, color: color);
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: InkWell(
@@ -152,16 +165,32 @@ class _SpendWarningHintState extends State<SpendWarningHint>
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      [
-                        status.blocked
-                            ? l10n.spendHardStopMessage
-                            : status.exceeded
-                            ? l10n.spendLimitReachedHint(text)
-                            : l10n.spendWarningHint(text),
-                        if (partial) l10n.spendPartialPrice,
-                      ].join(' '),
-                      style: TextStyle(fontSize: 12, color: color),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final candidate = cache == null
+                            ? hint
+                            : '$hint · $cache';
+                        final measuredStyle = DefaultTextStyle.of(
+                          context,
+                        ).style.merge(style);
+                        final painter = TextPainter(
+                          text: TextSpan(
+                            text: candidate,
+                            style: MediaQuery.boldTextOf(context)
+                                ? measuredStyle.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  )
+                                : measuredStyle,
+                          ),
+                          locale: Localizations.localeOf(context),
+                          textDirection: Directionality.of(context),
+                          textScaler: MediaQuery.textScalerOf(context),
+                          maxLines: 1,
+                        )..layout(maxWidth: constraints.maxWidth);
+                        final fits = !painter.didExceedMaxLines;
+                        painter.dispose();
+                        return Text(fits ? candidate : hint, style: style);
+                      },
                     ),
                   ),
                 ],

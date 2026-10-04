@@ -40,6 +40,7 @@ import '../../chat/widgets/chat_message_widget.dart' show ToolUIPart;
 import '../services/message_generation_service.dart';
 import '../services/tool_approval_service.dart';
 import '../services/spend_control_service.dart';
+import '../../../core/services/api/generation/spend_round_control.dart';
 import '../utils/model_display_helper.dart';
 import 'active_streaming_message_store.dart';
 import 'chat_controller.dart';
@@ -1010,6 +1011,13 @@ class ChatActions {
   }
 
   void _clearGenerationRuntimeState(ChatMessage message) {
+    final spendSession = _streamingStates[message.id]?.spendSession;
+    if (spendSession != null) {
+      SpendControlService(
+        chats: chatService,
+        settings: contextProvider.read<SettingsProvider>(),
+      ).endResponse(spendSession);
+    }
     final runId =
         _streamingStates[message.id]?.ctx.executionId ??
         _generationCheckpointCursors[message.id]?.runId ??
@@ -2987,6 +2995,31 @@ class ChatActions {
     _registerStreamingState(state);
     final assistant = ctx.assistant;
     final conversationId = state.conversationId;
+    if (!isAcpModelSource(ctx.config.id) &&
+        (ctx.settings.spendLimits.enabled ||
+            ctx.toolDefs.any(
+              (tool) => (tool['function'] as Map?)?['name'] == 'spend_control',
+            ))) {
+      state.spendSession =
+          SpendControlService(
+            chats: chatService,
+            settings: ctx.settings,
+          ).beginResponse(
+            message: ctx.assistantMessage,
+            assistant: assistant,
+            initialWarning: ctx.spendWarning,
+            stopMessage: AppLocalizations.of(
+              contextProvider,
+            )!.spendResponseStopped,
+            onRoundCompleted: () {
+              state.usage = state.spendSession!.usage;
+              state.totalTokens =
+                  state.spendSession!.control.lastUsage.totalTokens;
+              _scheduleStreamingCheckpoint(state);
+              chatService.notifySpendUsageChanged();
+            },
+          );
+    }
     final approvalOwner = ToolApprovalOwner(
       conversationId: conversationId,
       generationRunId: _backgroundTaskId(ctx),
@@ -3118,7 +3151,7 @@ class ChatActions {
         return;
       }
 
-      if (!ctx.streamOutput) {
+      if (!ctx.streamOutput && state.spendSession == null) {
         try {
           final result = await ChatApiService.generateMessage(
             config: ctx.config,
@@ -3191,6 +3224,8 @@ class ChatActions {
         maxTokens: assistant?.maxTokens,
         tools: ctx.toolDefs.isEmpty ? null : ctx.toolDefs,
         onToolCall: onToolCall,
+        spendControl: state.spendSession?.control,
+        stream: ctx.streamOutput,
         extraHeaders: ctx.extraHeaders,
         extraBody: ctx.extraBody,
         requestId: conversationId,
@@ -3300,6 +3335,13 @@ class ChatActions {
   }
 
   void _applyUsage(stream_ctrl.StreamingState state, TokenUsage usage) {
+    if (state.spendSession != null) {
+      state.usage = state.spendSession!.usage;
+      state.totalTokens =
+          state.spendSession!.control.pendingUsage?.totalTokens ??
+          state.spendSession!.control.lastUsage.totalTokens;
+      return;
+    }
     state.usage = (state.usage ?? const TokenUsage()).merge(usage);
     state.totalTokens = state.usage!.totalTokens;
   }
@@ -3686,6 +3728,14 @@ class ChatActions {
     final oauthFailure =
         e is ProviderOAuthException &&
         e.kind == ProviderOAuthFailure.loginRequired;
+    final spendStopped = e is SpendLimitExceeded;
+    if (spendStopped) {
+      ChatApiService.cancelRequest(conversationId);
+      _background.cancelRunApprovals(
+        conversationId,
+        _backgroundTaskId(state.ctx),
+      );
+    }
     final errorText = oauthFailure ? '' : e.toString();
 
     // Reset file processing state on error, scoped to this message so a
@@ -3719,16 +3769,21 @@ class ChatActions {
         errorParts.add(ProviderAuthErrorPart(providerId: providerId));
       }
     }
-    final errorMessage = _streamingMessageSnapshot(state).copyWith(
+    var errorMessage = _streamingMessageSnapshot(state).copyWith(
       parts: errorParts,
       totalTokens: state.totalTokens,
       isStreaming: false,
     );
+    if (spendStopped) errorMessage = _stopResponseTools(errorMessage);
     try {
       await _finalizeStreamingCheckpoint(
         errorMessage,
-        terminalState: GenerationRunState.failed,
-        errorCode: oauthFailure
+        terminalState: spendStopped
+            ? GenerationRunState.cancelled
+            : GenerationRunState.failed,
+        errorCode: spendStopped
+            ? 'spend_limit_reached'
+            : oauthFailure
             ? 'oauth_login_required'
             : e is EmptyAssistantReplyException
             ? 'empty_response'
@@ -3747,13 +3802,15 @@ class ChatActions {
         // The sequential stream drain owns source cancellation after this error
         // handler returns. Re-entering its barrier cancel here would wait on this
         // handler itself and prevent the UI error callback below from firing.
-        if (!oauthFailure) onStreamError?.call(errorText);
+        if (!oauthFailure && !spendStopped) onStreamError?.call(errorText);
         onStreamFinished?.call(conversationId);
       }
       await _finishBackgroundWithHandoff(
         conversationId,
         _backgroundTaskId(state.ctx),
-        BackgroundTaskOutcome.failed,
+        spendStopped
+            ? BackgroundTaskOutcome.cancelled
+            : BackgroundTaskOutcome.failed,
         resultPersisted:
             state.terminalPersisted &&
             !chatService.isTemporaryConversation(conversationId),

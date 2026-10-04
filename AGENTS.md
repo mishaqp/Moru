@@ -90,6 +90,16 @@ package name does not require building other platforms.
   `compact` uses existing compression to create a summarized chat, preserving
   the source and not charging retained replies again; `set_limits` and
   `compact` require ordinary confirmation without individual "Always allow".
+  API tool loops recheck saved spending plus completed requests of the active
+  reply before follow-ups; paid usage is summed separately from the last
+  context-window snapshot. An opted-in hard stop cancels pending tools and
+  ends the reply before another model request. `status` reports budget/cache
+  percentages and explicitly marks pending reply usage. Request/context logs
+  must never contain transient spending notices. Standard ACP exposes no
+  internal model-request boundary: its initial check remains, and context-only
+  `usage_update` events must not be treated as paid token usage.
+  If both limits and the spend tool were disabled at reply start, limits first
+  enabled in Statistics apply to the next reply; preserve the default loop.
 - **Browser and Computer**: `BrowserAgentSession.minimize` parks the live
   `WebViewController`; the next agent `WebViewPage` adopts it without reloading.
   `openSharedBrowser` opens or expands it. `BrowserMiniWindow` in `AppOverlays`

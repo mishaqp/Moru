@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'chat_api_helpers.dart';
+import 'generation/spend_round_control.dart';
 import 'stream/stream_chunk.dart';
 import 'stream/stream_chunk_emit.dart';
 
@@ -209,6 +210,9 @@ abstract final class ToolCallArgumentPrivacy {
       final rawText = error.toString();
       final safeText = _textForModel(handler, rawText);
       if (safeText == rawText) rethrow;
+      if (error is SpendLimitExceeded) {
+        Error.throwWithStackTrace(SpendLimitExceeded(safeText), stack);
+      }
       Error.throwWithStackTrace(_PrivateProviderError(safeText), stack);
     }
     // Incomplete arguments on cancellation/error are intentionally discarded.

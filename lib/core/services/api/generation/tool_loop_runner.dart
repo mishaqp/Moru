@@ -5,6 +5,7 @@ import '../tool_call_argument_privacy.dart';
 import '../stream/stream_chunk.dart';
 import '../stream/stream_chunk_emit.dart';
 import 'tool_result_images.dart';
+import 'spend_round_control.dart';
 
 typedef StreamRoundRunner =
     Stream<StreamChunk> Function(Stream<StreamChunk> Function() sendRound);
@@ -92,9 +93,12 @@ Stream<StreamChunk> runClientToolFollowUps({
   StreamRoundRunner? retryRound,
   bool emitCalls = false,
   TokenUsage? Function()? usageOf,
+  SpendRoundControl? spendControl,
 }) async* {
   var calls = List<EmitToolCall>.from(initialCalls);
+  spendControl?.recordInitialUsage(usageOf?.call());
   while (calls.isNotEmpty) {
+    await spendControl?.beforeRequest();
     final usage = usageOf?.call();
     final totalTokens = usage?.totalTokens ?? 0;
     final executed = <ExecutedClientTool>[];
@@ -120,7 +124,9 @@ Stream<StreamChunk> runClientToolFollowUps({
       totalTokens: totalTokens,
     );
     append(executed);
-    yield* retryRound?.call(sendFollowUp) ?? sendFollowUp();
+    await spendControl?.beforeRequest();
+    final round = retryRound?.call(sendFollowUp) ?? sendFollowUp();
+    yield* spendControl?.trackRound(round) ?? round;
     calls = takeCallsAfterRound();
   }
   yield* finish();
@@ -140,14 +146,18 @@ Stream<StreamChunk> runProviderToolRounds({
   bool executeAfterRound = true,
   StreamRoundRunner? retryRound,
   TokenUsage? Function()? usageOf,
+  SpendRoundControl? spendControl,
 }) async* {
   while (true) {
-    yield* retryRound?.call(sendRound) ?? sendRound();
+    await spendControl?.beforeRequest();
+    final round = retryRound?.call(sendRound) ?? sendRound();
+    yield* spendControl?.trackRound(round) ?? round;
     final calls = takeCalls();
     if (calls.isEmpty && !continueWithoutCalls()) {
       yield* finish();
       return;
     }
+    await spendControl?.beforeRequest();
     final executed = <ExecutedClientTool>[];
     if (executeAfterRound && calls.isNotEmpty && onToolCall != null) {
       final usage = usageOf?.call();

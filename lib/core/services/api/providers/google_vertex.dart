@@ -13,6 +13,7 @@ import '../../../../utils/sandbox_path_resolver.dart';
 import '../builtin_tools.dart';
 import '../chat_api_helpers.dart';
 import '../tool_call_argument_privacy.dart';
+import '../generation/spend_round_control.dart';
 import '../generation/tool_loop_runner.dart';
 import '../generation/tool_result_images.dart';
 import '../google_service_account_auth.dart';
@@ -42,6 +43,7 @@ Stream<StreamChunk> sendGoogleVertexStream(
   bool stream = true,
   bool skipImageParsing = false,
   StreamRoundRunner? retryRound,
+  SpendRoundControl? spendControl,
 }) {
   final cfg = config.copyWith(vertexAI: true);
   return sendGoogleStream(
@@ -61,6 +63,7 @@ Stream<StreamChunk> sendGoogleVertexStream(
     stream: stream,
     skipImageParsing: skipImageParsing,
     retryRound: retryRound,
+    spendControl: spendControl,
   );
 }
 
@@ -184,6 +187,7 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
   bool stream = true,
   bool skipImageParsing = false,
   StreamRoundRunner? retryRound,
+  SpendRoundControl? spendControl,
 }) async* {
   final upstreamId = apiModelId(config, modelId);
   final takesImages = modelTakesImages(config, modelId);
@@ -478,6 +482,7 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
 
   yield* runProviderToolRounds(
     retryRound: retryRound,
+    spendControl: spendControl,
     sendRound: () async* {
       pendingCalls = [];
       lastStreamResults = [];
@@ -519,7 +524,9 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
 
       final request = http.Request('POST', url);
       request.headers.addAll(headers);
-      request.body = jsonEncode(body);
+      request.body = jsonEncode(
+        spendControl?.decorateRequest(body, systemField: 'system') ?? body,
+      );
 
       final response = await client.send(request);
       if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -535,9 +542,9 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
         try {
           final u = (obj['usage'] as Map?)?.cast<String, dynamic>();
           if (u != null) {
-            totalUsage = (totalUsage ?? const TokenUsage()).merge(
-              claudeUsageFromMap(u),
-            );
+            final roundUsage = claudeUsageFromMap(u);
+            totalUsage = (totalUsage ?? const TokenUsage()).merge(roundUsage);
+            if (spendControl != null) yield Usage(roundUsage);
           }
         } catch (_) {}
         final content = (obj['content'] as List?) ?? const <dynamic>[];
@@ -598,7 +605,7 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
 
       final sse = response.stream.transform(utf8.decoder);
       final decoder = ClaudeStreamDecoder(
-        initialUsage: totalUsage,
+        initialUsage: spendControl == null ? totalUsage : null,
         sourceId: 'round-${streamRound++}',
       );
       final executedToolIds = <String>{};
@@ -614,6 +621,7 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
           if (chunk is ToolCallEnd &&
               decoder.isClientTool(chunk.id) &&
               onToolCall != null &&
+              spendControl == null &&
               executedToolIds.add(chunk.id)) {
             final tool = decoder.clientTools[chunk.id]!;
             final args = tool.decodedArguments;
@@ -671,6 +679,7 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
             arguments: tool.decodedArguments,
           ),
       ];
+      if (spendControl != null) return;
       for (final tool in decoder.clientTools.values) {
         var res = toolResultsContent[tool.id] ?? '';
         var images = decoder.toolResultImages[tool.id] ?? const [];
@@ -697,7 +706,7 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
     },
     takeCalls: () => pendingCalls,
     continueWithoutCalls: () => pauseTurn,
-    executeAfterRound: !stream,
+    executeAfterRound: !stream || spendControl != null,
     emitCalls: !stream,
     onToolCall: onToolCall,
     append: (executed) {
@@ -708,7 +717,7 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
         ];
         return;
       }
-      final results = stream
+      final results = stream && spendControl == null
           ? lastStreamResults
           : [
               for (final item in executed)

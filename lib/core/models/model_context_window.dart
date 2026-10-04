@@ -41,16 +41,16 @@ int? defaultContextWindowTokens(String upstreamId, {ModelCatalog? catalog}) =>
     (catalog ?? ModelCatalog.instance).lookup(upstreamId)?.contextTokens ??
     inferContextWindowTokens(upstreamId);
 
-/// Tokens the next request starts from: the latest reply's prompt plus its
-/// completion. Providers report the whole context each round, so the last
-/// round's numbers already cover the history. Null when no reply in
+/// Tokens the next request starts from: the latest model request's total.
+/// Paid prompt/completion fields may sum several tool rounds; totalTokens
+/// retains the final request's context size. Null when no reply in
 /// [visible] (one message per slot, oldest first) has usage.
 int? latestContextTokens(List<ChatMessage> visible) {
   for (var i = visible.length - 1; i >= 0; i--) {
     final m = visible[i];
     if (m.role != 'assistant') continue;
     final split = (m.promptTokens ?? 0) + (m.completionTokens ?? 0);
-    final used = split > 0 ? split : (m.totalTokens ?? 0);
+    final used = (m.totalTokens ?? 0) > 0 ? m.totalTokens! : split;
     if (used > 0) return used;
   }
   return null;

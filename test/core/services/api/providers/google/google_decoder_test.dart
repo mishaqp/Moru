@@ -527,6 +527,23 @@ void main() {
     },
   );
 
+  test('Gemini cached tokens are included in prompt only once', () {
+    final decoder = GoogleStreamDecoder();
+    decoder.accept(
+      _event({
+        'usageMetadata': {
+          'promptTokenCount': 100,
+          'cachedContentTokenCount': 60,
+          'candidatesTokenCount': 20,
+          'totalTokenCount': 120,
+        },
+      }),
+    );
+    expect(decoder.usage!.promptTokens, 100);
+    expect(decoder.usage!.cachedTokens, 60);
+    expect(decoder.usage!.totalTokens, 120);
+  });
+
   test('a follow-up round without usage keeps the prior snapshot', () {
     final first = GoogleStreamDecoder();
     first.accept(

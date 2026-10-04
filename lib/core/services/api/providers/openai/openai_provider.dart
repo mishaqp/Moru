@@ -13,6 +13,7 @@ import '../../../../../utils/sandbox_path_resolver.dart';
 import '../../builtin_tools.dart';
 import '../../chat_api_helpers.dart';
 import '../../tool_call_argument_privacy.dart';
+import '../../generation/spend_round_control.dart';
 import '../../generation/tool_loop_runner.dart';
 import '../../kimi_formula_search.dart';
 import '../../stream/sse_framing.dart';
@@ -116,6 +117,7 @@ Stream<StreamChunk> sendOpenAIStream(
   bool builtInSearchOnly = false,
   bool skipImageParsing = false,
   StreamRoundRunner? retryRound,
+  SpendRoundControl? spendControl,
 }) async* {
   final upstreamModelId = apiModelId(config, modelId);
   // Utility calls (title / summary generation) only want search injected.
@@ -696,7 +698,7 @@ Stream<StreamChunk> sendOpenAIStream(
     isReasoning: isReasoning,
     thinkingBudget: thinkingBudget,
   );
-  request.body = jsonEncode(body);
+  request.body = jsonEncode(spendControl?.decorateRequest(body) ?? body);
 
   final response = await client.send(request);
   if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -832,6 +834,7 @@ Stream<StreamChunk> sendOpenAIStream(
           extraHeaders: extraHeaders,
           initialUsage: firstUsage,
           retryRound: retryRound,
+          spendControl: spendControl,
         );
         return;
       }
@@ -853,6 +856,8 @@ Stream<StreamChunk> sendOpenAIStream(
             : firstChoice['finish_reason'].toString(),
       );
       return;
+    } on SpendLimitExceeded {
+      rethrow;
     } catch (e) {
       throw HttpException('Invalid JSON: $e');
     }
@@ -1021,6 +1026,7 @@ Stream<StreamChunk> sendOpenAIStream(
             approxPromptTokens: approxPromptTokens,
             approxCompletionChars: approxCompletionChars,
             retryRound: retryRound,
+            spendControl: spendControl,
           );
           return;
         }
@@ -1091,6 +1097,7 @@ Stream<StreamChunk> sendOpenAIStream(
               approxCompletionChars: approxCompletionChars,
               includeReasoningDetailsOnDone: true,
               retryRound: retryRound,
+              spendControl: spendControl,
             );
             return;
           }
@@ -1114,6 +1121,7 @@ Stream<StreamChunk> sendOpenAIStream(
       // the UI can persist the message.
       // XinLiu compatibility: Execute tools immediately if we have finish_reason='tool_calls' and accumulated calls
       if (config.useResponseApi != true &&
+          spendControl == null &&
           finishReason == 'tool_calls' &&
           toolAcc.isNotEmpty &&
           effectiveOnToolCall != null) {
@@ -1158,11 +1166,13 @@ Stream<StreamChunk> sendOpenAIStream(
           approxCompletionChars: approxCompletionChars,
           includeReasoningDetailsOnDone: true,
           retryRound: retryRound,
+          spendControl: spendControl,
         );
         return;
       }
       // XinLiu compatibility: Don't end early if we have accumulated tool calls
       if (config.useResponseApi != true &&
+          spendControl == null &&
           finishReason != null &&
           finishReason != 'tool_calls') {
         final bool hasPendingToolCalls =
@@ -1212,10 +1222,13 @@ Stream<StreamChunk> sendOpenAIStream(
             approxCompletionChars: approxCompletionChars,
             includeReasoningDetailsOnDone: false,
             retryRound: retryRound,
+            spendControl: spendControl,
           );
           return;
         }
       }
+    } on SpendLimitExceeded {
+      rethrow;
     } on ProviderOAuthException {
       rethrow;
     } on HttpException {
@@ -1236,6 +1249,53 @@ Stream<StreamChunk> sendOpenAIStream(
   }
   for (final chunk in responsesDecoder?.onClosed() ?? const <StreamChunk>[]) {
     yield chunk;
+  }
+  // Budget checks need the complete round, including trailing usage-only frames.
+  // Providers without [DONE] still continue their tools once the SSE closes.
+  if (spendControl != null &&
+      config.useResponseApi != true &&
+      toolAcc.isNotEmpty &&
+      effectiveOnToolCall != null) {
+    yield* runOpenAIChatCompletionsToolFollowUps(
+      client: client,
+      config: config,
+      modelId: modelId,
+      upstreamModelId: upstreamModelId,
+      url: url,
+      info: info,
+      messages: messages,
+      firstToolAcc: toolAcc,
+      firstAssistantContent: assistantContentBuffer,
+      firstReasoning: reasoningBuffer,
+      firstReasoningDetails:
+          chatDecoder?.reasoningDetails ?? reasoningDetailsBuffer.detailsOrNull,
+      onToolCall: effectiveOnToolCall,
+      userImagePaths: userImagePaths,
+      canImageInput: canImageInput,
+      allowRemoteImages: allowRemoteImages,
+      skipImageParsing: skipImageParsing,
+      isClaudeUpstream: isClaudeUpstream,
+      isReasoning: isReasoning,
+      effort: effort,
+      thinkingBudget: thinkingBudget,
+      temperature: temperature,
+      topP: topP,
+      tools: tools,
+      extraBodyCfg: extraBodyCfg,
+      extraHeaders: extraHeaders,
+      wantsImageOutput: wantsImageOutput,
+      needsReasoningEcho: needsReasoningEcho,
+      reasoningDetailsAllowSnapshots: reasoningDetailsAllowSnapshots,
+      applyMaxTokens: setMaxTokens,
+      initialUsage: usage,
+      streamRound: streamRound,
+      approxPromptTokens: approxPromptTokens,
+      approxCompletionChars: approxCompletionChars,
+      includeReasoningDetailsOnDone: true,
+      retryRound: retryRound,
+      spendControl: spendControl,
+    );
+    return;
   }
   final approxTotal =
       usage?.totalTokens ??

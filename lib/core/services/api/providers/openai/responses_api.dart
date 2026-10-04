@@ -11,6 +11,7 @@ import '../../../../../utils/app_directories.dart';
 import '../../../../../utils/sandbox_path_resolver.dart';
 import '../../chat_api_helpers.dart';
 import '../../tool_call_argument_privacy.dart';
+import '../../generation/spend_round_control.dart';
 import '../../generation/tool_loop_runner.dart';
 import '../../generation/tool_result_images.dart';
 import '../../stream/sse_decode_loop.dart';
@@ -208,6 +209,7 @@ Stream<StreamChunk> runOpenAIResponsesToolFollowUps({
   required int approxPromptTokens,
   required int approxCompletionChars,
   StreamRoundRunner? retryRound,
+  SpendRoundControl? spendControl,
 }) async* {
   var usage = initialUsage;
   var chars = approxCompletionChars;
@@ -311,7 +313,7 @@ Stream<StreamChunk> runOpenAIResponsesToolFollowUps({
           assistantHeaders: extraHeaders,
         ),
       );
-      req2.body = jsonEncode(body2);
+      req2.body = jsonEncode(spendControl?.decorateRequest(body2) ?? body2);
       final http.StreamedResponse resp2;
       try {
         resp2 = await client.send(req2);
@@ -319,6 +321,8 @@ Stream<StreamChunk> runOpenAIResponsesToolFollowUps({
           final errorBody = await resp2.stream.bytesToString();
           throw HttpException('HTTP ${resp2.statusCode}: $errorBody');
         }
+      } on SpendLimitExceeded {
+        rethrow;
       } on ProviderOAuthException {
         rethrow;
       } on HttpException {
@@ -330,7 +334,7 @@ Stream<StreamChunk> runOpenAIResponsesToolFollowUps({
         resp2.stream.transform(utf8.decoder),
       );
       final followUpDecoder = ResponsesStreamDecoder(
-        initialUsage: usage,
+        initialUsage: spendControl == null ? usage : null,
         sourceId: 'round-${round++}',
       );
       yield* decodeSseEvents(parseSseEventStrings(s2), followUpDecoder);
@@ -368,6 +372,7 @@ Stream<StreamChunk> runOpenAIResponsesToolFollowUps({
       );
     },
     retryRound: retryRound,
+    spendControl: spendControl,
     usageOf: () => usage,
   );
 }
