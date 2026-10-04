@@ -90,4 +90,9 @@ jobs:
         run: dart analyze --fatal-infos lib test integration_test
 
       - name: flutter test
-        run: flutter test
+        run: flutter test --file-reporter json:build/test-report.json
+
+      # The job log keeps only its tail, so repeat failures at the end.
+      - name: Failed test details
+        if: failure()
+        run: python3 .github/scripts/print_failed_tests.py build/test-report.json
