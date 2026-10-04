@@ -99,41 +99,43 @@ class HomeMobileScaffold extends StatelessWidget {
           settings.sidebarAppearance.widthFor(screenWidth, wide: false),
     );
 
-    return InteractiveDrawer(
-      controller: drawerController,
-      side: DrawerSide.left,
-      // Most of the screen, with the chat dimmed at the edge so it still shows
-      // where the panel came from.
-      drawerWidth: drawerWidth,
-      scrimColor: Colors.black,
-      maxScrimOpacity: 0.32,
-      barrierDismissible: true,
-      drawer: SideDrawer(
-        userName: context.watch<UserProvider>().name,
-        assistantName: _getAssistantName(context),
-        closePickerTicker: assistantPickerCloseTick,
-        loadingConversationIds: loadingConversationIds,
-        globalSearchMode: globalSearchMode,
-        globalSearchQuery: globalSearchQuery,
-        onGlobalSearchQueryChanged: onGlobalSearchQueryChanged,
-        onEnterGlobalSearch: onEnterGlobalSearch,
-        onExitGlobalSearch: onExitGlobalSearch,
-        onOpenGlobalSearchResult: (conversationId, messageId) async {
-          await onOpenGlobalSearchResult(conversationId, messageId);
-          drawerController.close();
-        },
-        onSelectConversation: (id, {closeDrawer = true}) {
-          onSelectConversation(id);
-          if (closeDrawer) drawerController.close();
-        },
-        onNewConversation: ({closeDrawer = true}) async {
-          await onCreateNewConversation();
-          if (closeDrawer) drawerController.close();
-        },
-      ),
-      child: ChatFrostedBackdrop(
-        active: backgroundActive,
-        backdrop: const MobileBackgroundLayer(),
+    // Keep shared artwork in screen coordinates while the chat slides aside.
+    return ChatFrostedBackdrop(
+      active: backgroundActive,
+      backdrop: const MobileBackgroundLayer(),
+      child: InteractiveDrawer(
+        controller: drawerController,
+        side: DrawerSide.left,
+        backgroundColor: Colors.transparent,
+        // Most of the screen, with the chat dimmed at the edge so it still shows
+        // where the panel came from.
+        drawerWidth: drawerWidth,
+        scrimColor: Colors.black,
+        maxScrimOpacity: 0.32,
+        barrierDismissible: true,
+        drawer: SideDrawer(
+          userName: context.watch<UserProvider>().name,
+          assistantName: _getAssistantName(context),
+          closePickerTicker: assistantPickerCloseTick,
+          loadingConversationIds: loadingConversationIds,
+          globalSearchMode: globalSearchMode,
+          globalSearchQuery: globalSearchQuery,
+          onGlobalSearchQueryChanged: onGlobalSearchQueryChanged,
+          onEnterGlobalSearch: onEnterGlobalSearch,
+          onExitGlobalSearch: onExitGlobalSearch,
+          onOpenGlobalSearchResult: (conversationId, messageId) async {
+            await onOpenGlobalSearchResult(conversationId, messageId);
+            drawerController.close();
+          },
+          onSelectConversation: (id, {closeDrawer = true}) {
+            onSelectConversation(id);
+            if (closeDrawer) drawerController.close();
+          },
+          onNewConversation: ({closeDrawer = true}) async {
+            await onCreateNewConversation();
+            if (closeDrawer) drawerController.close();
+          },
+        ),
         child: Scaffold(
           key: scaffoldKey,
           resizeToAvoidBottomInset: true,

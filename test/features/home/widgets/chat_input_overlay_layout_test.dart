@@ -1,5 +1,8 @@
+import 'dart:ui' as ui;
+
 import 'package:Kelivo/features/home/widgets/chat_input_overlay_layout.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 
@@ -309,4 +312,208 @@ void main() {
     );
     expect(tester.getTopLeft(find.byKey(backgroundKey).first).dy, 0);
   });
+
+  for (final size in [
+    const Size(390, 844),
+    const Size(1024, 768),
+    const Size(844, 390),
+  ]) {
+    for (final brightness in Brightness.values) {
+      for (final glass in [false, true]) {
+        for (final keyboard in [false, true]) {
+          testWidgets('shared wallpaper remains visible at chat edges: '
+              '$size / $brightness / glass=$glass / keyboard=$keyboard', (
+            tester,
+          ) async {
+            const wallpaper = Color(0xFF2858D0);
+            const gestureInset = 24.0;
+            final keyboardInset = keyboard ? 200.0 : 0.0;
+            tester.view.devicePixelRatio = 1;
+            tester.view.physicalSize = size;
+            tester.view.viewPadding = const FakeViewPadding(
+              top: 24,
+              bottom: gestureInset,
+            );
+            tester.view.padding = FakeViewPadding(
+              top: 24,
+              bottom: keyboard ? 0 : gestureInset,
+            );
+            tester.view.viewInsets = FakeViewPadding(bottom: keyboardInset);
+            addTearDown(tester.view.reset);
+
+            final theme = ThemeData(brightness: brightness);
+            final root = GlobalKey();
+            final scroll = ScrollController(initialScrollOffset: 132);
+            addTearDown(scroll.dispose);
+            const composer = Key('wallpaper-edge-composer');
+            Widget app({bool messages = false}) => MaterialApp(
+              theme: theme,
+              home: RepaintBoundary(
+                key: root,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    const ColoredBox(color: wallpaper),
+                    Scaffold(
+                      backgroundColor: Colors.transparent,
+                      extendBodyBehindAppBar: true,
+                      appBar: AppBar(
+                        automaticallyImplyLeading: false,
+                        backgroundColor: Colors.transparent,
+                        surfaceTintColor: Colors.transparent,
+                        elevation: 0,
+                      ),
+                      body: ChatInputOverlayLayout(
+                        topInset: 100,
+                        backgroundImageActive: true,
+                        frostedTopSigma: glass ? 14 : null,
+                        content: messages
+                            ? ListView.builder(
+                                controller: scroll,
+                                padding: const EdgeInsets.only(top: 108),
+                                itemExtent: 80,
+                                itemCount: 20,
+                                itemBuilder: (context, index) => ColoredBox(
+                                  key: index == 0
+                                      ? const Key(
+                                          'wallpaper-edge-first-message',
+                                        )
+                                      : null,
+                                  color: index.isEven
+                                      ? const Color(0xFFFFEE00)
+                                      : const Color(0xFFFF0040),
+                                  child: const Text('CONTRASTING MESSAGE'),
+                                ),
+                              )
+                            : const SizedBox.expand(),
+                        bottomOverlay: const SafeArea(
+                          top: false,
+                          left: false,
+                          right: false,
+                          child: SizedBox(
+                            key: composer,
+                            width: 300,
+                            height: 50,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+            await tester.pumpWidget(app());
+            await tester.pump();
+
+            final visibleHeight = size.height - keyboardInset;
+            expect(
+              tester.getBottomLeft(find.byKey(composer)).dy,
+              visibleHeight - (keyboard ? 0 : gestureInset),
+            );
+            final points = [
+              const Offset(4, 10), // Status bar.
+              const Offset(4, 60), // Header.
+              const Offset(4, 98), // Header's lower title/model line.
+              Offset(4, visibleHeight - 60), // Around the composer.
+              Offset(4, visibleHeight - 2), // Gesture bar / above IME.
+              Offset(4, visibleHeight - gestureInset - 2), // Visible messages.
+            ];
+            final backdropColors = await _colorsAt(tester, root, points);
+            final surface = theme.colorScheme.surface;
+            final originalContrast =
+                (wallpaper.r - surface.r).abs() +
+                (wallpaper.g - surface.g).abs() +
+                (wallpaper.b - surface.b).abs();
+            for (var i = 0; i < points.length; i++) {
+              final actual = backdropColors[i];
+              final contrast =
+                  (actual.r - surface.r).abs() +
+                  (actual.g - surface.g).abs() +
+                  (actual.b - surface.b).abs();
+              expect(
+                contrast / originalContrast,
+                greaterThan(0.30),
+                reason:
+                    'Wallpaper is covered by a surface fill at ${points[i]}',
+              );
+            }
+
+            await tester.pumpWidget(app(messages: true));
+            await tester.pump();
+            expect(
+              tester
+                  .getTopLeft(
+                    find.byKey(const Key('wallpaper-edge-first-message')),
+                  )
+                  .dy,
+              -24,
+            );
+            for (final offset in [132.0, 332.0]) {
+              scroll.jumpTo(offset);
+              await tester.pump();
+              final messageColors = await _colorsAt(tester, root, points);
+              if (!glass) {
+                for (var i = 0; i < 3; i++) {
+                  expect(
+                    messageColors[i],
+                    backdropColors[i],
+                    reason:
+                        'A scrolling message paints the title at ${points[i]}',
+                  );
+                }
+              } else {
+                expect(
+                  messageColors[1],
+                  isNot(backdropColors[1]),
+                  reason:
+                      'Glass keeps messages scrolling beneath the header blur',
+                );
+              }
+              expect(
+                messageColors[4],
+                keyboard ? isNot(backdropColors[4]) : backdropColors[4],
+                reason: keyboard
+                    ? 'No gesture inset is reserved above the keyboard'
+                    : 'A scrolling message paints the gesture area',
+              );
+              expect(
+                messageColors.last,
+                isNot(backdropColors.last),
+                reason:
+                    'The message canvas remains visible above the gesture area',
+              );
+            }
+            await tester.pumpWidget(const SizedBox.shrink());
+          });
+        }
+      }
+    }
+  }
+}
+
+Future<List<Color>> _colorsAt(
+  WidgetTester tester,
+  GlobalKey key,
+  List<Offset> points,
+) async {
+  final boundary =
+      key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+  final image = boundary.toImageSync();
+  try {
+    final bytes = await tester.runAsync(
+      () => image.toByteData(format: ui.ImageByteFormat.rawRgba),
+    );
+    final pixels = bytes!.buffer.asUint8List();
+    return [
+      for (final point in points)
+        Color.fromARGB(
+          pixels[(point.dy.toInt() * image.width + point.dx.toInt()) * 4 + 3],
+          pixels[(point.dy.toInt() * image.width + point.dx.toInt()) * 4],
+          pixels[(point.dy.toInt() * image.width + point.dx.toInt()) * 4 + 1],
+          pixels[(point.dy.toInt() * image.width + point.dx.toInt()) * 4 + 2],
+        ),
+    ];
+  } finally {
+    image.dispose();
+  }
 }

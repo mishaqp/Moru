@@ -16,11 +16,16 @@ class SidebarGlassBackdrop extends StatefulWidget {
     super.key,
     this.configuration,
     this.backgroundConfiguration,
+    this.viewportSize,
     this.active = true,
   });
 
   final SidebarAppearanceSettings? configuration;
   final ChatBackgroundSettings? backgroundConfiguration;
+
+  /// The full miniature screen when rendered by the appearance preview.
+  /// Live shared artwork uses the Android screen, including system insets.
+  final Size? viewportSize;
   final bool active;
 
   static const double blurSigma = 26;
@@ -94,6 +99,20 @@ class _SidebarGlassBackdropState extends State<SidebarGlassBackdrop> {
         child: RepaintBoundary(child: scene),
       );
     }
+    if (appearance.backgroundMode == SidebarBackgroundMode.sameAsChat &&
+        background.type != ChatBackgroundType.none) {
+      final viewport = widget.viewportSize ?? MediaQuery.sizeOf(context);
+      // Fit once in the chat's screen coordinates, then reveal the panel's
+      // portion. Keep effects inside this viewport so blur has no panel seam.
+      scene = OverflowBox(
+        alignment: Alignment.topLeft,
+        minWidth: viewport.width,
+        maxWidth: viewport.width,
+        minHeight: viewport.height,
+        maxHeight: viewport.height,
+        child: scene,
+      );
+    }
     return IgnorePointer(
       child: Opacity(
         opacity: appearance.opacity,
@@ -116,19 +135,38 @@ class _SidebarGlassBackdropState extends State<SidebarGlassBackdrop> {
   }
 }
 
+/// The appearance preview uses its unsaved draft to choose control surfaces.
+class SidebarSurfaceScope extends InheritedWidget {
+  const SidebarSurfaceScope({
+    super.key,
+    required this.clear,
+    required super.child,
+  });
+
+  final bool clear;
+
+  @override
+  bool updateShouldNotify(SidebarSurfaceScope oldWidget) =>
+      clear != oldWidget.clear;
+}
+
 /// Keeps chosen artwork and translucent panel effects visible behind rows.
 bool sidebarSurfacesClear(BuildContext context, {required bool embedded}) {
+  if (embedded) return true;
+  final draft = context
+      .dependOnInheritedWidgetOfExactType<SidebarSurfaceScope>();
+  if (draft != null) return draft.clear;
   final brightness = Theme.of(context).brightness;
-  return embedded ||
-      context.select<SettingsProvider, bool>(
-        (s) =>
-            s.glassTheme ||
+  return context.select<SettingsProvider?, bool>(
+    (s) =>
+        s != null &&
+        (s.glassTheme ||
             s.sidebarAppearance
                     .backgroundFor(brightness, s.chatAppearance)
                     .type !=
                 ChatBackgroundType.none ||
-            s.sidebarAppearance.opacity < 1,
-      );
+            s.sidebarAppearance.opacity < 1),
+  );
 }
 
 /// A light glass tile on the sidebar glass (search, buttons): a brighter

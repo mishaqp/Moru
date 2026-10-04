@@ -52,7 +52,7 @@ class _SidebarAppearancePreviewState extends State<SidebarAppearancePreview> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final wide = screenWidth >= AppBreakpoints.tablet;
-    return Theme(
+    final preview = Theme(
       data: widget.theme,
       child: Builder(
         builder: (context) {
@@ -85,6 +85,7 @@ class _SidebarAppearancePreviewState extends State<SidebarAppearancePreview> {
                               configuration: appearance,
                               backgroundConfiguration:
                                   widget.backgroundConfiguration,
+                              viewportSize: constraints.biggest,
                             ),
                             widget.height < 180
                                 ? _compactScene(l, cs, timestamp)
@@ -252,6 +253,13 @@ class _SidebarAppearancePreviewState extends State<SidebarAppearancePreview> {
           );
         },
       ),
+    );
+    return SidebarSurfaceScope(
+      clear:
+          widget.glass ||
+          widget.backgroundConfiguration.type != ChatBackgroundType.none ||
+          widget.appearance.opacity < 1,
+      child: preview,
     );
   }
 
