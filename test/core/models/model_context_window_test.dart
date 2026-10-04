@@ -14,6 +14,14 @@ ChatMessage _message(String role, {int? prompt, int? completion, int? total}) =>
     );
 
 void main() {
+  test('context uses final request total when spending sums tool rounds', () {
+    expect(
+      latestContextTokens([
+        _message('assistant', prompt: 2000, completion: 100, total: 800),
+      ]),
+      800,
+    );
+  });
   test('known families get their context window, others stay unknown', () {
     expect(inferContextWindowTokens('claude-sonnet-4-5'), 200000);
     expect(inferContextWindowTokens('anthropic/claude-opus-4'), 200000);

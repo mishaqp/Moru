@@ -12888,11 +12888,20 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get spendHardStopNote =>
-      'Блокировать новые запросы после исчерпания включённого лимита. Неизвестная цена не позволяет проверить долларовый лимит.';
+      'Остановить текущий ответ и блокировать новые запросы после исчерпания включённого лимита. Неизвестная цена не позволяет проверить долларовый лимит.';
 
   @override
   String get spendHardStopMessage =>
       'Лимит расходов достигнут. Измените лимиты или выключите жёсткий стоп в Статистике.';
+
+  @override
+  String spendCacheShare(String percent) {
+    return 'Кэш $percent%';
+  }
+
+  @override
+  String get spendResponseStopped =>
+      'Ответ остановлен: достигнут лимит расходов. Измените лимиты в Статистике, чтобы продолжить.';
 
   @override
   String get spendDisabled => 'Выключен';

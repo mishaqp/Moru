@@ -5723,8 +5723,17 @@
   "spendDailyTokens": "Per day · tokens",
   "spendWarningThreshold": "Warning threshold",
   "spendHardStop": "Hard stop",
-  "spendHardStopNote": "Block new requests only after an enabled budget is exhausted. Unknown costs cannot enforce a dollar limit.",
+  "spendHardStopNote": "Stop the current reply and block new requests when an enabled budget is exhausted. Unknown costs cannot enforce a dollar limit.",
   "spendHardStopMessage": "Spending limit reached. Change the limits or turn off Hard stop in Statistics.",
+  "spendCacheShare": "Cache {percent}%",
+  "spendResponseStopped": "Reply stopped: spending limit reached. Change limits in Statistics to continue.",
+  "@spendCacheShare": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
   "spendDisabled": "Off",
   "spendValueHint": "Empty means no limit",
   "spendInvalidValue": "Enter a positive number, or clear to disable. Token limits need whole numbers.",

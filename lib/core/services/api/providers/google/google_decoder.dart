@@ -265,6 +265,7 @@ class GoogleStreamDecoder implements StreamChunkDecoder {
         TokenUsage(
           promptTokens: (um['promptTokenCount'] ?? 0) as int,
           completionTokens: (um['candidatesTokenCount'] ?? 0) as int,
+          cachedTokens: (um['cachedContentTokenCount'] ?? 0) as int,
           totalTokens: (um['totalTokenCount'] ?? 0) as int,
         ),
       );

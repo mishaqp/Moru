@@ -65,6 +65,8 @@ void main() {
   late ToolHandlerService toolHandler;
   final errors = <String>[];
   Completer<void>? responseGate;
+  int? responseGateRequest;
+  Map<String, dynamic> Function(int requestNumber)? scriptedResponse;
 
   Future<void> mount(WidgetTester tester) async {
     await tester.runAsync(() async {
@@ -85,25 +87,33 @@ void main() {
       await assistants.loaded;
       approvals = ToolApprovalService();
       responseGate = null;
+      responseGateRequest = null;
+      scriptedResponse = null;
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       server.listen((request) async {
         final body =
             jsonDecode(await utf8.decoder.bind(request).join())
                 as Map<String, dynamic>;
         requests.add(body);
-        await responseGate?.future;
+        if (responseGateRequest == null ||
+            responseGateRequest == requests.length) {
+          await responseGate?.future;
+        }
         request.response.headers.contentType = ContentType.json;
         request.response.write(
-          jsonEncode({
-            'choices': [
-              {
-                'message': {
-                  'role': 'assistant',
-                  'content': 'Condensed context',
+          jsonEncode(
+            scriptedResponse?.call(requests.length) ??
+                {
+                  'choices': [
+                    {
+                      'message': {
+                        'role': 'assistant',
+                        'content': 'Condensed context',
+                      },
+                    },
+                  ],
                 },
-              },
-            ],
-          }),
+          ),
         );
         await request.response.close();
       });
@@ -262,6 +272,282 @@ void main() {
     await chatController.setCurrentConversationAndLoad(convo);
     return convo.id;
   }
+
+  Future<String> seedRoundBudget() async {
+    final assistant = assistants.currentAssistant!;
+    await assistants.updateAssistant(
+      assistant.copyWith(localToolIds: ['spend_control']),
+    );
+    await settings.setProviderConfig(
+      'p',
+      settings
+          .getProviderConfig('p')
+          .copyWith(
+            modelOverrides: {
+              'priced': {
+                'contextWindow': 200000,
+                'abilities': ['tool'],
+              },
+            },
+          ),
+    );
+    final conversation = await chats.createConversation(
+      title: 'Round budget',
+      assistantId: assistant.id,
+    );
+    await chats.addMessageDirectly(
+      conversation.id,
+      ChatMessage(
+        id: 'round-paid',
+        role: 'assistant',
+        content: 'Previous paid answer',
+        conversationId: conversation.id,
+        providerId: 'p',
+        modelId: 'priced',
+        promptTokens: 720,
+      ),
+    );
+    await chatController.setCurrentConversationAndLoad(conversation);
+    return conversation.id;
+  }
+
+  Map<String, dynamic> roundReply({
+    required int input,
+    required int output,
+    int cached = 0,
+    bool callTool = false,
+    bool changeLimits = false,
+  }) => {
+    'choices': [
+      {
+        'message': {
+          'role': 'assistant',
+          'content': callTool ? 'Checking the budget' : 'Round done',
+          if (callTool)
+            'tool_calls': [
+              {
+                'id': 'budget-round-tool',
+                'type': 'function',
+                'function': {
+                  'name': 'spend_control',
+                  'arguments': jsonEncode(
+                    changeLimits
+                        ? {
+                            'action': 'set_limits',
+                            'limits': {'chat_tokens': 2000},
+                          }
+                        : {'action': 'status'},
+                  ),
+                },
+              },
+            ],
+        },
+        'finish_reason': callTool ? 'tool_calls' : 'stop',
+      },
+    ],
+    'usage': {
+      'prompt_tokens': input,
+      'completion_tokens': output,
+      'total_tokens': input + output,
+      'prompt_tokens_details': {'cached_tokens': cached},
+    },
+  };
+
+  testWidgets(
+    'completed model round crosses warning threshold before the next request and counts usage once',
+    (tester) async {
+      await mount(tester);
+      await tester.runAsync(() async {
+        final id = await seedRoundBudget();
+        await settings.setSpendLimits(const SpendLimits(chatTokens: 1000));
+        scriptedResponse = (number) => number == 1
+            ? roundReply(input: 100, output: 10, cached: 75, callTool: true)
+            : roundReply(input: 130, output: 5, cached: 100);
+        final done = viewModel.generationTerminalEvents.first;
+        expect(
+          await viewModel.sendMessage(ChatInputData(text: 'Continue the task')),
+          ChatInputSubmissionResult.sent,
+        );
+        await done.timeout(const Duration(seconds: 10));
+        expect(requests, hasLength(2));
+        expect(
+          jsonEncode(requests.first['messages']),
+          isNot(contains('Spend control')),
+        );
+        expect(jsonEncode(requests.last['messages']), contains('170 tokens'));
+        final toolMessage = (requests.last['messages'] as List)
+            .cast<Map>()
+            .singleWhere((message) => message['role'] == 'tool');
+        final toolStatus = jsonDecode(toolMessage['content'] as String) as Map;
+        expect((toolStatus['chat'] as Map)['total_tokens'], 830);
+        expect((toolStatus['chat'] as Map)['used_percent'], {'tokens': 83.0});
+        expect(
+          toolStatus['current_response'],
+          containsPair('completed_requests', 1),
+        );
+        expect(
+          toolStatus['current_response'],
+          containsPair('accounting', 'partial'),
+        );
+        final reply = (await chats.loadMessages(id)).last;
+        expect(reply.promptTokens, 230);
+        expect(reply.completionTokens, 15);
+        expect(reply.cachedTokens, 175);
+        expect(reply.totalTokens, 135);
+        expect(reply.content, isNot(contains('Spend control')));
+        final status = await SpendControlService(
+          chats: chats,
+          settings: settings,
+        ).status(id, includeContext: false);
+        expect(SpendControlStatus.total(status.chat), 965);
+        expect(
+          status.toJson()['current_response'],
+          containsPair('accounting', 'not_included'),
+        );
+        final prompts = await repo.getMessagePrompts(
+          await chats.getMessageIds(id),
+        );
+        expect(
+          prompts.values.any(
+            (prompt) => prompt.payload.contains('Spend control'),
+          ),
+          isFalse,
+        );
+      });
+      await cleanup(tester);
+    },
+  );
+
+  testWidgets(
+    'hard stop after a completed round prevents the next request and cancels pending limit changes',
+    (tester) async {
+      await mount(tester);
+      await tester.runAsync(() async {
+        final id = await seedRoundBudget();
+        await settings.setSpendLimits(
+          const SpendLimits(chatTokens: 1000, hardStop: true),
+        );
+        scriptedResponse = (number) => number == 1
+            ? roundReply(
+                input: 300,
+                output: 10,
+                cached: 200,
+                callTool: true,
+                changeLimits: true,
+              )
+            : roundReply(input: 10, output: 5);
+        final done = viewModel.generationTerminalEvents.first;
+        expect(
+          await viewModel.sendMessage(ChatInputData(text: 'Keep working')),
+          ChatInputSubmissionResult.sent,
+        );
+        await done.timeout(const Duration(seconds: 10));
+        expect(requests, hasLength(1));
+        expect(approvals.pendingRequests, isEmpty);
+        expect(settings.spendLimits.chatTokens, 1000);
+        final reply = (await chats.loadMessages(id)).last;
+        expect(
+          reply.content,
+          contains('Reply stopped: spending limit reached.'),
+        );
+        expect(reply.promptTokens, 300);
+        expect(reply.completionTokens, 10);
+        expect(reply.cachedTokens, 200);
+        expect(reply.isStreaming, isFalse);
+        expect(streamController.hasLoadingTools(reply.id), isFalse);
+        final status = await SpendControlService(
+          chats: chats,
+          settings: settings,
+        ).status(id, includeContext: false);
+        expect(SpendControlStatus.total(status.chat), 1030);
+        expect(status.blocked, isTrue);
+      });
+      await cleanup(tester);
+    },
+  );
+
+  testWidgets(
+    'user Stop while the next request is pending preserves completed round spending',
+    (tester) async {
+      await mount(tester);
+      await tester.runAsync(() async {
+        final id = await seedRoundBudget();
+        await settings.setSpendLimits(const SpendLimits(chatTokens: 1000));
+        scriptedResponse = (number) => number == 1
+            ? roundReply(input: 100, output: 10, cached: 75, callTool: true)
+            : roundReply(input: 130, output: 5, cached: 100);
+        responseGate = Completer<void>();
+        responseGateRequest = 2;
+        final done = viewModel.generationTerminalEvents.first;
+        expect(
+          await viewModel.sendMessage(ChatInputData(text: 'Keep working')),
+          ChatInputSubmissionResult.sent,
+        );
+        final deadline = DateTime.now().add(const Duration(seconds: 10));
+        while (requests.length < 2 && DateTime.now().isBefore(deadline)) {
+          await Future<void>.delayed(const Duration(milliseconds: 5));
+        }
+        expect(requests, hasLength(2));
+        await viewModel.cancelStreaming();
+        responseGate!.complete();
+        await done.timeout(const Duration(seconds: 10));
+        final reply = (await chats.loadMessages(id)).last;
+        expect(reply.promptTokens, 100);
+        expect(reply.completionTokens, 10);
+        expect(reply.cachedTokens, 75);
+        expect(reply.totalTokens, 110);
+        expect(reply.isStreaming, isFalse);
+        expect(streamController.hasLoadingTools(reply.id), isFalse);
+        expect(approvals.pendingRequests, isEmpty);
+        final status = await SpendControlService(
+          chats: chats,
+          settings: settings,
+        ).status(id, includeContext: false);
+        expect(SpendControlStatus.total(status.chat), 830);
+        expect(
+          status.toJson()['current_response'],
+          containsPair('accounting', 'not_included'),
+        );
+      });
+      await cleanup(tester);
+    },
+  );
+
+  testWidgets(
+    'without limits the tool loop preserves the request system messages',
+    (tester) async {
+      await mount(tester);
+      await tester.runAsync(() async {
+        final id = await seedRoundBudget();
+        scriptedResponse = (number) => number == 1
+            ? roundReply(input: 100, output: 10, callTool: true)
+            : roundReply(input: 130, output: 5);
+        final done = viewModel.generationTerminalEvents.first;
+        expect(
+          await viewModel.sendMessage(ChatInputData(text: 'Use the tool')),
+          ChatInputSubmissionResult.sent,
+        );
+        await done.timeout(const Duration(seconds: 10));
+        expect(requests, hasLength(2));
+        List<Map> systems(Map request) => (request['messages'] as List)
+            .cast<Map>()
+            .where(
+              (message) => ['system', 'developer'].contains(message['role']),
+            )
+            .toList();
+        expect(systems(requests.last), systems(requests.first));
+        expect(
+          jsonEncode(systems(requests.last)),
+          isNot(contains('Spend control')),
+        );
+        expect(
+          (await chats.loadMessages(id)).last.content,
+          contains('Round done'),
+        );
+      });
+      await cleanup(tester);
+    },
+  );
 
   testWidgets(
     'status agrees with the token sheet and today includes other chats and temporary usage once',

@@ -22686,7 +22686,7 @@ abstract class AppLocalizations {
   /// No description provided for @spendHardStopNote.
   ///
   /// In en, this message translates to:
-  /// **'Block new requests only after an enabled budget is exhausted. Unknown costs cannot enforce a dollar limit.'**
+  /// **'Stop the current reply and block new requests when an enabled budget is exhausted. Unknown costs cannot enforce a dollar limit.'**
   String get spendHardStopNote;
 
   /// No description provided for @spendHardStopMessage.
@@ -22694,6 +22694,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Spending limit reached. Change the limits or turn off Hard stop in Statistics.'**
   String get spendHardStopMessage;
+
+  /// No description provided for @spendCacheShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Cache {percent}%'**
+  String spendCacheShare(String percent);
+
+  /// No description provided for @spendResponseStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply stopped: spending limit reached. Change limits in Statistics to continue.'**
+  String get spendResponseStopped;
 
   /// No description provided for @spendDisabled.
   ///

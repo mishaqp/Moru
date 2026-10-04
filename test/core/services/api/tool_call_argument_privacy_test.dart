@@ -1,11 +1,36 @@
 import 'dart:convert';
 
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'package:Kelivo/core/services/api/generation/spend_round_control.dart';
 import 'package:Kelivo/core/services/api/tool_call_argument_privacy.dart';
 import 'package:Kelivo/core/services/api/stream/stream_chunk.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('spending stop retains its type after privacy redaction', () async {
+    final protected = ToolCallArgumentPrivacy.register(
+      (name, args, {toolCallId}) async => 'ok',
+      (name, args) =>
+          (jsonDecode(
+                    jsonEncode(args).replaceAll('private-value', '[REDACTED]'),
+                  )
+                  as Map)
+              .cast<String, dynamic>(),
+    );
+    await expectLater(
+      ToolCallArgumentPrivacy.publishStream(
+        Stream.error(const SpendLimitExceeded('Stop private-value')),
+        protected,
+      ).toList(),
+      throwsA(
+        isA<SpendLimitExceeded>().having(
+          (e) => e.message,
+          'message',
+          'Stop [REDACTED]',
+        ),
+      ),
+    );
+  });
   test(
     'name sanitization also supports credentials matching internal copy keys',
     () {

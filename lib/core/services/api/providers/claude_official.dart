@@ -14,6 +14,7 @@ import '../../../../utils/mcp_structured_image.dart';
 import '../builtin_tools.dart';
 import '../chat_api_helpers.dart';
 import '../tool_call_argument_privacy.dart';
+import '../generation/spend_round_control.dart';
 import '../generation/tool_loop_runner.dart';
 import '../generation/tool_result_images.dart';
 import '../stream/sse_framing.dart';
@@ -60,6 +61,7 @@ Stream<StreamChunk> sendClaudeStream(
   bool builtInSearchOnly = false,
   bool skipImageParsing = false,
   StreamRoundRunner? retryRound,
+  SpendRoundControl? spendControl,
 }) async* {
   final upstreamModelId = apiModelId(config, modelId);
   final takesImages = modelTakesImages(config, modelId);
@@ -335,6 +337,7 @@ Stream<StreamChunk> sendClaudeStream(
 
   yield* runProviderToolRounds(
     retryRound: retryRound,
+    spendControl: spendControl,
     sendRound: () async* {
       final omitSamplingParams = claudeShouldOmitSamplingParams(
         upstreamModelId,
@@ -393,7 +396,9 @@ Stream<StreamChunk> sendClaudeStream(
       http.Request buildRequest() {
         final request = http.Request('POST', url);
         request.headers.addAll(baseHeaders);
-        request.body = jsonEncode(body);
+        request.body = jsonEncode(
+          spendControl?.decorateRequest(body, systemField: 'system') ?? body,
+        );
         return request;
       }
 
@@ -431,9 +436,9 @@ Stream<StreamChunk> sendClaudeStream(
         try {
           final u = (obj['usage'] as Map?)?.cast<String, dynamic>();
           if (u != null) {
-            totalUsage = (totalUsage ?? const TokenUsage()).merge(
-              claudeUsageFromMap(u),
-            );
+            final roundUsage = claudeUsageFromMap(u);
+            totalUsage = (totalUsage ?? const TokenUsage()).merge(roundUsage);
+            if (spendControl != null) yield Usage(roundUsage);
           }
         } catch (_) {}
         container =
@@ -543,7 +548,7 @@ Stream<StreamChunk> sendClaudeStream(
             ? decodeClaudeOAuthToolName
             : null,
         skipRedactedThinkingBlocks: skipRedactedThinkingBlocks,
-        initialUsage: totalUsage,
+        initialUsage: spendControl == null ? totalUsage : null,
         serverToolNames: declaredServerToolNames,
         sourceId: 'round-${streamRound++}',
       );
@@ -579,6 +584,7 @@ Stream<StreamChunk> sendClaudeStream(
             if (chunk is ToolCallEnd &&
                 decoder.isClientTool(chunk.id) &&
                 onToolCall != null &&
+                spendControl == null &&
                 executedToolIds.add(chunk.id)) {
               final tool = decoder.clientTools[chunk.id]!;
               final args = tool.decodedArguments;
@@ -656,6 +662,7 @@ Stream<StreamChunk> sendClaudeStream(
             arguments: tool.decodedArguments,
           ),
       ];
+      if (spendControl != null) return;
       for (final tool in decoder.clientTools.values) {
         var res = toolResultsContent[tool.id] ?? '';
         var images = decoder.toolResultImages[tool.id] ?? const [];
@@ -682,7 +689,7 @@ Stream<StreamChunk> sendClaudeStream(
     },
     takeCalls: () => pendingCalls,
     continueWithoutCalls: () => pauseTurn,
-    executeAfterRound: !stream,
+    executeAfterRound: !stream || spendControl != null,
     emitCalls: !stream,
     onToolCall: onToolCall,
     append: (executed) {
@@ -693,7 +700,7 @@ Stream<StreamChunk> sendClaudeStream(
         ];
         return;
       }
-      final results = stream
+      final results = stream && spendControl == null
           ? lastStreamResults
           : [
               for (final item in executed)

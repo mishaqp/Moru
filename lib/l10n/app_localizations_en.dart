@@ -12755,11 +12755,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spendHardStopNote =>
-      'Block new requests only after an enabled budget is exhausted. Unknown costs cannot enforce a dollar limit.';
+      'Stop the current reply and block new requests when an enabled budget is exhausted. Unknown costs cannot enforce a dollar limit.';
 
   @override
   String get spendHardStopMessage =>
       'Spending limit reached. Change the limits or turn off Hard stop in Statistics.';
+
+  @override
+  String spendCacheShare(String percent) {
+    return 'Cache $percent%';
+  }
+
+  @override
+  String get spendResponseStopped =>
+      'Reply stopped: spending limit reached. Change limits in Statistics to continue.';
 
   @override
   String get spendDisabled => 'Off';

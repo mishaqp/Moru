@@ -2,8 +2,10 @@ import '../../../core/models/assistant.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/model_context_window.dart';
 import '../../../core/models/spend_limits.dart';
+import '../../../core/models/token_usage.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/api/chat_api_helpers.dart';
+import '../../../core/services/api/generation/spend_round_control.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/model_catalog/model_catalog.dart';
 import '../utils/model_display_helper.dart';
@@ -17,6 +19,8 @@ class SpendControlStatus {
     required this.day,
     this.contextTokens,
     this.contextWindow,
+    this.completedResponseRounds = 0,
+    this.hasPendingResponseUsage = false,
   });
 
   final ChatTokenSummary chat;
@@ -25,8 +29,12 @@ class SpendControlStatus {
   final DateTime day;
   final int? contextTokens;
   final int? contextWindow;
+  final int completedResponseRounds;
+  final bool hasPendingResponseUsage;
 
   static int total(ChatTokenSummary usage) => usage.input + usage.output;
+  static double? cachedPercent(ChatTokenSummary usage) =>
+      usage.input == 0 ? null : usage.cached * 100 / usage.input;
   static double? remainingUsd(ChatTokenSummary usage, double? limit) {
     if (limit == null) return null;
     if (usage.replies == 0 && usage.costComplete) return limit;
@@ -67,11 +75,21 @@ class SpendControlStatus {
     'input_tokens': usage.input,
     'output_tokens': usage.output,
     'cached_tokens': usage.cached,
+    'cached_percent': cachedPercent(usage),
     'total_tokens': total(usage),
     'cost_usd': usage.cost,
     'cost_complete': usage.costComplete,
     'limit_usd': usd,
     'limit_tokens': tokens,
+    'used_percent': {
+      if (usd != null)
+        'usd': usage.replies == 0 && usage.costComplete
+            ? 0.0
+            : usage.cost == null
+            ? null
+            : usage.cost! * 100 / usd,
+      if (tokens != null) 'tokens': total(usage) * 100 / tokens,
+    },
     'remaining_usd': remainingUsd(usage, usd),
     'remaining_tokens': remainingTokens(usage, tokens),
     'remaining_usd_is_upper_bound': usd != null && !usage.costComplete,
@@ -94,6 +112,17 @@ class SpendControlStatus {
     'threshold_reached': chatWarning || dailyWarning,
     'limit_reached': exceeded,
     'hard_stopped': blocked,
+    'current_response': {
+      'completed_requests': completedResponseRounds,
+      'accounting': completedResponseRounds > 0 || hasPendingResponseUsage
+          ? 'partial'
+          : 'not_included',
+      'note': hasPendingResponseUsage
+          ? 'Includes reported usage of this response; the request in progress may still be incomplete.'
+          : completedResponseRounds > 0
+          ? 'Includes completed requests of this response; the request in progress and later requests are not yet included.'
+          : 'The current response is not yet included; usage becomes available after a model request completes.',
+    },
   };
 
   /// One request-only system line, emitted only for budgets at their threshold.
@@ -110,7 +139,7 @@ class SpendControlStatus {
       return '$scope: ${[if (usd != null) dollarLeft == null ? 'USD remaining unknown (price incomplete)' : '${usage.costComplete ? '' : 'at most '}\$${dollarLeft.toStringAsFixed(4)}${usage.costComplete ? '' : ' (price incomplete)'}', if (tokenLeft != null) '$tokenLeft tokens'].join(', ')} left';
     }
 
-    return 'Spend control — ${[if (chatWarning) remaining('chat', chat, limits.chatUsd, limits.chatTokens), if (dailyWarning) remaining('today', today, limits.dailyUsd, limits.dailyTokens)].join('; ')}. Keep context/replies small; consider spend_control compact if available (approval; new chat).';
+    return 'Spend control — ${[if (chatWarning) remaining('chat', chat, limits.chatUsd, limits.chatTokens), if (dailyWarning) remaining('today', today, limits.dailyUsd, limits.dailyTokens)].join('; ')}. Monitor spending during long tasks; reply briefly near the limit and offer compact (approval) or a new chat.';
   }
 }
 
@@ -127,6 +156,40 @@ class SpendControlService {
   final ModelCatalogEntry? Function(String? providerId, String modelId)?
   priceFor;
 
+  static final _responses = Expando<Map<String, SpendControlSession>>();
+
+  SpendControlSession beginResponse({
+    required ChatMessage message,
+    Assistant? assistant,
+    String? initialWarning,
+    required String stopMessage,
+    void Function()? onRoundCompleted,
+  }) {
+    final session = SpendControlSession._(message);
+    session.control = SpendRoundControl(
+      initialWarning: initialWarning,
+      onRoundCompleted: onRoundCompleted,
+      beforeRequest: (_, _) async {
+        final current = await status(
+          message.conversationId,
+          assistant: assistant,
+          includeContext: false,
+        );
+        if (current.blocked) throw SpendLimitExceeded(stopMessage);
+        return current.systemWarning;
+      },
+    );
+    (_responses[chats] ??= {})[message.conversationId] = session;
+    return session;
+  }
+
+  void endResponse(SpendControlSession session) {
+    final responses = _responses[chats];
+    if (identical(responses?[session.baseline.conversationId], session)) {
+      responses!.remove(session.baseline.conversationId);
+    }
+  }
+
   Future<SpendControlStatus> status(
     String conversationId, {
     Assistant? assistant,
@@ -138,13 +201,27 @@ class SpendControlService {
     final localNow = (now ?? DateTime.now()).toLocal();
     final day = DateTime(localNow.year, localNow.month, localNow.day);
     final end = DateTime(day.year, day.month, day.day + 1);
-    final chatMessages = await chats.loadSpendMessages(
-      conversationId: conversationId,
+    final chatMessages = List<ChatMessage>.of(
+      await chats.loadSpendMessages(conversationId: conversationId),
     );
-    final dayMessages = await chats.loadSpendMessages(
-      start: day,
-      endExclusive: end,
+    final dayMessages = List<ChatMessage>.of(
+      await chats.loadSpendMessages(start: day, endExclusive: end),
     );
+    final response = _responses[chats]?[conversationId];
+    // Live checkpoints already overlay DB rows. Replace the current row rather
+    // than adding it again, and retain earlier usage when continuing a reply.
+    if (response != null) {
+      chatMessages.removeWhere((message) => message.id == response.baseline.id);
+      chatMessages.add(response.message);
+    }
+    for (final active
+        in _responses[chats]?.values ?? const <SpendControlSession>[]) {
+      dayMessages.removeWhere((message) => message.id == active.baseline.id);
+      final time = active.baseline.timestamp.toLocal();
+      if (!time.isBefore(day) && time.isBefore(end)) {
+        dayMessages.add(active.message);
+      }
+    }
     ModelCatalogEntry? price(String? provider, String model) => priceFor != null
         ? priceFor!(provider, model)
         : ModelCatalog.instance.lookup(
@@ -176,14 +253,48 @@ class SpendControlService {
       today: ChatTokenSummary.of(dayMessages, priceFor: price),
       limits: settings.spendLimits,
       day: day,
+      completedResponseRounds: response?.control.completedRounds ?? 0,
+      hasPendingResponseUsage: response?.control.pendingUsage != null,
       contextTokens: !includeContext
           ? null
           : context.isEmpty
           ? 0
+          : response != null && response.control.completedRounds > 0
+          ? response.control.lastUsage.totalTokens
           : latestContextTokens(context),
       contextWindow: pk == null || mid == null || isAcpModelSource(pk)
           ? null
           : resolveContextWindowTokens(settings, pk, mid),
     );
   }
+}
+
+class SpendControlSession {
+  SpendControlSession._(this.baseline);
+  final ChatMessage baseline;
+  late final SpendRoundControl control;
+  TokenUsage get usage => TokenUsage(
+    promptTokens:
+        (baseline.promptTokens ?? 0) +
+        control.completedUsage.promptTokens +
+        (control.pendingUsage?.promptTokens ?? 0),
+    completionTokens:
+        (baseline.completionTokens ?? 0) +
+        control.completedUsage.completionTokens +
+        (control.pendingUsage?.completionTokens ?? 0),
+    cachedTokens:
+        (baseline.cachedTokens ?? 0) +
+        control.completedUsage.cachedTokens +
+        (control.pendingUsage?.cachedTokens ?? 0),
+  );
+  ChatMessage get message => baseline.copyWith(
+    promptTokens: usage.promptTokens,
+    completionTokens: usage.completionTokens,
+    cachedTokens: usage.cachedTokens,
+    totalTokens:
+        control.pendingUsage?.totalTokens ??
+        (control.completedRounds > 0
+            ? control.lastUsage.totalTokens
+            : baseline.totalTokens),
+  );
 }
