@@ -464,8 +464,49 @@ class WorkspaceToolsService {
       _fn(
         miniAppTool,
         [
-          'Publish a web app you built in the workspace as a Moru mini app:',
+          'Publish a native panel or web app from the workspace as a Moru mini app:',
           'the user opens it inside Moru and can pin it to the home screen.',
+          'For a lightweight native panel use formatVersion:2 and '
+              '"ui":{"engine":"native","entry":"screen.json"}. No HTML, '
+              'server, shell or background process is needed. screen.json is '
+              '{"version":1,"components":[...]}; fixed types are card (children), '
+              'text, value, button, switch, slider, list and indicator. Display '
+              'text may be a string or a locale map (en/ru/zh/zh_Hans/zh_Hant). '
+              'Bind values with "bind":"device.battery.levelPercent" or "data.count"; '
+              'buttons/controls use "action":"set_brightness","args": '
+              '{"value":{"\$value":true}}. Sliders use numeric min/max/step.',
+          'Version 2 "actions" is a list of {name,description,inputSchema, '
+              'permissions,danger,executor}. Preserve the source JSON Schema; '
+              'Moru validates original arguments and converts schemas at the '
+              'existing provider boundary. danger is read/write/root. A native '
+              'executor is {"kind":"native","handler":"device.screen.brightness.set"}; '
+              'its schema takes integer value 0–255 and optional mode manual/automatic. '
+              'Other fixed device groups are battery/screen/audio/connectivity/flashlight/system '
+              '(device.<group>.get), plus screen.timeout.set, audio.volume.set, '
+              'audio.dnd.set, flashlight.set and settings.open. On Android 15+ '
+              'global DND is managed in Android Settings; do not create a Moru '
+              'rule and claim that it restores the global mode. settings.open '
+              'allows an optional validated packageName only for app_details. device.root.* '
+              'supports only power_save/wifi/bluetooth/data/airplane.set and stop_app; '
+              'never accept arbitrary commands or invent a handler. For app data '
+              'use {"kind":"state","patch":{"count":{"\$arg":"count"}}}. '
+              'Reversible presets use kind:preset, steps:[{handler,args}]; kind:restore '
+              'restores only the host-owned prior values that were not changed later.',
+          'Declare the host capability on each action: '
+              'device.<group>.read, device.screen.write, device.audio.write, '
+              'device.flashlight.write, device.settings.open or device.root.<operation>. '
+              'App permissions may also list these capabilities; actions.ai lets '
+              'the user permit AI access separately. Installation '
+              'does not grant rights. User grants/revokes them on the app screen. '
+              'Actions automatically become ma_ tools when this assistant\'s mini_apps '
+              'tool is enabled; buttons and tools use one executor. Web UI calls '
+              'moru.actions.invoke(name,args) and reads moru.state.get(). '
+              'Respect permission_required/unsupported/denied/failed/unknown_after_timeout; '
+              'opened_settings only means the user\'s settings screen opened. '
+              'Version 2 cannot declare server.command: the legacy Linux runtime '
+              'does not isolate arbitrary shell from Moru files or grants. '
+              'Keep existing version-1 servers on their legacy path. New device access '
+              'is blocked from Wi-Fi and never inherits shell or environment root.',
           'The folder needs moru-app.json: {"id": "water-tracker" (lowercase,',
           'digits, dashes), "name": "Вода", "description": "...",',
           '"entry": "index.html" (default), "icon": "icon.svg" (optional, SVG)}.',

@@ -9,6 +9,7 @@ import '../../../core/services/acp/acp_mcp_binding.dart';
 import '../../../core/services/acp/acp_mcp_server.dart';
 import '../../../core/services/api/generation/tool_result_images.dart';
 import '../../../core/services/browser/browser_agent_session.dart';
+import '../../../core/services/mini_apps/mini_app_runtime.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/workspace/workspace_tools_service.dart';
 import '../../../utils/mcp_structured_image.dart';
@@ -31,11 +32,14 @@ class AcpMoruTools {
     required ToolApprovalService? approvals,
     ToolApprovalOwner? approvalOwner,
     SpendCompactHandler? compactContext,
+    MiniAppRuntime? miniAppRuntime,
   }) {
     final service = ToolHandlerService(
       contextProvider: context,
       compactContext: compactContext,
+      miniAppRuntime: miniAppRuntime,
     );
+    final miniAppRoutes = service.captureMiniAppToolRoutes();
     Assistant? current() {
       if (!context.mounted || chats.getConversation(conversationId) == null) {
         return null;
@@ -57,14 +61,21 @@ class AcpMoruTools {
           false,
           isToolModel: (_, _) => true,
           workspaceContext: workspace,
+          miniAppRouteSnapshot: miniAppRoutes,
           conversationId: conversationId,
         ),
+        miniAppActionNames: miniAppRoutes.names,
       );
     }
 
     return AcpMcpTools(
       key: assistant.id,
       definitions: definitions,
+      miniAppActionNames: () => {
+        for (final tool in definitions())
+          if (tool['name'] case final String name)
+            if (miniAppRoutes.names.contains(name)) name,
+      },
       cancelApproval: (id) => approvals?.deny(
         id,
         conversationId: conversationId,
@@ -93,6 +104,8 @@ class AcpMoruTools {
           approvalService: approvals,
           conversationId: conversationId,
           workspaceContext: workspace,
+          miniAppRouteSnapshot: miniAppRoutes,
+          miniAppSource: MiniAppInvocationSource.acp,
         );
         if (handler == null) {
           return error('The Moru tool handler is unavailable.');
@@ -142,7 +155,14 @@ class AcpMoruTools {
         decoded is Map &&
         (decoded['type'] == 'tool_error' ||
             decoded['error'] != null ||
-            decoded['ok'] == false);
+            decoded['ok'] == false ||
+            const {
+              'permission_required',
+              'unsupported',
+              'denied',
+              'failed',
+              'unknown_after_timeout',
+            }.contains(decoded['status']));
     final images = await loadToolResultImages(value.metadata);
     return {
       'isError': isError,

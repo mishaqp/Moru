@@ -10,14 +10,29 @@ class AcpToolCorrelation {
   const AcpToolCorrelation._({
     required this.id,
     this.name,
+    this._toolNameCandidates = const [],
     this.argumentsDigest,
     this.status,
   });
 
   final String id;
   final String? name;
+
+  /// Unredacted machine names retained only until the binding can check its
+  /// live app registry. Capturing a candidate does not authorize that tool.
+  final List<String> _toolNameCandidates;
   final String? argumentsDigest;
   final String? status;
+
+  String? resolveToolName({Set<String> miniAppActionNames = const {}}) =>
+      _toolNameCandidates
+          .where(
+            (candidate) =>
+                AcpMcpServer.allowedNames.contains(candidate) ||
+                (candidate.startsWith('ma_') &&
+                    miniAppActionNames.contains(candidate)),
+          )
+          .firstOrNull;
 
   static AcpToolCorrelation? fromUpdate(Map update) {
     final id = update['toolCallId'];
@@ -27,9 +42,11 @@ class AcpToolCorrelation {
         ? raw['arguments']
         : raw;
     final status = update['status'];
+    final candidates = _toolNames(update);
     return AcpToolCorrelation._(
       id: id,
-      name: _toolName(update),
+      name: candidates.where(AcpMcpServer.allowedNames.contains).firstOrNull,
+      toolNameCandidates: candidates,
       argumentsDigest: update.containsKey('rawInput')
           ? digest(arguments)
           : null,
@@ -46,12 +63,11 @@ class AcpToolCorrelation {
     );
   }
 
-  static String? _toolName(Map update) {
+  static List<String> _toolNames(Map update) {
+    final names = <String>[];
     final raw = update['rawInput'];
-    if (raw is Map &&
-        raw['server'] == 'moru' &&
-        AcpMcpServer.allowedNames.contains(raw['tool'])) {
-      return raw['tool'] as String;
+    if (raw is Map && raw['server'] == 'moru' && raw['tool'] is String) {
+      names.add(raw['tool'] as String);
     }
     final meta = update['_meta'];
     final claude = meta is Map ? meta['claudeCode'] : null;
@@ -60,15 +76,15 @@ class AcpToolCorrelation {
       update['title'],
       if (claude is Map) claude['toolName'],
     ]) {
-      for (final name in AcpMcpServer.allowedNames) {
-        if (candidate == 'mcp__moru__$name' ||
-            candidate == 'moru_$name' ||
-            candidate == 'Tool: moru/$name') {
-          return name;
+      if (candidate is! String) continue;
+      for (final prefix in ['mcp__moru__', 'moru_', 'Tool: moru/']) {
+        if (candidate.startsWith(prefix)) {
+          names.add(candidate.substring(prefix.length));
+          break;
         }
       }
     }
-    return null;
+    return List.unmodifiable(names);
   }
 
   static String digest(Object? input) {

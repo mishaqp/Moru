@@ -17,6 +17,7 @@ class AcpMcpTools {
     required this.definitions,
     required this.execute,
     this.cancelApproval,
+    this.miniAppActionNames,
   });
 
   final String key;
@@ -28,6 +29,7 @@ class AcpMcpTools {
   })
   execute;
   final void Function(String toolCallId)? cancelApproval;
+  final Set<String> Function()? miniAppActionNames;
 }
 
 /// Matches HTTP calls to the cards the agent already streams over ACP.
@@ -47,6 +49,8 @@ class AcpMcpBinding {
     binding.server = await AcpMcpServer.start(
       tools: () => binding._tools.definitions(),
       callTool: binding.callTool,
+      miniAppActionNames: () =>
+          binding._tools.miniAppActionNames?.call() ?? const {},
     );
     return binding;
   }
@@ -102,7 +106,9 @@ class AcpMcpBinding {
       () => _McpCard(correlation.id),
     );
     // Running updates can replace a machine-readable title with a human one.
-    card.name ??= correlation.name;
+    card.name ??= correlation.resolveToolName(
+      miniAppActionNames: _tools.miniAppActionNames?.call() ?? const {},
+    );
     if (correlation.argumentsDigest != null) {
       card.argumentsDigest = correlation.argumentsDigest;
     }
@@ -114,10 +120,16 @@ class AcpMcpBinding {
       _turn?.cards.values.any(
         (card) =>
             card.name != null &&
+            _allowsToolName(card.name!) &&
             AcpTurnTranslator.cardId(card.id, redactor: redactor) ==
                 request.toolCallId,
       ) ==
       true;
+
+  bool _allowsToolName(String name) =>
+      AcpMcpServer.allowedNames.contains(name) ||
+      (name.startsWith('ma_') &&
+          (_tools.miniAppActionNames?.call().contains(name) ?? false));
 
   /// Agent-side permission delegates to the Moru handler's approval gate.
   String? permissionChoice(AcpPermissionRequest request) {
@@ -138,6 +150,7 @@ class AcpMcpBinding {
   ) async {
     final turn = _turn;
     if (turn == null) return _error('No active agent turn.');
+    if (!_allowsToolName(name)) return _error('This Moru tool is unavailable.');
     if (name == 'browser_use' &&
         redactor?.protectAuthentication == true &&
         _containsAuthenticationUri(args)) {
@@ -151,6 +164,9 @@ class AcpMcpBinding {
     final digest = AcpToolCorrelation.digest(args);
     final deadline = DateTime.now().add(const Duration(seconds: 10));
     while (!turn.cancelled.isCompleted) {
+      if (!_allowsToolName(name)) {
+        return _error('This Moru tool is unavailable.');
+      }
       final card = turn.cards.values
           .where(
             (card) =>

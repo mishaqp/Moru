@@ -343,7 +343,7 @@ directory. Load the matching skill for the task; user instructions take priority
   shown as collapsed details in the chat and agent check. Filter stderr before
   retaining its tail; keep current RPC classification ahead of older stderr.
   Error parts are diagnostic history and must not become future model prompts.
-- **Mini apps**: published web apps (`MiniAppStore`, bridge `moru.*` in
+- **Mini apps**: published web apps and version-2 JSON native panels (`MiniAppStore`, bridge `moru.*` in
   `MiniAppBridge`). They keep an error journal, the last 5 versions, and
   manifest game settings (`MiniAppDisplay`). Background jobs (`moru.jobs`,
   `MiniAppJobs`) are stored with the app and run through the native
@@ -354,6 +354,20 @@ directory. Load the matching skill for the task; user instructions take priority
   `MiniAppWebHost` serves the apps to browsers in the Wi-Fi
   (`MiniAppWebServer`, `moru.local` via `MdnsResponder`), kept alive by
   `ProcessKeepAlive` (`app.keep_alive`).
+  Version-2 actions use `MiniAppRuntime` for buttons, chat and ACP; preserve
+  source schemas and the reply's `MiniAppToolRouteSnapshot`. Host-owned grants
+  are separate from app data: full trust skips consent but never grants access.
+  V2 AI data mutations require `actions.ai`; mutating WebView calls require
+  consent because script events cannot attest a user gesture.
+  V2 Wi-Fi and background data mutations also fail closed: reactive WebView
+  events must not relay them into a locally trusted action. Background reads
+  remain available with grants; old v1 jobs keep their data access.
+  New Wi-Fi device calls and background device mutations fail closed; restricted
+  apps cannot declare arbitrary `server.command` (legacy v1 servers stay valid).
+  Native panels watch Android only while open
+  and need no WebView/server. Fixed device/root handlers, presets and restoration
+  are documented in `docs/mini-app-platform.md`; do not add arbitrary shell
+  execution or bypass live grants/readback when extending them.
 
 ## Pre-commit checklist
 

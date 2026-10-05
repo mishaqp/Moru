@@ -37,6 +37,8 @@ class MainActivity : FlutterActivity() {
 
     override fun onPostResume() {
         super.onPostResume()
+        miniAppDeviceHandler?.setForeground(this, true)
+        miniAppDeviceHandler?.refresh()
         // A headless engine may have sent SystemChrome settings before its
         // Activity/PlatformPlugin existed. Apply the window policy on attach.
         applyEdgeToEdgeSystemBars(window)
@@ -49,9 +51,15 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onStop() {
+        miniAppDeviceHandler?.setForeground(this, false)
         highRefreshRate.stop()
         kelivo.backgroundRuntime.setForeground(false)
         super.onStop()
+    }
+
+    override fun onPause() {
+        miniAppDeviceHandler?.setForeground(this, false)
+        super.onPause()
     }
 
     private companion object {
@@ -83,6 +91,7 @@ class MainActivity : FlutterActivity() {
      @Volatile private var writableFileState = WritableFileState.IDLE
      private val writableFileExecutor = Executors.newSingleThreadExecutor()
      private var deviceLocalToolsHandler: DeviceLocalToolsHandler? = null
+    private var miniAppDeviceHandler: MiniAppDeviceHandler? = null
      private var workspacePlugin: WorkspacePlugin? = null
     private var incomingShareHandler: IncomingShareHandler? = null
     private var receivedShare = false
@@ -119,6 +128,10 @@ class MainActivity : FlutterActivity() {
          OAuthHandler.configure(this, flutterEngine.dartExecutor.binaryMessenger)
          kelivo.backgroundRuntime.attachActivity(this)
          deviceLocalToolsHandler = kelivo.deviceTools.also { it.attachActivity(this) }
+        miniAppDeviceHandler = MiniAppDeviceHandler.shared(applicationContext).also {
+            it.configure(flutterEngine.dartExecutor.binaryMessenger)
+            it.attachActivity(this)
+        }
          workspacePlugin = kelivo.workspace.also { it.attachActivity(this) }
         processTextChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, processTextChannelName)
         processTextChannel?.setMethodCallHandler { call, result ->
@@ -341,6 +354,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onDestroy() {
         deviceLocalToolsHandler?.detachActivity(this)
+        miniAppDeviceHandler?.detachActivity(this)
         kelivo.backgroundRuntime.detachActivity(this)
         OAuthHandler.detachActivity(this)
         processTextChannel?.setMethodCallHandler(null)
