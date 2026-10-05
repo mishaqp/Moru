@@ -43,7 +43,7 @@ class PhoneControlMiniApp {
     'description': l10n.phonePanelDescription,
     'formatVersion': 2,
     'ui': {'engine': 'native', 'entry': 'screen.json'},
-    'permissions': ['actions.ai'],
+    'permissions': ['actions.ai', 'device.root.dnd'],
     'actions': _actions(l10n),
   };
 
@@ -188,6 +188,11 @@ class PhoneControlMiniApp {
       ),
       _native('volume', l10n.phonePanelSound, 'device.audio.volume.set'),
       _native('dnd', l10n.phonePanelDnd, 'device.audio.dnd.set'),
+      _native(
+        'root_dnd',
+        l10n.miniAppsPermissionRootDnd,
+        'device.root.dnd.set',
+      ),
       _native('flashlight', l10n.phonePanelFlashlight, 'device.flashlight.set'),
       _native('settings', l10n.phonePanelOpenSettings, 'device.settings.open'),
       _native(

@@ -20,6 +20,7 @@ import '../chat/chat_service.dart';
 import '../keep_alive.dart';
 import '../mobile_background.dart';
 import '../mini_apps/mini_app_store.dart';
+import '../mini_apps/mini_app_runtime.dart';
 import '../mini_apps/mini_app_check.dart';
 import 'conversation_files.dart';
 import 'environment_output_redactor.dart';
@@ -505,7 +506,11 @@ class WorkspaceToolsService {
               'the user permit AI access separately. Installation '
               'does not grant rights. User grants/revokes them on the app screen. '
               'Actions automatically become ma_ tools when this assistant\'s mini_apps '
-              'tool is enabled; buttons and tools use one executor. Web UI calls '
+              'tool is enabled; buttons and tools use one executor. To invoke actions '
+              'in the same reply after publishing, call mini_apps {"action":"list"} '
+              'for current action schemas, then mini_apps {"action":"invoke", '
+              '"app_id":"id","action_name":"name","arguments":"{}","version":"version"} '
+              'with the returned current version. Web UI calls '
               'moru.actions.invoke(name,args) and reads moru.state.get(). '
               'Respect permission_required/unsupported/denied/failed/unknown_after_timeout; '
               'opened_settings only means the user\'s settings screen opened. '
@@ -1795,6 +1800,7 @@ class WorkspaceToolsService {
           'ok': true,
           'id': app.id,
           'name': app.name,
+          'version': MiniAppRuntime.actionVersionOf(app),
           'link': app.link,
           'updated': result.updated,
           'files': result.files,

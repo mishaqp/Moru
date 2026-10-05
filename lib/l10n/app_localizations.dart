@@ -23235,6 +23235,12 @@ abstract class AppLocalizations {
   /// **'Open Android settings'**
   String get miniAppsPermissionSettingsOpen;
 
+  /// No description provided for @miniAppsPermissionRootDnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Root: change Do Not Disturb'**
+  String get miniAppsPermissionRootDnd;
+
   /// No description provided for @miniAppsPermissionRootPowerSave.
   ///
   /// In en, this message translates to:
@@ -24018,7 +24024,7 @@ abstract class AppLocalizations {
   /// No description provided for @phonePanelDndAndroid15Hint.
   ///
   /// In en, this message translates to:
-  /// **'Android 15 and later restrict direct Do Not Disturb changes. Use Android settings when this action is unsupported; presets report any skipped step.'**
+  /// **'Android 15 and later need root access and a separate Do Not Disturb root grant for direct changes. Without root, use Android settings; presets report skipped steps.'**
   String get phonePanelDndAndroid15Hint;
 
   /// No description provided for @phonePanelSelectedAppSettings.

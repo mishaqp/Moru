@@ -16,6 +16,7 @@ import 'package:Kelivo/core/services/workspace/workspace_paths.dart';
 import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_check.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
+import 'package:Kelivo/core/services/mini_apps/mini_app_runtime.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tools_service.dart';
 import 'package:Kelivo/core/services/api/generation/tool_result_images.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
@@ -626,6 +627,7 @@ void main() {
         'ok': true,
         'id': 'water',
         'name': 'Water',
+        'version': MiniAppRuntime.actionVersionOf(store.byId('water')!),
         'link': 'kelivo://app/water',
         'updated': false,
         'files': 1,

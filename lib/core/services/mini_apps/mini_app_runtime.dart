@@ -97,6 +97,12 @@ class MiniAppRuntime {
     return 'ma_${safe(appId, 18)}_${safe(actionName, 24)}_$digest';
   }
 
+  /// Model invocation token. Publication timestamps alone can coincide after
+  /// a clock reset; include the full manifest's schemas, policies and executors.
+  /// Historical rollback IDs remain MiniAppStore.versionOf's numeric stamps.
+  static String actionVersionOf(MiniApp app) =>
+      '${MiniAppStore.versionOf(app)}:${sha256.convert(utf8.encode(jsonEncode(app.toJson())))}';
+
   List<Map<String, dynamic>> toolDefinitions() {
     final bindings = <String, MiniAppToolBinding?>{};
     for (final app in store.apps) {
@@ -144,13 +150,21 @@ class MiniAppRuntime {
     String actionName,
     Map<String, dynamic> arguments, {
     required MiniAppInvocation invocation,
-  }) => _executeAction(appId, actionName, arguments, invocation: invocation);
+    MiniApp? expectedApp,
+  }) => _executeAction(
+    appId,
+    actionName,
+    arguments,
+    invocation: invocation,
+    expectedApp: expectedApp,
+  );
 
   Future<Map<String, dynamic>> _executeAction(
     String appId,
     String actionName,
     Map<String, dynamic> arguments, {
     required MiniAppInvocation invocation,
+    MiniApp? expectedApp,
     _Request? parent,
     _SequenceRun? sequence,
     bool mutationLaneHeld = false,
@@ -165,6 +179,12 @@ class MiniAppRuntime {
         await _authorize(parent);
       }
       final app = _app(appId);
+      if (expectedApp != null && !identical(app, expectedApp)) {
+        _deny(
+          'app_changed',
+          'The mini app changed after its actions were read.',
+        );
+      }
       final action = app.actions.where((a) => a.name == actionName).firstOrNull;
       if (action == null) {
         _deny('action_not_found', 'This mini app action no longer exists.');
@@ -181,10 +201,12 @@ class MiniAppRuntime {
       pending = request;
       _activeRequests.add(request);
       final kind = action.executor['kind'];
+      String? nativeHandler;
       List<Map<String, dynamic>> steps = [];
       Map<String, dynamic>? undo;
       if (kind == 'native') {
-        _nativeArguments(action.executor['handler'] as String, args);
+        nativeHandler = action.executor['handler'] as String;
+        _nativeArguments(nativeHandler, args);
       } else if (kind == 'preset') {
         steps = [
           for (final step in action.executor['steps'] as List)
@@ -201,6 +223,18 @@ class MiniAppRuntime {
         }
       }
       await _authorize(request);
+      if (nativeHandler != null) {
+        final operations = await _selectDndOperations(request, [
+          {'handler': nativeHandler, 'args': args},
+        ]);
+        nativeHandler = operations.single['handler'] as String;
+        if (nativeHandler == 'device.root.dnd.set') {
+          request.operations = operations;
+        }
+      } else if (kind == 'preset') {
+        steps = await _selectDndOperations(request, steps);
+      }
+      if (request.extraRoot) await _authorize(request);
       if (kind == 'restore') {
         undo = await store.readHostData(appId, 'undo.json');
         _assertLive(request);
@@ -293,18 +327,11 @@ class MiniAppRuntime {
         }
         Map<String, dynamic>? nativeOutcome;
         if (action.isMutation) {
-          nativeOutcome = {
-            'handler': action.executor['handler'],
-            'status': 'unknown',
-          };
+          nativeOutcome = {'handler': nativeHandler, 'status': 'unknown'};
           request.stepResults.add(nativeOutcome);
           request.mutationAttempted = true;
         }
-        final native = await _runNative(
-          request,
-          action.executor['handler'] as String,
-          args,
-        );
+        final native = await _runNative(request, nativeHandler!, args);
         nativeOutcome?['status'] = native['status'] ?? 'failed';
         _assertLive(request);
         final nextState = await state(appId, invocation: invocation);
@@ -714,6 +741,29 @@ class MiniAppRuntime {
     request.permissionVersion ??= version;
   }
 
+  /// Select once before consent. Revocation afterwards cancels the request;
+  /// it must never silently switch to a different operation or approval policy.
+  Future<List<Map<String, dynamic>>> _selectDndOperations(
+    _Request request,
+    List<Map<String, dynamic>> operations,
+  ) async {
+    if (!operations.any((op) => op['handler'] == 'device.audio.dnd.set')) {
+      return operations;
+    }
+    final grants = await permissions.granted(request.app.id);
+    _assertLive(request);
+    if (!grants.contains('device.root.dnd')) return operations;
+    request.extraPermissions.add('device.root.dnd');
+    request.extraRoot = true;
+    return [
+      for (final operation in operations)
+        if (operation['handler'] == 'device.audio.dnd.set')
+          {...operation, 'handler': 'device.root.dnd.set'}
+        else
+          operation,
+    ];
+  }
+
   void _assertLive(_Request request, {bool checkGrants = true}) {
     if (request.owner?.isCancelled() == true || request.lifetimeCancelled) {
       _deny('invocation_cancelled', 'This invocation was cancelled.');
@@ -794,7 +844,12 @@ class MiniAppRuntime {
         jsonDecode(
               jsonEncode({
                 ...request.arguments,
-                if (request.operations.isNotEmpty)
+                // Empty native operation lists must also override user input.
+                if (const {
+                  'native',
+                  'preset',
+                  'restore',
+                }.contains(request.action.executor['kind']))
                   'operations': request.operations,
               }),
             )
@@ -888,7 +943,16 @@ class MiniAppRuntime {
       final changed =
           valid &&
           fields.keys.any((path) => !_equal(fields[path], applied[path]));
-      if (changed) {
+      // A user may change DND while the root manager is asking for access.
+      // A definite refusal cannot own that change, even if the modes coincide.
+      // An interrupted command owns only verified readback of its requested mode.
+      final isDnd =
+          handler == 'device.audio.dnd.set' || handler == 'device.root.dnd.set';
+      final owned =
+          !isDnd ||
+          const {'applied', 'unknown_after_timeout'}.contains(status) &&
+              applied['audio.dnd'] == args['mode'];
+      if (changed && owned) {
         (record['steps'] as List).add({
           'handler': handler,
           'args': args,
@@ -1036,7 +1100,7 @@ class MiniAppRuntime {
       ],
       'device.screen.timeout.set' => ['screen.timeoutMs'],
       'device.audio.volume.set' => ['audio.volumes.${args['stream']}.value'],
-      'device.audio.dnd.set' => ['audio.dnd'],
+      'device.audio.dnd.set' || 'device.root.dnd.set' => ['audio.dnd'],
       'device.flashlight.set' => ['flashlight.enabled'],
       'device.root.power_save.set' => ['battery.powerSave'],
       'device.root.wifi.set' => ['connectivity.wifiEnabled'],
@@ -1067,7 +1131,8 @@ class MiniAppRuntime {
       'stream': original['stream'],
       'value': before['audio.volumes.${original['stream']}.value'],
     },
-    'device.audio.dnd.set' => {'mode': before['audio.dnd']},
+    'device.audio.dnd.set' ||
+    'device.root.dnd.set' => {'mode': before['audio.dnd']},
     _ => {'enabled': before.values.single},
   };
 

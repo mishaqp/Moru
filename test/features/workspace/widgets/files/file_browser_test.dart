@@ -15,6 +15,7 @@ import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/custom_bottom_sheet.dart';
 import 'package:Kelivo/shared/widgets/ios_settings_rows.dart';
 import 'package:Kelivo/shared/widgets/ios_tactile.dart';
+import 'package:Kelivo/shared/widgets/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
@@ -584,8 +585,11 @@ void main() {
       FileBrowserOps.joinInsideRoot(tempDir.path, '../escape.txt'),
       isNull,
     );
-    await tester.pump(const Duration(seconds: 4));
+    // The rejected rename shows a toast from the real runAsync zone.
+    // Dismiss it while its Navigator is alive; pumping advances only fake time.
+    AppSnackBarManager().dismissAll();
     await tester.pumpAndSettle();
+    expect(AppSnackBarManager().activeToasts, isEmpty);
   });
 
   testWidgets('folder picker lists directories only and reports rel path', (

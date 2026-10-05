@@ -781,6 +781,7 @@ const reversibleHandlers = <String>{
   'device.screen.timeout.set',
   'device.audio.volume.set',
   'device.audio.dnd.set',
+  'device.root.dnd.set',
   'device.flashlight.set',
   'device.root.power_save.set',
   'device.root.wifi.set',

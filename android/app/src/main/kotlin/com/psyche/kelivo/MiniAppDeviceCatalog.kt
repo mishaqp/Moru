@@ -28,7 +28,7 @@ object MiniAppDeviceCatalog {
             handler == "device.screen.brightness.set" -> only("value", "mode") && integer("value", 0, 255) && (!args.containsKey("mode") || args["mode"] in setOf("manual", "automatic"))
             handler == "device.screen.timeout.set" -> only("milliseconds") && integer("milliseconds", 15000, 1800000)
             handler == "device.audio.volume.set" -> only("stream", "value") && args["stream"] in streams && integer("value", 0, 100)
-            handler == "device.audio.dnd.set" -> only("mode") && args["mode"] in setOf("all", "priority", "none", "alarms")
+            handler == "device.audio.dnd.set" || handler == "device.root.dnd.set" -> only("mode") && args["mode"] in setOf("all", "priority", "none", "alarms")
             handler == "device.settings.open" -> only("page", "packageName") && args["page"] in settingsPages && (!args.containsKey("packageName") || (args["page"] == "app_details" && validPackageName(args["packageName"])))
             handler == "device.flashlight.set" || handler in rootOperations.map { "device.root.$it.set" } -> only("enabled") && args["enabled"] is Boolean
             handler == "device.root.stop_app" -> only("packageName") && validPackageName(args["packageName"])
@@ -49,6 +49,7 @@ object MiniAppDeviceCatalog {
             "device.root.bluetooth.set" -> listOf("/system/bin/cmd", "bluetooth_manager", verb)
             "device.root.data.set" -> listOf("/system/bin/svc", "data", verb)
             "device.root.airplane.set" -> listOf("/system/bin/cmd", "connectivity", "airplane-mode", verb)
+            "device.root.dnd.set" -> listOf("/system/bin/cmd", "notification", "set_dnd", args["mode"] as String)
             "device.root.stop_app" -> listOf("/system/bin/am", "force-stop", "--user", userId.toString(), args["packageName"] as String)
             else -> return null
         }

@@ -37,6 +37,7 @@ void main() {
           'device.battery.read',
           'device.screen.write',
           'device.root.wifi',
+          'device.root.dnd',
         ],
         'actions': [
           {
@@ -95,7 +96,7 @@ void main() {
         ),
       ),
     );
-    await ioUntil(tester, () => find.byType(IosSwitch).evaluate().length == 4);
+    await ioUntil(tester, () => find.byType(IosSwitch).evaluate().length == 5);
   }
 
   testWidgets(
@@ -108,6 +109,7 @@ void main() {
       );
       expect(find.text('Allow AI actions'), findsOneWidget);
       expect(find.text('Root: change Wi-Fi'), findsOneWidget);
+      expect(find.text('Root: change Do Not Disturb'), findsOneWidget);
       final battery = find.byKey(
         const ValueKey('mini-app-permission-device.battery.read'),
       );

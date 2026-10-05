@@ -13059,6 +13059,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get miniAppsPermissionSettingsOpen => 'Open Android settings';
 
   @override
+  String get miniAppsPermissionRootDnd => 'Root: change Do Not Disturb';
+
+  @override
   String get miniAppsPermissionRootPowerSave => 'Root: change battery saver';
 
   @override
@@ -13466,7 +13469,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get phonePanelDndAndroid15Hint =>
-      'Android 15 and later restrict direct Do Not Disturb changes. Use Android settings when this action is unsupported; presets report any skipped step.';
+      'Android 15 and later need root access and a separate Do Not Disturb root grant for direct changes. Without root, use Android settings; presets report skipped steps.';
 
   @override
   String get phonePanelSelectedAppSettings =>

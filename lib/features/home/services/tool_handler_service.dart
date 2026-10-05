@@ -24,6 +24,7 @@ import '../../../core/services/mcp/mcp_tool_service.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
 import '../../../core/services/memory/memory_tools.dart';
 import '../../../core/services/mini_apps/mini_app_runtime.dart';
+import '../../../core/services/mini_apps/mini_app_manifest.dart';
 import '../../../core/services/logging/problem_report_service.dart';
 import '../../../core/services/scheduled_tasks_service.dart';
 import '../../../core/services/search/search_tool_service.dart';
@@ -405,6 +406,26 @@ class ToolHandlerService {
           ? null
           : (app, action, arguments) async {
               approvalService.setAutoApproveAll(settings.toolAutoApproveAll);
+              final operations = arguments['operations'];
+              // Only these executors present host-selected native operations.
+              // State-action inputs can contain arbitrary fields of that name.
+              final rootDndOperations =
+                  action.danger == MiniAppDanger.root &&
+                      action.permissions.contains('device.root.dnd') &&
+                      const {
+                        'native',
+                        'preset',
+                        'restore',
+                      }.contains(action.executor['kind']) &&
+                      operations is List
+                  ? operations
+                        .where(
+                          (operation) =>
+                              operation is Map &&
+                              operation['handler'] == 'device.root.dnd.set',
+                        )
+                        .toList()
+                  : const [];
               final approval = await approvalService.requestApproval(
                 toolCallId: approvalIdFor(name, toolCallId),
                 toolName: MiniAppRuntime.toolNameFor(app.id, action.name),
@@ -414,9 +435,13 @@ class ToolHandlerService {
                   'app': app.name,
                   'action': action.name,
                   'description': action.description,
+                  'danger': action.danger.name,
+                  'permissions': action.permissions.toList(),
                   'version': app.updatedAt.millisecondsSinceEpoch,
                   'source': miniAppSource.name,
                   'arguments': arguments,
+                  if (rootDndOperations.isNotEmpty)
+                    'root_dnd_operations': rootDndOperations,
                 },
               );
               return approval.approved;
@@ -555,6 +580,7 @@ class ToolHandlerService {
                   binding.actionName,
                   args,
                   invocation: invocation,
+                  expectedApp: binding.app,
                 ),
               ),
             ),

@@ -89,7 +89,12 @@ class FocusMiniApp {
       'description': l10n.focusPanelDescription,
       'formatVersion': 2,
       'ui': {'engine': 'native', 'entry': 'screen.json'},
-      'permissions': ['actions.ai', 'device.screen.read', 'device.audio.read'],
+      'permissions': [
+        'actions.ai',
+        'device.screen.read',
+        'device.audio.read',
+        'device.root.dnd',
+      ],
       'actions': [
         action('focus_preset', l10n.focusPanelSettings, {
           'kind': 'preset',

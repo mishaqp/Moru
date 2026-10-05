@@ -30,6 +30,7 @@ class MiniAppDataTool {
   static const String actionList = 'list';
   static const String actionRead = 'read';
   static const String actionState = 'state';
+  static const String actionInvoke = 'invoke';
   static const String actionWrite = 'write';
   static const String actionRemove = 'remove';
   static const String actionErrors = 'errors';
@@ -46,6 +47,7 @@ class MiniAppDataTool {
     actionList,
     actionRead,
     actionState,
+    actionInvoke,
     actionWrite,
     actionRemove,
     actionErrors,
@@ -66,6 +68,7 @@ class MiniAppDataTool {
 
   /// Larger reads return only the keys, so one app cannot flood the context.
   static const int maxReadChars = 20000;
+  static const int maxInvokeArgumentBytes = 64 * 1024;
 
   /// Bound model-facing snapshots; native panels and app subscriptions keep
   /// their full state. Action results embed the same snapshot under `state`.
@@ -136,8 +139,13 @@ class MiniAppDataTool {
           'them. Call "spec" before authoring native panels: complete manifest, screen, '
           'executors, expressions, bindings, permissions and publishable Focus example; no app_id needed. '
           '"state" reads current app and device state, whether open or closed. '
-          'Declared actions are separate ma_ tools and share the app buttons\' executor, '
-          'capabilities and confirmations. Version-2 data writes/removes also require '
+          'Declared actions share the app buttons\' executor, capabilities and confirmations. '
+          'Use "invoke" with app_id, action_name, arguments and the exact current "version" '
+          'from "list", publishing or rollback. "list" supplies each action\'s inputSchema, '
+          'permissions and danger without requiring app data grants. After publishing or '
+          'rollback, list again to discover current actions and invoke them in this reply. '
+          'Separate ma_ tools stay bound to the version offered at reply start. '
+          'Version-2 data writes/removes also require '
           'the app\'s granted actions.ai capability. Never claim a setting was applied when the '
           'result only says opened_settings, unsupported or unknown_after_timeout. '
           'Call "list" first: it shows each app\'s id, what it does, '
@@ -164,6 +172,8 @@ class MiniAppDataTool {
                 'spec: native panel authoring specification and complete examples (no app_id). '
                 'list: installed apps. read: one key of app_id, or all its '
                 'stored data without key. state: current app/device snapshot of app_id. '
+                'invoke: run a current declared version-2 action using action_name, '
+                'arguments and the exact current version from list, publishing or rollback. '
                 'write: set key of app_id to value. '
                 'remove: delete key of app_id. errors: error journal of '
                 'app_id, oldest first; clear: true empties it after reading. '
@@ -174,6 +184,18 @@ class MiniAppDataTool {
                 'delete: remove app_id with all its data.',
           },
           'app_id': {'type': 'string', 'description': 'App id from "list".'},
+          'action_name': {
+            'type': 'string',
+            'description':
+                'invoke: declared action name from the current list.',
+          },
+          'arguments': {
+            'type': 'string',
+            'maxLength': maxInvokeArgumentBytes,
+            'description':
+                'invoke: JSON-encoded object string matching the current action\'s inputSchema, '
+                'at most 65536 UTF-8 bytes. Use "{}" when the action takes no arguments.',
+          },
           'key': {'type': 'string', 'description': 'Storage key.'},
           'value': {'description': 'JSON value to store under key.'},
           'clear': {
@@ -182,7 +204,9 @@ class MiniAppDataTool {
           },
           'version': {
             'type': 'string',
-            'description': 'rollback: a version from "versions".',
+            'description':
+                'invoke: exact current version from list, publishing or rollback (required). '
+                'rollback: a numeric historical version id from "versions".',
           },
           'job': {
             'type': 'string',
@@ -222,6 +246,8 @@ class MiniAppDataTool {
           return jsonEncode(
             stateForModel(await executor.state(app.id, invocation: invocation)),
           );
+        case actionInvoke:
+          return jsonEncode(stateForModel(await _invoke(args)));
         case actionWrite:
           final app = _app(args);
           final key = _key(args);
@@ -275,6 +301,7 @@ class MiniAppDataTool {
           final restored = await store.rollback(app.id, version);
           result = {
             'restored': version,
+            'version': MiniAppRuntime.actionVersionOf(restored),
             'published': restored.updatedAt.toIso8601String(),
           };
         case actionJobs:
@@ -343,6 +370,7 @@ class MiniAppDataTool {
       {
         'id': app.id,
         'name': app.name,
+        'version': MiniAppRuntime.actionVersionOf(app),
         if (app.description.isNotEmpty) 'description': app.description,
         if (app.dataHelp.isNotEmpty) 'data': app.dataHelp,
         'keys': await store.storageKeys(app.id),
@@ -355,11 +383,86 @@ class MiniAppDataTool {
                 'name': action.name,
                 'description': action.description,
                 'tool': MiniAppRuntime.toolNameFor(app.id, action.name),
+                'inputSchema': action.inputSchema,
+                'permissions': action.permissions.toList()..sort(),
+                'danger': action.danger.name,
               },
           ],
         },
       },
   ];
+
+  Future<Map<String, dynamic>> _invoke(Map<String, dynamic> args) async {
+    for (final key in ['app_id', 'action_name', 'version']) {
+      final value = args[key];
+      if (value is! String || value.trim().isEmpty) {
+        throw _ToolFailure(
+          'invalid_arguments',
+          '"$key" must be a non-empty string for invoke.',
+        );
+      }
+    }
+    final encoded = args['arguments'];
+    if (encoded is! String ||
+        encoded.length > maxInvokeArgumentBytes ||
+        utf8.encode(encoded).length > maxInvokeArgumentBytes) {
+      throw const _ToolFailure(
+        'invalid_arguments',
+        '"arguments" must be a JSON object string of at most 65536 UTF-8 bytes for invoke.',
+      );
+    }
+    final Object? arguments;
+    try {
+      arguments = jsonDecode(encoded);
+    } on FormatException {
+      throw const _ToolFailure(
+        'invalid_arguments',
+        '"arguments" must contain valid JSON for invoke.',
+      );
+    }
+    if (arguments is! Map<String, dynamic>) {
+      throw const _ToolFailure(
+        'invalid_arguments',
+        '"arguments" must decode to a JSON object for invoke.',
+      );
+    }
+    final app = _app(args);
+    if (app.formatVersion < 2) {
+      throw const _ToolFailure(
+        'unsupported',
+        'Declared actions require a version-2 mini app.',
+      );
+    }
+    if (args['version'] != MiniAppRuntime.actionVersionOf(app)) {
+      throw const _ToolFailure(
+        'app_changed',
+        'The requested version is not current. Call list for the current version and action schemas.',
+      );
+    }
+    final executor = runtime;
+    final request = invocation;
+    if (executor == null ||
+        !identical(executor.store, store) ||
+        request == null) {
+      throw const _ToolFailure(
+        'permission_required',
+        'Invoking an app action requires a current AI invocation and actions.ai.',
+      );
+    }
+    if (!request.isAi) {
+      throw const _ToolFailure(
+        'invocation_denied',
+        'This action tool is available only to the current chat or ACP invocation.',
+      );
+    }
+    return executor.execute(
+      app.id,
+      (args['action_name'] as String).trim(),
+      Map<String, dynamic>.from(arguments),
+      invocation: request,
+      expectedApp: app,
+    );
+  }
 
   Future<void> _changeData(
     MiniApp app,

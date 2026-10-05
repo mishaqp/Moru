@@ -68,6 +68,7 @@ class _FeedbackRuntime extends MiniAppRuntime {
     String actionName,
     Map<String, dynamic> arguments, {
     required MiniAppInvocation invocation,
+    MiniApp? expectedApp,
   }) async => {
     'status': 'failed',
     'partial': true,

@@ -122,6 +122,7 @@ class _MiniAppPermissionsSheetState extends State<MiniAppPermissionsSheet> {
         'device.audio.write' => l10n.miniAppsPermissionAudioWrite,
         'device.flashlight.write' => l10n.miniAppsPermissionFlashlightWrite,
         'device.settings.open' => l10n.miniAppsPermissionSettingsOpen,
+        'device.root.dnd' => l10n.miniAppsPermissionRootDnd,
         'device.root.power_save' => l10n.miniAppsPermissionRootPowerSave,
         'device.root.wifi' => l10n.miniAppsPermissionRootWifi,
         'device.root.bluetooth' => l10n.miniAppsPermissionRootBluetooth,

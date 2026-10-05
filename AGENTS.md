@@ -357,6 +357,11 @@ directory. Load the matching skill for the task; user instructions take priority
   Version-2 actions use `MiniAppRuntime` for buttons, chat and ACP; preserve
   source schemas and the reply's `MiniAppToolRouteSnapshot`. Host-owned grants
   are separate from app data: full trust skips consent but never grants access.
+  After publish/rollback, `mini_apps.list` exposes current version/action schemas;
+  `mini_apps.invoke` continues in the same chat/ACP reply with that version.
+  Keep stale offered routes denied. Optional `device.root.dnd` selects fixed
+  DND root operations before consent; restore retains the actual handler and
+  rechecks its grant. Never accept shell text or treat command exit as readback.
   V2 AI data mutations require `actions.ai`; mutating WebView calls require
   consent because script events cannot attest a user gesture.
   V2 Wi-Fi and background data mutations also fail closed: reactive WebView

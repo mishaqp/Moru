@@ -41,6 +41,7 @@ class MiniAppDeviceService {
     'bluetooth',
     'data',
     'airplane',
+    'dnd',
   ];
   static const audioStreams = [
     'music',
@@ -124,6 +125,7 @@ class MiniAppDeviceService {
         };
         required = ['stream', 'value'];
       case 'device.audio.dnd.set':
+      case 'device.root.dnd.set':
         properties = {
           'mode': {
             'type': 'string',
