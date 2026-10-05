@@ -24026,6 +24026,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open settings for a selected app'**
   String get phonePanelSelectedAppSettings;
+
+  /// No description provided for @focusPanelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus'**
+  String get focusPanelTitle;
+
+  /// No description provided for @focusPanelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Timed focus sessions with phone settings and restore.'**
+  String get focusPanelDescription;
+
+  /// No description provided for @focusPanelSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Session'**
+  String get focusPanelSession;
+
+  /// No description provided for @focusPanelRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Time remaining'**
+  String get focusPanelRemaining;
+
+  /// No description provided for @focusPanelProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Session progress'**
+  String get focusPanelProgress;
+
+  /// No description provided for @focusPanelStart15.
+  ///
+  /// In en, this message translates to:
+  /// **'Start 15 minutes'**
+  String get focusPanelStart15;
+
+  /// No description provided for @focusPanelStart25.
+  ///
+  /// In en, this message translates to:
+  /// **'Start 25 minutes'**
+  String get focusPanelStart25;
+
+  /// No description provided for @focusPanelStart50.
+  ///
+  /// In en, this message translates to:
+  /// **'Start 50 minutes'**
+  String get focusPanelStart50;
+
+  /// No description provided for @focusPanelStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop and restore'**
+  String get focusPanelStop;
+
+  /// No description provided for @focusPanelRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Session running'**
+  String get focusPanelRunning;
+
+  /// No description provided for @focusPanelToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded sessions'**
+  String get focusPanelToday;
+
+  /// No description provided for @focusPanelSessionsToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Sessions on the counter date'**
+  String get focusPanelSessionsToday;
+
+  /// No description provided for @focusPanelDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter date'**
+  String get focusPanelDay;
+
+  /// No description provided for @focusPanelStartedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Last session started'**
+  String get focusPanelStartedAt;
+
+  /// No description provided for @focusPanelSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus settings'**
+  String get focusPanelSettings;
+
+  /// No description provided for @focusPanelSettingsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting requests Do Not Disturb, sets manual brightness to about 30%, and mutes media. Grant the requested permissions first. Partial changes are shown if a setting is unavailable.'**
+  String get focusPanelSettingsHint;
+
+  /// No description provided for @focusPanelManualStopHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Time continues while the panel is closed. When the countdown reaches zero, tap Stop and restore. Settings are not restored automatically. Each running session is counted when you stop it.'**
+  String get focusPanelManualStopHint;
+
+  /// No description provided for @focusPanelRecordStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Record the start of a focus session'**
+  String get focusPanelRecordStart;
+
+  /// No description provided for @focusPanelRecordStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a stopped focus session'**
+  String get focusPanelRecordStop;
+
+  /// No description provided for @phonePanelSelectedMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Last applied preset'**
+  String get phonePanelSelectedMode;
+
+  /// No description provided for @phonePanelAppliedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Applied at'**
+  String get phonePanelAppliedAt;
 }
 
 class _AppLocalizationsDelegate

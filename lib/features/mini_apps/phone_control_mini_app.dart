@@ -37,6 +37,16 @@ class PhoneControlMiniApp {
     for (final entry in _languages.entries) entry.key: read(entry.value),
   };
 
+  static Map<String, dynamic> manifest(AppLocalizations l10n) => {
+    'id': id,
+    'name': l10n.phonePanelTitle,
+    'description': l10n.phonePanelDescription,
+    'formatVersion': 2,
+    'ui': {'engine': 'native', 'entry': 'screen.json'},
+    'permissions': ['actions.ai'],
+    'actions': _actions(l10n),
+  };
+
   static Future<void> _install(MiniAppStore store) async {
     await store.load();
     if (store.byId(id) != null) return;
@@ -48,20 +58,12 @@ class PhoneControlMiniApp {
     );
     final source = await Directory.systemTemp.createTemp('moru-phone-panel-');
     try {
-      await File(p.join(source.path, MiniAppStore.manifestFile)).writeAsString(
-        jsonEncode({
-          'id': id,
-          'name': l10n.phonePanelTitle,
-          'description': l10n.phonePanelDescription,
-          'formatVersion': 2,
-          'ui': {'engine': 'native', 'entry': 'screen.json'},
-          'permissions': ['actions.ai'],
-          'actions': _actions(l10n),
-        }),
-      );
+      await File(
+        p.join(source.path, MiniAppStore.manifestFile),
+      ).writeAsString(jsonEncode(manifest(l10n)));
       await File(
         p.join(source.path, 'screen.json'),
-      ).writeAsString(jsonEncode(_screen()));
+      ).writeAsString(jsonEncode(screen()));
       // Initializers share one future; an existing user-installed copy always
       // wins, including one installed while localization/source IO was pending.
       if (store.byId(id) == null) await store.install(source, ifAbsent: true);
@@ -88,6 +90,22 @@ class PhoneControlMiniApp {
   };
 
   static List<Map<String, dynamic>> _actions(AppLocalizations l10n) {
+    Map<String, dynamic> sequence(
+      String name,
+      String label,
+      List<Map<String, dynamic>> steps,
+    ) => {
+      'name': name,
+      'description': label,
+      'inputSchema': {
+        'type': 'object',
+        'properties': <String, dynamic>{},
+        'additionalProperties': false,
+      },
+      'permissions': ['device.screen.write', 'device.audio.write'],
+      'danger': 'write',
+      'executor': {'kind': 'sequence', 'steps': steps},
+    };
     Map<String, dynamic> preset(
       String name,
       String label,
@@ -194,11 +212,11 @@ class PhoneControlMiniApp {
         'device.root.airplane.set',
       ),
       _native('stop_app', l10n.phonePanelStopApp, 'device.root.stop_app'),
-      preset('night', l10n.phonePanelNight, 35, 30000, 0, 'priority'),
-      preset('road', l10n.phonePanelRoad, 200, 120000, 5, 'all'),
-      preset('work', l10n.phonePanelWork, 110, 60000, 2, 'priority'),
+      preset('night_preset', l10n.phonePanelNight, 35, 30000, 0, 'priority'),
+      preset('road_preset', l10n.phonePanelRoad, 200, 120000, 5, 'all'),
+      preset('work_preset', l10n.phonePanelWork, 110, 60000, 2, 'priority'),
       {
-        'name': 'restore',
+        'name': 'restore_settings',
         'description': l10n.phonePanelRestore,
         'inputSchema': {
           'type': 'object',
@@ -209,10 +227,67 @@ class PhoneControlMiniApp {
         'danger': 'write',
         'executor': {'kind': 'restore'},
       },
+      {
+        'name': 'record_mode',
+        'description': l10n.phonePanelSelectedMode,
+        'inputSchema': {
+          'type': 'object',
+          'properties': {
+            'mode': {
+              'type': 'string',
+              'enum': ['night', 'road', 'work'],
+            },
+          },
+          'required': ['mode'],
+          'additionalProperties': false,
+        },
+        'permissions': <String>[],
+        'danger': 'write',
+        'executor': {
+          'kind': 'state',
+          'expressions': true,
+          'patch': {
+            'selectedMode': {r'$arg': 'mode'},
+            'appliedAt': {r'$now': true},
+          },
+        },
+      },
+      {
+        'name': 'clear_mode',
+        'description':
+            '${l10n.miniAppsErrorsClear}: ${l10n.phonePanelSelectedMode}',
+        'inputSchema': {
+          'type': 'object',
+          'properties': <String, dynamic>{},
+          'additionalProperties': false,
+        },
+        'permissions': <String>[],
+        'danger': 'write',
+        'executor': {
+          'kind': 'state',
+          'patch': {'selectedMode': null, 'appliedAt': null},
+        },
+      },
+      for (final mode in [
+        ('night', l10n.phonePanelNight),
+        ('road', l10n.phonePanelRoad),
+        ('work', l10n.phonePanelWork),
+      ])
+        sequence(mode.$1, mode.$2, [
+          {'action': '${mode.$1}_preset', 'arguments': <String, dynamic>{}},
+          {
+            'action': 'record_mode',
+            'arguments': {'mode': mode.$1},
+          },
+        ]),
+      sequence('restore', l10n.phonePanelRestore, [
+        {'action': 'restore_settings', 'arguments': <String, dynamic>{}},
+        {'action': 'clear_mode', 'arguments': <String, dynamic>{}},
+      ]),
     ];
   }
 
-  static Map<String, dynamic> _screen() {
+  static Map<String, dynamic> screen() {
     Map<String, dynamic> value(
       String Function(AppLocalizations) label,
       String bind, {
@@ -342,6 +417,20 @@ class PhoneControlMiniApp {
         ]),
         card((l) => l.phonePanelPresets, [
           {'type': 'text', 'text': _text((l) => l.phonePanelPresetsHint)},
+          value(
+            (l) => l.phonePanelSelectedMode,
+            'data.selectedMode',
+            values: {
+              'night': _text((l) => l.phonePanelNight),
+              'road': _text((l) => l.phonePanelRoad),
+              'work': _text((l) => l.phonePanelWork),
+            },
+          ),
+          value(
+            (l) => l.phonePanelAppliedAt,
+            'data.appliedAt',
+            format: 'datetime',
+          ),
           button((l) => l.phonePanelNight, 'night'),
           button((l) => l.phonePanelRoad, 'road'),
           button((l) => l.phonePanelWork, 'work'),

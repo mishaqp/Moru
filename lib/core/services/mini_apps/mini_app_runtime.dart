@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import '../api/tool_call_cancellation.dart';
 
 import 'mini_app_device.dart';
+import 'mini_app_expressions.dart';
 import 'mini_app_manifest.dart';
 import 'mini_app_permissions.dart';
 import 'mini_app_store.dart';
@@ -46,9 +47,13 @@ class MiniAppToolBinding {
 
 /// Every new UI/AI/device entry goes through the same live authorization.
 class MiniAppRuntime {
-  MiniAppRuntime({required this.store, MiniAppDeviceService? device})
-    : device = device ?? MiniAppDeviceService(),
-      permissions = MiniAppPermissions(store) {
+  MiniAppRuntime({
+    required this.store,
+    MiniAppDeviceService? device,
+    DateTime Function()? now,
+  }) : device = device ?? MiniAppDeviceService(),
+       _now = now ?? DateTime.now,
+       permissions = MiniAppPermissions(store) {
     _storageSub = store.dataChanges.listen((event) => _refresh(event.appId));
     _permissionSub = permissions.changes.listen((id) {
       _cancelStaleRequests(id);
@@ -62,6 +67,7 @@ class MiniAppRuntime {
   final MiniAppStore store;
   final MiniAppDeviceService device;
   final MiniAppPermissions permissions;
+  final DateTime Function() _now;
   final StreamController<({String appId, Map<String, dynamic> state})>
   _changes = StreamController.broadcast();
   late final StreamSubscription<({String appId, int revision})> _storageSub;
@@ -138,6 +144,16 @@ class MiniAppRuntime {
     String actionName,
     Map<String, dynamic> arguments, {
     required MiniAppInvocation invocation,
+  }) => _executeAction(appId, actionName, arguments, invocation: invocation);
+
+  Future<Map<String, dynamic>> _executeAction(
+    String appId,
+    String actionName,
+    Map<String, dynamic> arguments, {
+    required MiniAppInvocation invocation,
+    _Request? parent,
+    _SequenceRun? sequence,
+    bool mutationLaneHeld = false,
   }) async {
     _Request? pending;
     try {
@@ -145,6 +161,9 @@ class MiniAppRuntime {
         _deny('runtime_closed', 'The mini app runtime is closed.');
       }
       await store.load();
+      if (parent != null) {
+        await _authorize(parent);
+      }
       final app = _app(appId);
       final action = app.actions.where((a) => a.name == actionName).firstOrNull;
       if (action == null) {
@@ -156,8 +175,9 @@ class MiniAppRuntime {
         action,
         invocation,
         args,
-        store.generationFor(app.id),
+        parent?.generation ?? store.generationFor(app.id),
       );
+      request.permissionVersion = parent?.permissionVersion;
       pending = request;
       _activeRequests.add(request);
       final kind = action.executor['kind'];
@@ -216,18 +236,40 @@ class MiniAppRuntime {
           'Background jobs can only read mini app state and device data.',
         );
       }
+      if (kind == 'sequence') {
+        final run = sequence ?? _SequenceRun();
+        Future<Map<String, dynamic>> performSequence(bool held) async {
+          await _authorize(request);
+          return _sequence(request, run, mutationLaneHeld: held);
+        }
+
+        // Each referenced action performs its own normal approval. Holding the
+        // outer mutation lane avoids interleaving without recursively queuing.
+        if (action.isMutation && !mutationLaneHeld) {
+          return await _serializeMutation(() => performSequence(true));
+        }
+        return await performSequence(mutationLaneHeld);
+      }
       await _approval(request);
       await _authorize(request);
       _assertConsent(request);
       if (kind == 'state') {
-        final patch = Map<String, dynamic>.from(
-          _substitute(action.executor['patch'], args) as Map,
-        );
         await store.updateState(
           appId,
           (data) async {
             await _authorize(request);
             _assertConsent(request);
+            final template = Map<String, dynamic>.from(
+              action.executor['patch'] as Map,
+            );
+            final patch = action.executor['expressions'] == true
+                ? MiniAppExpressions.evaluatePatch(
+                    template,
+                    data: data,
+                    arguments: args,
+                    now: _now(),
+                  )
+                : Map<String, dynamic>.from(_substitute(template, args) as Map);
             _merge(data, patch);
           },
           expected: app,
@@ -249,11 +291,21 @@ class MiniAppRuntime {
         if (kind == 'restore') {
           return _restore(request, steps, undo!);
         }
+        Map<String, dynamic>? nativeOutcome;
+        if (action.isMutation) {
+          nativeOutcome = {
+            'handler': action.executor['handler'],
+            'status': 'unknown',
+          };
+          request.stepResults.add(nativeOutcome);
+          request.mutationAttempted = true;
+        }
         final native = await _runNative(
           request,
           action.executor['handler'] as String,
           args,
         );
+        nativeOutcome?['status'] = native['status'] ?? 'failed';
         _assertLive(request);
         final nextState = await state(appId, invocation: invocation);
         if (invocation.source != MiniAppInvocationSource.background) {
@@ -262,7 +314,7 @@ class MiniAppRuntime {
         return _result(native, nextState);
       }
 
-      if (action.isMutation || kind == 'restore') {
+      if ((action.isMutation || kind == 'restore') && !mutationLaneHeld) {
         return await _serializeMutation(perform);
       }
       return await perform();
@@ -281,6 +333,177 @@ class MiniAppRuntime {
       }
     }
   }
+
+  Future<Map<String, dynamic>> _sequence(
+    _Request request,
+    _SequenceRun run, {
+    required bool mutationLaneHeld,
+  }) async {
+    if (run.stack.contains(request.action.name) || run.stack.length >= 8) {
+      _deny(
+        'invalid_executor',
+        'Sequence has a cycle or exceeds eight levels.',
+      );
+    }
+    run.stack.add(request.action.name);
+    final completed = <Map<String, dynamic>>[];
+    final failed = <Map<String, dynamic>>[];
+    final feedback = <Map<String, dynamic>>[];
+    Map<String, dynamic> finish(Map<String, dynamic>? failure) {
+      final restricted = const {
+        'denied',
+        'permission_required',
+      }.contains(failure?['status']);
+      final safeCompleted = restricted
+          ? completed
+                .map((step) => _withoutState(step) as Map<String, dynamic>)
+                .toList()
+          : completed;
+      final safeFailed = restricted
+          ? failed
+                .map((step) => _withoutState(step) as Map<String, dynamic>)
+                .toList()
+          : failed;
+      return {
+        'status': failure == null
+            ? 'applied'
+            : const {
+                'denied',
+                'permission_required',
+              }.contains(failure['status'])
+            ? failure['status']
+            : 'failed',
+        if (failure?['code'] is String) 'code': failure!['code'],
+        if (failure?['message'] is String) 'message': failure!['message'],
+        'partial':
+            failure != null &&
+            (completed.isNotEmpty ||
+                failed.any(
+                  (step) => (step['result'] as Map)['partial'] == true,
+                )),
+        'completedSteps': safeCompleted,
+        if (safeFailed.isNotEmpty) 'failedStep': safeFailed.first,
+        'failedSteps': safeFailed,
+        if (feedback.isNotEmpty) 'steps': feedback,
+      };
+    }
+
+    try {
+      final steps = request.action.executor['steps'] as List;
+      for (var i = 0; i < steps.length; i++) {
+        final step = steps[i] as Map;
+        Map<String, dynamic> result;
+        try {
+          await _authorize(request);
+          if (++run.expanded > 32) {
+            _deny(
+              'invalid_executor',
+              'Sequence exceeds 32 expanded action invocations.',
+            );
+          }
+          final args = Map<String, dynamic>.from(
+            _substitute(
+                  step['arguments'] ?? const <String, dynamic>{},
+                  request.arguments,
+                )
+                as Map,
+          );
+          result = await _executeAction(
+            request.app.id,
+            step['action'] as String,
+            args,
+            invocation: request.invocation,
+            parent: request,
+            sequence: run,
+            mutationLaneHeld: mutationLaneHeld,
+          );
+          // A step may have completed just before a live source/grant changes.
+          // Retain its outcome, then recheck before any subsequent step.
+        } on MiniAppException catch (error) {
+          result = _failure(error);
+        } catch (_) {
+          result = {
+            'status': 'failed',
+            'code': 'execution_failed',
+            'message': 'The sequence step failed.',
+          };
+        }
+        final evidence = <String, dynamic>{
+          'index': i,
+          'action': step['action'],
+          'result': result,
+        };
+        if (result['steps'] is List) {
+          feedback.addAll(
+            (result['steps'] as List)
+                .whereType<Map>()
+                .map(Map<String, dynamic>.from)
+                .take(256 - feedback.length),
+          );
+        }
+        if (result['status'] == 'applied') {
+          completed.add(evidence);
+        } else {
+          failed.add(evidence);
+        }
+        try {
+          await _authorize(request);
+        } on MiniAppException catch (error) {
+          return finish(_failure(error));
+        }
+        if (result['status'] != 'applied') {
+          if (step['onFailure'] != 'continue' || !_canContinue(result)) {
+            return finish(result);
+          }
+        }
+      }
+      return finish(
+        failed.isEmpty
+            ? null
+            : Map<String, dynamic>.from(failed.first['result'] as Map),
+      );
+    } finally {
+      run.stack.removeLast();
+    }
+  }
+
+  static bool _canContinue(Map result) {
+    if (!const {'failed', 'unsupported'}.contains(result['status']) ||
+        result['code'] != null && result['code'] != 'execution_failed') {
+      return false;
+    }
+    for (final key in ['steps', 'failedSteps']) {
+      final entries = result[key];
+      if (entries is List) {
+        for (final entry in entries.whereType<Map>()) {
+          final nested = entry['result'] is Map
+              ? entry['result'] as Map
+              : entry;
+          if (!const {
+                'applied',
+                'failed',
+                'unsupported',
+                'conflict',
+              }.contains(nested['status']) ||
+              nested['code'] != null && nested['code'] != 'execution_failed' ||
+              nested['status'] == 'failed' && !_canContinue(nested)) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  static Object? _withoutState(Object? value) => value is Map
+      ? {
+          for (final entry in value.entries)
+            if (entry.key != 'state')
+              entry.key as String: _withoutState(entry.value),
+        }
+      : value is List
+      ? value.map(_withoutState).toList()
+      : value;
 
   Future<Map<String, dynamic>> state(
     String appId, {
@@ -977,6 +1200,7 @@ class MiniAppRuntime {
         ? 'permission_required'
         : const {
             'invalid_arguments',
+            'invalid_expression',
             'invalid_schema',
             'storage_full',
           }.contains(e.code)
@@ -1029,6 +1253,11 @@ class MiniAppRuntime {
     permissions.dispose();
     unawaited(_changes.close());
   }
+}
+
+class _SequenceRun {
+  final List<String> stack = [];
+  int expanded = 0;
 }
 
 class _Request {

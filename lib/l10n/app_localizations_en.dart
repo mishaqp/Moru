@@ -13471,4 +13471,70 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get phonePanelSelectedAppSettings =>
       'Open settings for a selected app';
+
+  @override
+  String get focusPanelTitle => 'Focus';
+
+  @override
+  String get focusPanelDescription =>
+      'Timed focus sessions with phone settings and restore.';
+
+  @override
+  String get focusPanelSession => 'Session';
+
+  @override
+  String get focusPanelRemaining => 'Time remaining';
+
+  @override
+  String get focusPanelProgress => 'Session progress';
+
+  @override
+  String get focusPanelStart15 => 'Start 15 minutes';
+
+  @override
+  String get focusPanelStart25 => 'Start 25 minutes';
+
+  @override
+  String get focusPanelStart50 => 'Start 50 minutes';
+
+  @override
+  String get focusPanelStop => 'Stop and restore';
+
+  @override
+  String get focusPanelRunning => 'Session running';
+
+  @override
+  String get focusPanelToday => 'Recorded sessions';
+
+  @override
+  String get focusPanelSessionsToday => 'Sessions on the counter date';
+
+  @override
+  String get focusPanelDay => 'Counter date';
+
+  @override
+  String get focusPanelStartedAt => 'Last session started';
+
+  @override
+  String get focusPanelSettings => 'Focus settings';
+
+  @override
+  String get focusPanelSettingsHint =>
+      'Starting requests Do Not Disturb, sets manual brightness to about 30%, and mutes media. Grant the requested permissions first. Partial changes are shown if a setting is unavailable.';
+
+  @override
+  String get focusPanelManualStopHint =>
+      'Time continues while the panel is closed. When the countdown reaches zero, tap Stop and restore. Settings are not restored automatically. Each running session is counted when you stop it.';
+
+  @override
+  String get focusPanelRecordStart => 'Record the start of a focus session';
+
+  @override
+  String get focusPanelRecordStop => 'Record a stopped focus session';
+
+  @override
+  String get phonePanelSelectedMode => 'Last applied preset';
+
+  @override
+  String get phonePanelAppliedAt => 'Applied at';
 }

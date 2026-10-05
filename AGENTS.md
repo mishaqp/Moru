@@ -364,6 +364,15 @@ directory. Load the matching skill for the task; user instructions take priority
   remain available with grants; old v1 jobs keep their data access.
   New Wi-Fi device calls and background device mutations fail closed; restricted
   apps cannot declare arbitrary `server.command` (legacy v1 servers stay valid).
+  Native authoring spec is available without app data via `mini_apps.spec` or
+  `publish_mini_app {action:spec}`; keep it aligned with validators and examples.
+  Sequences call the same runtime per step and retain partial failures; explicit
+  continuation never bypasses revocation, consent, cancellation or ownership.
+  State expressions require explicit `expressions:true`, are bounded, pre-patch
+  and atomic; unflagged legacy patches retain literal JSON/`$arg` semantics.
+  Never execute user code.
+  Timer/progress ticks exist only on a visible resumed panel, not in background.
+  Built-in Phone Control/Focus install only when absent; preserve existing data.
   Native panels watch Android only while open
   and need no WebView/server. Fixed device/root handlers, presets and restoration
   are documented in `docs/mini-app-platform.md`; do not add arbitrary shell

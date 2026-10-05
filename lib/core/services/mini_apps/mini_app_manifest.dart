@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import 'mini_app_device.dart';
+import 'mini_app_expressions.dart';
 import 'mini_app_store.dart' show MiniAppException;
 
 enum MiniAppUiEngine { web, native }
@@ -34,7 +35,10 @@ class MiniAppAction {
   bool get isMutation => danger != MiniAppDanger.read;
   bool get requiresConfirmation => danger == MiniAppDanger.root;
 
-  factory MiniAppAction.fromJson(Map<String, dynamic> json) {
+  factory MiniAppAction.fromJson(
+    Map<String, dynamic> json, {
+    String path = 'manifest.action',
+  }) {
     final name = json['name'];
     final description = json['description'];
     if (name is! String ||
@@ -42,42 +46,71 @@ class MiniAppAction {
         description is! String ||
         description.trim().isEmpty ||
         description.length > 2000) {
-      _bad(
+      _badAt(
         'invalid_action',
+        '$path.name',
         'An action needs a unique name and a description.',
+        '{"name":"start","description":"Start a Focus session"}',
       );
     }
     final schema = json['inputSchema'];
     if (schema is! Map<String, dynamic>) {
-      _bad('invalid_schema', 'inputSchema must be an object schema.');
+      _badAt(
+        'invalid_schema',
+        '$path.inputSchema',
+        'inputSchema must be an object schema.',
+        '{"type":"object","properties":{},"additionalProperties":false}',
+      );
     }
-    MiniAppJsonSchema.check(schema);
-    final permissions = MiniAppManifest.capabilities(json['permissions']);
+    _located(
+      '$path.inputSchema',
+      () => MiniAppJsonSchema.check(schema),
+      '{"type":"object"}',
+    );
+    final permissions = _located(
+      '$path.permissions',
+      () => MiniAppManifest.capabilities(json['permissions']),
+      '["device.screen.write"]',
+    );
     final danger = MiniAppDanger.values
         .where((v) => v.name == json['danger'])
         .firstOrNull;
     if (danger == null) {
-      _bad('invalid_action', 'danger must be read, write or root.');
+      _badAt(
+        'invalid_action',
+        '$path.danger',
+        'danger must be read, write or root.',
+        '"write"',
+      );
     }
     final executor = json['executor'];
     if (executor is! Map<String, dynamic>) {
-      _bad('invalid_executor', 'An executor must be an object.');
+      _badAt(
+        'invalid_executor',
+        '$path.executor',
+        'An executor must be an object.',
+        '{"kind":"state","patch":{"running":true}}',
+      );
     }
-    final policy = _policy(executor);
+    final policy = _policy(executor, path: '$path.executor');
     if (danger.index < policy.danger.index ||
         !permissions.containsAll(policy.permissions)) {
-      _bad(
+      _badAt(
         'invalid_policy',
+        '$path.executor',
         'An action cannot weaken its host permissions or confirmation policy.',
+        '{"permissions":${jsonEncode(policy.permissions.toList())},"danger":"${policy.danger.name}"}',
       );
     }
     if ((json['requiresRoot'] == false &&
             policy.danger == MiniAppDanger.root) ||
         (json['confirmation'] == 'none' &&
             policy.danger != MiniAppDanger.read)) {
-      _bad(
+      _badAt(
         'invalid_policy',
+        '$path.executor',
         'An action cannot disable host confirmation or root checks.',
+        '{"danger":"${policy.danger.name}","confirmation":"required"}',
       );
     }
     return MiniAppAction(
@@ -100,18 +133,30 @@ class MiniAppAction {
   };
 
   static ({MiniAppDanger danger, Set<String> permissions}) _policy(
-    Map<String, dynamic> executor,
-  ) {
+    Map<String, dynamic> executor, {
+    required String path,
+  }) {
+    Never bad(
+      String code,
+      String message, {
+      String? field,
+      String example = '{"kind":"state","patch":{"running":true}}',
+    }) => _badAt(code, field == null ? path : '$path.$field', message, example);
     final kind = executor['kind'];
     switch (kind) {
       case 'native':
         if (executor.keys.any((k) => !const {'kind', 'handler'}.contains(k))) {
-          _bad('invalid_executor', 'Unknown native executor field.');
+          bad('invalid_executor', 'Unknown native executor field.');
         }
         final handler = executor['handler'];
         if (handler is! String ||
             !MiniAppDeviceService.handlers.contains(handler)) {
-          _bad('invalid_executor', 'Unknown native handler.');
+          bad(
+            'invalid_executor',
+            'Unknown native handler.',
+            field: 'handler',
+            example: '"device.screen.brightness.set"',
+          );
         }
         return (
           danger: MiniAppDeviceService.requiresConfirmation(handler)
@@ -122,37 +167,71 @@ class MiniAppAction {
           permissions: MiniAppDeviceService.permissionsFor(handler),
         );
       case 'state':
-        if (executor.keys.any((k) => !const {'kind', 'patch'}.contains(k)) ||
+        if (executor.keys.any(
+              (k) => !const {'kind', 'patch', 'expressions'}.contains(k),
+            ) ||
             executor['patch'] is! Map<String, dynamic>) {
-          _bad(
+          bad(
             'invalid_executor',
             'A state executor needs a JSON object patch.',
+            field: 'patch',
           );
         }
-        _checkTemplate(executor['patch']);
+        if (executor.containsKey('expressions') &&
+            executor['expressions'] is! bool) {
+          bad(
+            'invalid_executor',
+            'Expression opt in must be a boolean.',
+            field: 'expressions',
+            example: 'true',
+          );
+        }
+        if (executor['expressions'] == true) {
+          MiniAppExpressions.validate(executor['patch'], path: '$path.patch');
+        } else {
+          _located(
+            '$path.patch',
+            () => _checkTemplate(executor['patch']),
+            '{"running":true}',
+          );
+        }
         return (danger: MiniAppDanger.write, permissions: <String>{});
       case 'preset':
         if (executor.keys.any((k) => !const {'kind', 'steps'}.contains(k))) {
-          _bad('invalid_executor', 'Unknown preset field.');
+          bad('invalid_executor', 'Unknown preset field.');
         }
         final steps = executor['steps'];
         if (steps is! List || steps.isEmpty || steps.length > 8) {
-          _bad('invalid_executor', 'A preset needs 1–8 reversible steps.');
+          bad(
+            'invalid_executor',
+            'A preset needs 1–8 reversible steps.',
+            field: 'steps',
+            example:
+                '[{"handler":"device.screen.brightness.set","args":{"value":77}}]',
+          );
         }
         var danger = MiniAppDanger.write;
         final permissions = <String>{};
-        for (final step in steps) {
+        for (var i = 0; i < steps.length; i++) {
+          final step = steps[i];
           if (step is! Map ||
               step.keys.any((k) => !const {'handler', 'args'}.contains(k)) ||
               !reversibleHandlers.contains(step['handler']) ||
               step['args'] is! Map) {
-            _bad(
+            bad(
               'invalid_executor',
               'Presets accept only fixed reversible device setters.',
+              field: 'steps[$i]',
+              example:
+                  '{"handler":"device.screen.brightness.set","args":{"value":77}}',
             );
           }
           final handler = step['handler'] as String;
-          _checkTemplate(step['args']);
+          _located(
+            '$path.steps[$i].args',
+            () => _checkTemplate(step['args']),
+            '{"value":77}',
+          );
           if (MiniAppDeviceService.requiresConfirmation(handler)) {
             danger = MiniAppDanger.root;
           }
@@ -161,15 +240,86 @@ class MiniAppAction {
         return (danger: danger, permissions: permissions);
       case 'restore':
         if (executor.length != 1) {
-          _bad(
+          bad(
             'invalid_executor',
             'Restore uses the host-owned undo record only.',
           );
         }
         // The record adds its actual capabilities and danger at execution time.
         return (danger: MiniAppDanger.write, permissions: <String>{});
+      case 'sequence':
+        if (executor.keys.any(
+          (key) => !const {'kind', 'steps'}.contains(key),
+        )) {
+          bad('invalid_executor', 'Unknown sequence field.');
+        }
+        final steps = executor['steps'];
+        if (steps is! List || steps.isEmpty || steps.length > 32) {
+          bad(
+            'invalid_executor',
+            'A sequence needs 1–32 action steps.',
+            field: 'steps',
+            example: '[{"action":"record","arguments":{}}]',
+          );
+        }
+        for (var i = 0; i < steps.length; i++) {
+          final step = steps[i];
+          if (step is! Map ||
+              step.keys.any(
+                (key) =>
+                    !const {'action', 'arguments', 'onFailure'}.contains(key),
+              )) {
+            bad(
+              'invalid_executor',
+              'A sequence step references a declared action.',
+              field: 'steps[$i]',
+              example: '{"action":"record","arguments":{}}',
+            );
+          }
+          if (step['action'] is! String ||
+              !RegExp(
+                r'^[a-zA-Z][a-zA-Z0-9_]{0,63}$',
+              ).hasMatch(step['action'] as String)) {
+            bad(
+              'invalid_executor',
+              'Action reference must be a declared action name.',
+              field: 'steps[$i].action',
+              example: '"record"',
+            );
+          }
+          final arguments = step['arguments'] ?? const <String, dynamic>{};
+          if (arguments is! Map) {
+            bad(
+              'invalid_executor',
+              'Step arguments must be an object.',
+              field: 'steps[$i].arguments',
+              example: '{"durationMs":1500000}',
+            );
+          }
+          if (step['onFailure'] != null &&
+              !const {'stop', 'continue'}.contains(step['onFailure'])) {
+            bad(
+              'invalid_executor',
+              'onFailure must be stop or continue.',
+              field: 'steps[$i].onFailure',
+              example: '"continue"',
+            );
+          }
+          _located(
+            '$path.steps[$i].arguments',
+            () => _checkTemplate(arguments),
+            '{"durationMs":1500000}',
+          );
+        }
+        // Transitive policy is resolved after all same-app actions are known.
+        return (danger: MiniAppDanger.read, permissions: <String>{});
       default:
-        _bad('invalid_executor', 'Unknown executor kind.');
+        bad(
+          'invalid_executor',
+          'Unknown executor kind.',
+          field: 'kind',
+          example: '"sequence"',
+        );
     }
   }
 }
@@ -189,41 +339,70 @@ class MiniAppManifest {
   static MiniAppManifest parse(Map<String, dynamic> json) {
     final version = json['formatVersion'] ?? 1;
     if (version != 1 && version != 2 || version is! int) {
-      _bad('invalid_manifest', 'formatVersion must be 1 or 2.');
+      _badAt(
+        'invalid_manifest',
+        'manifest.formatVersion',
+        'formatVersion must be 1 or 2.',
+        '2',
+      );
     }
     final ui = json['ui'];
     if (ui != null && ui is! Map) {
-      _bad('invalid_manifest', 'ui must be an object.');
+      _badAt(
+        'invalid_manifest',
+        'manifest.ui',
+        'ui must be an object.',
+        '{"engine":"native","entry":"screen.json"}',
+      );
     }
     final engineName = ui is Map ? ui['engine'] ?? 'web' : 'web';
     final engine = MiniAppUiEngine.values
         .where((v) => v.name == engineName)
         .firstOrNull;
     if (engine == null) {
-      _bad('invalid_manifest', 'ui.engine must be native or web.');
+      _badAt(
+        'invalid_manifest',
+        'manifest.ui.engine',
+        'ui.engine must be native or web.',
+        '"native"',
+      );
     }
     final rawActions = json['actions'] ?? const [];
     if (rawActions is! List ||
         rawActions.length > 64 ||
         version == 1 &&
             (rawActions.isNotEmpty || engine != MiniAppUiEngine.web)) {
-      _bad(
+      _badAt(
         'invalid_manifest',
+        'manifest.actions',
         'Version two actions must be a list of at most 64 actions.',
+        '[]',
       );
     }
     final actions = <MiniAppAction>[];
     final names = <String>{};
-    for (final raw in rawActions) {
+    for (var i = 0; i < rawActions.length; i++) {
+      final raw = rawActions[i];
       if (raw is! Map<String, dynamic>) {
-        _bad('invalid_action', 'Each action must be an object.');
+        _badAt(
+          'invalid_action',
+          'manifest.actions[$i]',
+          'Each action must be an object.',
+          '{"name":"start","description":"Start Focus","inputSchema":{"type":"object"},"permissions":[],"danger":"write","executor":{"kind":"state","patch":{"running":true}}}',
+        );
       }
-      final action = MiniAppAction.fromJson(raw);
+      final action = MiniAppAction.fromJson(raw, path: 'manifest.actions[$i]');
       if (!names.add(action.name)) {
-        _bad('invalid_action', 'Duplicate action name.');
+        _badAt(
+          'invalid_action',
+          'manifest.actions[$i].name',
+          'Duplicate action name "${action.name}".',
+          '"anotherAction"',
+        );
       }
       actions.add(action);
     }
+    _validateSequences(actions, rawActions);
     if (version == 2 && json['server'] != null) {
       _bad(
         'invalid_server',
@@ -240,6 +419,86 @@ class MiniAppManifest {
       entry: entry as String?,
       actions: List.unmodifiable(actions),
     );
+  }
+
+  static void _validateSequences(List<MiniAppAction> actions, List rawActions) {
+    final indices = {
+      for (var i = 0; i < actions.length; i++) actions[i].name: i,
+    };
+    for (var root = 0; root < actions.length; root++) {
+      if (actions[root].executor['kind'] != 'sequence') {
+        continue;
+      }
+      var expanded = 0;
+      final rootPath = 'manifest.actions[$root].executor';
+      ({MiniAppDanger danger, Set<String> permissions}) visit(
+        int index,
+        Set<String> stack,
+        int depth,
+      ) {
+        final action = actions[index];
+        final required = <String>{...action.permissions};
+        var danger = action.danger;
+        if (action.executor['kind'] != 'sequence') {
+          return (danger: danger, permissions: required);
+        }
+        if (depth > 8 || !stack.add(action.name)) {
+          _badAt(
+            'invalid_executor',
+            rootPath,
+            depth > 8
+                ? 'Sequence exceeds eight levels.'
+                : 'Sequence has a cycle through "${action.name}".',
+            '{"kind":"sequence","steps":[{"action":"record","arguments":{}}]}',
+          );
+        }
+        final steps = action.executor['steps'] as List;
+        for (var i = 0; i < steps.length; i++) {
+          final step = steps[i] as Map;
+          final path = 'manifest.actions[$index].executor.steps[$i].action';
+          final target = indices[step['action']];
+          if (target == null) {
+            _badAt(
+              'invalid_executor',
+              path,
+              'Unknown same-app action "${step['action']}".',
+              jsonEncode(actions.first.name),
+            );
+          }
+          if (++expanded > 32) {
+            _badAt(
+              'invalid_executor',
+              rootPath,
+              'Sequence expands to more than 32 action invocations; expansion reached $path.',
+              '{"kind":"sequence","steps":[{"action":"record","arguments":{}}]}',
+            );
+          }
+          final policy = visit(target, {
+            ...stack,
+          }, depth + (actions[target].executor['kind'] == 'sequence' ? 1 : 0));
+          required.addAll(policy.permissions);
+          if (policy.danger.index > danger.index) {
+            danger = policy.danger;
+          }
+        }
+        if (!action.permissions.containsAll(required) ||
+            action.danger.index < danger.index ||
+            rawActions[index]['requiresRoot'] == false &&
+                danger == MiniAppDanger.root ||
+            rawActions[index]['confirmation'] == 'none' &&
+                danger != MiniAppDanger.read) {
+          _badAt(
+            'invalid_policy',
+            'manifest.actions[$index].executor',
+            'Sequence cannot weaken its referenced actions: requires ${required.toList()..sort()} and danger ${danger.name}.',
+            '{"permissions":${jsonEncode(required.toList()..sort())},"danger":"${danger.name}"}',
+          );
+        }
+        return (danger: danger, permissions: required);
+      }
+
+      visit(root, {}, 1);
+    }
   }
 
   static Set<String> capabilities(Object? raw) {
@@ -267,29 +526,53 @@ class MiniAppManifest {
         screen.keys.any(
           (k) => !const {'version', 'components', 'title'}.contains(k),
         )) {
-      _bad('invalid_screen', 'A native screen needs version 1 and components.');
+      _badAt(
+        'invalid_screen',
+        'screen.components',
+        'A native screen needs version 1 and components.',
+        '{"version":1,"components":[{"type":"timer","bind":"data.endsAt"}]}',
+      );
     }
     if (utf8.encode(jsonEncode(screen)).length > 256 * 1024) {
       _bad('invalid_screen', 'The native screen is too large.');
     }
     final names = actions.map((a) => a.name).toSet();
     var count = 0;
-    void visit(Object? raw, int depth) {
+    void visit(Object? raw, int depth, String path) {
+      Never bad(
+        String message, {
+        String? field,
+        String example = '{"type":"timer","bind":"data.endsAt"}',
+      }) => _badAt(
+        'invalid_screen',
+        field == null ? path : '$path.$field',
+        message,
+        example,
+      );
       if (raw is! Map || depth > 12 || ++count > 256) {
-        _bad('invalid_screen', 'Invalid or oversized native component tree.');
+        bad('Invalid or oversized native component tree.');
       }
       final type = raw['type'];
       if (!const {
-            'card',
-            'text',
-            'value',
-            'button',
-            'switch',
-            'slider',
-            'list',
-            'indicator',
-          }.contains(type) ||
-          raw.keys.any(
+        'card',
+        'text',
+        'value',
+        'button',
+        'switch',
+        'slider',
+        'list',
+        'indicator',
+        'timer',
+        'progress',
+      }.contains(type)) {
+        bad(
+          'Unknown native component type.',
+          field: 'type',
+          example: '"timer"',
+        );
+      }
+      final unknown = raw.keys
+          .where(
             (k) => !const {
               'type',
               'id',
@@ -309,6 +592,8 @@ class MiniAppManifest {
               'values',
               'maxBind',
               'minBind',
+              'startBind',
+              'mode',
               'valueKey',
               'labelKey',
               'itemLabel',
@@ -320,8 +605,10 @@ class MiniAppManifest {
               'icon',
               'options',
             }.contains(k),
-          )) {
-        _bad('invalid_screen', 'Unknown native component or field.');
+          )
+          .firstOrNull;
+      if (unknown != null) {
+        bad('Unknown native component field.', field: '$unknown');
       }
       for (final key in [
         'title',
@@ -338,9 +625,10 @@ class MiniAppManifest {
                 text.length <= 20 &&
                 text.keys.every((k) => k is String && k.length <= 32) &&
                 text.values.every((v) => v is String && v.length <= 4000))) {
-          _bad(
-            'invalid_screen',
+          bad(
             'Display text must be a string or locale map.',
+            field: key,
+            example: '{"en":"Focus","ru":"Фокус"}',
           );
         }
       }
@@ -349,20 +637,61 @@ class MiniAppManifest {
               !RegExp(
                 r'^(data|device|revision)(\.[a-zA-Z0-9_-]+)*$',
               ).hasMatch(raw['bind'] as String))) {
-        _bad('invalid_screen', 'Invalid state binding.');
+        bad('Invalid state binding.', field: 'bind', example: '"data.endsAt"');
       }
-      for (final bound in ['minBind', 'maxBind']) {
+      for (final bound in ['minBind', 'maxBind', 'startBind']) {
         if (raw[bound] != null &&
             (raw[bound] is! String ||
                 !RegExp(
                   r'^(data|device)(\.[a-zA-Z0-9_-]+)*$',
                 ).hasMatch(raw[bound] as String))) {
-          _bad('invalid_screen', 'Invalid slider range binding.');
+          bad(
+            'Invalid state range binding.',
+            field: bound,
+            example: '"data.startedAt"',
+          );
         }
       }
+      if ((type == 'timer' || type == 'progress') && raw['bind'] == null) {
+        bad(
+          'Timestamp component requires a timestamp binding.',
+          field: 'bind',
+          example: '"data.endsAt"',
+        );
+      }
+      if (type == 'progress' && raw['startBind'] == null) {
+        bad(
+          'Progress requires its start timestamp binding.',
+          field: 'startBind',
+          example: '"data.startedAt"',
+        );
+      }
+      if (raw['mode'] != null &&
+          (type != 'timer' ||
+              !const {'countdown', 'elapsed'}.contains(raw['mode']))) {
+        bad(
+          'Timer mode must be countdown or elapsed.',
+          field: 'mode',
+          example: '"countdown"',
+        );
+      }
+      if (raw['startBind'] != null && type != 'progress') {
+        bad(
+          'startBind is used by progress components.',
+          field: 'startBind',
+          example:
+              '{"type":"progress","bind":"data.endsAt","startBind":"data.startedAt"}',
+        );
+      }
       if (raw['format'] != null &&
-          !const {'bytes', 'duration'}.contains(raw['format'])) {
-        _bad('invalid_screen', 'Unknown display format.');
+          !const {
+            'bytes',
+            'duration',
+            'date',
+            'time',
+            'datetime',
+          }.contains(raw['format'])) {
+        bad('Unknown display format.', field: 'format', example: '"datetime"');
       }
       for (final key in ['valueKey', 'labelKey']) {
         if (raw[key] != null &&
@@ -370,48 +699,79 @@ class MiniAppManifest {
                 !RegExp(
                   r'^[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)*$',
                 ).hasMatch(raw[key] as String))) {
-          _bad('invalid_screen', 'Invalid list selector.');
+          bad('Invalid list selector.', field: key, example: '"label"');
         }
       }
       if (raw['values'] != null) {
-        _checkTemplate(raw['values'], allowValue: true);
+        _located(
+          '$path.values',
+          () => _checkTemplate(raw['values'], allowValue: true),
+          '{"true":"Running","false":"Stopped"}',
+        );
       }
       if (raw['action'] != null && !names.contains(raw['action'])) {
-        _bad('invalid_screen', 'A component references an unknown action.');
+        bad(
+          'A component references an unknown action.',
+          field: 'action',
+          example: names.isEmpty ? '"start"' : jsonEncode(names.first),
+        );
       }
       if (raw['args'] != null) {
         if (raw['args'] is! Map) {
-          _bad('invalid_screen', 'Action args must be an object.');
+          bad(
+            'Action args must be an object.',
+            field: 'args',
+            example: '{"durationMs":1500000}',
+          );
         }
-        _checkTemplate(raw['args'], allowValue: true);
+        _located(
+          '$path.args',
+          () => _checkTemplate(raw['args'], allowValue: true),
+          '{"durationMs":1500000}',
+        );
       }
       for (final key in ['min', 'max', 'step']) {
         if (raw[key] != null &&
             (raw[key] is! num || !(raw[key] as num).isFinite)) {
-          _bad('invalid_screen', 'Invalid slider limit.');
+          bad('Invalid numeric limit.', field: key, example: '100');
         }
       }
       if ((raw['step'] is num && raw['step'] <= 0) ||
           (raw['min'] is num &&
               raw['max'] is num &&
               raw['min'] >= raw['max'])) {
-        _bad('invalid_screen', 'Invalid slider range.');
+        bad(
+          'Invalid numeric range.',
+          field: 'max',
+          example: '{"min":0,"max":100,"step":1}',
+        );
       }
       if (raw['children'] != null) {
         if (type != 'card' || raw['children'] is! List) {
-          _bad('invalid_screen', 'Only cards can contain child components.');
+          bad(
+            'Only cards can contain child components.',
+            field: 'children',
+            example:
+                '{"type":"card","children":[{"type":"timer","bind":"data.endsAt"}]}',
+          );
         }
-        for (final child in raw['children'] as List) {
-          visit(child, depth + 1);
+        final children = raw['children'] as List;
+        for (var i = 0; i < children.length; i++) {
+          visit(children[i], depth + 1, '$path.children[$i]');
         }
       }
       if (raw['options'] != null) {
-        _checkTemplate(raw['options'], allowValue: true);
+        _located(
+          '$path.options',
+          () => _checkTemplate(raw['options'], allowValue: true),
+          '[{"value":1500000,"label":"25 min"}]',
+        );
       }
     }
 
-    for (final component in screen['components'] as List) {
-      visit(component, 0);
+    final components = screen['components'] as List;
+    for (var i = 0; i < components.length; i++) {
+      visit(components[i], 0, 'screen.components[$i]');
     }
   }
 }
@@ -482,6 +842,20 @@ Object? _freeze(Object? value) => value is Map
 
 Never _bad(String code, String message) =>
     throw MiniAppException(code, message);
+
+Never _badAt(String code, String path, String message, String example) =>
+    throw MiniAppException(code, '$path: $message Example: $example');
+
+T _located<T>(String path, T Function() operation, String example) {
+  try {
+    return operation();
+  } on MiniAppException catch (error) {
+    if (error.message.startsWith(path)) {
+      rethrow;
+    }
+    _badAt(error.code, path, error.message, example);
+  }
+}
 
 /// A bounded validator for source JSON Schema. Unsupported assertion keywords
 /// are rejected at installation rather than silently weakening a contract.

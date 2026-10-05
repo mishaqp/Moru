@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -7,13 +9,14 @@ import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/section_card.dart';
 
 /// A bounded JSON screen made from host widgets. It never executes app code.
-class NativeMiniAppPanel extends StatelessWidget {
+class NativeMiniAppPanel extends StatefulWidget {
   const NativeMiniAppPanel({
     super.key,
     required this.screen,
     required this.state,
     required this.onAction,
     this.busy = false,
+    this.now,
   });
 
   final Map<String, dynamic> screen;
@@ -21,6 +24,7 @@ class NativeMiniAppPanel extends StatelessWidget {
   final Future<void> Function(String name, Map<String, dynamic> arguments)
   onAction;
   final bool busy;
+  final DateTime Function()? now;
 
   /// Screen strings can be plain text or locale maps, without expressions.
   static String localizedText(Object? raw, Locale locale) {
@@ -62,16 +66,132 @@ class NativeMiniAppPanel extends StatelessWidget {
     return value;
   }
 
+  @override
+  State<NativeMiniAppPanel> createState() => _NativeMiniAppPanelState();
+}
+
+class _NativeMiniAppPanelState extends State<NativeMiniAppPanel>
+    with WidgetsBindingObserver {
+  Timer? _tick;
+  late DateTime _now;
+  bool _resumed = true;
+  bool _visible = true;
+
+  Map<String, dynamic> get screen => widget.screen;
+  Map<String, dynamic> get state => widget.state;
+  bool get busy => widget.busy;
+
+  DateTime _readNow() => widget.now?.call() ?? DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _resumed = lifecycle == null || lifecycle == AppLifecycleState.resumed;
+    _now = _readNow();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _visible =
+        (ModalRoute.of(context)?.isCurrent ?? true) &&
+        TickerMode.valuesOf(context).enabled;
+    _syncClock();
+  }
+
+  @override
+  void didUpdateWidget(covariant NativeMiniAppPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncClock();
+  }
+
+  void _syncClock() {
+    if (_resumed && _visible) _now = _readNow();
+    _scheduleTick();
+  }
+
+  static DateTime? _timestamp(Object? value) {
+    if (value is! num || !value.isFinite) return null;
+    try {
+      return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+    } on ArgumentError {
+      return null;
+    }
+  }
+
+  bool _needsTick(Object? components) {
+    if (components is! List) return false;
+    for (final component in components) {
+      if (component is! Map) continue;
+      final timestamp = _timestamp(
+        NativeMiniAppPanel.binding(state, component['bind']),
+      );
+      if (component['type'] == 'timer' && timestamp != null) {
+        if (component['mode'] == 'elapsed' || timestamp.isAfter(_now)) {
+          return true;
+        }
+      }
+      if (component['type'] == 'progress' && timestamp != null) {
+        final start = _timestamp(
+          NativeMiniAppPanel.binding(state, component['startBind']),
+        );
+        if (start != null &&
+            timestamp.isAfter(start) &&
+            timestamp.isAfter(_now)) {
+          return true;
+        }
+      }
+      if (_needsTick(component['children'])) return true;
+    }
+    return false;
+  }
+
+  void _scheduleTick() {
+    if (!_resumed || !_visible || !_needsTick(screen['components'])) {
+      _tick?.cancel();
+      _tick = null;
+      return;
+    }
+    _tick ??= Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || !_resumed || !_visible) {
+        _tick?.cancel();
+        _tick = null;
+        return;
+      }
+      setState(() => _now = _readNow());
+      if (!_needsTick(screen['components'])) {
+        _tick?.cancel();
+        _tick = null;
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState lifecycle) {
+    _resumed = lifecycle == AppLifecycleState.resumed;
+    if (_resumed && _visible) setState(() => _now = _readNow());
+    _scheduleTick();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _tick?.cancel();
+    super.dispose();
+  }
+
   String _text(BuildContext context, Object? value) =>
-      localizedText(value, Localizations.localeOf(context));
+      NativeMiniAppPanel.localizedText(value, Localizations.localeOf(context));
 
   String? _reason(BuildContext context, Object? path) {
     if (path is! String || !path.contains('.')) return null;
     final parts = path.split('.');
     final parent = parts.take(parts.length - 1).join('.');
     final reason =
-        binding(state, '$parent.reasons.${parts.last}') ??
-        binding(state, '$parent.reasons.group');
+        NativeMiniAppPanel.binding(state, '$parent.reasons.${parts.last}') ??
+        NativeMiniAppPanel.binding(state, '$parent.reasons.group');
     final l10n = AppLocalizations.of(context)!;
     return switch (reason) {
       'permission_required' ||
@@ -115,13 +235,24 @@ class NativeMiniAppPanel extends StatelessWidget {
     if (component['values'] case final Map values) {
       if (values.containsKey('$value')) return _text(context, values['$value']);
     }
-    if (value is bool) {
+    if (value is bool &&
+        !const ['date', 'time', 'datetime'].contains(component['format'])) {
       return value ? l10n.miniAppsNativeOn : l10n.miniAppsNativeOff;
     }
     final locale = Localizations.localeOf(context).toString();
     var unit = _text(context, component['unit']);
     final String text;
-    if (value is num && component['format'] == 'bytes') {
+    if (const ['date', 'time', 'datetime'].contains(component['format'])) {
+      final date = value is String
+          ? DateTime.tryParse(value)?.toLocal()
+          : _timestamp(value);
+      if (date == null) return l10n.miniAppsNativeUnavailable;
+      text = switch (component['format']) {
+        'date' => DateFormat.yMMMd(locale).format(date),
+        'time' => DateFormat.Hm(locale).format(date),
+        _ => DateFormat.yMMMd(locale).add_Hm().format(date),
+      };
+    } else if (value is num && component['format'] == 'bytes') {
       final bytes = value.toDouble();
       final exponent = bytes.abs() >= 1024 * 1024 * 1024
           ? 3
@@ -178,7 +309,7 @@ class NativeMiniAppPanel extends StatelessWidget {
     if (busy || name is! String || name.isEmpty) return;
     final args = _controlArguments(component['args'] ?? const {}, value);
     if (args is! Map) return;
-    await onAction(name, Map<String, dynamic>.from(args));
+    await widget.onAction(name, Map<String, dynamic>.from(args));
   }
 
   bool _enabled(Map<String, dynamic> component) =>
@@ -194,7 +325,7 @@ class NativeMiniAppPanel extends StatelessWidget {
   ) {
     final l10n = AppLocalizations.of(context)!;
     final label = _text(context, component['label'] ?? component['title']);
-    final value = binding(state, component['bind']);
+    final value = NativeMiniAppPanel.binding(state, component['bind']);
     final reason = _reason(context, component['bind']);
     final cs = Theme.of(context).colorScheme;
     switch (component['type']) {
@@ -227,6 +358,70 @@ class NativeMiniAppPanel extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Text(_text(context, component['text'])),
+        );
+      case 'timer':
+        final timestamp = _timestamp(value);
+        final String display;
+        if (timestamp == null) {
+          display = l10n.miniAppsNativeUnavailable;
+        } else {
+          final elapsed = component['mode'] == 'elapsed';
+          final difference = elapsed
+              ? _now.millisecondsSinceEpoch - timestamp.millisecondsSinceEpoch
+              : timestamp.millisecondsSinceEpoch - _now.millisecondsSinceEpoch;
+          final milliseconds = difference < 0 ? 0 : difference;
+          final seconds = elapsed
+              ? milliseconds ~/ 1000
+              : (milliseconds + 999) ~/ 1000;
+          display =
+              '${seconds ~/ 3600}:'
+              '${(seconds ~/ 60).remainder(60).toString().padLeft(2, '0')}:'
+              '${seconds.remainder(60).toString().padLeft(2, '0')}';
+        }
+        return IosNavRow(
+          label: label,
+          labelTrailing: const SizedBox.shrink(),
+          subtitle: display,
+          subtitleMaxLines: null,
+          caption: reason,
+        );
+      case 'progress':
+        final end = _timestamp(value);
+        final start = _timestamp(
+          NativeMiniAppPanel.binding(state, component['startBind']),
+        );
+        final fraction = end != null && start != null && end.isAfter(start)
+            ? ((_now.millisecondsSinceEpoch - start.millisecondsSinceEpoch) /
+                      (end.millisecondsSinceEpoch -
+                          start.millisecondsSinceEpoch))
+                  .clamp(0.0, 1.0)
+            : null;
+        final display = fraction == null
+            ? l10n.miniAppsNativeUnavailable
+            : NumberFormat.percentPattern(
+                Localizations.localeOf(context).toString(),
+              ).format(fraction);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            IosNavRow(
+              label: label,
+              labelTrailing: const SizedBox.shrink(),
+              subtitle: display,
+              subtitleMaxLines: null,
+              caption: reason,
+            ),
+            if (fraction != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: LinearProgressIndicator(
+                  value: fraction,
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(6),
+                  semanticsLabel: '$label: $display',
+                ),
+              ),
+          ],
         );
       case 'value':
       case 'indicator':
@@ -328,11 +523,11 @@ class NativeMiniAppPanel extends StatelessWidget {
         );
       case 'slider':
         final minimum = component['minBind'] != null
-            ? binding(state, component['minBind'])
+            ? NativeMiniAppPanel.binding(state, component['minBind'])
             : component['min'] ?? 0;
         final min = minimum is num ? minimum.toDouble() : 0.0;
         final maximum = component['maxBind'] != null
-            ? binding(state, component['maxBind'])
+            ? NativeMiniAppPanel.binding(state, component['maxBind'])
             : component['max'];
         final max = maximum is num ? maximum.toDouble() : min;
         return _NativeSlider(
@@ -374,10 +569,16 @@ class NativeMiniAppPanel extends StatelessWidget {
           final String itemLabel;
           if (item is Map) {
             final fields = Map<String, dynamic>.from(item);
-            itemValue = binding(fields, component['valueKey'] ?? 'value');
+            itemValue = NativeMiniAppPanel.binding(
+              fields,
+              component['valueKey'] ?? 'value',
+            );
             itemLabel = _text(
               context,
-              binding(fields, component['labelKey'] ?? 'label'),
+              NativeMiniAppPanel.binding(
+                fields,
+                component['labelKey'] ?? 'label',
+              ),
             );
           } else {
             itemValue = item;

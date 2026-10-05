@@ -26,7 +26,10 @@ class FakeDevice extends MiniAppDeviceService {
   final attached = Completer<void>();
   final calls = <String>[];
   String? fail;
+  String? unsupported;
+  String unsupportedStatus = 'unsupported';
   Completer<void>? pendingSnapshot;
+  final snapshotEntered = Completer<void>();
   Completer<void>? pendingNative;
   Future<void> Function()? afterMutation;
   final nativeEntered = Completer<void>();
@@ -49,6 +52,9 @@ class FakeDevice extends MiniAppDeviceService {
   Stream<Map<String, dynamic>> get changes => events.stream;
   @override
   Future<Map<String, dynamic>> snapshot() async {
+    if (pendingSnapshot != null && !snapshotEntered.isCompleted) {
+      snapshotEntered.complete();
+    }
     await pendingSnapshot?.future;
     return jsonDecode(jsonEncode(current)) as Map<String, dynamic>;
   }
@@ -76,6 +82,12 @@ class FakeDevice extends MiniAppDeviceService {
       return {
         'status': 'permission_required',
         'message': 'Android access missing',
+      };
+    }
+    if (handler == unsupported) {
+      return {
+        'status': unsupportedStatus,
+        'message': 'Unavailable on this Android version',
       };
     }
     switch (handler) {
@@ -168,6 +180,19 @@ void main() {
     'inputSchema': schema ?? MiniAppDeviceService.inputSchemaFor(handler),
     'executor': {'kind': 'native', 'handler': handler},
   };
+  Map<String, dynamic> sequenceAction(
+    List<Map<String, dynamic>> steps, {
+    String name = 'start',
+    List<String> permissions = const [],
+    String danger = 'write',
+  }) => {
+    'name': name,
+    'description': 'Run ordered actions',
+    'permissions': permissions,
+    'danger': danger,
+    'inputSchema': {'type': 'object'},
+    'executor': {'kind': 'sequence', 'steps': steps},
+  };
   Future<MiniApp> install({
     String id = 'panel',
     List<Map<String, dynamic>>? actions,
@@ -202,6 +227,479 @@ void main() {
     approve: approve,
     isAllowed: isAllowed,
     fullTrust: fullTrust,
+  );
+
+  test(
+    'sequence rechecks grants after the final applied step and retains only safe completed evidence',
+    () async {
+      await install(
+        actions: [
+          sequenceAction([
+            {
+              'action': 'save',
+              'arguments': {'value': 1},
+            },
+          ]),
+          stateAction(),
+        ],
+      );
+      await runtime.permissions.setGranted(
+        'panel',
+        'device.battery.read',
+        true,
+      );
+      device.pendingSnapshot = Completer<void>();
+      final written = Completer<void>();
+      final dataSub = store.dataChanges.listen((_) {
+        if (!written.isCompleted) {
+          written.complete();
+        }
+      });
+      try {
+        final pending = runtime.execute(
+          'panel',
+          'start',
+          {},
+          invocation: button,
+        );
+        await written.future;
+        await device.snapshotEntered.future;
+        await runtime.permissions.setGranted(
+          'panel',
+          'device.battery.read',
+          false,
+        );
+        device.pendingSnapshot!.complete();
+        final result = await pending;
+        expect(await store.storageGet('panel', 'saved'), 1);
+        expect(result['status'], 'permission_required');
+        expect(result['partial'], true);
+        expect(result['completedSteps'], hasLength(1));
+        expect(result['completedSteps'][0]['result']['status'], 'applied');
+        expect(
+          result['completedSteps'][0]['result'].containsKey('state'),
+          false,
+        );
+      } finally {
+        await dataSub.cancel();
+      }
+    },
+  );
+
+  test(
+    'sequences run ordered native and nested state actions without a mutation lane deadlock',
+    () async {
+      final increment = stateAction();
+      increment['name'] = 'increment';
+      increment['inputSchema'] = {'type': 'object'};
+      increment['executor'] = {
+        'kind': 'state',
+        'expressions': true,
+        'patch': {
+          'count': {r'$inc': 1},
+        },
+      };
+      await install(
+        actions: [
+          sequenceAction(
+            [
+              {
+                'action': 'save',
+                'arguments': {
+                  'value': {r'$arg': 'value'},
+                },
+              },
+              {
+                'action': 'bright',
+                'arguments': {
+                  'value': {r'$arg': 'value'},
+                },
+              },
+              {'action': 'bump'},
+            ],
+            permissions: ['device.screen.write'],
+          ),
+          sequenceAction([
+            {'action': 'increment'},
+          ], name: 'bump'),
+          stateAction(),
+          increment,
+          nativeAction('device.screen.brightness.set', name: 'bright'),
+        ],
+      );
+      await runtime.permissions.setGranted(
+        'panel',
+        'device.screen.write',
+        true,
+      );
+      device.afterMutation = () async {
+        expect(await store.storageGet('panel', 'saved'), 80);
+      };
+      final result = await runtime.execute('panel', 'start', {
+        'value': 80,
+      }, invocation: button);
+      expect(result['status'], 'applied');
+      expect((result['completedSteps'] as List).map((s) => s['action']), [
+        'save',
+        'bright',
+        'bump',
+      ]);
+      expect(result['partial'], false);
+      expect(await store.storageAll('panel'), {'saved': 80, 'count': 1});
+      expect(device.calls, ['device.screen.brightness.set']);
+    },
+    timeout: const Timeout(Duration(seconds: 5)),
+  );
+
+  test('sequence failure stops after honest completed effects', () async {
+    await install(
+      actions: [
+        sequenceAction(
+          [
+            {
+              'action': 'save',
+              'arguments': {'value': 1},
+            },
+            {
+              'action': 'bright',
+              'arguments': {'value': 80},
+            },
+            {
+              'action': 'save',
+              'arguments': {'value': 3},
+            },
+          ],
+          permissions: ['device.screen.write'],
+        ),
+        stateAction(),
+        nativeAction('device.screen.brightness.set', name: 'bright'),
+      ],
+    );
+    await runtime.permissions.setGranted('panel', 'device.screen.write', true);
+    device.fail = 'device.screen.brightness.set';
+    final result = await runtime.execute(
+      'panel',
+      'start',
+      {},
+      invocation: button,
+    );
+    expect(result['status'], 'permission_required');
+    expect(result['partial'], true);
+    expect(result['completedSteps'], hasLength(1));
+    expect(result['failedStep']['index'], 1);
+    expect(result['failedStep']['action'], 'bright');
+    expect(await store.storageGet('panel', 'saved'), 1);
+    expect(device.calls, ['device.screen.brightness.set']);
+  });
+
+  test(
+    'sequence continue stops an ambiguous timeout inside an aggregated preset failure',
+    () async {
+      await install(
+        actions: [
+          sequenceAction(
+            [
+              {'action': 'preset', 'arguments': {}, 'onFailure': 'continue'},
+              {
+                'action': 'save',
+                'arguments': {'value': 1},
+              },
+            ],
+            permissions: ['device.screen.write'],
+          ),
+          {
+            'name': 'preset',
+            'description': 'Focus settings',
+            'permissions': ['device.screen.write'],
+            'danger': 'write',
+            'inputSchema': {'type': 'object'},
+            'executor': {
+              'kind': 'preset',
+              'steps': [
+                {
+                  'handler': 'device.screen.brightness.set',
+                  'args': {'value': 77},
+                },
+              ],
+            },
+          },
+          stateAction(),
+        ],
+      );
+      await runtime.permissions.setGranted(
+        'panel',
+        'device.screen.write',
+        true,
+      );
+      device.unsupported = 'device.screen.brightness.set';
+      device.unsupportedStatus = 'unknown_after_timeout';
+      final result = await runtime.execute(
+        'panel',
+        'start',
+        {},
+        invocation: button,
+      );
+      expect(result['status'], 'failed');
+      expect(await store.storageAll('panel'), isEmpty);
+      expect(result['completedSteps'], isEmpty);
+      expect(
+        result['failedStep']['result']['steps'][0]['status'],
+        'unknown_after_timeout',
+      );
+    },
+  );
+
+  test(
+    'sequence continue keeps ordinary partial failure visible while recording Focus state',
+    () async {
+      await install(
+        actions: [
+          sequenceAction(
+            [
+              {'action': 'preset', 'arguments': {}, 'onFailure': 'continue'},
+              {
+                'action': 'save',
+                'arguments': {'value': 1},
+              },
+            ],
+            permissions: ['device.screen.write'],
+          ),
+          {
+            'name': 'preset',
+            'description': 'Focus settings',
+            'permissions': ['device.screen.write'],
+            'danger': 'write',
+            'inputSchema': {'type': 'object'},
+            'executor': {
+              'kind': 'preset',
+              'steps': [
+                {
+                  'handler': 'device.screen.brightness.set',
+                  'args': {'value': 77},
+                },
+                {
+                  'handler': 'device.screen.timeout.set',
+                  'args': {'milliseconds': 15000},
+                },
+              ],
+            },
+          },
+          stateAction(),
+        ],
+      );
+      await runtime.permissions.setGranted(
+        'panel',
+        'device.screen.write',
+        true,
+      );
+      // Ordinary unsupported outcome, unlike a missing required grant.
+      device.unsupported = 'device.screen.timeout.set';
+      final result = await runtime.execute(
+        'panel',
+        'start',
+        {},
+        invocation: button,
+      );
+      expect(result['status'], 'failed');
+      expect(result['partial'], true);
+      expect(result['failedStep']['action'], 'preset');
+      expect(result['failedSteps'], hasLength(1));
+      expect((result['completedSteps'] as List).single['action'], 'save');
+      expect(await store.storageGet('panel', 'saved'), 1);
+      expect(result['steps'], hasLength(2));
+      expect(
+        (await store.readHostData('panel', 'undo.json'))['steps'],
+        hasLength(1),
+      );
+    },
+  );
+
+  test(
+    'sequence continue never bypasses revoked grants approval refusal or background ownership',
+    () async {
+      await install(
+        actions: [
+          sequenceAction(
+            [
+              {
+                'action': 'bright',
+                'arguments': {'value': 80},
+                'onFailure': 'continue',
+              },
+              {
+                'action': 'save',
+                'arguments': {'value': 3},
+              },
+            ],
+            permissions: ['device.screen.write'],
+          ),
+          stateAction(),
+          nativeAction('device.screen.brightness.set', name: 'bright'),
+        ],
+      );
+      await runtime.permissions.setGranted(
+        'panel',
+        'device.screen.write',
+        true,
+      );
+      await runtime.permissions.setGranted('panel', 'actions.ai', true);
+      final denied = await runtime.execute(
+        'panel',
+        'start',
+        {},
+        invocation: ai(approve: (_, _, _) async => false),
+      );
+      expect(denied['status'], 'denied');
+      expect(await store.storageAll('panel'), isEmpty);
+      expect(device.calls, isEmpty);
+      device.afterMutation = () =>
+          runtime.permissions.setGranted('panel', 'device.screen.write', false);
+      final revoked = await runtime.execute(
+        'panel',
+        'start',
+        {},
+        invocation: button,
+      );
+      expect(revoked['status'], 'permission_required');
+      expect(await store.storageAll('panel'), isEmpty);
+      await runtime.permissions.setGranted(
+        'panel',
+        'device.screen.write',
+        true,
+      );
+      for (final source in [
+        MiniAppInvocationSource.background,
+        MiniAppInvocationSource.wifi,
+      ]) {
+        expect(
+          (await runtime.execute(
+            'panel',
+            'start',
+            {},
+            invocation: MiniAppInvocation(
+              source: source,
+              fullTrust: () => true,
+            ),
+          ))['status'],
+          'denied',
+        );
+      }
+      expect(await store.storageAll('panel'), isEmpty);
+      expect(device.calls, hasLength(1));
+    },
+  );
+
+  test(
+    'ACP sequence asks normal per-step consent including root and shares cancellation',
+    () async {
+      await install(
+        actions: [
+          sequenceAction(
+            [
+              {
+                'action': 'save',
+                'arguments': {'value': 1},
+              },
+              {
+                'action': 'wifi',
+                'arguments': {'enabled': false},
+              },
+            ],
+            permissions: ['device.root.wifi'],
+            danger: 'root',
+          ),
+          stateAction(),
+          nativeAction('device.root.wifi.set', name: 'wifi', danger: 'root'),
+        ],
+      );
+      await runtime.permissions.setGranted('panel', 'device.root.wifi', true);
+      await runtime.permissions.setGranted('panel', 'actions.ai', true);
+      final approved = <String>[];
+      final result = await runtime.execute(
+        'panel',
+        'start',
+        {},
+        invocation: MiniAppInvocation(
+          source: MiniAppInvocationSource.acp,
+          approve: (_, action, _) async {
+            approved.add(action.name);
+            return true;
+          },
+        ),
+      );
+      expect(result['status'], 'applied');
+      expect(approved, ['save', 'wifi']);
+      expect((device.current['connectivity'] as Map)['wifiEnabled'], false);
+    },
+  );
+
+  test(
+    'state executors without expression opt in preserve recognized dollar objects as literal JSON',
+    () async {
+      for (final enabled in [null, false]) {
+        for (final patch in <Map<String, dynamic>>[
+          {
+            'value': {r'$inc': 1},
+          },
+          {
+            'value': {r'$now': false},
+          },
+          {r'$now': true},
+        ]) {
+          final action = stateAction();
+          action['executor'] = {
+            'kind': 'state',
+            if (enabled != null) 'expressions': enabled,
+            'patch': patch,
+          };
+          await install(actions: [action]);
+          for (final key in await store.storageKeys('panel')) {
+            await store.storageRemove('panel', key);
+          }
+          final result = await runtime.execute('panel', 'save', {
+            'value': 1,
+          }, invocation: button);
+          expect(result['status'], 'applied');
+          expect(await store.storageAll('panel'), patch);
+        }
+      }
+    },
+  );
+
+  test(
+    'state expressions use one prepatch snapshot in the atomic write',
+    () async {
+      final action = stateAction();
+      action['executor'] = {
+        'kind': 'state',
+        'expressions': true,
+        'patch': {
+          'counter': {
+            r'$inc': {r'$arg': 'value'},
+          },
+          'previous': {r'$data': 'counter'},
+          'nested': {
+            'total': {
+              r'$add': [
+                1,
+                {r'$data': 'counter'},
+              ],
+            },
+          },
+        },
+      };
+      await install(actions: [action]);
+      await store.storageSet('panel', 'counter', 2);
+      final result = await runtime.execute('panel', 'save', {
+        'value': 3,
+      }, invocation: button);
+      expect(result['status'], 'applied');
+      expect(await store.storageAll('panel'), {
+        'counter': 5,
+        'previous': 2,
+        'nested': {'total': 3},
+      });
+    },
   );
 
   test(

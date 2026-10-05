@@ -4,6 +4,7 @@ import '../../../core/services/api/tool_call_cancellation.dart';
 import '../../../core/services/mini_apps/mini_app_jobs.dart';
 import '../../../core/services/mini_apps/mini_app_runtime.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
+import '../../mini_apps/mini_app_specification.dart';
 
 class _ToolFailure implements Exception {
   const _ToolFailure(this.error, this.message);
@@ -25,6 +26,7 @@ class MiniAppDataTool {
 
   static const String toolName = 'mini_apps';
 
+  static const String actionSpec = 'spec';
   static const String actionList = 'list';
   static const String actionRead = 'read';
   static const String actionState = 'state';
@@ -40,6 +42,7 @@ class MiniAppDataTool {
   static const String actionDelete = 'delete';
 
   static const List<String> actions = [
+    actionSpec,
     actionList,
     actionRead,
     actionState,
@@ -72,6 +75,26 @@ class MiniAppDataTool {
     if (state is Map) {
       bounded['state'] = stateForModel(Map<String, dynamic>.from(state));
     }
+    Map<String, dynamic> boundEvidence(Map entry) {
+      final evidence = Map<String, dynamic>.from(entry);
+      final child = evidence['result'];
+      if (child is Map) {
+        evidence['result'] = stateForModel(Map<String, dynamic>.from(child));
+      }
+      return evidence;
+    }
+
+    for (final key in ['completedSteps', 'failedSteps']) {
+      final steps = bounded[key];
+      if (steps is List) {
+        bounded[key] = [
+          for (final entry in steps)
+            if (entry is Map) boundEvidence(entry) else entry,
+        ];
+      }
+    }
+    final failed = bounded['failedStep'];
+    if (failed is Map) bounded['failedStep'] = boundEvidence(failed);
     final data = bounded['data'];
     if (data is Map && jsonEncode(data).length > maxReadChars) {
       bounded.remove('data');
@@ -110,7 +133,9 @@ class MiniAppDataTool {
       'description':
           'Read and change the data of the user\'s Moru mini apps (native panels and web '
           'apps such as a water tracker or a shopping list) without opening '
-          'them. "state" reads current app and device state, whether open or closed. '
+          'them. Call "spec" before authoring native panels: complete manifest, screen, '
+          'executors, expressions, bindings, permissions and publishable Focus example; no app_id needed. '
+          '"state" reads current app and device state, whether open or closed. '
           'Declared actions are separate ma_ tools and share the app buttons\' executor, '
           'capabilities and confirmations. Version-2 data writes/removes also require '
           'the app\'s granted actions.ai capability. Never claim a setting was applied when the '
@@ -136,6 +161,7 @@ class MiniAppDataTool {
             'type': 'string',
             'enum': actions,
             'description':
+                'spec: native panel authoring specification and complete examples (no app_id). '
                 'list: installed apps. read: one key of app_id, or all its '
                 'stored data without key. state: current app/device snapshot of app_id. '
                 'write: set key of app_id to value. '
@@ -170,6 +196,12 @@ class MiniAppDataTool {
 
   Future<String> execute(Map<String, dynamic> args) async {
     try {
+      if (actionOf(args) == actionSpec) {
+        return jsonEncode({
+          'ok': true,
+          'specification': MiniAppSpecification.document,
+        });
+      }
       await store.load();
       final action = actionOf(args);
       final Map<String, dynamic> result;

@@ -250,6 +250,204 @@ void main() {
   );
 
   testWidgets(
+    'sequence expressions behave identically through button, chat and ACP',
+    (tester) async {
+      await tester.runAsync(() async {
+        final file = File('${temp.path}/source/moru-app.json');
+        final manifest =
+            jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+        (manifest['actions'] as List).addAll([
+          {
+            'name': 'increment',
+            'description': 'Increment saved count',
+            'inputSchema': {
+              'type': 'object',
+              'properties': {},
+              'additionalProperties': false,
+            },
+            'permissions': <String>[],
+            'danger': 'write',
+            'executor': {
+              'kind': 'state',
+              'expressions': true,
+              'patch': {
+                'count': {r'$inc': 1},
+              },
+            },
+          },
+          {
+            'name': 'set_then_increment',
+            'description': 'Set then increment',
+            'inputSchema': schema,
+            'permissions': <String>[],
+            'danger': 'write',
+            'executor': {
+              'kind': 'sequence',
+              'steps': [
+                {
+                  'action': 'set_count',
+                  'arguments': {
+                    'count': {r'$arg': 'count'},
+                  },
+                },
+                {'action': 'increment', 'arguments': <String, dynamic>{}},
+              ],
+            },
+          },
+        ]);
+        for (final name in ['fail_after_sequence', 'fail_nested']) {
+          (manifest['actions'] as List).add({
+            'name': name,
+            'description': 'Report a nested partial failure',
+            'inputSchema': schema,
+            'permissions': <String>[],
+            'danger': 'write',
+            'executor': {
+              'kind': 'sequence',
+              'steps': name == 'fail_nested'
+                  ? [
+                      {
+                        'action': 'fail_after_sequence',
+                        'arguments': {
+                          'count': {r'$arg': 'count'},
+                        },
+                      },
+                    ]
+                  : [
+                      {
+                        'action': 'set_then_increment',
+                        'arguments': {
+                          'count': {r'$arg': 'count'},
+                        },
+                      },
+                      {
+                        'action': 'set_count',
+                        'arguments': {'count': 99},
+                      },
+                    ],
+            },
+          });
+        }
+        await file.writeAsString(jsonEncode(manifest));
+        await store.install(Directory('${temp.path}/source'));
+        await runtime.permissions.setGranted('counter', 'actions.ai', true);
+        await store.storageSet('counter', 'large', 'x' * 21000);
+        await settings.setToolAutoApproveAll(true);
+      });
+      final handler = await service(tester);
+      final chats = _ActionChat(
+        Conversation(id: 'chat', title: 'Chat', assistantId: assistant.id),
+      );
+      addTearDown(chats.dispose);
+      final acp = AcpMoruTools.create(
+        context: tester.element(find.byType(SizedBox)),
+        assistant: assistant,
+        chats: chats,
+        assistants: assistants,
+        settings: settings,
+        conversationId: 'chat',
+        providerKey: 'provider',
+        modelId: 'model',
+        workspace: null,
+        approvals: null,
+        miniAppRuntime: runtime,
+      );
+      await tester.runAsync(() async {
+        final button = await runtime.execute(
+          'counter',
+          'set_then_increment',
+          {'count': 2},
+          invocation: const MiniAppInvocation(
+            source: MiniAppInvocationSource.button,
+          ),
+        );
+        expect(button['status'], 'applied');
+        expect((button['completedSteps'] as List).length, 2);
+        expect(await store.storageGet('counter', 'count'), 3);
+        final name = MiniAppRuntime.toolNameFor(
+          'counter',
+          'set_then_increment',
+        );
+        final chat = decode(
+          await handler.buildToolCallHandler(settings, assistant)!(name, {
+            'count': 5,
+          }),
+        );
+        expect(chat['status'], 'applied');
+        expect((chat['completedSteps'] as List).length, 2);
+        for (final evidence in chat['completedSteps'] as List) {
+          expect(evidence['result']['state']['data_omitted'], true);
+          expect(evidence['result']['state'].containsKey('data'), false);
+        }
+        expect(await store.storageGet('counter', 'count'), 6);
+        final result = await acp.execute(name, {
+          'count': 8,
+        }, toolCallId: 'sequence-acp');
+        expect(result['isError'], false, reason: jsonEncode(result));
+        final content = result['content'] as List;
+        final decoded =
+            jsonDecode((content.single as Map)['text'] as String) as Map;
+        expect(decoded['status'], 'applied');
+        expect((decoded['completedSteps'] as List).length, 2);
+        for (final evidence in decoded['completedSteps'] as List) {
+          expect(evidence['result']['state']['data_omitted'], true);
+          expect(evidence['result']['state'].containsKey('data'), false);
+        }
+        expect(await store.storageGet('counter', 'count'), 9);
+        final failedName = MiniAppRuntime.toolNameFor('counter', 'fail_nested');
+        final failedChat = decode(
+          await handler.buildToolCallHandler(settings, assistant)!(failedName, {
+            'count': 8,
+          }),
+        );
+        final failedAcp = await acp.execute(failedName, {
+          'count': 8,
+        }, toolCallId: 'nested-failure');
+        expect(failedAcp['isError'], true);
+        final failedAcpResult =
+            jsonDecode((failedAcp['content'] as List).single['text'] as String)
+                as Map;
+        for (final failed in [failedChat, failedAcpResult]) {
+          expect(failed['status'], 'failed');
+          expect(failed['partial'], true);
+          for (final evidence in [
+            failed['failedStep'],
+            ...failed['failedSteps'] as List,
+          ]) {
+            final child = evidence['result']['completedSteps'][0]['result'];
+            for (final completed in child['completedSteps'] as List) {
+              expect(completed['result']['state']['data_omitted'], true);
+              expect(completed['result']['state'].containsKey('data'), false);
+            }
+          }
+          expect(
+            jsonEncode(failed).length,
+            lessThan(MiniAppDataTool.maxReadChars),
+          );
+        }
+        expect(await store.storageGet('counter', 'large'), 'x' * 21000);
+        await runtime.permissions.setGranted('counter', 'actions.ai', false);
+        expect(
+          decode(
+            await handler.buildToolCallHandler(settings, assistant)!(name, {
+              'count': 1,
+            }),
+          )['status'],
+          'permission_required',
+        );
+        expect(
+          (await acp.execute(name, {
+            'count': 1,
+          }, toolCallId: 'revoked-sequence'))['isError'],
+          true,
+        );
+        expect(await store.storageGet('counter', 'count'), 9);
+      });
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
     'full trust bypasses confirmation without granting app rights',
     (tester) async {
       final handler = await service(tester);
