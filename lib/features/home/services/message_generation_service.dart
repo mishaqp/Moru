@@ -301,6 +301,8 @@ class MessageGenerationService {
     final mcpRouteSnapshot = generationController.captureMcpToolRoutes(
       assistant,
     );
+    final miniAppRouteSnapshot = generationController
+        .captureMiniAppToolRoutes();
     final toolDefs = generationController.buildToolDefinitions(
       settings,
       assistant,
@@ -308,6 +310,7 @@ class MessageGenerationService {
       modelId,
       hasBuiltInSearch,
       mcpRouteSnapshot: mcpRouteSnapshot,
+      miniAppRouteSnapshot: miniAppRouteSnapshot,
       workspaceContext: workspaceContext,
       conversationId: currentConversation?.id,
     );
@@ -412,6 +415,7 @@ class MessageGenerationService {
             askUserService: askUserService,
             conversationId: currentConversation?.id,
             mcpRouteSnapshot: mcpRouteSnapshot,
+            miniAppRouteSnapshot: miniAppRouteSnapshot,
             workspaceContext: workspaceContext,
           )
         : null;

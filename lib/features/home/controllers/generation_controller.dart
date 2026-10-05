@@ -124,6 +124,9 @@ class GenerationController {
     return toolHandlerService.captureMcpToolRoutes(assistant);
   }
 
+  MiniAppToolRouteSnapshot captureMiniAppToolRoutes() =>
+      toolHandlerService.captureMiniAppToolRoutes();
+
   /// Prepare tool definitions for API call.
   /// Delegates to ToolHandlerService.buildToolDefinitions.
   List<Map<String, dynamic>> buildToolDefinitions(
@@ -133,6 +136,7 @@ class GenerationController {
     String modelId,
     bool hasBuiltInSearch, {
     McpToolRouteSnapshot? mcpRouteSnapshot,
+    MiniAppToolRouteSnapshot? miniAppRouteSnapshot,
     WorkspaceToolContext? workspaceContext,
     String? conversationId,
   }) {
@@ -144,6 +148,7 @@ class GenerationController {
       hasBuiltInSearch,
       isToolModel: isToolModel,
       mcpRouteSnapshot: mcpRouteSnapshot,
+      miniAppRouteSnapshot: miniAppRouteSnapshot,
       workspaceContext: workspaceContext,
       conversationId: conversationId,
     );
@@ -158,6 +163,7 @@ class GenerationController {
     AskUserInteractionService? askUserService,
     String? conversationId,
     McpToolRouteSnapshot? mcpRouteSnapshot,
+    MiniAppToolRouteSnapshot? miniAppRouteSnapshot,
     WorkspaceToolContext? workspaceContext,
   }) {
     return toolHandlerService.buildToolCallHandler(
@@ -167,6 +173,7 @@ class GenerationController {
       askUserService: askUserService,
       conversationId: conversationId,
       mcpRouteSnapshot: mcpRouteSnapshot,
+      miniAppRouteSnapshot: miniAppRouteSnapshot,
       workspaceContext: workspaceContext,
     );
   }

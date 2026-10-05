@@ -11,6 +11,7 @@ import 'package:Kelivo/core/services/mini_apps/mini_app_jobs.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
 import 'package:Kelivo/features/mini_apps/pages/mini_apps_page.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
+import 'package:Kelivo/shared/widgets/snackbar.dart';
 
 import '../../support/business_test_harness.dart';
 
@@ -184,8 +185,10 @@ void main() {
   });
 
   testWidgets('versions roll the app back to earlier code', (tester) async {
+    late String firstCode;
     await tester.runAsync(() async {
       await install('water', 'Water', '', html: '<p>v1</p>');
+      firstCode = await File(store.byId('water')!.entryPath).readAsString();
       await install('water', 'Water', '', html: '<p>v2</p>');
     });
     await pump(tester);
@@ -202,14 +205,32 @@ void main() {
     final first = (await tester.runAsync(
       () => store.versions('water'),
     ))!.single.updatedAt;
-    await tester.tap(find.textContaining('2026'));
-    await ioUntil(tester, () => store.byId('water')!.updatedAt == first);
+    final version = find.textContaining('2026');
+    final dateLabel = tester.widget<Text>(version).data!;
+    final successMessage = AppLocalizations.of(
+      tester.element(find.byType(MiniAppsPage)),
+    )!.miniAppsRolledBack(dateLabel);
+    final snackBars = AppSnackBarManager();
+    await tester.tap(version);
+    // Updating the visible app precedes the remaining rollback/grant IO.
+    // Wait for completion before advancing the notification's fake clock.
+    await ioUntil(
+      tester,
+      () => snackBars.activeToasts.any(
+        (toast) => toast.notification.message == successMessage,
+      ),
+    );
+    expect(store.byId('water')!.updatedAt, first);
     expect(find.text('Roll back “Water”'), findsNothing);
-    // Let the confirmation snack bar time out.
-    await tester.pump(const Duration(seconds: 4));
-    await tester.pumpAndSettle();
     final entry = File(store.byId('water')!.entryPath);
-    expect(await tester.runAsync(entry.readAsString), contains('v1'));
+    expect(await tester.runAsync(entry.readAsString), firstCode);
+    final notification = snackBars.activeToasts.single.notification;
+    expect(notification.message, successMessage);
+    expect(notification.type, NotificationType.success);
+    await tester.pump(notification.duration);
+    await tester.pumpAndSettle();
+    expect(snackBars.activeToasts, isEmpty);
+    expect(tester.binding.transientCallbackCount, isZero);
   });
 
   testWidgets('background jobs show their schedule and run on demand', (

@@ -13008,4 +13008,467 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get spendCompactNote =>
       'Compression creates a new chat with a summary using your compression settings. The original chat stays available; this reply finishes there.';
+
+  @override
+  String get miniAppsPermissionsTitle => 'App permissions';
+
+  @override
+  String get miniAppsPermissionsExplanation =>
+      'Allow each capability explicitly. Revoking access takes effect immediately. Android permissions remain separate.';
+
+  @override
+  String get miniAppsPermissionAi => 'Allow AI actions';
+
+  @override
+  String get miniAppsPermissionAiHint =>
+      'The assistant can call declared actions and change this app’s data when its Mini Apps tool is enabled. Device grants still apply.';
+
+  @override
+  String get miniAppsPermissionRootHint =>
+      'Fixed root operations only. Each change asks for confirmation unless full trust is on.';
+
+  @override
+  String get miniAppsPermissionBatteryRead => 'Read battery status';
+
+  @override
+  String get miniAppsPermissionScreenRead => 'Read screen settings';
+
+  @override
+  String get miniAppsPermissionAudioRead => 'Read sound settings';
+
+  @override
+  String get miniAppsPermissionConnectivityRead => 'Read connection status';
+
+  @override
+  String get miniAppsPermissionFlashlightRead => 'Read flashlight status';
+
+  @override
+  String get miniAppsPermissionSystemRead => 'Read device information';
+
+  @override
+  String get miniAppsPermissionScreenWrite =>
+      'Change system brightness and screen timeout';
+
+  @override
+  String get miniAppsPermissionAudioWrite => 'Change volume and Do Not Disturb';
+
+  @override
+  String get miniAppsPermissionFlashlightWrite => 'Control the flashlight';
+
+  @override
+  String get miniAppsPermissionSettingsOpen => 'Open Android settings';
+
+  @override
+  String get miniAppsPermissionRootPowerSave => 'Root: change battery saver';
+
+  @override
+  String get miniAppsPermissionRootWifi => 'Root: change Wi-Fi';
+
+  @override
+  String get miniAppsPermissionRootBluetooth => 'Root: change Bluetooth';
+
+  @override
+  String get miniAppsPermissionRootData => 'Root: change mobile data';
+
+  @override
+  String get miniAppsPermissionRootAirplane => 'Root: change airplane mode';
+
+  @override
+  String get miniAppsPermissionRootStopApp => 'Root: stop a selected app';
+
+  @override
+  String get miniAppsNativeUnavailable => 'Unavailable';
+
+  @override
+  String get miniAppsNativeUnknown => 'Not checked';
+
+  @override
+  String get miniAppsNativeOn => 'On';
+
+  @override
+  String get miniAppsNativeOff => 'Off';
+
+  @override
+  String get miniAppsNativeNoItems => 'No available items';
+
+  @override
+  String get miniAppsNativeChoose => 'Choose an item';
+
+  @override
+  String get miniAppsNativeLoadError => 'Could not load this panel.';
+
+  @override
+  String get miniAppsNativeActionError => 'Could not complete the action.';
+
+  @override
+  String get miniAppsNativePermissionRequired => 'Permission required';
+
+  @override
+  String get miniAppsNativeUnsupported => 'Not supported on this device';
+
+  @override
+  String get miniAppsNativeDenied => 'Action denied';
+
+  @override
+  String get miniAppsNativeApplied => 'Change applied';
+
+  @override
+  String get miniAppsNativeOpenedSettings =>
+      'Android settings opened. Return here to refresh the status.';
+
+  @override
+  String get miniAppsNativeTimeout =>
+      'The action timed out. Its final state is unknown; refresh before trying again.';
+
+  @override
+  String get miniAppsNativePartial =>
+      'Some changes could not be applied. Check the permissions and device support.';
+
+  @override
+  String get miniAppsNativeRestoreConflict =>
+      'Later manual changes were kept. These values were not restored.';
+
+  @override
+  String get miniAppsNativeNothingToRestore =>
+      'There are no previous values to restore.';
+
+  @override
+  String get miniAppsNativeConfirmTitle => 'Confirm app action';
+
+  @override
+  String get miniAppsNativeRootWarning =>
+      'This action uses root and can interrupt connections, notifications or other apps.';
+
+  @override
+  String get phonePanelTitle => 'Phone panel';
+
+  @override
+  String get phonePanelDescription =>
+      'Battery, screen, sound and connectivity controls with explicit permissions.';
+
+  @override
+  String get phonePanelIntro =>
+      'Open app permissions first and allow the capabilities you want. Buttons and AI use the same declared actions.';
+
+  @override
+  String get phonePanelBattery => 'Battery';
+
+  @override
+  String get phonePanelCharge => 'Charge';
+
+  @override
+  String get phonePanelCharging => 'Charging';
+
+  @override
+  String get phonePanelBatteryStatus => 'Battery status';
+
+  @override
+  String get phonePanelPowerSource => 'Power source';
+
+  @override
+  String get phonePanelTemperature => 'Battery temperature';
+
+  @override
+  String get phonePanelVoltage => 'Battery voltage';
+
+  @override
+  String get phonePanelCurrent => 'Battery current';
+
+  @override
+  String get phonePanelAverageCurrent => 'Average battery current';
+
+  @override
+  String get phonePanelChargeCounter => 'Remaining charge';
+
+  @override
+  String get phonePanelEnergy => 'Remaining energy';
+
+  @override
+  String get phonePanelChargeTime => 'Estimated charge time';
+
+  @override
+  String get phonePanelCycles => 'Charge cycles';
+
+  @override
+  String get phonePanelPowerSave => 'Battery saver';
+
+  @override
+  String get phonePanelScreen => 'Screen';
+
+  @override
+  String get phonePanelBrightness => 'System brightness (manual)';
+
+  @override
+  String get phonePanelBrightnessMode => 'Brightness mode';
+
+  @override
+  String get phonePanelAutomatic => 'Automatic';
+
+  @override
+  String get phonePanelManual => 'Manual';
+
+  @override
+  String get phonePanelScreenTimeout => 'Screen timeout';
+
+  @override
+  String get phonePanelScreenOn => 'Screen is awake';
+
+  @override
+  String get phonePanelRefreshRate => 'Screen refresh rate';
+
+  @override
+  String get phonePanelCanWrite => 'Android allows changing system settings';
+
+  @override
+  String get phonePanelSound => 'Sound';
+
+  @override
+  String get phonePanelMusic => 'Media volume';
+
+  @override
+  String get phonePanelRing => 'Ring volume';
+
+  @override
+  String get phonePanelNotification => 'Notification volume';
+
+  @override
+  String get phonePanelAlarm => 'Alarm volume';
+
+  @override
+  String get phonePanelSystemVolume => 'System volume';
+
+  @override
+  String get phonePanelCallVolume => 'Call volume';
+
+  @override
+  String get phonePanelRingerMode => 'Ringer mode';
+
+  @override
+  String get phonePanelNormal => 'Normal';
+
+  @override
+  String get phonePanelVibrate => 'Vibrate';
+
+  @override
+  String get phonePanelSilent => 'Silent';
+
+  @override
+  String get phonePanelDnd => 'Do Not Disturb';
+
+  @override
+  String get phonePanelDndAll => 'Allow all interruptions';
+
+  @override
+  String get phonePanelDndPriority => 'Priority only';
+
+  @override
+  String get phonePanelDndNone => 'No interruptions';
+
+  @override
+  String get phonePanelDndAlarms => 'Alarms only';
+
+  @override
+  String get phonePanelCanDnd => 'Android allows changing Do Not Disturb';
+
+  @override
+  String get phonePanelConnections => 'Connections';
+
+  @override
+  String get phonePanelConnected => 'Connected';
+
+  @override
+  String get phonePanelValidated => 'Internet access confirmed';
+
+  @override
+  String get phonePanelMetered => 'Metered network';
+
+  @override
+  String get phonePanelNetworkType => 'Network type';
+
+  @override
+  String get phonePanelWifi => 'Wi-Fi';
+
+  @override
+  String get phonePanelBluetooth => 'Bluetooth';
+
+  @override
+  String get phonePanelMobileData => 'Mobile data';
+
+  @override
+  String get phonePanelAirplane => 'Airplane mode';
+
+  @override
+  String get phonePanelFlashlight => 'Flashlight';
+
+  @override
+  String get phonePanelFlashlightAvailable => 'Flashlight available';
+
+  @override
+  String get phonePanelFlashlightControl => 'Android allows flashlight control';
+
+  @override
+  String get phonePanelSystem => 'Device information';
+
+  @override
+  String get phonePanelManufacturer => 'Manufacturer';
+
+  @override
+  String get phonePanelModel => 'Model';
+
+  @override
+  String get phonePanelAndroid => 'Android version';
+
+  @override
+  String get phonePanelAppVersion => 'Moru version';
+
+  @override
+  String get phonePanelTotalMemory => 'Total memory';
+
+  @override
+  String get phonePanelFreeMemory => 'Available memory';
+
+  @override
+  String get phonePanelTotalStorage => 'Total storage';
+
+  @override
+  String get phonePanelFreeStorage => 'Free storage';
+
+  @override
+  String get phonePanelPresets => 'Manual presets';
+
+  @override
+  String get phonePanelPresetsHint =>
+      'Presets change brightness, timeout, media volume and Do Not Disturb only when you tap. Restore keeps later manual changes.';
+
+  @override
+  String get phonePanelNight => 'Night';
+
+  @override
+  String get phonePanelRoad => 'Road';
+
+  @override
+  String get phonePanelWork => 'Work';
+
+  @override
+  String get phonePanelRestore => 'Restore previous values';
+
+  @override
+  String get phonePanelRoot => 'Fixed root controls';
+
+  @override
+  String get phonePanelRootHint =>
+      'Root is checked only for an explicit root action. These controls can disconnect the phone or stop app notifications.';
+
+  @override
+  String get phonePanelRootAvailable => 'Root access checked';
+
+  @override
+  String get phonePanelStopApp => 'Stop a selected app (root)';
+
+  @override
+  String get phonePanelOpenSettings => 'Open system settings';
+
+  @override
+  String get phonePanelChargingStatus => 'Charging';
+
+  @override
+  String get phonePanelDischargingStatus => 'Discharging';
+
+  @override
+  String get phonePanelFullStatus => 'Full';
+
+  @override
+  String get phonePanelNotChargingStatus => 'Not charging';
+
+  @override
+  String get phonePanelUnplugged => 'Unplugged';
+
+  @override
+  String get phonePanelAc => 'AC charger';
+
+  @override
+  String get phonePanelUsb => 'USB charger';
+
+  @override
+  String get phonePanelWireless => 'Wireless charger';
+
+  @override
+  String get phonePanelEthernet => 'Ethernet';
+
+  @override
+  String get phonePanelVpn => 'VPN';
+
+  @override
+  String get phonePanelNone => 'None';
+
+  @override
+  String get phonePanel15Seconds => '15 seconds';
+
+  @override
+  String get phonePanel30Seconds => '30 seconds';
+
+  @override
+  String get phonePanel1Minute => '1 minute';
+
+  @override
+  String get phonePanel2Minutes => '2 minutes';
+
+  @override
+  String get phonePanel5Minutes => '5 minutes';
+
+  @override
+  String get phonePanel10Minutes => '10 minutes';
+
+  @override
+  String get phonePanel30Minutes => '30 minutes';
+
+  @override
+  String get miniAppsNativeSensorUnavailable =>
+      'The sensor did not return a value';
+
+  @override
+  String get miniAppsNativeEstimateUnavailable =>
+      'Android has no estimate for this value';
+
+  @override
+  String get miniAppsNativeSettingUnavailable =>
+      'Android could not read this setting';
+
+  @override
+  String get miniAppsNativeServiceUnavailable =>
+      'The Android service is unavailable';
+
+  @override
+  String get miniAppsNativeReadFailed =>
+      'Could not read the status. Refresh to try again.';
+
+  @override
+  String get miniAppsNativeRootUnavailable => 'Root access is unavailable';
+
+  @override
+  String get miniAppsNativeRootDenied => 'Root access was denied';
+
+  @override
+  String get miniAppsNativeRestorePending =>
+      'Restore the previous preset before applying another.';
+
+  @override
+  String get phonePanelDock => 'Dock charger';
+
+  @override
+  String get phonePanelOtherNetwork => 'Other network';
+
+  @override
+  String get phonePanelUptime => 'Time since device boot';
+
+  @override
+  String get phonePanelDndAccess => 'Do Not Disturb special access';
+
+  @override
+  String get phonePanelDndAndroid15Hint =>
+      'Android 15 and later restrict direct Do Not Disturb changes. Use Android settings when this action is unsupported; presets report any skipped step.';
+
+  @override
+  String get phonePanelSelectedAppSettings =>
+      'Open settings for a selected app';
 }

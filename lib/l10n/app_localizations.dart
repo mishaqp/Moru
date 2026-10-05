@@ -23144,6 +23144,888 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Compression creates a new chat with a summary using your compression settings. The original chat stays available; this reply finishes there.'**
   String get spendCompactNote;
+
+  /// No description provided for @miniAppsPermissionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'App permissions'**
+  String get miniAppsPermissionsTitle;
+
+  /// No description provided for @miniAppsPermissionsExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow each capability explicitly. Revoking access takes effect immediately. Android permissions remain separate.'**
+  String get miniAppsPermissionsExplanation;
+
+  /// No description provided for @miniAppsPermissionAi.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow AI actions'**
+  String get miniAppsPermissionAi;
+
+  /// No description provided for @miniAppsPermissionAiHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The assistant can call declared actions and change this app’s data when its Mini Apps tool is enabled. Device grants still apply.'**
+  String get miniAppsPermissionAiHint;
+
+  /// No description provided for @miniAppsPermissionRootHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Fixed root operations only. Each change asks for confirmation unless full trust is on.'**
+  String get miniAppsPermissionRootHint;
+
+  /// No description provided for @miniAppsPermissionBatteryRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Read battery status'**
+  String get miniAppsPermissionBatteryRead;
+
+  /// No description provided for @miniAppsPermissionScreenRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Read screen settings'**
+  String get miniAppsPermissionScreenRead;
+
+  /// No description provided for @miniAppsPermissionAudioRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Read sound settings'**
+  String get miniAppsPermissionAudioRead;
+
+  /// No description provided for @miniAppsPermissionConnectivityRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Read connection status'**
+  String get miniAppsPermissionConnectivityRead;
+
+  /// No description provided for @miniAppsPermissionFlashlightRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Read flashlight status'**
+  String get miniAppsPermissionFlashlightRead;
+
+  /// No description provided for @miniAppsPermissionSystemRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Read device information'**
+  String get miniAppsPermissionSystemRead;
+
+  /// No description provided for @miniAppsPermissionScreenWrite.
+  ///
+  /// In en, this message translates to:
+  /// **'Change system brightness and screen timeout'**
+  String get miniAppsPermissionScreenWrite;
+
+  /// No description provided for @miniAppsPermissionAudioWrite.
+  ///
+  /// In en, this message translates to:
+  /// **'Change volume and Do Not Disturb'**
+  String get miniAppsPermissionAudioWrite;
+
+  /// No description provided for @miniAppsPermissionFlashlightWrite.
+  ///
+  /// In en, this message translates to:
+  /// **'Control the flashlight'**
+  String get miniAppsPermissionFlashlightWrite;
+
+  /// No description provided for @miniAppsPermissionSettingsOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Android settings'**
+  String get miniAppsPermissionSettingsOpen;
+
+  /// No description provided for @miniAppsPermissionRootPowerSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Root: change battery saver'**
+  String get miniAppsPermissionRootPowerSave;
+
+  /// No description provided for @miniAppsPermissionRootWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Root: change Wi-Fi'**
+  String get miniAppsPermissionRootWifi;
+
+  /// No description provided for @miniAppsPermissionRootBluetooth.
+  ///
+  /// In en, this message translates to:
+  /// **'Root: change Bluetooth'**
+  String get miniAppsPermissionRootBluetooth;
+
+  /// No description provided for @miniAppsPermissionRootData.
+  ///
+  /// In en, this message translates to:
+  /// **'Root: change mobile data'**
+  String get miniAppsPermissionRootData;
+
+  /// No description provided for @miniAppsPermissionRootAirplane.
+  ///
+  /// In en, this message translates to:
+  /// **'Root: change airplane mode'**
+  String get miniAppsPermissionRootAirplane;
+
+  /// No description provided for @miniAppsPermissionRootStopApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Root: stop a selected app'**
+  String get miniAppsPermissionRootStopApp;
+
+  /// No description provided for @miniAppsNativeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get miniAppsNativeUnavailable;
+
+  /// No description provided for @miniAppsNativeUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Not checked'**
+  String get miniAppsNativeUnknown;
+
+  /// No description provided for @miniAppsNativeOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get miniAppsNativeOn;
+
+  /// No description provided for @miniAppsNativeOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get miniAppsNativeOff;
+
+  /// No description provided for @miniAppsNativeNoItems.
+  ///
+  /// In en, this message translates to:
+  /// **'No available items'**
+  String get miniAppsNativeNoItems;
+
+  /// No description provided for @miniAppsNativeChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an item'**
+  String get miniAppsNativeChoose;
+
+  /// No description provided for @miniAppsNativeLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load this panel.'**
+  String get miniAppsNativeLoadError;
+
+  /// No description provided for @miniAppsNativeActionError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete the action.'**
+  String get miniAppsNativeActionError;
+
+  /// No description provided for @miniAppsNativePermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Permission required'**
+  String get miniAppsNativePermissionRequired;
+
+  /// No description provided for @miniAppsNativeUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Not supported on this device'**
+  String get miniAppsNativeUnsupported;
+
+  /// No description provided for @miniAppsNativeDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Action denied'**
+  String get miniAppsNativeDenied;
+
+  /// No description provided for @miniAppsNativeApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Change applied'**
+  String get miniAppsNativeApplied;
+
+  /// No description provided for @miniAppsNativeOpenedSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Android settings opened. Return here to refresh the status.'**
+  String get miniAppsNativeOpenedSettings;
+
+  /// No description provided for @miniAppsNativeTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The action timed out. Its final state is unknown; refresh before trying again.'**
+  String get miniAppsNativeTimeout;
+
+  /// No description provided for @miniAppsNativePartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Some changes could not be applied. Check the permissions and device support.'**
+  String get miniAppsNativePartial;
+
+  /// No description provided for @miniAppsNativeRestoreConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Later manual changes were kept. These values were not restored.'**
+  String get miniAppsNativeRestoreConflict;
+
+  /// No description provided for @miniAppsNativeNothingToRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no previous values to restore.'**
+  String get miniAppsNativeNothingToRestore;
+
+  /// No description provided for @miniAppsNativeConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm app action'**
+  String get miniAppsNativeConfirmTitle;
+
+  /// No description provided for @miniAppsNativeRootWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This action uses root and can interrupt connections, notifications or other apps.'**
+  String get miniAppsNativeRootWarning;
+
+  /// No description provided for @phonePanelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone panel'**
+  String get phonePanelTitle;
+
+  /// No description provided for @phonePanelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery, screen, sound and connectivity controls with explicit permissions.'**
+  String get phonePanelDescription;
+
+  /// No description provided for @phonePanelIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Open app permissions first and allow the capabilities you want. Buttons and AI use the same declared actions.'**
+  String get phonePanelIntro;
+
+  /// No description provided for @phonePanelBattery.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery'**
+  String get phonePanelBattery;
+
+  /// No description provided for @phonePanelCharge.
+  ///
+  /// In en, this message translates to:
+  /// **'Charge'**
+  String get phonePanelCharge;
+
+  /// No description provided for @phonePanelCharging.
+  ///
+  /// In en, this message translates to:
+  /// **'Charging'**
+  String get phonePanelCharging;
+
+  /// No description provided for @phonePanelBatteryStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery status'**
+  String get phonePanelBatteryStatus;
+
+  /// No description provided for @phonePanelPowerSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Power source'**
+  String get phonePanelPowerSource;
+
+  /// No description provided for @phonePanelTemperature.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery temperature'**
+  String get phonePanelTemperature;
+
+  /// No description provided for @phonePanelVoltage.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery voltage'**
+  String get phonePanelVoltage;
+
+  /// No description provided for @phonePanelCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery current'**
+  String get phonePanelCurrent;
+
+  /// No description provided for @phonePanelAverageCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Average battery current'**
+  String get phonePanelAverageCurrent;
+
+  /// No description provided for @phonePanelChargeCounter.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining charge'**
+  String get phonePanelChargeCounter;
+
+  /// No description provided for @phonePanelEnergy.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining energy'**
+  String get phonePanelEnergy;
+
+  /// No description provided for @phonePanelChargeTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated charge time'**
+  String get phonePanelChargeTime;
+
+  /// No description provided for @phonePanelCycles.
+  ///
+  /// In en, this message translates to:
+  /// **'Charge cycles'**
+  String get phonePanelCycles;
+
+  /// No description provided for @phonePanelPowerSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery saver'**
+  String get phonePanelPowerSave;
+
+  /// No description provided for @phonePanelScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen'**
+  String get phonePanelScreen;
+
+  /// No description provided for @phonePanelBrightness.
+  ///
+  /// In en, this message translates to:
+  /// **'System brightness (manual)'**
+  String get phonePanelBrightness;
+
+  /// No description provided for @phonePanelBrightnessMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Brightness mode'**
+  String get phonePanelBrightnessMode;
+
+  /// No description provided for @phonePanelAutomatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get phonePanelAutomatic;
+
+  /// No description provided for @phonePanelManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual'**
+  String get phonePanelManual;
+
+  /// No description provided for @phonePanelScreenTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen timeout'**
+  String get phonePanelScreenTimeout;
+
+  /// No description provided for @phonePanelScreenOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen is awake'**
+  String get phonePanelScreenOn;
+
+  /// No description provided for @phonePanelRefreshRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen refresh rate'**
+  String get phonePanelRefreshRate;
+
+  /// No description provided for @phonePanelCanWrite.
+  ///
+  /// In en, this message translates to:
+  /// **'Android allows changing system settings'**
+  String get phonePanelCanWrite;
+
+  /// No description provided for @phonePanelSound.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound'**
+  String get phonePanelSound;
+
+  /// No description provided for @phonePanelMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Media volume'**
+  String get phonePanelMusic;
+
+  /// No description provided for @phonePanelRing.
+  ///
+  /// In en, this message translates to:
+  /// **'Ring volume'**
+  String get phonePanelRing;
+
+  /// No description provided for @phonePanelNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification volume'**
+  String get phonePanelNotification;
+
+  /// No description provided for @phonePanelAlarm.
+  ///
+  /// In en, this message translates to:
+  /// **'Alarm volume'**
+  String get phonePanelAlarm;
+
+  /// No description provided for @phonePanelSystemVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'System volume'**
+  String get phonePanelSystemVolume;
+
+  /// No description provided for @phonePanelCallVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Call volume'**
+  String get phonePanelCallVolume;
+
+  /// No description provided for @phonePanelRingerMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Ringer mode'**
+  String get phonePanelRingerMode;
+
+  /// No description provided for @phonePanelNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get phonePanelNormal;
+
+  /// No description provided for @phonePanelVibrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrate'**
+  String get phonePanelVibrate;
+
+  /// No description provided for @phonePanelSilent.
+  ///
+  /// In en, this message translates to:
+  /// **'Silent'**
+  String get phonePanelSilent;
+
+  /// No description provided for @phonePanelDnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Do Not Disturb'**
+  String get phonePanelDnd;
+
+  /// No description provided for @phonePanelDndAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow all interruptions'**
+  String get phonePanelDndAll;
+
+  /// No description provided for @phonePanelDndPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority only'**
+  String get phonePanelDndPriority;
+
+  /// No description provided for @phonePanelDndNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No interruptions'**
+  String get phonePanelDndNone;
+
+  /// No description provided for @phonePanelDndAlarms.
+  ///
+  /// In en, this message translates to:
+  /// **'Alarms only'**
+  String get phonePanelDndAlarms;
+
+  /// No description provided for @phonePanelCanDnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Android allows changing Do Not Disturb'**
+  String get phonePanelCanDnd;
+
+  /// No description provided for @phonePanelConnections.
+  ///
+  /// In en, this message translates to:
+  /// **'Connections'**
+  String get phonePanelConnections;
+
+  /// No description provided for @phonePanelConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get phonePanelConnected;
+
+  /// No description provided for @phonePanelValidated.
+  ///
+  /// In en, this message translates to:
+  /// **'Internet access confirmed'**
+  String get phonePanelValidated;
+
+  /// No description provided for @phonePanelMetered.
+  ///
+  /// In en, this message translates to:
+  /// **'Metered network'**
+  String get phonePanelMetered;
+
+  /// No description provided for @phonePanelNetworkType.
+  ///
+  /// In en, this message translates to:
+  /// **'Network type'**
+  String get phonePanelNetworkType;
+
+  /// No description provided for @phonePanelWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Wi-Fi'**
+  String get phonePanelWifi;
+
+  /// No description provided for @phonePanelBluetooth.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth'**
+  String get phonePanelBluetooth;
+
+  /// No description provided for @phonePanelMobileData.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile data'**
+  String get phonePanelMobileData;
+
+  /// No description provided for @phonePanelAirplane.
+  ///
+  /// In en, this message translates to:
+  /// **'Airplane mode'**
+  String get phonePanelAirplane;
+
+  /// No description provided for @phonePanelFlashlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Flashlight'**
+  String get phonePanelFlashlight;
+
+  /// No description provided for @phonePanelFlashlightAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Flashlight available'**
+  String get phonePanelFlashlightAvailable;
+
+  /// No description provided for @phonePanelFlashlightControl.
+  ///
+  /// In en, this message translates to:
+  /// **'Android allows flashlight control'**
+  String get phonePanelFlashlightControl;
+
+  /// No description provided for @phonePanelSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'Device information'**
+  String get phonePanelSystem;
+
+  /// No description provided for @phonePanelManufacturer.
+  ///
+  /// In en, this message translates to:
+  /// **'Manufacturer'**
+  String get phonePanelManufacturer;
+
+  /// No description provided for @phonePanelModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get phonePanelModel;
+
+  /// No description provided for @phonePanelAndroid.
+  ///
+  /// In en, this message translates to:
+  /// **'Android version'**
+  String get phonePanelAndroid;
+
+  /// No description provided for @phonePanelAppVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Moru version'**
+  String get phonePanelAppVersion;
+
+  /// No description provided for @phonePanelTotalMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Total memory'**
+  String get phonePanelTotalMemory;
+
+  /// No description provided for @phonePanelFreeMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Available memory'**
+  String get phonePanelFreeMemory;
+
+  /// No description provided for @phonePanelTotalStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Total storage'**
+  String get phonePanelTotalStorage;
+
+  /// No description provided for @phonePanelFreeStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Free storage'**
+  String get phonePanelFreeStorage;
+
+  /// No description provided for @phonePanelPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual presets'**
+  String get phonePanelPresets;
+
+  /// No description provided for @phonePanelPresetsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Presets change brightness, timeout, media volume and Do Not Disturb only when you tap. Restore keeps later manual changes.'**
+  String get phonePanelPresetsHint;
+
+  /// No description provided for @phonePanelNight.
+  ///
+  /// In en, this message translates to:
+  /// **'Night'**
+  String get phonePanelNight;
+
+  /// No description provided for @phonePanelRoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Road'**
+  String get phonePanelRoad;
+
+  /// No description provided for @phonePanelWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Work'**
+  String get phonePanelWork;
+
+  /// No description provided for @phonePanelRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore previous values'**
+  String get phonePanelRestore;
+
+  /// No description provided for @phonePanelRoot.
+  ///
+  /// In en, this message translates to:
+  /// **'Fixed root controls'**
+  String get phonePanelRoot;
+
+  /// No description provided for @phonePanelRootHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Root is checked only for an explicit root action. These controls can disconnect the phone or stop app notifications.'**
+  String get phonePanelRootHint;
+
+  /// No description provided for @phonePanelRootAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Root access checked'**
+  String get phonePanelRootAvailable;
+
+  /// No description provided for @phonePanelStopApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop a selected app (root)'**
+  String get phonePanelStopApp;
+
+  /// No description provided for @phonePanelOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open system settings'**
+  String get phonePanelOpenSettings;
+
+  /// No description provided for @phonePanelChargingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Charging'**
+  String get phonePanelChargingStatus;
+
+  /// No description provided for @phonePanelDischargingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Discharging'**
+  String get phonePanelDischargingStatus;
+
+  /// No description provided for @phonePanelFullStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Full'**
+  String get phonePanelFullStatus;
+
+  /// No description provided for @phonePanelNotChargingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Not charging'**
+  String get phonePanelNotChargingStatus;
+
+  /// No description provided for @phonePanelUnplugged.
+  ///
+  /// In en, this message translates to:
+  /// **'Unplugged'**
+  String get phonePanelUnplugged;
+
+  /// No description provided for @phonePanelAc.
+  ///
+  /// In en, this message translates to:
+  /// **'AC charger'**
+  String get phonePanelAc;
+
+  /// No description provided for @phonePanelUsb.
+  ///
+  /// In en, this message translates to:
+  /// **'USB charger'**
+  String get phonePanelUsb;
+
+  /// No description provided for @phonePanelWireless.
+  ///
+  /// In en, this message translates to:
+  /// **'Wireless charger'**
+  String get phonePanelWireless;
+
+  /// No description provided for @phonePanelEthernet.
+  ///
+  /// In en, this message translates to:
+  /// **'Ethernet'**
+  String get phonePanelEthernet;
+
+  /// No description provided for @phonePanelVpn.
+  ///
+  /// In en, this message translates to:
+  /// **'VPN'**
+  String get phonePanelVpn;
+
+  /// No description provided for @phonePanelNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get phonePanelNone;
+
+  /// No description provided for @phonePanel15Seconds.
+  ///
+  /// In en, this message translates to:
+  /// **'15 seconds'**
+  String get phonePanel15Seconds;
+
+  /// No description provided for @phonePanel30Seconds.
+  ///
+  /// In en, this message translates to:
+  /// **'30 seconds'**
+  String get phonePanel30Seconds;
+
+  /// No description provided for @phonePanel1Minute.
+  ///
+  /// In en, this message translates to:
+  /// **'1 minute'**
+  String get phonePanel1Minute;
+
+  /// No description provided for @phonePanel2Minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'2 minutes'**
+  String get phonePanel2Minutes;
+
+  /// No description provided for @phonePanel5Minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'5 minutes'**
+  String get phonePanel5Minutes;
+
+  /// No description provided for @phonePanel10Minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'10 minutes'**
+  String get phonePanel10Minutes;
+
+  /// No description provided for @phonePanel30Minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'30 minutes'**
+  String get phonePanel30Minutes;
+
+  /// No description provided for @miniAppsNativeSensorUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The sensor did not return a value'**
+  String get miniAppsNativeSensorUnavailable;
+
+  /// No description provided for @miniAppsNativeEstimateUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Android has no estimate for this value'**
+  String get miniAppsNativeEstimateUnavailable;
+
+  /// No description provided for @miniAppsNativeSettingUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Android could not read this setting'**
+  String get miniAppsNativeSettingUnavailable;
+
+  /// No description provided for @miniAppsNativeServiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The Android service is unavailable'**
+  String get miniAppsNativeServiceUnavailable;
+
+  /// No description provided for @miniAppsNativeReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read the status. Refresh to try again.'**
+  String get miniAppsNativeReadFailed;
+
+  /// No description provided for @miniAppsNativeRootUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Root access is unavailable'**
+  String get miniAppsNativeRootUnavailable;
+
+  /// No description provided for @miniAppsNativeRootDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Root access was denied'**
+  String get miniAppsNativeRootDenied;
+
+  /// No description provided for @miniAppsNativeRestorePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore the previous preset before applying another.'**
+  String get miniAppsNativeRestorePending;
+
+  /// No description provided for @phonePanelDock.
+  ///
+  /// In en, this message translates to:
+  /// **'Dock charger'**
+  String get phonePanelDock;
+
+  /// No description provided for @phonePanelOtherNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Other network'**
+  String get phonePanelOtherNetwork;
+
+  /// No description provided for @phonePanelUptime.
+  ///
+  /// In en, this message translates to:
+  /// **'Time since device boot'**
+  String get phonePanelUptime;
+
+  /// No description provided for @phonePanelDndAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Do Not Disturb special access'**
+  String get phonePanelDndAccess;
+
+  /// No description provided for @phonePanelDndAndroid15Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Android 15 and later restrict direct Do Not Disturb changes. Use Android settings when this action is unsupported; presets report any skipped step.'**
+  String get phonePanelDndAndroid15Hint;
+
+  /// No description provided for @phonePanelSelectedAppSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings for a selected app'**
+  String get phonePanelSelectedAppSettings;
 }
 
 class _AppLocalizationsDelegate

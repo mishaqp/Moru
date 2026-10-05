@@ -21,6 +21,7 @@ import '../../core/services/mini_apps/mini_app_bridge.dart';
 import '../../core/services/mini_apps/mini_app_fetch.dart';
 import '../../core/services/mini_apps/mini_app_jobs.dart';
 import '../../core/services/mini_apps/mini_app_reminders.dart';
+import '../../core/services/mini_apps/mini_app_runtime.dart';
 import '../../core/services/mini_apps/mini_app_servers.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
 import '../../core/services/notification_service.dart';
@@ -33,6 +34,8 @@ import '../../shared/widgets/ios_settings_rows.dart';
 import '../../shared/widgets/option_sheet.dart';
 import '../../shared/widgets/snackbar.dart';
 import 'mini_app_job_runner.dart';
+import 'pages/native_mini_app_page.dart';
+import 'phone_control_mini_app.dart';
 import 'pages/mini_app_page.dart';
 
 /// Opens mini apps from links, lists and home screen shortcuts.
@@ -43,6 +46,14 @@ class MiniAppLauncher {
   static final StreamController<String> _launches =
       StreamController.broadcast();
   static bool _initialized = false;
+  static MiniAppRuntime? _runtime;
+
+  /// One executor and grant registry for native panels, web pages and tools.
+  static MiniAppRuntime get runtime =>
+      _runtime ??= MiniAppRuntime(store: MiniAppStore.instance);
+
+  static Future<void> ensureExample({MiniAppStore? store}) =>
+      PhoneControlMiniApp.ensureInstalled(store ?? MiniAppStore.instance);
 
   /// Shortcut taps while Moru is already running.
   static Stream<String> get launches => _launches.stream;
@@ -127,6 +138,7 @@ class MiniAppLauncher {
           background: true,
           server: server.fetch,
           serverUrl: server.url,
+          isAllowed: () => !cancellation.cancelled,
         ),
         cancellation: cancellation,
       );
@@ -180,6 +192,12 @@ class MiniAppLauncher {
     bool background = false,
     Future<Map<String, Object?>> Function(Map<String, dynamic> args)? server,
     Future<String> Function(String path)? serverUrl,
+    MiniAppRuntime? runtime,
+    MiniAppInvocationSource? source,
+    bool Function()? isAllowed,
+    Future<bool> Function(MiniApp, MiniAppAction, Map<String, dynamic>)?
+    approve,
+    Future<void>? cancelled,
   }) => MiniAppHost(
     ask: (prompt, system) async {
       final target = askModelFor(settings, assistants.currentAssistant);
@@ -227,6 +245,18 @@ class MiniAppLauncher {
     background: background,
     server: server,
     serverUrl: serverUrl,
+    runtime: runtime ?? MiniAppLauncher.runtime,
+    invocation: MiniAppInvocation(
+      source:
+          source ??
+          (background
+              ? MiniAppInvocationSource.background
+              : MiniAppInvocationSource.button),
+      isAllowed: isAllowed,
+      fullTrust: () => settings.toolAutoApproveAll,
+      approve: approve,
+      cancelled: cancelled,
+    ),
   );
 
   /// Shared by every open app, so connections are reused.
@@ -254,6 +284,7 @@ class MiniAppLauncher {
   static void ensureInitialized() {
     if (_initialized) return;
     _initialized = true;
+    unawaited(ensureExample().catchError((_) {}));
     unawaited(reminders.rescheduleAll().catchError((_) {}));
     unawaited(jobs.rescheduleAll().catchError((_) {}));
     _channel.setMethodCallHandler((call) async {
@@ -293,11 +324,28 @@ class MiniAppLauncher {
       );
       return;
     }
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => MiniAppPage(app: app, store: store),
-      ),
-    );
+    final ownedRuntime = identical(apps, MiniAppStore.instance)
+        ? null
+        : MiniAppRuntime(store: apps);
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => app.uiEngine == MiniAppUiEngine.native
+              ? NativeMiniAppPage(
+                  app: app,
+                  store: apps,
+                  runtime: ownedRuntime ?? runtime,
+                )
+              : MiniAppPage(
+                  app: app,
+                  store: apps,
+                  runtime: ownedRuntime ?? runtime,
+                ),
+        ),
+      );
+    } finally {
+      await ownedRuntime?.dispose();
+    }
   }
 
   /// Shares [app] as a `.moruapp` file, asking first whether its data goes

@@ -14,6 +14,62 @@ Future<void> expectStillPending(Future<dynamic> future) async {
 }
 
 void main() {
+  test(
+    'concurrent mini-app calls sharing an id need separate consent',
+    () async {
+      final service = ToolApprovalService();
+      addTearDown(service.dispose);
+      Future<ToolApprovalResult> request() => service.requestApproval(
+        toolCallId: 'same',
+        toolName: 'ma_phone_control_power_save',
+        conversationId: 'chat',
+        arguments: const {
+          'app_id': 'phone-control',
+          'version': 1,
+          'enabled': true,
+        },
+      );
+      final first = request();
+      final second = request();
+      expect(identical(first, second), false);
+      expect((await first).approved, false);
+      service.approve('same', conversationId: 'chat');
+      expect((await second).approved, true);
+    },
+  );
+
+  test(
+    'mini-app actions require explicit consent for the prepared version',
+    () async {
+      final service = ToolApprovalService();
+      addTearDown(service.dispose);
+      final first = service.requestApproval(
+        toolCallId: 'same',
+        toolName: 'ma_phone_control_power_save',
+        conversationId: 'chat',
+        arguments: const {
+          'app_id': 'phone-control',
+          'version': 1,
+          'enabled': true,
+        },
+      );
+      expect(service.pendingRequests.single.requiresExplicitConsent, true);
+      final second = service.requestApproval(
+        toolCallId: 'same',
+        toolName: 'ma_phone_control_power_save',
+        conversationId: 'chat',
+        arguments: const {
+          'app_id': 'phone-control',
+          'version': 2,
+          'enabled': true,
+        },
+      );
+      expect((await first).approved, false);
+      service.approve('same', conversationId: 'chat');
+      expect((await second).approved, true);
+    },
+  );
+
   for (final toolName in ['browser_use', 'phone_control']) {
     test(
       '$toolName cannot reuse pending consent for different nested arguments',

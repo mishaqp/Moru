@@ -40,6 +40,92 @@ Future<(int, Map<String, dynamic>?)> rpc(
 }
 
 void main() {
+  test('registered mini-app actions retain source schemas in MCP', () async {
+    const actionName = 'ma_phone_control_set_brightness';
+    final schema = <String, dynamic>{
+      'type': 'object',
+      r'$defs': {
+        'level': {'type': 'integer', 'minimum': 10, 'maximum': 100},
+      },
+      'properties': {
+        'percent': {r'$ref': r'#/$defs/level'},
+      },
+      'required': ['percent'],
+      'additionalProperties': false,
+    };
+    final source = <Map<String, dynamic>>[
+      {
+        'type': 'function',
+        'function': {'name': actionName, 'parameters': schema},
+      },
+      definition('ma_foreign_action'),
+      definition('root_shell'),
+    ];
+    final registered = <String>{actionName};
+    final calls = <Map<String, dynamic>>[];
+    final server = await AcpMcpServer.start(
+      miniAppActionNames: () => registered,
+      tools: () =>
+          AcpMcpServer.moruTools(source, miniAppActionNames: registered),
+      callTool: (name, args) async {
+        calls.add(args);
+        return {'content': <Object>[]};
+      },
+    );
+    addTearDown(server.close);
+    final listed =
+        (await rpc(server, {
+              'jsonrpc': '2.0',
+              'id': 1,
+              'method': 'tools/list',
+            })).$2!['result']['tools']
+            as List;
+    expect(listed, hasLength(1));
+    expect(listed.single['inputSchema'], schema);
+    expect(schema['properties']['percent'], {r'$ref': r'#/$defs/level'});
+    final call = {
+      'jsonrpc': '2.0',
+      'id': 2,
+      'method': 'tools/call',
+      'params': {
+        'name': actionName,
+        'arguments': {'percent': 40},
+      },
+    };
+    expect((await rpc(server, call)).$2!['result']['isError'], false);
+    expect(calls, [
+      {'percent': 40},
+    ]);
+    registered.clear();
+    expect((await rpc(server, call)).$2!['error']['code'], -32602);
+    expect(calls, hasLength(1));
+  });
+
+  test('a ma prefix alone cannot expose an external tool', () async {
+    var calls = 0;
+    final server = await AcpMcpServer.start(
+      tools: () => [
+        {
+          'name': 'ma_foreign_action',
+          'inputSchema': {'type': 'object'},
+        },
+      ],
+      callTool: (_, _) async {
+        calls++;
+        return {};
+      },
+    );
+    addTearDown(server.close);
+    final response = await rpc(server, {
+      'jsonrpc': '2.0',
+      'id': 1,
+      'method': 'tools/call',
+      'params': {'name': 'ma_foreign_action', 'arguments': {}},
+    });
+    expect(response.$2!['error']['code'], -32602);
+    expect(calls, 0);
+  });
+
   test('our mcp_client lists only Moru tools and calls the handler', () async {
     final definitions = [
       definition('browser_use'),

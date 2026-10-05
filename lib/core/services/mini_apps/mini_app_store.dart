@@ -8,6 +8,10 @@ import 'package:path/path.dart' as p;
 
 import '../../../utils/app_directories.dart';
 import '../skills/skill_archive.dart' show safeZipEntryName;
+import 'mini_app_manifest.dart';
+
+export 'mini_app_manifest.dart'
+    show MiniAppAction, MiniAppDanger, MiniAppUiEngine;
 
 /// A mini app the agent built and published: a small web app with its own
 /// data, opened inside Moru or from a home screen shortcut.
@@ -19,6 +23,9 @@ class MiniApp {
     required this.directory,
     this.description = '',
     this.entry = 'index.html',
+    this.formatVersion = 1,
+    this.uiEngine = MiniAppUiEngine.web,
+    this.actions = const [],
     this.icon,
     this.dataHelp = '',
     this.network = const [],
@@ -63,6 +70,9 @@ class MiniApp {
 
   /// Entry page, relative to [codeDirectory].
   final String entry;
+  final int formatVersion;
+  final MiniAppUiEngine uiEngine;
+  final List<MiniAppAction> actions;
 
   /// SVG icon relative to [codeDirectory], or null for the letter icon.
   final String? icon;
@@ -75,38 +85,51 @@ class MiniApp {
   /// Opens the app from a chat reply.
   String get link => MiniAppStore.linkFor(id);
 
-  factory MiniApp.fromJson(
-    String directory,
-    Map<String, dynamic> json,
-  ) => MiniApp(
-    id: json['id'] as String,
-    name: json['name'] as String,
-    description: json['description'] as String? ?? '',
-    entry: json['entry'] as String? ?? 'index.html',
-    icon: json['icon'] as String?,
-    dataHelp: json['data'] as String? ?? '',
-    network: [for (final host in json['network'] as List? ?? const []) '$host'],
-    permissions: {
-      for (final name in json['permissions'] as List? ?? const []) '$name',
-    },
-    fullscreen: json['fullscreen'] == true,
-    orientation:
-        MiniAppOrientation.parse(json['orientation']) ?? MiniAppOrientation.any,
-    keepAwake: json['keepAwake'] == true,
-    serverCommand: json['server'] is Map
-        ? (json['server'] as Map)['command'] as String?
-        : null,
-    directory: directory,
-    updatedAt: DateTime.fromMillisecondsSinceEpoch(
-      json['updatedAt'] as int? ?? 0,
-    ),
-  );
+  factory MiniApp.fromJson(String directory, Map<String, dynamic> json) {
+    final manifest = MiniAppManifest.parse(json);
+    return MiniApp(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String? ?? '',
+      entry:
+          manifest.entry ??
+          (manifest.uiEngine == MiniAppUiEngine.native
+              ? 'screen.json'
+              : 'index.html'),
+      formatVersion: manifest.formatVersion,
+      uiEngine: manifest.uiEngine,
+      actions: manifest.actions,
+      icon: json['icon'] as String?,
+      dataHelp: json['data'] as String? ?? '',
+      network: [
+        for (final host in json['network'] as List? ?? const []) '$host',
+      ],
+      permissions: {
+        for (final name in json['permissions'] as List? ?? const []) '$name',
+      },
+      fullscreen: json['fullscreen'] == true,
+      orientation:
+          MiniAppOrientation.parse(json['orientation']) ??
+          MiniAppOrientation.any,
+      keepAwake: json['keepAwake'] == true,
+      serverCommand: json['server'] is Map
+          ? (json['server'] as Map)['command'] as String?
+          : null,
+      directory: directory,
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(
+        json['updatedAt'] as int? ?? 0,
+      ),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,
     if (description.isNotEmpty) 'description': description,
     'entry': entry,
+    if (formatVersion != 1) 'formatVersion': formatVersion,
+    if (formatVersion == 2) 'ui': {'engine': uiEngine.name, 'entry': entry},
+    if (actions.isNotEmpty) 'actions': actions.map((a) => a.toJson()).toList(),
     'icon': ?icon,
     if (dataHelp.isNotEmpty) 'data': dataHelp,
     if (network.isNotEmpty) 'network': network,
@@ -128,7 +151,9 @@ enum MiniAppOrientation {
   /// one of these names.
   static MiniAppOrientation? parse(Object? raw) {
     for (final value in values) {
-      if (value.name == raw) return value;
+      if (value.name == raw) {
+        return value;
+      }
     }
     return null;
   }
@@ -214,6 +239,14 @@ class MiniAppStore extends ChangeNotifier {
   bool _loaded = false;
   Future<void>? _loading;
   final Map<String, Future<void>> _writes = {};
+  final Map<String, int> _generations = {};
+  final Map<String, int> _dataRevisions = {};
+  final Map<String, int> _grantVersions = {};
+  final StreamController<String> _grantChanges = StreamController.broadcast();
+  final StreamController<String> _lifecycleChanges =
+      StreamController.broadcast();
+  final StreamController<({String appId, int revision})> _dataChanges =
+      StreamController.broadcast();
   final StreamController<({String appId, String key})> _changes =
       StreamController.broadcast();
   final List<Future<void> Function(String id)> _deleteHooks = [];
@@ -221,6 +254,21 @@ class MiniAppStore extends ChangeNotifier {
   /// Data written from outside the app itself, e.g. by the chat, so an open
   /// app can redraw.
   Stream<({String appId, String key})> get changes => _changes.stream;
+  Stream<({String appId, int revision})> get dataChanges => _dataChanges.stream;
+  int generationFor(String id) => _generations[id] ?? 0;
+  int dataRevisionFor(String id) => _dataRevisions[id] ?? 0;
+  Stream<String> get grantChanges => _grantChanges.stream;
+  Stream<String> get lifecycleChanges => _lifecycleChanges.stream;
+  void _invalidateApp(String id) {
+    _generations[id] = generationFor(id) + 1;
+    _lifecycleChanges.add(id);
+  }
+
+  int grantVersionFor(String id) => _grantVersions[id] ?? 0;
+  void invalidateGrants(String id) {
+    _grantVersions[id] = grantVersionFor(id) + 1;
+    _grantChanges.add(id);
+  }
 
   /// Runs before an app is deleted, e.g. to cancel its reminders.
   void addDeleteHook(Future<void> Function(String id) hook) =>
@@ -258,7 +306,9 @@ class MiniAppStore extends ChangeNotifier {
           continue;
         }
         final manifest = File(p.join(entry.path, 'manifest.json'));
-        if (!await manifest.exists()) continue;
+        if (!await manifest.exists()) {
+          continue;
+        }
         try {
           apps.add(
             MiniApp.fromJson(
@@ -278,7 +328,9 @@ class MiniAppStore extends ChangeNotifier {
 
   MiniApp? byId(String id) {
     for (final app in _apps) {
-      if (app.id == id) return app;
+      if (app.id == id) {
+        return app;
+      }
     }
     return null;
   }
@@ -287,8 +339,9 @@ class MiniAppStore extends ChangeNotifier {
   /// `moru-app.json`. Returns the app and whether it replaced an older copy.
   /// Stored data survives an update.
   Future<({MiniApp app, bool updated, int files, int bytes})> install(
-    Directory sourceDir,
-  ) async {
+    Directory sourceDir, {
+    bool ifAbsent = false,
+  }) async {
     await load();
     final manifestSource = File(p.join(sourceDir.path, manifestFile));
     if (!await manifestSource.exists()) {
@@ -320,7 +373,13 @@ class MiniAppStore extends ChangeNotifier {
         '"name" must be 1-40 characters.',
       );
     }
-    final entry = _relative(manifest['entry'], fallback: 'index.html')!;
+    final parsed = MiniAppManifest.parse(manifest);
+    final entry = _relative(
+      parsed.entry,
+      fallback: parsed.uiEngine == MiniAppUiEngine.native
+          ? 'screen.json'
+          : 'index.html',
+    )!;
     final network = _hosts(manifest['network']);
     final permissions = _permissions(manifest['permissions']);
     final icon = _relative(manifest['icon'], fallback: null);
@@ -348,6 +407,20 @@ class MiniAppStore extends ChangeNotifier {
     if (!names.contains(entry)) {
       throw MiniAppException('missing_entry', 'Entry file "$entry" not found.');
     }
+    if (parsed.uiEngine == MiniAppUiEngine.native) {
+      final source = files.firstWhere((f) => f.relative == entry);
+      try {
+        MiniAppManifest.validateScreen(
+          jsonDecode(await source.file.readAsString()),
+          parsed.actions,
+        );
+      } on FormatException {
+        throw const MiniAppException(
+          'invalid_screen',
+          'The native screen is not valid JSON.',
+        );
+      }
+    }
     if (icon != null && !names.contains(icon)) {
       throw MiniAppException('missing_icon', 'Icon file "$icon" not found.');
     }
@@ -358,78 +431,98 @@ class MiniAppStore extends ChangeNotifier {
 
     final root = await _root();
     final directory = Directory(p.join(root.path, id));
-    final previous = byId(id);
     // Build the new copy beside the old one so a failure keeps the old app.
-    final staging = Directory(p.join(root.path, '.$id.staging'));
-    if (await staging.exists()) await staging.delete(recursive: true);
-    final code = Directory(p.join(staging.path, 'app'));
-    await code.create(recursive: true);
-    for (final file in files) {
-      final target = File(p.join(code.path, file.relative));
-      await target.parent.create(recursive: true);
-      await file.file.copy(target.path);
-    }
-    await File(p.join(code.path, bridgeFile)).writeAsString(moruBridgeScript);
-    final entryFile = File(p.join(code.path, entry));
-    if (_isHtml(entry)) {
-      await entryFile.writeAsString(
-        withBridgeScript(await entryFile.readAsString(), entry),
+    await root.create(recursive: true);
+    final staging = await root.createTemp('.$id.staging-');
+    try {
+      final code = Directory(p.join(staging.path, 'app'));
+      await code.create(recursive: true);
+      for (final file in files) {
+        final target = File(p.join(code.path, file.relative));
+        await target.parent.create(recursive: true);
+        await file.file.copy(target.path);
+      }
+      await File(p.join(code.path, bridgeFile)).writeAsString(moruBridgeScript);
+      final entryFile = File(p.join(code.path, entry));
+      if (_isHtml(entry)) {
+        await entryFile.writeAsString(
+          withBridgeScript(await entryFile.readAsString(), entry),
+        );
+      }
+
+      final app = MiniApp(
+        id: id,
+        name: name,
+        description: '${manifest['description'] ?? ''}'.trim(),
+        entry: entry,
+        formatVersion: parsed.formatVersion,
+        uiEngine: parsed.uiEngine,
+        actions: parsed.actions,
+        icon: icon,
+        dataHelp: _limited('${manifest['data'] ?? ''}'.trim(), 2000),
+        network: network,
+        permissions: permissions,
+        fullscreen: manifest['fullscreen'] == true,
+        orientation: orientation,
+        keepAwake: manifest['keepAwake'] == true,
+        serverCommand: serverCommand,
+        directory: directory.path,
+        updatedAt: _now(),
       );
+      await File(
+        p.join(staging.path, 'manifest.json'),
+      ).writeAsString(jsonEncode(app.toJson()));
+
+      return await _queued('\u0000install/$id', () async {
+        final previous = byId(id);
+        if (ifAbsent && previous != null) {
+          return (app: previous, updated: false, files: 0, bytes: 0);
+        }
+        _invalidateApp(id);
+        await directory.create(recursive: true);
+        final oldCode = Directory(p.join(directory.path, 'app'));
+        if (previous != null) {
+          await _keepVersion(previous);
+        } else if (await oldCode.exists()) {
+          await oldCode.delete(recursive: true);
+        }
+        await code.rename(oldCode.path);
+        await File(
+          p.join(staging.path, 'manifest.json'),
+        ).rename(p.join(directory.path, 'manifest.json'));
+        if (previous != null) {
+          await clearErrors(id);
+        }
+
+        _apps = _sorted([
+          for (final other in _apps)
+            if (other.id != id) other,
+          app,
+        ]);
+        await _pruneGrants(app, reset: previous == null);
+        notifyListeners();
+        return (
+          app: app,
+          updated: previous != null,
+          files: files.length,
+          bytes: bytes,
+        );
+      });
+    } finally {
+      if (await staging.exists()) {
+        await staging.delete(recursive: true);
+      }
     }
-
-    final app = MiniApp(
-      id: id,
-      name: name,
-      description: '${manifest['description'] ?? ''}'.trim(),
-      entry: entry,
-      icon: icon,
-      dataHelp: _limited('${manifest['data'] ?? ''}'.trim(), 2000),
-      network: network,
-      permissions: permissions,
-      fullscreen: manifest['fullscreen'] == true,
-      orientation: orientation,
-      keepAwake: manifest['keepAwake'] == true,
-      serverCommand: serverCommand,
-      directory: directory.path,
-      updatedAt: _now(),
-    );
-    await File(
-      p.join(staging.path, 'manifest.json'),
-    ).writeAsString(jsonEncode(app.toJson()));
-
-    await directory.create(recursive: true);
-    final oldCode = Directory(p.join(directory.path, 'app'));
-    if (previous != null) {
-      await _keepVersion(previous);
-    } else if (await oldCode.exists()) {
-      await oldCode.delete(recursive: true);
-    }
-    await code.rename(oldCode.path);
-    await File(
-      p.join(staging.path, 'manifest.json'),
-    ).rename(p.join(directory.path, 'manifest.json'));
-    await staging.delete(recursive: true);
-    if (previous != null) await clearErrors(id);
-
-    _apps = _sorted([
-      for (final other in _apps)
-        if (other.id != id) other,
-      app,
-    ]);
-    notifyListeners();
-    return (
-      app: app,
-      updated: previous != null,
-      files: files.length,
-      bytes: bytes,
-    );
   }
 
   /// Removes the app, its files and its data.
   Future<void> delete(String id) async {
     await load();
     final app = byId(id);
-    if (app == null) return;
+    if (app == null) {
+      return;
+    }
+    _invalidateApp(id);
     for (final hook in _deleteHooks) {
       await hook(id);
     }
@@ -439,7 +532,16 @@ class MiniAppStore extends ChangeNotifier {
       await _writes[_mapKey(id, name)]?.catchError((_) {});
     }
     final directory = Directory(app.directory);
-    if (await directory.exists()) await directory.delete(recursive: true);
+    if (await directory.exists()) {
+      await directory.delete(recursive: true);
+    }
+    for (final name in ['grants.json', 'undo.json']) {
+      await _writes[_mapKey(id, 'host/$name')]?.catchError((_) {});
+    }
+    final hostDirectory = Directory(p.join((await _root()).path, '.host', id));
+    if (await hostDirectory.exists()) {
+      await hostDirectory.delete(recursive: true);
+    }
     _apps = [
       for (final other in _apps)
         if (other.id != id) other,
@@ -473,11 +575,15 @@ class MiniAppStore extends ChangeNotifier {
     );
     final code = Directory(app.codeDirectory);
     await for (final entity in code.list(recursive: true)) {
-      if (entity is! File) continue;
+      if (entity is! File) {
+        continue;
+      }
       final relative = p.posix.joinAll(
         p.split(p.relative(entity.path, from: code.path)),
       );
-      if (relative == bridgeFile) continue;
+      if (relative == bridgeFile) {
+        continue;
+      }
       archive.addFile(ArchiveFile.bytes(relative, await entity.readAsBytes()));
     }
     if (withData) {
@@ -519,7 +625,9 @@ class MiniAppStore extends ChangeNotifier {
       var files = 0;
       var bytes = 0;
       for (final entry in archive) {
-        if (!entry.isFile || entry.isSymbolicLink) continue;
+        if (!entry.isFile || entry.isSymbolicLink) {
+          continue;
+        }
         final String? name;
         try {
           name = safeZipEntryName(entry.name);
@@ -529,7 +637,9 @@ class MiniAppStore extends ChangeNotifier {
             'The file has unsafe paths.',
           );
         }
-        if (name == null) continue;
+        if (name == null) {
+          continue;
+        }
         files++;
         bytes += entry.size;
         if (files > maxFiles + 2 || bytes > maxBytes + maxDataBytes) {
@@ -565,7 +675,9 @@ class MiniAppStore extends ChangeNotifier {
       var restored = false;
       if (data != null && data.isNotEmpty) {
         await _update(id, (current) {
-          if (current.isNotEmpty) return;
+          if (current.isNotEmpty) {
+            return;
+          }
           current.addAll(data!);
           restored = true;
         });
@@ -586,7 +698,9 @@ class MiniAppStore extends ChangeNotifier {
 
   Future<Map<String, dynamic>> _readData(MiniApp app) async {
     final file = File(p.join(app.directory, 'data.json'));
-    if (!await file.exists()) return <String, dynamic>{};
+    if (!await file.exists()) {
+      return <String, dynamic>{};
+    }
     return Map<String, dynamic>.from(
       jsonDecode(await file.readAsString()) as Map,
     );
@@ -599,7 +713,145 @@ class MiniAppStore extends ChangeNotifier {
       (await _readData(_require(id))).keys.toList();
 
   /// All stored values of the app.
-  Future<Map<String, dynamic>> storageAll(String id) => _readData(_require(id));
+  Future<Map<String, dynamic>> storageAll(String id) async {
+    await _writes[id];
+    return _readData(_require(id));
+  }
+
+  /// Runtime state writes share the existing storage queue and update every
+  /// viewer. A pending old action may not write into a replaced/deleted app.
+  Future<T> updateState<T>(
+    String id,
+    FutureOr<T> Function(Map<String, dynamic> data) change, {
+    MiniApp? expected,
+    void Function()? check,
+  }) => _queued(id, () async {
+    final app = _require(id);
+    void verify() {
+      if (expected != null && !identical(byId(id), expected)) {
+        throw const MiniAppException(
+          'app_changed',
+          'The mini app changed while the action was pending.',
+        );
+      }
+      check?.call();
+    }
+
+    verify();
+    final data = await _readData(app);
+    verify();
+    final result = await change(data);
+    verify();
+    final encoded = jsonEncode(data);
+    if (utf8.encode(encoded).length > maxDataBytes) {
+      throw const MiniAppException(
+        'storage_full',
+        'App data may not exceed 5 MB.',
+      );
+    }
+    await _writeAtomically(
+      File(p.join(app.directory, 'data.json')),
+      encoded,
+      check: verify,
+    );
+    _dataWritten(id);
+    _changes.add((appId: id, key: '*'));
+    return result;
+  });
+
+  /// Fixed host-only files live outside installed code and storage. Neither
+  /// imports, exports, rollbacks nor moru.storage can address these paths.
+  Future<Map<String, dynamic>> readHostData(String id, String name) async {
+    await load();
+    _require(id);
+    final file = await _hostFile(id, name);
+    await _writes[_mapKey(id, 'host/$name')];
+    if (!await file.exists()) {
+      return {};
+    }
+    try {
+      return Map<String, dynamic>.from(
+        jsonDecode(await file.readAsString()) as Map,
+      );
+    } on FormatException {
+      return {};
+    }
+  }
+
+  Future<T> updateHostData<T>(
+    String id,
+    String name,
+    FutureOr<T> Function(Map<String, dynamic>) change, {
+    MiniApp? expected,
+    int? generation,
+  }) {
+    final app = expected ?? _require(id);
+    final capturedGeneration = generation ?? generationFor(id);
+    void verify() {
+      if (!identical(byId(id), app) ||
+          generationFor(id) != capturedGeneration) {
+        throw const MiniAppException(
+          'app_changed',
+          'The mini app changed while its host data was being written.',
+        );
+      }
+    }
+
+    return _queued(_mapKey(id, 'host/$name'), () async {
+      verify();
+      final file = await _hostFile(id, name);
+      verify();
+      final map = await file.exists()
+          ? Map<String, dynamic>.from(
+              jsonDecode(await file.readAsString()) as Map,
+            )
+          : <String, dynamic>{};
+      verify();
+      final result = await change(map);
+      verify();
+      await file.parent.create(recursive: true);
+      verify();
+      await _writeAtomically(file, jsonEncode(map), check: verify);
+      return result;
+    });
+  }
+
+  Future<File> _hostFile(String id, String name) async {
+    if (!const {'grants.json', 'undo.json'}.contains(name)) {
+      throw const MiniAppException(
+        'invalid_host_file',
+        'Unknown host-owned mini app file.',
+      );
+    }
+    return File(p.join((await _root()).path, '.host', id, name));
+  }
+
+  // Prune at the installation boundary even when no runtime is open. A code
+  // rollback must never revive capabilities removed by an intermediate version.
+  Future<void> _pruneGrants(MiniApp app, {bool reset = false}) async {
+    final generation = generationFor(app.id);
+    final file = await _hostFile(app.id, 'grants.json');
+    if (!await file.exists()) {
+      return;
+    }
+    final declared = {
+      ...app.permissions.where(MiniAppManifest.knownCapabilities.contains),
+      for (final action in app.actions) ...action.permissions,
+    };
+    await updateHostData(
+      app.id,
+      'grants.json',
+      (map) {
+        final granted = map['granted'];
+        map['granted'] = reset || granted is! List
+            ? <String>[]
+            : granted.whereType<String>().where(declared.contains).toList();
+      },
+      expected: app,
+      generation: generation,
+    );
+    invalidateGrants(app.id);
+  }
 
   /// [fromApp] marks the app's own writes; other writes reach [changes].
   Future<void> storageSet(
@@ -607,6 +859,8 @@ class MiniAppStore extends ChangeNotifier {
     String key,
     Object? value, {
     bool fromApp = false,
+    MiniApp? expected,
+    void Function()? check,
   }) async {
     if (key.isEmpty || key.length > maxKeyLength) {
       throw const MiniAppException(
@@ -614,17 +868,33 @@ class MiniAppStore extends ChangeNotifier {
         'Keys must be 1-$maxKeyLength characters.',
       );
     }
-    await _update(id, (data) => data[key] = value);
-    if (!fromApp) _changes.add((appId: id, key: key));
+    await _update(
+      id,
+      (data) => data[key] = value,
+      expected: expected,
+      check: check,
+    );
+    if (!fromApp) {
+      _changes.add((appId: id, key: key));
+    }
   }
 
   Future<void> storageRemove(
     String id,
     String key, {
     bool fromApp = false,
+    MiniApp? expected,
+    void Function()? check,
   }) async {
-    await _update(id, (data) => data.remove(key));
-    if (!fromApp) _changes.add((appId: id, key: key));
+    await _update(
+      id,
+      (data) => data.remove(key),
+      expected: expected,
+      check: check,
+    );
+    if (!fromApp) {
+      _changes.add((appId: id, key: key));
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -667,7 +937,9 @@ class MiniAppStore extends ChangeNotifier {
 
   Future<Map<String, dynamic>> _readMap(String id, String name) async {
     final file = File(p.join(_require(id).directory, name));
-    if (!await file.exists()) return <String, dynamic>{};
+    if (!await file.exists()) {
+      return <String, dynamic>{};
+    }
     return Map<String, dynamic>.from(
       jsonDecode(await file.readAsString()) as Map,
     );
@@ -702,7 +974,9 @@ class MiniAppStore extends ChangeNotifier {
 
   Future<List<MiniAppLogEntry>> _readErrors(MiniApp app) async {
     final file = _errorsFile(app);
-    if (!await file.exists()) return [];
+    if (!await file.exists()) {
+      return [];
+    }
     try {
       return [
         for (final entry in jsonDecode(await file.readAsString()) as List)
@@ -742,7 +1016,9 @@ class MiniAppStore extends ChangeNotifier {
     final app = _require(id);
     return _queued(_journal(id), () async {
       final file = _errorsFile(app);
-      if (await file.exists()) await file.delete();
+      if (await file.exists()) {
+        await file.delete();
+      }
     });
   }
 
@@ -765,7 +1041,9 @@ class MiniAppStore extends ChangeNotifier {
 
   Future<List<MiniApp>> _versions(MiniApp app) async {
     final root = Directory(p.join(app.directory, 'versions'));
-    if (!await root.exists()) return [];
+    if (!await root.exists()) {
+      return [];
+    }
     final found = <MiniApp>[];
     await for (final entry in root.list()) {
       if (entry is! Directory ||
@@ -795,7 +1073,9 @@ class MiniAppStore extends ChangeNotifier {
   /// copies beyond [maxVersions]. The manifest stays until it is replaced.
   Future<void> _keepVersion(MiniApp app) async {
     final target = Directory(p.join(app.directory, 'versions', versionOf(app)));
-    if (await target.exists()) await target.delete(recursive: true);
+    if (await target.exists()) {
+      await target.delete(recursive: true);
+    }
     await target.create(recursive: true);
     final code = Directory(app.codeDirectory);
     if (await code.exists()) {
@@ -822,12 +1102,15 @@ class MiniAppStore extends ChangeNotifier {
         !await Directory(p.join(source.path, 'app')).exists()) {
       throw MiniAppException('not_found', 'No version "$version" of "$id".');
     }
+    _invalidateApp(id);
     // Move it aside first so pruning while keeping the current code cannot
     // delete it.
     final picked = Directory(
       p.join(p.dirname(current.directory), '.$id.rollback'),
     );
-    if (await picked.exists()) await picked.delete(recursive: true);
+    if (await picked.exists()) {
+      await picked.delete(recursive: true);
+    }
     await source.rename(picked.path);
     final manifest = File(p.join(picked.path, 'manifest.json'));
     final restored = MiniApp.fromJson(
@@ -845,6 +1128,7 @@ class MiniAppStore extends ChangeNotifier {
         if (other.id != id) other,
       restored,
     ]);
+    await _pruneGrants(restored);
     notifyListeners();
     return restored;
   }
@@ -860,10 +1144,30 @@ class MiniAppStore extends ChangeNotifier {
   }
 
   /// Writes are queued per app so two quick saves cannot overwrite each other.
-  Future<void> _update(String id, void Function(Map<String, dynamic>) change) {
+  Future<void> _update(
+    String id,
+    void Function(Map<String, dynamic>) change, {
+    MiniApp? expected,
+    void Function()? check,
+  }) {
     final app = _require(id);
+    final generation = generationFor(id);
+    void verify() {
+      if ((expected != null || check != null) &&
+          (!identical(byId(id), expected ?? app) ||
+              generationFor(id) != generation)) {
+        throw const MiniAppException(
+          'app_changed',
+          'The mini app changed while its storage write was pending.',
+        );
+      }
+      check?.call();
+    }
+
     return _queued(id, () async {
+      verify();
       final data = await _readData(app);
+      verify();
       change(data);
       final encoded = jsonEncode(data);
       if (utf8.encode(encoded).length > maxDataBytes) {
@@ -872,7 +1176,12 @@ class MiniAppStore extends ChangeNotifier {
           'App data may not exceed 5 MB.',
         );
       }
-      await _writeAtomically(File(p.join(app.directory, 'data.json')), encoded);
+      await _writeAtomically(
+        File(p.join(app.directory, 'data.json')),
+        encoded,
+        check: verify,
+      );
+      _dataWritten(id);
     });
   }
 
@@ -884,9 +1193,20 @@ class MiniAppStore extends ChangeNotifier {
     return next;
   }
 
-  static Future<void> _writeAtomically(File file, String text) async {
+  void _dataWritten(String id) {
+    final revision = (_dataRevisions[id] ?? 0) + 1;
+    _dataRevisions[id] = revision;
+    _dataChanges.add((appId: id, revision: revision));
+  }
+
+  static Future<void> _writeAtomically(
+    File file,
+    String text, {
+    void Function()? check,
+  }) async {
     final temp = File('${file.path}.tmp');
     await temp.writeAsString(text, flush: true);
+    check?.call();
     await temp.rename(file.path);
   }
 
@@ -902,13 +1222,18 @@ class MiniAppStore extends ChangeNotifier {
       apps..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
   static const int maxHosts = 20;
-  static const Set<String> knownPermissions = {'calendar'};
+  static Set<String> get knownPermissions => {
+    'calendar',
+    ...MiniAppManifest.knownCapabilities,
+  };
   static final RegExp _hostPattern = RegExp(
     r'^(\*\.)?([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$',
   );
 
   static List<String> _hosts(Object? raw) {
-    if (raw == null) return const [];
+    if (raw == null) {
+      return const [];
+    }
     if (raw is! List || raw.length > maxHosts) {
       throw const MiniAppException(
         'invalid_network',
@@ -933,7 +1258,9 @@ class MiniAppStore extends ChangeNotifier {
   static const int maxServerCommandLength = 500;
 
   static String? _serverCommand(Object? raw) {
-    if (raw == null) return null;
+    if (raw == null) {
+      return null;
+    }
     final command = raw is Map ? raw['command'] : null;
     if (command is! String ||
         command.trim().isEmpty ||
@@ -949,7 +1276,9 @@ class MiniAppStore extends ChangeNotifier {
   }
 
   static Set<String> _permissions(Object? raw) {
-    if (raw == null) return const {};
+    if (raw == null) {
+      return const {};
+    }
     final names = raw is List ? raw.map((e) => '$e'.trim()).toSet() : null;
     if (names == null || !names.every(knownPermissions.contains)) {
       throw MiniAppException(
@@ -979,7 +1308,9 @@ class MiniAppStore extends ChangeNotifier {
   /// A safe relative path from the manifest, or [fallback] when absent.
   static String? _relative(Object? raw, {required String? fallback}) {
     final value = raw == null ? '' : '$raw'.trim();
-    if (value.isEmpty) return fallback;
+    if (value.isEmpty) {
+      return fallback;
+    }
     final normalized = p.posix.normalize(value.replaceAll(r'\', '/'));
     if (p.posix.isAbsolute(normalized) ||
         normalized == '..' ||
@@ -997,16 +1328,24 @@ class MiniAppStore extends ChangeNotifier {
     Future<void> walk(Directory dir) async {
       await for (final entry in dir.list(followLinks: false)) {
         final name = p.basename(entry.path);
-        if (name.startsWith('.')) continue;
-        if (entry is Directory) {
-          if (!skippedDirectories.contains(name)) await walk(entry);
+        if (name.startsWith('.')) {
           continue;
         }
-        if (entry is! File) continue;
+        if (entry is Directory) {
+          if (!skippedDirectories.contains(name)) {
+            await walk(entry);
+          }
+          continue;
+        }
+        if (entry is! File) {
+          continue;
+        }
         final relative = p.posix.joinAll(
           p.split(p.relative(entry.path, from: sourceDir.path)),
         );
-        if (relative == manifestFile || relative == bridgeFile) continue;
+        if (relative == manifestFile || relative == bridgeFile) {
+          continue;
+        }
         final size = await entry.length();
         bytes += size;
         files.add((file: entry, relative: relative, size: size));
@@ -1033,7 +1372,9 @@ class MiniAppStore extends ChangeNotifier {
   /// page already includes it.
   @visibleForTesting
   static String withBridgeScript(String html, String entry) {
-    if (html.contains(bridgeFile)) return html;
+    if (html.contains(bridgeFile)) {
+      return html;
+    }
     final depth = p.posix.split(entry).length - 1;
     final src = '${'../' * depth}$bridgeFile';
     final tag = '<script src="$src"></script>';
@@ -1089,7 +1430,58 @@ class MiniAppStore extends ChangeNotifier {
   window.__moruChanged = function (key) {
     window.dispatchEvent(new CustomEvent('moru:storage', { detail: { key: key } }));
   };
+  window.__moruStateChanged = function (state) {
+    window.dispatchEvent(new CustomEvent('moru:state', { detail: state }));
+  };
+  function subscribeState(listener, select) {
+    if (typeof listener !== 'function') throw new TypeError('listener must be a function');
+    var active = true;
+    function changed(e) { if (active) listener(select(e.detail)); }
+    window.addEventListener('moru:state', changed);
+    call('state.get').then(function (state) { if (active) listener(select(state)); });
+    return function () { active = false; window.removeEventListener('moru:state', changed); };
+  }
+  function device(handler, args) {
+    return call('device.invoke', { handler: handler, arguments: args || {} });
+  }
   window.moru = {
+    actions: {
+      invoke: function (name, args) { return call('actions.invoke', { name: name, arguments: args || {} }); }
+    },
+    state: {
+      get: function () { return call('state.get'); },
+      subscribe: function (listener) { return subscribeState(listener, function (state) { return state; }); }
+    },
+    device: {
+      snapshot: function () { return call('device.snapshot').then(function (state) { return state.device || state; }); },
+      subscribe: function (listener) { return subscribeState(listener, function (state) { return state.device || state; }); },
+      battery: { get: function () { return device('device.battery.get'); } },
+      screen: {
+        get: function () { return device('device.screen.get'); },
+        brightness: { set: function (args) { return device('device.screen.brightness.set', args); } },
+        timeout: { set: function (args) { return device('device.screen.timeout.set', args); } }
+      },
+      audio: {
+        get: function () { return device('device.audio.get'); },
+        volume: { set: function (args) { return device('device.audio.volume.set', args); } },
+        dnd: { set: function (args) { return device('device.audio.dnd.set', args); } }
+      },
+      connectivity: { get: function () { return device('device.connectivity.get'); } },
+      flashlight: {
+        get: function () { return device('device.flashlight.get'); },
+        set: function (args) { return device('device.flashlight.set', args); }
+      },
+      system: { get: function () { return device('device.system.get'); } },
+      settings: { open: function (args) { return device('device.settings.open', args); } },
+      root: {
+        powerSave: { set: function (args) { return device('device.root.power_save.set', args); } },
+        wifi: { set: function (args) { return device('device.root.wifi.set', args); } },
+        bluetooth: { set: function (args) { return device('device.root.bluetooth.set', args); } },
+        data: { set: function (args) { return device('device.root.data.set', args); } },
+        airplane: { set: function (args) { return device('device.root.airplane.set', args); } },
+        stopApp: function (args) { return device('device.root.stop_app', args); }
+      }
+    },
     storage: {
       get: function (key) { return call('storage.get', { key: key }); },
       set: function (key, value) { return call('storage.set', { key: key, value: value }); },

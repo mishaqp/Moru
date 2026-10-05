@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'mini_app_fetch.dart';
 import 'mini_app_jobs.dart';
 import 'mini_app_reminders.dart';
+import 'mini_app_runtime.dart';
 import 'mini_app_store.dart';
 
 /// What a mini app may ask of Moru beyond its own storage.
@@ -20,6 +22,8 @@ class MiniAppHost {
     this.background = false,
     this.server,
     this.serverUrl,
+    this.runtime,
+    this.invocation,
   });
 
   /// Asks the default model; returns its text.
@@ -58,6 +62,11 @@ class MiniAppHost {
   /// `moru.server.url`: the address of a path on the app's own server, for
   /// the page to reach it directly.
   final Future<String> Function(String path)? serverUrl;
+
+  /// Only trusted hosts attach this context. The legacy file JavaScript
+  /// channel cannot establish a calling origin and leaves it absent.
+  final MiniAppRuntime? runtime;
+  final MiniAppInvocation? invocation;
 }
 
 /// Answers `window.moru` calls from one mini app page. Each message is
@@ -69,18 +78,40 @@ class MiniAppBridge {
     required this.appId,
     this.host = const MiniAppHost(),
     this.onProblem,
-  });
+    this.onJobDone,
+  }) : _boundApp = store.byId(appId),
+       _generation = store.generationFor(appId) {
+    unawaited(
+      host.invocation?.cancelled?.then((_) {
+        _sourceCancelled = true;
+      }),
+    );
+  }
 
   static const int maxPromptChars = 32000;
 
   final MiniAppStore store;
   final String appId;
   final MiniAppHost host;
+  final MiniApp? _boundApp;
+  final int _generation;
+  bool _disposed = false;
+  bool _sourceCancelled = false;
+  final Completer<void> _lifetime = Completer<void>();
+  late final Future<void> _cancelled = host.invocation?.cancelled == null
+      ? _lifetime.future
+      : Future.any<void>([_lifetime.future, host.invocation!.cancelled!]);
+
+  void dispose() {
+    _disposed = true;
+    if (!_lifetime.isCompleted) _lifetime.complete();
+  }
 
   /// Called with each problem noted in [pageErrors] (its kind: `error`,
   /// `promise`, `resource`) or [failedCalls] (kind `call`), e.g. to keep it
   /// in the app's error journal.
   final void Function(String kind, String problem)? onProblem;
+  final void Function(String? error)? onJobDone;
 
   static const int maxProblems = 50;
 
@@ -126,6 +157,11 @@ class MiniAppBridge {
         _note(pageErrors, kind, '$kind: ${args['message']}');
         return null;
       }
+      if (method == '__jobDone' && onJobDone != null) {
+        final error = args['error'];
+        onJobDone!(error == null ? null : '$error');
+        return null;
+      }
       final value = await _dispatch(method, args);
       return _reply(id, true, value);
     } on MiniAppException catch (e) {
@@ -149,6 +185,90 @@ class MiniAppBridge {
   static String changedScript(String key) =>
       'window.__moruChanged && window.__moruChanged(${jsonEncode(key)});';
 
+  static String stateChangedScript(Map<String, dynamic> state) =>
+      'window.__moruStateChanged && window.__moruStateChanged(${jsonEncode(state)});';
+
+  static Map<String, dynamic> _denied(String message) => {
+    'status': 'denied',
+    'message': message,
+  };
+
+  bool get _hasLiveContext =>
+      !_disposed &&
+      !_sourceCancelled &&
+      _boundApp != null &&
+      _boundApp.formatVersion >= 2 &&
+      identical(store.byId(appId), _boundApp) &&
+      store.generationFor(appId) == _generation &&
+      host.runtime != null &&
+      host.invocation != null &&
+      host.invocation!.source != MiniAppInvocationSource.wifi &&
+      (host.invocation!.isAllowed?.call() ?? true);
+
+  void _assertStorageWriteAllowed() {
+    final current = store.byId(appId);
+    final restricted =
+        (_boundApp?.formatVersion ?? 1) >= 2 ||
+        (current?.formatVersion ?? 1) >= 2;
+    final source = host.invocation?.source;
+    if (restricted &&
+        (host.background ||
+            source == MiniAppInvocationSource.wifi ||
+            source == MiniAppInvocationSource.background)) {
+      throw const MiniAppException(
+        'read_only_source',
+        'Version 2 app data is read-only over Wi-Fi and in background jobs.',
+      );
+    }
+    if (_disposed ||
+        _sourceCancelled ||
+        _boundApp == null ||
+        !identical(current, _boundApp) ||
+        store.generationFor(appId) != _generation ||
+        !(host.invocation?.isAllowed?.call() ?? true) ||
+        restricted && !_hasLiveContext) {
+      throw const MiniAppException(
+        'app_context_unavailable',
+        'The app context was closed or changed before its data write completed.',
+      );
+    }
+  }
+
+  MiniAppInvocation _invocation() {
+    final invocation = host.invocation!;
+    return MiniAppInvocation(
+      source: invocation.source,
+      isAllowed: () => _hasLiveContext,
+      fullTrust: invocation.fullTrust,
+      approve: invocation.approve,
+      // JavaScript can run from storage events, timers or another page
+      // callback. Its foreground source cannot attest a user gesture.
+      forceConfirmation:
+          invocation.forceConfirmation ||
+          invocation.source == MiniAppInvocationSource.button,
+      cancelled: _cancelled,
+    );
+  }
+
+  Future<Map<String, dynamic>> _runtimeState() async {
+    if (!_hasLiveContext) return _denied('The app context is unavailable.');
+    final state = await host.runtime!.state(appId, invocation: _invocation());
+    return _hasLiveContext ? state : _denied('The app was closed or changed.');
+  }
+
+  Future<Map<String, dynamic>> _runtimeAction(
+    String name,
+    Map<String, dynamic> arguments,
+  ) async {
+    if (!_hasLiveContext) return _denied('The app context is unavailable.');
+    return host.runtime!.execute(
+      appId,
+      name,
+      arguments,
+      invocation: _invocation(),
+    );
+  }
+
   Future<Object?> _dispatch(String method, Map<String, dynamic> args) async {
     String text(String name, {int max = 1000, bool required = true}) {
       final value = args[name];
@@ -169,13 +289,74 @@ class MiniAppBridge {
     }
 
     switch (method) {
+      case 'state.get':
+      case 'device.snapshot':
+        return _runtimeState();
+      case 'actions.invoke':
+        if (!_hasLiveContext) return _denied('The app context is unavailable.');
+        final arguments = args['arguments'];
+        if (arguments != null && arguments is! Map) {
+          throw const MiniAppException(
+            'invalid_argument',
+            'arguments must be an object.',
+          );
+        }
+        return _runtimeAction(
+          text('name', max: 120),
+          arguments == null
+              ? const {}
+              : Map<String, dynamic>.from(arguments as Map),
+        );
+      case 'device.invoke':
+        if (!_hasLiveContext) return _denied('The app context is unavailable.');
+        final handler = text('handler', max: 120);
+        final actions = _boundApp!.actions
+            .where(
+              (action) =>
+                  action.executor['kind'] == 'native' &&
+                  action.executor['handler'] == handler,
+            )
+            .toList();
+        if (actions.length != 1) {
+          return _denied(
+            'Use a declared app action for this device operation.',
+          );
+        }
+        final arguments = args['arguments'];
+        if (arguments != null && arguments is! Map) {
+          throw const MiniAppException(
+            'invalid_argument',
+            'arguments must be an object.',
+          );
+        }
+        return _runtimeAction(
+          actions.single.name,
+          arguments == null
+              ? const {}
+              : Map<String, dynamic>.from(arguments as Map),
+        );
       case 'storage.get':
         return store.storageGet(appId, key());
       case 'storage.set':
-        await store.storageSet(appId, key(), args['value'], fromApp: true);
+        _assertStorageWriteAllowed();
+        await store.storageSet(
+          appId,
+          key(),
+          args['value'],
+          fromApp: true,
+          expected: _boundApp,
+          check: _assertStorageWriteAllowed,
+        );
         return null;
       case 'storage.remove':
-        await store.storageRemove(appId, key(), fromApp: true);
+        _assertStorageWriteAllowed();
+        await store.storageRemove(
+          appId,
+          key(),
+          fromApp: true,
+          expected: _boundApp,
+          check: _assertStorageWriteAllowed,
+        );
         return null;
       case 'storage.keys':
         return store.storageKeys(appId);
