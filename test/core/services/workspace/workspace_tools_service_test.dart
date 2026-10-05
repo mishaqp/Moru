@@ -470,6 +470,105 @@ void main() {
   );
 
   group('publish_mini_app', () {
+    test(
+      'spec needs no path or app data and supplies publishable built-in files',
+      () async {
+        var loads = 0;
+        final store = MiniAppStore(
+          root: () async {
+            loads++;
+            throw const MiniAppException(
+              'unexpected_io',
+              'No app data access for spec.',
+            );
+          },
+        );
+        final tools = WorkspaceToolsService(
+          registry: registry,
+          miniApps: store,
+        );
+        final result = jsonOf(
+          await tools.handle(ctx(), WorkspaceToolsService.miniAppTool, {
+            'action': 'spec',
+          }, toolCallId: 'panel-spec'),
+        );
+        expect(result['ok'], true);
+        expect(loads, 0);
+        final spec = result['specification'] as Map;
+        final examples = spec['examples'] as Map;
+        final installed = MiniAppStore(
+          root: () async => Directory(p.join(tmp.path, 'from-spec')),
+        );
+        final publisher = WorkspaceToolsService(
+          registry: registry,
+          miniApps: installed,
+        );
+        expect(examples.keys, containsAll(['focus', 'phone-control']));
+        for (final example in examples.entries) {
+          final files = example.value as Map;
+          final source = Directory(
+            p.join(workspaceDir.path, 'spec-${example.key}'),
+          )..createSync();
+          for (final entry in files.entries) {
+            File(
+              p.join(source.path, entry.key as String),
+            ).writeAsStringSync(jsonEncode(entry.value));
+          }
+          final published = jsonOf(
+            await publisher.handle(
+              ctx(),
+              WorkspaceToolsService.miniAppTool,
+              {'path': source.path},
+              toolCallId: 'publish-spec-${example.key}',
+            ),
+          );
+          expect(published['ok'], true, reason: jsonEncode(published));
+          expect(
+            installed.byId(example.key as String)?.uiEngine.name,
+            'native',
+          );
+        }
+      },
+    );
+
+    test(
+      'invalid native screen JSON points to the file and repair format',
+      () async {
+        final source = Directory(p.join(workspaceDir.path, 'bad-screen'))
+          ..createSync();
+        File(p.join(source.path, 'moru-app.json')).writeAsStringSync(
+          jsonEncode({
+            'id': 'bad-screen',
+            'name': 'Bad screen',
+            'formatVersion': 2,
+            'ui': {'engine': 'native', 'entry': 'screen.json'},
+          }),
+        );
+        File(
+          p.join(source.path, 'screen.json'),
+        ).writeAsStringSync('{"version":1,"components":[');
+        final tools = WorkspaceToolsService(
+          registry: registry,
+          miniApps: MiniAppStore(
+            root: () async => Directory(p.join(tmp.path, 'bad-installed')),
+          ),
+        );
+        final result = jsonOf(
+          await tools.handle(
+            ctx(),
+            WorkspaceToolsService.miniAppTool,
+            {'path': source.path},
+            toolCallId: 'invalid-screen-json',
+          ),
+        );
+        expect(result['error'], 'invalid_screen');
+        expect(result['message'], contains('screen.json'));
+        expect(result['message'], contains('offset'));
+        expect(result['message'], contains('"components":[]'));
+        expect(result['instruction'], contains('"action":"spec"'));
+      },
+    );
+
     for (final args in <Map<String, dynamic>>[
       {},
       {'path': null},

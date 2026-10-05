@@ -35,6 +35,7 @@ import '../../shared/widgets/option_sheet.dart';
 import '../../shared/widgets/snackbar.dart';
 import 'mini_app_job_runner.dart';
 import 'pages/native_mini_app_page.dart';
+import 'focus_mini_app.dart';
 import 'phone_control_mini_app.dart';
 import 'pages/mini_app_page.dart';
 
@@ -52,8 +53,11 @@ class MiniAppLauncher {
   static MiniAppRuntime get runtime =>
       _runtime ??= MiniAppRuntime(store: MiniAppStore.instance);
 
-  static Future<void> ensureExample({MiniAppStore? store}) =>
-      PhoneControlMiniApp.ensureInstalled(store ?? MiniAppStore.instance);
+  static Future<void> ensureExample({MiniAppStore? store}) async {
+    final target = store ?? MiniAppStore.instance;
+    await PhoneControlMiniApp.ensureInstalled(target);
+    await FocusMiniApp.ensureInstalled(target);
+  }
 
   /// Shortcut taps while Moru is already running.
   static Stream<String> get launches => _launches.stream;

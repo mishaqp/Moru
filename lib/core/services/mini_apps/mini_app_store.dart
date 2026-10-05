@@ -414,10 +414,11 @@ class MiniAppStore extends ChangeNotifier {
           jsonDecode(await source.file.readAsString()),
           parsed.actions,
         );
-      } on FormatException {
-        throw const MiniAppException(
+      } on FormatException catch (e) {
+        throw MiniAppException(
           'invalid_screen',
-          'The native screen is not valid JSON.',
+          '$entry at offset ${e.offset ?? 0}: ${e.message}. '
+              'Use a JSON object such as {"version":1,"components":[]}.',
         );
       }
     }

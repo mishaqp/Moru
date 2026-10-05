@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
 import '../../../features/home/services/tool_approval_service.dart';
+import '../../../features/mini_apps/mini_app_specification.dart';
 import '../../../utils/app_directories.dart';
 import '../../../utils/mcp_structured_image.dart';
 import '../api/tool_call_cancellation.dart';
@@ -464,13 +465,18 @@ class WorkspaceToolsService {
       _fn(
         miniAppTool,
         [
+          'Before authoring a native panel, call this tool with {"action":"spec"} '
+              '(no path required), or mini_apps {"action":"spec"}. The returned specification '
+              'contains every manifest/executor/expression/component/binding/capability and '
+              'complete publishable Focus JSON files. Publish with {"path":"folder"} '
+              'or {"action":"publish","path":"folder"}.',
           'Publish a native panel or web app from the workspace as a Moru mini app:',
           'the user opens it inside Moru and can pin it to the home screen.',
           'For a lightweight native panel use formatVersion:2 and '
               '"ui":{"engine":"native","entry":"screen.json"}. No HTML, '
               'server, shell or background process is needed. screen.json is '
               '{"version":1,"components":[...]}; fixed types are card (children), '
-              'text, value, button, switch, slider, list and indicator. Display '
+              'text, value, button, switch, slider, list, indicator, timer and progress. Display '
               'text may be a string or a locale map (en/ru/zh/zh_Hans/zh_Hant). '
               'Bind values with "bind":"device.battery.levelPercent" or "data.count"; '
               'buttons/controls use "action":"set_brightness","args": '
@@ -591,6 +597,12 @@ class WorkspaceToolsService {
           'false or the check was skipped, ask the user to open the app instead.',
         ],
         {
+          'action': {
+            'type': 'string',
+            'enum': ['publish', 'spec'],
+            'description':
+                'publish (default): install path. spec: complete native panel authoring contract; no path needed.',
+          },
           'path': {
             'type': 'string',
             'description':
@@ -598,7 +610,7 @@ class WorkspaceToolsService {
                 '(${vocab.join(', ')}).',
           },
         },
-        ['path'],
+        [],
       ),
     ];
   }
@@ -1732,6 +1744,23 @@ class WorkspaceToolsService {
     Map<String, dynamic> args,
   ) async {
     const tool = miniAppTool;
+    final action = args['action'] ?? 'publish';
+    if (action == 'spec') {
+      return ClientToolResult(
+        jsonEncode({
+          'ok': true,
+          'specification': MiniAppSpecification.document,
+        }),
+        metadata: WorkspaceToolMetadata(tool: tool, status: 'ok').toJson(),
+      );
+    }
+    if (action != 'publish') {
+      return _errorResult(
+        tool: tool,
+        error: 'invalid_arguments',
+        message: 'action must be publish or spec; omit action to publish.',
+      );
+    }
     final path = args['path'];
     if (path is! String || path.trim().isEmpty) {
       return _errorResult(
@@ -1775,7 +1804,13 @@ class WorkspaceToolsService {
         metadata: meta.toJson(),
       );
     } on MiniAppException catch (e) {
-      return _errorResult(tool: tool, error: e.code, message: e.message);
+      return _errorResult(
+        tool: tool,
+        error: e.code,
+        message: e.message,
+        instruction:
+            'For the accepted format and complete examples, call publish_mini_app {"action":"spec"} or mini_apps {"action":"spec"}.',
+      );
     } on PathResolutionException catch (e) {
       return _errorResult(tool: tool, error: 'path_error', message: e.message);
     }

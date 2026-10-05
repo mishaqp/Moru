@@ -1,14 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:Kelivo/core/services/mini_apps/mini_app_device.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_manifest.dart';
+import 'package:Kelivo/core/services/mini_apps/mini_app_expressions.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_permissions.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
 import 'package:Kelivo/features/mini_apps/phone_control_mini_app.dart';
+import 'package:Kelivo/l10n/app_localizations.dart';
 
 void main() {
   late Directory temp;
@@ -111,6 +114,85 @@ void main() {
     expect(await store.storageGet('phone-control', 'custom'), 42);
     expect(await store.versions('phone-control'), isEmpty);
   });
+
+  test(
+    'phone modes use default-stop sequences and timestamped state without changing public controls',
+    () {
+      final source = PhoneControlMiniApp.manifest(
+        lookupAppLocalizations(const Locale('en')),
+      );
+      final actions = source['actions'] as List;
+      expect(
+        actions.singleWhere(
+          (action) => action['name'] == 'record_mode',
+        )['executor']['expressions'],
+        isTrue,
+      );
+      expect(
+        actions.singleWhere(
+          (action) => action['name'] == 'clear_mode',
+        )['executor']['expressions'],
+        isNull,
+      );
+      for (final name in ['night', 'road', 'work']) {
+        final action = actions.singleWhere((action) => action['name'] == name);
+        expect(action['executor'], {
+          'kind': 'sequence',
+          'steps': [
+            {'action': '${name}_preset', 'arguments': <String, dynamic>{}},
+            {
+              'action': 'record_mode',
+              'arguments': {'mode': name},
+            },
+          ],
+        });
+      }
+      expect(
+        actions.singleWhere(
+          (action) => action['name'] == 'restore',
+        )['executor'],
+        {
+          'kind': 'sequence',
+          'steps': [
+            {'action': 'restore_settings', 'arguments': <String, dynamic>{}},
+            {'action': 'clear_mode', 'arguments': <String, dynamic>{}},
+          ],
+        },
+      );
+      final patch = Map<String, dynamic>.from(
+        actions.singleWhere(
+          (action) => action['name'] == 'record_mode',
+        )['executor']['patch'],
+      );
+      final now = DateTime(2026, 10, 5, 9);
+      expect(
+        MiniAppExpressions.evaluatePatch(
+          patch,
+          data: {},
+          arguments: {'mode': 'night'},
+          now: now,
+        ),
+        {'selectedMode': 'night', 'appliedAt': now.millisecondsSinceEpoch},
+      );
+      final screen = PhoneControlMiniApp.screen();
+      final rows = [
+        for (final card in screen['components'] as List) ...?card['children'],
+      ];
+      expect(
+        rows.where(
+          (row) =>
+              row['bind'] == 'data.appliedAt' && row['format'] == 'datetime',
+        ),
+        hasLength(1),
+      );
+      expect(
+        rows.where(
+          (row) => ['night', 'road', 'work', 'restore'].contains(row['action']),
+        ),
+        hasLength(4),
+      );
+    },
+  );
 
   test('concurrent initializers create one copy', () async {
     await Future.wait([

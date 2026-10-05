@@ -13610,4 +13610,71 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get phonePanelSelectedAppSettings =>
       'Открыть настройки выбранного приложения';
+
+  @override
+  String get focusPanelTitle => 'Фокус';
+
+  @override
+  String get focusPanelDescription =>
+      'Сессии фокусировки с таймером, настройками телефона и восстановлением.';
+
+  @override
+  String get focusPanelSession => 'Сессия';
+
+  @override
+  String get focusPanelRemaining => 'Осталось времени';
+
+  @override
+  String get focusPanelProgress => 'Прогресс сессии';
+
+  @override
+  String get focusPanelStart15 => 'Начать на 15 минут';
+
+  @override
+  String get focusPanelStart25 => 'Начать на 25 минут';
+
+  @override
+  String get focusPanelStart50 => 'Начать на 50 минут';
+
+  @override
+  String get focusPanelStop => 'Остановить и восстановить';
+
+  @override
+  String get focusPanelRunning => 'Сессия идёт';
+
+  @override
+  String get focusPanelToday => 'Записанные сессии';
+
+  @override
+  String get focusPanelSessionsToday => 'Сессий за указанную дату';
+
+  @override
+  String get focusPanelDay => 'Дата счётчика';
+
+  @override
+  String get focusPanelStartedAt => 'Начало последней сессии';
+
+  @override
+  String get focusPanelSettings => 'Настройки фокусировки';
+
+  @override
+  String get focusPanelSettingsHint =>
+      'При запуске запрашивается режим «Не беспокоить», устанавливается ручная яркость около 30% и отключается звук медиа. Сначала выдайте нужные разрешения. Если настройка недоступна, панель сообщит о частичном изменении.';
+
+  @override
+  String get focusPanelManualStopHint =>
+      'Время продолжает идти при закрытой панели. Когда таймер дойдёт до нуля, нажмите «Остановить и восстановить». Настройки не восстанавливаются автоматически. Каждая запущенная сессия учитывается при её остановке.';
+
+  @override
+  String get focusPanelRecordStart => 'Записать начало сессии фокусировки';
+
+  @override
+  String get focusPanelRecordStop =>
+      'Записать остановленную сессию фокусировки';
+
+  @override
+  String get phonePanelSelectedMode => 'Последний применённый режим';
+
+  @override
+  String get phonePanelAppliedAt => 'Время применения';
 }

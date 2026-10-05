@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
+import 'package:Kelivo/core/services/mini_apps/mini_app_manifest.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -76,6 +77,286 @@ void main() {
     );
     return (await store.install(src)).app;
   }
+
+  test(
+    'state expression opt in is a source boolean with an exact validation path',
+    () {
+      for (final invalid in [1, 'true', null]) {
+        final raw = action();
+        raw['executor'] = {
+          'kind': 'state',
+          'expressions': invalid,
+          'patch': {'count': 1},
+        };
+        expect(
+          () => MiniAppManifest.parse({
+            'formatVersion': 2,
+            'actions': [raw],
+          }),
+          throwsA(
+            isA<MiniAppException>().having(
+              (e) => e.message,
+              'path',
+              contains('manifest.actions[0].executor.expressions'),
+            ),
+          ),
+        );
+      }
+      final raw = action();
+      raw['executor'] = {
+        'kind': 'state',
+        'expressions': true,
+        'patch': {
+          'count': {r'$inc': 1},
+        },
+      };
+      final app = MiniAppManifest.parse({
+        'formatVersion': 2,
+        'actions': [raw],
+      });
+      expect(app.actions.single.toJson(), raw);
+    },
+  );
+
+  test(
+    'common manifest diagnostics include the exact source field and accepted example',
+    () {
+      final cases = <(Map<String, dynamic>, String)>[
+        ({'formatVersion': 'two'}, 'manifest.formatVersion'),
+        ({'formatVersion': 2, 'ui': 'native'}, 'manifest.ui'),
+        (
+          {
+            'formatVersion': 2,
+            'ui': {'engine': 'other'},
+          },
+          'manifest.ui.engine',
+        ),
+        (
+          {
+            'formatVersion': 2,
+            'actions': [action(), action()],
+          },
+          'manifest.actions[1].name',
+        ),
+      ];
+      for (final (manifest, path) in cases) {
+        expect(
+          () => MiniAppManifest.parse(manifest),
+          throwsA(
+            isA<MiniAppException>()
+                .having((e) => e.message, 'path', contains(path))
+                .having((e) => e.message, 'example', contains('Example:')),
+          ),
+        );
+      }
+    },
+  );
+
+  test(
+    'sequence references forward declared actions and preserves its transitive source policy',
+    () async {
+      final sequence = {
+        ...action(name: 'start'),
+        'permissions': ['device.screen.write'],
+        'executor': {
+          'kind': 'sequence',
+          'steps': [
+            {
+              'action': 'bright',
+              'arguments': {'value': 77},
+              'onFailure': 'continue',
+            },
+            {
+              'action': 'save',
+              'arguments': {
+                'value': {r'$arg': 'value'},
+              },
+            },
+          ],
+        },
+      };
+      final app = await install({
+        'formatVersion': 2,
+        'actions': [
+          sequence,
+          {
+            ...action(name: 'bright'),
+            'permissions': ['device.screen.write'],
+            'executor': {
+              'kind': 'native',
+              'handler': 'device.screen.brightness.set',
+            },
+          },
+          action(),
+        ],
+      });
+      expect(app.actions.first.toJson(), sequence);
+    },
+  );
+
+  test(
+    'sequence errors name the exact step and reject cycles or weakened policy',
+    () async {
+      Map<String, dynamic> sequence(String name, String target) => {
+        ...action(name: name),
+        'executor': {
+          'kind': 'sequence',
+          'steps': [
+            {
+              'action': target,
+              'arguments': {'value': 2},
+            },
+          ],
+        },
+      };
+      for (final actions in [
+        [sequence('start', 'missing'), action()],
+        [sequence('start', 'other'), sequence('other', 'start')],
+        [
+          sequence('start', 'bright'),
+          {
+            ...action(name: 'bright'),
+            'permissions': ['device.screen.write'],
+            'executor': {
+              'kind': 'native',
+              'handler': 'device.screen.brightness.set',
+            },
+          },
+        ],
+        [
+          {
+            ...sequence('start', 'save'),
+            'executor': {
+              'kind': 'sequence',
+              'steps': [
+                {
+                  'action': 'save',
+                  'arguments': {'value': 2},
+                  'onFailure': 'ignore',
+                },
+              ],
+            },
+          },
+          action(),
+        ],
+      ]) {
+        await expectLater(
+          install({'formatVersion': 2, 'actions': actions}),
+          throwsA(
+            isA<MiniAppException>()
+                .having(
+                  (e) => e.message,
+                  'path',
+                  contains('manifest.actions[0].executor'),
+                )
+                .having((e) => e.message, 'example', contains('Example:')),
+          ),
+        );
+      }
+    },
+  );
+
+  test(
+    'sequence depth and expanded invocations are bounded before installation',
+    () async {
+      Map<String, dynamic> chain(int index, int repetitions) => {
+        ...action(name: 'chain$index'),
+        'executor': {
+          'kind': 'sequence',
+          'steps': [
+            for (var i = 0; i < repetitions; i++)
+              {
+                'action': index == 8 ? 'save' : 'chain${index + 1}',
+                'arguments': {'value': 2},
+              },
+          ],
+        },
+      };
+      await expectLater(
+        install({
+          'formatVersion': 2,
+          'actions': [for (var i = 0; i <= 8; i++) chain(i, 1), action()],
+        }),
+        throwsA(isA<MiniAppException>()),
+      );
+      final leaf = action(name: 'chain5');
+      await expectLater(
+        install({
+          'formatVersion': 2,
+          'actions': [for (var i = 0; i < 5; i++) chain(i, 2), leaf],
+        }),
+        throwsA(isA<MiniAppException>()),
+      );
+    },
+  );
+
+  test(
+    'native Focus timer progress and timestamp formats are accepted',
+    () async {
+      final app = await install(
+        {
+          'formatVersion': 2,
+          'ui': {'engine': 'native'},
+          'actions': [action()],
+        },
+        screen: {
+          'version': 1,
+          'components': [
+            {'type': 'timer', 'bind': 'data.endsAt'},
+            {'type': 'timer', 'bind': 'data.startedAt', 'mode': 'elapsed'},
+            {
+              'type': 'progress',
+              'bind': 'data.endsAt',
+              'startBind': 'data.startedAt',
+            },
+            for (final format in ['date', 'time', 'datetime'])
+              {'type': 'value', 'bind': 'data.startedAt', 'format': format},
+          ],
+        },
+      );
+      expect(app.entry, 'screen.json');
+    },
+  );
+
+  test(
+    'native screen errors identify nested timer and progress fields',
+    () async {
+      for (final component in [
+        {'type': 'timer', 'bind': 'data.endsAt', 'mode': 'pause'},
+        {'type': 'timer'},
+        {'type': 'progress', 'bind': 'data.endsAt'},
+        {'type': 'progress', 'bind': 'data.endsAt', 'startBind': 'unsafe/path'},
+      ]) {
+        await expectLater(
+          install(
+            {
+              'formatVersion': 2,
+              'ui': {'engine': 'native'},
+              'actions': [action()],
+            },
+            screen: {
+              'version': 1,
+              'components': [
+                {
+                  'type': 'card',
+                  'children': [component],
+                },
+              ],
+            },
+          ),
+          throwsA(
+            isA<MiniAppException>()
+                .having(
+                  (e) => e.message,
+                  'path',
+                  contains('screen.components[0].children[0]'),
+                )
+                .having((e) => e.message, 'example', contains('Example:')),
+          ),
+        );
+      }
+    },
+  );
 
   test(
     'version two native entry and original action schemas survive reload',

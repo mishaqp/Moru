@@ -12871,6 +12871,71 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get phonePanelSelectedAppSettings => '打开选定应用的设置';
+
+  @override
+  String get focusPanelTitle => '专注';
+
+  @override
+  String get focusPanelDescription => '带计时器、手机设置和恢复功能的专注时段。';
+
+  @override
+  String get focusPanelSession => '专注时段';
+
+  @override
+  String get focusPanelRemaining => '剩余时间';
+
+  @override
+  String get focusPanelProgress => '时段进度';
+
+  @override
+  String get focusPanelStart15 => '开始 15 分钟';
+
+  @override
+  String get focusPanelStart25 => '开始 25 分钟';
+
+  @override
+  String get focusPanelStart50 => '开始 50 分钟';
+
+  @override
+  String get focusPanelStop => '停止并恢复';
+
+  @override
+  String get focusPanelRunning => '时段进行中';
+
+  @override
+  String get focusPanelToday => '已记录的时段';
+
+  @override
+  String get focusPanelSessionsToday => '计数日期内的时段';
+
+  @override
+  String get focusPanelDay => '计数日期';
+
+  @override
+  String get focusPanelStartedAt => '最近时段开始时间';
+
+  @override
+  String get focusPanelSettings => '专注设置';
+
+  @override
+  String get focusPanelSettingsHint =>
+      '开始时会请求勿扰模式，将手动亮度设为约 30%，并静音媒体。请先授予所需权限。如果某项设置不可用，面板会显示部分更改的结果。';
+
+  @override
+  String get focusPanelManualStopHint =>
+      '关闭面板后时间仍会继续。倒计时归零后，请点击“停止并恢复”。设置不会自动恢复。每个进行中的时段都会在停止时计入统计。';
+
+  @override
+  String get focusPanelRecordStart => '记录专注时段的开始';
+
+  @override
+  String get focusPanelRecordStop => '记录已停止的专注时段';
+
+  @override
+  String get phonePanelSelectedMode => '最近应用的预设';
+
+  @override
+  String get phonePanelAppliedAt => '应用时间';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -25669,6 +25734,71 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get phonePanelSelectedAppSettings => '打开选定应用的设置';
+
+  @override
+  String get focusPanelTitle => '专注';
+
+  @override
+  String get focusPanelDescription => '带计时器、手机设置和恢复功能的专注时段。';
+
+  @override
+  String get focusPanelSession => '专注时段';
+
+  @override
+  String get focusPanelRemaining => '剩余时间';
+
+  @override
+  String get focusPanelProgress => '时段进度';
+
+  @override
+  String get focusPanelStart15 => '开始 15 分钟';
+
+  @override
+  String get focusPanelStart25 => '开始 25 分钟';
+
+  @override
+  String get focusPanelStart50 => '开始 50 分钟';
+
+  @override
+  String get focusPanelStop => '停止并恢复';
+
+  @override
+  String get focusPanelRunning => '时段进行中';
+
+  @override
+  String get focusPanelToday => '已记录的时段';
+
+  @override
+  String get focusPanelSessionsToday => '计数日期内的时段';
+
+  @override
+  String get focusPanelDay => '计数日期';
+
+  @override
+  String get focusPanelStartedAt => '最近时段开始时间';
+
+  @override
+  String get focusPanelSettings => '专注设置';
+
+  @override
+  String get focusPanelSettingsHint =>
+      '开始时会请求勿扰模式，将手动亮度设为约 30%，并静音媒体。请先授予所需权限。如果某项设置不可用，面板会显示部分更改的结果。';
+
+  @override
+  String get focusPanelManualStopHint =>
+      '关闭面板后时间仍会继续。倒计时归零后，请点击“停止并恢复”。设置不会自动恢复。每个进行中的时段都会在停止时计入统计。';
+
+  @override
+  String get focusPanelRecordStart => '记录专注时段的开始';
+
+  @override
+  String get focusPanelRecordStop => '记录已停止的专注时段';
+
+  @override
+  String get phonePanelSelectedMode => '最近应用的预设';
+
+  @override
+  String get phonePanelAppliedAt => '应用时间';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -38541,4 +38671,69 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get phonePanelSelectedAppSettings => '開啟選定應用程式的設定';
+
+  @override
+  String get focusPanelTitle => '專注';
+
+  @override
+  String get focusPanelDescription => '具備計時器、手機設定與還原功能的專注時段。';
+
+  @override
+  String get focusPanelSession => '專注時段';
+
+  @override
+  String get focusPanelRemaining => '剩餘時間';
+
+  @override
+  String get focusPanelProgress => '時段進度';
+
+  @override
+  String get focusPanelStart15 => '開始 15 分鐘';
+
+  @override
+  String get focusPanelStart25 => '開始 25 分鐘';
+
+  @override
+  String get focusPanelStart50 => '開始 50 分鐘';
+
+  @override
+  String get focusPanelStop => '停止並還原';
+
+  @override
+  String get focusPanelRunning => '時段進行中';
+
+  @override
+  String get focusPanelToday => '已記錄的時段';
+
+  @override
+  String get focusPanelSessionsToday => '計數日期內的時段';
+
+  @override
+  String get focusPanelDay => '計數日期';
+
+  @override
+  String get focusPanelStartedAt => '最近時段開始時間';
+
+  @override
+  String get focusPanelSettings => '專注設定';
+
+  @override
+  String get focusPanelSettingsHint =>
+      '開始時會要求勿擾模式，將手動亮度設為約 30%，並將媒體靜音。請先授予所需權限。如果某項設定無法使用，面板會顯示部分變更的結果。';
+
+  @override
+  String get focusPanelManualStopHint =>
+      '關閉面板後時間仍會繼續。倒數歸零後，請點選「停止並還原」。設定不會自動還原。每個進行中的時段都會在停止時計入統計。';
+
+  @override
+  String get focusPanelRecordStart => '記錄專注時段的開始';
+
+  @override
+  String get focusPanelRecordStop => '記錄已停止的專注時段';
+
+  @override
+  String get phonePanelSelectedMode => '最近套用的預設';
+
+  @override
+  String get phonePanelAppliedAt => '套用時間';
 }
