@@ -35,6 +35,35 @@ class ToolApprovalResult {
 
 typedef _PendingKey = ({String scope, String toolCallId});
 
+Object? _argumentSnapshot(Object? value) => switch (value) {
+  Map() => Map.unmodifiable({
+    for (final entry in value.entries)
+      entry.key: _argumentSnapshot(entry.value),
+  }),
+  List() => List.unmodifiable(value.map(_argumentSnapshot)),
+  _ => value,
+};
+
+bool _sameArguments(Object? left, Object? right) {
+  if (identical(left, right)) return true;
+  if (left is Map && right is Map) {
+    return left.length == right.length &&
+        left.entries.every(
+          (entry) =>
+              right.containsKey(entry.key) &&
+              _sameArguments(entry.value, right[entry.key]),
+        );
+  }
+  if (left is List && right is List) {
+    if (left.length != right.length) return false;
+    for (var i = 0; i < left.length; i++) {
+      if (!_sameArguments(left[i], right[i])) return false;
+    }
+    return true;
+  }
+  return left == right;
+}
+
 enum ToolApprovalActionStatus { resolved, stale }
 
 /// Immutable execution ownership captured before a tool or ACP callback starts.
@@ -64,6 +93,8 @@ class ToolApprovalRequest {
   final String toolCallId;
   final String toolName;
   final Map<String, dynamic> arguments;
+  // Private original snapshot: display redaction cannot prove call equality.
+  final Object? _executionArguments;
   final String? conversationId;
   final ToolApprovalOwner? owner;
   String? get generationRunId => owner?.generationRunId;
@@ -85,12 +116,13 @@ class ToolApprovalRequest {
     required this.toolCallId,
     required this.toolName,
     required this.arguments,
+    Object? executionArguments,
     this.conversationId,
     this.owner,
     this.secretFields = const [],
     this.secretInputOnly = false,
     required this._completer,
-  });
+  }) : _executionArguments = _argumentSnapshot(executionArguments ?? arguments);
 
   Future<ToolApprovalResult> get future => _completer.future;
 
@@ -99,6 +131,7 @@ class ToolApprovalRequest {
     toolCallId: toolCallId,
     toolName: toolName,
     arguments: arguments,
+    executionArguments: _executionArguments,
     conversationId: conversationId,
     owner: owner,
     secretFields: secretFields,
@@ -235,9 +268,11 @@ class ToolApprovalService extends ChangeNotifier {
       // consumed once. A repeated backend id must get a fresh request.
       if (toolName != 'manage_mcp' &&
           toolName != 'spend_control' &&
+          toolName != 'manage_assistants' &&
           existing.toolName == toolName &&
           existing.generationRunId == owner?.generationRunId &&
-          existing.assistantMessageId == owner?.assistantMessageId) {
+          existing.assistantMessageId == owner?.assistantMessageId &&
+          _sameArguments(existing._executionArguments, arguments)) {
         return existing.future;
       }
       _pending.remove(key);
@@ -269,6 +304,7 @@ class ToolApprovalService extends ChangeNotifier {
       toolCallId: toolCallId,
       toolName: toolName,
       arguments: displayArguments,
+      executionArguments: arguments,
       conversationId: _storedConversationId(conversationId),
       owner: owner,
       secretFields: List.unmodifiable(secretFields),

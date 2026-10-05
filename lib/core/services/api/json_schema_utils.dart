@@ -20,8 +20,8 @@ const String _refKey = r'$ref';
 /// Keywords whose value is a map of *names* to subschemas the sanitizer keeps.
 const Set<String> _schemaMapKeywords = {'properties'};
 
-/// Combinators the sanitizer flattens to the first variant. Tuple-form `items`
-/// is flattened the same way.
+/// Schema lists. Legacy readers expand the first branch; provider normalization
+/// uses preserveReferences and expands every branch, including tuple positions.
 const Set<String> _schemaListKeywords = {
   'anyOf',
   'oneOf',
@@ -30,6 +30,7 @@ const Set<String> _schemaListKeywords = {
   'one_of',
   'all_of',
   'items',
+  'prefixItems',
 };
 
 /// Keywords whose value is a single subschema that the sanitizer keeps.
@@ -55,10 +56,14 @@ const Set<String> _annotationKeywords = {
 };
 
 class _RefBudget {
-  _RefBudget({this.expandAdditionalProperties = true});
+  _RefBudget({
+    this.expandAdditionalProperties = true,
+    this.preserveReferences = false,
+  });
 
   int expansions = 0;
   final bool expandAdditionalProperties;
+  final bool preserveReferences;
 }
 
 /// Inline every resolvable local `$ref` in [schema] against its own root.
@@ -82,16 +87,25 @@ class _RefBudget {
 /// [expandAdditionalProperties] should be true when the caller will keep that
 /// keyword (OpenAI, Claude) and false when it will drop it (Google), so a
 /// discarded branch cannot exhaust the expansion budget.
+///
+/// [preserveReferences] enables the provider contract: every schema-list branch
+/// is expanded; cycles/budgeted local refs retain definitions, boolean targets
+/// become object-form schemas, and validation siblings become an allOf.
+/// Unresolvable refs carry a description instead of silently losing meaning.
 Map<String, dynamic> resolveJsonSchemaRefs(
   Map<String, dynamic> schema, {
   bool expandAdditionalProperties = true,
+  bool preserveReferences = false,
 }) {
   final resolved = _resolveSchema(
     schema,
     schema,
     const <String>{},
     0,
-    _RefBudget(expandAdditionalProperties: expandAdditionalProperties),
+    _RefBudget(
+      expandAdditionalProperties: expandAdditionalProperties,
+      preserveReferences: preserveReferences,
+    ),
   );
   return resolved is Map<String, dynamic> ? resolved : schema;
 }
@@ -114,13 +128,28 @@ dynamic _resolveSchema(
   final ref = m[_refKey];
   if (ref is String && ref.trim().isNotEmpty) {
     final pointer = ref.trim();
-    final exhausted =
+    var exhausted =
         active.contains(pointer) ||
         depth >= _maxRefDepth ||
         budget.expansions >= _maxRefExpansions;
     m.remove(_refKey);
+    final target = _lookupRef(pointer, root);
+    // Do not let one fan-out consume the ability to inline a later small
+    // leaf. Larger/cyclic branches remain references under the shared budget.
+    if (budget.preserveReferences &&
+        exhausted &&
+        !active.contains(pointer) &&
+        _smallRefLeaf(target)) {
+      exhausted = false;
+    }
+    if (budget.preserveReferences && exhausted && target != null) {
+      m[_refKey] = pointer;
+      return _walkKeywords(m, root, active, depth, budget);
+    }
     if (!exhausted) {
-      final target = _lookupRef(pointer, root);
+      if (budget.preserveReferences && target is bool) {
+        return target ? m : <String, dynamic>{'not': <String, dynamic>{}, ...m};
+      }
       // Boolean schemas are valid JSON Schema but not expressible as a
       // provider property Schema object. Treat them like unresolved refs.
       if (target != null && target is! bool) {
@@ -133,14 +162,47 @@ dynamic _resolveSchema(
           budget,
         );
         if (resolved is Map<String, dynamic>) {
+          if (budget.preserveReferences) {
+            final validations = Map<String, dynamic>.from(m)
+              ..removeWhere((key, _) => _annotationKeywords.contains(key));
+            if (validations.isNotEmpty) {
+              return {
+                for (final key in _annotationKeywords)
+                  if (m.containsKey(key)) key: m[key],
+                'allOf': [
+                  resolved,
+                  _walkKeywords(validations, root, active, depth, budget),
+                ],
+              };
+            }
+          }
           return _overlayAnnotations(resolved, m);
         }
         return resolved;
       }
     }
+    if (budget.preserveReferences) {
+      final description = m['description']?.toString() ?? '';
+      m['description'] =
+          '${description.isEmpty ? '' : '$description\n'}Unresolved schema reference: $pointer. The tool validates the original schema.';
+    }
   }
 
   return _walkKeywords(m, root, active, depth, budget);
+}
+
+bool _smallRefLeaf(dynamic target) {
+  var remaining = 32;
+  bool small(dynamic node) {
+    if (--remaining < 0) return false;
+    if (node is Map) {
+      return !node.containsKey(_refKey) && node.values.every(small);
+    }
+    if (node is List) return node.every(small);
+    return true;
+  }
+
+  return target is Map && small(target);
 }
 
 /// Copy annotation siblings over [target]. Validation keywords next to a
@@ -171,7 +233,10 @@ Map<String, dynamic> _walkKeywords(
 ) {
   final out = <String, dynamic>{};
   node.forEach((key, value) {
-    if (_definitionKeywords.contains(key)) return;
+    if (_definitionKeywords.contains(key)) {
+      if (budget.preserveReferences) out[key] = value;
+      return;
+    }
     if (_schemaMapKeywords.contains(key) && value is Map) {
       out[key] = <String, dynamic>{
         for (final entry in value.entries)
@@ -188,9 +253,12 @@ Map<String, dynamic> _walkKeywords(
     if (_schemaListKeywords.contains(key) && value is List) {
       // Sanitizer keeps only the first variant; do not spend budget on the rest.
       out[key] = [
-        if (value.isNotEmpty)
+        if (budget.preserveReferences)
+          for (final variant in value)
+            _resolveSchema(variant, root, active, depth, budget)
+        else if (value.isNotEmpty)
           _resolveSchema(value.first, root, active, depth, budget),
-        if (value.length > 1) ...value.skip(1),
+        if (!budget.preserveReferences && value.length > 1) ...value.skip(1),
       ];
       return;
     }

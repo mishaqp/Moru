@@ -1,11 +1,100 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/features/home/services/ask_user_interaction_service.dart';
 
+void _normalizeCollidingQuestionIds(SendPort port) {
+  final questions = AskUserInteractionService.normalizeQuestions(const {
+    'questions': [
+      {'id': 'q3', 'question': 'First?'},
+      {'id': 'q3_3', 'question': 'Second?'},
+      {'question': 'Third?'},
+    ],
+  });
+  port.send(questions.map((question) => question.id).toList());
+}
+
 void main() {
   group('AskUserInteractionService', () {
+    test('generated question ids advance past repeated collisions', () async {
+      // Isolate the synchronous normalizer so a regression cannot block the
+      // runner indefinitely; always stop the isolate after the assertion.
+      final port = ReceivePort();
+      final worker = await Isolate.spawn(
+        _normalizeCollidingQuestionIds,
+        port.sendPort,
+      );
+      try {
+        final ids = await port.first.timeout(const Duration(seconds: 5));
+        expect(ids, ['q3', 'q3_3', 'q3_4']);
+      } finally {
+        worker.kill(priority: Isolate.immediate);
+        port.close();
+      }
+    });
+
+    test(
+      'replacing a repeated call id cancels its previous pending result',
+      () async {
+        final service = AskUserInteractionService();
+        addTearDown(service.cancelAll);
+        const arguments = {
+          'questions': [
+            {'id': 'q', 'question': 'Choose?'},
+          ],
+        };
+        final first = service.requestAnswer(
+          toolCallId: 'same',
+          arguments: arguments,
+          conversationId: 'chat',
+        );
+        final second = service.requestAnswer(
+          toolCallId: 'same',
+          arguments: arguments,
+          conversationId: 'chat',
+        );
+        expect(
+          (await first.timeout(const Duration(seconds: 1))).error,
+          'cancelled',
+        );
+        expect(service.pendingRequests, hasLength(1));
+        service.answer('same', const {
+          'q': AskUserAnswerValue.single(value: 'answer', custom: true),
+        });
+        expect((await second).answers['q']!.value, 'answer');
+      },
+    );
+
+    test(
+      'disposing cancels waiting results and rejects later requests',
+      () async {
+        final service = AskUserInteractionService();
+        const arguments = {
+          'questions': [
+            {'id': 'q', 'question': 'Choose?'},
+          ],
+        };
+        final pending = service.requestAnswer(
+          toolCallId: 'wait',
+          arguments: arguments,
+        );
+        service.dispose();
+        expect(
+          (await pending.timeout(const Duration(seconds: 1))).error,
+          'cancelled',
+        );
+        expect(service.pendingRequests, isEmpty);
+        final later = await service.requestAnswer(
+          toolCallId: 'later',
+          arguments: arguments,
+        );
+        expect(later.error, 'cancelled');
+        expect(service.pendingRequests, isEmpty);
+      },
+    );
+
     test(
       'normalizes questions and completes with structured answers',
       () async {

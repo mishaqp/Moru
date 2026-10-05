@@ -57,6 +57,60 @@ void main() {
   Map<String, dynamic> decode(String value) =>
       jsonDecode(value) as Map<String, dynamic>;
 
+  test(
+    'strict nullable limits preserve budgets and clear only named fields',
+    () async {
+      await settings.setToolAutoApproveAll(true);
+      await settings.setSpendLimits(
+        const SpendLimits(
+          dailyUsd: 5,
+          chatUsd: 0.5,
+          warningPercent: 70,
+          hardStop: true,
+        ),
+      );
+      final result = decode(
+        await tool().execute(
+          {
+            'action': 'set_limits',
+            'limits': {
+              'chat_usd': null,
+              'chat_tokens': 100,
+              'daily_usd': null,
+              'daily_tokens': null,
+              'warning_percent': null,
+              'hard_stop': null,
+            },
+            'clear': null,
+          },
+          toolCallId: 'nullable',
+          conversationId: 'c',
+        ),
+      );
+      expect(result['ok'], isTrue, reason: '$result');
+      expect(settings.spendLimits.chatTokens, 100);
+      expect(settings.spendLimits.chatUsd, 0.5);
+      expect(settings.spendLimits.dailyUsd, 5);
+      expect(settings.spendLimits.warningPercent, 70);
+      expect(settings.spendLimits.hardStop, isTrue);
+
+      final cleared = decode(
+        await tool().execute(
+          {
+            'action': 'set_limits',
+            'limits': null,
+            'clear': ['chat_usd'],
+          },
+          toolCallId: 'nullable-clear',
+          conversationId: 'c',
+        ),
+      );
+      expect(cleared['ok'], isTrue, reason: '$cleared');
+      expect(settings.spendLimits.chatUsd, isNull);
+      expect(settings.spendLimits.dailyUsd, 5);
+    },
+  );
+
   test('tool is opt-in and status never asks for approval', () async {
     expect(
       LocalToolsService.isEnabledForAssistant(

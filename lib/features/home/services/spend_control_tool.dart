@@ -128,13 +128,18 @@ class SpendControlTool {
       }
       Map<String, dynamic>? changes;
       if (action == 'set_limits') {
-        if (args.containsKey('limits') && args['limits'] is! Map) {
+        if (args['limits'] != null && args['limits'] is! Map) {
           throw const FormatException('limits must be an object.');
         }
         changes = args['limits'] is Map
             ? Map<String, dynamic>.from(args['limits'] as Map)
             : <String, dynamic>{};
-        if (args.containsKey('clear')) {
+        final supported = settings.spendLimits.toJson().keys.toSet();
+        // Optional nulls are omitted edits; clear alone disables a budget.
+        changes.removeWhere(
+          (key, value) => value == null && supported.contains(key),
+        );
+        if (args['clear'] != null) {
           final clear = args['clear'];
           if (clear is! List) {
             throw const FormatException(

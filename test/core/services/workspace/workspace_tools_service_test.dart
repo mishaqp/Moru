@@ -29,6 +29,7 @@ class _RecordingApproval extends ToolApprovalService {
   String? lastName;
   bool allow = true;
   String denyReason = 'nope';
+  void Function()? onRequest;
 
   @override
   Future<ToolApprovalResult> requestApproval({
@@ -42,6 +43,7 @@ class _RecordingApproval extends ToolApprovalService {
   }) async {
     calls++;
     lastName = toolName;
+    onRequest?.call();
     if (allow) return ToolApprovalResult.approved();
     return ToolApprovalResult.denied(denyReason);
   }
@@ -468,6 +470,43 @@ void main() {
   );
 
   group('publish_mini_app', () {
+    for (final args in <Map<String, dynamic>>[
+      {},
+      {'path': null},
+      {'path': 42},
+      {'path': true},
+      {
+        'path': <String>['app'],
+      },
+      {'path': ''},
+      {'path': '   '},
+    ]) {
+      test('rejects invalid required path $args before installation', () async {
+        final candidate = args['path']?.toString() ?? '';
+        final app = Directory(p.join(workspaceDir.path, candidate))
+          ..createSync(recursive: true);
+        File(p.join(app.path, 'moru-app.json')).writeAsStringSync(
+          jsonEncode({'id': 'unexpected', 'name': 'Unexpected'}),
+        );
+        File(p.join(app.path, 'index.html')).writeAsStringSync('<p>hi</p>');
+        final store = MiniAppStore(
+          root: () async => Directory(p.join(tmp.path, 'installed')),
+        );
+        final tools = WorkspaceToolsService(
+          registry: registry,
+          miniApps: store,
+        );
+        final result = await tools.handle(
+          ctx(),
+          WorkspaceToolsService.miniAppTool,
+          args,
+          toolCallId: 'invalid-publish',
+        );
+        expect(jsonOf(result)['error'], 'invalid_arguments');
+        expect(store.byId('unexpected'), isNull);
+      });
+    }
+
     test('installs a workspace folder and returns its link', () async {
       final app = Directory(p.join(workspaceDir.path, 'apps', 'water'))
         ..createSync(recursive: true);
@@ -764,6 +803,8 @@ void main() {
           await tools.handle(ctx(), 'shell', {
             'command': 'npm run dev',
             'background': true,
+            'cwd': null,
+            'timeout_seconds': null,
           }, toolCallId: 'bg'),
         );
         expect(started['background'], isTrue);
@@ -783,11 +824,14 @@ void main() {
         final peek = jsonOf(
           await tools.handle(ctx(), 'shell_output', {
             'job_id': jobId,
+            'wait_seconds': null,
+            'stop': null,
           }, toolCallId: 'peek'),
         );
         expect(peek['status'], 'running');
         expect(peek['stdout'], contains('ready on :3000'));
         expect(peek.containsKey('exit_code'), isFalse);
+        expect(runtime.cancelled, isEmpty);
 
         runtime.job.add(
           const CommandExited(
@@ -864,6 +908,61 @@ void main() {
       expect(plans.of('conv-1')?.steps, hasLength(2));
     });
 
+    test(
+      'update_plan keeps valid final and multiple-working-step behavior',
+      () async {
+        final plans = TaskPlanRegistry();
+        addTearDown(plans.dispose);
+        final tools = WorkspaceToolsService(registry: registry, plans: plans);
+        for (final statuses in [
+          ['completed', 'completed'],
+          ['in_progress', 'in_progress'],
+        ]) {
+          final result = await tools.handle(ctx(), 'update_plan', {
+            'plan': [
+              {'step': 'First', 'status': statuses[0]},
+              {'step': 'Second', 'status': statuses[1]},
+            ],
+          }, toolCallId: 'valid-plan');
+          expect(jsonOf(result)['ok'], isTrue);
+          expect(plans.of('conv-1')?.steps, hasLength(2));
+          expect(plans.of('conv-1')?.isDone, statuses.first == 'completed');
+        }
+      },
+    );
+
+    for (final invalidEntry in <Object?>[
+      null,
+      'step',
+      {},
+      {'step': 42, 'status': 'pending'},
+      {'step': '', 'status': 'pending'},
+      {'step': 'Read', 'status': null},
+      {'step': 'Read', 'status': 'finished'},
+      {'step': 'Read', 'status': true},
+    ]) {
+      test(
+        'update_plan rejects malformed entry $invalidEntry without updating',
+        () async {
+          final plans = TaskPlanRegistry();
+          addTearDown(plans.dispose);
+          const original = TaskPlan([
+            PlanStep('Original', PlanStepStatus.pending),
+          ]);
+          plans.set('conv-1', original);
+          final tools = WorkspaceToolsService(registry: registry, plans: plans);
+          final result = await tools.handle(ctx(), 'update_plan', {
+            'plan': [
+              {'step': 'Valid', 'status': 'pending'},
+              invalidEntry,
+            ],
+          }, toolCallId: 'invalid-plan');
+          expect(jsonOf(result)['error'], 'invalid_arguments');
+          expect(plans.of('conv-1'), same(original));
+        },
+      );
+    }
+
     test('shell_output is offered only together with shell', () {
       final tools = service(runtime: FakeWorkspaceRuntime());
       List<String> names(Set<String> disabled) => [
@@ -893,6 +992,101 @@ void main() {
   });
 
   group('file tools', () {
+    test('optional nulls preserve file-tool defaults', () async {
+      File(
+        p.join(workspaceDir.path, 'note.txt'),
+      ).writeAsStringSync('needle\nNeedle');
+      Directory(p.join(workspaceDir.path, 'sub')).createSync();
+      File(
+        p.join(workspaceDir.path, 'sub', 'deep.txt'),
+      ).writeAsStringSync('needle');
+      final tools = service();
+      final cases = <String, (Map<String, dynamic>, Map<String, dynamic>)>{
+        'read_file': ({'path': 'note.txt'}, {'offset': null, 'limit': null}),
+        'list_dir': ({}, {'path': null, 'depth': null}),
+        'glob': ({'pattern': '**/*.txt'}, {'path': null}),
+        'grep': (
+          {'pattern': 'needle'},
+          {'path': null, 'ignore_case': null, 'limit': null},
+        ),
+      };
+      for (final entry in cases.entries) {
+        final omitted = client(
+          await tools.handle(
+            ctx(),
+            entry.key,
+            entry.value.$1,
+            toolCallId: '${entry.key}-omitted',
+          ),
+        ).content;
+        final nullable = client(
+          await tools.handle(ctx(), entry.key, {
+            ...entry.value.$1,
+            ...entry.value.$2,
+          }, toolCallId: '${entry.key}-null'),
+        ).content;
+        expect(nullable, omitted, reason: entry.key);
+      }
+    });
+
+    for (final value in <Object?>[
+      null,
+      42,
+      true,
+      <String>['text'],
+    ]) {
+      test(
+        'write_file rejects non-string content $value without writing',
+        () async {
+          final target = File(p.join(workspaceDir.path, 'note.txt'))
+            ..writeAsStringSync('original');
+          final result = await service().handle(ctx(), 'write_file', {
+            'path': target.path,
+            'content': value,
+          }, toolCallId: 'write-invalid');
+          expect(jsonOf(result)['error'], 'invalid_arguments');
+          expect(target.readAsStringSync(), 'original');
+        },
+      );
+
+      for (final field in ['old_string', 'new_string']) {
+        test(
+          'edit_file rejects non-string $field $value without editing',
+          () async {
+            final target = File(p.join(workspaceDir.path, 'note.txt'))
+              ..writeAsStringSync('original');
+            final result = await service().handle(ctx(), 'edit_file', {
+              'path': target.path,
+              'old_string': 'original',
+              'new_string': 'replacement',
+              field: value,
+            }, toolCallId: 'edit-invalid');
+            expect(jsonOf(result)['error'], 'invalid_arguments');
+            expect(target.readAsStringSync(), 'original');
+          },
+        );
+      }
+    }
+
+    test('empty string content and replacement remain valid', () async {
+      final target = File(p.join(workspaceDir.path, 'note.txt'))
+        ..writeAsStringSync('original');
+      final tools = service();
+      final edited = await tools.handle(ctx(), 'edit_file', {
+        'path': target.path,
+        'old_string': 'original',
+        'new_string': '',
+      }, toolCallId: 'edit-empty');
+      expect(jsonOf(edited)['ok'], isTrue);
+      expect(target.readAsStringSync(), isEmpty);
+      final written = await tools.handle(ctx(), 'write_file', {
+        'path': target.path,
+        'content': '',
+      }, toolCallId: 'write-empty');
+      expect(jsonOf(written)['ok'], isTrue);
+      expect(target.readAsStringSync(), isEmpty);
+    });
+
     test(
       'external mounts appear in prompt and readonly beats allow-all',
       () async {
@@ -1115,6 +1309,28 @@ void main() {
   });
 
   group('approval', () {
+    test('shell disabled during approval does not start a process', () async {
+      final runtime = _SandboxedRuntime();
+      final provider = WorkspaceRuntimeProvider()..register(runtime);
+      var enabled = true;
+      final tools = WorkspaceToolsService(
+        registry: registry,
+        runtimeProvider: provider,
+        isToolEnabled: (_, _) => enabled,
+      );
+      final approval = _RecordingApproval()..onRequest = () => enabled = false;
+      final result = await tools.handle(
+        ctx(sandboxed: true, allowAll: false, shellNeedsApproval: true),
+        'shell',
+        {'command': 'touch should-not-run'},
+        toolCallId: 'revoked-shell',
+        approvalService: approval,
+      );
+      expect(jsonOf(result)['error'], 'tool_disabled');
+      expect(runtime.requests, isEmpty);
+      expect(registry.all, isEmpty);
+    });
+
     test('shell asks when shellNeedsApproval', () async {
       final approval = _RecordingApproval();
       final runtime = _SandboxedRuntime();

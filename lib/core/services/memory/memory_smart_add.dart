@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../database/chat_database_repository.dart';
 import '../../models/assistant.dart';
 import '../../models/memory_entry.dart';
+import '../api/tool_call_cancellation.dart';
 import 'memory_prompts.dart';
 import 'memory_repository.dart';
 import 'memory_tokenizer.dart';
@@ -548,6 +549,8 @@ class MemorySmartAdd {
     String? overrideEn,
     MemoryTraceStep? traceStep,
   }) async {
+    final cancellation = ToolCallCancellation.current;
+    cancellation?.throwIfCancelled();
     // Fast path: exact duplicate (§12.6).
     final exact = await chatRepository.findExactMemory(
       assistantId: visibilityAssistantId,
@@ -602,6 +605,7 @@ class MemorySmartAdd {
               content: item.content,
             );
       } catch (e) {
+        cancellation?.throwIfCancelled();
         traceStep?.appendResponse('<request failed> $e');
         decision = await degradeDecision(
           visibilityAssistantId: visibilityAssistantId,
@@ -611,6 +615,7 @@ class MemorySmartAdd {
       }
     }
 
+    cancellation?.throwIfCancelled();
     return applyDecision(
       item: item,
       decision: decision,

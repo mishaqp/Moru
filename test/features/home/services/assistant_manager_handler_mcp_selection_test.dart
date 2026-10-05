@@ -90,6 +90,7 @@ void main() {
             workspaces.loaded,
             skills.loaded,
           ]);
+          await settings.setToolAutoApproveAll(true);
           assistants.bindMcpServers(
             liveMcpServerIds: () =>
                 mcp.configuredServers.map((server) => server.id).toSet(),

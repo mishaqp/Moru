@@ -72,6 +72,198 @@ void main() {
     );
   });
 
+  test(
+    'strict nullable settings preserve omitted values and explicit clears',
+    () async {
+      await assistants.updateAssistant(
+        assistants
+            .getById(mainId)!
+            .copyWith(
+              temperature: 0.7,
+              topP: 0.8,
+              streamOutput: false,
+              localToolIds: [LocalToolNames.calculate],
+              chatModelProvider: 'openai',
+              chatModelId: 'gpt-5',
+            ),
+      );
+      final schema =
+          AssistantManagerTool
+                  .definition['function']['parameters']['properties']['settings']['properties']
+              as Map;
+      final nullableSettings = {
+        for (final key in schema.keys) key as String: null,
+      };
+      final updated = await _run(tool, {
+        'action': 'update',
+        'assistant_id': mainId,
+        'settings': {...nullableSettings, 'name': 'Renamed'},
+        'clear': ['temperature'],
+      });
+      expect(updated['ok'], isTrue, reason: '$updated');
+      final current = assistants.getById(mainId)!;
+      expect(current.name, 'Renamed');
+      expect(current.temperature, isNull);
+      expect(current.topP, 0.8);
+      expect(current.streamOutput, isFalse);
+      expect(current.localToolIds, [LocalToolNames.calculate]);
+      expect(current.chatModelProvider, 'openai');
+      expect(current.chatModelId, 'gpt-5');
+
+      for (final action in ['create', 'duplicate']) {
+        final result = await _run(tool, {
+          'action': action,
+          'assistant_id': action == 'duplicate' ? mainId : null,
+          'settings': {...nullableSettings, 'name': action},
+          'clear': null,
+        });
+        expect(result['ok'], isTrue, reason: '$result');
+        final created = assistants.getById(result['created']['id'])!;
+        expect(created.name, action);
+        if (action == 'duplicate') {
+          expect(created.topP, 0.8);
+          expect(created.chatModelId, 'gpt-5');
+        }
+      }
+    },
+  );
+
+  test(
+    'assistant results redact saved credentials without changing settings',
+    () async {
+      const secret = 'ASSISTANT_HEADER_PRIVATE_SENTINEL';
+      const ordinary = '/workspace/context.json';
+      await assistants.updateAssistant(
+        assistants
+            .getById(mainId)!
+            .copyWith(
+              customHeaders: [
+                {'name': 'Authorization', 'value': 'Bearer $secret'},
+                {'name': 'X-Api-Key', 'value': secret},
+                {'name': 'X-Context', 'value': ordinary},
+              ],
+              systemPrompt: 'Keep $secret private.',
+            ),
+      );
+      final original = assistants.getById(mainId)!.toJson();
+      final read = await _run(tool, {'action': 'get', 'assistant_id': mainId});
+      expect(read['ok'], isTrue);
+      expect(jsonEncode(read), isNot(contains(secret)));
+      expect(read['settings']['customHeaders'][2]['value'], ordinary);
+      expect(assistants.getById(mainId)!.toJson(), original);
+
+      final copied = await _run(tool, {
+        'action': 'duplicate',
+        'assistant_id': mainId,
+      });
+      expect(copied['ok'], isTrue);
+      expect(jsonEncode(copied), isNot(contains(secret)));
+      final copiedId = copied['created']['id'] as String;
+      expect(
+        assistants.getById(copiedId)!.customHeaders,
+        original['customHeaders'],
+      );
+
+      final updated = await _run(tool, {
+        'action': 'update',
+        'assistant_id': mainId,
+        'settings': {'name': 'Renamed'},
+      });
+      expect(updated['ok'], isTrue);
+      expect(jsonEncode(updated), isNot(contains(secret)));
+      expect(
+        assistants.getById(mainId)!.customHeaders,
+        original['customHeaders'],
+      );
+    },
+  );
+
+  test(
+    'regex flag types are checked before updating assistant settings',
+    () async {
+      final original = assistants.getById(mainId)!.toJson();
+      for (final field in ['visualOnly', 'replaceOnly', 'enabled']) {
+        final result = await _run(tool, {
+          'action': 'update',
+          'assistant_id': mainId,
+          'settings': {
+            'name': 'Rejected rename',
+            'regexRules': [
+              {
+                'name': 'Rule',
+                'pattern': 'old',
+                'replacement': 'new',
+                'scopes': ['assistant'],
+                field: 'false',
+              },
+            ],
+          },
+        });
+        expect(result['error'], 'invalid_settings', reason: '$field: $result');
+        expect(assistants.getById(mainId)!.toJson(), original);
+      }
+      final valid = await _run(tool, {
+        'action': 'update',
+        'assistant_id': mainId,
+        'settings': {
+          'regexRules': [
+            {
+              'name': 'Rule',
+              'pattern': 'old',
+              'replacement': 'new',
+              'scopes': ['assistant'],
+              'visualOnly': null,
+              'replaceOnly': null,
+              'enabled': null,
+            },
+          ],
+        },
+      });
+      expect(valid['ok'], isTrue, reason: '$valid');
+      final rule = assistants.getById(mainId)!.regexRules.single;
+      expect(rule.visualOnly, isFalse);
+      expect(rule.replaceOnly, isFalse);
+      expect(rule.enabled, isTrue);
+    },
+  );
+
+  test(
+    'non-finite numeric settings return structured errors without writes',
+    () async {
+      final original = assistants.getById(mainId)!.toJson();
+      for (final field in ['temperature', 'maxTokens']) {
+        for (final value in [
+          double.infinity,
+          double.negativeInfinity,
+          double.nan,
+        ]) {
+          final result = await _run(tool, {
+            'action': 'update',
+            'assistant_id': mainId,
+            'settings': {'name': 'Rejected rename', field: value},
+          });
+          expect(
+            result['error'],
+            'invalid_settings',
+            reason: '$field: $result',
+          );
+          expect(assistants.getById(mainId)!.toJson(), original);
+        }
+      }
+    },
+  );
+
+  test('invalid-setting errors do not echo supplied private values', () async {
+    const secret = 'SUPPLIED_ASSISTANT_PRIVATE_SENTINEL';
+    final result = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {'streamOutput': 'password=$secret'},
+    });
+    expect(result['error'], 'invalid_settings');
+    expect(jsonEncode(result), isNot(contains(secret)));
+  });
+
   test('updating unrelated settings prunes inherited dead MCP ids', () async {
     await assistants.updateAssistant(
       assistants.getById(mainId)!.copyWith(mcpServerIds: ['mcp-1', 'removed']),

@@ -128,6 +128,7 @@ class AskUserRequest {
 
 class AskUserInteractionService extends ChangeNotifier {
   final Map<String, AskUserRequest> _pending = <String, AskUserRequest>{};
+  bool _disposed = false;
 
   Map<String, AskUserRequest> get pendingRequests => Map.unmodifiable(_pending);
 
@@ -138,6 +139,14 @@ class AskUserInteractionService extends ChangeNotifier {
     required Map<String, dynamic> arguments,
     String? conversationId,
   }) {
+    if (_disposed) {
+      return Future.value(
+        const AskUserResult.error(
+          error: 'cancelled',
+          message: 'Ask user request was cancelled.',
+        ),
+      );
+    }
     final questions = normalizeQuestions(arguments);
     if (questions.isEmpty) {
       throw const AskUserInvalidRequestException(
@@ -149,6 +158,15 @@ class AskUserInteractionService extends ChangeNotifier {
     final key = toolCallId.trim().isEmpty
         ? 'ask_user_input_v0_${DateTime.now().microsecondsSinceEpoch}'
         : toolCallId.trim();
+    final replaced = _pending.remove(key);
+    if (replaced != null && !replaced._completer.isCompleted) {
+      replaced._completer.complete(
+        const AskUserResult.error(
+          error: 'cancelled',
+          message: 'Ask user request was cancelled.',
+        ),
+      );
+    }
     _pending[key] = AskUserRequest(
       toolCallId: key,
       questions: questions,
@@ -227,8 +245,9 @@ class AskUserInteractionService extends ChangeNotifier {
       if (id.isEmpty || usedIds.contains(id)) {
         id = 'q${questions.length + 1}';
       }
+      var suffix = usedIds.length + 1;
       while (usedIds.contains(id)) {
-        id = 'q${questions.length + 1}_${usedIds.length + 1}';
+        id = 'q${questions.length + 1}_${suffix++}';
       }
       usedIds.add(id);
 
@@ -264,5 +283,12 @@ class AskUserInteractionService extends ChangeNotifier {
       if (out.length == 4) break;
     }
     return out;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    cancelAll();
+    super.dispose();
   }
 }

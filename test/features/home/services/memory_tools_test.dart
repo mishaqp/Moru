@@ -50,6 +50,11 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
   Future<String?> getTemporaryPath() async => '$path/tmp';
 }
 
+class _TemporaryMemoryChat extends ChatService {
+  @override
+  bool isTemporaryConversation(String? id) => id == 'temporary';
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -324,20 +329,30 @@ void main() {
     }
 
     Future<(ToolHandlerService, SettingsProvider, MemoryProvider)>
-    pumpLegacyHandler(WidgetTester tester) async {
-      final settings = SettingsProvider(createBusinessTestPreferences());
-      await settings.loaded;
-      final memory = MemoryProvider(
-        preferences: createBusinessTestPreferences(),
-      );
+    pumpLegacyHandler(WidgetTester tester, {ChatService? chat}) async {
+      final setup = (await tester.runAsync(() async {
+        final harness = await createBusinessTestHarness(
+          initial: {
+            'assistants_v1': jsonEncode([
+              assistant().toJson(),
+              assistant(id: 'assistant-b').toJson(),
+            ]),
+          },
+        );
+        final settings = SettingsProvider(harness.preferences);
+        final assistants = AssistantProvider(preferences: harness.preferences);
+        final memory = MemoryProvider(preferences: harness.preferences);
+        await Future.wait([settings.loaded, assistants.loaded]);
+        return (settings: settings, assistants: assistants, memory: memory);
+      }))!;
+      final settings = setup.settings;
+      final memory = setup.memory;
+      addTearDown(settings.dispose);
+      addTearDown(memory.dispose);
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            ChangeNotifierProvider(
-              create: (_) => AssistantProvider(
-                preferences: createBusinessTestPreferences(),
-              ),
-            ),
+            ChangeNotifierProvider(create: (_) => setup.assistants),
             ChangeNotifierProvider(
               create: (_) =>
                   McpProvider(preferences: createBusinessTestPreferences()),
@@ -351,6 +366,8 @@ void main() {
             ),
             ChangeNotifierProvider.value(value: memory),
             ChangeNotifierProvider.value(value: settings),
+            if (chat != null)
+              ChangeNotifierProvider<ChatService>.value(value: chat),
           ],
           child: const SizedBox.shrink(),
         ),
@@ -363,7 +380,7 @@ void main() {
       'legacy ON + enableMemory + supportsTools registers only the trio',
       (tester) async {
         final (service, settings, _) = await pumpLegacyHandler(tester);
-        await settings.setLegacyMemoryMode(true);
+        await tester.runAsync(() => settings.setLegacyMemoryMode(true));
 
         final defs = service.buildToolDefinitions(
           settings,
@@ -388,10 +405,10 @@ void main() {
       tester,
     ) async {
       final (service, settings, _) = await pumpLegacyHandler(tester);
-      await settings.setLegacyMemoryMode(true);
+      await tester.runAsync(() => settings.setLegacyMemoryMode(true));
 
-      List<String> descriptionsFor(String lang) {
-        settings.setMemoryPromptLang(lang);
+      Future<List<String>> descriptionsFor(String lang) async {
+        await tester.runAsync(() => settings.setMemoryPromptLang(lang));
         return service
             .buildToolDefinitions(
               settings,
@@ -406,8 +423,8 @@ void main() {
             .toList();
       }
 
-      final zh = descriptionsFor('zh');
-      final en = descriptionsFor('en');
+      final zh = await descriptionsFor('zh');
+      final en = await descriptionsFor('en');
 
       expect(zh, everyElement(contains('记忆')));
       expect(en, everyElement(contains('memory record')));
@@ -418,7 +435,7 @@ void main() {
       tester,
     ) async {
       final (service, settings, _) = await pumpLegacyHandler(tester);
-      await settings.setLegacyMemoryMode(true);
+      await tester.runAsync(() => settings.setLegacyMemoryMode(true));
 
       final defs = service.buildToolDefinitions(
         settings,
@@ -433,22 +450,110 @@ void main() {
 
     testWidgets('create_memory writes to MemoryProvider', (tester) async {
       final (service, settings, memory) = await pumpLegacyHandler(tester);
-      await settings.setLegacyMemoryMode(true);
+      await tester.runAsync(() => settings.setLegacyMemoryMode(true));
 
       final handler = service.buildToolCallHandler(
         settings,
         assistant(enableMemory: true),
       );
       expect(handler, isNotNull);
-      final result = await handler!('create_memory', {
-        'content': 'User likes tea',
-      });
+      final result = await tester.runAsync(
+        () => handler!('create_memory', {'content': 'User likes tea'}),
+      );
       expect(result, 'User likes tea');
       expect(memory.getForAssistant('assistant-a'), hasLength(1));
       expect(
         memory.getForAssistant('assistant-a').single.content,
         'User likes tea',
       );
+    });
+
+    testWidgets(
+      'legacy edits and deletes cannot modify another assistant memory',
+      (tester) async {
+        final (service, settings, memory) = await pumpLegacyHandler(tester);
+        await tester.runAsync(() => settings.setLegacyMemoryMode(true));
+        final other = (await tester.runAsync(
+          () => memory.add(
+            assistantId: 'assistant-b',
+            content: 'Private other memory',
+          ),
+        ))!;
+        final handler = service.buildToolCallHandler(
+          settings,
+          assistant(enableMemory: true),
+        )!;
+        for (final name in ['edit_memory', 'delete_memory']) {
+          final result = await tester.runAsync(
+            () => handler(name, {'id': other.id, 'content': 'Changed'}),
+          );
+          expect(decode(result as String)['error'], 'memory_not_found');
+          expect(
+            memory.getForAssistant('assistant-b').single.content,
+            'Private other memory',
+          );
+        }
+      },
+    );
+
+    testWidgets(
+      'legacy memory validates content and integer ids before writes',
+      (tester) async {
+        final (service, settings, memory) = await pumpLegacyHandler(tester);
+        await tester.runAsync(() => settings.setLegacyMemoryMode(true));
+        final own = (await tester.runAsync(
+          () => memory.add(assistantId: 'assistant-a', content: 'Original'),
+        ))!;
+        final handler = service.buildToolCallHandler(
+          settings,
+          assistant(enableMemory: true),
+        )!;
+        for (final name in ['create_memory', 'edit_memory']) {
+          for (final content in [null, 42, true, <String>[]]) {
+            final result = await tester.runAsync(
+              () => handler(name, {'id': own.id, 'content': content}),
+            );
+            expect(decode(result as String)['error'], 'invalid_memory_content');
+            expect(memory.memories.single.content, 'Original');
+          }
+        }
+        for (final name in ['edit_memory', 'delete_memory']) {
+          for (final id in [own.id + 0.5, '${own.id}', null]) {
+            final result = await tester.runAsync(
+              () => handler(name, {'id': id, 'content': 'Changed'}),
+            );
+            expect(decode(result as String)['error'], 'invalid_memory_id');
+            expect(memory.memories.single.content, 'Original');
+          }
+        }
+      },
+    );
+
+    testWidgets('legacy memory never writes from temporary conversations', (
+      tester,
+    ) async {
+      final chat = _TemporaryMemoryChat();
+      addTearDown(chat.dispose);
+      final (service, settings, memory) = await pumpLegacyHandler(
+        tester,
+        chat: chat,
+      );
+      await tester.runAsync(() => settings.setLegacyMemoryMode(true));
+      final own = (await tester.runAsync(
+        () => memory.add(assistantId: 'assistant-a', content: 'Original'),
+      ))!;
+      final handler = service.buildToolCallHandler(
+        settings,
+        assistant(enableMemory: true),
+        conversationId: 'temporary',
+      )!;
+      for (final name in ['create_memory', 'edit_memory', 'delete_memory']) {
+        final result = await tester.runAsync(
+          () => handler(name, {'id': own.id, 'content': 'Changed'}),
+        );
+        expect(decode(result as String)['error'], 'temporary_conversation');
+        expect(memory.memories.single.content, 'Original');
+      }
     });
   });
 
@@ -750,6 +855,70 @@ void main() {
       final payload = decode(raw!);
       expect(payload['error'], 'invalid_memory_type');
     });
+
+    test(
+      'invalid supplied scope never writes to the default global scope',
+      () async {
+        for (final scope in ['workspace', '', 42, true, <String, dynamic>{}]) {
+          final payload = decode(
+            (await call(
+              MemoryTools.memoryUpdate,
+              {
+                'type': 'workflow',
+                'content': 'User prefers scoped memories.',
+                'scope': scope,
+              },
+              a: assistant(
+                memoryWriteScope: MemoryWriteScope.toolDefaultGlobal,
+              ),
+            ))!,
+          );
+
+          expect(payload['error'], 'invalid_memory_scope');
+          expect(await memoryRepository.readAll(), isEmpty);
+        }
+      },
+    );
+
+    test('non-string content does not create a memory', () async {
+      for (final content in [
+        42,
+        true,
+        <String, dynamic>{'fact': 'Alex'},
+      ]) {
+        final payload = decode(
+          (await call(MemoryTools.memoryUpdate, {
+            'type': 'identity',
+            'content': content,
+          }))!,
+        );
+
+        expect(payload['error'], 'invalid_memory_content');
+        expect(await memoryRepository.readAll(), isEmpty);
+      }
+    });
+
+    test('null scope retains the configured tool default', () async {
+      await seedAssistant('assistant-a');
+      for (final (policy, expected) in [
+        (MemoryWriteScope.toolDefaultGlobal, MemoryScope.global),
+        (MemoryWriteScope.toolDefaultAssistant, MemoryScope.assistant),
+      ]) {
+        final payload = decode(
+          (await call(MemoryTools.memoryUpdate, {
+            'type': 'workflow',
+            'content': 'User prefers ${policy.name} memories.',
+            'scope': null,
+          }, a: assistant(memoryWriteScope: policy)))!,
+        );
+
+        expect(payload['action'], 'NEW');
+        final entries = await chatRepository.memoriesByIds([
+          payload['id'] as String,
+        ]);
+        expect(entries.single.scope, expected);
+      }
+    });
   });
 
   group('memory_search_profile', () {
@@ -848,6 +1017,34 @@ void main() {
   });
 
   group('memory_edit', () {
+    test('non-string content leaves an existing memory unchanged', () async {
+      final original = await memoryRepository.create(
+        scope: MemoryScope.global,
+        type: MemoryType.identity,
+        content: 'User is Alex.',
+        source: MemorySource.tool,
+      );
+
+      for (final content in [
+        42,
+        true,
+        <String, dynamic>{'fact': 'Alex'},
+      ]) {
+        final payload = decode(
+          (await call(MemoryTools.memoryEdit, {
+            'id': original.id,
+            'content': content,
+          }))!,
+        );
+
+        expect(payload['error'], 'invalid_memory_content');
+        expect(
+          (await memoryRepository.readAll()).single.content,
+          original.content,
+        );
+      }
+    });
+
     test('happy path EDIT', () async {
       final created = await memoryRepository.create(
         scope: MemoryScope.global,
@@ -969,6 +1166,36 @@ void main() {
       });
       expect(decode(raw!)['error'], 'invalid_profile_fields');
     });
+
+    test(
+      'missing or non-string values do not clear or overwrite a field',
+      () async {
+        await call(MemoryTools.updateUserProfile, {
+          'fields': [
+            {'key': 'preferred_name', 'value': 'Alex'},
+          ],
+        });
+
+        for (final item in [
+          {'key': 'preferred_name'},
+          {'key': 'preferred_name', 'value': null},
+          {'key': 'preferred_name', 'value': 42},
+        ]) {
+          final payload = decode(
+            (await call(MemoryTools.updateUserProfile, {
+              'fields': [item],
+            }))!,
+          );
+          expect(payload['updated'], isEmpty);
+          expect(payload['cleared'], isEmpty);
+          expect(payload['rejected'], [
+            {'key': 'preferred_name', 'reason': 'invalid_value'},
+          ]);
+          final fields = await chatRepository.readProfileFields();
+          expect(fields.single.value, 'Alex');
+        }
+      },
+    );
   });
 
   group('chat_search', () {

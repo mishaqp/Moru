@@ -122,11 +122,14 @@ void main() {
         'type': 'number',
         'minimum': 1,
         'maximum': 10,
+        'description':
+            'Source constraint exclusiveMinimum: 0.\nSource constraint exclusiveMaximum: 11.',
       });
       expect(output['properties']['hosts'], {
         'type': 'array',
         'minItems': 1,
         'maxItems': 3,
+        'description': 'Source constraint uniqueItems: true.',
         'items': {
           'type': 'string',
           'minLength': 1,
@@ -248,9 +251,17 @@ void main() {
       }, ProviderKind.openai);
 
       final props = output['properties'] as Map<String, dynamic>;
-      expect(props['remote'], {'description': 'kept'});
-      expect(props['dangling'], isEmpty);
-      expect(props['anchor'], isEmpty);
+      expect(
+        props['remote']['description'],
+        startsWith('kept\nUnresolved schema reference:'),
+      );
+      for (final name in ['remote', 'dangling', 'anchor']) {
+        expect(props[name], isNot(contains('type')));
+        expect(
+          props[name]['description'],
+          contains('Unresolved schema reference:'),
+        );
+      }
     });
 
     test('cuts a recursive \$ref without inventing a type', () {
@@ -378,9 +389,18 @@ void main() {
           'post',
           'text',
         }, reason: '$kind');
-        expect((output['properties']['early'] as Map)['items'], {
-          'type': 'string',
-        });
+        final early = output['properties']['early'] as Map;
+        if (kind == ProviderKind.google) {
+          expect(
+            early['description'],
+            contains('Source constraint prefixItems:'),
+          );
+          expect(early['items']['anyOf'], isA<List>());
+        } else {
+          expect((early['prefixItems'] as List).first, {'type': 'string'});
+          expect((early['prefixItems'] as List).length, 2);
+          expect(early['items'], isEmpty);
+        }
       }
     });
 

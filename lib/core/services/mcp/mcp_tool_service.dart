@@ -4,6 +4,7 @@ import 'package:mcp_client/mcp_client.dart' as mcp;
 import '../../providers/mcp_provider.dart';
 import 'mcp_tool_privacy.dart';
 import '../chat/chat_service.dart';
+import '../api/tool_schema_normalizer.dart';
 import '../../providers/assistant_provider.dart';
 import '../../../utils/app_directories.dart';
 import '../../../utils/mcp_structured_image.dart';
@@ -41,6 +42,24 @@ class McpToolRouteSnapshot {
 
 class McpToolService extends ChangeNotifier {
   McpToolService();
+
+  /// One source for advertisement and optional-null adaptation, including
+  /// persisted legacy tools which have parameter descriptors but no raw schema.
+  static Map<String, dynamic> sourceParameters(McpToolConfig tool) {
+    if (tool.schema != null && tool.schema!.isNotEmpty) {
+      return Map<String, dynamic>.from(tool.schema!);
+    }
+    return {
+      'type': 'object',
+      'properties': {
+        for (final p in tool.params) p.name: {'type': p.type ?? 'string'},
+      },
+      if (tool.params.any((p) => p.required))
+        'required': [
+          for (final p in tool.params.where((p) => p.required)) p.name,
+        ],
+    };
+  }
 
   List<McpToolConfig> listAvailableToolsForConversation(
     McpProvider mcpProvider,
@@ -277,7 +296,7 @@ class McpToolService extends ChangeNotifier {
       final result = await provider.callTool(
         route.server.id,
         route.tool.name,
-        arguments,
+        omitUnsupportedOptionalNulls(arguments, sourceParameters(route.tool)),
       );
       filter.capture(provider);
       return result == null ? null : filter.result(result);

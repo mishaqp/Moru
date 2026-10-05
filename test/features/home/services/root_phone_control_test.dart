@@ -84,6 +84,31 @@ void main() {
     ]);
   });
 
+  test('password labels and descendants are hidden in root screen reads', () {
+    final screen = RootPhoneControl.parseScreen('''
+<hierarchy>
+  <node text="secret-text" content-desc="secret-description" password="true"
+      class="android.widget.EditText" clickable="true" bounds="[10,20][110,60]">
+    <node text="secret-child" content-desc="secret-child-description"
+        bounds="[10,20][110,60]" />
+  </node>
+  <node text="Visible label" bounds="[0,100][200,140]" />
+</hierarchy>''');
+
+    expect(screen['nodes'], [
+      {
+        'class': 'EditText',
+        'password': true,
+        'clickable': true,
+        'editable': true,
+        'x': 60,
+        'y': 40,
+      },
+      {'text': 'Visible label', 'x': 100, 'y': 120},
+    ]);
+    expect(jsonEncode(screen), isNot(contains('secret')));
+  });
+
   test('actions become input and statusbar commands', () async {
     expect((await run({'action': 'tap', 'x': 980, 'y': 2280.4}))['ok'], isTrue);
     await run({'action': 'long_press', 'x': 10, 'y': 20});
@@ -132,6 +157,26 @@ void main() {
   test('apps are listed once, sorted', () async {
     expect((await run({'action': 'list_apps'}))['apps'], ['com.a', 'com.b']);
   });
+
+  test(
+    'a failed root app query reports failure instead of an empty list',
+    () async {
+      control = RootPhoneControl(
+        shell: RootShellTool(
+          start: (_, _) => Process.start('sh', [
+            '-c',
+            'echo "Permission denied" >&2; exit 1',
+          ]),
+        ),
+        setClipboard: (text) async => clipboard.add(text),
+      );
+
+      final result = await run({'action': 'list_apps'});
+      expect(result['error'], 'ROOT_FAILED');
+      expect(result['message'], 'Permission denied');
+      expect(result.containsKey('apps'), isFalse);
+    },
+  );
 
   test('missing points, bad packages and failures are explained', () async {
     expect(

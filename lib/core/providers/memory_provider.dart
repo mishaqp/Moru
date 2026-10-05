@@ -54,14 +54,19 @@ class MemoryProvider extends ChangeNotifier {
   Future<AssistantMemory?> update({
     required int id,
     required String content,
+    String? assistantId,
   }) async {
-    final mem = await _store.update(id: id, content: content);
+    final mem = await _store.update(
+      id: id,
+      content: content,
+      assistantId: assistantId,
+    );
     await loadAll();
     return mem;
   }
 
-  Future<bool> delete({required int id}) async {
-    final ok = await _store.delete(id: id);
+  Future<bool> delete({required int id, String? assistantId}) async {
+    final ok = await _store.delete(id: id, assistantId: assistantId);
     await loadAll();
     return ok;
   }

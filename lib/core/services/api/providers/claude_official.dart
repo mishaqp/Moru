@@ -13,6 +13,7 @@ import '../../../utils/multimodal_input_utils.dart';
 import '../../../../utils/mcp_structured_image.dart';
 import '../builtin_tools.dart';
 import '../chat_api_helpers.dart';
+import '../tool_schema_normalizer.dart';
 import '../tool_call_argument_privacy.dart';
 import '../generation/spend_round_control.dart';
 import '../generation/tool_loop_runner.dart';
@@ -392,6 +393,8 @@ Stream<StreamChunk> sendClaudeStream(
       if (extraClaude.isNotEmpty) {
         body.addAll(extraClaude);
       }
+
+      normalizeNativeToolSchemas(body, ToolSchemaTarget.claude);
 
       http.Request buildRequest() {
         final request = http.Request('POST', url);

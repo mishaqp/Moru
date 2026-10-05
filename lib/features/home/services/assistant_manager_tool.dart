@@ -8,6 +8,8 @@ import '../../../core/models/assistant_regex.dart';
 import '../../../core/models/preset_message.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/services/acp/acp_agent_catalog.dart';
+import '../../../core/services/acp/acp_secret_redactor.dart';
+import '../../../core/services/mcp/mcp_secrets.dart';
 
 /// A chat provider and the models the user added to it.
 class AssistantManagerProvider {
@@ -140,6 +142,213 @@ class AssistantManagerTool {
 
   /// The assistant running the chat that called the tool.
   final String? callerAssistantId;
+  final Set<String> _savedCredentials = {};
+
+  static bool _privateHeader(Map header) =>
+      McpSecrets.sensitiveName((header['name'] ?? '').toString()) ||
+      (header['value'] is String &&
+          McpSecrets.isSecret('', header['value'] as String));
+
+  static void _collectHeaderCredentials(
+    Iterable<Object?> headers,
+    Set<String> credentials,
+  ) {
+    void collect(Object? value) {
+      if (value is String && value.isNotEmpty) {
+        credentials.add(value);
+        final auth = RegExp(
+          r'^(?:Bearer|Basic|Token)\s+(.+)$',
+          caseSensitive: false,
+        ).firstMatch(value);
+        if (auth != null) credentials.add(auth[1]!);
+      } else if (value is List) {
+        value.forEach(collect);
+      } else if (value is Map) {
+        value.values.forEach(collect);
+      }
+    }
+
+    for (final header in headers) {
+      if (header is! Map) continue;
+      if (header['name'] is String &&
+          McpSecrets.isSecret('', header['name'] as String)) {
+        collect(header['name']);
+      }
+      if (_privateHeader(header)) collect(header['value']);
+    }
+  }
+
+  static AcpSecretRedactor _credentialRedactor(Iterable<String> credentials) =>
+      AcpSecretRedactor([
+        for (final value in credentials) ...[
+          value,
+          Uri.encodeComponent(value),
+          Uri.encodeQueryComponent(value),
+        ],
+      ]);
+
+  AcpSecretRedactor _captureCredentials() {
+    for (final assistant in assistants.assistants) {
+      _collectHeaderCredentials(assistant.customHeaders, _savedCredentials);
+    }
+    return _credentialRedactor(_savedCredentials);
+  }
+
+  /// A separate public copy for approval cards, model calls and history.
+  /// The handler must continue executing the original arguments.
+  /// Keep one private credential set per handler so history stays redacted
+  /// after a saved header is rotated or its assistant is removed.
+  static Map<String, dynamic> argumentsForModel(
+    Map<String, dynamic> arguments, {
+    Iterable<Assistant> assistants = const [],
+    AssistantManagerCatalog? catalog,
+    Set<String>? retainedCredentials,
+  }) {
+    final saved = assistants.toList();
+    final credentials = retainedCredentials ?? <String>{};
+    for (final assistant in saved) {
+      _collectHeaderCredentials(assistant.customHeaders, credentials);
+    }
+    final rawSettings = arguments['settings'];
+    Object? settings = rawSettings;
+    if (rawSettings is String) {
+      try {
+        settings = jsonDecode(rawSettings);
+      } on FormatException {
+        settings = null;
+      }
+    }
+    if (settings is Map && settings['customHeaders'] is List) {
+      _collectHeaderCredentials(settings['customHeaders'] as List, credentials);
+    }
+    final redactor = _credentialRedactor(credentials);
+    final publicIds = <String, Set<String>>{
+      'assistant_id': {for (final a in saved) a.id},
+      'chatModelProvider': {
+        for (final a in saved)
+          if (a.chatModelProvider != null) a.chatModelProvider!,
+        for (final p in catalog?.providers ?? <AssistantManagerProvider>[])
+          p.key,
+      },
+      'chatModelId': {
+        for (final a in saved)
+          if (a.chatModelId != null) a.chatModelId!,
+        for (final p in catalog?.providers ?? <AssistantManagerProvider>[])
+          ...p.models,
+      },
+      'agentId': {
+        for (final a in saved)
+          if (a.agentId != null) a.agentId!,
+        for (final a in catalog?.agents ?? <AssistantManagerOption>[]) a.id,
+      },
+      'defaultWorkspaceId': {
+        for (final a in saved)
+          if (a.defaultWorkspaceId != null) a.defaultWorkspaceId!,
+        for (final w in catalog?.workspaces ?? <AssistantManagerOption>[]) w.id,
+      },
+      'mcpServerIds': {
+        for (final a in saved) ...a.mcpServerIds,
+        for (final s in catalog?.mcpServers ?? <AssistantManagerOption>[]) s.id,
+      },
+      'localToolIds': {
+        for (final a in saved) ...a.localToolIds,
+        ...?catalog?.localToolIds,
+      },
+      'skillIds': {
+        for (final a in saved) ...?a.skillIds,
+        for (final s in catalog?.skills ?? <AssistantManagerOption>[]) s.id,
+      },
+    };
+    final agentChoices = <String, Set<String>>{};
+    for (final assistant in saved) {
+      for (final entry in assistant.agentConfig.entries) {
+        (agentChoices[entry.key] ??= {}).add(entry.value);
+      }
+    }
+    Object? publicValue(
+      Object? value, {
+      Map? schema,
+      Set<String> ids = const {},
+      bool headerPair = false,
+      bool agentConfig = false,
+    }) {
+      if (value is String) {
+        return ids.contains(value) ||
+                (schema?['enum'] is List &&
+                    (schema!['enum'] as List).contains(value))
+            ? value
+            : redactor.text(value);
+      }
+      if (value is List) {
+        return [
+          for (final item in value)
+            publicValue(
+              item,
+              schema: schema?['items'] is Map ? schema!['items'] as Map : null,
+              ids: ids,
+              headerPair: headerPair,
+            ),
+        ];
+      }
+      if (value is! Map) return value;
+      final properties = schema?['properties'] is Map
+          ? schema!['properties'] as Map
+          : const {};
+      return <String, dynamic>{
+        for (final entry in value.entries)
+          properties.containsKey(entry.key) ||
+                      (agentConfig && agentChoices.containsKey(entry.key))
+                  ? entry.key.toString()
+                  : redactor.text(entry.key.toString()):
+              headerPair &&
+                  entry.key == 'value' &&
+                  _privateHeader(value) &&
+                  entry.value != null &&
+                  entry.value != ''
+              ? redactor.text('[REDACTED]')
+              : publicValue(
+                  entry.value,
+                  schema: properties[entry.key] is Map
+                      ? properties[entry.key] as Map
+                      : null,
+                  ids: properties.containsKey(entry.key)
+                      ? publicIds[entry.key] ?? const {}
+                      : agentConfig
+                      ? agentChoices[entry.key] ?? const {}
+                      : const {},
+                  headerPair:
+                      properties.containsKey(entry.key) &&
+                      entry.key == 'customHeaders',
+                  agentConfig:
+                      properties.containsKey(entry.key) &&
+                      entry.key == 'agentConfig',
+                ),
+      };
+    }
+
+    final source = <String, dynamic>{
+      ...arguments,
+      if (rawSettings is String) 'settings': settings is Map ? settings : null,
+    };
+    final result =
+        publicValue(source, schema: definition['function']['parameters'] as Map)
+            as Map<String, dynamic>;
+    if (rawSettings is String) {
+      if (settings is Map) {
+        try {
+          final safeSettings = jsonEncode(result['settings']);
+          result['settings'] = safeSettings == jsonEncode(settings)
+              ? rawSettings
+              : safeSettings;
+        } on JsonUnsupportedObjectError {
+          result['settings'] = redactor.text('[Invalid settings JSON omitted]');
+        }
+      } else {
+        result['settings'] = redactor.text('[Invalid settings JSON omitted]');
+      }
+    }
+    return result;
+  }
 
   static String actionOf(Map<String, dynamic> args) =>
       (args['action'] ?? '').toString().trim().toLowerCase();
@@ -161,7 +370,8 @@ class AssistantManagerTool {
           'Changes apply from the next message. Deleting an assistant also '
           'deletes its conversations; the assistant running this chat and '
           'the last remaining assistant cannot be deleted. Avatar images '
-          'are set by the user in the settings page.',
+          'are set by the user in the settings page. Saved credentials are '
+          'redacted in results; never copy redacted values into settings.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -385,6 +595,7 @@ class AssistantManagerTool {
   Future<String> execute(Map<String, dynamic> args) async {
     try {
       await assistants.loaded;
+      _captureCredentials();
       final action = actionOf(args);
       final Map<String, dynamic> result;
       switch (action) {
@@ -412,7 +623,11 @@ class AssistantManagerTool {
       }
       return jsonEncode({'ok': true, ...result});
     } on _ToolFailure catch (e) {
-      return jsonEncode({'ok': false, 'error': e.error, 'message': e.message});
+      return jsonEncode({
+        'ok': false,
+        'error': e.error,
+        'message': _captureCredentials().text(e.message),
+      });
     }
   }
 
@@ -422,7 +637,7 @@ class AssistantManagerTool {
 
   Map<String, dynamic> _summary(Assistant a) => {
     'id': a.id,
-    'name': a.name,
+    'name': _captureCredentials().text(a.name),
     'model': a.chatModelProvider == null || a.chatModelId == null
         ? null
         : {'provider': a.chatModelProvider, 'id': a.chatModelId},
@@ -437,6 +652,25 @@ class AssistantManagerTool {
 
   Map<String, dynamic> _settingsOf(Assistant a) {
     final json = a.toJson();
+    final redactor = _captureCredentials();
+    Object? publicValue(Object? value) => switch (value) {
+      String() => redactor.text(value),
+      List() => value.map(publicValue).toList(),
+      Map() => {
+        for (final entry in value.entries) entry.key: publicValue(entry.value),
+      },
+      _ => value,
+    };
+    for (final key in const [
+      'name',
+      'avatar',
+      'systemPrompt',
+      'messageTemplate',
+      'customHeaders',
+      'customBody',
+    ]) {
+      if (json.containsKey(key)) json[key] = publicValue(json[key]);
+    }
     for (final key in const [
       'id',
       'background',
@@ -452,14 +686,15 @@ class AssistantManagerTool {
     }
     if (!_isEmojiAvatar(a.avatar)) json.remove('avatar');
     json['presetMessages'] = [
-      for (final m in a.presetMessages) {'role': m.role, 'content': m.content},
+      for (final m in a.presetMessages)
+        {'role': m.role, 'content': redactor.text(m.content)},
     ];
     json['regexRules'] = [
       for (final r in a.regexRules)
         {
-          'name': r.name,
-          'pattern': r.pattern,
-          'replacement': r.replacement,
+          'name': redactor.text(r.name),
+          'pattern': redactor.text(r.pattern),
+          'replacement': redactor.text(r.replacement),
           'scopes': [for (final s in r.scopes) s.name],
           'visualOnly': r.visualOnly,
           'replaceOnly': r.replaceOnly,
@@ -612,15 +847,26 @@ class AssistantManagerTool {
   }
 
   Map<String, dynamic> _settingsArg(Map<String, dynamic> args) {
+    Map<String, dynamic> suppliedSettings(Map raw) {
+      final settings = raw.map((k, v) => MapEntry(k.toString(), v));
+      final allowed = _settingsSchema.keys.toSet();
+      // Strict providers fill omitted optional properties with null. Resets
+      // remain explicit through clear, so those values are not edits.
+      settings.removeWhere(
+        (key, value) => value == null && allowed.contains(key),
+      );
+      return settings;
+    }
+
     final raw = args['settings'];
     if (raw == null) return const {};
-    if (raw is Map) return raw.map((k, v) => MapEntry(k.toString(), v));
+    if (raw is Map) return suppliedSettings(raw);
     if (raw is String && raw.trim().isNotEmpty) {
       // Some models send nested objects as JSON text.
       try {
         final decoded = jsonDecode(raw);
         if (decoded is Map) {
-          return decoded.map((k, v) => MapEntry(k.toString(), v));
+          return suppliedSettings(decoded);
         }
       } on FormatException {
         // Reported below.
@@ -956,6 +1202,14 @@ class AssistantManagerTool {
           'Each regex rule needs at least one scope: user or assistant.',
         );
       }
+      for (final field in ['visualOnly', 'replaceOnly', 'enabled']) {
+        if (item[field] != null && item[field] is! bool) {
+          throw _ToolFailure(
+            'invalid_settings',
+            'Regex $field must be true or false.',
+          );
+        }
+      }
       final visualOnly = item['visualOnly'] == true;
       final replaceOnly = item['replaceOnly'] == true;
       if (visualOnly && replaceOnly) {
@@ -995,10 +1249,8 @@ class _SettingsReader {
 
   final Map<String, dynamic> _settings;
 
-  Never _invalid(String key, String expected) => throw _ToolFailure(
-    'invalid_settings',
-    '$key must be $expected, got ${jsonEncode(_settings[key])}.',
-  );
+  Never _invalid(String key, String expected) =>
+      throw _ToolFailure('invalid_settings', '$key must be $expected.');
 
   String? string(String key) {
     if (!_settings.containsKey(key)) return null;
@@ -1026,7 +1278,7 @@ class _SettingsReader {
   int? integer(String key, {int? min, int? max}) {
     if (!_settings.containsKey(key)) return null;
     final value = _settings[key];
-    if (value is num && value == value.roundToDouble()) {
+    if (value is num && value.isFinite && value == value.roundToDouble()) {
       final n = value.toInt();
       if ((min == null || n >= min) && (max == null || n <= max)) return n;
     }

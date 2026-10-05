@@ -523,7 +523,7 @@ Stream<StreamChunk> sendOpenAIStream(
       if (temperature != null) 'temperature': temperature,
       if (topP != null) 'top_p': topP,
       if (maxTokens != null) 'max_output_tokens': maxTokens,
-      if (toolList.isNotEmpty) 'tools': toResponsesToolsFormat(toolList),
+      if (toolList.isNotEmpty) 'tools': toolList,
       if (toolList.isNotEmpty) 'tool_choice': 'auto',
       if (isReasoning && effort != 'off')
         'reasoning': {
@@ -601,8 +601,7 @@ Stream<StreamChunk> sendOpenAIStream(
       if (topP != null) 'top_p': topP,
       if (isReasoning && effort != 'off' && effort != 'auto')
         'reasoning_effort': effort,
-      if (tools != null && tools.isNotEmpty)
-        'tools': cleanToolsForCompatibility(tools),
+      if (tools != null && tools.isNotEmpty) 'tools': tools,
       if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
     };
     setMaxTokens(body);
@@ -698,6 +697,18 @@ Stream<StreamChunk> sendOpenAIStream(
     isReasoning: isReasoning,
     thinkingBudget: thinkingBudget,
   );
+  if (body['tools'] is List) {
+    final sourceTools = [
+      for (final tool in (body['tools'] as List).whereType<Map>())
+        Map<String, dynamic>.from(tool),
+    ];
+    body['tools'] = config.useResponseApi == true
+        ? toResponsesToolsFormat(sourceTools)
+        : cleanToolsForCompatibility(sourceTools);
+    if (config.useResponseApi == true) {
+      responsesToolsSpec = (body['tools'] as List).cast<Map<String, dynamic>>();
+    }
+  }
   request.body = jsonEncode(spendControl?.decorateRequest(body) ?? body);
 
   final response = await client.send(request);

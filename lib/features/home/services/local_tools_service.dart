@@ -399,7 +399,7 @@ class LocalToolsService {
           'function': {
             'name': LocalToolNames.reportProblem,
             'description':
-                'Collect a private Moru problem report when the user reports an app bug or asks for diagnostics. Always requires fresh confirmation. Creates a ZIP with app version/build, Android version and device model, PRoot/root mode, allowlisted settings without secrets and up to 128 KiB of technical events from this app run (event names, error types and package stack frames). Chat/message text, request/context logs and credentials are excluded. Returns file name/path, size, included categories and a brief diagnostic summary, never the full journal. The chat shows a Share button. Files are private, outside model file roots, and removed on the next app launch or expire after 24 hours. Use the summary to diagnose or draft an issue; do not try to open the private ZIP with file tools.',
+                'Collect a private Moru problem report when the user reports an app bug or asks for diagnostics. Requires fresh confirmation unless global full access is enabled. Creates a ZIP with app version/build, Android version and device model, PRoot/root mode, allowlisted settings without secrets and up to 128 KiB of technical events from this app run (event names, error types and package stack frames). Chat/message text, request/context logs and credentials are excluded. Returns file name/path, size, included categories and a brief diagnostic summary, never the full journal. The chat shows a Share button. Files are private, outside model file roots, and removed on the next app launch or expire after 24 hours. Use the summary to diagnose or draft an issue; do not try to open the private ZIP with file tools.',
             'parameters': {
               'type': 'object',
               'properties': <String, dynamic>{},
@@ -1156,7 +1156,7 @@ class LocalToolsService {
           'end': {
             'type': 'string',
             'description':
-                "End time, same formats as 'start'. Defaults to 1 hour after start.",
+                "End time, same formats as 'start'. Defaults to 1 hour after start, or the next local day for an all-day event.",
           },
           'all_day': {
             'type': 'boolean',
@@ -1402,7 +1402,13 @@ class LocalToolsService {
     try {
       final result = await _deviceToolsChannel.invokeMethod<String>(
         method,
-        jsonEncode(args),
+        // Nullable optional slots in strict calls mean omitted. The Android
+        // handlers use JSONObject.has/optString, where JSON null can otherwise
+        // replace a field, remove reminders or fail an optional time parse.
+        jsonEncode({
+          for (final entry in args.entries)
+            if (entry.value != null) entry.key: entry.value,
+        }),
       );
       if (result == null || result.isEmpty) {
         return jsonEncode({

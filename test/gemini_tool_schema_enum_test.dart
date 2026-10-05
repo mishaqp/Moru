@@ -31,7 +31,7 @@ void main() {
       expect(binary['type'], 'boolean');
     });
 
-    test('stringifies enum values on string-typed schemas', () {
+    test('keeps string enum values without changing non-string literals', () {
       final cleaned = cleanSchemaForGemini({
         'type': 'object',
         'properties': {
@@ -45,7 +45,7 @@ void main() {
         },
       }, stringEnumOnly: true);
 
-      expect(cleaned['properties']['mode']['enum'], ['read', '1', 'true']);
+      expect(cleaned['properties']['mode']['enum'], ['read']);
       expect(cleaned['properties']['untyped']['type'], 'string');
       expect(cleaned['properties']['untyped']['enum'], ['a', 'b']);
     });
@@ -107,7 +107,7 @@ void main() {
       expect(ratio.containsKey('enum'), isFalse);
     });
 
-    test('keeps only the string members of an untyped mixed enum', () {
+    test('keeps every type of an untyped mixed enum', () {
       final cleaned = cleanSchemaForGemini({
         'type': 'object',
         'properties': {
@@ -125,14 +125,21 @@ void main() {
       }, stringEnumOnly: true);
 
       final mixed = cleaned['properties']['mixed'] as Map<String, dynamic>;
-      expect(mixed['type'], 'string');
-      expect(mixed['enum'], ['read']);
-      // No string member: a string schema would accept nothing the tool takes,
-      // so keep a type one of the members actually has.
+      final variants = mixed['anyOf'] as List;
+      expect(variants.map((node) => node['type']).toSet(), {
+        'string',
+        'integer',
+        'boolean',
+      });
+      expect(variants.first['enum'], ['read']);
+      expect(variants[1]['description'], contains('Allowed values: [1]'));
       final noStrings =
           cleaned['properties']['noStrings'] as Map<String, dynamic>;
-      expect(noStrings['type'], 'integer');
-      expect(noStrings.containsKey('enum'), isFalse);
+      expect((noStrings['anyOf'] as List).map((node) => node['type']).toSet(), {
+        'integer',
+        'boolean',
+        'object',
+      });
     });
 
     test('types an enum whose members are all composites', () {
@@ -155,13 +162,14 @@ void main() {
       }, stringEnumOnly: true);
 
       final objects = cleaned['properties']['objects'] as Map<String, dynamic>;
-      expect(objects['type'], 'object');
-      expect(objects.containsKey('enum'), isFalse);
-      expect(objects['properties'], <String, dynamic>{});
+      final variants = objects['anyOf'] as List;
+      expect(variants.map((node) => node['type']).toSet(), {'object', 'array'});
+      expect(variants.first['properties'], <String, dynamic>{});
+      expect(variants.first['description'], contains('Allowed values:'));
       final lists = cleaned['properties']['lists'] as Map<String, dynamic>;
       expect(lists['type'], 'array');
       expect(lists.containsKey('enum'), isFalse);
-      expect(lists['items'], {'type': 'string'});
+      expect(lists['items']['anyOf'], isA<List>());
     });
 
     test('types a null-only enum as null rather than string', () {
@@ -207,10 +215,15 @@ void main() {
         'required': ['outer', 'missing'],
       }, stringEnumOnly: true);
 
-      expect(cleaned['properties']['outer']['properties']['tags']['items'], {
-        'type': 'string',
-      });
-      expect(cleaned['properties']['missing'], {'type': 'string'});
+      for (final node in [
+        cleaned['properties']['outer']['properties']['tags']['items'],
+        cleaned['properties']['missing'],
+      ]) {
+        expect(
+          (node['anyOf'] as List).map((branch) => branch['type']).toSet(),
+          {'string', 'number', 'boolean', 'object', 'array', 'null'},
+        );
+      }
     });
   });
 }
