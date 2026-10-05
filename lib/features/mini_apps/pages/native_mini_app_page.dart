@@ -270,6 +270,7 @@ class _NativeMiniAppPageState extends State<NativeMiniAppPage>
         'device.screen.timeout.set' => l10n.phonePanelScreenTimeout,
         'device.audio.volume.set' => l10n.phonePanelSound,
         'device.audio.dnd.set' => l10n.phonePanelDnd,
+        'device.root.dnd.set' => l10n.miniAppsPermissionRootDnd,
         'device.flashlight.set' => l10n.phonePanelFlashlight,
         'device.root.power_save.set' => l10n.miniAppsPermissionRootPowerSave,
         'device.root.wifi.set' => l10n.miniAppsPermissionRootWifi,

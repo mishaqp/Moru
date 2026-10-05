@@ -833,6 +833,43 @@ void main() {
   );
 
   test(
+    'expected app is checked after loading before the replacement schema',
+    () async {
+      await runtime.dispose();
+      final controlled = ControlledStore(
+        root: () async => Directory(p.join(temp.path, 'controlled-apps')),
+      );
+      store = controlled;
+      runtime = MiniAppRuntime(store: store, device: device);
+      final offered = await install();
+      controlled.trigger = controlled.loads + 1;
+      controlled.beforeLoad = () => install(
+        actions: [
+          stateAction(
+            schema: {
+              'type': 'object',
+              'properties': {
+                'renamed': {'type': 'string'},
+              },
+              'required': ['renamed'],
+              'additionalProperties': false,
+            },
+          ),
+        ],
+      );
+      final result = await runtime.execute(
+        'panel',
+        'save',
+        {'value': 1},
+        invocation: button,
+        expectedApp: offered,
+      );
+      expect(result['code'], 'app_changed');
+      expect(await store.storageAll('panel'), isEmpty);
+    },
+  );
+
+  test(
     'state checks identity after its final asynchronous grant read',
     () async {
       await runtime.dispose();

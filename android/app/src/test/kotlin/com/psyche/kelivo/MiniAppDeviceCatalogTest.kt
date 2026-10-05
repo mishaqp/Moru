@@ -45,6 +45,24 @@ class MiniAppDeviceCatalogTest {
         assertNotNull(MiniAppDeviceCatalog.validate("device.settings.open", mapOf("page" to "app_details", "packageName" to "com.example;id")))
     }
 
+    @Test fun rootDndAcceptsOnlyTheFourFixedModesWithoutShellArguments() {
+        for (mode in listOf("all", "priority", "alarms", "none")) {
+            assertNull(MiniAppDeviceCatalog.validate("device.root.dnd.set", mapOf("mode" to mode)))
+            val command = MiniAppDeviceCatalog.rootCommand("device.root.dnd.set", mapOf("mode" to mode))!!
+            assertEquals(listOf("/system/bin/cmd", "notification", "set_dnd", mode), command.argv)
+            assertEquals(listOf("su", "-c", "exec '/system/bin/cmd' 'notification' 'set_dnd' '$mode'"), command.suArgv())
+        }
+        for (mode in listOf<Any?>(null, true, 1, "silent", "on", "off", "ALL", "none;id", "$(id)", "all\nnone", "priority --user 0", listOf("all"))) {
+            val args = mapOf("mode" to mode)
+            assertNotNull("Invalid mode $mode must be rejected", MiniAppDeviceCatalog.validate("device.root.dnd.set", args))
+            assertNull(MiniAppDeviceCatalog.rootCommand("device.root.dnd.set", args))
+        }
+        for (args in listOf(emptyMap(), mapOf("enabled" to true), mapOf("mode" to "all", "command" to "id"), mapOf("mode" to "all", "argv" to listOf("id")), mapOf("mode" to "all", "shell" to "id"), mapOf("mode" to "all", "extra" to null))) {
+            assertNotNull(args.toString(), MiniAppDeviceCatalog.validate("device.root.dnd.set", args))
+            assertNull(MiniAppDeviceCatalog.rootCommand("device.root.dnd.set", args))
+        }
+    }
+
     @Test fun rootCommandsComeOnlyFromAllowlistedOperationAndValidatedArguments() {
         val expected = mapOf(
             "power_save" to listOf("/system/bin/cmd", "power", "set-mode", "1"),

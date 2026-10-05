@@ -17,7 +17,7 @@ class MiniAppSpecification {
       'Get this specification with mini_apps {action:spec} or publish_mini_app {action:spec}.',
       'Write the example JSON objects to moru-app.json and screen.json in a workspace folder; change id/name/actions for your app.',
       'Publish with publish_mini_app {path:folder}. Installation never grants capabilities. Ask the user to grant them on the app screen.',
-      'mini_apps {action:list} discovers installed app IDs and ma_ tools; state reads a snapshot. Buttons, chat and ACP execute the same declared actions.',
+      'mini_apps {action:list} discovers installed app IDs, opaque current version tokens and action schemas. After publishing or rollback, call list again then mini_apps {action:invoke,app_id:ID,action_name:NAME,version:TOKEN,arguments:"{}"} to execute the current action in the same reply. arguments is a JSON-object string limited to 64 KiB UTF-8. Tokens include a manifest contract digest; historical rollback IDs remain numeric and come from versions. Stale ma_ tools and tokens remain denied. Buttons, chat and ACP execute the same declared actions.',
     ],
     'manifest': {
       'nativePanelExampleFields': [
@@ -316,7 +316,7 @@ class MiniAppSpecification {
       'rules':
           'Explicit per-app user grants checked on every entry and every sequence step. AI additionally requires actions.ai. Write steps use normal tool approval; root needs its own capability and confirmation. Full trust skips consent only, never app grants or Android permissions. Revoke/cancel halts later steps. No inherited shell/root/Wi-Fi access. Device mutations from Wi-Fi or background jobs are forbidden.',
       'android':
-          'WRITE_SETTINGS is separately needed for brightness/timeout. DND needs Android policy access and global DND cannot be changed by Moru on Android 15+. Use device.settings.open page:dnd. Root handlers are fixed operations only with confirmation and result verification.',
+          'WRITE_SETTINGS is separately needed for brightness/timeout. Ordinary DND needs Android policy access and cannot change global DND on Android 15+: use device.settings.open page:dnd. device.root.dnd.set accepts only mode all/priority/alarms/none, requires the separate device.root.dnd grant and root confirmation, and verifies the actual global filter. If the app declares and the user grants device.root.dnd, device.audio.dnd.set actions and preset steps select that root handler before consent (original action grants still apply). Revocation cancels the selected operation, never falls back during an invocation. Restore retains the actual handler and requires its current grants. Root commands are fixed and bounded; no shell text or argv is accepted.',
       'results':
           'Never call opened_settings, permission_required, denied, unsupported, failed or unknown_after_timeout a successful setting change. Inspect each sequence/preset step and partial result.',
     },

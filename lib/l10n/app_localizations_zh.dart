@@ -12474,6 +12474,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get miniAppsPermissionSettingsOpen => '打开 Android 设置';
 
   @override
+  String get miniAppsPermissionRootDnd => 'Root：更改勿扰模式';
+
+  @override
   String get miniAppsPermissionRootPowerSave => 'Root：更改省电模式';
 
   @override
@@ -12867,7 +12870,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get phonePanelDndAndroid15Hint =>
-      'Android 15 及更高版本限制直接更改勿扰模式。若此动作不受支持，请使用 Android 设置；预设会报告跳过的步骤。';
+      'Android 15 及更高版本直接更改勿扰模式需要 root 访问权限和单独授予此迷你应用的勿扰模式 root 权限。没有 root 时，请使用 Android 设置；预设会报告跳过的步骤。';
 
   @override
   String get phonePanelSelectedAppSettings => '打开选定应用的设置';
@@ -25337,6 +25340,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get miniAppsPermissionSettingsOpen => '打开 Android 设置';
 
   @override
+  String get miniAppsPermissionRootDnd => 'Root：更改勿扰模式';
+
+  @override
   String get miniAppsPermissionRootPowerSave => 'Root：更改省电模式';
 
   @override
@@ -25730,7 +25736,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get phonePanelDndAndroid15Hint =>
-      'Android 15 及更高版本限制直接更改勿扰模式。若此动作不受支持，请使用 Android 设置；预设会报告跳过的步骤。';
+      'Android 15 及更高版本直接更改勿扰模式需要 root 访问权限和单独授予此迷你应用的勿扰模式 root 权限。没有 root 时，请使用 Android 设置；预设会报告跳过的步骤。';
 
   @override
   String get phonePanelSelectedAppSettings => '打开选定应用的设置';
@@ -38274,6 +38280,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get miniAppsPermissionSettingsOpen => '開啟 Android 設定';
 
   @override
+  String get miniAppsPermissionRootDnd => 'Root：變更勿擾模式';
+
+  @override
   String get miniAppsPermissionRootPowerSave => 'Root：變更省電模式';
 
   @override
@@ -38667,7 +38676,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get phonePanelDndAndroid15Hint =>
-      'Android 15 及更新版本限制直接變更勿擾模式。若此動作不受支援，請使用 Android 設定；預設會回報跳過的步驟。';
+      'Android 15 及更新版本直接變更勿擾模式需要 root 存取權限和另外授予此迷你應用程式的勿擾模式 root 權限。沒有 root 時，請使用 Android 設定；預設會回報跳過的步驟。';
 
   @override
   String get phonePanelSelectedAppSettings => '開啟選定應用程式的設定';

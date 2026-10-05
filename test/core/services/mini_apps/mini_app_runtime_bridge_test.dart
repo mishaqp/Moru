@@ -696,7 +696,7 @@ void main() {
           approve: (_, action, arguments) async {
             approvals++;
             expect(action.name, 'brightness');
-            expect(arguments, {'value': 80});
+            expect(arguments, {'value': 80, 'operations': []});
             return false;
           },
         ),

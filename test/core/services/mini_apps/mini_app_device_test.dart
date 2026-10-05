@@ -26,6 +26,7 @@ void main() {
         'bluetooth',
         'data',
         'airplane',
+        'dnd',
       ]) {
         final handler = 'device.root.$operation.set';
         expect(MiniAppDeviceService.permissionsFor(handler), {
@@ -80,8 +81,8 @@ void main() {
           },
         },
       );
-      expect(MiniAppDeviceService.handlers, hasLength(18));
-      expect(MiniAppDeviceService.knownCapabilities, hasLength(16));
+      expect(MiniAppDeviceService.handlers, hasLength(19));
+      expect(MiniAppDeviceService.knownCapabilities, hasLength(17));
       expect(MiniAppDeviceService.inputSchemaFor('device.shell'), isNull);
       // Callers cannot weaken the authoritative catalog by editing a schema copy.
       (brightness!['properties'] as Map)['value'] = {'type': 'string'};
@@ -92,6 +93,55 @@ void main() {
             as Map)['value']['type'],
         'integer',
       );
+    },
+  );
+
+  test('root DND has a separate grant and a fixed four-mode schema', () {
+    expect(MiniAppDeviceService.permissionsFor('device.root.dnd.set'), {
+      'device.root.dnd',
+    });
+    expect(MiniAppDeviceService.permissionsFor('device.audio.dnd.set'), {
+      'device.audio.write',
+    });
+    expect(MiniAppDeviceService.inputSchemaFor('device.root.dnd.set'), {
+      'type': 'object',
+      'properties': {
+        'mode': {
+          'type': 'string',
+          'enum': ['all', 'priority', 'none', 'alarms'],
+        },
+      },
+      'required': ['mode'],
+      'additionalProperties': false,
+    });
+  });
+
+  test(
+    'root DND reaches Android with the fixed handler and each mode',
+    () async {
+      final nativeCalls = <MethodCall>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        nativeCalls.add(call);
+        return {
+          'status': 'denied',
+          'state': {
+            'audio': {'dnd': 'all'},
+          },
+        };
+      });
+      final service = MiniAppDeviceService(channel: channel, events: events);
+      for (final mode in ['all', 'priority', 'alarms', 'none']) {
+        final result = await service.execute('device.root.dnd.set', {
+          'mode': mode,
+        });
+        expect(result['status'], 'denied');
+        expect(result['state']['audio']['dnd'], 'all');
+        expect(nativeCalls.last.method, 'execute');
+        expect(nativeCalls.last.arguments['handler'], 'device.root.dnd.set');
+        expect(nativeCalls.last.arguments['args'], {'mode': mode});
+        expect(nativeCalls.last.arguments['requestId'], isA<String>());
+      }
+      expect(nativeCalls, hasLength(4));
     },
   );
 

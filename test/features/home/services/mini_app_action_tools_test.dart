@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/models/conversation.dart';
+import 'package:Kelivo/core/models/workspace.dart';
+import 'package:Kelivo/core/models/workspace_binding.dart';
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/mcp_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
@@ -17,17 +19,21 @@ import 'package:Kelivo/core/services/mcp/mcp_tool_service.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_runtime.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_device.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
+import 'package:Kelivo/core/services/workspace/workspace_paths.dart';
+import 'package:Kelivo/core/services/workspace/workspace_tools_service.dart';
 import 'package:Kelivo/features/home/services/local_tools_service.dart';
 import 'package:Kelivo/features/home/services/acp_moru_tools.dart';
 import 'package:Kelivo/features/home/services/mini_app_data_tool.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
 import 'package:Kelivo/features/home/services/tool_handler_service.dart';
+import 'package:Kelivo/utils/mcp_structured_image.dart';
 
 import '../../../support/business_test_harness.dart';
+import '../../../support/tool_schema_contract.dart';
 
 class _ActionChat extends ChangeNotifier implements ChatService {
   _ActionChat(this.conversation);
-  final Conversation conversation;
+  Conversation conversation;
 
   @override
   Conversation? getConversation(String id) =>
@@ -74,6 +80,9 @@ void main() {
   late McpToolService mcpTools;
   late Assistant assistant;
   late String actionName;
+  late int publication;
+  late WorkspaceToolsService publisher;
+  late WorkspaceToolContext publishContext;
   final schema = <String, dynamic>{
     'type': 'object',
     'properties': {
@@ -86,7 +95,32 @@ void main() {
 
   setUp(() async {
     temp = await Directory.systemTemp.createTemp('moru-action-tools-');
-    store = MiniAppStore(root: () async => Directory('${temp.path}/apps'));
+    publication = DateTime.utc(2026, 1, 1).millisecondsSinceEpoch;
+    store = MiniAppStore(
+      root: () async => Directory('${temp.path}/apps'),
+      now: () =>
+          DateTime.fromMillisecondsSinceEpoch(publication++, isUtc: true),
+    );
+    final session = Directory('${temp.path}/session')..createSync();
+    final skills = Directory('${temp.path}/skills')..createSync();
+    publishContext = WorkspaceToolContext(
+      workspace: Workspace(
+        id: 'workspace',
+        name: 'Workspace',
+        kind: WorkspaceKind.managed,
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      ),
+      binding: const WorkspaceBinding(workspaceId: 'workspace'),
+      paths: WorkspacePaths.native(
+        workspaceHostRoot: temp.path,
+        sessionHostDir: session.path,
+        skillsHostDir: skills.path,
+      ),
+      sessionDir: session,
+      outputsDir: Directory('${session.path}/outputs')..createSync(),
+    );
+    publisher = WorkspaceToolsService(miniApps: store);
     final source = Directory('${temp.path}/source')..createSync();
     File('${source.path}/moru-app.json').writeAsStringSync(
       jsonEncode({
@@ -157,9 +191,74 @@ void main() {
     );
   }
 
-  Map<String, dynamic> decode(Object? result) => result is String
-      ? jsonDecode(result) as Map<String, dynamic>
+  Map<String, dynamic> decode(Object? result) =>
+      result is String || result is ClientToolResult
+      ? jsonDecode(
+              result is String ? result : (result as ClientToolResult).content,
+            )
+            as Map<String, dynamic>
       : Map<String, dynamic>.from(result! as Map);
+
+  Map<String, dynamic> decodeAcp(Map<String, Object?> result) =>
+      decode((result['content'] as List).single['text']);
+
+  Future<Map<String, dynamic>> publishSource() async {
+    final result = decode(
+      await publisher.handle(
+        publishContext,
+        WorkspaceToolsService.miniAppTool,
+        {'path': '${temp.path}/source'},
+        toolCallId: 'publish-replacement',
+      ),
+    );
+    expect(result['ok'], true, reason: jsonEncode(result));
+    return result;
+  }
+
+  Future<Map<String, dynamic>> publishReplacement() async {
+    final file = File('${temp.path}/source/moru-app.json');
+    final manifest =
+        jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    manifest['actions'][0]['inputSchema'] = {
+      'type': 'object',
+      'properties': {
+        'amount': {'type': 'integer', 'minimum': 0, 'maximum': 5},
+      },
+      'required': ['amount'],
+      'additionalProperties': false,
+    };
+    manifest['actions'][0]['executor']['patch'] = {
+      'count': {r'$arg': 'amount'},
+    };
+    (manifest['actions'] as List).add({
+      'name': 'set_new',
+      'description': 'Set the count with the new action',
+      'inputSchema': schema,
+      'permissions': <String>[],
+      'danger': 'write',
+      'executor': {
+        'kind': 'state',
+        'patch': {
+          'count': {r'$arg': 'count'},
+        },
+      },
+    });
+    await file.writeAsString(jsonEncode(manifest));
+    return publishSource();
+  }
+
+  Map<String, dynamic> invokeArgs(
+    String name,
+    Map<String, dynamic> arguments, {
+    String? version,
+  }) => {
+    'action': 'invoke',
+    'app_id': 'counter',
+    'action_name': name,
+    'arguments': jsonEncode(arguments),
+    'version':
+        version ?? MiniAppRuntime.actionVersionOf(store.byId('counter')!),
+  };
 
   Future<ToolApprovalRequest> nextApproval(ToolApprovalService approvals) {
     final result = Completer<ToolApprovalRequest>();
@@ -172,6 +271,699 @@ void main() {
     approvals.addListener(changed);
     changed();
     return result.future.whenComplete(() => approvals.removeListener(changed));
+  }
+
+  test('mini_apps invoke keeps source schemas compatible with providers', () {
+    final definition = MiniAppDataTool.definition;
+    final source = jsonEncode(definition);
+    final properties =
+        definition['function']['parameters']['properties'] as Map;
+    expect(properties['action']['enum'], contains('invoke'));
+    expect(properties['action_name']['type'], 'string');
+    expect(properties['arguments']['type'], 'string');
+    for (final target in ToolSchemaTarget.values) {
+      final converted = normalizeToolDefinition(definition, target);
+      final function = converted['function'] as Map;
+      final parameters = function['parameters'] as Map;
+      assertToolSchemaForProvider(
+        parameters,
+        target,
+        strict: function['strict'] == true,
+        path: 'mini_apps',
+      );
+      // JSON text avoids free/empty object schemas in provider definitions.
+      expect(parameters['properties']['arguments']['type'], 'string');
+    }
+    expect(jsonEncode(definition), source);
+  });
+
+  testWidgets(
+    'mini_apps list discovers versions and source action policy without grants',
+    (tester) async {
+      final handler = await service(tester);
+      await tester.runAsync(() async {
+        final call = handler.buildToolCallHandler(settings, assistant)!;
+        final listed = decode(await call('mini_apps', {'action': 'list'}));
+        final app = (listed['apps'] as List).single as Map;
+        expect(
+          app['version'],
+          MiniAppRuntime.actionVersionOf(store.byId('counter')!),
+        );
+        final action = (app['actions'] as List).single as Map;
+        expect(action['inputSchema'], schema);
+        expect(action['permissions'], isEmpty);
+        expect(action['danger'], 'write');
+        expect(await runtime.permissions.granted('counter'), isEmpty);
+        expect(await store.storageAll('counter'), isEmpty);
+      });
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'same chat handler invokes newly published actions and rejects stale schemas',
+    (tester) async {
+      final handler = await service(tester);
+      await tester.runAsync(() async {
+        await settings.setToolAutoApproveAll(true);
+        await runtime.permissions.setGranted('counter', 'actions.ai', true);
+        final offered = handler.captureMiniAppToolRoutes();
+        final call = handler.buildToolCallHandler(
+          settings,
+          assistant,
+          miniAppRouteSnapshot: offered,
+        )!;
+        final oldVersion = MiniAppRuntime.actionVersionOf(
+          store.byId('counter')!,
+        );
+        await publishReplacement();
+        final listed = decode(await call('mini_apps', {'action': 'list'}));
+        final app = (listed['apps'] as List).single as Map;
+        final version = app['version'] as String;
+        expect(version, isNot(oldVersion));
+        expect(
+          (app['actions'] as List).map((a) => a['name']),
+          contains('set_new'),
+        );
+        expect(
+          decode(await call(actionName, {'count': 4}))['status'],
+          'denied',
+        );
+        final stale = decode(
+          await call(
+            'mini_apps',
+            invokeArgs('set_count', {'count': 4}, version: oldVersion),
+          ),
+        );
+        expect(stale['ok'], false);
+        expect(stale['error'], 'app_changed');
+        final oldSchema = decode(
+          await call(
+            'mini_apps',
+            invokeArgs('set_count', {'count': 4}, version: version),
+          ),
+        );
+        expect(oldSchema['status'], 'failed');
+        expect(oldSchema['code'], 'invalid_arguments');
+        expect(await store.storageAll('counter'), isEmpty);
+        expect(
+          decode(
+            await call(
+              'mini_apps',
+              invokeArgs('set_count', {'amount': 3}, version: version),
+            ),
+          )['status'],
+          'applied',
+        );
+        final invoked = decode(
+          await call(
+            'mini_apps',
+            invokeArgs('set_new', {'count': 8}, version: version),
+          ),
+        );
+        expect(invoked['status'], 'applied');
+        expect(await store.storageGet('counter', 'count'), 8);
+        expect(
+          offered.names,
+          isNot(contains(MiniAppRuntime.toolNameFor('counter', 'set_new'))),
+        );
+      });
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'same-timestamp publication cannot reuse an action invocation version',
+    (tester) async {
+      final handler = await service(tester);
+      await tester.runAsync(() async {
+        await settings.setToolAutoApproveAll(true);
+        await runtime.permissions.setGranted('counter', 'actions.ai', true);
+        final call = handler.buildToolCallHandler(settings, assistant)!;
+        final original = store.byId('counter')!;
+        final listed = decode(await call('mini_apps', {'action': 'list'}));
+        final oldVersion = (listed['apps'] as List).single['version'] as String;
+        publication = original.updatedAt.millisecondsSinceEpoch;
+        final file = File('${temp.path}/source/moru-app.json');
+        final manifest =
+            jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+        manifest['actions'][0]['executor']['patch'] = {
+          'other': {r'$arg': 'count'},
+        };
+        await file.writeAsString(jsonEncode(manifest));
+        await publishSource();
+        expect(
+          MiniAppStore.versionOf(store.byId('counter')!),
+          MiniAppStore.versionOf(original),
+        );
+        final stale = decode(
+          await call(
+            'mini_apps',
+            invokeArgs('set_count', {'count': 4}, version: oldVersion),
+          ),
+        );
+        expect(stale['ok'], false);
+        expect(stale['error'], 'app_changed');
+        expect(await store.storageAll('counter'), isEmpty);
+        final current = decode(await call('mini_apps', {'action': 'list'}));
+        final newVersion =
+            (current['apps'] as List).single['version'] as String;
+        expect(newVersion, isNot(oldVersion));
+        expect(
+          decode(
+            await call(
+              'mini_apps',
+              invokeArgs('set_count', {'count': 4}, version: newVersion),
+            ),
+          )['status'],
+          'applied',
+        );
+        expect(await store.storageAll('counter'), {'other': 4});
+      });
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'same reply invokes actions after rollback and returning to the newer version',
+    (tester) async {
+      final handler = await service(tester);
+      await tester.runAsync(() async {
+        await settings.setToolAutoApproveAll(true);
+        await runtime.permissions.setGranted('counter', 'actions.ai', true);
+        final call = handler.buildToolCallHandler(settings, assistant)!;
+        final initial = MiniAppStore.versionOf(store.byId('counter')!);
+        await publishReplacement();
+        final newer = MiniAppStore.versionOf(store.byId('counter')!);
+        for (final target in [initial, newer]) {
+          final rolledBack = decode(
+            await call('mini_apps', {
+              'action': 'rollback',
+              'app_id': 'counter',
+              'version': target,
+            }),
+          );
+          expect(rolledBack['ok'], true);
+          expect(rolledBack['restored'], target);
+          final currentVersion = MiniAppRuntime.actionVersionOf(
+            store.byId('counter')!,
+          );
+          expect(rolledBack['version'], currentVersion);
+          final listing = decode(await call('mini_apps', {'action': 'list'}));
+          expect((listing['apps'] as List).single['version'], currentVersion);
+          final result = decode(
+            await call(
+              'mini_apps',
+              invokeArgs(target == initial ? 'set_count' : 'set_new', {
+                'count': target == initial ? 2 : 7,
+              }, version: currentVersion),
+            ),
+          );
+          expect(result['status'], 'applied');
+          expect(
+            await store.storageGet('counter', 'count'),
+            target == initial ? 2 : 7,
+          );
+          expect(
+            decode(await call(actionName, {'count': 1}))['status'],
+            'denied',
+          );
+        }
+      });
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  test('publish result exposes the current invocation version', () async {
+    final published = await publishReplacement();
+    expect(
+      published['version'],
+      MiniAppRuntime.actionVersionOf(store.byId('counter')!),
+    );
+  });
+
+  test(
+    'invoke validates required fields and only accepts an AI runtime',
+    () async {
+      await runtime.permissions.setGranted('counter', 'actions.ai', true);
+      final tool = MiniAppDataTool(
+        store: store,
+        runtime: runtime,
+        invocation: MiniAppInvocation(
+          source: MiniAppInvocationSource.chat,
+          fullTrust: () => true,
+        ),
+      );
+      final valid = invokeArgs('set_count', {'count': 4});
+      for (final key in ['app_id', 'action_name', 'arguments', 'version']) {
+        for (final invalid in [null, 4, '']) {
+          final result = decode(await tool.execute({...valid, key: invalid}));
+          expect(result['ok'], false, reason: '$key=$invalid');
+        }
+        final missing = Map<String, dynamic>.of(valid)..remove(key);
+        expect(decode(await tool.execute(missing))['ok'], false, reason: key);
+      }
+      expect(await store.storageAll('counter'), isEmpty);
+      for (final source in [
+        MiniAppInvocationSource.button,
+        MiniAppInvocationSource.background,
+        MiniAppInvocationSource.wifi,
+      ]) {
+        final result = decode(
+          await MiniAppDataTool(
+            store: store,
+            runtime: runtime,
+            invocation: MiniAppInvocation(
+              source: source,
+              fullTrust: () => true,
+            ),
+          ).execute(valid),
+        );
+        expect(result['ok'], false, reason: source.name);
+        expect(result['error'], 'invocation_denied');
+      }
+      for (final tool in [
+        MiniAppDataTool(store: store, runtime: runtime),
+        MiniAppDataTool(
+          store: store,
+          invocation: const MiniAppInvocation(
+            source: MiniAppInvocationSource.chat,
+          ),
+        ),
+      ]) {
+        final result = decode(await tool.execute(valid));
+        expect(result['ok'], false);
+        expect(result['error'], 'permission_required');
+      }
+      expect(await store.storageAll('counter'), isEmpty);
+    },
+  );
+
+  test(
+    'invoke accepts only bounded JSON text that decodes to an object',
+    () async {
+      await runtime.permissions.setGranted('counter', 'actions.ai', true);
+      final tool = MiniAppDataTool(
+        store: store,
+        runtime: runtime,
+        invocation: MiniAppInvocation(
+          source: MiniAppInvocationSource.chat,
+          fullTrust: () => true,
+        ),
+      );
+      final valid = invokeArgs('set_count', {'count': 4});
+      for (final invalid in [
+        {'count': 4},
+        '{',
+        '[]',
+        'null',
+        '4',
+        'true',
+        jsonEncode('text'),
+        ' ' * (64 * 1024 + 1),
+        jsonEncode({'note': '中' * (64 * 1024 ~/ 3), 'count': 4}),
+      ]) {
+        final result = decode(
+          await tool.execute({...valid, 'arguments': invalid}),
+        );
+        expect(result['ok'], false);
+        expect(result['error'], 'invalid_arguments');
+        expect(await store.storageAll('counter'), isEmpty);
+      }
+      final result = decode(await tool.execute(valid));
+      expect(result['status'], 'applied');
+      expect(await store.storageAll('counter'), {'count': 4});
+    },
+  );
+
+  testWidgets(
+    'root DND approval retains effective policy and selected host operations',
+    (tester) async {
+      final handler = await service(tester);
+      final approvals = ToolApprovalService();
+      addTearDown(approvals.dispose);
+      await tester.runAsync(() async {
+        final file = File('${temp.path}/source/moru-app.json');
+        final manifest =
+            jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+        manifest['permissions'] = ['actions.ai', 'device.root.dnd'];
+        manifest['actions'][0] = {
+          'name': 'set_count',
+          'description': 'Quiet preset',
+          'inputSchema': {'type': 'object', 'additionalProperties': false},
+          'permissions': ['device.audio.write'],
+          'danger': 'write',
+          'executor': {
+            'kind': 'preset',
+            'steps': [
+              {
+                'handler': 'device.audio.dnd.set',
+                'args': {'mode': 'priority'},
+              },
+            ],
+          },
+        };
+        await file.writeAsString(jsonEncode(manifest));
+        await publishSource();
+        for (final permission in [
+          'actions.ai',
+          'device.audio.write',
+          'device.root.dnd',
+        ]) {
+          await runtime.permissions.setGranted('counter', permission, true);
+        }
+        final call = handler.buildToolCallHandler(
+          settings,
+          assistant,
+          approvalService: approvals,
+          conversationId: 'chat',
+        )!;
+        final invocation = call(
+          'mini_apps',
+          invokeArgs('set_count', {}),
+          toolCallId: 'root-dnd',
+        );
+        final approval = await nextApproval(approvals);
+        try {
+          expect(approval.arguments['danger'], 'root');
+          expect(
+            approval.arguments['permissions'],
+            contains('device.root.dnd'),
+          );
+          expect(approval.arguments['root_dnd_operations'], [
+            {
+              'handler': 'device.root.dnd.set',
+              'args': {'mode': 'priority'},
+            },
+          ]);
+        } finally {
+          approvals.deny('root-dnd', conversationId: 'chat');
+          expect(decode(await invocation)['status'], 'denied');
+        }
+      });
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  for (final executor in <String, Map<String, dynamic>>{
+    'empty restore': {'kind': 'restore'},
+    'state': {
+      'kind': 'state',
+      'patch': {'count': 1},
+    },
+    'expression': {
+      'kind': 'state',
+      'expressions': true,
+      'patch': {'count': 1},
+    },
+  }.entries) {
+    testWidgets(
+      'approval operation provenance for ${executor.key}',
+      (tester) async {
+        final handler = await service(tester);
+        final approvals = ToolApprovalService();
+        addTearDown(approvals.dispose);
+        await tester.runAsync(() async {
+          final file = File('${temp.path}/source/moru-app.json');
+          final manifest =
+              jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+          manifest['permissions'] = ['actions.ai', 'device.root.dnd'];
+          manifest['actions'][0] = {
+            'name': 'set_count',
+            'description': 'Input operation fixture',
+            'inputSchema': {
+              'type': 'object',
+              'properties': {
+                'operations': {'type': 'array'},
+              },
+              'additionalProperties': false,
+            },
+            'permissions': ['device.root.dnd'],
+            'danger': 'root',
+            'executor': executor.value,
+          };
+          await file.writeAsString(jsonEncode(manifest));
+          await publishSource();
+          for (final permission in ['actions.ai', 'device.root.dnd']) {
+            await runtime.permissions.setGranted('counter', permission, true);
+          }
+          final modelOperations = [
+            {
+              'handler': 'device.root.dnd.set',
+              'args': {'mode': 'none'},
+            },
+          ];
+          final call = handler.buildToolCallHandler(
+            settings,
+            assistant,
+            approvalService: approvals,
+            conversationId: 'chat',
+          )!;
+          final invocation = call(
+            'mini_apps',
+            invokeArgs('set_count', {'operations': modelOperations}),
+            toolCallId: 'input-operations',
+          );
+          final approval = await nextApproval(approvals);
+          try {
+            expect(
+              approval.arguments.containsKey('root_dnd_operations'),
+              isFalse,
+            );
+            expect(
+              approval.arguments['arguments']['operations'],
+              executor.key == 'empty restore' ? isEmpty : modelOperations,
+            );
+          } finally {
+            approvals.deny('input-operations', conversationId: 'chat');
+            expect(decode(await invocation)['status'], 'denied');
+          }
+        });
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
+
+  testWidgets(
+    'invoke uses app grants and action confirmation even with full trust available',
+    (tester) async {
+      final handler = await service(tester);
+      final approvals = ToolApprovalService();
+      addTearDown(approvals.dispose);
+      await tester.runAsync(() async {
+        await settings.setToolAutoApproveAll(true);
+        final call = handler.buildToolCallHandler(
+          settings,
+          assistant,
+          approvalService: approvals,
+          conversationId: 'chat',
+        )!;
+        final args = invokeArgs('set_count', {'count': 6});
+        expect(
+          decode(await call('mini_apps', args))['status'],
+          'permission_required',
+        );
+        expect(approvals.pendingRequests, isEmpty);
+        await runtime.permissions.setGranted('counter', 'actions.ai', true);
+        await settings.setToolAutoApproveAll(false);
+        final without = handler.buildToolCallHandler(settings, assistant)!;
+        expect(
+          decode(await without('mini_apps', args))['status'],
+          'permission_required',
+        );
+        final denied = call('mini_apps', args, toolCallId: 'deny-invoke');
+        final approval = await nextApproval(approvals);
+        expect(approval.toolName, actionName);
+        expect(approval.requiresExplicitConsent, true);
+        expect(approval.arguments['action'], 'set_count');
+        expect(approval.arguments['arguments'], {'count': 6});
+        approvals.deny('deny-invoke', conversationId: 'chat');
+        expect(decode(await denied)['status'], 'denied');
+        expect(await store.storageAll('counter'), isEmpty);
+        final approved = call('mini_apps', args, toolCallId: 'approve-invoke');
+        await nextApproval(approvals);
+        approvals.approve('approve-invoke', conversationId: 'chat');
+        expect(decode(await approved)['status'], 'applied');
+        expect(await store.storageGet('counter', 'count'), 6);
+      });
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'existing ACP tools invoke newly published actions in the same turn with bounded results',
+    (tester) async {
+      await service(tester);
+      final chats = _ActionChat(
+        Conversation(id: 'chat', title: 'Chat', assistantId: assistant.id),
+      );
+      addTearDown(chats.dispose);
+      final tools = AcpMoruTools.create(
+        context: tester.element(find.byType(SizedBox)),
+        assistant: assistant,
+        chats: chats,
+        assistants: assistants,
+        settings: settings,
+        conversationId: 'chat',
+        providerKey: 'provider',
+        modelId: 'model',
+        workspace: null,
+        approvals: null,
+        miniAppRuntime: runtime,
+      );
+      await tester.runAsync(() async {
+        await runtime.permissions.setGranted('counter', 'actions.ai', true);
+        await settings.setToolAutoApproveAll(true);
+        final oldVersion = MiniAppRuntime.actionVersionOf(
+          store.byId('counter')!,
+        );
+        await publishReplacement();
+        final discovered = decodeAcp(
+          await tools.execute('mini_apps', {
+            'action': 'list',
+          }, toolCallId: 'discover-new'),
+        );
+        final current =
+            (discovered['apps'] as List).single['version'] as String;
+        expect(tools.miniAppActionNames!(), isEmpty);
+        expect(
+          (await tools.execute(actionName, {
+            'count': 1,
+          }, toolCallId: 'stale-offered'))['isError'],
+          true,
+        );
+        expect(
+          (await tools.execute(
+            'mini_apps',
+            invokeArgs('set_new', {'count': 8}, version: oldVersion),
+            toolCallId: 'stale-version',
+          ))['isError'],
+          true,
+        );
+        final large = 'x' * (MiniAppDataTool.maxReadChars + 100);
+        await store.storageSet('counter', 'large', large);
+        final result = await tools.execute(
+          'mini_apps',
+          invokeArgs('set_new', {'count': 8}, version: current),
+          toolCallId: 'invoke-new',
+        );
+        expect(result['isError'], false, reason: jsonEncode(result));
+        final action = decodeAcp(result);
+        expect(action['status'], 'applied');
+        expect(action['state']['data_omitted'], true);
+        expect(action['state'].containsKey('data'), false);
+        expect(
+          jsonEncode(action).length,
+          lessThan(MiniAppDataTool.maxReadChars),
+        );
+        expect(await store.storageGet('counter', 'count'), 8);
+        expect(await store.storageGet('counter', 'large'), large);
+        await runtime.permissions.setGranted('counter', 'actions.ai', false);
+        expect(
+          (await tools.execute(
+            'mini_apps',
+            invokeArgs('set_new', {'count': 1}),
+            toolCallId: 'revoked',
+          ))['isError'],
+          true,
+        );
+        await assistants.updateAssistant(
+          assistant.copyWith(localToolIds: const []),
+        );
+        expect(
+          (await tools.execute(
+            'mini_apps',
+            invokeArgs('set_new', {'count': 1}),
+            toolCallId: 'disabled',
+          ))['isError'],
+          true,
+        );
+        expect(await store.storageGet('counter', 'count'), 8);
+      });
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  for (final invalidation in [
+    'grant revoked',
+    'assistant disabled',
+    'chat switched',
+    'app replaced',
+  ]) {
+    testWidgets(
+      'ACP invoke stops when $invalidation while action approval waits',
+      (tester) async {
+        await service(tester);
+        final approvals = ToolApprovalService();
+        addTearDown(approvals.dispose);
+        final chats = _ActionChat(
+          Conversation(id: 'chat', title: 'Chat', assistantId: assistant.id),
+        );
+        addTearDown(chats.dispose);
+        final owner = ToolApprovalOwner(
+          conversationId: 'chat',
+          generationRunId: 'turn',
+          assistantMessageId: 'reply',
+          isActive: () => chats.conversation.assistantId == assistant.id,
+        );
+        final tools = AcpMoruTools.create(
+          context: tester.element(find.byType(SizedBox)),
+          assistant: assistant,
+          chats: chats,
+          assistants: assistants,
+          settings: settings,
+          conversationId: 'chat',
+          providerKey: 'provider',
+          modelId: 'model',
+          workspace: null,
+          approvals: approvals,
+          approvalOwner: owner,
+          miniAppRuntime: runtime,
+        );
+        await tester.runAsync(() async {
+          await runtime.permissions.setGranted('counter', 'actions.ai', true);
+          final pending = tools.execute(
+            'mini_apps',
+            invokeArgs('set_count', {'count': 7}),
+            toolCallId: 'pending-invoke',
+          );
+          final request = await Future.any([
+            nextApproval(approvals),
+            pending.then(
+              (value) => throw StateError('Approval was not requested: $value'),
+            ),
+          ]);
+          expect(request.arguments['source'], 'acp');
+          expect(request.requiresExplicitConsent, true);
+          if (invalidation == 'grant revoked') {
+            await runtime.permissions.setGranted(
+              'counter',
+              'actions.ai',
+              false,
+            );
+          } else if (invalidation == 'assistant disabled') {
+            await assistants.updateAssistant(
+              assistant.copyWith(localToolIds: const []),
+            );
+          } else if (invalidation == 'chat switched') {
+            chats.conversation = chats.conversation.copyWith(
+              assistantId: 'other',
+            );
+          } else {
+            await publishReplacement();
+          }
+          approvals.approve('pending-invoke', conversationId: 'chat');
+          final result = await pending;
+          expect(result['isError'], true, reason: jsonEncode(result));
+          expect(
+            decodeAcp(result)['status'],
+            invalidation == 'grant revoked' ? 'permission_required' : 'denied',
+          );
+          expect(await store.storageAll('counter'), isEmpty);
+        });
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
   }
 
   testWidgets(

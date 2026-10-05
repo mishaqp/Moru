@@ -25,6 +25,9 @@ import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
 import org.robolectric.shadows.ShadowSystemClock
 import java.time.Duration
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [30], manifest = Config.NONE, application = Application::class, shadows = [MiniAppDeviceHandlerTest.MissingBatterySensors::class])
@@ -163,6 +166,92 @@ class MiniAppDeviceHandlerTest {
         assertEquals(false, audio["canChangeDnd"])
         assertEquals(true, audio["canAccessDnd"])
         assertEquals("unsupported_android_version", (audio["reasons"] as Map<*, *>)["canChangeDnd"])
+    }
+
+    @Test @Config(sdk = [30, 35]) fun rootDndUsesFixedCommandAndConfirmsAllFourGlobalFiltersWithoutPolicyAccess() {
+        val notifications = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        shadowOf(notifications).setNotificationPolicyAccessGranted(false)
+        val modes = mapOf(
+            "all" to NotificationManager.INTERRUPTION_FILTER_ALL,
+            "priority" to NotificationManager.INTERRUPTION_FILTER_PRIORITY,
+            "alarms" to NotificationManager.INTERRUPTION_FILTER_ALARMS,
+            "none" to NotificationManager.INTERRUPTION_FILTER_NONE,
+        )
+        for ((mode, filter) in modes) {
+            notifications.setInterruptionFilter(if (mode == "all") NotificationManager.INTERRUPTION_FILTER_NONE else NotificationManager.INTERRUPTION_FILTER_ALL)
+            val launched = mutableListOf<List<String>>()
+            val handler = MiniAppDeviceHandler(context, rootRunner = MiniAppRootRunner(launcher = { argv ->
+                launched.add(argv)
+                // Simulate the shell's global change in Android's state fixture.
+                notifications.setInterruptionFilter(filter)
+                ProcessBuilder("/bin/sh", "-c", "exit 0").start()
+            }), readbackTimeoutMs = 0)
+            val result = handler.execute("device.root.dnd.set", mapOf("mode" to mode))
+            assertEquals("Root DND mode $mode", "applied", result["status"])
+            assertEquals(listOf(listOf("su", "-c", "exec '/system/bin/cmd' 'notification' 'set_dnd' '$mode'")), launched)
+            assertEquals(filter, notifications.currentInterruptionFilter)
+            val audio = (result["state"] as Map<*, *>)["audio"] as Map<*, *>
+            assertEquals(mode, audio["dnd"])
+            assertEquals(false, audio["canAccessDnd"])
+            assertEquals(false, audio["canChangeDnd"])
+        }
+    }
+
+    @Test @Config(sdk = [30, 35]) fun successfulRootDndExitCannotClaimAnUnchangedOrUnreadableGlobalFilter() {
+        val notifications = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val handler = MiniAppDeviceHandler(context, rootRunner = MiniAppRootRunner(launcher = { ProcessBuilder("/bin/sh", "-c", "exit 0").start() }), readbackTimeoutMs = 0)
+        notifications.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+        val unchanged = handler.execute("device.root.dnd.set", mapOf("mode" to "none"))
+        assertEquals("failed", unchanged["status"])
+        assertEquals("all", ((unchanged["state"] as Map<*, *>)["audio"] as Map<*, *>)["dnd"])
+        notifications.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_UNKNOWN)
+        val unreadable = handler.execute("device.root.dnd.set", mapOf("mode" to "none"))
+        assertEquals("unknown_after_timeout", unreadable["status"])
+        assertNull(((unreadable["state"] as Map<*, *>)["audio"] as Map<*, *>)["dnd"])
+    }
+
+    @Test @Config(sdk = [35]) fun rootDndDenialAndTimeoutCannotClaimAppliedEvenForAMatchingFilter() {
+        val notifications = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notifications.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+        val denied = MiniAppDeviceHandler(context, rootRunner = MiniAppRootRunner(launcher = { ProcessBuilder("/bin/sh", "-c", "printf 'Permission denied'; exit 1").start() }), readbackTimeoutMs = 0)
+        val refusal = denied.execute("device.root.dnd.set", mapOf("mode" to "all"))
+        assertEquals("denied", refusal["status"])
+        assertEquals(false, ((refusal["state"] as Map<*, *>)["system"] as Map<*, *>)["rootAvailable"])
+        val timedOut = MiniAppDeviceHandler(context, rootRunner = MiniAppRootRunner(timeoutMs = 40, launcher = { ProcessBuilder("/bin/sh", "-c", "exec sleep 10").start() }), readbackTimeoutMs = 0)
+        val timeout = timedOut.execute("device.root.dnd.set", mapOf("mode" to "all"))
+        assertEquals("unknown_after_timeout", timeout["status"])
+        assertEquals("all", ((timeout["state"] as Map<*, *>)["audio"] as Map<*, *>)["dnd"])
+    }
+
+    @Test @Config(sdk = [35]) fun cancelledOrInvalidRootDndNeverLaunchesSu() {
+        var launches = 0
+        val handler = MiniAppDeviceHandler(context, rootRunner = MiniAppRootRunner(launcher = { launches++; throw AssertionError("Invalid or cancelled root DND must not launch") }), readbackTimeoutMs = 0)
+        val token = MiniAppRootCancellation().apply { cancel() }
+        assertEquals("denied", handler.execute("device.root.dnd.set", mapOf("mode" to "none"), token)["status"])
+        assertEquals("failed", handler.execute("device.root.dnd.set", mapOf("mode" to "none;id"))["status"])
+        assertEquals("failed", handler.execute("device.root.dnd.set", mapOf("mode" to "none", "argv" to listOf("id")))["status"])
+        assertEquals(0, launches)
+    }
+
+    @Test @Config(sdk = [35]) fun rootDndCancellationDuringTheCommandKeepsTheOutcomeUnknown() {
+        val notifications = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val started = CountDownLatch(1)
+        val process = AtomicReference<Process>()
+        val reply = AtomicReference<Map<String, Any?>>()
+        val token = MiniAppRootCancellation()
+        val handler = MiniAppDeviceHandler(context, rootRunner = MiniAppRootRunner(launcher = {
+            notifications.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+            ProcessBuilder("/bin/sh", "-c", "exec sleep 10").start().also { process.set(it); started.countDown() }
+        }), readbackTimeoutMs = 0)
+        val worker = Thread { reply.set(handler.execute("device.root.dnd.set", mapOf("mode" to "none"), token)) }
+        worker.start()
+        assertTrue(started.await(2, TimeUnit.SECONDS))
+        token.cancel()
+        worker.join(2000)
+        assertFalse(worker.isAlive)
+        assertFalse(process.get().isAlive)
+        assertEquals("unknown_after_timeout", reply.get()["status"])
+        assertEquals("none", ((reply.get()["state"] as Map<*, *>)["audio"] as Map<*, *>)["dnd"])
     }
 
     @Test fun settingsOpeningRequiresCurrentForegroundFocusAndNeverReportsAChange() {

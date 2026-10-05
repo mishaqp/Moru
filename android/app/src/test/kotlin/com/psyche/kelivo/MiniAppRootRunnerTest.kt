@@ -9,6 +9,20 @@ import org.junit.Test
 class MiniAppRootRunnerTest {
     private val command get() = MiniAppDeviceCatalog.rootCommand("device.root.wifi.set", mapOf("enabled" to true))!!
 
+    @Test fun dndRunsOnlyTheCatalogsFixedSuCommandForEveryMode() {
+        val launched = mutableListOf<List<String>>()
+        val runner = MiniAppRootRunner(launcher = { argv ->
+            launched.add(argv)
+            ProcessBuilder("/bin/sh", "-c", "exit 0").start()
+        })
+        for (mode in listOf("all", "priority", "alarms", "none")) {
+            val dnd = MiniAppDeviceCatalog.rootCommand("device.root.dnd.set", mapOf("mode" to mode))!!
+            assertEquals(MiniAppRootRunner.Outcome.COMPLETED, runner.execute(dnd).outcome)
+            assertEquals(listOf("su", "-c", "exec '/system/bin/cmd' 'notification' 'set_dnd' '$mode'"), launched.last())
+        }
+        assertEquals(4, launched.size)
+    }
+
     @Test fun drainsAndBoundsOutputWhileWaitingForActualProcessExit() {
         val runner = MiniAppRootRunner(launcher = { ProcessBuilder("/bin/sh", "-c", "printf '%05000d' 0").start() }, outputLimit = 256)
         val result = runner.execute(command)

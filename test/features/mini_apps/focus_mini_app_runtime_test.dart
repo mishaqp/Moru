@@ -156,6 +156,9 @@ void main() {
   Future<void> grantAll(bool enabled) async {
     final app = store.byId(FocusMiniApp.id)!;
     for (final capability in MiniAppPermissions.declared(app)) {
+      // These existing scenarios exercise the Android API path. Root is an
+      // independent opt-in covered by mini_app_root_dnd_test.dart.
+      if (capability == 'device.root.dnd') continue;
       await runtime.permissions.setGranted(app.id, capability, enabled);
     }
   }

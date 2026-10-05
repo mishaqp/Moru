@@ -374,7 +374,7 @@ class MiniAppDeviceHandler(
         "device.screen.brightness.set" -> systemSetting(Settings.System.SCREEN_BRIGHTNESS)?.let { value -> if (args.containsKey("mode")) listOf(value, when (systemSetting(Settings.System.SCREEN_BRIGHTNESS_MODE)) { 0 -> "manual"; 1 -> "automatic"; else -> null }) else value }
         "device.screen.timeout.set" -> systemSetting(Settings.System.SCREEN_OFF_TIMEOUT)
         "device.audio.volume.set" -> runCatching { (context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.getStreamVolume(STREAM_IDS[args["stream"]]!!) }.getOrNull()
-        "device.audio.dnd.set" -> runCatching { dndName((context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)?.currentInterruptionFilter) }.getOrNull()
+        "device.audio.dnd.set", "device.root.dnd.set" -> runCatching { dndName((context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager)?.currentInterruptionFilter) }.getOrNull()
         "device.flashlight.set" -> runCatching { flashCameraId()?.let { torchValue(it).enabled } }.getOrNull()
         "device.root.power_save.set" -> runCatching { (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isPowerSaveMode }.getOrNull()
         "device.root.wifi.set" -> wifiEnabled()
@@ -389,7 +389,7 @@ class MiniAppDeviceHandler(
         "device.screen.brightness.set" -> if (args.containsKey("mode")) listOf((args["value"] as Number).toInt(), args["mode"]) else (args["value"] as Number).toInt()
         "device.screen.timeout.set" -> (args["milliseconds"] as Number).toInt()
         "device.audio.volume.set" -> (args["value"] as Number).toInt()
-        "device.audio.dnd.set" -> args["mode"]
+        "device.audio.dnd.set", "device.root.dnd.set" -> args["mode"]
         "device.root.stop_app" -> true
         else -> args["enabled"]
     }

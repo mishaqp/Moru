@@ -13195,6 +13195,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get miniAppsPermissionSettingsOpen => 'Открывать настройки Android';
 
   @override
+  String get miniAppsPermissionRootDnd => 'Root: менять режим «Не беспокоить»';
+
+  @override
   String get miniAppsPermissionRootPowerSave => 'Root: менять энергосбережение';
 
   @override
@@ -13605,7 +13608,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get phonePanelDndAndroid15Hint =>
-      'Android 15 и новее ограничивают прямое изменение режима «Не беспокоить». Если действие не поддерживается, используйте настройки Android; профили сообщат о пропущенном шаге.';
+      'На Android 15 и новее для прямого изменения режима «Не беспокоить» нужны root-доступ и отдельное разрешение этому мини-приложению. Без root используйте настройки Android; профили сообщат о пропущенных шагах.';
 
   @override
   String get phonePanelSelectedAppSettings =>
