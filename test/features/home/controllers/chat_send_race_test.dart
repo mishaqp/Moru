@@ -2319,6 +2319,11 @@ void main() {
         final question = (await service.loadMessages(
           target.id,
         )).firstWhere((m) => m.role == 'user');
+        await assistantProvider.updateAssistant(
+          assistantProvider.currentAssistant!.copyWith(
+            localToolIds: [AskUserToolNames.askUser],
+          ),
+        );
         var returned = false;
         final run = controller.debugViewModel
             .regenerateScheduledMessage(
@@ -2326,7 +2331,6 @@ void main() {
               conversation: service.getConversation(target.id)!,
               assistant: assistantProvider.currentAssistant!.copyWith(
                 streamOutput: false,
-                localToolIds: [AskUserToolNames.askUser],
               ),
               modelOverride: (providerKey: 'SiliconFlow', modelId: 'gpt-4o'),
             )

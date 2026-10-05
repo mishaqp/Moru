@@ -132,8 +132,12 @@ MCP/normalizer/HTTP-provider/handler — **133 passed**. Это пересека
 их числа не складываются. `dart analyze --fatal-infos lib test integration_test`
 проходит без замечаний; форматирование изменённых Dart и `git diff --check`
 прошли. Python policy/APK verifier/release keep rules: **14 + 6 + 3**.
-Автоматический PR CI фильтрует только master; для указанной feature-базы полный
-набор запускается вручную через debug workflow, с publish=false.
-Полный набор тестов выполняет CI. APK и физический телефон в этой задаче не
-проверялись; live provider API, native Android Stop/permission и крупные пункты
-D1–D10 остаются отдельной проверкой/работой.
+Автоматический PR CI фильтрует только master; ручной debug workflow тоже
+пропускает полный Flutter-набор. Для указанной feature-базы полный прогон
+выполняется локально; workflow не изменён.
+Полный `flutter test --no-pub --reporter expanded`: **8193 passed**.
+Во время этого прогона Dart-исходники не менялись (проверено SHA-256);
+форматирование **54 изменённых Dart-файлов** не требует правок.
+APK и физический телефон в этой задаче не проверялись; live provider API,
+native Android Stop/permission и крупные пункты D1–D10 остаются отдельной
+проверкой/работой.
