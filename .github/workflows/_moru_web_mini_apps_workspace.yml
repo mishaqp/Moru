@@ -1,4 +1,4 @@
-name: Mini apps workspace snapshot (temporary)
+name: Mini apps workspace setup (temporary)
 
 on:
   push:
@@ -9,19 +9,38 @@ permissions:
   contents: read
 
 jobs:
-  snapshot:
+  setup:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
           ref: 3db99c060201b3be5374f6d565677a21d54a1c58
           persist-credentials: false
-      - name: Archive the requested base without credentials or generated files
-        run: git archive --format=tar.gz --output="$RUNNER_TEMP/moru-source.tar.gz" HEAD
+      - name: Use the repository's pinned, verified cloud setup
+        run: bash tool/codex_cloud_setup.sh
+      - name: Baseline mini-app tests and host test-engine preparation
+        run: |
+          source "$HOME/.moru-toolchains/activate.sh"
+          flutter test test/core/services/mini_apps --reporter expanded
+      - name: Archive only the public SDK and resolved package cache for offline checks
+        run: |
+          cp pubspec.lock "$RUNNER_TEMP/pubspec.lock"
+          tar -C "$HOME" -czf "$RUNNER_TEMP/moru-sdk.tar.gz" .moru-toolchains
+          tar -C "$HOME" --exclude=credentials.json --exclude=log --exclude=_temp -czf "$RUNNER_TEMP/moru-pub-cache.tar.gz" .pub-cache
       - uses: actions/upload-artifact@v4
         with:
-          name: moru-mini-apps-source
-          path: ${{ runner.temp }}/moru-source.tar.gz
+          name: moru-mini-apps-sdk
+          path: ${{ runner.temp }}/moru-sdk.tar.gz
           retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moru-mini-apps-packages
+          path: |
+            ${{ runner.temp }}/moru-pub-cache.tar.gz
+            ${{ runner.temp }}/pubspec.lock
+          retention-days: 1
+          compression-level: 0
           if-no-files-found: error
