@@ -1,4 +1,4 @@
-name: Mini apps offline workspace (temporary)
+name: Mini apps development checks (temporary)
 on:
   push:
     branches: [codex/moru-web-mini-apps-offline-20261006]
@@ -7,89 +7,52 @@ permissions:
   contents: read
   actions: read
 jobs:
-  prepare:
+  contracts:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
         with:
-          run-id: 37398570701
-          github-token: ${{ github.token }}
-          path: original
-          merge-multiple: true
-      - name: Prepare smaller transport archives
-        run: |
-          mkdir chunks
-          split -b 400M original/moru-sdk.tar.gz chunks/sdk-
-          split -b 400M original/moru-pub-cache.tar.gz chunks/packages-
-          cp original/pubspec.lock chunks/pubspec.lock
-      - uses: actions/upload-artifact@v4
+          persist-credentials: false
+      - name: JavaScript bridge contracts
+        run: node --test tool/test_mini_app_web_runtime.cjs
+      - uses: actions/cache@v4
         with:
-          name: moru-sdk-aa
-          path: chunks/sdk-aa
-          retention-days: 1
-          compression-level: 0
-      - uses: actions/upload-artifact@v4
-        with:
-          name: moru-sdk-ab
-          path: chunks/sdk-ab
-          retention-days: 1
-          compression-level: 0
-      - uses: actions/upload-artifact@v4
-        with:
-          name: moru-sdk-ac
-          path: chunks/sdk-ac
-          retention-days: 1
-          compression-level: 0
-      - uses: actions/upload-artifact@v4
-        with:
-          name: moru-sdk-ad
-          path: chunks/sdk-ad
-          retention-days: 1
-          compression-level: 0
-      - uses: actions/upload-artifact@v4
-        with:
-          name: moru-packages-aa
-          path: chunks/packages-aa
-          retention-days: 1
-          compression-level: 0
-      - uses: actions/upload-artifact@v4
-        with:
-          name: moru-packages-ab
           path: |
-            chunks/packages-ab
-            chunks/pubspec.lock
-          retention-days: 1
-          compression-level: 0
-  vendor:
+            ~/.moru-toolchains
+            ~/.pub-cache
+          key: moru-mini-apps-flutter-3.44.9-${{ hashFiles('pubspec.yaml') }}
+      - run: bash tool/codex_cloud_setup.sh
+      - name: Dart publishing and host contracts
+        run: |
+          source "$HOME/.moru-toolchains/activate.sh"
+          flutter test test/core/services/mini_apps/mini_app_content_server_test.dart test/core/services/mini_apps/mini_app_publisher_test.dart --reporter expanded
+  notices:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Fetch pinned npm sources without executing package scripts
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 37399101203
+          name: moru-pinned-vendor-sources
+          github-token: ${{ github.token }}
+          path: vendor
+      - name: Inspect exact browser exports and third-party notices
         shell: python
         run: |
-          import base64, hashlib, json, pathlib, urllib.request
-          root = pathlib.Path('vendor'); root.mkdir()
-          packages = {'@galacean/engine':'1.6.13', '@galacean/engine-ui':'1.6.13', '@galacean/engine-physics-lite':'1.6.13', 'phaser':'3.90.0', 'chart.js':'4.5.1', 'sql.js':'1.14.2', '@kurkle/color':'0.3.4'}
-          for name, version in packages.items():
-              with urllib.request.urlopen('https://registry.npmjs.org/' + name + '/' + version) as response:
-                  metadata = json.load(response)
-              url = metadata['dist']['tarball']
-              assert url.startswith('https://registry.npmjs.org/')
-              with urllib.request.urlopen(url) as response:
-                  content = response.read()
-              integrity = metadata['dist']['integrity']
-              algorithm, digest = integrity.split('-', 1)
-              assert algorithm == 'sha512'
-              assert base64.b64encode(hashlib.sha512(content).digest()).decode() == digest
-              stem = name.replace('@','').replace('/','-')
-              (root / (stem + '.json')).write_text(json.dumps(metadata, indent=2))
-              (root / (stem + '.tgz')).write_bytes(content)
-              print(name, version, metadata.get('license'), len(content), hashlib.sha256(content).hexdigest())
-      - uses: actions/upload-artifact@v4
-        with:
-          name: moru-pinned-vendor-sources
-          path: vendor
-          retention-days: 1
-          compression-level: 0
-          if-no-files-found: error
+          import pathlib,tarfile,re,json
+          for archive in sorted(pathlib.Path('vendor').glob('*.tgz')):
+              print('\nPACKAGE',archive.stem)
+              with tarfile.open(archive) as tar:
+                  files={m.name:m for m in tar if m.isfile()}
+                  for name in ['package/LICENSE','package/LICENSE.md']:
+                      if name in files: print(tar.extractfile(files[name]).read().decode())
+                  for name in ['package/dist/browser.js','package/dist/phaser.js','package/dist/chart.umd.js']:
+                      if name not in files: continue
+                      text=tar.extractfile(files[name]).read().decode()
+                      print('BROWSER HEADER',text[:1200])
+                      print('BROWSER EXPORTS',text[-2000:])
+                      notices=sorted({line.strip() for line in text.splitlines() if re.search(r'copyright|@license|license:|licensed under',line,re.I)})
+                      print('NOTICES\n'+'\n'.join(line[:400] for line in notices[:100]))
+                  special=[m for n,m in files.items() if n.endswith('license.js') or 'LICENSE' in n and 'spine' not in n.lower()]
+                  for m in special[:12]: print(m.name,tar.extractfile(m).read().decode()[:5000])
