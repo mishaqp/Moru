@@ -10,7 +10,6 @@ import '../../core/providers/settings_provider.dart';
 import '../../core/services/keep_alive.dart';
 import '../../core/services/mdns_responder.dart';
 import '../../core/services/mini_apps/mini_app_bridge.dart';
-import '../../core/services/mini_apps/mini_app_runtime.dart';
 import '../../core/services/mini_apps/mini_app_servers.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
 import '../../core/services/mini_apps/mini_app_web_server.dart';
@@ -27,14 +26,7 @@ class MiniAppWebHost extends ChangeNotifier {
     ProcessKeepAlive? keepAlive,
     Future<List<InternetAddress>> Function()? localAddresses,
     this.mdnsName = 'moru',
-    MiniAppRuntime? runtime,
   }) : _store = store ?? MiniAppStore.instance,
-       _runtime =
-           runtime ??
-           (store == null
-               ? MiniAppLauncher.runtime
-               : MiniAppRuntime(store: store)),
-       _ownsRuntime = runtime == null && store != null,
        _keepAlive = keepAlive ?? ProcessKeepAlive.instance,
        _localAddresses = localAddresses ?? _wifiAddresses {
     _released = _keepAlive.released.listen((id) {
@@ -47,8 +39,6 @@ class MiniAppWebHost extends ChangeNotifier {
   static const String keepAliveId = 'mini-app-web';
 
   final MiniAppStore _store;
-  final MiniAppRuntime _runtime;
-  final bool _ownsRuntime;
   final ProcessKeepAlive _keepAlive;
   final Future<List<InternetAddress>> Function() _localAddresses;
   final String mdnsName;
@@ -133,9 +123,6 @@ class MiniAppWebHost extends ChangeNotifier {
               settings,
               assistants,
               server: lease.fetch,
-              runtime: _runtime,
-              source: MiniAppInvocationSource.wifi,
-              isAllowed: () => _active(epoch),
             ),
           );
         },
@@ -282,7 +269,6 @@ class MiniAppWebHost extends ChangeNotifier {
     _epoch++;
     unawaited(_released.cancel());
     unawaited(_stopAll());
-    if (_ownsRuntime) unawaited(_runtime.dispose());
     super.dispose();
   }
 

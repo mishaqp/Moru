@@ -55,7 +55,6 @@ import '../utils/tool_timing.dart';
 import '../../home/services/assistant_manager_tool.dart';
 import '../../home/services/mcp_manager_tool.dart';
 import 'mcp_management_approval.dart';
-import 'mini_app_root_dnd_approval_details.dart';
 import '../../home/services/mini_app_data_tool.dart';
 import '../../home/services/scheduled_task_tool.dart';
 import '../../home/services/local_tools_service.dart';
@@ -5395,10 +5394,6 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
         );
     final isPendingApproval = pendingRequest != null;
     final approvalRequest = pendingRequest;
-    final rootDndApproval = MiniAppRootDndApprovalDetails.fromRequest(
-      approvalRequest,
-      textColor: fg.body,
-    );
     final workspacePart = _workspacePartFromUi(widget.part);
     final isWorkspace = shouldUseWorkspaceToolUi(workspacePart);
 
@@ -5483,80 +5478,68 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
         : null;
     final Widget? summaryContent = _isAskUser
         ? _AskUserInlineBody(part: widget.part, compact: true)
-        : rootDndApproval ??
-              (widget.part.toolName == LocalToolNames.spendControl &&
-                      approvalRequest != null
-                  ? SpendControlApprovalDetails(
-                      arguments: approvalRequest.arguments,
-                    )
-                  : widget.part.toolName == LocalToolNames.mcpManager &&
-                        approvalRequest != null
-                  ? McpManagementApproval(
-                      key: ValueKey(approvalRequest.approvalId),
-                      request: approvalRequest,
-                      onDeny: () => showToolApprovalDenyDialog(
-                        context,
-                        approvalService,
-                        approvalRequest.toolCallId,
-                        conversationId: approvalRequest.conversationId,
-                      ),
-                    )
-                  : widget.part.toolName == LocalToolNames.reportProblem &&
-                        isPendingApproval
-                  ? Text(
-                      AppLocalizations.of(context)!.problemReportConsent,
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.4,
-                        color: fg.body,
-                      ),
-                    )
-                  : widget.part.toolName == LocalToolNames.reportProblem &&
-                        !widget.part.loading &&
-                        ProblemReportCard.fromContent(widget.part.content) !=
-                            null
-                  ? ProblemReportCard.fromContent(widget.part.content)
-                  : isWorkspace
-                  ? WorkspaceToolCardBody(
-                      part: workspacePart,
-                      conversationId: widget.conversationId,
-                    )
-                  : ttsText.isNotEmpty
-                  ? _buildTextToSpeechReplayRow(
-                      context,
-                      text: ttsText,
-                      textColor: fg.body,
-                      buttonColor: fg.accent,
-                    )
-                  : screenTimeResult != null &&
-                        (screenTimeResult.isNoPermission ||
-                            screenTimeResult.hasApps)
-                  ? ScreenTimeToolSummary(
-                      result: screenTimeResult,
-                      textColor: fg.body,
-                      secondaryColor: fg.muted,
-                      errorColor: cs.error,
-                    )
-                  : weatherResult != null && !weatherResult.isError
-                  ? WeatherToolSummary(
-                      result: weatherResult,
-                      textColor: fg.body,
-                    )
-                  : shouldShowSummary && structuredPreview != null
-                  ? structuredPreview
-                  : !shouldShowSummary || summaryText.trim().isEmpty
-                  ? null
-                  : Text(
-                      summaryText.trim(),
-                      maxLines: isPendingApproval ? 2 : 4,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.4,
-                        fontFamily: isPendingApproval ? 'monospace' : null,
-                        color: fg.body,
-                      ),
-                    ));
+        : widget.part.toolName == LocalToolNames.spendControl &&
+              approvalRequest != null
+        ? SpendControlApprovalDetails(arguments: approvalRequest.arguments)
+        : widget.part.toolName == LocalToolNames.mcpManager &&
+              approvalRequest != null
+        ? McpManagementApproval(
+            key: ValueKey(approvalRequest.approvalId),
+            request: approvalRequest,
+            onDeny: () => showToolApprovalDenyDialog(
+              context,
+              approvalService,
+              approvalRequest.toolCallId,
+              conversationId: approvalRequest.conversationId,
+            ),
+          )
+        : widget.part.toolName == LocalToolNames.reportProblem &&
+              isPendingApproval
+        ? Text(
+            AppLocalizations.of(context)!.problemReportConsent,
+            style: TextStyle(fontSize: 12, height: 1.4, color: fg.body),
+          )
+        : widget.part.toolName == LocalToolNames.reportProblem &&
+              !widget.part.loading &&
+              ProblemReportCard.fromContent(widget.part.content) != null
+        ? ProblemReportCard.fromContent(widget.part.content)
+        : isWorkspace
+        ? WorkspaceToolCardBody(
+            part: workspacePart,
+            conversationId: widget.conversationId,
+          )
+        : ttsText.isNotEmpty
+        ? _buildTextToSpeechReplayRow(
+            context,
+            text: ttsText,
+            textColor: fg.body,
+            buttonColor: fg.accent,
+          )
+        : screenTimeResult != null &&
+              (screenTimeResult.isNoPermission || screenTimeResult.hasApps)
+        ? ScreenTimeToolSummary(
+            result: screenTimeResult,
+            textColor: fg.body,
+            secondaryColor: fg.muted,
+            errorColor: cs.error,
+          )
+        : weatherResult != null && !weatherResult.isError
+        ? WeatherToolSummary(result: weatherResult, textColor: fg.body)
+        : shouldShowSummary && structuredPreview != null
+        ? structuredPreview
+        : !shouldShowSummary || summaryText.trim().isEmpty
+        ? null
+        : Text(
+            summaryText.trim(),
+            maxLines: isPendingApproval ? 2 : 4,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.4,
+              fontFamily: isPendingApproval ? 'monospace' : null,
+              color: fg.body,
+            ),
+          );
     final Widget? imageThumbnails =
         (!_isAskUser && !hideToolResultImages && imagePaths.isNotEmpty)
         ? SizedBox(
@@ -5792,10 +5775,6 @@ class _ToolCallItemState extends State<_ToolCallItem> {
         : null;
     final isPendingApproval = pendingRequest != null;
     final pendingToolCallId = pendingRequest?.toolCallId;
-    final rootDndApproval = MiniAppRootDndApprovalDetails.fromRequest(
-      pendingRequest,
-      textColor: fg.body,
-    );
 
     return IosCardPress(
       borderRadius: BorderRadius.circular(16),
@@ -6047,13 +6026,8 @@ class _ToolCallItemState extends State<_ToolCallItem> {
               const SizedBox(height: 8),
               SpendControlApprovalDetails(arguments: pendingRequest.arguments),
             ],
-            if (rootDndApproval != null) ...[
-              const SizedBox(height: 8),
-              rootDndApproval,
-            ],
             if (!isWorkspace &&
                 isPendingApproval &&
-                rootDndApproval == null &&
                 widget.part.toolName != LocalToolNames.reportProblem &&
                 widget.part.toolName != LocalToolNames.mcpManager &&
                 widget.part.toolName != LocalToolNames.spendControl &&

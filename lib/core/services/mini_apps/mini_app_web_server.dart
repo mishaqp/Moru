@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:path/path.dart' as p;
 
-import '../workspace/workspace_file_access.dart';
 import 'mini_app_bridge.dart';
 import 'mini_app_store.dart';
 
@@ -14,13 +12,7 @@ import 'mini_app_store.dart';
 /// POSTs to `/app/<id>/__moru` and run in the same [MiniAppBridge] as in
 /// Moru, with the same data.
 class MiniAppWebServer {
-  MiniAppWebServer({
-    required this.store,
-    required this.bridgeFor,
-    this.protectedApp,
-  }) : _generation = protectedApp == null
-           ? null
-           : store.generationFor(protectedApp.id);
+  MiniAppWebServer({required this.store, required this.bridgeFor});
 
   final MiniAppStore store;
 
@@ -28,46 +20,14 @@ class MiniAppWebServer {
   /// the server runs.
   final MiniAppBridge Function(MiniApp app) bridgeFor;
 
-  /// An app-bound, short-lived loopback origin for a version 2 WebView.
-  /// The Wi-Fi host leaves this null and keeps its existing routes.
-  final MiniApp? protectedApp;
-  final int? _generation;
-
-  bool get _appCurrent =>
-      protectedApp != null &&
-      identical(store.byId(protectedApp!.id), protectedApp) &&
-      store.generationFor(protectedApp!.id) == _generation;
-
   HttpServer? _server;
   final Map<String, MiniAppBridge> _bridges = {};
   String? _password;
-  String? _token;
-  int _epoch = 0;
-  WorkspaceFileAccess? _protectedAccess;
 
   static const int maxBridgeMessageBytes = 8 * 1024 * 1024;
 
   bool get running => _server != null;
   int? get port => _server?.port;
-
-  Uri? get appUri {
-    final app = protectedApp;
-    final token = _token;
-    final port = this.port;
-    if (app == null || token == null || port == null) return null;
-    return Uri.parse(
-      'http://127.0.0.1:$port/app/${Uri.encodeComponent(app.id)}/$token/',
-    );
-  }
-
-  bool allowsNavigation(Uri uri) {
-    final base = appUri;
-    return base != null &&
-        _appCurrent &&
-        uri.scheme == base.scheme &&
-        uri.origin == base.origin &&
-        uri.path.startsWith(base.path);
-  }
 
   /// Listens on [port] of every network ([localhostOnly]: of this phone
   /// only). With a [password], the browser asks for it (HTTP Basic, any
@@ -77,19 +37,7 @@ class MiniAppWebServer {
     required bool localhostOnly,
     String? password,
   }) async {
-    if (protectedApp != null && !localhostOnly) {
-      throw const MiniAppException('denied', 'The app host is loopback only.');
-    }
-    final epoch = ++_epoch;
-    await _closeCurrent();
-    if (epoch != _epoch) return;
-    final app = protectedApp;
-    if (app != null) {
-      final access = WorkspaceFileAccess(roots: [app.codeDirectory]);
-      await access.resolve(app.codeDirectory);
-      if (epoch != _epoch) return;
-      _protectedAccess = access;
-    }
+    await stop();
     _password = password == null || password.isEmpty ? null : password;
     final server = await HttpServer.bind(
       localhostOnly ? InternetAddress.loopbackIPv4 : InternetAddress.anyIPv4,
@@ -97,34 +45,13 @@ class MiniAppWebServer {
     );
     // Off: byte ranges of compressed bodies would not match the file.
     server.autoCompress = false;
-    if (epoch != _epoch) {
-      await server.close(force: true);
-      return;
-    }
-    if (protectedApp != null) {
-      final random = Random.secure();
-      _token = List.generate(
-        32,
-        (_) => random.nextInt(256),
-      ).map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
-    }
     _server = server;
     server.listen((request) => unawaited(_handle(request)));
   }
 
   Future<void> stop() async {
-    _epoch++;
-    await _closeCurrent();
-  }
-
-  Future<void> _closeCurrent() async {
     final server = _server;
     _server = null;
-    _token = null;
-    _protectedAccess = null;
-    for (final bridge in _bridges.values) {
-      bridge.dispose();
-    }
     _bridges.clear();
     await server?.close(force: true);
   }
@@ -132,56 +59,6 @@ class MiniAppWebServer {
   Future<void> _handle(HttpRequest request) async {
     final response = request.response;
     try {
-      final localApp = protectedApp;
-      if (localApp != null) {
-        response.persistentConnection = false;
-        final base = appUri;
-        if (base == null ||
-            request.headers.value(HttpHeaders.hostHeader) != base.authority) {
-          response.statusCode = HttpStatus.forbidden;
-          return;
-        }
-        if (!_appCurrent) {
-          response.statusCode = HttpStatus.gone;
-          return;
-        }
-        // Never send the app's nonce to external resources via Referer.
-        response.headers
-          ..set('referrer-policy', 'no-referrer')
-          ..set('x-content-type-options', 'nosniff')
-          ..set('x-frame-options', 'DENY')
-          ..set(
-            'content-security-policy',
-            "default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval'; base-uri 'none'; frame-ancestors 'none'; frame-src 'self'; object-src 'none'",
-          );
-        final segments = request.uri.pathSegments;
-        if (segments.length < 4 ||
-            segments[0] != 'app' ||
-            segments[1] != localApp.id ||
-            !_same(segments[2], _token!)) {
-          _notFound(response);
-          return;
-        }
-        if (segments
-            .skip(3)
-            .any(
-              (part) =>
-                  part == '.' ||
-                  part == '..' ||
-                  part.contains('/') ||
-                  part.contains('\\') ||
-                  part.contains('\u0000') ||
-                  RegExp(
-                    r'%(?:2e|2f|5c|00)',
-                    caseSensitive: false,
-                  ).hasMatch(part),
-            )) {
-          response.statusCode = HttpStatus.forbidden;
-          return;
-        }
-        await _app(request, localApp.id, segments.skip(3).toList());
-        return;
-      }
       if (!_authorized(request)) {
         response
           ..statusCode = HttpStatus.unauthorized
@@ -263,10 +140,6 @@ class MiniAppWebServer {
     await store.load();
     final app = store.byId(id);
     if (app == null) return _notFound(response);
-    if (protectedApp != null && !_appCurrent) {
-      response.statusCode = HttpStatus.gone;
-      return;
-    }
     // "/app/<id>" -> "/app/<id>/", so relative links resolve inside the app.
     if (rest.isEmpty) {
       response
@@ -287,7 +160,7 @@ class MiniAppWebServer {
           charset: 'utf-8',
         )
         ..set(HttpHeaders.cacheControlHeader, 'no-store');
-      response.write(webBridgeScript(app.id, appUri: appUri, token: _token));
+      response.write(webBridgeScript(app.id));
       return;
     }
     // An entry in a folder loads its files relative to that folder.
@@ -296,8 +169,7 @@ class MiniAppWebServer {
         ..statusCode = HttpStatus.found
         ..headers.set(
           HttpHeaders.locationHeader,
-          appUri?.resolve(app.entry).path ??
-              '/app/${Uri.encodeComponent(id)}/${app.entry}',
+          '/app/${Uri.encodeComponent(id)}/${app.entry}',
         );
       return;
     }
@@ -307,79 +179,50 @@ class MiniAppWebServer {
     if (!p.isWithin(code, file.path) || !await file.exists()) {
       return _notFound(response);
     }
-    final access = _protectedAccess;
-    if (protectedApp != null && (access == null || !_appCurrent)) {
-      response.statusCode = HttpStatus.gone;
-      return;
-    }
-    try {
-      await _file(request, file, access: access);
-    } on WorkspaceFileAccessException {
-      response.statusCode = HttpStatus.forbidden;
-    }
+    await _file(request, file);
   }
 
   /// A file with revalidation (ETag) and byte ranges, so the browser keeps
   /// it cached and can seek in audio and video.
-  static Future<void> _file(
-    HttpRequest request,
-    File file, {
-    WorkspaceFileAccess? access,
-  }) async {
-    final opened = await access?.openRead(file.path);
-    try {
-      final response = request.response;
-      final stat = await file.stat();
-      final size = await opened?.handle.length() ?? stat.size;
-      final etag = '"$size-${stat.modified.millisecondsSinceEpoch}"';
-      response.headers
-        ..contentType = contentTypeFor(file.path)
-        ..set(HttpHeaders.cacheControlHeader, 'no-cache')
-        ..set(HttpHeaders.etagHeader, etag)
-        ..set(HttpHeaders.acceptRangesHeader, 'bytes');
-      response.headers.set(HttpHeaders.lastModifiedHeader, stat.modified);
-      final ifNoneMatch = request.headers.value(HttpHeaders.ifNoneMatchHeader);
-      if (ifNoneMatch != null &&
-          ifNoneMatch.split(',').any((tag) => tag.trim() == etag)) {
-        response.statusCode = HttpStatus.notModified;
+  static Future<void> _file(HttpRequest request, File file) async {
+    final response = request.response;
+    final stat = await file.stat();
+    final size = stat.size;
+    final etag = '"$size-${stat.modified.millisecondsSinceEpoch}"';
+    response.headers
+      ..contentType = contentTypeFor(file.path)
+      ..set(HttpHeaders.cacheControlHeader, 'no-cache')
+      ..set(HttpHeaders.etagHeader, etag)
+      ..set(HttpHeaders.acceptRangesHeader, 'bytes');
+    response.headers.set(HttpHeaders.lastModifiedHeader, stat.modified);
+    final ifNoneMatch = request.headers.value(HttpHeaders.ifNoneMatchHeader);
+    if (ifNoneMatch != null &&
+        ifNoneMatch.split(',').any((tag) => tag.trim() == etag)) {
+      response.statusCode = HttpStatus.notModified;
+      return;
+    }
+    var start = 0;
+    var end = size - 1;
+    final range = request.headers.value(HttpHeaders.rangeHeader);
+    if (range != null) {
+      final parsed = parseRange(range, size);
+      if (parsed == null) {
+        response
+          ..statusCode = HttpStatus.requestedRangeNotSatisfiable
+          ..headers.set(HttpHeaders.contentRangeHeader, 'bytes */$size');
         return;
       }
-      var start = 0;
-      var end = size - 1;
-      final range = request.headers.value(HttpHeaders.rangeHeader);
-      if (range != null) {
-        final parsed = parseRange(range, size);
-        if (parsed == null) {
-          response
-            ..statusCode = HttpStatus.requestedRangeNotSatisfiable
-            ..headers.set(HttpHeaders.contentRangeHeader, 'bytes */$size');
-          return;
-        }
-        (start, end) = parsed;
-        response
-          ..statusCode = HttpStatus.partialContent
-          ..headers.set(
-            HttpHeaders.contentRangeHeader,
-            'bytes $start-$end/$size',
-          );
-      }
-      response.contentLength = size == 0 ? 0 : end - start + 1;
-      if (request.method == 'HEAD' || size == 0) return;
-      if (opened == null) {
-        await response.addStream(file.openRead(start, end + 1));
-      } else {
-        await opened.handle.setPosition(start);
-        var remaining = end - start + 1;
-        while (remaining > 0) {
-          final chunk = await opened.handle.read(min(64 * 1024, remaining));
-          if (chunk.isEmpty) break;
-          response.add(chunk);
-          remaining -= chunk.length;
-        }
-      }
-    } finally {
-      await opened?.close();
+      (start, end) = parsed;
+      response
+        ..statusCode = HttpStatus.partialContent
+        ..headers.set(
+          HttpHeaders.contentRangeHeader,
+          'bytes $start-$end/$size',
+        );
     }
+    response.contentLength = size == 0 ? 0 : end - start + 1;
+    if (request.method == 'HEAD' || size == 0) return;
+    await response.addStream(file.openRead(start, end + 1));
   }
 
   /// The first range of a `Range: bytes=...` header as inclusive
@@ -412,18 +255,6 @@ class MiniAppWebServer {
       response.statusCode = HttpStatus.methodNotAllowed;
       return;
     }
-    if (protectedApp != null) {
-      final origin = request.headers.value('origin');
-      final token = request.headers.value('x-moru-app-token');
-      final site = request.headers.value('sec-fetch-site');
-      if (origin != appUri?.origin ||
-          token == null ||
-          !_same(token, _token!) ||
-          (site != null && site != 'same-origin')) {
-        response.statusCode = HttpStatus.forbidden;
-        return;
-      }
-    }
     final bytes = <int>[];
     await for (final chunk in request) {
       bytes.addAll(chunk);
@@ -431,10 +262,6 @@ class MiniAppWebServer {
         response.statusCode = HttpStatus.requestEntityTooLarge;
         return;
       }
-    }
-    if (protectedApp != null && (_server == null || !_appCurrent)) {
-      response.statusCode = HttpStatus.gone;
-      return;
     }
     final bridge = _bridges[app.id] ??= bridgeFor(app);
     final script = await bridge.handle(
@@ -462,27 +289,16 @@ class MiniAppWebServer {
 
   /// `moru.js` for a browser: `MoruBridge.postMessage` becomes a POST to
   /// the app's bridge, and the reply runs like Moru's `runJavaScript`.
-  static String webBridgeScript(String appId, {Uri? appUri, String? token}) =>
+  static String webBridgeScript(String appId) =>
       '''
 (function () {
   if (window.MoruBridge) return;
-  ${token == null ? '' : 'if (window.top !== window) return;'}
-  var endpoint = ${jsonEncode(appUri?.resolve('__moru').path ?? '/app/${Uri.encodeComponent(appId)}/__moru')};
-  var token = ${jsonEncode(token)};
+  var endpoint = ${jsonEncode('/app/${Uri.encodeComponent(appId)}/__moru')};
   window.MoruBridge = {
     postMessage: function (message) {
-      var id;
-      try { id = JSON.parse(message).id; } catch (_) {}
-      fetch(endpoint, { method: 'POST', body: message, credentials: 'same-origin',
-        headers: token ? { 'X-Moru-App-Token': token } : {} })
-        .then(function (response) {
-          if (!response.ok) throw new Error('The app context is unavailable.');
-          return response.text();
-        })
-        .then(function (script) { if (script) (0, eval)(script); })
-        .catch(function (error) {
-          if (window.__moruReply && id !== undefined) window.__moruReply(id, false, String(error.message || error));
-        });
+      fetch(endpoint, { method: 'POST', body: message, credentials: 'same-origin' })
+        .then(function (response) { return response.text(); })
+        .then(function (script) { if (script) (0, eval)(script); });
     }
   };
 })();

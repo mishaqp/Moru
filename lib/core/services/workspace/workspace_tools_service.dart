@@ -7,7 +7,6 @@ import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
 import '../../../features/home/services/tool_approval_service.dart';
-import '../../../features/mini_apps/mini_app_specification.dart';
 import '../../../utils/app_directories.dart';
 import '../../../utils/mcp_structured_image.dart';
 import '../api/tool_call_cancellation.dart';
@@ -20,7 +19,6 @@ import '../chat/chat_service.dart';
 import '../keep_alive.dart';
 import '../mobile_background.dart';
 import '../mini_apps/mini_app_store.dart';
-import '../mini_apps/mini_app_runtime.dart';
 import '../mini_apps/mini_app_check.dart';
 import 'conversation_files.dart';
 import 'environment_output_redactor.dart';
@@ -466,58 +464,8 @@ class WorkspaceToolsService {
       _fn(
         miniAppTool,
         [
-          'Before authoring a native panel, call this tool with {"action":"spec"} '
-              '(no path required), or mini_apps {"action":"spec"}. The returned specification '
-              'contains every manifest/executor/expression/component/binding/capability and '
-              'complete publishable Focus JSON files. Publish with {"path":"folder"} '
-              'or {"action":"publish","path":"folder"}.',
-          'Publish a native panel or web app from the workspace as a Moru mini app:',
+          'Publish a web app you built in the workspace as a Moru mini app:',
           'the user opens it inside Moru and can pin it to the home screen.',
-          'For a lightweight native panel use formatVersion:2 and '
-              '"ui":{"engine":"native","entry":"screen.json"}. No HTML, '
-              'server, shell or background process is needed. screen.json is '
-              '{"version":1,"components":[...]}; fixed types are card (children), '
-              'text, value, button, switch, slider, list, indicator, timer and progress. Display '
-              'text may be a string or a locale map (en/ru/zh/zh_Hans/zh_Hant). '
-              'Bind values with "bind":"device.battery.levelPercent" or "data.count"; '
-              'buttons/controls use "action":"set_brightness","args": '
-              '{"value":{"\$value":true}}. Sliders use numeric min/max/step.',
-          'Version 2 "actions" is a list of {name,description,inputSchema, '
-              'permissions,danger,executor}. Preserve the source JSON Schema; '
-              'Moru validates original arguments and converts schemas at the '
-              'existing provider boundary. danger is read/write/root. A native '
-              'executor is {"kind":"native","handler":"device.screen.brightness.set"}; '
-              'its schema takes integer value 0–255 and optional mode manual/automatic. '
-              'Other fixed device groups are battery/screen/audio/connectivity/flashlight/system '
-              '(device.<group>.get), plus screen.timeout.set, audio.volume.set, '
-              'audio.dnd.set, flashlight.set and settings.open. On Android 15+ '
-              'global DND is managed in Android Settings; do not create a Moru '
-              'rule and claim that it restores the global mode. settings.open '
-              'allows an optional validated packageName only for app_details. device.root.* '
-              'supports only power_save/wifi/bluetooth/data/airplane.set and stop_app; '
-              'never accept arbitrary commands or invent a handler. For app data '
-              'use {"kind":"state","patch":{"count":{"\$arg":"count"}}}. '
-              'Reversible presets use kind:preset, steps:[{handler,args}]; kind:restore '
-              'restores only the host-owned prior values that were not changed later.',
-          'Declare the host capability on each action: '
-              'device.<group>.read, device.screen.write, device.audio.write, '
-              'device.flashlight.write, device.settings.open or device.root.<operation>. '
-              'App permissions may also list these capabilities; actions.ai lets '
-              'the user permit AI access separately. Installation '
-              'does not grant rights. User grants/revokes them on the app screen. '
-              'Actions automatically become ma_ tools when this assistant\'s mini_apps '
-              'tool is enabled; buttons and tools use one executor. To invoke actions '
-              'in the same reply after publishing, call mini_apps {"action":"list"} '
-              'for current action schemas, then mini_apps {"action":"invoke", '
-              '"app_id":"id","action_name":"name","arguments":"{}","version":"version"} '
-              'with the returned current version. Web UI calls '
-              'moru.actions.invoke(name,args) and reads moru.state.get(). '
-              'Respect permission_required/unsupported/denied/failed/unknown_after_timeout; '
-              'opened_settings only means the user\'s settings screen opened. '
-              'Version 2 cannot declare server.command: the legacy Linux runtime '
-              'does not isolate arbitrary shell from Moru files or grants. '
-              'Keep existing version-1 servers on their legacy path. New device access '
-              'is blocked from Wi-Fi and never inherits shell or environment root.',
           'The folder needs moru-app.json: {"id": "water-tracker" (lowercase,',
           'digits, dashes), "name": "Вода", "description": "...",',
           '"entry": "index.html" (default), "icon": "icon.svg" (optional, SVG)}.',
@@ -602,12 +550,6 @@ class WorkspaceToolsService {
           'false or the check was skipped, ask the user to open the app instead.',
         ],
         {
-          'action': {
-            'type': 'string',
-            'enum': ['publish', 'spec'],
-            'description':
-                'publish (default): install path. spec: complete native panel authoring contract; no path needed.',
-          },
           'path': {
             'type': 'string',
             'description':
@@ -615,7 +557,7 @@ class WorkspaceToolsService {
                 '(${vocab.join(', ')}).',
           },
         },
-        [],
+        ['path'],
       ),
     ];
   }
@@ -1749,23 +1691,6 @@ class WorkspaceToolsService {
     Map<String, dynamic> args,
   ) async {
     const tool = miniAppTool;
-    final action = args['action'] ?? 'publish';
-    if (action == 'spec') {
-      return ClientToolResult(
-        jsonEncode({
-          'ok': true,
-          'specification': MiniAppSpecification.document,
-        }),
-        metadata: WorkspaceToolMetadata(tool: tool, status: 'ok').toJson(),
-      );
-    }
-    if (action != 'publish') {
-      return _errorResult(
-        tool: tool,
-        error: 'invalid_arguments',
-        message: 'action must be publish or spec; omit action to publish.',
-      );
-    }
     final path = args['path'];
     if (path is! String || path.trim().isEmpty) {
       return _errorResult(
@@ -1800,7 +1725,6 @@ class WorkspaceToolsService {
           'ok': true,
           'id': app.id,
           'name': app.name,
-          'version': MiniAppRuntime.actionVersionOf(app),
           'link': app.link,
           'updated': result.updated,
           'files': result.files,
@@ -1810,13 +1734,7 @@ class WorkspaceToolsService {
         metadata: meta.toJson(),
       );
     } on MiniAppException catch (e) {
-      return _errorResult(
-        tool: tool,
-        error: e.code,
-        message: e.message,
-        instruction:
-            'For the accepted format and complete examples, call publish_mini_app {"action":"spec"} or mini_apps {"action":"spec"}.',
-      );
+      return _errorResult(tool: tool, error: e.code, message: e.message);
     } on PathResolutionException catch (e) {
       return _errorResult(tool: tool, error: 'path_error', message: e.message);
     }

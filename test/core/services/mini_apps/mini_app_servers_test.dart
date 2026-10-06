@@ -19,15 +19,10 @@ class _Runtime extends WorkspaceRuntime {
   final requests = <CommandRequest>[];
   final processes = <String, StreamController<CommandEvent>>{};
   final cancelled = <String>[];
-  bool rootChroot = false;
 
   @override
-  Future<RuntimeStatus> status() async => RuntimeStatus(
-    ready: true,
-    engine: 'fake',
-    sandboxed: true,
-    rootChroot: rootChroot,
-  );
+  Future<RuntimeStatus> status() async =>
+      const RuntimeStatus(ready: true, engine: 'fake', sandboxed: true);
 
   @override
   Stream<CommandEvent> run(CommandRequest request) {
@@ -73,8 +68,6 @@ void main() {
   var listening = false;
   late DateTime clock;
   late FakeProcessKeepAlive keepAlive;
-  var runtimeLookups = 0;
-  var variablesLookups = 0;
 
   setUp(() async {
     temp = await Directory.systemTemp.createTemp('mini-app-servers-');
@@ -83,8 +76,6 @@ void main() {
     );
     runtime = _Runtime();
     keepAlive = FakeProcessKeepAlive();
-    runtimeLookups = 0;
-    variablesLookups = 0;
     // Stands in for the app's server: it "listens" once the test says so.
     http = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     http.listen((request) async {
@@ -117,14 +108,8 @@ void main() {
       startTimeout: const Duration(seconds: 5),
     );
     environment = MiniAppServerEnvironment(
-      runtime: () async {
-        runtimeLookups++;
-        return runtime;
-      },
-      variables: () async {
-        variablesLookups++;
-        return {'LANG': 'ru_RU.UTF-8'};
-      },
+      runtime: () async => runtime,
+      variables: () async => {'LANG': 'ru_RU.UTF-8'},
     );
   });
   tearDown(() async {
@@ -133,10 +118,7 @@ void main() {
     await temp.delete(recursive: true);
   });
 
-  Future<MiniApp> install({
-    String? command = 'python3 server.py',
-    int formatVersion = 1,
-  }) async {
+  Future<MiniApp> install({String? command = 'python3 server.py'}) async {
     final src = Directory(p.join(temp.path, 'src'));
     if (await src.exists()) await src.delete(recursive: true);
     await src.create();
@@ -144,7 +126,6 @@ void main() {
       jsonEncode({
         'id': 'notes',
         'name': 'Notes',
-        'formatVersion': formatVersion,
         if (command != null) 'server': {'command': command},
       }),
     );
@@ -161,15 +142,6 @@ void main() {
     }
     expect(done(), isTrue);
   }
-
-  MiniApp restrictedApp(MiniApp legacy) => MiniApp(
-    id: legacy.id,
-    name: legacy.name,
-    directory: legacy.directory,
-    serverCommand: legacy.serverCommand,
-    updatedAt: legacy.updatedAt,
-    formatVersion: 2,
-  );
 
   test('the manifest server is kept; bad commands are refused', () async {
     final app = await install();
@@ -193,130 +165,6 @@ void main() {
       );
     }
   });
-
-  test(
-    'a restricted v2 server refuses the inherited root workspace runtime',
-    () async {
-      runtime.rootChroot = true;
-      final app = restrictedApp(await install());
-      final lease = servers.lease(app, environment);
-      await expectLater(
-        lease.url('/'),
-        throwsA(
-          isA<MiniAppException>().having(
-            (e) => e.code,
-            'code',
-            'restricted_server_denied',
-          ),
-        ),
-      );
-      expect(runtime.requests, isEmpty);
-      expect(runtimeLookups, 0);
-      expect(variablesLookups, 0);
-      expect(keepAlive.holds, isEmpty);
-      expect(
-        Directory(p.join(app.directory, 'server-data')).existsSync(),
-        isFalse,
-      );
-      await lease.release();
-    },
-  );
-
-  test(
-    'a restricted v2 server refuses arbitrary same-UID non-root execution',
-    () async {
-      listening = true;
-      final app = restrictedApp(await install());
-      final lease = servers.lease(app, environment);
-      await expectLater(
-        lease.url('/'),
-        throwsA(
-          isA<MiniAppException>().having(
-            (e) => e.code,
-            'code',
-            'restricted_server_denied',
-          ),
-        ),
-      );
-      expect(runtime.requests, isEmpty);
-      expect(runtimeLookups, 0);
-      expect(variablesLookups, 0);
-      expect(keepAlive.holds, isEmpty);
-      expect(
-        Directory(p.join(app.directory, 'server-data')).existsSync(),
-        isFalse,
-      );
-      await lease.release();
-    },
-  );
-
-  test(
-    'upgrading to a restricted app cannot reuse a legacy root server',
-    () async {
-      listening = true;
-      runtime.rootChroot = true;
-      final installed = await install();
-      final old = servers.lease(installed, environment);
-      await old.url('/');
-      final id = runtime.requests.single.runId;
-      final restricted = servers.lease(restrictedApp(installed), environment);
-      await expectLater(
-        restricted.url('/'),
-        throwsA(
-          isA<MiniAppException>().having(
-            (e) => e.code,
-            'code',
-            'restricted_server_denied',
-          ),
-        ),
-      );
-      expect(runtime.requests, hasLength(1));
-      expect(runtimeLookups, 1);
-      expect(variablesLookups, 1);
-      expect(keepAlive.holds, hasLength(1));
-      expect(runtime.cancelled, [id]);
-      await expectLater(old.url('/'), throwsA(isA<MiniAppException>()));
-      await restricted.release();
-      await old.release();
-    },
-  );
-
-  test(
-    'installing a valid v2 app without a command closes its legacy root server',
-    () async {
-      listening = true;
-      runtime.rootChroot = true;
-      final old = servers.lease(await install(), environment);
-      await old.url('/');
-      final runId = runtime.requests.single.runId;
-      final updated = await install(command: null, formatVersion: 2);
-      final current = servers.lease(updated, environment);
-      await expectLater(
-        current.url('/'),
-        throwsA(
-          isA<MiniAppException>().having((e) => e.code, 'code', 'no_server'),
-        ),
-      );
-      expect(runtime.cancelled, [runId]);
-      expect(runtime.requests, hasLength(1));
-      expect(runtimeLookups, 1);
-      expect(variablesLookups, 1);
-      expect(keepAlive.holds, hasLength(1));
-      expect(servers.status(updated.id)['running'], isFalse);
-      await expectLater(
-        old.url('/'),
-        throwsA(
-          isA<MiniAppException>().having(
-            (e) => e.code,
-            'code',
-            'server_stopped',
-          ),
-        ),
-      );
-      await current.release();
-      await old.release();
-    },
-  );
 
   test('one server for all users, started with the app files, a data folder '
       'and a port; requests reach it; it stops with the last user', () async {

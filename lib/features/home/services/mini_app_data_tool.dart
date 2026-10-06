@@ -1,10 +1,7 @@
 import 'dart:convert';
 
-import '../../../core/services/api/tool_call_cancellation.dart';
 import '../../../core/services/mini_apps/mini_app_jobs.dart';
-import '../../../core/services/mini_apps/mini_app_runtime.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
-import '../../mini_apps/mini_app_specification.dart';
 
 class _ToolFailure implements Exception {
   const _ToolFailure(this.error, this.message);
@@ -16,21 +13,12 @@ class _ToolFailure implements Exception {
 /// The `mini_apps` local tool: the chat reads and changes the data of the
 /// user's mini apps, e.g. "I drank a glass of water", without opening them.
 class MiniAppDataTool {
-  const MiniAppDataTool({
-    required this.store,
-    this.jobs,
-    this.serverStatus,
-    this.runtime,
-    this.invocation,
-  });
+  const MiniAppDataTool({required this.store, this.jobs, this.serverStatus});
 
   static const String toolName = 'mini_apps';
 
-  static const String actionSpec = 'spec';
   static const String actionList = 'list';
   static const String actionRead = 'read';
-  static const String actionState = 'state';
-  static const String actionInvoke = 'invoke';
   static const String actionWrite = 'write';
   static const String actionRemove = 'remove';
   static const String actionErrors = 'errors';
@@ -43,11 +31,8 @@ class MiniAppDataTool {
   static const String actionDelete = 'delete';
 
   static const List<String> actions = [
-    actionSpec,
     actionList,
     actionRead,
-    actionState,
-    actionInvoke,
     actionWrite,
     actionRemove,
     actionErrors,
@@ -68,57 +53,8 @@ class MiniAppDataTool {
 
   /// Larger reads return only the keys, so one app cannot flood the context.
   static const int maxReadChars = 20000;
-  static const int maxInvokeArgumentBytes = 64 * 1024;
-
-  /// Bound model-facing snapshots; native panels and app subscriptions keep
-  /// their full state. Action results embed the same snapshot under `state`.
-  static Map<String, dynamic> stateForModel(Map<String, dynamic> result) {
-    final bounded = Map<String, dynamic>.of(result);
-    final state = bounded['state'];
-    if (state is Map) {
-      bounded['state'] = stateForModel(Map<String, dynamic>.from(state));
-    }
-    Map<String, dynamic> boundEvidence(Map entry) {
-      final evidence = Map<String, dynamic>.from(entry);
-      final child = evidence['result'];
-      if (child is Map) {
-        evidence['result'] = stateForModel(Map<String, dynamic>.from(child));
-      }
-      return evidence;
-    }
-
-    for (final key in ['completedSteps', 'failedSteps']) {
-      final steps = bounded[key];
-      if (steps is List) {
-        bounded[key] = [
-          for (final entry in steps)
-            if (entry is Map) boundEvidence(entry) else entry,
-        ];
-      }
-    }
-    final failed = bounded['failedStep'];
-    if (failed is Map) bounded['failedStep'] = boundEvidence(failed);
-    final data = bounded['data'];
-    if (data is Map && jsonEncode(data).length > maxReadChars) {
-      bounded.remove('data');
-      bounded['data_omitted'] = true;
-      bounded['data_key_count'] = data.length;
-      bounded['data_keys'] = [
-        for (final key in data.keys.take(100))
-          key.toString().length > 128
-              ? '${key.toString().substring(0, 128)}…'
-              : key.toString(),
-      ];
-      bounded['note'] =
-          'The app data is large. Read a specific key with mini_apps.read. '
-          'This preview contains at most 100 keys, each at most 128 characters.';
-    }
-    return bounded;
-  }
 
   final MiniAppStore store;
-  final MiniAppRuntime? runtime;
-  final MiniAppInvocation? invocation;
 
   /// Background jobs; `jobs` and `run_job` are unavailable without them.
   final MiniAppJobs? jobs;
@@ -134,21 +70,9 @@ class MiniAppDataTool {
     'function': {
       'name': toolName,
       'description':
-          'Read and change the data of the user\'s Moru mini apps (native panels and web '
+          'Read and change the data of the user\'s Moru mini apps (small web '
           'apps such as a water tracker or a shopping list) without opening '
-          'them. Call "spec" before authoring native panels: complete manifest, screen, '
-          'executors, expressions, bindings, permissions and publishable Focus example; no app_id needed. '
-          '"state" reads current app and device state, whether open or closed. '
-          'Declared actions share the app buttons\' executor, capabilities and confirmations. '
-          'Use "invoke" with app_id, action_name, arguments and the exact current "version" '
-          'from "list", publishing or rollback. "list" supplies each action\'s inputSchema, '
-          'permissions and danger without requiring app data grants. After publishing or '
-          'rollback, list again to discover current actions and invoke them in this reply. '
-          'Separate ma_ tools stay bound to the version offered at reply start. '
-          'Version-2 data writes/removes also require '
-          'the app\'s granted actions.ai capability. Never claim a setting was applied when the '
-          'result only says opened_settings, unsupported or unknown_after_timeout. '
-          'Call "list" first: it shows each app\'s id, what it does, '
+          'them. Call "list" first: it shows each app\'s id, what it does, '
           'how it stores its data and its keys. Keep the stored format '
           'exactly as the app expects; read a key before writing it. An open '
           'app redraws when its data changes. To fix an app, read its '
@@ -169,12 +93,8 @@ class MiniAppDataTool {
             'type': 'string',
             'enum': actions,
             'description':
-                'spec: native panel authoring specification and complete examples (no app_id). '
                 'list: installed apps. read: one key of app_id, or all its '
-                'stored data without key. state: current app/device snapshot of app_id. '
-                'invoke: run a current declared version-2 action using action_name, '
-                'arguments and the exact current version from list, publishing or rollback. '
-                'write: set key of app_id to value. '
+                'data without key. write: set key of app_id to value. '
                 'remove: delete key of app_id. errors: error journal of '
                 'app_id, oldest first; clear: true empties it after reading. '
                 'versions: earlier versions of app_id. rollback: restore '
@@ -184,18 +104,6 @@ class MiniAppDataTool {
                 'delete: remove app_id with all its data.',
           },
           'app_id': {'type': 'string', 'description': 'App id from "list".'},
-          'action_name': {
-            'type': 'string',
-            'description':
-                'invoke: declared action name from the current list.',
-          },
-          'arguments': {
-            'type': 'string',
-            'maxLength': maxInvokeArgumentBytes,
-            'description':
-                'invoke: JSON-encoded object string matching the current action\'s inputSchema, '
-                'at most 65536 UTF-8 bytes. Use "{}" when the action takes no arguments.',
-          },
           'key': {'type': 'string', 'description': 'Storage key.'},
           'value': {'description': 'JSON value to store under key.'},
           'clear': {
@@ -204,9 +112,7 @@ class MiniAppDataTool {
           },
           'version': {
             'type': 'string',
-            'description':
-                'invoke: exact current version from list, publishing or rollback (required). '
-                'rollback: a numeric historical version id from "versions".',
+            'description': 'rollback: a version from "versions".',
           },
           'job': {
             'type': 'string',
@@ -220,12 +126,6 @@ class MiniAppDataTool {
 
   Future<String> execute(Map<String, dynamic> args) async {
     try {
-      if (actionOf(args) == actionSpec) {
-        return jsonEncode({
-          'ok': true,
-          'specification': MiniAppSpecification.document,
-        });
-      }
       await store.load();
       final action = actionOf(args);
       final Map<String, dynamic> result;
@@ -234,32 +134,18 @@ class MiniAppDataTool {
           result = {'apps': await _list()};
         case actionRead:
           result = await _read(args);
-        case actionState:
-          final app = _app(args);
-          final executor = runtime;
-          if (executor == null) {
-            throw const _ToolFailure(
-              'unavailable',
-              'App state is unavailable here.',
-            );
-          }
-          return jsonEncode(
-            stateForModel(await executor.state(app.id, invocation: invocation)),
-          );
-        case actionInvoke:
-          return jsonEncode(stateForModel(await _invoke(args)));
         case actionWrite:
           final app = _app(args);
           final key = _key(args);
           if (!args.containsKey('value')) {
             throw const _ToolFailure('missing_value', '"value" is required.');
           }
-          await _changeData(app, key, value: args['value']);
+          await store.storageSet(app.id, key, args['value']);
           result = {'written': key};
         case actionRemove:
           final app = _app(args);
           final key = _key(args);
-          await _changeData(app, key, remove: true);
+          await store.storageRemove(app.id, key);
           result = {'removed': key};
         case actionErrors:
           final app = _app(args);
@@ -301,7 +187,6 @@ class MiniAppDataTool {
           final restored = await store.rollback(app.id, version);
           result = {
             'restored': version,
-            'version': MiniAppRuntime.actionVersionOf(restored),
             'published': restored.updatedAt.toIso8601String(),
           };
         case actionJobs:
@@ -370,187 +255,11 @@ class MiniAppDataTool {
       {
         'id': app.id,
         'name': app.name,
-        'version': MiniAppRuntime.actionVersionOf(app),
         if (app.description.isNotEmpty) 'description': app.description,
         if (app.dataHelp.isNotEmpty) 'data': app.dataHelp,
         'keys': await store.storageKeys(app.id),
-        if (app.formatVersion >= 2) ...{
-          'engine': app.uiEngine.name,
-          'permissions': app.permissions.toList()..sort(),
-          'actions': [
-            for (final action in app.actions)
-              {
-                'name': action.name,
-                'description': action.description,
-                'tool': MiniAppRuntime.toolNameFor(app.id, action.name),
-                'inputSchema': action.inputSchema,
-                'permissions': action.permissions.toList()..sort(),
-                'danger': action.danger.name,
-              },
-          ],
-        },
       },
   ];
-
-  Future<Map<String, dynamic>> _invoke(Map<String, dynamic> args) async {
-    for (final key in ['app_id', 'action_name', 'version']) {
-      final value = args[key];
-      if (value is! String || value.trim().isEmpty) {
-        throw _ToolFailure(
-          'invalid_arguments',
-          '"$key" must be a non-empty string for invoke.',
-        );
-      }
-    }
-    final encoded = args['arguments'];
-    if (encoded is! String ||
-        encoded.length > maxInvokeArgumentBytes ||
-        utf8.encode(encoded).length > maxInvokeArgumentBytes) {
-      throw const _ToolFailure(
-        'invalid_arguments',
-        '"arguments" must be a JSON object string of at most 65536 UTF-8 bytes for invoke.',
-      );
-    }
-    final Object? arguments;
-    try {
-      arguments = jsonDecode(encoded);
-    } on FormatException {
-      throw const _ToolFailure(
-        'invalid_arguments',
-        '"arguments" must contain valid JSON for invoke.',
-      );
-    }
-    if (arguments is! Map<String, dynamic>) {
-      throw const _ToolFailure(
-        'invalid_arguments',
-        '"arguments" must decode to a JSON object for invoke.',
-      );
-    }
-    final app = _app(args);
-    if (app.formatVersion < 2) {
-      throw const _ToolFailure(
-        'unsupported',
-        'Declared actions require a version-2 mini app.',
-      );
-    }
-    if (args['version'] != MiniAppRuntime.actionVersionOf(app)) {
-      throw const _ToolFailure(
-        'app_changed',
-        'The requested version is not current. Call list for the current version and action schemas.',
-      );
-    }
-    final executor = runtime;
-    final request = invocation;
-    if (executor == null ||
-        !identical(executor.store, store) ||
-        request == null) {
-      throw const _ToolFailure(
-        'permission_required',
-        'Invoking an app action requires a current AI invocation and actions.ai.',
-      );
-    }
-    if (!request.isAi) {
-      throw const _ToolFailure(
-        'invocation_denied',
-        'This action tool is available only to the current chat or ACP invocation.',
-      );
-    }
-    return executor.execute(
-      app.id,
-      (args['action_name'] as String).trim(),
-      Map<String, dynamic>.from(arguments),
-      invocation: request,
-      expectedApp: app,
-    );
-  }
-
-  Future<void> _changeData(
-    MiniApp app,
-    String key, {
-    Object? value,
-    bool remove = false,
-  }) async {
-    if (app.formatVersion < 2) {
-      if (remove) {
-        await store.storageRemove(app.id, key);
-      } else {
-        await store.storageSet(app.id, key, value);
-      }
-      return;
-    }
-    final executor = runtime;
-    final request = invocation;
-    if (executor == null ||
-        !identical(executor.store, store) ||
-        request == null) {
-      throw const _ToolFailure(
-        'permission_required',
-        'Changing this app requires a current AI invocation and actions.ai.',
-      );
-    }
-    if (!request.isAi) {
-      throw const _ToolFailure(
-        'invocation_denied',
-        'This data tool is available only to the current chat or ACP invocation.',
-      );
-    }
-    if (key.length > MiniAppStore.maxKeyLength) {
-      throw const _ToolFailure(
-        'invalid_key',
-        'Keys must be 1-${MiniAppStore.maxKeyLength} characters.',
-      );
-    }
-    final generation = store.generationFor(app.id);
-    final grantVersion = executor.permissions.versionFor(app.id);
-    final owner = ToolCallCancellation.current;
-    var lifetimeCancelled = false;
-    request.cancelled?.then((_) => lifetimeCancelled = true);
-    void check() {
-      if (lifetimeCancelled ||
-          owner?.isCancelled() == true ||
-          request.isAllowed?.call() == false) {
-        throw const MiniAppException(
-          'invocation_cancelled',
-          'This invocation is no longer allowed.',
-        );
-      }
-      if (!identical(store.byId(app.id), app) ||
-          store.generationFor(app.id) != generation) {
-        throw const MiniAppException(
-          'app_changed',
-          'The mini app changed while the write was pending.',
-        );
-      }
-      if (executor.permissions.versionFor(app.id) != grantVersion) {
-        throw const MiniAppException(
-          'permission_required',
-          'Mini app permissions changed while the write was pending.',
-        );
-      }
-    }
-
-    check();
-    final grants = await executor.permissions.granted(app.id);
-    check();
-    if (!grants.contains('actions.ai')) {
-      throw const _ToolFailure(
-        'permission_required',
-        'Grant actions.ai on the app screen before the AI can change its data.',
-      );
-    }
-    await store.updateState(
-      app.id,
-      (data) {
-        if (remove) {
-          data.remove(key);
-        } else {
-          data[key] = value;
-        }
-      },
-      expected: app,
-      check: check,
-    );
-  }
 
   Future<Map<String, dynamic>> _read(Map<String, dynamic> args) async {
     final app = _app(args);

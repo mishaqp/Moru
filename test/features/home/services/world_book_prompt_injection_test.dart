@@ -2,7 +2,6 @@ import 'package:Kelivo/features/chat/utils/prompt_injection_selection.dart';
 import 'package:Kelivo/features/home/widgets/world_book_sheet.dart';
 import 'package:Kelivo/features/home/services/message_generation_service.dart';
 import 'package:Kelivo/features/home/controllers/generation_controller.dart';
-import 'package:Kelivo/features/home/services/mini_app_tool_routes.dart';
 import 'package:Kelivo/features/home/controllers/stream_controller.dart'
     as stream_ctrl;
 import 'package:Kelivo/core/services/mcp/mcp_tool_service.dart';
@@ -77,15 +76,11 @@ class _Chat extends ChatService {
 
 class _Routes extends Fake implements McpToolRouteSnapshot {}
 
-class _AppRoutes extends Fake implements MiniAppToolRouteSnapshot {}
-
 class _Stream extends Fake implements stream_ctrl.StreamController {}
 
 class _Generation extends Fake implements GenerationController {
   @override
   McpToolRouteSnapshot captureMcpToolRoutes(Assistant? assistant) => _Routes();
-  @override
-  MiniAppToolRouteSnapshot captureMiniAppToolRoutes() => _AppRoutes();
   @override
   List<Map<String, dynamic>> buildToolDefinitions(
     SettingsProvider settings,
@@ -94,7 +89,6 @@ class _Generation extends Fake implements GenerationController {
     String modelId,
     bool hasBuiltInSearch, {
     McpToolRouteSnapshot? mcpRouteSnapshot,
-    MiniAppToolRouteSnapshot? miniAppRouteSnapshot,
     WorkspaceToolContext? workspaceContext,
     String? conversationId,
   }) => [];

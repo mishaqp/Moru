@@ -76,34 +76,10 @@ class MiniAppServers {
   /// now, so it is warm by the first request.
   MiniAppServerLease lease(MiniApp app, MiniAppServerEnvironment environment) {
     final command = app.serverCommand;
-    var server = _servers[app.id];
-    if (server != null &&
-        (!identical(server.app, app) || app.formatVersion >= 2)) {
-      // An updated app cannot inherit a process or its execution mode from
-      // a previously installed version (including a legacy root server).
-      server.stopping = true;
-      unawaited(_stopRun(server.run!).catchError((_) {}));
-    }
     if (command == null) return MiniAppServerLease._(this, null);
-    if (app.formatVersion >= 2) {
-      // PRoot shares Moru's Android UID, /proc and mutable rootfs. It cannot
-      // enforce this app's independent device and host-file grants.
-      return MiniAppServerLease._(
-        this,
-        null,
-        denial: const MiniAppException(
-          'restricted_server_denied',
-          'Restricted apps cannot run arbitrary workspace server commands.',
-        ),
-      );
-    }
+    var server = _servers[app.id];
     if (server == null || server.stopping) {
-      server = _servers[app.id] = _Server(
-        app,
-        command,
-        environment,
-        store.generationFor(app.id),
-      );
+      server = _servers[app.id] = _Server(app, command, environment);
       _run(server);
     }
     server.leases++;
@@ -168,14 +144,7 @@ class MiniAppServers {
     }
   }
 
-  void _checkStopped(_Server server, _ServerRun run) {
-    if (!identical(store.byId(server.app.id), server.app) ||
-        store.generationFor(server.app.id) != server.generation) {
-      server.stopping = true;
-      if (run.launched && !run.terminal) {
-        unawaited(_stopRun(run).catchError((_) {}));
-      }
-    }
+  static void _checkStopped(_Server server, _ServerRun run) {
     if (server.stopping || run.stopping) throw _stopped;
   }
 
@@ -436,12 +405,11 @@ class MiniAppServers {
 }
 
 class _Server {
-  _Server(this.app, this.command, this.environment, this.generation);
+  _Server(this.app, this.command, this.environment);
 
   final MiniApp app;
   final String command;
   final MiniAppServerEnvironment environment;
-  final int generation;
 
   /// Kept across restarts, so a page's URLs only change with the port.
   final String token = _newToken();
@@ -493,11 +461,10 @@ class _ServerRun {
 
 /// One user of an app's server: the open page or a background job.
 class MiniAppServerLease {
-  MiniAppServerLease._(this._servers, this._server, {this._denial});
+  MiniAppServerLease._(this._servers, this._server);
 
   final MiniAppServers _servers;
   final _Server? _server;
-  final MiniAppException? _denial;
   bool _released = false;
 
   /// `moru.server.fetch`.
@@ -510,7 +477,6 @@ class MiniAppServerLease {
   Future<String> url(String path) async => _servers._url(_use(), path);
 
   _Server _use() {
-    if (_denial != null) throw _denial;
     final server = _server;
     if (server == null) {
       throw const MiniAppException(

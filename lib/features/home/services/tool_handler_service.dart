@@ -23,8 +23,7 @@ import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/mcp/mcp_tool_service.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
 import '../../../core/services/memory/memory_tools.dart';
-import '../../../core/services/mini_apps/mini_app_runtime.dart';
-import '../../../core/services/mini_apps/mini_app_manifest.dart';
+import '../../../core/services/mini_apps/mini_app_store.dart';
 import '../../../core/services/logging/problem_report_service.dart';
 import '../../../core/services/scheduled_tasks_service.dart';
 import '../../../core/services/search/search_tool_service.dart';
@@ -46,9 +45,6 @@ import 'built_in_tool_names.dart';
 import 'local_tools_service.dart';
 import 'mcp_manager_tool.dart';
 import 'mini_app_data_tool.dart';
-import 'mini_app_tool_routes.dart';
-
-export 'mini_app_tool_routes.dart' show MiniAppToolRouteSnapshot;
 import 'root_phone_control.dart';
 import 'root_shell_tool.dart';
 import 'scheduled_task_tool.dart';
@@ -64,28 +60,9 @@ import '../../../core/services/acp/acp_agent_manager.dart';
 /// - Memory 工具 (§10)
 /// - Search 工具
 class ToolHandlerService {
-  ToolHandlerService({
-    required this.contextProvider,
-    this.compactContext,
-    this.miniAppRuntime,
-  });
+  ToolHandlerService({required this.contextProvider, this.compactContext});
 
   SpendCompactHandler? compactContext;
-  final MiniAppRuntime? miniAppRuntime;
-  MiniAppRuntime get _miniApps => miniAppRuntime ?? MiniAppLauncher.runtime;
-
-  Set<String> get miniAppActionNames => {
-    for (final definition in _miniApps.toolDefinitions())
-      definition['function']['name'] as String,
-  };
-
-  Set<String> get _reservedToolNames => {
-    ...BuiltInToolNames.all,
-    ...miniAppActionNames,
-  };
-
-  MiniAppToolRouteSnapshot captureMiniAppToolRoutes() =>
-      MiniAppToolRouteSnapshot.capture(_miniApps);
 
   /// Build context (used for accessing providers)
   final BuildContext contextProvider;
@@ -182,7 +159,7 @@ class ToolHandlerService {
       contextProvider.read<McpProvider>(),
       contextProvider.read<AssistantProvider>(),
       assistantId: assistant?.id,
-      reservedNames: _reservedToolNames,
+      reservedNames: BuiltInToolNames.all,
     );
   }
 
@@ -214,7 +191,6 @@ class ToolHandlerService {
     bool hasBuiltInSearch, {
     required bool Function(String providerKey, String modelId) isToolModel,
     McpToolRouteSnapshot? mcpRouteSnapshot,
-    MiniAppToolRouteSnapshot? miniAppRouteSnapshot,
     WorkspaceToolContext? workspaceContext,
     String? conversationId,
   }) {
@@ -254,19 +230,6 @@ class ToolHandlerService {
         supportsTools: supportsTools,
       ),
     );
-    if (supportsTools &&
-        assistant != null &&
-        LocalToolsService.isAvailableOnThisPlatform(LocalToolNames.miniApps) &&
-        LocalToolsService.isEnabledForAssistant(
-          LocalToolNames.miniApps,
-          assistant,
-        )) {
-      toolDefs.addAll(
-        (miniAppRouteSnapshot ?? captureMiniAppToolRoutes()).currentDefinitions(
-          _miniApps.store,
-        ),
-      );
-    }
 
     // MCP tools
     final mcpTools = _buildMcpToolDefinitions(
@@ -304,7 +267,7 @@ class ToolHandlerService {
       contextProvider.read<AssistantProvider>(),
       assistant?.id,
       routeSnapshot: mcpRouteSnapshot,
-      reservedNames: _reservedToolNames,
+      reservedNames: BuiltInToolNames.all,
     );
 
     if (tools.isEmpty) return [];
@@ -340,9 +303,7 @@ class ToolHandlerService {
     AskUserInteractionService? askUserService,
     String? conversationId,
     McpToolRouteSnapshot? mcpRouteSnapshot,
-    MiniAppToolRouteSnapshot? miniAppRouteSnapshot,
     WorkspaceToolContext? workspaceContext,
-    MiniAppInvocationSource miniAppSource = MiniAppInvocationSource.chat,
   }) {
     final mcp = contextProvider.read<McpProvider>();
     final toolSvc = contextProvider.read<McpToolService>();
@@ -355,7 +316,7 @@ class ToolHandlerService {
           mcp,
           assistantProvider,
           assistantId: assistant?.id,
-          reservedNames: _reservedToolNames,
+          reservedNames: BuiltInToolNames.all,
         );
 
     String approvalIdFor(String name, String? toolCallId) {
@@ -369,112 +330,6 @@ class ToolHandlerService {
       final owner = ToolApprovalOwner.current;
       if (owner != null && !owner.isActive()) {
         throw StateError('tool_call_cancelled');
-      }
-    }
-
-    final miniAppBindings =
-        (miniAppRouteSnapshot ?? captureMiniAppToolRoutes()).bindings;
-
-    MiniAppInvocation appInvocation(
-      String name,
-      String? toolCallId, {
-      Future<void>? cancelled,
-    }) => MiniAppInvocation(
-      source: miniAppSource,
-      cancelled: cancelled,
-      fullTrust: () => settings.toolAutoApproveAll,
-      isAllowed: () {
-        try {
-          ensureLiveToolCall();
-          if (!contextProvider.mounted) return false;
-          final current = assistant == null
-              ? null
-              : assistantProvider.getById(assistant.id);
-          return current != null &&
-              LocalToolsService.isAvailableOnThisPlatform(
-                LocalToolNames.miniApps,
-              ) &&
-              LocalToolsService.isEnabledForAssistant(
-                LocalToolNames.miniApps,
-                current,
-              );
-        } catch (_) {
-          return false;
-        }
-      },
-      approve: approvalService == null
-          ? null
-          : (app, action, arguments) async {
-              approvalService.setAutoApproveAll(settings.toolAutoApproveAll);
-              final operations = arguments['operations'];
-              // Only these executors present host-selected native operations.
-              // State-action inputs can contain arbitrary fields of that name.
-              final rootDndOperations =
-                  action.danger == MiniAppDanger.root &&
-                      action.permissions.contains('device.root.dnd') &&
-                      const {
-                        'native',
-                        'preset',
-                        'restore',
-                      }.contains(action.executor['kind']) &&
-                      operations is List
-                  ? operations
-                        .where(
-                          (operation) =>
-                              operation is Map &&
-                              operation['handler'] == 'device.root.dnd.set',
-                        )
-                        .toList()
-                  : const [];
-              final approval = await approvalService.requestApproval(
-                toolCallId: approvalIdFor(name, toolCallId),
-                toolName: MiniAppRuntime.toolNameFor(app.id, action.name),
-                conversationId: conversationId,
-                arguments: {
-                  'app_id': app.id,
-                  'app': app.name,
-                  'action': action.name,
-                  'description': action.description,
-                  'danger': action.danger.name,
-                  'permissions': action.permissions.toList(),
-                  'version': app.updatedAt.millisecondsSinceEpoch,
-                  'source': miniAppSource.name,
-                  'arguments': arguments,
-                  if (rootDndOperations.isNotEmpty)
-                    'root_dnd_operations': rootDndOperations,
-                },
-              );
-              return approval.approved;
-            },
-    );
-
-    Future<T> invokeMiniApp<T>(
-      String name,
-      String? toolCallId,
-      Future<T> Function(MiniAppInvocation) execute,
-    ) async {
-      final cancellation = Completer<void>();
-      final invocation = appInvocation(
-        name,
-        toolCallId,
-        cancelled: cancellation.future,
-      );
-      void changed() {
-        if (invocation.isAllowed?.call() == false &&
-            !cancellation.isCompleted) {
-          cancellation.complete();
-        }
-      }
-
-      // A live predicate prevents the next step, while this signal also stops
-      // native work already waiting for Android or a root-manager response.
-      assistantProvider.addListener(changed);
-      try {
-        changed();
-        return await execute(invocation);
-      } finally {
-        assistantProvider.removeListener(changed);
-        if (!cancellation.isCompleted) cancellation.complete();
       }
     }
 
@@ -510,7 +365,7 @@ class ToolHandlerService {
             assistantId: assistant?.id,
             toolName: name,
             routeSnapshot: routes,
-            reservedNames: _reservedToolNames,
+            reservedNames: BuiltInToolNames.all,
           );
       if (needsApproval) {
         if (approvalService == null) {
@@ -547,7 +402,7 @@ class ToolHandlerService {
         toolName: name,
         arguments: args,
         routeSnapshot: routes,
-        reservedNames: _reservedToolNames,
+        reservedNames: BuiltInToolNames.all,
       );
     }
 
@@ -560,32 +415,6 @@ class ToolHandlerService {
     }) async {
       try {
         ensureLiveToolCall();
-        final binding = miniAppBindings[name];
-        if (binding != null) {
-          if (!identical(_miniApps.store.byId(binding.app.id), binding.app)) {
-            return jsonEncode({
-              'ok': false,
-              'status': 'denied',
-              'message':
-                  'The app changed after this tool was offered. Request its current actions again.',
-            });
-          }
-          return jsonEncode(
-            MiniAppDataTool.stateForModel(
-              await invokeMiniApp(
-                name,
-                toolCallId,
-                (invocation) => _miniApps.execute(
-                  binding.app.id,
-                  binding.actionName,
-                  args,
-                  invocation: invocation,
-                  expectedApp: binding.app,
-                ),
-              ),
-            ),
-          );
-        }
         if (workspaceContext != null &&
             workspaceTools != null &&
             WorkspaceToolsService.toolNames.contains(name)) {
@@ -986,17 +815,11 @@ class ToolHandlerService {
               tool: name,
             );
           }
-          return invokeMiniApp(
-            name,
-            toolCallId,
-            (invocation) => MiniAppDataTool(
-              store: _miniApps.store,
-              jobs: MiniAppLauncher.jobs,
-              serverStatus: MiniAppLauncher.servers.status,
-              runtime: _miniApps,
-              invocation: invocation,
-            ).execute(args),
-          );
+          return MiniAppDataTool(
+            store: MiniAppStore.instance,
+            jobs: MiniAppLauncher.jobs,
+            serverStatus: MiniAppLauncher.servers.status,
+          ).execute(args);
         }
 
         if (name == LocalToolNames.browserUse &&

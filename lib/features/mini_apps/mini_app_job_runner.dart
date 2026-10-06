@@ -5,7 +5,6 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/services/mini_apps/mini_app_bridge.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
-import '../../core/services/mini_apps/mini_app_web_server.dart';
 import '../../core/services/scheduled_tasks_service.dart';
 
 /// Runs a background job of a mini app: opens the app in a WebView that is
@@ -47,66 +46,48 @@ class MiniAppJobRunner {
     required MiniAppHost host,
     ScheduledRunCancellation? cancellation,
   }) async {
-    cancellation?.check();
-    if (app.uiEngine == MiniAppUiEngine.native) {
-      throw const MiniAppException(
-        'unavailable',
-        'Native panels do not run JavaScript jobs.',
-      );
-    }
     void log(String problem) => unawaited(
       store.logError(app.id, 'job $jobId: $problem').catchError((_) {}),
     );
-    final loaded = Completer<void>();
-    final finished = Completer<String?>();
     final bridge = MiniAppBridge(
       store: store,
       appId: app.id,
       host: host,
-      onJobDone: (error) {
-        if (!finished.isCompleted) finished.complete(error);
-      },
       onProblem: (kind, problem) {
         // The console has the details of these.
         if (kind != 'error' && kind != 'promise') log(problem);
       },
     );
+    final loaded = Completer<void>();
+    final finished = Completer<String?>();
     final controller = WebViewController();
-    MiniAppWebServer? localHost;
     // Set once the job is over: replies and console output that arrive
     // while the page is being cleared belong to no page and are dropped.
     var closed = false;
-    Future<void> cancel() async {
-      closed = true;
-      bridge.dispose();
+    cancellation?.onCancel = () async {
       if (!finished.isCompleted) finished.complete('cancelled');
-      await localHost?.stop();
-      await controller.loadHtmlString('<html></html>').catchError((_) {});
-    }
-
-    cancellation?.onCancel = cancel;
+    };
     try {
       await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
-      cancellation?.check();
-      if (app.formatVersion < 2) {
-        await controller.addJavaScriptChannel(
-          'MoruBridge',
-          onMessageReceived: (message) async {
-            final script = await bridge.handle(message.message);
-            if (script != null && !closed) {
-              await controller.runJavaScript(script);
-            }
-          },
-        );
-      } else {
-        localHost = MiniAppWebServer(
-          store: store,
-          protectedApp: app,
-          bridgeFor: (_) => bridge,
-        );
-        await localHost.start(port: 0, localhostOnly: true);
-        cancellation?.check();
-      }
+      await controller.addJavaScriptChannel(
+        'MoruBridge',
+        onMessageReceived: (message) async {
+          final Object? call;
+          try {
+            call = jsonDecode(message.message);
+          } on FormatException {
+            return;
+          }
+          if (call is Map && call['method'] == '__jobDone') {
+            final args = call['args'];
+            final error = args is Map ? args['error'] : null;
+            if (!finished.isCompleted) finished.complete(error?.toString());
+            return;
+          }
+          final script = await bridge.handle(message.message);
+          if (script != null && !closed) await controller.runJavaScript(script);
+        },
+      );
       await controller.setOnConsoleMessage((message) {
         if (!closed &&
             message.level == JavaScriptLogLevel.error &&
@@ -119,21 +100,13 @@ class MiniAppJobRunner {
           onPageFinished: (_) {
             if (!loaded.isCompleted) loaded.complete();
           },
-          onNavigationRequest: (request) =>
-              (localHost == null
-                  ? request.url.startsWith('file://')
-                  : localHost.allowsNavigation(Uri.parse(request.url)))
+          onNavigationRequest: (request) => request.url.startsWith('file://')
               ? NavigationDecision.navigate
               : NavigationDecision.prevent,
         ),
       );
       await store.refreshBridge(app);
-      cancellation?.check();
-      if (localHost == null) {
-        await controller.loadFile(app.entryPath);
-      } else {
-        await controller.loadRequest(localHost.appUri!);
-      }
+      await controller.loadFile(app.entryPath);
       try {
         await loaded.future.timeout(loadTimeout);
       } on TimeoutException {
@@ -154,15 +127,7 @@ class MiniAppJobRunner {
     } finally {
       // Stop the app's timers and requests.
       closed = true;
-      bridge.dispose();
-      if (identical(cancellation?.onCancel, cancel)) {
-        cancellation?.onCancel = null;
-      }
-      try {
-        await controller.loadHtmlString('<html></html>');
-      } finally {
-        await localHost?.stop();
-      }
+      await controller.loadHtmlString('');
     }
   }
 

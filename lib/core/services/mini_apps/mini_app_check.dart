@@ -7,7 +7,6 @@ import 'mini_app_bridge.dart';
 import 'mini_app_fetch.dart';
 import 'mini_app_jobs.dart';
 import 'mini_app_reminders.dart';
-import 'mini_app_runtime.dart';
 import 'mini_app_servers.dart';
 import 'mini_app_store.dart';
 
@@ -84,20 +83,13 @@ class MiniAppCheckReport {
 /// data and reminders, and its host sends nothing: no notifications, no
 /// model requests, no calendar changes. Network reads go out as usual.
 class MiniAppSandbox {
-  MiniAppSandbox._(
-    this._root,
-    this.store,
-    this.bridge,
-    this._server,
-    this._runtime,
-  );
+  MiniAppSandbox._(this._root, this.store, this.bridge, this._server);
 
   static const String testAnswer = 'Test answer from Moru.';
 
   final Directory _root;
   final MiniAppStore store;
   final MiniAppBridge bridge;
-  final MiniAppRuntime? _runtime;
 
   /// Its own copy of the app's server, with an empty `/data`.
   final ({MiniAppServers servers, MiniAppServerLease lease})? _server;
@@ -167,21 +159,10 @@ class MiniAppSandbox {
           lease: servers.lease(copy, serverEnvironment),
         );
       }
-      // Host grants live outside the app directory, so a check never inherits
-      // device privileges from the installed app.
-      final runtime = copy.formatVersion >= 2
-          ? MiniAppRuntime(store: store)
-          : null;
       final bridge = MiniAppBridge(
         store: store,
         appId: app.id,
         host: MiniAppHost(
-          runtime: runtime,
-          invocation: runtime == null
-              ? null
-              : const MiniAppInvocation(
-                  source: MiniAppInvocationSource.background,
-                ),
           ask: (prompt, system) async => testAnswer,
           notify: (title, body) async {},
           reminders: MiniAppReminders(
@@ -219,7 +200,7 @@ class MiniAppSandbox {
               ),
         ),
       );
-      return MiniAppSandbox._(root, store, bridge, server, runtime);
+      return MiniAppSandbox._(root, store, bridge, server);
     } catch (_) {
       await root.delete(recursive: true);
       rethrow;
@@ -227,8 +208,6 @@ class MiniAppSandbox {
   }
 
   Future<void> dispose() async {
-    bridge.dispose();
-    await _runtime?.dispose();
     await _server?.lease.release();
     await _root.delete(recursive: true);
   }

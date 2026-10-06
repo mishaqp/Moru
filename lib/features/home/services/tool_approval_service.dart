@@ -104,8 +104,7 @@ class ToolApprovalRequest {
   bool get requiresExplicitConsent =>
       toolName == 'report_problem' ||
       toolName == 'manage_mcp' ||
-      toolName == 'spend_control' ||
-      toolName.startsWith('ma_');
+      toolName == 'spend_control';
   final List<String> secretFields;
 
   /// Collect private inputs without asking for consent in global trusted mode.
@@ -270,7 +269,6 @@ class ToolApprovalService extends ChangeNotifier {
       if (toolName != 'manage_mcp' &&
           toolName != 'spend_control' &&
           toolName != 'manage_assistants' &&
-          !toolName.startsWith('ma_') &&
           existing.toolName == toolName &&
           existing.generationRunId == owner?.generationRunId &&
           existing.assistantMessageId == owner?.assistantMessageId &&

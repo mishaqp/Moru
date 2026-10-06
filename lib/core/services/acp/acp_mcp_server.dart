@@ -17,21 +17,12 @@ typedef AcpMcpToolHandler =
 /// Uses JSON POST responses; the optional server-initiated GET stream is not
 /// offered. Tools and their live policy are supplied by the chat adapter.
 class AcpMcpServer {
-  AcpMcpServer._(
-    this._server,
-    this.token,
-    this.tools,
-    this.callTool,
-    this.miniAppActionNames,
-  );
+  AcpMcpServer._(this._server, this.token, this.tools, this.callTool);
 
   final HttpServer _server;
   final String token;
   final List<Map<String, dynamic>> Function() tools;
   final AcpMcpToolHandler callTool;
-
-  /// Exact names from the live mini-app registry, never a prefix wildcard.
-  final Set<String> Function()? miniAppActionNames;
   Future<void>? _closing;
 
   static const int maxMessageBytes = 8 * 1024 * 1024;
@@ -51,13 +42,12 @@ class AcpMcpServer {
   /// Convert the normal model's definitions, retaining only Moru's tools.
   /// Workspace file/shell tools and third-party MCP servers never pass here.
   static List<Map<String, dynamic>> moruTools(
-    Iterable<Map<String, dynamic>> definitions, {
-    Set<String> miniAppActionNames = const {},
-  }) => [
+    Iterable<Map<String, dynamic>> definitions,
+  ) => [
     for (final definition in definitions)
       if (definition['function'] case final Map function)
         if (function['name'] is String &&
-            _allowed(function['name'], miniAppActionNames))
+            allowedNames.contains(function['name']))
           {
             'name': function['name'],
             if (function['description'] is String)
@@ -69,20 +59,13 @@ class AcpMcpServer {
   static Future<AcpMcpServer> start({
     required List<Map<String, dynamic>> Function() tools,
     required AcpMcpToolHandler callTool,
-    Set<String> Function()? miniAppActionNames,
   }) async {
     final random = Random.secure();
     final token = base64Url.encode(
       List.generate(32, (_) => random.nextInt(256)),
     );
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    final endpoint = AcpMcpServer._(
-      server,
-      token,
-      tools,
-      callTool,
-      miniAppActionNames,
-    );
+    final endpoint = AcpMcpServer._(server, token, tools, callTool);
     server.listen((request) => unawaited(endpoint._handle(request)));
     return endpoint;
   }
@@ -91,12 +74,8 @@ class AcpMcpServer {
 
   List<Map<String, dynamic>> _available() => [
     for (final tool in tools())
-      if (_allowed(tool['name'], miniAppActionNames?.call() ?? const {})) tool,
+      if (allowedNames.contains(tool['name'])) tool,
   ];
-
-  static bool _allowed(Object? name, Set<String> miniApps) =>
-      allowedNames.contains(name) ||
-      (name is String && name.startsWith('ma_') && miniApps.contains(name));
 
   Future<void> _handle(HttpRequest request) async {
     final response = request.response;

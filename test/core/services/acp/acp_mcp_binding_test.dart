@@ -9,7 +9,6 @@ import 'package:Kelivo/core/services/acp/acp_agent.dart';
 import 'package:Kelivo/core/services/acp/acp_mcp_binding.dart';
 import 'package:Kelivo/core/services/acp/acp_mcp_stdio_bridge.dart';
 import 'package:Kelivo/core/services/acp/acp_secret_redactor.dart';
-import 'package:Kelivo/core/services/acp/acp_tool_correlation.dart';
 import 'package:Kelivo/core/services/api/tool_display_redaction.dart';
 
 AcpMcpTools source({
@@ -33,126 +32,6 @@ AcpMcpTools source({
 );
 
 void main() {
-  group('live mini-app action correlation', () {
-    const action = 'ma_counter_set_count';
-    const arguments = <String, dynamic>{'count': 4};
-
-    AcpMcpTools actions(Set<String> registered, List<String> calls) =>
-        AcpMcpTools(
-          key: 'mini-app-assistant',
-          miniAppActionNames: () => registered,
-          definitions: () => [
-            for (final name in registered)
-              {
-                'name': name,
-                'inputSchema': {'type': 'object'},
-              },
-          ],
-          execute: (name, args, {required toolCallId}) async {
-            calls.add('$name:$toolCallId');
-            return {'content': <Object>[]};
-          },
-        );
-
-    AcpPermissionRequest permission(String id) => AcpPermissionRequest(
-      sessionId: 'session',
-      toolCallId: 'acp-tool-$id',
-      title: '',
-      kind: 'other',
-      input: arguments,
-      options: const [],
-    );
-
-    final forms = <String, Map<String, dynamic>>{
-      'Codex rawInput': {
-        'title': 'Change count',
-        'rawInput': {'server': 'moru', 'tool': action, 'arguments': arguments},
-      },
-      'Codex rawInput before stale title': {
-        'title': 'moru_browser_use',
-        'rawInput': {'server': 'moru', 'tool': action, 'arguments': arguments},
-      },
-      'Claude title': {'title': 'mcp__moru__$action', 'rawInput': arguments},
-      'OpenCode name': {'name': 'moru_$action', 'rawInput': arguments},
-      'Moru title': {'title': 'Tool: moru/$action', 'rawInput': arguments},
-      'Claude metadata': {
-        '_meta': {
-          'claudeCode': {'toolName': 'mcp__moru__$action'},
-        },
-        'rawInput': arguments,
-      },
-    };
-    for (final form in forms.entries) {
-      test('${form.key} dispatches the registered mini-app action', () async {
-        final registered = <String>{action};
-        final calls = <String>[];
-        final tools = actions(registered, calls);
-        final binding = await AcpMcpBinding.start(tools);
-        addTearDown(binding.close);
-        binding.beginTurn(tools);
-        // AcpConnection parses before the binding knows the live registry.
-        final correlation = AcpToolCorrelation.fromUpdate({
-          'toolCallId': 'dynamic',
-          'status': 'in_progress',
-          ...form.value,
-        })!;
-        binding.observeCorrelation(correlation);
-
-        expect(binding.ownsPermission(permission('dynamic')), true);
-        final result = await binding
-            .callTool(action, arguments)
-            .timeout(const Duration(seconds: 2));
-        expect(result['isError'], isNot(true));
-        expect(calls, ['$action:acp-tool-dynamic']);
-      });
-    }
-
-    test(
-      'an unregistered ma prefix does not claim a Moru permission',
-      () async {
-        final calls = <String>[];
-        final tools = actions({action}, calls);
-        final binding = await AcpMcpBinding.start(tools);
-        addTearDown(binding.close);
-        binding.beginTurn(tools);
-        binding.observe({
-          'toolCallId': 'foreign',
-          'title': 'mcp__moru__ma_foreign_execute',
-          'rawInput': arguments,
-        });
-
-        expect(binding.ownsPermission(permission('foreign')), false);
-        final result = await binding
-            .callTool('ma_foreign_execute', arguments)
-            .timeout(const Duration(seconds: 2));
-        expect(result['isError'], true);
-        expect(calls, isEmpty);
-      },
-    );
-
-    test('revocation invalidates a previously correlated app action', () async {
-      final registered = <String>{action};
-      final calls = <String>[];
-      final tools = actions(registered, calls);
-      final binding = await AcpMcpBinding.start(tools);
-      addTearDown(binding.close);
-      binding.beginTurn(tools);
-      binding.observe({
-        'toolCallId': 'revoked',
-        'rawInput': {'server': 'moru', 'tool': action, 'arguments': arguments},
-      });
-      expect(binding.ownsPermission(permission('revoked')), true);
-
-      registered.clear();
-      expect(binding.ownsPermission(permission('revoked')), false);
-      final result = await binding
-          .callTool(action, arguments)
-          .timeout(const Duration(seconds: 2));
-      expect(result['isError'], true);
-      expect(calls, isEmpty);
-    });
-  });
-
   group('subscription browser authorization guard', () {
     const privateValue = 'private-authorization-test-value';
     const authUrl = 'https://login.example/callback?state=$privateValue';

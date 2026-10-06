@@ -7,7 +7,6 @@ import 'package:path/path.dart' as p;
 
 import 'package:Kelivo/core/services/mini_apps/mini_app_bridge.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_reminders.dart';
-import 'package:Kelivo/core/services/mini_apps/mini_app_runtime.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
 import 'package:Kelivo/features/home/services/mini_app_data_tool.dart';
 
@@ -47,7 +46,6 @@ void main() {
           {
             'id': 'water',
             'name': 'Water',
-            'version': MiniAppRuntime.actionVersionOf(store.byId('water')!),
             'description': 'Tracks water',
             'data': 'log: {"YYYY-MM-DD": [ml, ...]}',
             'keys': ['goal'],
