@@ -354,6 +354,16 @@ directory. Load the matching skill for the task; user instructions take priority
   `MiniAppWebHost` serves the apps to browsers in the Wi-Fi
   (`MiniAppWebServer`, `moru.local` via `MdnsResponder`), kept alive by
   `ProcessKeepAlive` (`app.keep_alive`).
+  Shared offline libraries and the Moru CSS kit are pinned in
+  `assets/mini_apps/runtime/vendor-manifest.json` with license notices;
+  `moru.assets.load/url` use the app's local HTTP origin. `MiniAppLocalSession`
+  isolates each WebView; native `moru.*` calls keep their JavaScript channel.
+  `mini_apps` with `action: "guide"` returns API topics and runnable examples.
+  `publish_mini_app` accepts a build folder plus `manifest`, or `app_id/files`
+  for a partial update; keep data/jobs/server files and version rollback intact.
+  Check vendor hashes/size with `tool/verify_mini_app_runtime.py`; browser
+  verification and Android checker examples live in `tool/verify_mini_app_examples*`
+  and `integration_test/mini_apps/`.
 
 ## Pre-commit checklist
 

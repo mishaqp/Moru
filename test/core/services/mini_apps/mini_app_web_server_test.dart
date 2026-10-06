@@ -4,11 +4,15 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:Kelivo/core/services/mini_apps/mini_app_assets.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_bridge.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_web_server.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  // These tests exercise a real loopback HTTP server, not widget requests.
+  HttpOverrides.global = null;
   late Directory temp;
   late MiniAppStore store;
   late MiniAppWebServer server;
@@ -148,6 +152,80 @@ void main() {
     // One bridge per app while the server runs.
     expect(bridges, 1);
     expect((await get('/app/notes/__moru')).status, 405);
+  });
+
+  test(
+    'serves bundled libraries and WASM locally without copying into apps',
+    () async {
+      await server.start(port: 0, localhostOnly: true);
+      for (final asset in MiniAppAssets.catalog.values) {
+        final filename = asset['file'] as String;
+        final response = await get(
+          '/app/notes/__moru_assets/$filename',
+          method: 'HEAD',
+        );
+        expect(response.status, 200, reason: filename);
+        expect(response.headers.contentLength, greaterThan(0));
+        final type = filename.endsWith('.wasm')
+            ? 'application/wasm'
+            : filename.endsWith('.css')
+            ? 'text/css'
+            : 'application/javascript';
+        expect(response.headers.contentType?.mimeType, type);
+        expect(
+          File(
+            p.join(store.byId('notes')!.codeDirectory, filename),
+          ).existsSync(),
+          isFalse,
+        );
+      }
+      final wasm = MiniAppAssets.catalog['sqljs-wasm']!['file'];
+      final request = await client.getUrl(
+        Uri.parse(
+          'http://127.0.0.1:${server.port}/app/notes/__moru_assets/$wasm',
+        ),
+      );
+      request.headers.set(HttpHeaders.rangeHeader, 'bytes=0-7');
+      final response = await request.close();
+      expect(response.statusCode, 206);
+      expect(await response.expand((chunk) => chunk).toList(), [
+        0,
+        97,
+        115,
+        109,
+        1,
+        0,
+        0,
+        0,
+      ]);
+      for (final path in [
+        '/app/notes/__moru_assets/not-bundled.js',
+        '/app/notes/__moru_assets/..%2Fmanifest.json',
+        '/app/nope/__moru_assets/$wasm',
+      ]) {
+        expect((await get(path)).status, 404, reason: path);
+      }
+      expect(bridges, 0);
+    },
+  );
+
+  test('injects the current bridge into secondary HTML pages', () async {
+    final code = store.byId('notes')!.codeDirectory;
+    final page = File(p.join(code, 'pages/next.html'));
+    await page.create(recursive: true);
+    await page.writeAsString(
+      '<head></head><script type="module" src="./next.mjs"></script>',
+    );
+    await File(
+      p.join(code, 'pages/next.mjs'),
+    ).writeAsString('export const next = 1;');
+    await server.start(port: 0, localhostOnly: true);
+    final response = await get('/app/notes/pages/next.html');
+    expect(response.body, contains('<script src="../moru.js"></script>'));
+    final module = await get('/app/notes/pages/next.mjs');
+    expect(module.status, 200);
+    expect(module.headers.contentType?.mimeType, 'application/javascript');
+    expect(module.body, 'export const next = 1;');
   });
 
   test('a password is asked by the browser and checked', () async {

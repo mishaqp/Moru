@@ -1,0 +1,445 @@
+{
+  "format": 1,
+  "sizeBudgetBytes": 8388608,
+  "packages": [
+    {
+      "package": "@galacean/engine",
+      "version": "1.6.13",
+      "license": "MIT",
+      "licenseFile": "LICENSE-galacean-engine.txt",
+      "tarball": "https://registry.npmjs.org/@galacean/engine/-/engine-1.6.13.tgz",
+      "tarballFile": "galacean-engine-1.6.13.tgz",
+      "integrity": "sha512-5zDZV+VA35Yd7I0PKU91Iw6Q2aeMqLCVligFenqwpWMy6/vC4X5nM5BF8KDEe9BMDZmSunmG46ASCOow/o94Hg==",
+      "sha256": "4759a815e60ae00fd712cad103791d946dc12b34c7036e62c137b3c64624f941",
+      "assets": [
+        {
+          "source": "dist/browser.min.js",
+          "file": "galacean-engine-1.6.13.min.js",
+          "sourceSha256": "d054b9170acd5273b4c9c7571d5331510fe30b9cef77dd67b6d488ed17cbc5f1",
+          "transforms": [
+            {
+              "op": "replace-once",
+              "before": "fetch(\"https://mdn.alipayobjects.com/rms/afts/file/A*J8IrSL8WE8EAAAAAQ6AAAAgAehQnAQ/basis_transcoder.js\")",
+              "after": "fetch(window.moru.assets.url(\"galacean-basis-js\"))"
+            },
+            {
+              "op": "replace-once",
+              "before": "fetch(\"https://mdn.alipayobjects.com/rms/afts/file/A*F3duSLqOP2sAAAAAXjAAAAgAehQnAQ/basis_transcoder.wasm\")",
+              "after": "fetch(window.moru.assets.url(\"galacean-basis-wasm\"))"
+            }
+          ]
+        },
+        {
+          "source": "LICENSE",
+          "file": "LICENSE-galacean-engine.txt",
+          "sourceSha256": "fabc1236d6d0e9bc85a45d810b66f5c01fd5003a7470582b05a4e13ed84f61d5"
+        }
+      ]
+    },
+    {
+      "package": "@galacean/engine-ui",
+      "version": "1.6.13",
+      "license": "MIT",
+      "licenseFile": "LICENSE-galacean-engine-ui.txt",
+      "tarball": "https://registry.npmjs.org/@galacean/engine-ui/-/engine-ui-1.6.13.tgz",
+      "tarballFile": "galacean-engine-ui-1.6.13.tgz",
+      "integrity": "sha512-pJD4VgeQwikfErEXQaboCllOHYBQgXRgJXoNgbUDIKHmdmHSjYpEduXrziUc76LGwVxKyYSX5Lu0xA295OEYBw==",
+      "sha256": "cb2e92ac82283ed2137156354610a29663376e1d7c553e52b41fbd665689b91d",
+      "assets": [
+        {
+          "source": "dist/browser.min.js",
+          "file": "galacean-engine-ui-1.6.13.min.js",
+          "sourceSha256": "764ba1aaec2b52ca51ecac5c611ca30c93a19469bc7aae6e336a3ea33074321f"
+        },
+        {
+          "source": "LICENSE",
+          "file": "LICENSE-galacean-engine-ui.txt",
+          "sourceSha256": "fabc1236d6d0e9bc85a45d810b66f5c01fd5003a7470582b05a4e13ed84f61d5"
+        }
+      ]
+    },
+    {
+      "package": "phaser",
+      "version": "3.90.0",
+      "license": "MIT",
+      "licenseFile": "LICENSE-phaser.txt",
+      "tarball": "https://registry.npmjs.org/phaser/-/phaser-3.90.0.tgz",
+      "tarballFile": "phaser-3.90.0.tgz",
+      "integrity": "sha512-/cziz/5ZIn02uDkC9RzN8VF9x3Gs3XdFFf9nkiMEQT3p7hQlWuyjy4QWosU802qqno2YSLn2BfqwOKLv/sSVfQ==",
+      "sha256": "c4e3a8da498ab94aa8859c7a32cb89140d94bfd95d769bee36a98cdef1bea6e6",
+      "assets": [
+        {
+          "source": "dist/phaser.min.js",
+          "file": "phaser-3.90.0.min.js",
+          "sourceSha256": "e92ddef111ba42e92d316979c732311757093688ea1810591cb7aa2858eba7a7",
+          "transforms": [
+            {
+              "op": "empty-webpack-module",
+              "start": "63595:()=>{",
+              "end": ",10312:t=>{",
+              "moduleSha256": "b70ea0699dbae74416434b116e9951ca88ac9f08537ddb133d143658a59dec86",
+              "replacement": "63595:()=>{}",
+              "source": "src/polyfills/requestVideoFrame.js"
+            }
+          ]
+        },
+        {
+          "source": "LICENSE.md",
+          "file": "LICENSE-phaser.txt",
+          "sourceSha256": "080f3d5539e766bb556df5b8e86c4f5d581ece35c692b80956ca352b84d29134"
+        }
+      ]
+    },
+    {
+      "package": "chart.js",
+      "version": "4.5.1",
+      "license": "MIT",
+      "licenseFile": "LICENSE-chart.js.txt",
+      "tarball": "https://registry.npmjs.org/chart.js/-/chart.js-4.5.1.tgz",
+      "tarballFile": "chart.js-4.5.1.tgz",
+      "integrity": "sha512-GIjfiT9dbmHRiYi6Nl2yFCq7kkwdkp1W/lp2J99rX0yo9tgJGn3lKQATztIjb5tVtevcBtIdICNWqlq5+E8/Pw==",
+      "sha256": "f540d98468457ac7a0aabb32006dfb066297e096c5ea063a5d80aa973d1c337a",
+      "assets": [
+        {
+          "source": "dist/chart.umd.js",
+          "file": "chart-4.5.1.umd.js",
+          "sourceSha256": "ecc3cd1eeb8c34d2178e3f59fd63ec5a3d84358c11730af0b9958dc886d7652a"
+        },
+        {
+          "source": "LICENSE.md",
+          "file": "LICENSE-chart.js.txt",
+          "sourceSha256": "41a84aa2caba645f966a18d9c2056b73e6d3a81d80bc0046bc0011a2634d4cce"
+        }
+      ]
+    },
+    {
+      "package": "sql.js",
+      "version": "1.14.2",
+      "license": "MIT",
+      "licenseFile": "LICENSE-sql.js.txt",
+      "tarball": "https://registry.npmjs.org/sql.js/-/sql.js-1.14.2.tgz",
+      "tarballFile": "sql.js-1.14.2.tgz",
+      "integrity": "sha512-3ZGPovObMFrdw79zrUHbfdE/DLIsy8jdNdssmMSQuRAymedU6q84asPt0kgiqrdMYlPegDItiIMfmIXzZnYFcw==",
+      "sha256": "9d491337e1850df39362be640c23f9751bf0fbd33fc232c2a580bb87b70d62fd",
+      "assets": [
+        {
+          "source": "dist/sql-wasm-browser.js",
+          "file": "sql-wasm-1.14.2.js",
+          "sourceSha256": "35e39a73b2e0bc1c2202a4cadb23bcf7a3a77071a39c270f014402968785b95f"
+        },
+        {
+          "source": "dist/sql-wasm-browser.wasm",
+          "file": "sql-wasm-1.14.2.wasm",
+          "sourceSha256": "38c14f6e379210bc942bdc4ebca44e7bfdb4318ecc1c72ca666a28fdce96670a"
+        },
+        {
+          "source": "LICENSE",
+          "file": "LICENSE-sql.js.txt",
+          "sourceSha256": "60a3f6e4d7b29b4321359e683b36cf198d24f58e24582070f56e6fa89d5ee2be"
+        }
+      ]
+    }
+  ],
+  "additionalSources": [
+    {
+      "name": "Basis Universal",
+      "version": "1.60",
+      "tag": "v1_60",
+      "gitCommit": "323239a6a5ffa57d6570cfc403be99156e33a8b0",
+      "repository": "https://github.com/BinomialLLC/basis_universal",
+      "license": "Apache-2.0",
+      "licenseFile": "LICENSE-basis-universal.txt",
+      "assets": [
+        {
+          "file": "basis-transcoder-1.60.js",
+          "source": "https://raw.githubusercontent.com/BinomialLLC/basis_universal/323239a6a5ffa57d6570cfc403be99156e33a8b0/webgl/transcoder/build/basis_transcoder.js",
+          "sha256": "36a1528ad2a9a94d3b43ed63e9fe4bcff8e6ecb6e02534dbc907624551c7846c"
+        },
+        {
+          "file": "basis-transcoder-1.60.wasm",
+          "source": "https://raw.githubusercontent.com/BinomialLLC/basis_universal/323239a6a5ffa57d6570cfc403be99156e33a8b0/webgl/transcoder/build/basis_transcoder.wasm",
+          "sha256": "867e354b478d62f029bda7437f522f9fffa07b34ba71ac2c858c6742a436bb63"
+        },
+        {
+          "file": "LICENSE-basis-universal.txt",
+          "source": "https://raw.githubusercontent.com/BinomialLLC/basis_universal/323239a6a5ffa57d6570cfc403be99156e33a8b0/LICENSE",
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        }
+      ]
+    }
+  ],
+  "noticeSources": [
+    {
+      "label": "Galacean embedded TypeScript helper code (Microsoft)",
+      "package": "@galacean/engine",
+      "source": "dist/browser.js",
+      "version": "1.6.13",
+      "textSha256": "ec9583d8e058315c341e64c1d70f73b15fffcf84f4aed245ecd719b60b5cce6f"
+    },
+    {
+      "label": "Galacean embedded/adapted Meshoptimizer decoder (MIT)",
+      "package": "meshoptimizer",
+      "licenseSource": "LICENSE.md",
+      "sourceVersion": "0.22.0",
+      "tarball": "https://registry.npmjs.org/meshoptimizer/-/meshoptimizer-0.22.0.tgz",
+      "integrity": "sha512-IebiK79sqIy+E4EgOr+CAw+Ke8hAspXKzBd0JdgEmPHiAwmvEj2S4h1rfvo+o/BnfEYd/jAOg5IeeIjzlzSnDg==",
+      "sha256": "47c7f2bd1332353c8db8c6c8ac21a98a76af7604281114096ca08acf0384fc2d",
+      "textSha256": "d1bc307ff896c7fc65e3ff4823cc478194f7a5bc6436f99534ebede4d9e2017a"
+    },
+    {
+      "label": "Chart.js bundled @kurkle/color 0.3.2 (MIT)",
+      "package": "@kurkle/color",
+      "licenseSource": "LICENSE.md",
+      "sourceVersion": "0.3.2",
+      "tarball": "https://registry.npmjs.org/@kurkle/color/-/color-0.3.2.tgz",
+      "integrity": "sha512-fuscdXJ9G1qb7W8VdHi+IwRqij3lBkosAm4ydQtEmbY58OzHXqQhvlxqEkoz0yssNVn38bcpRWgA9PP+OGoisw==",
+      "sha256": "af9eaac0ecbb472fe2093d2a4525629f96541f4e6422c031d9c86d4dc8fc7511",
+      "textSha256": "2859c50313bad2ba77b081410c477beaf92b60ca13a77a248d89859a6dd6ac81"
+    },
+    {
+      "label": "Phaser bundled eventemitter3 5.0.1 (MIT)",
+      "package": "eventemitter3",
+      "licenseSource": "LICENSE",
+      "sourceVersion": "5.0.1",
+      "tarball": "https://registry.npmjs.org/eventemitter3/-/eventemitter3-5.0.1.tgz",
+      "integrity": "sha512-GWkBvjiSZK87ELrYOSESUYeVIc9mvLLf/nXalMOS5dYrgZq9o5OVkbZAVM06CVxYsCwH9BDZFPlQTlPA1j4ahA==",
+      "sha256": "3188d3a05772c99cf0ccf44f6cd8530bcbaf02ce0addcc47c33f26daff0f952c",
+      "textSha256": "3aecc12b1cb28832b5f65ab64291de96568c3f236a74d646281b4491f7bcadbf"
+    },
+    {
+      "label": "Phaser bundled Earcut 2.2.4 (ISC)",
+      "package": "earcut",
+      "licenseSource": "LICENSE",
+      "sourceVersion": "2.2.4",
+      "tarball": "https://registry.npmjs.org/earcut/-/earcut-2.2.4.tgz",
+      "integrity": "sha512-/pjZsA1b4RPHbeWZQn66SWS8nZZWLQQ23oE3Eam7aroEFGEvwKAsJfZ9ytiEMycfzXWpca4FA9QIOehf7PocBQ==",
+      "sha256": "6db1957d339d2db7187c55b14cbb0e3fe2bc78f0458cfb947f7e62113cb8d6cb",
+      "textSha256": "cd661c432ea8243974e6fde6fc433ebee3e96525ca8b66321b9d9971674ede60"
+    },
+    {
+      "label": "Phaser adapted RBush (MIT)",
+      "package": "rbush",
+      "licenseSource": "LICENSE",
+      "sourceVersion": "2.0.2",
+      "tarball": "https://registry.npmjs.org/rbush/-/rbush-2.0.2.tgz",
+      "integrity": "sha512-XBOuALcTm+O/H8G90b6pzu6nX6v2zCKiFG4BJho8a+bY6AER6t8uQUZdi5bomQc0AprCWhEGa7ncAbbRap0bRA==",
+      "sha256": "3d1b63866dfb9a8be1d337bfb15fe81041cf4180a55341008e4ab775808cd1bc",
+      "textSha256": "58c86fab9ba45724c811fd51c6d072eae0f2cbd03023f1dbbba10ff8758bda10"
+    },
+    {
+      "label": "Phaser adapted QuickSelect (BSD-2-Clause)",
+      "package": "phaser",
+      "source": "dist/phaser.js",
+      "version": "3.90.0",
+      "textSha256": "b6027c55c89c5228a1a566d7a7a1b82d0bb76bdd3fa0f39cd927baa85ce1d74f"
+    },
+    {
+      "label": "Phaser adapted gl-matrix (MIT)",
+      "package": "gl-matrix",
+      "licenseSource": "LICENSE.md",
+      "sourceVersion": "2.8.1",
+      "tarball": "https://registry.npmjs.org/gl-matrix/-/gl-matrix-2.8.1.tgz",
+      "integrity": "sha512-0YCjVpE3pS5XWlN3J4X7AiAx65+nqAI54LndtVFnQZB6G/FVLkZH8y8V6R3cIoOQR4pUdfwQGd1iwyoXHJ4Qfw==",
+      "sha256": "da7aedb33f015ccc2b5e9b73231c900586f16e6533960cc8546739c513d31060",
+      "textSha256": "61ed58d1088e313710c4192cf02f97bda3cc0bb4b3b4d3f66e54ad1b666a3a52"
+    },
+    {
+      "label": "Phaser adapted line-circle-collision (MIT)",
+      "package": "line-circle-collision",
+      "licenseSource": "LICENSE.md",
+      "sourceVersion": "1.0.2",
+      "tarball": "https://registry.npmjs.org/line-circle-collision/-/line-circle-collision-1.0.2.tgz",
+      "integrity": "sha512-NpUu8Jecx5vE/YLCEije1R5HCoU3qXWkux63/74ZSyqXAx9xTYG0ZPgy1QO2QFVuSTu9ibF0AiJOl/faN+Thrg==",
+      "sha256": "d85014e9ade0bdecb7ba1b31dee2c3117dcba5308579e241f86513302eb25048",
+      "textSha256": "91515553fda3d86e82454bab0eb876a2cb9a31c0dcb8be640870fed624e53697"
+    },
+    {
+      "label": "Phaser bundled Matter.js 0.20.0 (MIT)",
+      "package": "phaser",
+      "source": "src/physics/matter-js/lib/license.js",
+      "version": "3.90.0",
+      "textSha256": "84581d248ebd4f0ac78d6adec45111c10f819209a683c6241e352d1c922dfe0c"
+    },
+    {
+      "label": "Phaser bundled poly-decomp 0.3.0 (MIT)",
+      "package": "poly-decomp",
+      "licenseSource": "LICENSE",
+      "sourceVersion": "0.3.0",
+      "tarball": "https://registry.npmjs.org/poly-decomp/-/poly-decomp-0.3.0.tgz",
+      "integrity": "sha512-hWeBxGzPYiybmI4548Fca7Up/0k1qS5+79cVHI9+H33dKya5YNb9hxl0ZnDaDgvrZSuYFBhkCK/HOnqN7gefkQ==",
+      "sha256": "9b7f526092d78e037fc37a4cf3e45d41434641eb7afcc6bb9d2d93532a25d2d7",
+      "textSha256": "aa92b836949eb315e062592a9fdd660e6a301477e771305160f492dd3ee8a066"
+    },
+    {
+      "label": "Phaser adapted matter-collision-events (MIT)",
+      "package": "matter-collision-events",
+      "licenseSource": "LICENSE",
+      "sourceVersion": "0.1.7",
+      "tarball": "https://registry.npmjs.org/matter-collision-events/-/matter-collision-events-0.1.7.tgz",
+      "integrity": "sha512-w52wADiffkcNMfXF1X+JejKIWnD06C+z3ZhWVls3s3WBoFncy54B7jKNvqcPn4WpmL2C6pojBpEdsGdEHcig+Q==",
+      "sha256": "56efcc1eda6cb928669178396174c4eea9c6cb16ed3713a87d2b2f166d628fba",
+      "textSha256": "2eb760f72944e653c20fef010662909c89432c477663b1573ad4d09e67d5480e"
+    },
+    {
+      "label": "Phaser adapted base64-arraybuffer (MIT)",
+      "package": "base64-arraybuffer",
+      "licenseSource": "LICENSE-MIT",
+      "sourceVersion": "0.1.5",
+      "tarball": "https://registry.npmjs.org/base64-arraybuffer/-/base64-arraybuffer-0.1.5.tgz",
+      "integrity": "sha512-437oANT9tP582zZMwSvZGy2nmSeAb8DW2me3y+Uv1Wp2Rulr8Mqlyrv3E7MLxmsiaPSMMDmiDVzgE+e8zlMx9g==",
+      "sha256": "1fa54c7c3ccce10f005415b6680df8015834c9614d7556a8220fecf2b7b45a62",
+      "textSha256": "f3eca6ff762533fa5a77caf954a143e48afa204668cf97dce758c45a9e006be3"
+    },
+    {
+      "label": "Phaser adapted stable 0.1.8 (MIT)",
+      "package": "stable",
+      "licenseSource": "README.md",
+      "sourceVersion": "0.1.8",
+      "tarball": "https://registry.npmjs.org/stable/-/stable-0.1.8.tgz",
+      "integrity": "sha512-ji9qxRnOVfcuLDySj9qzhGSEFVobyt1kIOSkj1qZzYLzq7Tos/oUUWvotUPQLlrsidqsK6tBH89Bc9kL5zHA6w==",
+      "sha256": "1d5f9321e96c34a4fe0b2d09dbcddef1edb896ccaea01d691a3a224ff2572bdb",
+      "textSha256": "4d30d2d2ca9ad967e77abe77926e972f8c7b9a7e4b6ae1c0b5c9aa2138f18645"
+    },
+    {
+      "label": "Phaser adapted Three.js interpolation (MIT)",
+      "licenseSource": "https://raw.githubusercontent.com/mrdoob/three.js/r159/LICENSE",
+      "sha256": "852e0e8699169bf9f6fdc6bda3e682d078dcbc738b5d33e74df594721bff271d",
+      "textSha256": "852e0e8699169bf9f6fdc6bda3e682d078dcbc738b5d33e74df594721bff271d"
+    },
+    {
+      "label": "Phaser requestAnimationFrame polyfill references (MIT)",
+      "licenseSource": "https://raw.githubusercontent.com/Financial-Times/polyfill-service/v3.25.1/LICENSE.md",
+      "sha256": "4cad1fee7283608bf882f1e51c3da3fc82e0623efd59064661e550b72fcc24d7",
+      "textSha256": "4cad1fee7283608bf882f1e51c3da3fc82e0623efd59064661e550b72fcc24d7"
+    },
+    {
+      "label": "Emscripten-generated runtime code (MIT / University of Illinois NCSA)",
+      "licenseSource": "https://raw.githubusercontent.com/emscripten-core/emscripten/4.0.19/LICENSE",
+      "sha256": "620a78084fc7ca97c0b5dea9abf891f3ffcadfdbf305276f099c9c4e12fc1d86",
+      "textSha256": "620a78084fc7ca97c0b5dea9abf891f3ffcadfdbf305276f099c9c4e12fc1d86"
+    },
+    {
+      "label": "musl libc and bundled math code used by WebAssembly builds",
+      "licenseSource": "https://raw.githubusercontent.com/emscripten-core/emscripten/4.0.19/system/lib/libc/musl/COPYRIGHT",
+      "sha256": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af",
+      "textSha256": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af"
+    },
+    {
+      "label": "Basis Universal transcoder (Apache-2.0)",
+      "gitCommit": "323239a6a5ffa57d6570cfc403be99156e33a8b0",
+      "licenseSource": "https://raw.githubusercontent.com/BinomialLLC/basis_universal/323239a6a5ffa57d6570cfc403be99156e33a8b0/LICENSE",
+      "textSha256": "fdcf1c33579d047f89390645ee5a77ab1fb449beb7fff670ced57de77f62b6e7"
+    }
+  ],
+  "files": {
+    "LICENSE-basis-universal.txt": {
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "package": "Basis Universal",
+      "source": "LICENSE"
+    },
+    "LICENSE-chart.js.txt": {
+      "bytes": 1093,
+      "sha256": "41a84aa2caba645f966a18d9c2056b73e6d3a81d80bc0046bc0011a2634d4cce",
+      "package": "chart.js",
+      "source": "LICENSE.md"
+    },
+    "LICENSE-galacean-engine-ui.txt": {
+      "bytes": 1080,
+      "sha256": "fabc1236d6d0e9bc85a45d810b66f5c01fd5003a7470582b05a4e13ed84f61d5",
+      "package": "@galacean/engine-ui",
+      "source": "LICENSE"
+    },
+    "LICENSE-galacean-engine.txt": {
+      "bytes": 1080,
+      "sha256": "fabc1236d6d0e9bc85a45d810b66f5c01fd5003a7470582b05a4e13ed84f61d5",
+      "package": "@galacean/engine",
+      "source": "LICENSE"
+    },
+    "LICENSE-phaser.txt": {
+      "bytes": 1120,
+      "sha256": "080f3d5539e766bb556df5b8e86c4f5d581ece35c692b80956ca352b84d29134",
+      "package": "phaser",
+      "source": "LICENSE.md"
+    },
+    "LICENSE-sql.js.txt": {
+      "bytes": 2199,
+      "sha256": "60a3f6e4d7b29b4321359e683b36cf198d24f58e24582070f56e6fa89d5ee2be",
+      "package": "sql.js",
+      "source": "LICENSE"
+    },
+    "THIRD-PARTY-NOTICES.txt": {
+      "bytes": 46338,
+      "sha256": "4136659505076ec9e81d03785494538beed066e7a30c5de7b1b7dee47b45e143"
+    },
+    "basis-transcoder-1.60.js": {
+      "bytes": 116373,
+      "sha256": "36a1528ad2a9a94d3b43ed63e9fe4bcff8e6ecb6e02534dbc907624551c7846c",
+      "package": "Basis Universal",
+      "source": "webgl/transcoder/build/basis_transcoder.js"
+    },
+    "basis-transcoder-1.60.wasm": {
+      "bytes": 654157,
+      "sha256": "867e354b478d62f029bda7437f522f9fffa07b34ba71ac2c858c6742a436bb63",
+      "package": "Basis Universal",
+      "source": "webgl/transcoder/build/basis_transcoder.wasm"
+    },
+    "chart-4.5.1.umd.js": {
+      "bytes": 208518,
+      "sha256": "ecc3cd1eeb8c34d2178e3f59fd63ec5a3d84358c11730af0b9958dc886d7652a",
+      "package": "chart.js",
+      "source": "dist/chart.umd.js"
+    },
+    "galacean-engine-1.6.13.min.js": {
+      "bytes": 1170610,
+      "sha256": "b372f4a8e357f7e671eaa5d6cbaa278e58476acf4e895a04c9ea07348c4cb749",
+      "package": "@galacean/engine",
+      "source": "dist/browser.min.js"
+    },
+    "galacean-engine-ui-1.6.13.min.js": {
+      "bytes": 67084,
+      "sha256": "764ba1aaec2b52ca51ecac5c611ca30c93a19469bc7aae6e336a3ea33074321f",
+      "package": "@galacean/engine-ui",
+      "source": "dist/browser.min.js"
+    },
+    "moru-ui-1.0.0.css": {
+      "bytes": 6210,
+      "sha256": "d5dba4ac27580c9064996e991186e19fbce6f82931707cf6b4132c61260685be",
+      "package": "Moru",
+      "version": "1.0.0",
+      "license": "AGPL-3.0-only"
+    },
+    "phaser-3.90.0.min.js": {
+      "bytes": 1194984,
+      "sha256": "8cac29f35c591b0864b3f48c3651b80ab31859a8dbb492677be7dc1cba0cf78e",
+      "package": "phaser",
+      "source": "dist/phaser.min.js"
+    },
+    "sql-wasm-1.14.2.js": {
+      "bytes": 45129,
+      "sha256": "35e39a73b2e0bc1c2202a4cadb23bcf7a3a77071a39c270f014402968785b95f",
+      "package": "sql.js",
+      "source": "dist/sql-wasm-browser.js"
+    },
+    "sql-wasm-1.14.2.wasm": {
+      "bytes": 658410,
+      "sha256": "38c14f6e379210bc942bdc4ebca44e7bfdb4318ecc1c72ca666a28fdce96670a",
+      "package": "sql.js",
+      "source": "dist/sql-wasm-browser.wasm"
+    }
+  },
+  "reproduce": [
+    "npm pack @galacean/engine@1.6.13 @galacean/engine-ui@1.6.13 phaser@3.90.0 chart.js@4.5.1 sql.js@1.14.2 --json",
+    "Verify each npm tarball integrity and SHA-256 below; extract only the listed source paths.",
+    "For transformed JS apply the exact, single-occurrence replacements below. Empty Phaser webpack module 63595 only after its SHA-256 matches.",
+    "Fetch additional Basis artifacts from the pinned Git commit URLs below; verify their SHA-256. No build toolchains or maps are packaged.",
+    "python3 tool/verify_mini_app_runtime.py --tarballs /path/to/npm/tarballs --write-zip /tmp/moru-runtime.zip"
+  ],
+  "notes": [
+    "Galacean engine and UI expose Galacean and Galacean.UI; UI peers with exactly engine 1.6.13.",
+    "Phaser 3.90.0 retains full Canvas/WebGL, Arcade and Matter APIs. The optional legacy requestVideoFrameCallback polyfill module is omitted: src/polyfills/requestVideoFrame.js attributes ThaUnknown/rvfc-polyfill, whose source LICENSE is GPL-3.0. Modern Android WebView supplies the native callback.",
+    "Galacean lazy Basis transcoder fetches use moru.assets.url; the official Apache-2.0 Basis Universal v1_60 JS/WASM replace the custom upstream CDN build. PNG/JPEG and compressed KTX2 textures stay offline.",
+    "sql.js uses its browser-only WebAssembly distribution. Call initSqlJs({locateFile: () => moru.assets.url(\"sqljs-wasm\")}); serialize database.export() explicitly for persistence.",
+    "Moru UI CSS is project-authored; the repository license applies. Theme defaults follow Moru; native inline CSS tokens override defaults."
+  ]
+}

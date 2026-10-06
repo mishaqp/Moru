@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Звёздный сборщик</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="main.js" defer></script>
+</head>
+<body class="moru-app">
+  <main class="moru-container moru-stack">
+    <h1>Звёздный сборщик</h1>
+    <div class="moru-row"><p>Очки: <output id="score">0</output></p><p>Рекорд: <output id="best">0</output></p></div>
+    <div class="stage"><canvas id="world" aria-label="Поле со звёздами и красным противником"></canvas></div>
+    <div class="moru-row controls">
+      <div id="joystick" role="group" aria-label="Джойстик: перемещайте палец для движения"><span id="knob"></span></div>
+      <div class="moru-stack"><button id="start" class="moru-button" disabled>Начать</button><button id="pause" class="moru-button moru-button--secondary" disabled>Пауза</button></div>
+    </div>
+    <p id="status" role="status" aria-live="polite">Загрузка…</p>
+    <p class="moru-muted">Собирайте жёлтые звёзды, избегайте красного противника. Управление — джойстик или стрелки клавиатуры.</p>
+  </main>
+</body>
+</html>

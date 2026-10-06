@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../workspace/workspace_file_access.dart';
+import 'mini_app_assets.dart';
 import 'mini_app_bridge.dart';
 import 'mini_app_store.dart';
 
@@ -12,16 +14,36 @@ import 'mini_app_store.dart';
 /// POSTs to `/app/<id>/__moru` and run in the same [MiniAppBridge] as in
 /// Moru, with the same data.
 class MiniAppWebServer {
-  MiniAppWebServer({required this.store, required this.bridgeFor});
+  MiniAppWebServer({
+    required this.store,
+    required this.bridgeFor,
+    MiniAppAssets? assets,
+    this.onlyAppId,
+    this.accessToken,
+    this.nativeBridge = false,
+    this.pageBootstrap,
+  }) : _assets = assets ?? MiniAppAssets();
 
   final MiniAppStore store;
 
   /// The bridge a browser page of [app] talks to; built once per app while
   /// the server runs.
   final MiniAppBridge Function(MiniApp app) bridgeFor;
+  final MiniAppAssets _assets;
+
+  /// A WebView session serves one app, behind an unguessable path, and uses
+  /// its native JavaScript channel instead of exposing bridge POSTs.
+  final String? onlyAppId;
+  final String? accessToken;
+  final bool nativeBridge;
+  final String Function()? pageBootstrap;
+
+  String get _prefix => accessToken == null ? '' : '/$accessToken';
+  String _appPath(String id) => '$_prefix/app/${Uri.encodeComponent(id)}/';
 
   HttpServer? _server;
   final Map<String, MiniAppBridge> _bridges = {};
+  final Map<String, WorkspaceFileAccess> _fileAccess = {};
   String? _password;
 
   static const int maxBridgeMessageBytes = 8 * 1024 * 1024;
@@ -53,11 +75,21 @@ class MiniAppWebServer {
     final server = _server;
     _server = null;
     _bridges.clear();
+    _fileAccess.clear();
     await server?.close(force: true);
   }
 
   Future<void> _handle(HttpRequest request) async {
     final response = request.response;
+    response.persistentConnection = false;
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    if (nativeBridge) {
+      response.headers.set('Referrer-Policy', 'no-referrer');
+      response.headers.set(
+        'Content-Security-Policy',
+        "default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval'; base-uri 'self'; object-src 'none'",
+      );
+    }
     try {
       if (!_authorized(request)) {
         response
@@ -69,9 +101,36 @@ class MiniAppWebServer {
           ..write('Password required.');
         return;
       }
-      final segments = request.uri.pathSegments;
+      var segments = request.uri.pathSegments;
+      if (segments.any(
+        (part) =>
+            part == '.' ||
+            part == '..' ||
+            part.contains('/') ||
+            part.contains(r'\') ||
+            part.contains('\u0000') ||
+            RegExp(r'%(?:2e|2f|5c|00)', caseSensitive: false).hasMatch(part),
+      )) {
+        _notFound(response);
+        return;
+      }
+      final token = accessToken;
+      if (token != null) {
+        if (segments.isEmpty ||
+            !_same(segments.first, token) ||
+            request.headers.value('host') !=
+                '127.0.0.1:${request.connectionInfo?.localPort}') {
+          _notFound(response);
+          return;
+        }
+        segments = segments.skip(1).toList();
+      }
       if (segments.isEmpty) {
-        await _index(response);
+        if (onlyAppId == null) {
+          await _index(response);
+        } else {
+          _notFound(response);
+        }
       } else if (segments.first == 'app' && segments.length >= 2) {
         await _app(request, segments[1], segments.skip(2).toList());
       } else {
@@ -137,6 +196,7 @@ class MiniAppWebServer {
 
   Future<void> _app(HttpRequest request, String id, List<String> rest) async {
     final response = request.response;
+    if (onlyAppId != null && id != onlyAppId) return _notFound(response);
     await store.load();
     final app = store.byId(id);
     if (app == null) return _notFound(response);
@@ -144,14 +204,17 @@ class MiniAppWebServer {
     if (rest.isEmpty) {
       response
         ..statusCode = HttpStatus.movedPermanently
-        ..headers.set(
-          HttpHeaders.locationHeader,
-          '/app/${Uri.encodeComponent(id)}/',
-        );
+        ..headers.set(HttpHeaders.locationHeader, _appPath(id));
       return;
     }
     final path = rest.join('/');
-    if (path == '__moru') return _bridge(request, app);
+    if (path == '__moru') {
+      return nativeBridge ? _notFound(response) : _bridge(request, app);
+    }
+    if (rest.first == '__moru_assets') {
+      if (rest.length != 2) return _notFound(response);
+      return _asset(request, rest[1]);
+    }
     if (path == MiniAppStore.bridgeFile) {
       response.headers
         ..contentType = ContentType(
@@ -160,7 +223,13 @@ class MiniAppWebServer {
           charset: 'utf-8',
         )
         ..set(HttpHeaders.cacheControlHeader, 'no-store');
-      response.write(webBridgeScript(app.id));
+      response.write(
+        nativeBridge
+            ? '${MiniAppAssets.bootstrapScript}\n${MiniAppStore.moruBridgeScript}'
+            : webBridgeScript(app.id, prefix: _prefix),
+      );
+      final bootstrap = pageBootstrap;
+      if (bootstrap != null) response.write('\n${bootstrap()}');
       return;
     }
     // An entry in a folder loads its files relative to that folder.
@@ -169,28 +238,121 @@ class MiniAppWebServer {
         ..statusCode = HttpStatus.found
         ..headers.set(
           HttpHeaders.locationHeader,
-          '/app/${Uri.encodeComponent(id)}/${app.entry}',
+          '${_appPath(id)}${app.entry}',
         );
       return;
     }
     final relative = path.isEmpty ? app.entry : path;
     final code = p.normalize(app.codeDirectory);
     final file = File(p.normalize(p.join(code, relative)));
-    if (!p.isWithin(code, file.path) || !await file.exists()) {
+    if (!p.isWithin(code, file.path)) {
       return _notFound(response);
     }
-    await _file(request, file);
+    final access = _fileAccess.putIfAbsent(
+      app.id,
+      () => WorkspaceFileAccess(roots: [code]),
+    );
+    final WorkspaceFileHandle opened;
+    try {
+      opened = await access.openRead(file.path);
+    } on WorkspaceFileAccessException {
+      return _notFound(response);
+    } on FileSystemException {
+      return _notFound(response);
+    }
+    try {
+      if (const {
+        '.html',
+        '.htm',
+      }.contains(p.extension(relative).toLowerCase())) {
+        final source = await opened.readBytes(
+          maxBytes: MiniAppStore.maxBytes + 1,
+        );
+        if (source.length > MiniAppStore.maxBytes) return _notFound(response);
+        final html = MiniAppStore.withBridgeScript(
+          utf8.decode(source),
+          relative,
+        );
+        response.headers
+          ..contentType = ContentType.html
+          ..set(HttpHeaders.cacheControlHeader, 'no-store');
+        final bytes = utf8.encode(html);
+        response.contentLength = bytes.length;
+        if (request.method != 'HEAD') response.add(bytes);
+      } else {
+        await _file(request, file.path, opened);
+      }
+    } finally {
+      await opened.close();
+    }
+  }
+
+  Future<void> _asset(HttpRequest request, String filename) async {
+    final response = request.response;
+    if (request.method != 'GET' && request.method != 'HEAD') {
+      response.statusCode = HttpStatus.methodNotAllowed;
+      return;
+    }
+    final data = await _assets.load(filename);
+    if (data == null) return _notFound(response);
+    final bytes = data.buffer.asUint8List(
+      data.offsetInBytes,
+      data.lengthInBytes,
+    );
+    final size = bytes.length;
+    final etag = '"$filename-$size"';
+    response.headers
+      ..contentType = contentTypeFor(filename)
+      ..set(
+        HttpHeaders.cacheControlHeader,
+        'public, max-age=31536000, immutable',
+      )
+      ..set(HttpHeaders.etagHeader, etag)
+      ..set(HttpHeaders.acceptRangesHeader, 'bytes')
+      ..set('X-Content-Type-Options', 'nosniff');
+    if (request.headers.value(HttpHeaders.ifNoneMatchHeader) == etag) {
+      response.statusCode = HttpStatus.notModified;
+      return;
+    }
+    var start = 0;
+    var end = size - 1;
+    final range = request.headers.value(HttpHeaders.rangeHeader);
+    if (range != null) {
+      final parsed = parseRange(range, size);
+      if (parsed == null) {
+        response
+          ..statusCode = HttpStatus.requestedRangeNotSatisfiable
+          ..headers.set(HttpHeaders.contentRangeHeader, 'bytes */$size');
+        return;
+      }
+      (start, end) = parsed;
+      response
+        ..statusCode = HttpStatus.partialContent
+        ..headers.set(
+          HttpHeaders.contentRangeHeader,
+          'bytes $start-$end/$size',
+        );
+    }
+    response.contentLength = size == 0 ? 0 : end - start + 1;
+    if (request.method != 'HEAD' && size > 0) {
+      response.add(bytes.sublist(start, end + 1));
+    }
   }
 
   /// A file with revalidation (ETag) and byte ranges, so the browser keeps
   /// it cached and can seek in audio and video.
-  static Future<void> _file(HttpRequest request, File file) async {
+  static Future<void> _file(
+    HttpRequest request,
+    String path,
+    WorkspaceFileHandle opened,
+  ) async {
     final response = request.response;
+    final file = File(opened.path);
     final stat = await file.stat();
     final size = stat.size;
     final etag = '"$size-${stat.modified.millisecondsSinceEpoch}"';
     response.headers
-      ..contentType = contentTypeFor(file.path)
+      ..contentType = contentTypeFor(path)
       ..set(HttpHeaders.cacheControlHeader, 'no-cache')
       ..set(HttpHeaders.etagHeader, etag)
       ..set(HttpHeaders.acceptRangesHeader, 'bytes');
@@ -289,11 +451,12 @@ class MiniAppWebServer {
 
   /// `moru.js` for a browser: `MoruBridge.postMessage` becomes a POST to
   /// the app's bridge, and the reply runs like Moru's `runJavaScript`.
-  static String webBridgeScript(String appId) =>
+  static String webBridgeScript(String appId, {String prefix = ''}) =>
       '''
+${MiniAppAssets.bootstrapScript}
 (function () {
   if (window.MoruBridge) return;
-  var endpoint = ${jsonEncode('/app/${Uri.encodeComponent(appId)}/__moru')};
+  var endpoint = ${jsonEncode('$prefix/app/${Uri.encodeComponent(appId)}/__moru')};
   window.MoruBridge = {
     postMessage: function (message) {
       fetch(endpoint, { method: 'POST', body: message, credentials: 'same-origin' })

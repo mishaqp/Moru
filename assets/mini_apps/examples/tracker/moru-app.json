@@ -1,0 +1,7 @@
+{
+  "id": "example-water",
+  "name": "Вода за день",
+  "description": "Записывайте выпитую воду — данные сохраняются в Moru.",
+  "entry": "index.html",
+  "data": "log: object mapping local YYYY-MM-DD dates to arrays of positive millilitre numbers, e.g. {\"2026-10-06\":[250,200]}. Add an amount to today's array; preserve other dates."
+}

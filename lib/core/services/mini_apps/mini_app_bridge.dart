@@ -149,6 +149,26 @@ class MiniAppBridge {
   static String changedScript(String key) =>
       'window.__moruChanged && window.__moruChanged(${jsonEncode(key)});';
 
+  /// Moru's active theme and WebView insets, available before UI-kit startup
+  /// and again when the user switches theme or rotates the phone.
+  static String themeScript(Map<String, Object?> theme) =>
+      '''
+(function () {
+  var theme = ${jsonEncode(theme)};
+  window.__moruTheme = theme;
+  if (window.moru) window.moru.theme = theme;
+  var root = document.documentElement;
+  root.dataset.moruTheme = theme.dark ? 'dark' : 'light';
+  Object.keys(theme.colors || {}).forEach(function (name) {
+    root.style.setProperty('--moru-' + name, theme.colors[name]);
+  });
+  Object.keys(theme.insets || {}).forEach(function (name) {
+    root.style.setProperty('--moru-safe-' + name, theme.insets[name] + 'px');
+  });
+  window.dispatchEvent(new CustomEvent('moru:theme', {detail: theme}));
+})();
+''';
+
   Future<Object?> _dispatch(String method, Map<String, dynamic> args) async {
     String text(String name, {int max = 1000, bool required = true}) {
       final value = args[name];

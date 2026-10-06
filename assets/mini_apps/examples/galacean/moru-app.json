@@ -1,0 +1,9 @@
+{
+  "id": "example-galacean",
+  "name": "Звёздный сборщик",
+  "description": "Игра Galacean со спрайтами, столкновениями и джойстиком.",
+  "entry": "index.html",
+  "orientation": "portrait",
+  "keepAwake": true,
+  "data": "best: nonnegative integer, highest collected-star score. Never decrease it."
+}

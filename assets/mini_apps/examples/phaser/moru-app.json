@@ -1,0 +1,9 @@
+{
+  "id": "example-phaser",
+  "name": "Ловец монет",
+  "description": "Игра Phaser: собирайте монеты и избегайте красных шаров.",
+  "entry": "index.html",
+  "orientation": "portrait",
+  "keepAwake": true,
+  "data": "best: nonnegative integer, highest coin score. Never decrease it."
+}

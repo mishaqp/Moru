@@ -1,0 +1,7 @@
+.moru-container { max-width: 480px; }
+.stage { height: min(46dvh, 500px); min-height: 230px; border: 1px solid var(--moru-border); border-radius: 16px; overflow: hidden; }
+#world { display: block; width: 100%; height: 100%; touch-action: none; }
+.controls { justify-content: space-between; }
+#joystick { position: relative; flex: 0 0 120px; width: 120px; height: 120px; border-radius: 50%; border: 2px solid var(--moru-border); background: var(--moru-surface); touch-action: none; user-select: none; }
+#knob { position: absolute; top: 36px; left: 36px; width: 44px; height: 44px; border-radius: 50%; background: var(--moru-accent); pointer-events: none; }
+#status { min-height: 1.5em; }

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/services/mini_apps/mini_app_bridge.dart';
+import '../../core/services/mini_apps/mini_app_local_session.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
 import '../../core/services/scheduled_tasks_service.dart';
 
@@ -64,10 +65,12 @@ class MiniAppJobRunner {
     // Set once the job is over: replies and console output that arrive
     // while the page is being cleared belong to no page and are dropped.
     var closed = false;
+    MiniAppLocalSession? local;
     cancellation?.onCancel = () async {
       if (!finished.isCompleted) finished.complete('cancelled');
     };
     try {
+      local = await MiniAppLocalSession.start(store: store, app: app);
       await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
       await controller.addJavaScriptChannel(
         'MoruBridge',
@@ -100,13 +103,13 @@ class MiniAppJobRunner {
           onPageFinished: (_) {
             if (!loaded.isCompleted) loaded.complete();
           },
-          onNavigationRequest: (request) => request.url.startsWith('file://')
+          onNavigationRequest: (request) => local!.allowsNavigation(request.url)
               ? NavigationDecision.navigate
               : NavigationDecision.prevent,
         ),
       );
       await store.refreshBridge(app);
-      await controller.loadFile(app.entryPath);
+      await controller.loadRequest(local.entryUri(app));
       try {
         await loaded.future.timeout(loadTimeout);
       } on TimeoutException {
@@ -127,7 +130,11 @@ class MiniAppJobRunner {
     } finally {
       // Stop the app's timers and requests.
       closed = true;
-      await controller.loadHtmlString('');
+      try {
+        await controller.loadHtmlString('');
+      } finally {
+        await local?.close();
+      }
     }
   }
 

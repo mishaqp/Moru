@@ -11,6 +11,7 @@ import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/environment_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/mini_apps/mini_app_bridge.dart';
+import '../../../core/services/mini_apps/mini_app_local_session.dart';
 import '../../../core/services/mini_apps/mini_app_servers.dart';
 import '../../../core/services/workspace/workspace_runtime.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
@@ -38,6 +39,8 @@ class MiniAppPage extends StatefulWidget {
 class _MiniAppPageState extends State<MiniAppPage> {
   late final WebViewController _controller;
   late final MiniAppBridge _bridge;
+  late final Future<MiniAppLocalSession> _local;
+  MiniAppLocalSession? _loadedLocal;
 
   /// The app's server while the page is open; a rollback may change it.
   late MiniAppServerLease _server;
@@ -83,6 +86,11 @@ class _MiniAppPageState extends State<MiniAppPage> {
         _logError(problem);
       },
     );
+    _local = MiniAppLocalSession.start(
+      store: _store,
+      app: _app,
+      bootstrapScript: _themeScript,
+    );
     // Data the chat changed while the app is open.
     _changes = _store.changes
         .where((change) => change.appId == widget.app.id)
@@ -109,12 +117,14 @@ class _MiniAppPageState extends State<MiniAppPage> {
       })
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageFinished: (_) {
+          onPageFinished: (_) async {
+            if (!mounted) return;
+            await _applyTheme();
             if (mounted) setState(() => _loading = false);
           },
           onNavigationRequest: (request) {
             // Pages of the app stay inside; everything else opens outside.
-            if (request.url.startsWith('file://')) {
+            if (_loadedLocal?.allowsNavigation(request.url) ?? false) {
               return NavigationDecision.navigate;
             }
             final uri = Uri.tryParse(request.url);
@@ -146,7 +156,49 @@ class _MiniAppPageState extends State<MiniAppPage> {
     await _store.refreshBridge(_app);
     final errors = await _store.readErrors(_app.id);
     if (mounted && errors.isNotEmpty) setState(() => _errors = errors.length);
-    await _controller.loadFile(_app.entryPath);
+    final local = await _local;
+    if (!mounted) return;
+    _loadedLocal = local;
+    await _controller.loadRequest(local.entryUri(_app));
+  }
+
+  String _themeScript() {
+    if (!mounted) return '';
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    String hex(Color color) =>
+        '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+    // The Scaffold/app bar already consumes the top inset. Fullscreen uses
+    // SafeArea; only the remaining WebView inset belongs to the web content.
+    final padding = _app.fullscreen
+        ? EdgeInsets.zero
+        : MediaQuery.paddingOf(context);
+    return MiniAppBridge.themeScript({
+      'dark': theme.brightness == Brightness.dark,
+      'colors': {
+        'bg': hex(colors.surface),
+        'surface': hex(colors.surfaceContainerLow),
+        'text': hex(colors.onSurface),
+        'muted': hex(colors.onSurfaceVariant),
+        'accent': hex(colors.primary),
+        'on-accent': hex(colors.onPrimary),
+        'border': hex(colors.outlineVariant),
+      },
+      'insets': {
+        'top': 0,
+        'right': padding.right,
+        'bottom': padding.bottom,
+        'left': padding.left,
+      },
+    });
+  }
+
+  Future<void> _applyTheme() => _controller.runJavaScript(_themeScript());
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loading) unawaited(_applyTheme());
   }
 
   void _logError(String problem) {
@@ -221,7 +273,7 @@ class _MiniAppPageState extends State<MiniAppPage> {
           _logged = 0;
           _loading = true;
         });
-        await _controller.loadFile(restored.entryPath);
+        await _load();
       case 'server':
         await showMiniAppServer(
           context,
@@ -241,6 +293,7 @@ class _MiniAppPageState extends State<MiniAppPage> {
   void dispose() {
     MiniAppDisplay.apply(_app, null);
     unawaited(_server.release());
+    unawaited(_local.then((local) => local.close()));
     _controlsTimer?.cancel();
     unawaited(_changes?.cancel());
     super.dispose();

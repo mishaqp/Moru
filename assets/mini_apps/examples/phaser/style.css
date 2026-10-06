@@ -1,0 +1,6 @@
+.moru-container { max-width: 440px; }
+#stage { height: min(52dvh, 560px); min-height: 240px; overflow: hidden; border: 1px solid var(--moru-border); border-radius: 16px; background: var(--moru-surface); }
+#stage canvas { display: block; touch-action: none; }
+.controls { justify-content: center; gap: 8px; }
+#left, #right { touch-action: none; user-select: none; }
+#status { min-height: 1.5em; }

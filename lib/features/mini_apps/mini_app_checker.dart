@@ -5,6 +5,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../core/services/mini_apps/mini_app_bridge.dart';
 import '../../core/services/mini_apps/mini_app_check.dart';
 import '../../core/services/mini_apps/mini_app_jobs.dart';
+import '../../core/services/mini_apps/mini_app_local_session.dart';
 import '../../core/services/mini_apps/mini_app_servers.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
 import 'mini_app_launcher.dart';
@@ -35,7 +36,12 @@ class MiniAppChecker {
     final console = <String>[];
     final loaded = Completer<void>();
     final controller = WebViewController();
+    MiniAppLocalSession? local;
     try {
+      local = await MiniAppLocalSession.start(
+        store: sandbox.store,
+        app: sandbox.app,
+      );
       await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
       await controller.addJavaScriptChannel(
         'MoruBridge',
@@ -56,12 +62,12 @@ class MiniAppChecker {
           onPageFinished: (_) {
             if (!loaded.isCompleted) loaded.complete();
           },
-          onNavigationRequest: (request) => request.url.startsWith('file://')
+          onNavigationRequest: (request) => local!.allowsNavigation(request.url)
               ? NavigationDecision.navigate
               : NavigationDecision.prevent,
         ),
       );
-      await controller.loadFile(sandbox.app.entryPath);
+      await controller.loadRequest(local.entryUri(sandbox.app));
       var didLoad = true;
       try {
         await loaded.future.timeout(loadTimeout);
@@ -101,8 +107,12 @@ class MiniAppChecker {
       );
     } finally {
       // Stop the app's timers before its sandbox goes away.
-      await controller.loadHtmlString('');
-      await sandbox.dispose();
+      try {
+        await controller.loadHtmlString('');
+      } finally {
+        await local?.close();
+        await sandbox.dispose();
+      }
     }
   }
 }

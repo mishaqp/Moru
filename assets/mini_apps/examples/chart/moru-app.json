@@ -1,0 +1,7 @@
+{
+  "id": "example-chart",
+  "name": "График недели",
+  "description": "Локальный график Chart.js с редактируемыми значениями.",
+  "entry": "index.html",
+  "data": "values: array of exactly 7 nonnegative finite numbers for Monday through Sunday, e.g. [2,4,3,5,4,6,5]. Preserves chart values across updates."
+}

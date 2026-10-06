@@ -1,0 +1,7 @@
+{
+  "id": "example-sqlite",
+  "name": "Заметки SQLite",
+  "description": "Заметки в локальной базе sql.js без подключения к сети.",
+  "entry": "index.html",
+  "data": "database: SQLite database exported by sql.js as an array of byte integers 0..255. Table notes(id INTEGER PRIMARY KEY, text TEXT NOT NULL). Do not edit database bytes through chat; use the app's form."
+}

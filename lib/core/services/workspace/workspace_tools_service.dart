@@ -28,6 +28,7 @@ import 'output_buffer.dart';
 import 'task_plan.dart';
 import 'tool_run_registry.dart';
 import 'workspace_paths.dart';
+import 'workspace_file_access.dart';
 import 'workspace_runtime.dart';
 import 'workspace_session_sync.dart';
 import 'workspace_tool_context.dart';
@@ -464,6 +465,16 @@ class WorkspaceToolsService {
       _fn(
         miniAppTool,
         [
+          'First read mini_apps with action:"guide" for all APIs, bundled',
+          'offline libraries, Moru UI kit and tested complete examples.',
+          'Publish a built folder directly: {path:"project/dist", manifest:',
+          '{id:"game", name:"Game"}}. Vite + TypeScript builds work: set',
+          'Vite base:"./"; modules, fetch of relative assets and WASM work.',
+          'No copying build files into tool arguments; binary files are copied',
+          'directly (up to 500 files / 20 MiB for the complete app). To patch',
+          'only selected files: {path:"patch-folder", app_id:"game", files:',
+          '["main.js","style.css"]}; other files/data are kept and versions',
+          'and rollback work. Optional manifest merges metadata for a patch.',
           'Publish a web app you built in the workspace as a Moru mini app:',
           'the user opens it inside Moru and can pin it to the home screen.',
           'The folder needs moru-app.json: {"id": "water-tracker" (lowercase,',
@@ -474,8 +485,8 @@ class WorkspaceToolsService {
           'font, one accent color, 8 px spacing grid, tap targets of 44 px or',
           'more, rounded cards, 150-250 ms transitions, empty states, and',
           'padding from env(safe-area-inset-*). Use classic relative <script src> and <link> tags;',
-          'type="module" scripts and fetch() of local files are blocked, so',
-          'bundle modules first. Save data only with window.moru.storage',
+          'module scripts and fetch() of relative local files work offline.',
+          'Save shared data with window.moru.storage',
           '(async get(key), set(key, jsonValue), remove(key), keys()), and',
           'describe the keys and their format in moru-app.json "data" so the',
           'chat can update them; redraw on window "moru:storage" events, sent',
@@ -553,8 +564,56 @@ class WorkspaceToolsService {
           'path': {
             'type': 'string',
             'description':
-                'Folder with moru-app.json, in model path vocabulary '
+                'App/build/patch folder, in model path vocabulary '
                 '(${vocab.join(', ')}).',
+          },
+          'manifest': {
+            'type': 'object',
+            'description':
+                'Optional moru-app.json metadata. Full publish: id and name '
+                'required; patch: merges non-null metadata, cannot change id.',
+            'properties': {
+              'id': {'type': 'string'},
+              'name': {'type': 'string'},
+              'description': {'type': 'string'},
+              'entry': {'type': 'string'},
+              'icon': {'type': 'string'},
+              'data': {'type': 'string'},
+              'network': {
+                'type': 'array',
+                'items': {'type': 'string'},
+              },
+              'permissions': {
+                'type': 'array',
+                'items': {'type': 'string'},
+              },
+              'fullscreen': {'type': 'boolean'},
+              'orientation': {
+                'type': 'string',
+                'enum': ['any', 'portrait', 'landscape'],
+              },
+              'keepAwake': {'type': 'boolean'},
+              'server': {
+                'type': 'object',
+                'properties': {
+                  'command': {'type': 'string'},
+                },
+                'required': ['command'],
+              },
+            },
+          },
+          'app_id': {
+            'type': 'string',
+            'description': 'Installed app to patch; requires files.',
+          },
+          'files': {
+            'type': 'array',
+            'minItems': 1,
+            'maxItems': MiniAppStore.maxFiles,
+            'items': {'type': 'string'},
+            'description':
+                'Patch only these relative files from path; requires app_id. '
+                'Use manifest for metadata changes, not moru-app.json in files.',
           },
         },
         ['path'],
@@ -1699,8 +1758,29 @@ class WorkspaceToolsService {
         message: 'path must be a non-empty string',
       );
     }
+    final manifest = args['manifest'];
+    final appId = args['app_id'];
+    final files = args['files'];
+    final partial = appId != null || files != null;
+    if ((manifest != null && manifest is! Map<String, dynamic>) ||
+        (partial &&
+            (appId is! String ||
+                appId.trim().isEmpty ||
+                files is! List ||
+                files.isEmpty ||
+                files.any((file) => file is! String || file.trim().isEmpty)))) {
+      return _errorResult(
+        tool: tool,
+        error: 'invalid_arguments',
+        message:
+            'manifest must be an object. Partial updates need a non-empty '
+            'app_id and files (a non-empty list of relative file paths).',
+      );
+    }
     try {
       final resolved = await ctx.paths.resolveReal(path, cwd: ctx.cwd);
+      final sourceAccess = ctx.paths.fileAccess;
+      await sourceAccess.resolve(resolved.hostPath);
       if (resolved.zone == WorkspaceZone.outside ||
           !await Directory(resolved.hostPath).exists()) {
         return _errorResult(
@@ -1709,9 +1789,22 @@ class WorkspaceToolsService {
           message: '$path is not a folder in the workspace.',
         );
       }
-      final result = await (miniApps ?? MiniAppStore.instance).install(
-        Directory(resolved.hostPath),
-      );
+      final store = miniApps ?? MiniAppStore.instance;
+      final source = Directory(resolved.hostPath);
+      final metadata = manifest as Map<String, dynamic>?;
+      final result = partial
+          ? await store.updateFiles(
+              (appId as String).trim(),
+              source,
+              files: (files as List).cast<String>(),
+              manifest: metadata,
+              sourceAccess: sourceAccess,
+            )
+          : await store.install(
+              source,
+              manifest: metadata,
+              sourceAccess: sourceAccess,
+            );
       final app = result.app;
       final check = await _checkMiniApp(app);
       final meta = WorkspaceToolMetadata(
@@ -1735,6 +1828,15 @@ class WorkspaceToolsService {
       );
     } on MiniAppException catch (e) {
       return _errorResult(tool: tool, error: e.code, message: e.message);
+    } on WorkspaceFileAccessException catch (e) {
+      return _errorResult(tool: tool, error: 'path_error', message: e.message);
+    } on FileSystemException {
+      return _errorResult(
+        tool: tool,
+        error: 'source_unavailable',
+        message:
+            'The source folder changed or could not be read. Publish it again after the build completes.',
+      );
     } on PathResolutionException catch (e) {
       return _errorResult(tool: tool, error: 'path_error', message: e.message);
     }
