@@ -1,46 +1,95 @@
-name: Mini apps workspace setup (temporary)
-
+name: Mini apps offline workspace (temporary)
 on:
   push:
     branches: [codex/moru-web-mini-apps-offline-20261006]
     paths: [.github/workflows/_moru_web_mini_apps_workspace.yml]
-
 permissions:
   contents: read
-
+  actions: read
 jobs:
-  setup:
+  prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
         with:
-          ref: 3db99c060201b3be5374f6d565677a21d54a1c58
-          persist-credentials: false
-      - name: Use the repository's pinned, verified cloud setup
-        run: bash tool/codex_cloud_setup.sh
-      - name: Baseline mini-app tests and host test-engine preparation
+          run-id: 37398570701
+          github-token: ${{ github.token }}
+          path: original
+          merge-multiple: true
+      - name: Prepare smaller transport archives
         run: |
-          source "$HOME/.moru-toolchains/activate.sh"
-          flutter test test/core/services/mini_apps --reporter expanded
-      - name: Archive only the public SDK and resolved package cache for offline checks
-        run: |
-          cp pubspec.lock "$RUNNER_TEMP/pubspec.lock"
-          tar -C "$HOME" -czf "$RUNNER_TEMP/moru-sdk.tar.gz" .moru-toolchains
-          tar -C "$HOME" --exclude=credentials.json --exclude=log --exclude=_temp -czf "$RUNNER_TEMP/moru-pub-cache.tar.gz" .pub-cache
+          mkdir chunks
+          split -b 400M original/moru-sdk.tar.gz chunks/sdk-
+          split -b 400M original/moru-pub-cache.tar.gz chunks/packages-
+          cp original/pubspec.lock chunks/pubspec.lock
       - uses: actions/upload-artifact@v4
         with:
-          name: moru-mini-apps-sdk
-          path: ${{ runner.temp }}/moru-sdk.tar.gz
+          name: moru-sdk-aa
+          path: chunks/sdk-aa
           retention-days: 1
           compression-level: 0
-          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: moru-mini-apps-packages
+          name: moru-sdk-ab
+          path: chunks/sdk-ab
+          retention-days: 1
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moru-sdk-ac
+          path: chunks/sdk-ac
+          retention-days: 1
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moru-sdk-ad
+          path: chunks/sdk-ad
+          retention-days: 1
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moru-packages-aa
+          path: chunks/packages-aa
+          retention-days: 1
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moru-packages-ab
           path: |
-            ${{ runner.temp }}/moru-pub-cache.tar.gz
-            ${{ runner.temp }}/pubspec.lock
+            chunks/packages-ab
+            chunks/pubspec.lock
+          retention-days: 1
+          compression-level: 0
+  vendor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Fetch pinned npm sources without executing package scripts
+        shell: python
+        run: |
+          import base64, hashlib, json, pathlib, urllib.request
+          root = pathlib.Path('vendor'); root.mkdir()
+          packages = {'@galacean/engine':'1.6.13', '@galacean/engine-ui':'1.6.13', '@galacean/engine-physics-lite':'1.6.13', 'phaser':'3.90.0', 'chart.js':'4.5.1', 'sql.js':'1.14.2', '@kurkle/color':'0.3.4'}
+          for name, version in packages.items():
+              with urllib.request.urlopen('https://registry.npmjs.org/' + name + '/' + version) as response:
+                  metadata = json.load(response)
+              url = metadata['dist']['tarball']
+              assert url.startswith('https://registry.npmjs.org/')
+              with urllib.request.urlopen(url) as response:
+                  content = response.read()
+              integrity = metadata['dist']['integrity']
+              algorithm, digest = integrity.split('-', 1)
+              assert algorithm == 'sha512'
+              assert base64.b64encode(hashlib.sha512(content).digest()).decode() == digest
+              stem = name.replace('@','').replace('/','-')
+              (root / (stem + '.json')).write_text(json.dumps(metadata, indent=2))
+              (root / (stem + '.tgz')).write_bytes(content)
+              print(name, version, metadata.get('license'), len(content), hashlib.sha256(content).hexdigest())
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moru-pinned-vendor-sources
+          path: vendor
           retention-days: 1
           compression-level: 0
           if-no-files-found: error
