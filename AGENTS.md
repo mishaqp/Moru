@@ -356,14 +356,21 @@ directory. Load the matching skill for the task; user instructions take priority
   `ProcessKeepAlive` (`app.keep_alive`).
   Shared offline libraries and the Moru CSS kit are pinned in
   `assets/mini_apps/runtime/vendor-manifest.json` with license notices;
-  `moru.assets.load/url` use the app's local HTTP origin. `MiniAppLocalSession`
-  isolates each WebView; native `moru.*` calls keep their JavaScript channel.
+  `moru.assets.load/url` use a stable HTTPS origin per installed app, intercepted
+  by Android `MiniAppOrigin`; the private loopback port is never its origin.
+  `.browser-storage.json` stays outside versioned code. Legacy file storage is
+  imported from trusted blank documents before app startup, without clearing
+  its source; only the temporary reader has universal file access (for opaque
+  cache copies) and is destroyed on success or error. App WebViews never get
+  file access. Fresh apps never inherit shared file data. Checker origins are
+  temporary. Native `moru.*` calls keep their JavaScript channel.
   `mini_apps` with `action: "guide"` returns API topics and runnable examples.
   `publish_mini_app` accepts a build folder plus `manifest`, or `app_id/files`
   for a partial update; keep data/jobs/server files and version rollback intact.
   Check vendor hashes/size with `tool/verify_mini_app_runtime.py`; browser
   verification and Android checker examples live in `tool/verify_mini_app_examples*`
-  and `integration_test/mini_apps/`.
+  and `integration_test/mini_apps/`. `tool/verify_mini_app_storage*` verifies
+  browser data migration, isolation and process restarts.
 
 ## Pre-commit checklist
 

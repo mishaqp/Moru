@@ -100,7 +100,8 @@ class MiniAppJobRunner {
       });
       await controller.setNavigationDelegate(
         NavigationDelegate(
-          onPageFinished: (_) {
+          onPageFinished: (url) {
+            if (local!.pageFinished(url)) return;
             if (!loaded.isCompleted) loaded.complete();
           },
           onNavigationRequest: (request) => local!.allowsNavigation(request.url)
@@ -109,6 +110,7 @@ class MiniAppJobRunner {
         ),
       );
       await store.refreshBridge(app);
+      await local.prepare(controller);
       await controller.loadRequest(local.entryUri(app));
       try {
         await loaded.future.timeout(loadTimeout);
@@ -131,7 +133,7 @@ class MiniAppJobRunner {
       // Stop the app's timers and requests.
       closed = true;
       try {
-        await controller.loadHtmlString('');
+        await controller.loadHtmlString('<!doctype html><html></html>');
       } finally {
         await local?.close();
       }

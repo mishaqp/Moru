@@ -86,11 +86,6 @@ class _MiniAppPageState extends State<MiniAppPage> {
         _logError(problem);
       },
     );
-    _local = MiniAppLocalSession.start(
-      store: _store,
-      app: _app,
-      bootstrapScript: _themeScript,
-    );
     // Data the chat changed while the app is open.
     _changes = _store.changes
         .where((change) => change.appId == widget.app.id)
@@ -99,25 +94,29 @@ class _MiniAppPageState extends State<MiniAppPage> {
             _controller.runJavaScript(MiniAppBridge.changedScript(change.key)),
           ),
         );
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+    _controller = WebViewController();
+    // Installing a delegate replaces the native WebViewClient. Complete all
+    // plugin setup before the storage interceptor wraps that client.
+    final configured = <Future<void>>[
+      _controller.setJavaScriptMode(JavaScriptMode.unrestricted),
       // Double taps are game input, not zoom.
-      ..enableZoom(false)
-      ..addJavaScriptChannel(
+      _controller.enableZoom(false),
+      _controller.addJavaScriptChannel(
         'MoruBridge',
         onMessageReceived: (message) => unawaited(_answer(message.message)),
-      )
-      ..setOnConsoleMessage((message) {
+      ),
+      _controller.setOnConsoleMessage((message) {
         // Chromium's own line for a missing file; the bridge reports it
         // with the file name.
         if (message.level == JavaScriptLogLevel.error &&
             !message.message.startsWith('Failed to load resource')) {
           _logError('console: ${message.message}');
         }
-      })
-      ..setNavigationDelegate(
+      }),
+      _controller.setNavigationDelegate(
         NavigationDelegate(
-          onPageFinished: (_) async {
+          onPageFinished: (url) async {
+            if (_loadedLocal?.pageFinished(url) ?? false) return;
             if (!mounted) return;
             await _applyTheme();
             if (mounted) setState(() => _loading = false);
@@ -134,12 +133,20 @@ class _MiniAppPageState extends State<MiniAppPage> {
             return NavigationDecision.prevent;
           },
         ),
-      );
+      ),
+    ];
     final platform = _controller.platform;
     if (platform is AndroidWebViewController) {
       // Sounds start from game code, not only right after a tap.
-      unawaited(platform.setMediaPlaybackRequiresUserGesture(false));
+      configured.add(platform.setMediaPlaybackRequiresUserGesture(false));
     }
+    _local = Future.wait(configured).then(
+      (_) => MiniAppLocalSession.start(
+        store: _store,
+        app: _app,
+        bootstrapScript: _themeScript,
+      ),
+    );
     MiniAppDisplay.apply(null, _app);
     unawaited(_load());
   }
@@ -153,13 +160,22 @@ class _MiniAppPageState extends State<MiniAppPage> {
   );
 
   Future<void> _load() async {
-    await _store.refreshBridge(_app);
-    final errors = await _store.readErrors(_app.id);
-    if (mounted && errors.isNotEmpty) setState(() => _errors = errors.length);
-    final local = await _local;
-    if (!mounted) return;
-    _loadedLocal = local;
-    await _controller.loadRequest(local.entryUri(_app));
+    try {
+      final local = await _local;
+      if (!mounted) return;
+      await _store.refreshBridge(_app);
+      final errors = await _store.readErrors(_app.id);
+      if (!mounted) return;
+      if (errors.isNotEmpty) setState(() => _errors = errors.length);
+      _loadedLocal = local;
+      await local.prepare(_controller);
+      if (!mounted) return;
+      await _controller.loadRequest(local.entryUri(_app));
+    } catch (error) {
+      if (!mounted) return;
+      _logError('startup: $error');
+      setState(() => _loading = false);
+    }
   }
 
   String _themeScript() {
@@ -293,7 +309,7 @@ class _MiniAppPageState extends State<MiniAppPage> {
   void dispose() {
     MiniAppDisplay.apply(_app, null);
     unawaited(_server.release());
-    unawaited(_local.then((local) => local.close()));
+    unawaited(_local.then((local) => local.close()).catchError((_) {}));
     _controlsTimer?.cancel();
     unawaited(_changes?.cancel());
     super.dispose();

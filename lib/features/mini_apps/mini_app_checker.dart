@@ -41,6 +41,7 @@ class MiniAppChecker {
       local = await MiniAppLocalSession.start(
         store: sandbox.store,
         app: sandbox.app,
+        ephemeral: true,
       );
       await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
       await controller.addJavaScriptChannel(
@@ -59,7 +60,8 @@ class MiniAppChecker {
       });
       await controller.setNavigationDelegate(
         NavigationDelegate(
-          onPageFinished: (_) {
+          onPageFinished: (url) {
+            if (local!.pageFinished(url)) return;
             if (!loaded.isCompleted) loaded.complete();
           },
           onNavigationRequest: (request) => local!.allowsNavigation(request.url)
@@ -67,6 +69,7 @@ class MiniAppChecker {
               : NavigationDecision.prevent,
         ),
       );
+      await local.prepare(controller);
       await controller.loadRequest(local.entryUri(sandbox.app));
       var didLoad = true;
       try {
@@ -108,7 +111,7 @@ class MiniAppChecker {
     } finally {
       // Stop the app's timers before its sandbox goes away.
       try {
-        await controller.loadHtmlString('');
+        await controller.loadHtmlString('<!doctype html><html></html>');
       } finally {
         await local?.close();
         await sandbox.dispose();

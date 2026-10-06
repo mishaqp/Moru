@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import '../../../utils/app_directories.dart';
 import '../skills/skill_archive.dart' show safeZipEntryName;
 import '../workspace/workspace_file_access.dart';
+import 'mini_app_browser_storage_state.dart';
 
 /// A mini app the agent built and published: a small web app with its own
 /// data, opened inside Moru or from a home screen shortcut.
@@ -262,12 +263,12 @@ class MiniAppStore extends ChangeNotifier {
         final manifest = File(p.join(entry.path, 'manifest.json'));
         if (!await manifest.exists()) continue;
         try {
-          apps.add(
-            MiniApp.fromJson(
-              entry.path,
-              jsonDecode(await manifest.readAsString()) as Map<String, dynamic>,
-            ),
+          final app = MiniApp.fromJson(
+            entry.path,
+            jsonDecode(await manifest.readAsString()) as Map<String, dynamic>,
           );
+          await MiniAppBrowserStorageState.registerLegacy(app);
+          apps.add(app);
         } catch (e) {
           debugPrint('[MiniApps] skipping ${entry.path}: $e');
         }
@@ -437,6 +438,7 @@ class MiniAppStore extends ChangeNotifier {
       await oldCode.delete(recursive: true);
     }
     await code.rename(oldCode.path);
+    if (previous == null) await MiniAppBrowserStorageState.registerFresh(app);
     await File(
       p.join(staging.path, 'manifest.json'),
     ).rename(p.join(directory.path, 'manifest.json'));

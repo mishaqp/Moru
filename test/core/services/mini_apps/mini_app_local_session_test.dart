@@ -47,28 +47,91 @@ void main() {
   }
 
   test(
-    'each WebView has an isolated loopback origin and capability path',
+    'the same app keeps its origin after reopening and store restart',
+    () async {
+      final app = store.byId('one')!;
+      final first = await MiniAppLocalSession.start(store: store, app: app);
+      final initial = first.entryUri(app);
+      await first.close();
+      final restartedStore = MiniAppStore(
+        root: () async => Directory(p.join(temp.path, 'apps')),
+      );
+      addTearDown(restartedStore.dispose);
+      await restartedStore.load();
+      final reopened = restartedStore.byId(app.id)!;
+      final second = await MiniAppLocalSession.start(
+        store: restartedStore,
+        app: reopened,
+      );
+      addTearDown(second.close);
+      expect(initial.scheme, 'https');
+      expect(second.entryUri(reopened), initial);
+      expect(initial.path, '/pages/start.html');
+    },
+  );
+
+  test('different apps have separate stable storage origins', () async {
+    final one = await MiniAppLocalSession.start(
+      store: store,
+      app: store.byId('one')!,
+    );
+    final two = await MiniAppLocalSession.start(
+      store: store,
+      app: store.byId('two')!,
+    );
+    addTearDown(one.close);
+    addTearDown(two.close);
+    final first = one.entryUri(store.byId('one')!);
+    final other = two.entryUri(store.byId('two')!);
+    expect(first.scheme, 'https');
+    expect(first.origin, isNot(other.origin));
+    expect(one.allowsNavigation(other.toString()), isFalse);
+  });
+
+  test(
+    'reusing a deleted app ID cannot expose its previous browser data',
+    () async {
+      final previous = store.byId('one')!;
+      final first = await MiniAppLocalSession.start(
+        store: store,
+        app: previous,
+      );
+      final oldOrigin = first.entryUri(previous).origin;
+      await first.close();
+      await store.delete(previous.id);
+      final fresh = (await store.install(
+        Directory(p.join(temp.path, 'one')),
+      )).app;
+      final next = await MiniAppLocalSession.start(store: store, app: fresh);
+      addTearDown(next.close);
+      expect(next.entryUri(fresh).origin, isNot(oldOrigin));
+    },
+  );
+
+  test(
+    'each WebView keeps a private loopback backend and capability path',
     () async {
       final app = store.byId('one')!;
       final first = await MiniAppLocalSession.start(store: store, app: app);
       final second = await MiniAppLocalSession.start(store: store, app: app);
       addTearDown(first.close);
       addTearDown(second.close);
-      final uri = first.entryUri(app);
+      final uri = first.backendUri(app);
       expect(uri.scheme, 'http');
       expect(uri.host, '127.0.0.1');
-      expect(second.entryUri(app).port, isNot(uri.port));
+      expect(second.backendUri(app).port, isNot(uri.port));
       expect(uri.pathSegments.first.length, greaterThanOrEqualTo(32));
       expect(
-        second.entryUri(app).pathSegments.first,
+        second.backendUri(app).pathSegments.first,
         isNot(uri.pathSegments.first),
       );
-      expect(first.allowsNavigation(uri.toString()), isTrue);
+      final entry = first.entryUri(app);
+      expect(first.allowsNavigation(entry.toString()), isTrue);
       expect(
-        first.allowsNavigation(uri.resolve('main.mjs').toString()),
+        first.allowsNavigation(entry.resolve('main.mjs').toString()),
         isTrue,
       );
-      expect(first.allowsNavigation(second.entryUri(app).toString()), isFalse);
+      expect(first.allowsNavigation(uri.toString()), isFalse);
       expect(first.allowsNavigation('https://example.com/'), isFalse);
       expect(first.allowsNavigation('file:///etc/passwd'), isFalse);
       expect((await get(uri)).body, contains('src="../moru.js"'));
@@ -108,7 +171,7 @@ void main() {
         app: app,
         bootstrapScript: () => 'window.themeWasSet = true;',
       );
-      final uri = session.entryUri(app);
+      final uri = session.backendUri(app);
       final script = (await get(uri.resolve('../moru.js'))).body;
       expect(script, contains(MiniAppStore.moruBridgeScript));
       expect(script, contains('__moruAssetCatalog'));
@@ -128,7 +191,7 @@ void main() {
     final app = store.byId('one')!;
     final session = await MiniAppLocalSession.start(store: store, app: app);
     addTearDown(session.close);
-    final uri = session.entryUri(app);
+    final uri = session.backendUri(app);
     final secret = File(p.join(temp.path, 'secret.txt'));
     await secret.writeAsString('outside app');
     await Link(p.join(app.codeDirectory, 'secret.txt')).create(secret.path);
