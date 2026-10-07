@@ -1,0 +1,3 @@
+.moru-container { max-width: 560px; }
+.total { font-size: clamp(2.5rem, 12vw, 4rem); font-weight: 700; line-height: 1.2; }
+#status { min-height: 1.5em; }

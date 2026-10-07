@@ -159,6 +159,12 @@ flutter:
     - assets/mermaid.min.js
     - assets/html/mark.html
     - assets/skills/skill-creator/
+    - assets/mini_apps/runtime/
+    - assets/mini_apps/examples/tracker/
+    - assets/mini_apps/examples/chart/
+    - assets/mini_apps/examples/phaser/
+    - assets/mini_apps/examples/galacean/
+    - assets/mini_apps/examples/sqlite/
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

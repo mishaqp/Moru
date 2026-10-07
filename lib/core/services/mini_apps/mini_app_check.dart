@@ -47,7 +47,12 @@ class MiniAppCheckReport {
   /// it settled; 0 means the screen stayed blank.
   final int? visibleContent;
 
-  bool get ok => loaded && pageErrors.isEmpty && failedCalls.isEmpty;
+  bool get ok =>
+      loaded &&
+      pageErrors.isEmpty &&
+      failedCalls.isEmpty &&
+      visibleContent != 0 &&
+      !console.any((line) => line.startsWith('error: '));
 
   /// The WebView hides the details of script errors on file pages ("Script
   /// error."); the console has them, so they take its place.

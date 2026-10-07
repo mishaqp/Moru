@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Заметки SQLite</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="main.js" defer></script>
+</head>
+<body class="moru-app">
+  <main class="moru-container moru-stack">
+    <h1>Заметки SQLite</h1>
+    <form id="add" class="moru-card moru-stack">
+      <label class="moru-field">Новая заметка<input id="text" maxlength="500" required placeholder="Что нужно запомнить?"></label>
+      <button class="moru-button" type="submit" disabled>Добавить</button>
+    </form>
+    <ul id="notes" class="moru-list moru-card" aria-label="Заметки"></ul>
+    <p id="status" role="status" aria-live="polite">Загрузка…</p>
+  </main>
+</body>
+</html>

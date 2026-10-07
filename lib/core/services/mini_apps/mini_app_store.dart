@@ -8,6 +8,8 @@ import 'package:path/path.dart' as p;
 
 import '../../../utils/app_directories.dart';
 import '../skills/skill_archive.dart' show safeZipEntryName;
+import '../workspace/workspace_file_access.dart';
+import 'mini_app_browser_storage_state.dart';
 
 /// A mini app the agent built and published: a small web app with its own
 /// data, opened inside Moru or from a home screen shortcut.
@@ -214,6 +216,7 @@ class MiniAppStore extends ChangeNotifier {
   bool _loaded = false;
   Future<void>? _loading;
   final Map<String, Future<void>> _writes = {};
+  Future<void> _codeWrites = Future<void>.value();
   final StreamController<({String appId, String key})> _changes =
       StreamController.broadcast();
   final List<Future<void> Function(String id)> _deleteHooks = [];
@@ -260,12 +263,12 @@ class MiniAppStore extends ChangeNotifier {
         final manifest = File(p.join(entry.path, 'manifest.json'));
         if (!await manifest.exists()) continue;
         try {
-          apps.add(
-            MiniApp.fromJson(
-              entry.path,
-              jsonDecode(await manifest.readAsString()) as Map<String, dynamic>,
-            ),
+          final app = MiniApp.fromJson(
+            entry.path,
+            jsonDecode(await manifest.readAsString()) as Map<String, dynamic>,
           );
+          await MiniAppBrowserStorageState.registerLegacy(app);
+          apps.add(app);
         } catch (e) {
           debugPrint('[MiniApps] skipping ${entry.path}: $e');
         }
@@ -287,23 +290,47 @@ class MiniAppStore extends ChangeNotifier {
   /// `moru-app.json`. Returns the app and whether it replaced an older copy.
   /// Stored data survives an update.
   Future<({MiniApp app, bool updated, int files, int bytes})> install(
-    Directory sourceDir,
-  ) async {
+    Directory sourceDir, {
+    Map<String, dynamic>? manifest,
+    WorkspaceFileAccess? sourceAccess,
+  }) => _mutateCode(
+    () => _install(sourceDir, manifest: manifest, sourceAccess: sourceAccess),
+  );
+
+  Future<({MiniApp app, bool updated, int files, int bytes})> _install(
+    Directory sourceDir, {
+    Map<String, dynamic>? manifest,
+    WorkspaceFileAccess? sourceAccess,
+  }) async {
+    final access = WorkspaceFileAccess(roots: [sourceDir.path]);
+    await access.resolve(sourceDir.path);
     await load();
-    final manifestSource = File(p.join(sourceDir.path, manifestFile));
-    if (!await manifestSource.exists()) {
-      throw const MiniAppException(
-        'missing_manifest',
-        'The folder has no $manifestFile.',
-      );
-    }
-    final Map<String, dynamic> manifest;
-    try {
-      manifest = Map<String, dynamic>.from(
-        jsonDecode(await manifestSource.readAsString()) as Map,
-      );
-    } catch (e) {
-      throw MiniAppException('invalid_manifest', '$manifestFile: $e');
+    if (manifest == null) {
+      final manifestSource = File(p.join(sourceDir.path, manifestFile));
+      if (!await manifestSource.exists()) {
+        throw const MiniAppException(
+          'missing_manifest',
+          'The folder has no $manifestFile. Supply manifest when publishing a build folder.',
+        );
+      }
+      try {
+        final opened = await _openSource(manifestSource, access, sourceAccess);
+        final String text;
+        try {
+          text = utf8.decode(await opened.readBytes(maxBytes: maxBytes + 1));
+          if (text.length > maxBytes) {
+            throw const MiniAppException(
+              'too_large',
+              'The manifest is too large.',
+            );
+          }
+        } finally {
+          await opened.close();
+        }
+        manifest = Map<String, dynamic>.from(jsonDecode(text) as Map);
+      } catch (e) {
+        throw MiniAppException('invalid_manifest', '$manifestFile: $e');
+      }
     }
     final id = '${manifest['id'] ?? ''}'.trim();
     final name = '${manifest['name'] ?? ''}'.trim();
@@ -343,7 +370,7 @@ class MiniAppStore extends ChangeNotifier {
       }
     }
 
-    final files = await _collect(sourceDir);
+    final files = await _collect(sourceDir, access: access);
     final names = files.map((f) => f.relative).toSet();
     if (!names.contains(entry)) {
       throw MiniAppException('missing_entry', 'Entry file "$entry" not found.');
@@ -354,7 +381,7 @@ class MiniAppStore extends ChangeNotifier {
     if (icon != null && p.extension(icon).toLowerCase() != '.svg') {
       throw const MiniAppException('invalid_icon', 'The icon must be an SVG.');
     }
-    final bytes = files.fold<int>(0, (sum, f) => sum + f.size);
+    var bytes = 0;
 
     final root = await _root();
     final directory = Directory(p.join(root.path, id));
@@ -367,7 +394,13 @@ class MiniAppStore extends ChangeNotifier {
     for (final file in files) {
       final target = File(p.join(code.path, file.relative));
       await target.parent.create(recursive: true);
-      await file.file.copy(target.path);
+      bytes += await _copySource(
+        file.file,
+        target,
+        access,
+        sourceAccess,
+        maxBytes - bytes,
+      );
     }
     await File(p.join(code.path, bridgeFile)).writeAsString(moruBridgeScript);
     final entryFile = File(p.join(code.path, entry));
@@ -391,7 +424,7 @@ class MiniAppStore extends ChangeNotifier {
       keepAwake: manifest['keepAwake'] == true,
       serverCommand: serverCommand,
       directory: directory.path,
-      updatedAt: _now(),
+      updatedAt: await _publicationTime(previous),
     );
     await File(
       p.join(staging.path, 'manifest.json'),
@@ -405,6 +438,7 @@ class MiniAppStore extends ChangeNotifier {
       await oldCode.delete(recursive: true);
     }
     await code.rename(oldCode.path);
+    if (previous == null) await MiniAppBrowserStorageState.registerFresh(app);
     await File(
       p.join(staging.path, 'manifest.json'),
     ).rename(p.join(directory.path, 'manifest.json'));
@@ -425,8 +459,126 @@ class MiniAppStore extends ChangeNotifier {
     );
   }
 
+  /// Replaces only [files] from [sourceDir]. Metadata is inherited unless
+  /// supplied in [manifest]; data, jobs and the remaining code are retained.
+  /// The complete result is validated before the installed copy is changed.
+  Future<({MiniApp app, bool updated, int files, int bytes})> updateFiles(
+    String id,
+    Directory sourceDir, {
+    required List<String> files,
+    Map<String, dynamic>? manifest,
+    WorkspaceFileAccess? sourceAccess,
+  }) => _mutateCode(() async {
+    final access = WorkspaceFileAccess(roots: [sourceDir.path]);
+    await access.resolve(sourceDir.path);
+    await load();
+    final app = _require(id);
+    if (files.isEmpty || files.length > maxFiles) {
+      throw const MiniAppException(
+        'invalid_files',
+        'files must contain 1-$maxFiles relative file paths.',
+      );
+    }
+    if (manifest != null && manifest['id'] != null && manifest['id'] != id) {
+      throw const MiniAppException(
+        'invalid_id',
+        'A partial update cannot change the app id.',
+      );
+    }
+    final selected = <String, File>{};
+    final sourceRoot = await sourceDir.resolveSymbolicLinks();
+    for (final raw in files) {
+      final name = _relative(raw, fallback: null);
+      if (name == null ||
+          name == manifestFile ||
+          name == bridgeFile ||
+          p.posix
+              .split(name)
+              .any(
+                (part) =>
+                    part.startsWith('.') || skippedDirectories.contains(part),
+              ) ||
+          selected.containsKey(name)) {
+        throw MiniAppException('invalid_path', 'Cannot patch "$raw".');
+      }
+      final file = File(p.joinAll([sourceRoot, ...p.posix.split(name)]));
+      if (!await file.exists()) {
+        throw MiniAppException('missing_file', 'File "$raw" not found.');
+      }
+      selected[name] = file;
+    }
+    final root = await _root();
+    final staging = await root.createTemp('.$id.patch-');
+    try {
+      final installedAccess = WorkspaceFileAccess(roots: [app.codeDirectory]);
+      var bytes = 0;
+      for (final file in await _collect(Directory(app.codeDirectory))) {
+        final target = File(p.join(staging.path, file.relative));
+        await target.parent.create(recursive: true);
+        bytes += await _copySource(
+          file.file,
+          target,
+          installedAccess,
+          null,
+          maxBytes - bytes,
+        );
+      }
+      for (final file in selected.entries) {
+        final target = File(p.join(staging.path, file.key));
+        await target.parent.create(recursive: true);
+        if (await target.exists()) bytes -= await target.length();
+        bytes += await _copySource(
+          file.value,
+          target,
+          access,
+          sourceAccess,
+          maxBytes - bytes,
+        );
+      }
+      return await _install(
+        staging,
+        manifest: {
+          ...app.toJson()..remove('updatedAt'),
+          // Strict tool schemas emit null for unspecified optional fields.
+          for (final entry
+              in manifest?.entries ?? const <MapEntry<String, dynamic>>[])
+            if (entry.value != null) entry.key: entry.value,
+        },
+      );
+    } finally {
+      await staging.delete(recursive: true);
+    }
+  });
+
+  /// Publish, patch, rollback and delete share staging folders and history.
+  /// Serializing them also makes two concurrent patches compose correctly.
+  Future<T> _mutateCode<T>(Future<T> Function() action) {
+    final next = _codeWrites.then((_) => action());
+    _codeWrites = next.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace __) {},
+    );
+    return next;
+  }
+
+  Future<DateTime> _publicationTime(MiniApp? previous) async {
+    var time = _now();
+    if (previous == null) return time;
+    // Version folders use milliseconds, even when the clock has microseconds.
+    // The clock can also repeat or move backwards, including after rollback.
+    for (final version in [previous, ...await _versions(previous)]) {
+      if (time.millisecondsSinceEpoch <=
+          version.updatedAt.millisecondsSinceEpoch) {
+        time = version.updatedAt.add(const Duration(milliseconds: 1));
+      }
+    }
+    return time;
+  }
+
   /// Removes the app, its files and its data.
-  Future<void> delete(String id) async {
+  Future<void> delete(String id) => _mutateCode(() => _delete(id));
+
+  Future<void> _delete(String id) async {
     await load();
     final app = byId(id);
     if (app == null) return;
@@ -813,7 +965,10 @@ class MiniAppStore extends ChangeNotifier {
   /// Puts back the code of [version] (see [versions]). The current code
   /// becomes a version itself, so a rollback can be undone. Stored data and
   /// reminders stay as they are.
-  Future<MiniApp> rollback(String id, String version) async {
+  Future<MiniApp> rollback(String id, String version) =>
+      _mutateCode(() => _rollback(id, version));
+
+  Future<MiniApp> _rollback(String id, String version) async {
     await load();
     final current = _require(id);
     final source = Directory(p.join(current.directory, 'versions', version));
@@ -978,6 +1133,9 @@ class MiniAppStore extends ChangeNotifier {
 
   /// A safe relative path from the manifest, or [fallback] when absent.
   static String? _relative(Object? raw, {required String? fallback}) {
+    if (raw != null && raw is! String) {
+      throw const MiniAppException('invalid_path', 'A path must be a string.');
+    }
     final value = raw == null ? '' : '$raw'.trim();
     if (value.isEmpty) return fallback;
     final normalized = p.posix.normalize(value.replaceAll(r'\', '/'));
@@ -990,48 +1148,116 @@ class MiniAppStore extends ChangeNotifier {
   }
 
   static Future<List<({File file, String relative, int size})>> _collect(
-    Directory sourceDir,
-  ) async {
+    Directory sourceDir, {
+    WorkspaceFileAccess? access,
+  }) async {
+    access ??= WorkspaceFileAccess(roots: [sourceDir.path]);
+    final checked = access;
+    await checked.resolve(sourceDir.path);
     final files = <({File file, String relative, int size})>[];
     var bytes = 0;
     Future<void> walk(Directory dir) async {
-      await for (final entry in dir.list(followLinks: false)) {
-        final name = p.basename(entry.path);
-        if (name.startsWith('.')) continue;
-        if (entry is Directory) {
-          if (!skippedDirectories.contains(name)) await walk(entry);
-          continue;
-        }
-        if (entry is! File) continue;
-        final relative = p.posix.joinAll(
-          p.split(p.relative(entry.path, from: sourceDir.path)),
-        );
-        if (relative == manifestFile || relative == bridgeFile) continue;
-        final size = await entry.length();
-        bytes += size;
-        files.add((file: entry, relative: relative, size: size));
-        if (files.length > maxFiles) {
-          throw const MiniAppException(
-            'too_many_files',
-            'A mini app may have at most $maxFiles files.',
+      await checked.withDirectory(dir.path, (anchored) async {
+        await for (final child in Directory(
+          anchored,
+        ).list(followLinks: false)) {
+          final entry = child is Directory
+              ? Directory(p.join(dir.path, p.basename(child.path)))
+              : child is File
+              ? File(p.join(dir.path, p.basename(child.path)))
+              : child;
+          final name = p.basename(entry.path);
+          if (name.startsWith('.')) continue;
+          if (entry is Directory) {
+            if (!skippedDirectories.contains(name)) await walk(entry);
+            continue;
+          }
+          if (entry is! File) continue;
+          final relative = p.posix.joinAll(
+            p.split(p.relative(entry.path, from: sourceDir.path)),
           );
+          if (relative == manifestFile || relative == bridgeFile) continue;
+          final size = (await checked.stat(child.path)).size;
+          bytes += size;
+          files.add((file: entry, relative: relative, size: size));
+          if (files.length > maxFiles) {
+            throw const MiniAppException(
+              'too_many_files',
+              'A mini app may have at most $maxFiles files.',
+            );
+          }
+          if (bytes > maxBytes) {
+            throw const MiniAppException(
+              'too_large',
+              'A mini app may be at most 20 MB.',
+            );
+          }
         }
-        if (bytes > maxBytes) {
-          throw const MiniAppException(
-            'too_large',
-            'A mini app may be at most 20 MB.',
-          );
-        }
-      }
+      });
     }
 
     await walk(sourceDir);
     return files;
   }
 
+  static Future<WorkspaceFileHandle> _openSource(
+    File file,
+    WorkspaceFileAccess access,
+    WorkspaceFileAccess? grant,
+  ) async {
+    // The selected folder and the model's original grant must both contain
+    // the actual descriptor, including after an ancestor is replaced.
+    await access.resolve(file.path);
+    final opened = await (grant ?? access).openRead(file.path);
+    try {
+      await access.resolve(opened.path);
+      return opened;
+    } catch (_) {
+      await opened.close();
+      rethrow;
+    }
+  }
+
+  static Future<int> _copySource(
+    File source,
+    File target,
+    WorkspaceFileAccess access,
+    WorkspaceFileAccess? grant,
+    int limit,
+  ) async {
+    final opened = await _openSource(source, access, grant);
+    RandomAccessFile? output;
+    try {
+      if (await opened.handle.length() > limit) {
+        throw const MiniAppException(
+          'too_large',
+          'A mini app may be at most 20 MB.',
+        );
+      }
+      output = await target.open(mode: FileMode.write);
+      var bytes = 0;
+      while (true) {
+        final chunk = await opened.handle.read(
+          (limit - bytes + 1).clamp(1, 64 * 1024),
+        );
+        if (chunk.isEmpty) return bytes;
+        bytes += chunk.length;
+        if (bytes > limit) {
+          throw const MiniAppException(
+            'too_large',
+            'A mini app may be at most 20 MB.',
+          );
+        }
+        await output.writeFrom(chunk);
+      }
+    } finally {
+      await output?.close();
+      await opened.close();
+    }
+  }
+
   /// [html] with the bridge script loaded before any app script, unless the
   /// page already includes it.
-  @visibleForTesting
   static String withBridgeScript(String html, String entry) {
     if (html.contains(bridgeFile)) return html;
     final depth = p.posix.split(entry).length - 1;
@@ -1049,6 +1275,35 @@ class MiniAppStore extends ChangeNotifier {
   static const String moruBridgeScript = r'''
 (function () {
   if (window.moru) return;
+  var assetCatalog = window.__moruAssetCatalog || {};
+  var bridgeScript = document.currentScript && document.currentScript.src;
+  var assetBase = bridgeScript ? new URL('__moru_assets/', bridgeScript).href : null;
+  var assetLoads = {};
+  function assetUrl(name) {
+    var asset = assetCatalog[name];
+    if (!asset || !assetBase) throw new Error('Unknown bundled Moru asset: ' + name);
+    return new URL(asset.file, assetBase).href;
+  }
+  function loadAsset(name) {
+    if (assetLoads[name]) return assetLoads[name];
+    var asset = assetCatalog[name];
+    if (!asset || !/\.(js|css)$/.test(asset.file)) {
+      return Promise.reject(new Error('Use moru.assets.url for a binary asset: ' + name));
+    }
+    var promise = Promise.all((asset.dependencies || []).map(loadAsset)).then(function () {
+      return new Promise(function (resolve, reject) {
+        var css = /\.css$/.test(asset.file);
+        var tag = document.createElement(css ? 'link' : 'script');
+        if (css) { tag.rel = 'stylesheet'; tag.href = assetUrl(name); }
+        else { tag.src = assetUrl(name); }
+        tag.onload = function () { resolve(); };
+        tag.onerror = function () { reject(new Error('Failed to load Moru asset: ' + name)); };
+        document.head.appendChild(tag);
+      });
+    });
+    assetLoads[name] = promise.catch(function (error) { delete assetLoads[name]; throw error; });
+    return assetLoads[name];
+  }
   var pending = {};
   var next = 0;
   // Problems go to Moru, which shows them to the agent after publishing.
@@ -1090,6 +1345,18 @@ class MiniAppStore extends ChangeNotifier {
     window.dispatchEvent(new CustomEvent('moru:storage', { detail: { key: key } }));
   };
   window.moru = {
+    assets: { url: assetUrl, load: loadAsset },
+    theme: window.__moruTheme || {
+      dark: !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches),
+      colors: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? {
+        bg: '#1a1b21', surface: '#25262d', text: '#f1f0f7', muted: '#c6c6d0',
+        accent: '#b6c4ff', 'on-accent': '#1d2d61', border: '#45464f'
+      } : {
+        bg: '#fefbff', surface: '#ffffff', text: '#1a1b21', muted: '#45464f',
+        accent: '#4d5c92', 'on-accent': '#ffffff', border: '#c6c6d0'
+      },
+      insets: { top: 0, right: 0, bottom: 0, left: 0 }
+    },
     storage: {
       get: function (key) { return call('storage.get', { key: key }); },
       set: function (key, value) { return call('storage.set', { key: key, value: value }); },

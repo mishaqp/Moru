@@ -11,6 +11,7 @@ import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/environment_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/mini_apps/mini_app_bridge.dart';
+import '../../../core/services/mini_apps/mini_app_local_session.dart';
 import '../../../core/services/mini_apps/mini_app_servers.dart';
 import '../../../core/services/workspace/workspace_runtime.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
@@ -38,6 +39,8 @@ class MiniAppPage extends StatefulWidget {
 class _MiniAppPageState extends State<MiniAppPage> {
   late final WebViewController _controller;
   late final MiniAppBridge _bridge;
+  late final Future<MiniAppLocalSession> _local;
+  MiniAppLocalSession? _loadedLocal;
 
   /// The app's server while the page is open; a rollback may change it.
   late MiniAppServerLease _server;
@@ -91,30 +94,36 @@ class _MiniAppPageState extends State<MiniAppPage> {
             _controller.runJavaScript(MiniAppBridge.changedScript(change.key)),
           ),
         );
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+    _controller = WebViewController();
+    // Installing a delegate replaces the native WebViewClient. Complete all
+    // plugin setup before the storage interceptor wraps that client.
+    final configured = <Future<void>>[
+      _controller.setJavaScriptMode(JavaScriptMode.unrestricted),
       // Double taps are game input, not zoom.
-      ..enableZoom(false)
-      ..addJavaScriptChannel(
+      _controller.enableZoom(false),
+      _controller.addJavaScriptChannel(
         'MoruBridge',
         onMessageReceived: (message) => unawaited(_answer(message.message)),
-      )
-      ..setOnConsoleMessage((message) {
+      ),
+      _controller.setOnConsoleMessage((message) {
         // Chromium's own line for a missing file; the bridge reports it
         // with the file name.
         if (message.level == JavaScriptLogLevel.error &&
             !message.message.startsWith('Failed to load resource')) {
           _logError('console: ${message.message}');
         }
-      })
-      ..setNavigationDelegate(
+      }),
+      _controller.setNavigationDelegate(
         NavigationDelegate(
-          onPageFinished: (_) {
+          onPageFinished: (url) async {
+            if (_loadedLocal?.pageFinished(url) ?? false) return;
+            if (!mounted) return;
+            await _applyTheme();
             if (mounted) setState(() => _loading = false);
           },
           onNavigationRequest: (request) {
             // Pages of the app stay inside; everything else opens outside.
-            if (request.url.startsWith('file://')) {
+            if (_loadedLocal?.allowsNavigation(request.url) ?? false) {
               return NavigationDecision.navigate;
             }
             final uri = Uri.tryParse(request.url);
@@ -124,12 +133,20 @@ class _MiniAppPageState extends State<MiniAppPage> {
             return NavigationDecision.prevent;
           },
         ),
-      );
+      ),
+    ];
     final platform = _controller.platform;
     if (platform is AndroidWebViewController) {
       // Sounds start from game code, not only right after a tap.
-      unawaited(platform.setMediaPlaybackRequiresUserGesture(false));
+      configured.add(platform.setMediaPlaybackRequiresUserGesture(false));
     }
+    _local = Future.wait(configured).then(
+      (_) => MiniAppLocalSession.start(
+        store: _store,
+        app: _app,
+        bootstrapScript: _themeScript,
+      ),
+    );
     MiniAppDisplay.apply(null, _app);
     unawaited(_load());
   }
@@ -143,10 +160,61 @@ class _MiniAppPageState extends State<MiniAppPage> {
   );
 
   Future<void> _load() async {
-    await _store.refreshBridge(_app);
-    final errors = await _store.readErrors(_app.id);
-    if (mounted && errors.isNotEmpty) setState(() => _errors = errors.length);
-    await _controller.loadFile(_app.entryPath);
+    try {
+      final local = await _local;
+      if (!mounted) return;
+      await _store.refreshBridge(_app);
+      final errors = await _store.readErrors(_app.id);
+      if (!mounted) return;
+      if (errors.isNotEmpty) setState(() => _errors = errors.length);
+      _loadedLocal = local;
+      await local.prepare(_controller);
+      if (!mounted) return;
+      await _controller.loadRequest(local.entryUri(_app));
+    } catch (error) {
+      if (!mounted) return;
+      _logError('startup: $error');
+      setState(() => _loading = false);
+    }
+  }
+
+  String _themeScript() {
+    if (!mounted) return '';
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    String hex(Color color) =>
+        '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+    // The Scaffold/app bar already consumes the top inset. Fullscreen uses
+    // SafeArea; only the remaining WebView inset belongs to the web content.
+    final padding = _app.fullscreen
+        ? EdgeInsets.zero
+        : MediaQuery.paddingOf(context);
+    return MiniAppBridge.themeScript({
+      'dark': theme.brightness == Brightness.dark,
+      'colors': {
+        'bg': hex(colors.surface),
+        'surface': hex(colors.surfaceContainerLow),
+        'text': hex(colors.onSurface),
+        'muted': hex(colors.onSurfaceVariant),
+        'accent': hex(colors.primary),
+        'on-accent': hex(colors.onPrimary),
+        'border': hex(colors.outlineVariant),
+      },
+      'insets': {
+        'top': 0,
+        'right': padding.right,
+        'bottom': padding.bottom,
+        'left': padding.left,
+      },
+    });
+  }
+
+  Future<void> _applyTheme() => _controller.runJavaScript(_themeScript());
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loading) unawaited(_applyTheme());
   }
 
   void _logError(String problem) {
@@ -221,7 +289,7 @@ class _MiniAppPageState extends State<MiniAppPage> {
           _logged = 0;
           _loading = true;
         });
-        await _controller.loadFile(restored.entryPath);
+        await _load();
       case 'server':
         await showMiniAppServer(
           context,
@@ -241,6 +309,7 @@ class _MiniAppPageState extends State<MiniAppPage> {
   void dispose() {
     MiniAppDisplay.apply(_app, null);
     unawaited(_server.release());
+    unawaited(_local.then((local) => local.close()).catchError((_) {}));
     _controlsTimer?.cancel();
     unawaited(_changes?.cancel());
     super.dispose();

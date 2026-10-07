@@ -1,0 +1,3 @@
+.moru-container { max-width: 720px; }
+.chart { position: relative; height: clamp(240px, 50vh, 380px); }
+#status { min-height: 1.5em; }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../core/services/mini_apps/mini_app_guide.dart';
 import '../../../core/services/mini_apps/mini_app_jobs.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
 
@@ -18,6 +19,7 @@ class MiniAppDataTool {
   static const String toolName = 'mini_apps';
 
   static const String actionList = 'list';
+  static const String actionGuide = 'guide';
   static const String actionRead = 'read';
   static const String actionWrite = 'write';
   static const String actionRemove = 'remove';
@@ -31,6 +33,7 @@ class MiniAppDataTool {
   static const String actionDelete = 'delete';
 
   static const List<String> actions = [
+    actionGuide,
     actionList,
     actionRead,
     actionWrite,
@@ -72,7 +75,11 @@ class MiniAppDataTool {
       'description':
           'Read and change the data of the user\'s Moru mini apps (small web '
           'apps such as a water tracker or a shopping list) without opening '
-          'them. Call "list" first: it shows each app\'s id, what it does, '
+          'them. To build or update an app, call "guide" first for all moru.* '
+          'APIs, offline libraries, build-folder publishing and partial '
+          'updates. Optional topic narrows the guide; example returns complete '
+          'manifest and files for tracker, chart, phaser, galacean or sqlite. '
+          'For app data, call "list" first: it shows each app\'s id, what it does, '
           'how it stores its data and its keys. Keep the stored format '
           'exactly as the app expects; read a key before writing it. An open '
           'app redraws when its data changes. To fix an app, read its '
@@ -93,6 +100,7 @@ class MiniAppDataTool {
             'type': 'string',
             'enum': actions,
             'description':
+                'guide: offline API/build guide; optional topic or example. '
                 'list: installed apps. read: one key of app_id, or all its '
                 'data without key. write: set key of app_id to value. '
                 'remove: delete key of app_id. errors: error journal of '
@@ -102,6 +110,19 @@ class MiniAppDataTool {
                 'run_job: run job of app_id now. server: state and output '
                 'of the server of app_id. delete_job: remove job of app_id. '
                 'delete: remove app_id with all its data.',
+          },
+          'topic': {
+            'type': 'string',
+            'enum': MiniAppGuide.topics,
+            'description':
+                'guide: optional section; omit for the full overview.',
+          },
+          'example': {
+            'type': 'string',
+            'enum': [for (final item in MiniAppGuide.examples) item['id']],
+            'description':
+                'guide: complete runnable project as manifest plus text files. '
+                'Write them with write_file and publish the folder.',
           },
           'app_id': {'type': 'string', 'description': 'App id from "list".'},
           'key': {'type': 'string', 'description': 'Storage key.'},
@@ -126,8 +147,11 @@ class MiniAppDataTool {
 
   Future<String> execute(Map<String, dynamic> args) async {
     try {
-      await store.load();
       final action = actionOf(args);
+      if (action == actionGuide) {
+        return jsonEncode({'ok': true, ...await MiniAppGuide.read(args)});
+      }
+      await store.load();
       final Map<String, dynamic> result;
       switch (action) {
         case actionList:

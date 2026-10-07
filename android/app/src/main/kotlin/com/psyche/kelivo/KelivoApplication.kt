@@ -14,6 +14,7 @@ class KelivoApplication : Application() {
     val workspace by lazy { WorkspacePlugin(this) }
     val deviceTools by lazy { DeviceLocalToolsHandler(this) }
     private val chatBackgroundVideo by lazy { ChatBackgroundVideo(this) }
+    private val miniAppOrigin by lazy { MiniAppOrigin() }
 
     private val engineHolder = lazy {
         FlutterEngine(this).also { engine ->
@@ -24,6 +25,7 @@ class KelivoApplication : Application() {
             workspace.configure(messenger)
             deviceTools.configure(messenger)
             chatBackgroundVideo.configure(messenger)
+            miniAppOrigin.configure(engine)
             engine.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint.createDefault())
         }
     }
