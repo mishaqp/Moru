@@ -51,6 +51,7 @@ class HomeDesktopScaffold extends StatelessWidget {
     required this.buildAssistantBackground,
     this.appBarOverride,
     required this.body,
+    this.backgroundActive = true,
   });
 
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -81,6 +82,7 @@ class HomeDesktopScaffold extends StatelessWidget {
   final Widget Function(BuildContext context) buildAssistantBackground;
   final PreferredSizeWidget? appBarOverride;
   final Widget body;
+  final bool backgroundActive;
 
   static const Duration _sidebarAnimDuration = Duration(milliseconds: 260);
   static const Curve _sidebarAnimCurve = Curves.easeOutCubic;
@@ -90,6 +92,7 @@ class HomeDesktopScaffold extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return ChatFrostedBackdrop(
+      active: backgroundActive,
       backdrop: buildAssistantBackground(context),
       child: SizedBox.expand(
         child: Row(
@@ -126,9 +129,14 @@ class HomeDesktopScaffold extends StatelessWidget {
   }
 
   Widget _buildLeftSidebar(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final sidebarWidth = context.select<SettingsProvider, double>(
+      (settings) =>
+          settings.sidebarAppearance.widthFor(screenWidth, wide: true),
+    );
     final sidebar = SideDrawer(
       embedded: true,
-      embeddedWidth: embeddedSidebarWidth,
+      embeddedWidth: sidebarWidth,
       userName: context.watch<UserProvider>().name,
       assistantName: _getAssistantName(context),
       closePickerTicker: assistantPickerCloseTick,
@@ -151,14 +159,17 @@ class HomeDesktopScaffold extends StatelessWidget {
     return AnimatedContainer(
       duration: _sidebarAnimDuration,
       curve: _sidebarAnimCurve,
-      width: tabletSidebarOpen ? embeddedSidebarWidth : 0,
+      width: tabletSidebarOpen ? sidebarWidth : 0,
       color: Colors.transparent,
       child: ClipRect(
         child: OverflowBox(
           alignment: Alignment.centerLeft,
           minWidth: 0,
-          maxWidth: embeddedSidebarWidth,
-          child: SizedBox(width: embeddedSidebarWidth, child: sidebar),
+          maxWidth: sidebarWidth,
+          child: TickerMode(
+            enabled: tabletSidebarOpen,
+            child: SizedBox(width: sidebarWidth, child: sidebar),
+          ),
         ),
       ),
     );

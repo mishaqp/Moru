@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import '../../../core/models/message_part.dart';
+import '../../../core/models/tool_call_status.dart';
 import '../../home/services/ask_user_interaction_service.dart';
+import '../utils/chat_ui_work.dart';
 import '../utils/thinking_tag_parser.dart';
 import 'timeline_visibility.dart';
 
@@ -271,13 +273,35 @@ class TimelineVisibleBlock {
   bool get isThinking => thinkingSteps.isNotEmpty;
 }
 
+// Weak entries live only as long as the immutable persisted part. A changed
+// payload (even with the same message id/version) is a new part and decodes again.
+final _decodedToolParts = Expando<({Map<String, dynamic>? value})>();
+
+Map<String, dynamic>? decodeTimelineToolPart(ToolCallPart part) {
+  final cached = _decodedToolParts[part];
+  if (cached != null) return cached.value;
+  final decoded = _decodeJsonMap(part.payloadJson);
+  _decodedToolParts[part] = (value: decoded);
+  return decoded;
+}
+
 /// Parse a persisted tool_call payload the same way the renderer does.
 TimelineToolRef? parseTimelineToolPayload(
   String payloadJson, {
   int fallbackOrdinal = 0,
+  bool isStreaming = true,
+}) => _timelineToolFromPayload(
+  _decodeJsonMap(payloadJson),
+  fallbackOrdinal: fallbackOrdinal,
+  isStreaming: isStreaming,
+);
+
+TimelineToolRef? _timelineToolFromPayload(
+  Map<String, dynamic>? decoded, {
+  required int fallbackOrdinal,
+  required bool isStreaming,
 }) {
   try {
-    final decoded = _decodeJsonMap(payloadJson);
     if (decoded == null) return null;
     final providerId = (decoded['id'] ?? '').toString().trim();
     final name = (decoded['name'] ?? '').toString();
@@ -288,7 +312,11 @@ TimelineToolRef? parseTimelineToolPayload(
     final arguments = args is Map
         ? args.cast<String, dynamic>()
         : const <String, dynamic>{};
-    final loading = content == null || content.isEmpty;
+    final loading =
+        isStreaming &&
+        !toolCallWasStopped(metadata) &&
+        !toolCallResponseWasStopped(metadata) &&
+        (content == null || content.isEmpty);
     return TimelineToolRef(
       providerId: providerId,
       fallbackOrdinal: fallbackOrdinal,
@@ -315,7 +343,10 @@ TimelineToolRef? parseTimelineToolPayload(
 
 Map<String, dynamic>? _decodeJsonMap(String raw) {
   try {
-    final decoded = jsonDecode(raw);
+    final decoded = ChatUiWork.measure(
+      'timeline.jsonDecode',
+      () => jsonDecode(raw),
+    );
     if (decoded is Map<String, dynamic>) return decoded;
     if (decoded is Map) return decoded.cast<String, dynamic>();
   } catch (_) {}
@@ -351,6 +382,7 @@ TimelineProjection projectAssistantTimeline({
   String Function(String text)? transformText,
   bool? renderFromParts,
   bool partsArrivalOrdered = false,
+  bool isStreaming = true,
   // True when reasoningSegments carries the synthesized inline-think overlay.
   // Provider reasoning keeps tag-like text literal.
   bool? parseInlineThinking,
@@ -408,9 +440,11 @@ TimelineProjection projectAssistantTimeline({
           transformText: transformText,
           inlineThinking: useInlineThinking,
           inlineThinkingExpanded: inlineThinkingExpanded,
+          isStreaming: isStreaming,
         ),
       ),
       liveTools,
+      isStreaming: isStreaming,
     );
   }
 
@@ -433,6 +467,7 @@ TimelineProjection projectAssistantTimeline({
               ],
       ),
       liveTools,
+      isStreaming: isStreaming,
     );
   }
   final offsets = contentSplitOffsets;
@@ -462,6 +497,7 @@ TimelineProjection projectAssistantTimeline({
         ],
       ),
       liveTools,
+      isStreaming: isStreaming,
     );
   }
 
@@ -502,6 +538,7 @@ TimelineProjection projectAssistantTimeline({
       blocks: blocks,
     ),
     liveTools,
+    isStreaming: isStreaming,
   );
 }
 
@@ -512,8 +549,9 @@ TimelineProjection projectAssistantTimeline({
 /// to empty-id projected steps. Never synthesizes string ids.
 TimelineProjection mergeLiveToolsIntoProjection(
   TimelineProjection projection,
-  List<TimelineToolRef> liveTools,
-) {
+  List<TimelineToolRef> liveTools, {
+  bool isStreaming = true,
+}) {
   final liveById = <String, TimelineToolRef>{};
   final emptyIdLive = <TimelineToolRef>[];
   for (final tool in liveTools) {
@@ -526,18 +564,58 @@ TimelineProjection mergeLiveToolsIntoProjection(
     }
   }
   var emptyIndex = 0;
+  TimelineToolRef recover(TimelineToolRef tool) {
+    if (isStreaming || tool.loading || tool.content?.isNotEmpty == true) {
+      return tool;
+    }
+    final metadata = tool.metadata;
+    final raw = metadata?['workspace'];
+    final workspace = raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : Map<String, dynamic>.from(metadata ?? const {});
+    final status = workspace['status'];
+    // An empty result with a recorded terminal outcome is still trustworthy.
+    // With no outcome, retain the call and show interruption only in its UI
+    // metadata; never invent a result in the saved model history.
+    if (const {
+      'ok',
+      'completed',
+      'error',
+      'failed',
+      'denied',
+      'timeout',
+      'cancelled',
+      'interrupted',
+    }.contains(status)) {
+      return tool;
+    }
+    return tool.copyWith(
+      metadata: {
+        ...?metadata,
+        'workspace': {
+          ...workspace,
+          'tool': tool.toolName,
+          'status': 'interrupted',
+          'interrupted': true,
+        },
+      },
+    );
+  }
+
   TimelineToolRef resolve(TimelineToolRef projected) {
     final trimmed = projected.providerId.trim();
     if (trimmed.isNotEmpty) {
       final live = liveById[trimmed];
       if (live != null) {
-        return live.copyWith(fallbackOrdinal: projected.fallbackOrdinal);
+        return recover(
+          live.copyWith(fallbackOrdinal: projected.fallbackOrdinal),
+        );
       }
-      return projected;
+      return recover(projected);
     }
-    if (emptyIndex >= emptyIdLive.length) return projected;
+    if (emptyIndex >= emptyIdLive.length) return recover(projected);
     final live = emptyIdLive[emptyIndex++];
-    return live.copyWith(fallbackOrdinal: projected.fallbackOrdinal);
+    return recover(live.copyWith(fallbackOrdinal: projected.fallbackOrdinal));
   }
 
   return TimelineProjection(
@@ -620,6 +698,7 @@ List<TimelineProjectedBlock> _projectFromParts({
   String Function(String text)? transformText,
   bool inlineThinking = false,
   bool inlineThinkingExpanded = true,
+  bool isStreaming = true,
 }) {
   final blocks = <TimelineProjectedBlock>[];
   var pending = <TimelineProjectedStep>[];
@@ -682,10 +761,11 @@ List<TimelineProjectedBlock> _projectFromParts({
             reasoningOverlayIndex: provided == null ? null : overlayIndex,
           ),
         );
-      case ToolCallPart(:final payloadJson):
-        final parsed = parseTimelineToolPayload(
-          payloadJson,
+      case ToolCallPart():
+        final parsed = _timelineToolFromPayload(
+          decodeTimelineToolPart(part),
           fallbackOrdinal: toolCount,
+          isStreaming: isStreaming,
         );
         if (parsed == null || parsed.toolName == kBuiltinSearchToolName) {
           continue;

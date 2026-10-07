@@ -109,4 +109,40 @@ void main() {
       );
     },
   );
+
+  test('the phone Downloads folder is mounted at /downloads and survives a '
+      'refresh of the external mounts', () async {
+    Directory('${root.path}/Download').createSync();
+    File('${root.path}/Download/report.pdf').writeAsStringSync('%PDF');
+    final withDownloads = WorkspacePaths.sandboxed(
+      workspaceHostRoot: '${root.path}/ws',
+      sessionHostDir: '${root.path}/chat',
+      skillsHostDir: '${root.path}/skills',
+      externalMounts: mounts,
+      loadExternalMounts: () async => mounts,
+      downloadsHostDir: '${root.path}/Download',
+    );
+    final resolved = withDownloads.resolve(
+      '/downloads/report.pdf',
+      cwd: '/workspace',
+    );
+    expect(File(resolved.hostPath).readAsStringSync(), '%PDF');
+    expect(
+      withDownloads.toModelPath(resolved.hostPath),
+      '/downloads/report.pdf',
+    );
+    expect(withDownloads.mounts.map((m) => m.guest), contains('/downloads'));
+    expect(
+      () => withDownloads.resolve('/downloads/../ws', cwd: '/workspace'),
+      throwsA(isA<PathResolutionException>()),
+    );
+
+    await withDownloads.refreshExternalMounts();
+    expect(
+      withDownloads.mounts.where((m) => m.guest == '/downloads'),
+      hasLength(1),
+    );
+    // Without the folder nothing is mounted there.
+    expect(paths.mounts.map((m) => m.guest), isNot(contains('/downloads')));
+  });
 }

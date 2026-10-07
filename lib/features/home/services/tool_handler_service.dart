@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/assistant.dart';
+import '../../../core/models/workspace_binding.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/environment_provider.dart';
 import '../../../core/providers/mcp_provider.dart';
@@ -13,12 +15,16 @@ import '../../../core/providers/memory_provider_v2.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/tts_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
-import '../../../core/services/api/json_schema_utils.dart';
+import '../../../core/services/api/tool_call_cancellation.dart';
+import '../../../core/services/api/tool_call_argument_privacy.dart';
+import '../../../core/services/mcp/mcp_tool_privacy.dart';
+import '../../../core/services/api/tool_schema_normalizer.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/mcp/mcp_tool_service.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
 import '../../../core/services/memory/memory_tools.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
+import '../../../core/services/logging/problem_report_service.dart';
 import '../../../core/services/scheduled_tasks_service.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import '../../../core/services/tools/tool_schema_overrides.dart';
@@ -29,14 +35,23 @@ import '../../../core/services/workspace/workspace_runtime.dart';
 import '../../../core/services/workspace/workspace_tools_service.dart';
 import '../../../core/providers/workspace_provider.dart';
 import '../../../core/services/browser/browser_agent_session.dart';
+import '../../../core/services/browser/browser_cookie_export.dart';
 import '../../mini_apps/mini_app_checker.dart';
+import '../../mini_apps/mini_app_launcher.dart';
 import 'ask_user_interaction_service.dart';
 import 'assistant_manager_tool.dart';
+import 'browser_agent_tool.dart';
 import 'built_in_tool_names.dart';
 import 'local_tools_service.dart';
+import 'mcp_manager_tool.dart';
 import 'mini_app_data_tool.dart';
+import 'root_phone_control.dart';
+import 'root_shell_tool.dart';
 import 'scheduled_task_tool.dart';
+import 'spend_control_service.dart';
+import 'spend_control_tool.dart';
 import 'tool_approval_service.dart';
+import '../../../core/services/acp/acp_agent_manager.dart';
 
 /// 工具调用处理服务
 ///
@@ -45,7 +60,9 @@ import 'tool_approval_service.dart';
 /// - Memory 工具 (§10)
 /// - Search 工具
 class ToolHandlerService {
-  ToolHandlerService({required this.contextProvider});
+  ToolHandlerService({required this.contextProvider, this.compactContext});
+
+  SpendCompactHandler? compactContext;
 
   /// Build context (used for accessing providers)
   final BuildContext contextProvider;
@@ -83,7 +100,20 @@ class ToolHandlerService {
             workspaces.byId(id)?.isToolEnabled(name) ?? false,
         plans: _optional<TaskPlanRegistry>(),
         checkMiniApp: defaultTargetPlatform == TargetPlatform.android
-            ? MiniAppChecker.run
+            ? (app) {
+                final environment = contextProvider
+                    .read<EnvironmentProvider?>();
+                return MiniAppChecker.run(
+                  app,
+                  jobs: MiniAppLauncher.jobs,
+                  serverEnvironment: environment == null
+                      ? null
+                      : MiniAppLauncher.serverEnvironment(
+                          contextProvider.read<WorkspaceRuntimeProvider>(),
+                          environment,
+                        ),
+                );
+              }
             : null,
       );
     } catch (_) {
@@ -95,143 +125,15 @@ class ToolHandlerService {
   // Tool Schema Sanitization
   // ============================================================================
 
-  /// Sanitize/translate JSON Schema to each provider's accepted subset.
-  ///
-  /// Different providers (Google, OpenAI, Claude) have different requirements
-  /// for tool parameter schemas. This method normalizes schemas to work across
-  /// all providers.
+  /// Compatibility entry point; all provider conversion lives in the normalizer.
   static Map<String, dynamic> sanitizeToolParametersForProvider(
     Map<String, dynamic> schema,
     ProviderKind kind,
-  ) {
-    Map<String, dynamic> clone = _deepCloneMap(schema);
-    // Inline local $ref targets first: the allow-list below drops $ref/$defs,
-    // so an unresolved reference would reach the model as an empty schema and
-    // the whole nested object would silently vanish from the tool call.
-    clone = resolveJsonSchemaRefs(
-      clone,
-      expandAdditionalProperties: kind != ProviderKind.google,
-    );
-    clone = _sanitizeNode(clone, kind) as Map<String, dynamic>;
-    return clone;
-  }
-
-  static dynamic _sanitizeNode(dynamic node, ProviderKind kind) {
-    if (node is List) {
-      return node.map((e) => _sanitizeNode(e, kind)).toList();
-    }
-    if (node is! Map) return node;
-
-    final m = Map<String, dynamic>.from(node);
-    // Remove $schema as it's not needed for tool definitions
-    m.remove(r'$schema');
-
-    // Convert 'const' to 'enum' for compatibility
-    if (m.containsKey('const')) {
-      final v = m['const'];
-      if (v is String || v is num || v is bool) {
-        m['enum'] = [v];
-        // Keep the declared type in sync so a non-string const is not mistaken
-        // for a string enum downstream.
-        if (m['type'] == null) {
-          if (v is bool) {
-            m['type'] = 'boolean';
-          } else if (v is int) {
-            m['type'] = 'integer';
-          } else if (v is num) {
-            m['type'] = 'number';
-          } else {
-            m['type'] = 'string';
-          }
-        }
-      }
-      m.remove('const');
-    }
-
-    // Flatten anyOf/oneOf/allOf to first variant for simplicity
-    for (final key in [
-      'anyOf',
-      'oneOf',
-      'allOf',
-      'any_of',
-      'one_of',
-      'all_of',
-    ]) {
-      if (m[key] is List && (m[key] as List).isNotEmpty) {
-        final first = (m[key] as List).first;
-        final flattened = _sanitizeNode(first, kind);
-        m.remove(key);
-        if (flattened is Map<String, dynamic>) {
-          m
-            ..remove('type')
-            ..remove('properties')
-            ..remove('items');
-          m.addAll(flattened);
-        }
-      }
-    }
-
-    // Normalize type array to single type
-    final t = m['type'];
-    if (t is List && t.isNotEmpty) m['type'] = t.first.toString();
-
-    // Normalize items array to single item
-    final items = m['items'];
-    if (items is List && items.isNotEmpty) m['items'] = items.first;
-    if (m['items'] is Map) m['items'] = _sanitizeNode(m['items'], kind);
-
-    // Recursively sanitize properties
-    if (m['properties'] is Map) {
-      final props = Map<String, dynamic>.from(m['properties']);
-      final norm = <String, dynamic>{};
-      props.forEach((k, v) {
-        norm[k] = _sanitizeNode(v, kind);
-      });
-      m['properties'] = norm;
-    }
-
-    // additionalProperties can itself be a schema.
-    if (m['additionalProperties'] is Map) {
-      m['additionalProperties'] = _sanitizeNode(
-        m['additionalProperties'],
-        kind,
-      );
-    }
-
-    // Keep only allowed keys based on provider
-    Set<String> allowed;
-    switch (kind) {
-      case ProviderKind.google:
-        allowed = {
-          'type',
-          'description',
-          'properties',
-          'required',
-          'items',
-          'enum',
-        };
-        break;
-      case ProviderKind.openai:
-      case ProviderKind.claude:
-      case ProviderKind.local:
-        allowed = {
-          'type',
-          'description',
-          'properties',
-          'required',
-          'items',
-          'enum',
-          'additionalProperties',
-        };
-        break;
-    }
-    m.removeWhere((k, v) => !allowed.contains(k));
-    return m;
-  }
-
-  static Map<String, dynamic> _deepCloneMap(Map<String, dynamic> input) {
-    return jsonDecode(jsonEncode(input)) as Map<String, dynamic>;
-  }
+  ) => normalizeToolSchema(schema, switch (kind) {
+    ProviderKind.google => ToolSchemaTarget.gemini,
+    ProviderKind.claude => ToolSchemaTarget.claude,
+    _ => ToolSchemaTarget.openai,
+  }).parameters;
 
   static String _toolError({
     required String error,
@@ -370,39 +272,14 @@ class ToolHandlerService {
 
     if (tools.isEmpty) return [];
 
-    final providerCfg = settings.getProviderConfig(providerKey);
-    final providerKind = ProviderConfig.classify(
-      providerCfg.id,
-      explicitType: providerCfg.providerType,
-    );
-
     return tools.map((t) {
-      Map<String, dynamic> baseSchema;
-      if (t.schema != null && t.schema!.isNotEmpty) {
-        baseSchema = Map<String, dynamic>.from(t.schema!);
-      } else {
-        final props = <String, dynamic>{
-          for (final p in t.params) p.name: {'type': (p.type ?? 'string')},
-        };
-        final required = [
-          for (final p in t.params.where((e) => e.required)) p.name,
-        ];
-        baseSchema = {
-          'type': 'object',
-          'properties': props,
-          if (required.isNotEmpty) 'required': required,
-        };
-      }
-      final sanitized = sanitizeToolParametersForProvider(
-        baseSchema,
-        providerKind,
-      );
+      final baseSchema = McpToolService.sourceParameters(t);
       return {
         'type': 'function',
         'function': {
           'name': t.name,
           if ((t.description ?? '').isNotEmpty) 'description': t.description,
-          'parameters': sanitized,
+          'parameters': baseSchema,
         },
       };
     }).toList();
@@ -448,12 +325,40 @@ class ToolHandlerService {
       return '${name}_${DateTime.now().microsecondsSinceEpoch}';
     }
 
+    void ensureLiveToolCall() {
+      ToolCallCancellation.current?.throwIfCancelled();
+      final owner = ToolApprovalOwner.current;
+      if (owner != null && !owner.isActive()) {
+        throw StateError('tool_call_cancelled');
+      }
+    }
+
+    final privacy = McpToolPrivacy(mcp);
+    final assistantCredentials = <String>{};
+    Map<String, dynamic> publicAssistantArguments(Map<String, dynamic> args) =>
+        AssistantManagerTool.argumentsForModel(
+          args,
+          assistants: assistantProvider.assistants,
+          catalog: _assistantManagerCatalog(settings, mcp),
+          retainedCredentials: assistantCredentials,
+        );
+
     Future<Object?> approveAndExecuteMcp(
       String name,
       Map<String, dynamic> args, {
       String? toolCallId,
     }) async {
-      if (approvalService != null &&
+      privacy.capture(mcp);
+      if (privacy.containsCredential(args)) {
+        return _toolError(
+          error: 'credential_arguments',
+          message:
+              'MCP credential literals are not accepted in tool arguments. Configure credentials privately in MCP settings.',
+          tool: privacy.text(name),
+        );
+      }
+      final needsApproval =
+          !settings.toolAutoApproveAll &&
           toolSvc.toolNeedsApprovalForAssistant(
             mcp,
             assistantProvider,
@@ -461,22 +366,35 @@ class ToolHandlerService {
             toolName: name,
             routeSnapshot: routes,
             reservedNames: BuiltInToolNames.all,
-          )) {
+          );
+      if (needsApproval) {
+        if (approvalService == null) {
+          return _toolError(
+            error: 'approval_unavailable',
+            message: 'This MCP tool requires the user\'s confirmation.',
+            tool: privacy.text(name),
+          );
+        }
+        approvalService.setAutoApproveAll(false);
         final result = await approvalService.requestApproval(
           toolCallId: approvalIdFor(name, toolCallId),
           toolName: name,
           arguments: args,
           conversationId: conversationId,
         );
+        privacy.capture(mcp);
         if (!result.approved) {
           return _toolError(
             error: 'approval_denied',
-            message: result.denyReason ?? 'User denied the tool call',
-            tool: name,
+            message: privacy.text(
+              result.denyReason ?? 'User denied the tool call',
+            ),
+            tool: privacy.text(name),
           );
         }
       }
 
+      ensureLiveToolCall();
       return toolSvc.callToolForAssistant(
         mcp,
         assistantProvider,
@@ -490,8 +408,13 @@ class ToolHandlerService {
 
     final workspaceTools = workspaceContext == null ? null : _workspaceTools();
 
-    return (name, args, {toolCallId}) async {
+    Future<Object?> handler(
+      String name,
+      Map<String, dynamic> args, {
+      String? toolCallId,
+    }) async {
       try {
+        ensureLiveToolCall();
         if (workspaceContext != null &&
             workspaceTools != null &&
             WorkspaceToolsService.toolNames.contains(name)) {
@@ -509,10 +432,33 @@ class ToolHandlerService {
           return await approveAndExecuteMcp(name, args, toolCallId: toolCallId);
         }
 
+        final liveAssistant = assistant == null
+            ? null
+            : assistantProvider.getById(assistant.id);
+        bool localPermissionIsLive() =>
+            liveAssistant != null &&
+            LocalToolsService.isAvailableOnThisPlatform(name) &&
+            LocalToolsService.isEnabledForAssistant(name, liveAssistant);
+        if (LocalToolNames.all.contains(name) && !localPermissionIsLive()) {
+          return _toolError(
+            error: 'permission_denied',
+            message: 'This tool is disabled for the current assistant.',
+            tool: name,
+          );
+        }
+
         // Search tool
         if (name == SearchToolService.toolName &&
-            assistant?.searchEnabled == true) {
-          final q = (args['query'] ?? '').toString();
+            liveAssistant?.searchEnabled == true) {
+          final query = args['query'];
+          if (query is! String || query.trim().isEmpty) {
+            return _toolError(
+              error: 'invalid_arguments',
+              message: 'query must be a non-empty string.',
+              tool: name,
+            );
+          }
+          final q = query.trim();
           return await SearchToolService.executeSearch(q, settings);
         }
 
@@ -520,9 +466,10 @@ class ToolHandlerService {
         final memoryResult = await _handleMemoryToolCall(
           name,
           args,
-          assistant,
+          liveAssistant,
           conversationId: conversationId,
         );
+        ensureLiveToolCall();
         if (memoryResult != null) {
           return memoryResult;
         }
@@ -541,25 +488,33 @@ class ToolHandlerService {
           });
         }
 
-        // Mutating device tools and Shared Browser click/type actions modify
-        // user-visible state, so they require explicit approval first.
-        if (LocalToolNames.requiresApprovalFor(name, args) &&
-            assistant != null &&
-            LocalToolsService.isEnabledForAssistant(name, assistant) &&
-            approvalService != null) {
+        // Mutations require consent unless the saved global full access is on.
+        if (name != LocalToolNames.reportProblem &&
+            name != LocalToolNames.mcpManager &&
+            name != LocalToolNames.spendControl &&
+            LocalToolNames.requiresApprovalFor(name, args) &&
+            localPermissionIsLive() &&
+            !settings.toolAutoApproveAll) {
+          if (approvalService == null) {
+            return _toolError(
+              error: 'approval_unavailable',
+              message: 'This action requires the user\'s confirmation.',
+              tool: name,
+            );
+          }
+          approvalService.setAutoApproveAll(false);
           if (name == LocalToolNames.browserUse) {
-            // Set before the prompt is created (not just inside
-            // BrowserAgentTool.execute, which only runs after approval) so
-            // the browser page can already pick the matching request out of
-            // ToolApprovalService.pendingRequests instead of guessing.
             BrowserAgentSession.instance.setOwnerConversationId(conversationId);
           }
           final approval = await approvalService.requestApproval(
             toolCallId: approvalIdFor(name, toolCallId),
             toolName: name,
-            arguments: args,
+            arguments: name == LocalToolNames.assistantManager
+                ? publicAssistantArguments(args)
+                : args,
             conversationId: conversationId,
           );
+          ensureLiveToolCall();
           if (!approval.approved) {
             return _toolError(
               error: 'approval_denied',
@@ -567,6 +522,30 @@ class ToolHandlerService {
               tool: name,
             );
           }
+        }
+        if (LocalToolNames.all.contains(name)) {
+          final current = assistant == null
+              ? null
+              : assistantProvider.getById(assistant.id);
+          if (current == null ||
+              !LocalToolsService.isEnabledForAssistant(name, current)) {
+            return _toolError(
+              error: 'permission_denied',
+              message: 'This tool was disabled while awaiting confirmation.',
+              tool: name,
+            );
+          }
+        }
+        if (name == LocalToolNames.browserUse &&
+            settings.disabledBrowserActions.contains(
+              (args['action'] ?? '').toString().trim().toLowerCase(),
+            )) {
+          return jsonEncode({
+            'ok': false,
+            'error': 'action_disabled',
+            'message':
+                'This browser action is turned off in Settings > Browser.',
+          });
         }
 
         // Re-read phone-control permission on every call so disabling it also
@@ -584,12 +563,166 @@ class ToolHandlerService {
           }
         }
 
+        if (name == LocalToolNames.reportProblem) {
+          bool isEnabled() {
+            final current = assistant == null
+                ? null
+                : assistantProvider.getById(assistant.id);
+            return current != null &&
+                LocalToolsService.isEnabledForAssistant(name, current) &&
+                LocalToolsService.isAvailableOnThisPlatform(name);
+          }
+
+          if (!isEnabled()) {
+            return _toolError(
+              error: 'permission_denied',
+              message: 'Problem reports are disabled for this assistant.',
+              tool: name,
+            );
+          }
+          if (!settings.toolAutoApproveAll) {
+            if (approvalService == null) {
+              return _toolError(
+                error: 'approval_unavailable',
+                message: 'A problem report requires the user\'s confirmation.',
+                tool: name,
+              );
+            }
+            // The settings value changes before the provider's next rebuild.
+            approvalService.setAutoApproveAll(false);
+            final approval = await approvalService.requestApproval(
+              toolCallId: approvalIdFor(name, toolCallId),
+              toolName: name,
+              arguments: const {},
+              conversationId: conversationId,
+            );
+            ensureLiveToolCall();
+            if (!approval.approved) {
+              return _toolError(
+                error: 'approval_denied',
+                message: approval.denyReason ?? 'User denied the tool call',
+                tool: name,
+              );
+            }
+          }
+          ensureLiveToolCall();
+          if (!isEnabled()) {
+            return _toolError(
+              error: 'permission_denied',
+              message: 'Problem reports are disabled for this assistant.',
+              tool: name,
+            );
+          }
+          return jsonEncode(
+            await ProblemReportService().create(
+              settings: settings,
+              mcp: mcp,
+              environment: _optional<EnvironmentProvider>(),
+              checkCancelled: ensureLiveToolCall,
+            ),
+          );
+        }
+
+        if (name == LocalToolNames.mcpManager) {
+          void checkAllowed() {
+            ensureLiveToolCall();
+            final current = assistant == null
+                ? null
+                : assistantProvider.getById(assistant.id);
+            if (current == null ||
+                !LocalToolsService.isEnabledForAssistant(name, current)) {
+              throw StateError('permission_denied');
+            }
+          }
+
+          try {
+            checkAllowed();
+          } catch (_) {
+            return _toolError(
+              error: 'permission_denied',
+              message: 'MCP management is disabled for this assistant.',
+              tool: name,
+            );
+          }
+          approvalService?.setAutoApproveAll(settings.toolAutoApproveAll);
+          final conversation = conversationId == null
+              ? null
+              : _optional<ChatService>()?.getConversation(conversationId);
+          final binding = conversation != null
+              ? WorkspaceBinding.fromExtras(conversation.extras)
+              : (workspaceContext?.skillsOnly == false
+                    ? workspaceContext!.binding
+                    : null);
+          return McpManagerTool(
+            provider: mcp,
+            assistants: assistantProvider,
+            chat: _optional<ChatService>(),
+            currentAssistantId: conversation?.assistantId ?? assistant?.id,
+            defaultWorkspaceId: binding?.isBound == true
+                ? binding!.workspaceId
+                : null,
+            approvals: approvalService,
+            autoApproveAll: settings.toolAutoApproveAll,
+            checkAllowed: checkAllowed,
+          ).execute(
+            args,
+            toolCallId: approvalIdFor(name, toolCallId),
+            conversationId: conversationId,
+          );
+        }
+
+        if (name == LocalToolNames.spendControl) {
+          final chats = _optional<ChatService>();
+          if (chats == null ||
+              conversationId == null ||
+              chats.getConversation(conversationId) == null) {
+            return _toolError(
+              error: 'no_conversation',
+              message: 'Spend control needs an existing chat.',
+              tool: name,
+            );
+          }
+          void checkAllowed() {
+            ensureLiveToolCall();
+            final current = assistant == null
+                ? null
+                : assistantProvider.getById(assistant.id);
+            if (current == null ||
+                !LocalToolsService.isEnabledForAssistant(name, current) ||
+                chats.getConversation(conversationId) == null) {
+              throw StateError('permission_denied');
+            }
+          }
+
+          final compress = compactContext;
+          return SpendControlTool(
+            settings: settings,
+            approvals: approvalService,
+            checkAllowed: checkAllowed,
+            readStatus: () =>
+                SpendControlService(chats: chats, settings: settings).status(
+                  conversationId,
+                  assistant: assistant == null
+                      ? null
+                      : assistantProvider.getById(assistant.id),
+                ),
+            compact: compress == null
+                ? null
+                : () => compress(conversationId, checkAllowed: checkAllowed),
+          ).execute(
+            args,
+            toolCallId: approvalIdFor(name, toolCallId),
+            conversationId: conversationId,
+          );
+        }
+
         if (name == LocalToolNames.assistantManager &&
             assistant != null &&
             LocalToolsService.isEnabledForAssistant(name, assistant)) {
           // Changes are only made after the approval prompt above; a caller
           // without one (e.g. a background run) may only read.
-          if (approvalService == null &&
+          if (!settings.toolAutoApproveAll &&
+              approvalService == null &&
               AssistantManagerTool.requiresApproval(args)) {
             return _toolError(
               error: 'approval_unavailable',
@@ -611,7 +744,8 @@ class ToolHandlerService {
             LocalToolsService.isEnabledForAssistant(name, assistant)) {
           // Changes are only made after the approval prompt above; a caller
           // without one (e.g. a background run) may only read.
-          if (approvalService == null &&
+          if (!settings.toolAutoApproveAll &&
+              approvalService == null &&
               ScheduledTaskTool.requiresApproval(args)) {
             return _toolError(
               error: 'approval_unavailable',
@@ -637,10 +771,64 @@ class ToolHandlerService {
           ).execute(args);
         }
 
+        if (name == LocalToolNames.rootShell &&
+            assistant != null &&
+            LocalToolsService.isEnabledForAssistant(name, assistant)) {
+          // Commands that change anything are approved first; a caller
+          // without the prompt (e.g. a background run) may only read. The
+          // permission is read again so turning it off stops a tool loop.
+          final current = assistantProvider.getById(assistant.id);
+          if (current == null || !current.localToolIds.contains(name)) {
+            return _toolError(
+              error: 'permission_denied',
+              message: 'Root commands are disabled for this assistant.',
+              tool: name,
+            );
+          }
+          if (!settings.toolAutoApproveAll &&
+              approvalService == null &&
+              LocalToolNames.requiresApprovalFor(name, args)) {
+            return _toolError(
+              error: 'approval_unavailable',
+              message:
+                  'Root commands that change something need the user\'s '
+                  'confirmation, which is not available here.',
+              tool: name,
+            );
+          }
+          return const RootShellTool().execute(args);
+        }
+
         if (name == LocalToolNames.miniApps &&
             assistant != null &&
             LocalToolsService.isEnabledForAssistant(name, assistant)) {
-          return MiniAppDataTool(store: MiniAppStore.instance).execute(args);
+          // Deleting is only done after the approval prompt above; a caller
+          // without one (e.g. a background run) may not delete.
+          if (!settings.toolAutoApproveAll &&
+              approvalService == null &&
+              MiniAppDataTool.requiresApproval(args)) {
+            return _toolError(
+              error: 'approval_unavailable',
+              message:
+                  'Deleting mini apps or jobs needs the user\'s confirmation, '
+                  'which is not available here.',
+              tool: name,
+            );
+          }
+          return MiniAppDataTool(
+            store: MiniAppStore.instance,
+            jobs: MiniAppLauncher.jobs,
+            serverStatus: MiniAppLauncher.servers.status,
+          ).execute(args);
+        }
+
+        if (name == LocalToolNames.browserUse &&
+            '${args['action']}'.trim().toLowerCase() == 'export_cookies') {
+          return _exportBrowserCookies(
+            conversationId,
+            approvalService,
+            fullAccess: settings.toolAutoApproveAll,
+          );
         }
 
         // Local tools
@@ -670,6 +858,23 @@ class ToolHandlerService {
           },
         );
         if (localResult != null) {
+          if (name == LocalToolNames.phoneControl &&
+              assistant != null &&
+              RootPhoneControl.accessibilityUnavailable(localResult) &&
+              (assistantProvider
+                      .getById(assistant.id)
+                      ?.localToolIds
+                      .contains(LocalToolNames.rootShell) ??
+                  false)) {
+            // Accessibility is off; root can still read and drive the screen.
+            return RootPhoneControl(
+              setClipboard: (text) =>
+                  Clipboard.setData(ClipboardData(text: text)),
+            ).execute(args);
+          }
+          if (name == LocalToolNames.browserUse) {
+            return BrowserAgentTool.forModel(localResult);
+          }
           return localResult;
         }
 
@@ -691,6 +896,15 @@ class ToolHandlerService {
               arguments: args,
               conversationId: conversationId,
             );
+            ensureLiveToolCall();
+            final current = assistantProvider.getById(assistant.id);
+            if (current == null || !current.localToolIds.contains(name)) {
+              return _toolError(
+                error: 'permission_denied',
+                message: 'Ask user was disabled while awaiting an answer.',
+                tool: name,
+              );
+            }
             return result.toJsonString();
           } on AskUserInvalidRequestException catch (e) {
             return _toolError(
@@ -705,15 +919,55 @@ class ToolHandlerService {
       } catch (e) {
         // Catch unexpected exceptions and return error JSON to LLM
         // This prevents tool failures from terminating the chat flow
+        privacy.capture(mcp);
         return _toolError(
           error: 'execution_error',
-          message: e.toString(),
-          tool: name,
+          message: privacy.text(e.toString()),
+          tool: privacy.text(name),
           instruction:
               'The tool execution failed unexpectedly. You may try again with different parameters or inform the user about the issue.',
         );
       }
-    };
+    }
+
+    return ToolCallArgumentPrivacy.register(handler, (name, args) {
+      final publicName = args['value'];
+      if (name == '__mcp_private_name__' &&
+          publicName is String &&
+          (BuiltInToolNames.all.contains(publicName) ||
+              routes.containsExposedName(publicName))) {
+        return args;
+      }
+      if (name == LocalToolNames.mcpManager) {
+        privacy.capture(mcp);
+        return privacy.managerArgumentsForModel(
+          args,
+          publicIds: [
+            ...assistantProvider.assistants.map((assistant) => assistant.id),
+            ...?_optional<WorkspaceProvider>()?.workspaces.map(
+              (workspace) => workspace.id,
+            ),
+          ],
+        );
+      }
+      if (name == LocalToolNames.assistantManager) {
+        return publicAssistantArguments(args);
+      }
+      if (routes.containsExposedName(name) ||
+          !BuiltInToolNames.all.contains(name)) {
+        privacy.capture(mcp);
+        return privacy.argumentsForModel(args);
+      }
+      return args;
+    });
+  }
+
+  AcpAgentManager? _agentManager() {
+    try {
+      return contextProvider.read<AcpAgentManager>();
+    } on ProviderNotFoundException {
+      return null;
+    }
   }
 
   AssistantManagerCatalog _assistantManagerCatalog(
@@ -721,6 +975,7 @@ class ToolHandlerService {
     McpProvider mcp,
   ) {
     final configs = settings.providerConfigs;
+    final privacy = McpToolPrivacy(mcp);
     final keys = [
       ...settings.providersOrder.where(configs.containsKey),
       ...configs.keys.where((k) => !settings.providersOrder.contains(k)),
@@ -736,10 +991,10 @@ class ToolHandlerService {
           ),
       ],
       mcpServers: [
-        for (final server in mcp.servers)
+        for (final server in mcp.configuredServers)
           AssistantManagerOption(
             id: server.id,
-            name: server.name,
+            name: privacy.text(server.name),
             enabled: server.enabled,
           ),
       ],
@@ -757,12 +1012,69 @@ class ToolHandlerService {
             in contextProvider.read<WorkspaceProvider>().workspaces)
           AssistantManagerOption(id: workspace.id, name: workspace.name),
       ],
+      agents: [
+        if (_agentManager() case final agents?)
+          for (final spec in agents.agents)
+            AssistantManagerOption(
+              id: spec.id,
+              name: spec.name,
+              enabled: agents.state(spec.id) == AcpInstallState.installed,
+            ),
+      ],
       localToolIds: [
         for (final id in LocalToolNames.all)
           if (LocalToolsService.isAvailableOnThisPlatform(id) &&
               id != LocalToolNames.browserUse)
             id,
       ],
+    );
+  }
+
+  /// browser_use export_cookies: the open site's cookies as a file in the
+  /// chat folder of the conversation's workspace, for the terminal. Only
+  /// after the user's approval, which [handleToolCall] asked for already.
+  Future<String> _exportBrowserCookies(
+    String? conversationId,
+    ToolApprovalService? approvalService, {
+    required bool fullAccess,
+  }) async {
+    if (approvalService == null && !fullAccess) {
+      return _toolError(
+        error: 'approval_unavailable',
+        message:
+            'Exporting cookies needs the user\'s confirmation, which is not '
+            'available here.',
+        tool: LocalToolNames.browserUse,
+      );
+    }
+    final session = BrowserAgentSession.instance;
+    if (!session.isAttached) {
+      return _toolError(
+        error: 'browser_not_open',
+        message: 'Open the site in the browser first.',
+        tool: LocalToolNames.browserUse,
+      );
+    }
+    final ctx = await WorkspaceToolsService.resolve(
+      conversationId: conversationId,
+      workspaceProvider: contextProvider.read<WorkspaceProvider>(),
+      runtimeProvider: contextProvider.read<WorkspaceRuntimeProvider>(),
+      chatService: contextProvider.read<ChatService>(),
+    );
+    if (ctx == null) {
+      return _toolError(
+        error: 'workspace_required',
+        message:
+            'Cookies go to the terminal of a workspace; this chat has none.',
+        tool: LocalToolNames.browserUse,
+      );
+    }
+    return jsonEncode(
+      await BrowserCookieExport.export(
+        pageUrl: await session.controller?.currentUrl(),
+        hostDir: ctx.sessionDir,
+        modelDir: ctx.paths.modelSessionDir,
+      ),
     );
   }
 
@@ -778,7 +1090,12 @@ class ToolHandlerService {
     final settings = contextProvider.read<SettingsProvider>();
     if (settings.legacyMemoryMode) {
       if (MemoryTools.allToolNames.contains(name)) return null;
-      return _handleLegacyMemoryToolCall(name, args, assistant);
+      return _handleLegacyMemoryToolCall(
+        name,
+        args,
+        assistant,
+        conversationId: conversationId,
+      );
     }
 
     if (assistant == null) return null;
@@ -847,8 +1164,9 @@ class ToolHandlerService {
   Future<String?> _handleLegacyMemoryToolCall(
     String name,
     Map<String, dynamic> args,
-    Assistant? assistant,
-  ) async {
+    Assistant? assistant, {
+    String? conversationId,
+  }) async {
     if (assistant?.enableMemory != true) return null;
     if (name != 'create_memory' &&
         name != 'edit_memory' &&
@@ -857,37 +1175,49 @@ class ToolHandlerService {
     }
 
     try {
+      if (_optional<ChatService>()?.isTemporaryConversation(conversationId) ??
+          false) {
+        return _toolError(
+          error: 'temporary_conversation',
+          message: 'Memory cannot be written from a temporary conversation.',
+          tool: name,
+        );
+      }
       final mp = contextProvider.read<MemoryProvider>();
 
       if (name == 'create_memory') {
-        final content = (args['content'] ?? '').toString();
-        if (content.isEmpty) {
+        final content = args['content'];
+        if (content is! String || content.isEmpty) {
           return _toolError(
             error: 'invalid_memory_content',
-            message: 'Memory content must not be empty.',
+            message: 'Memory content must be a non-empty string.',
             tool: name,
           );
         }
         final m = await mp.add(assistantId: assistant!.id, content: content);
         return m.content;
       } else if (name == 'edit_memory') {
-        final id = (args['id'] as num?)?.toInt() ?? -1;
-        final content = (args['content'] ?? '').toString();
-        if (id <= 0) {
+        final id = args['id'];
+        final content = args['content'];
+        if (id is! num || !id.isFinite || id <= 0 || id != id.toInt()) {
           return _toolError(
             error: 'invalid_memory_id',
             message: 'Memory id must be a positive integer.',
             tool: name,
           );
         }
-        if (content.isEmpty) {
+        if (content is! String || content.isEmpty) {
           return _toolError(
             error: 'invalid_memory_content',
-            message: 'Memory content must not be empty.',
+            message: 'Memory content must be a non-empty string.',
             tool: name,
           );
         }
-        final m = await mp.update(id: id, content: content);
+        final m = await mp.update(
+          id: id.toInt(),
+          content: content,
+          assistantId: assistant!.id,
+        );
         if (m == null) {
           return _toolError(
             error: 'memory_not_found',
@@ -899,15 +1229,15 @@ class ToolHandlerService {
         }
         return m.content;
       } else if (name == 'delete_memory') {
-        final id = (args['id'] as num?)?.toInt() ?? -1;
-        if (id <= 0) {
+        final id = args['id'];
+        if (id is! num || !id.isFinite || id <= 0 || id != id.toInt()) {
           return _toolError(
             error: 'invalid_memory_id',
             message: 'Memory id must be a positive integer.',
             tool: name,
           );
         }
-        final ok = await mp.delete(id: id);
+        final ok = await mp.delete(id: id.toInt(), assistantId: assistant!.id);
         if (!ok) {
           return _toolError(
             error: 'memory_not_found',

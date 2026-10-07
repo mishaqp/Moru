@@ -386,7 +386,7 @@ class _SaveButtonState extends State<_SaveButton> {
       final bytes = audio.$1;
       final extension = audio.$2;
       final fileName =
-          'kelivo_tts_${DateTime.now().millisecondsSinceEpoch}.$extension';
+          'moru_tts_${DateTime.now().millisecondsSinceEpoch}.$extension';
       final savePath = await FilePicker.platform.saveFile(
         dialogTitle: widget.l10n.ttsSaveDialogTitle,
         fileName: fileName,

@@ -25,6 +25,16 @@ typedef ScheduledTaskExecutor =
       Future<void> Function(String conversationId) onConversation,
     );
 
+/// Runs one background job of a mini app: calls [function] of app [appId].
+/// Throws when the job failed.
+typedef MiniAppJobExecutor =
+    Future<void> Function(
+      String appId,
+      String jobId,
+      String function,
+      ScheduledRunCancellation cancellation,
+    );
+
 class ScheduledTasksService extends ChangeNotifier {
   ScheduledTasksService({MethodChannel? channel})
     : _channel = channel ?? const MethodChannel('app.scheduled_tasks') {
@@ -34,6 +44,9 @@ class ScheduledTasksService extends ChangeNotifier {
 
   final MethodChannel _channel;
   ScheduledTaskExecutor? _executor;
+
+  /// Runs the planner's mini app jobs (kind `miniAppJob`).
+  MiniAppJobExecutor? miniAppJobs;
   final _active = <String, ScheduledRunCancellation>{};
   List<ScheduledTask> tasks = const [];
   bool exactAlarms = false;
@@ -69,14 +82,11 @@ class ScheduledTasksService extends ChangeNotifier {
         if (_active.containsKey(id)) return;
         final cancellation = ScheduledRunCancellation();
         _active[id] = cancellation;
+        final task = jsonDecode(args['task'] as String) as Map<String, dynamic>;
         unawaited(
-          _execute(
-            id,
-            ScheduledTask.fromJson(
-              jsonDecode(args['task'] as String) as Map<String, dynamic>,
-            ),
-            cancellation,
-          ),
+          task['kind'] == 'miniAppJob'
+              ? _executeJob(id, task, cancellation)
+              : _execute(id, ScheduledTask.fromJson(task), cancellation),
         );
       case 'cancel':
         await _active[call.arguments]?.cancel();
@@ -116,6 +126,37 @@ class ScheduledTasksService extends ChangeNotifier {
     } finally {
       _active.remove(id);
       await refresh();
+    }
+  }
+
+  Future<void> _executeJob(
+    String id,
+    Map<String, dynamic> job,
+    ScheduledRunCancellation cancellation,
+  ) async {
+    Map<String, Object?> result;
+    try {
+      final executor = miniAppJobs;
+      if (executor == null) throw StateError('runner_not_ready');
+      await executor(
+        job['appId'] as String,
+        job['jobId'] as String,
+        job['run'] as String,
+        cancellation,
+      );
+      result = {'status': 'completed'};
+    } catch (e) {
+      result = {
+        'status': 'failed',
+        'error': e is StateError ? e.message : e.toString(),
+      };
+    }
+    try {
+      await _channel.invokeMethod<void>('finish', {'runId': id, ...result});
+    } catch (e) {
+      _recordError(e);
+    } finally {
+      _active.remove(id);
     }
   }
 

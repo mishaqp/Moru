@@ -28,6 +28,7 @@ import '../controllers/generation_controller.dart';
 import 'ask_user_interaction_service.dart';
 import 'message_builder_service.dart';
 import 'tool_approval_service.dart';
+import 'spend_control_service.dart';
 import '../utils/model_display_helper.dart';
 
 /// Callback types for UI updates from MessageGenerationService
@@ -66,6 +67,7 @@ class PreparedGeneration {
   final ToolCallHandler? onToolCall;
   final bool hasBuiltInSearch;
   final List<String> lastUserImagePaths;
+  final String? spendWarning;
 
   PreparedGeneration({
     required this.apiMessages,
@@ -73,6 +75,7 @@ class PreparedGeneration {
     this.onToolCall,
     required this.hasBuiltInSearch,
     required this.lastUserImagePaths,
+    this.spendWarning,
   });
 }
 
@@ -139,6 +142,9 @@ class MessageGenerationService {
     String? processingMessageId,
     String? requiredAttachmentMessageId,
   }) async {
+    final stopMessage = AppLocalizations.of(
+      contextProvider,
+    )?.spendHardStopMessage;
     final cfg = settings.getProviderConfig(providerKey);
     final kind = ProviderConfig.classify(
       providerKey,
@@ -376,6 +382,28 @@ class MessageGenerationService {
     }
     messageBuilderService.stripInternalRevisionIds(apiMessages);
 
+    // After frozen user prompts and context logging: this transient line is
+    // only part of the outgoing request, never persisted message content.
+    String? spendWarning;
+    if (settings.spendLimits.enabled && currentConversation != null) {
+      final spend =
+          await SpendControlService(
+            chats: chatService,
+            settings: settings,
+          ).status(
+            currentConversation.id,
+            assistant: assistant,
+            providerKey: providerKey,
+            modelId: modelId,
+            includeContext: false,
+          );
+      if (spend.blocked) {
+        throw StateError(stopMessage ?? 'Spending limit reached.');
+      }
+      messageBuilderService.injectSpendWarning(apiMessages, spend);
+      spendWarning = spend.systemWarning;
+    }
+
     final onToolCall = toolDefs.isNotEmpty
         ? generationController.buildToolCallHandler(
             settings,
@@ -394,6 +422,7 @@ class MessageGenerationService {
       onToolCall: onToolCall,
       hasBuiltInSearch: hasBuiltInSearch,
       lastUserImagePaths: lastUserImagePaths,
+      spendWarning: spendWarning,
     );
   }
 
@@ -423,6 +452,7 @@ class MessageGenerationService {
     required Assistant? assistant,
     required String modelId,
     required String providerKey,
+    String? queuedInputId,
   }) async {
     final userParts = await buildPersistedUserMessageParts(
       input,
@@ -450,6 +480,7 @@ class MessageGenerationService {
       userParts: userParts,
       modelId: modelId,
       providerId: providerKey,
+      queuedInputId: queuedInputId,
     );
     return (
       userMessage: result.userMessage!,
@@ -618,6 +649,7 @@ class MessageGenerationService {
     required bool enableReasoning,
     required bool generateTitleOnFinish,
     String? generationRunId,
+    String? executionId,
     bool scheduled = false,
     bool scheduledNotify = true,
     bool scheduledPreview = true,
@@ -630,6 +662,7 @@ class MessageGenerationService {
     return stream_ctrl.GenerationContext(
       assistantMessage: assistantMessage,
       apiMessages: prepared.apiMessages,
+      spendWarning: prepared.spendWarning,
       userImagePaths: userImagePaths,
       allowImagesApiRouting: allowImagesApiRouting,
       providerKey: providerKey,
@@ -650,6 +683,7 @@ class MessageGenerationService {
       ocrActive: ocrActive,
       generateTitleOnFinish: generateTitleOnFinish,
       generationRunId: generationRunId,
+      executionId: executionId,
       scheduled: scheduled,
       scheduledNotify: scheduledNotify,
       scheduledPreview: scheduledPreview,

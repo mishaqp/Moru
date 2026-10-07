@@ -20,7 +20,7 @@ class MermaidViewHandle {
   });
 }
 
-/// Mobile/desktop (non-web) Mermaid renderer using webview_flutter.
+/// Android Mermaid renderer using webview_flutter.
 /// Returns a handle with the widget and an export-to-PNG action.
 MermaidViewHandle? createMermaidView(
   String code,
@@ -328,8 +328,7 @@ class _MermaidInlineWebViewState extends State<_MermaidInlineWebView> {
       );
       if (b64 == null || b64.isEmpty) return false;
       final bytes = base64Decode(b64);
-      // Desktop: Save As dialog (use existing file_picker, same as image viewer)
-      // Mobile: save directly to gallery
+      // Android: save directly to gallery
       final name = 'kelivo-mermaid-${DateTime.now().millisecondsSinceEpoch}';
       final result = await ImageGallerySaverPlus.saveImage(
         bytes,

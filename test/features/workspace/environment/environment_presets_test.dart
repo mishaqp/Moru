@@ -211,7 +211,7 @@ void main() {
       expect(scroll.position.extentAfter, closeTo(0, 0.1));
       expect(tester.takeException(), isNull);
     },
-    variant: TargetPlatformVariant.mobile(),
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
   testWidgets(
@@ -243,7 +243,7 @@ void main() {
       expect(logController(tester).position.extentAfter, closeTo(0, 0.1));
       expect(tester.takeException(), isNull);
     },
-    variant: TargetPlatformVariant.mobile(),
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
   testWidgets(
@@ -375,11 +375,11 @@ void main() {
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
-  for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+  for (final alpine in [false, true]) {
     testWidgets(
-      '$platform presets install and expose the platform package source',
+      'Android presets install and expose the package source (alpine=$alpine)',
       (tester) async {
-        await setup(tester, alpine: platform == TargetPlatform.iOS);
+        await setup(tester, alpine: alpine);
         await tester.runAsync(service.refresh);
         await pump(
           tester,
@@ -399,15 +399,13 @@ void main() {
           find.byKey(const ValueKey('environment-dependency-python')),
         );
         await tester.pumpAndSettle();
-        final category = platform == TargetPlatform.iOS ? 'APK' : 'APT';
+        final category = alpine ? 'APK' : 'APT';
         expect(find.text(category), findsOneWidget);
         expect(find.text('pip'), findsOneWidget);
         await tester.tap(find.text(category));
         await tester.pumpAndSettle();
         expect(find.byType(MirrorPage), findsOneWidget);
-        final mirrorCategory = platform == TargetPlatform.iOS
-            ? MirrorCategory.apk
-            : MirrorCategory.apt;
+        final mirrorCategory = alpine ? MirrorCategory.apk : MirrorCategory.apt;
         final toggle = find.byKey(EnvironmentPane.useMirrorKey(mirrorCategory));
         await tester.tap(toggle);
         await tester.runAsync(
@@ -417,7 +415,7 @@ void main() {
         expect(env.mirrors[mirrorCategory]?.useMirror, isTrue);
         expect(
           env.mirrors[mirrorCategory]?.mirrorId,
-          platform == TargetPlatform.iOS ? 'alpine.tuna' : 'apt.tuna',
+          alpine ? 'alpine.tuna' : 'apt.tuna',
         );
         await tester.tap(toggle);
         await tester.runAsync(
@@ -451,7 +449,7 @@ void main() {
         expect(find.text('安装日志'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
-      variant: TargetPlatformVariant.only(platform),
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
     );
   }
 }

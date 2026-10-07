@@ -23,12 +23,40 @@ class AssistantProvider extends ChangeNotifier {
   String? _currentAssistantId;
   final ChatService? chatService;
 
-  List<Assistant> get assistants => List.unmodifiable(_assistants);
+  Set<String>? Function()? _liveMcpServerIds;
+  Future<void>? _mcpServersLoaded;
+
+  /// Bound after MCP construction to avoid the workspace/assistant dependency cycle.
+  void bindMcpServers({
+    required Set<String>? Function() liveMcpServerIds,
+    Future<void>? mcpServersLoaded,
+  }) {
+    _liveMcpServerIds = liveMcpServerIds;
+    _mcpServersLoaded = mcpServersLoaded;
+  }
+
+  Assistant _withLiveMcpServers(Assistant assistant) {
+    final live = _liveMcpServerIds?.call();
+    if (live == null) return assistant;
+    final ids = assistant.mcpServerIds.where(live.contains).toList();
+    return listEquals(ids, assistant.mcpServerIds)
+        ? assistant
+        : assistant.copyWith(mcpServerIds: ids);
+  }
+
+  /// Used to distinguish an inherited stale selection from a newly supplied id.
+  List<String> getStoredMcpServerIds(String assistantId) => [
+    for (final assistant in _assistants)
+      if (assistant.id == assistantId) ...assistant.mcpServerIds,
+  ];
+
+  List<Assistant> get assistants =>
+      List.unmodifiable(_assistants.map(_withLiveMcpServers));
   String? get currentAssistantId => _currentAssistantId;
   Assistant? get currentAssistant {
     final idx = _assistants.indexWhere((a) => a.id == _currentAssistantId);
-    if (idx != -1) return _assistants[idx];
-    if (_assistants.isNotEmpty) return _assistants.first;
+    if (idx != -1) return _withLiveMcpServers(_assistants[idx]);
+    if (_assistants.isNotEmpty) return _withLiveMcpServers(_assistants.first);
     return null;
   }
 
@@ -84,7 +112,7 @@ class AssistantProvider extends ChangeNotifier {
       }
       if (changed) {
         try {
-          await _persist();
+          await _persist(waitForMcpServers: false);
         } catch (_) {}
       }
     }
@@ -268,11 +296,33 @@ class AssistantProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> _persist() async {
+  Future<void> _persist({bool waitForMcpServers = true}) async {
+    if (waitForMcpServers) await _mcpServersLoaded;
+    for (var i = 0; i < _assistants.length; i++) {
+      _assistants[i] = _withLiveMcpServers(_assistants[i]);
+    }
     await preferences.setString(
       _assistantsKey,
       Assistant.encodeList(_assistants),
     );
+  }
+
+  Future<void> removeMcpServerId(String id) async {
+    await loaded;
+    var changed = false;
+    for (var i = 0; i < _assistants.length; i++) {
+      final assistant = _assistants[i];
+      if (!assistant.mcpServerIds.contains(id)) continue;
+      _assistants[i] = assistant.copyWith(
+        mcpServerIds: assistant.mcpServerIds
+            .where((value) => value != id)
+            .toList(),
+      );
+      changed = true;
+    }
+    if (!changed) return;
+    await _persist();
+    notifyListeners();
   }
 
   Future<void> setCurrentAssistant(String id) async {
@@ -286,7 +336,7 @@ class AssistantProvider extends ChangeNotifier {
   Assistant? getById(String id) {
     final idx = _assistants.indexWhere((a) => a.id == id);
     if (idx == -1) return null;
-    return _assistants[idx];
+    return _withLiveMcpServers(_assistants[idx]);
   }
 
   // Lightweight accessor so callers don't depend on Assistant.presetMessages symbol

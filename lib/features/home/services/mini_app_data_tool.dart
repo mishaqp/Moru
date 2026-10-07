@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../../core/services/mini_apps/mini_app_guide.dart';
+import '../../../core/services/mini_apps/mini_app_jobs.dart';
 import '../../../core/services/mini_apps/mini_app_store.dart';
 
 class _ToolFailure implements Exception {
@@ -12,26 +14,56 @@ class _ToolFailure implements Exception {
 /// The `mini_apps` local tool: the chat reads and changes the data of the
 /// user's mini apps, e.g. "I drank a glass of water", without opening them.
 class MiniAppDataTool {
-  const MiniAppDataTool({required this.store});
+  const MiniAppDataTool({required this.store, this.jobs, this.serverStatus});
 
   static const String toolName = 'mini_apps';
 
   static const String actionList = 'list';
+  static const String actionGuide = 'guide';
   static const String actionRead = 'read';
   static const String actionWrite = 'write';
   static const String actionRemove = 'remove';
+  static const String actionErrors = 'errors';
+  static const String actionVersions = 'versions';
+  static const String actionRollback = 'rollback';
+  static const String actionJobs = 'jobs';
+  static const String actionRunJob = 'run_job';
+  static const String actionServer = 'server';
+  static const String actionDeleteJob = 'delete_job';
+  static const String actionDelete = 'delete';
 
   static const List<String> actions = [
+    actionGuide,
     actionList,
     actionRead,
     actionWrite,
     actionRemove,
+    actionErrors,
+    actionVersions,
+    actionRollback,
+    actionJobs,
+    actionRunJob,
+    actionServer,
+    actionDeleteJob,
+    actionDelete,
   ];
+
+  /// Deleting an app or a job goes through the user's approval.
+  static bool requiresApproval(Map<String, dynamic> args) {
+    final action = actionOf(args);
+    return action == actionDelete || action == actionDeleteJob;
+  }
 
   /// Larger reads return only the keys, so one app cannot flood the context.
   static const int maxReadChars = 20000;
 
   final MiniAppStore store;
+
+  /// Background jobs; `jobs` and `run_job` are unavailable without them.
+  final MiniAppJobs? jobs;
+
+  /// State and output of an app's server (MiniAppServers.status).
+  final Map<String, Object?> Function(String appId)? serverStatus;
 
   static String actionOf(Map<String, dynamic> args) =>
       (args['action'] ?? '').toString().trim().toLowerCase();
@@ -43,10 +75,24 @@ class MiniAppDataTool {
       'description':
           'Read and change the data of the user\'s Moru mini apps (small web '
           'apps such as a water tracker or a shopping list) without opening '
-          'them. Call "list" first: it shows each app\'s id, what it does, '
+          'them. To build or update an app, call "guide" first for all moru.* '
+          'APIs, offline libraries, build-folder publishing and partial '
+          'updates. Optional topic narrows the guide; example returns complete '
+          'manifest and files for tracker, chart, phaser, galacean or sqlite. '
+          'For app data, call "list" first: it shows each app\'s id, what it does, '
           'how it stores its data and its keys. Keep the stored format '
           'exactly as the app expects; read a key before writing it. An open '
-          'app redraws when its data changes.',
+          'app redraws when its data changes. To fix an app, read its '
+          '"errors": the journal of script errors, console errors and failed '
+          'moru.* calls the current version hit while the user used it '
+          '(republishing clears it). "versions" lists the earlier code Moru '
+          'kept (the last 5); "rollback" puts one back without touching the '
+          'data. "jobs" lists the app\'s background jobs (moru.jobs) with '
+          'their next and last runs; "run_job" starts one now to test it, '
+          'then read "jobs" and "errors" about 30 s later. "server" shows '
+          'whether the app\'s server runs and its latest output. "delete_job" '
+          'removes a background job and "delete" removes a whole app with its '
+          'data, versions and jobs; both ask the user first.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -54,13 +100,45 @@ class MiniAppDataTool {
             'type': 'string',
             'enum': actions,
             'description':
+                'guide: offline API/build guide; optional topic or example. '
                 'list: installed apps. read: one key of app_id, or all its '
                 'data without key. write: set key of app_id to value. '
-                'remove: delete key of app_id.',
+                'remove: delete key of app_id. errors: error journal of '
+                'app_id, oldest first; clear: true empties it after reading. '
+                'versions: earlier versions of app_id. rollback: restore '
+                'version of app_id. jobs: background jobs of app_id. '
+                'run_job: run job of app_id now. server: state and output '
+                'of the server of app_id. delete_job: remove job of app_id. '
+                'delete: remove app_id with all its data.',
+          },
+          'topic': {
+            'type': 'string',
+            'enum': MiniAppGuide.topics,
+            'description':
+                'guide: optional section; omit for the full overview.',
+          },
+          'example': {
+            'type': 'string',
+            'enum': [for (final item in MiniAppGuide.examples) item['id']],
+            'description':
+                'guide: complete runnable project as manifest plus text files. '
+                'Write them with write_file and publish the folder.',
           },
           'app_id': {'type': 'string', 'description': 'App id from "list".'},
           'key': {'type': 'string', 'description': 'Storage key.'},
           'value': {'description': 'JSON value to store under key.'},
+          'clear': {
+            'type': 'boolean',
+            'description': 'errors: empty the journal after reading it.',
+          },
+          'version': {
+            'type': 'string',
+            'description': 'rollback: a version from "versions".',
+          },
+          'job': {
+            'type': 'string',
+            'description': 'run_job, delete_job: a job id from "jobs".',
+          },
         },
         'required': ['action'],
       },
@@ -69,8 +147,11 @@ class MiniAppDataTool {
 
   Future<String> execute(Map<String, dynamic> args) async {
     try {
-      await store.load();
       final action = actionOf(args);
+      if (action == actionGuide) {
+        return jsonEncode({'ok': true, ...await MiniAppGuide.read(args)});
+      }
+      await store.load();
       final Map<String, dynamic> result;
       switch (action) {
         case actionList:
@@ -90,6 +171,95 @@ class MiniAppDataTool {
           final key = _key(args);
           await store.storageRemove(app.id, key);
           result = {'removed': key};
+        case actionErrors:
+          final app = _app(args);
+          final entries = await store.readErrors(app.id);
+          if (args['clear'] == true) await store.clearErrors(app.id);
+          result = {
+            'errors': [
+              for (final entry in entries)
+                {
+                  'at': entry.at.toIso8601String(),
+                  'message': entry.message,
+                  if (entry.count > 1) 'count': entry.count,
+                },
+            ],
+            if (args['clear'] == true) 'cleared': true,
+          };
+        case actionVersions:
+          final app = _app(args);
+          result = {
+            'current': app.updatedAt.toIso8601String(),
+            'versions': [
+              for (final version in await store.versions(app.id))
+                {
+                  'version': MiniAppStore.versionOf(version),
+                  'published': version.updatedAt.toIso8601String(),
+                  if (version.name != app.name) 'name': version.name,
+                },
+            ],
+          };
+        case actionRollback:
+          final app = _app(args);
+          final version = '${args['version'] ?? ''}'.trim();
+          if (version.isEmpty) {
+            throw const _ToolFailure(
+              'missing_version',
+              '"version" is required. Call "versions" to get them.',
+            );
+          }
+          final restored = await store.rollback(app.id, version);
+          result = {
+            'restored': version,
+            'published': restored.updatedAt.toIso8601String(),
+          };
+        case actionJobs:
+          final app = _app(args);
+          result = {
+            'jobs': [
+              for (final job in await _jobs().list(app.id))
+                {
+                  ...job.toJson()..remove('lastRun'),
+                  'runs': [for (final run in job.runs) run.toJson()],
+                },
+            ],
+          };
+        case actionServer:
+          final app = _app(args);
+          final status = serverStatus;
+          if (status == null) {
+            throw const _ToolFailure(
+              'unavailable',
+              'App servers are not available here.',
+            );
+          }
+          result = {'command': app.serverCommand, ...status(app.id)};
+        case actionRunJob:
+          final app = _app(args);
+          final job = '${args['job'] ?? ''}'.trim();
+          await _jobs().runNow(app.id, job);
+          result = {
+            'started': job,
+            'note':
+                'The job runs in the background for up to 30 s. Read "jobs" '
+                'for its result and "errors" for what went wrong.',
+          };
+        case actionDeleteJob:
+          final app = _app(args);
+          final job = '${args['job'] ?? ''}'.trim();
+          final jobs = _jobs();
+          if (!(await store.readJobs(app.id)).containsKey(job)) {
+            throw _ToolFailure(
+              'not_found',
+              'No job "$job". Call "jobs" to get the ids.',
+            );
+          }
+          await jobs.remove(app.id, job);
+          result = {'deleted_job': job};
+        case actionDelete:
+          final app = _app(args);
+          await store.delete(app.id);
+          result = {'deleted': app.id};
         default:
           throw _ToolFailure(
             'invalid_action',
@@ -129,6 +299,17 @@ class MiniAppDataTool {
       };
     }
     return {'data': all};
+  }
+
+  MiniAppJobs _jobs() {
+    final jobs = this.jobs;
+    if (jobs == null) {
+      throw const _ToolFailure(
+        'unavailable',
+        'Background jobs are not available here.',
+      );
+    }
+    return jobs;
   }
 
   MiniApp _app(Map<String, dynamic> args) {

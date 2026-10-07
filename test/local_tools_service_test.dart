@@ -9,12 +9,51 @@ import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/services/browser/browser_agent_session.dart';
 import 'package:Kelivo/core/services/browser/web_source.dart';
 import 'package:Kelivo/features/home/services/browser_agent_actions.dart';
+import 'package:Kelivo/features/home/services/built_in_tool_names.dart';
 import 'package:Kelivo/features/home/services/local_tools_service.dart';
 
 import 'support/fake_webview_platform.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('tool descriptions match full access and all-day defaults', () {
+    final report = LocalToolsService
+        .definitions[LocalToolNames.reportProblem]!['function'];
+    expect(report['description'], contains('global full access'));
+    final calendar = LocalToolsService
+        .definitions[LocalToolNames.calendarCreate]!['function'];
+    expect(
+      calendar['parameters']['properties']['end']['description'],
+      contains('next local day'),
+    );
+  });
+
+  test('manage_mcp is opt-in and only mutations require approval', () {
+    const disabled = Assistant(id: 'mcp', name: 'MCP');
+    final enabled = disabled.copyWith(localToolIds: ['manage_mcp']);
+    expect(LocalToolNames.all, contains('manage_mcp'));
+    expect(BuiltInToolNames.all, contains('manage_mcp'));
+    for (final assistant in [disabled, enabled]) {
+      final names = LocalToolsService.buildToolDefinitions(
+        assistant: assistant,
+        supportsTools: true,
+      ).map((tool) => tool['function']['name']);
+      expect(names.contains('manage_mcp'), identical(assistant, enabled));
+    }
+    for (final action in ['add', 'update', 'remove', 'enable', 'disable']) {
+      expect(
+        LocalToolNames.requiresApprovalFor('manage_mcp', {'action': action}),
+        isTrue,
+      );
+    }
+    for (final action in ['list', 'get', 'test']) {
+      expect(
+        LocalToolNames.requiresApprovalFor('manage_mcp', {'action': action}),
+        isFalse,
+      );
+    }
+  });
 
   group('Assistant local tools', () {
     const localToolsAssistant = Assistant(
@@ -158,7 +197,9 @@ void main() {
       expect((properties['action'] as Map<String, dynamic>)['enum'], const [
         'open',
         'observe',
+        'screenshot',
         'click',
+        'hover',
         'type',
         'submit',
         'press_key',
@@ -167,8 +208,18 @@ void main() {
         'forward',
         'reload',
         'read',
+        'collect',
+        'outline',
         'wait_for',
+        'wait_stable',
         'eval_js',
+        'fetch',
+        'export_cookies',
+        'tabs',
+        'new_tab',
+        'switch_tab',
+        'close_tab',
+        'set_mode',
         'done',
         'close',
       ]);
@@ -185,6 +236,18 @@ void main() {
         36,
       );
       expect(parameters['required'], const ['action']);
+    });
+
+    test('browser fetch needs approval only to send data', () {
+      bool gated(Map<String, dynamic> args) =>
+          LocalToolNames.requiresApprovalFor(LocalToolNames.browserUse, {
+            'action': 'fetch',
+            ...args,
+          });
+      expect(gated({}), isFalse);
+      expect(gated({'method': 'head'}), isFalse);
+      expect(gated({'method': 'POST'}), isTrue);
+      expect(gated({'method': 'delete'}), isTrue);
     });
 
     test(
@@ -876,23 +939,6 @@ void main() {
       },
     );
 
-    test('location is unavailable on desktop platforms', () {
-      addTearDown(() => debugDefaultTargetPlatformOverride = null);
-      for (final platform in [
-        TargetPlatform.macOS,
-        TargetPlatform.windows,
-        TargetPlatform.linux,
-      ]) {
-        debugDefaultTargetPlatformOverride = platform;
-        expect(
-          LocalToolsService.isAvailableOnThisPlatform(
-            LocalToolNames.currentLocation,
-          ),
-          isFalse,
-        );
-      }
-    });
-
     test(
       'Android location permissions and calls use the native channel',
       () async {
@@ -957,6 +1003,62 @@ void main() {
         expect(calls, isEmpty);
       },
     );
+
+    test('device tools omit null slots and preserve explicit clears', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      const channel = MethodChannel('app.device_tools');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      addTearDown(() {
+        debugDefaultTargetPlatformOverride = null;
+        messenger.setMockMethodCallHandler(channel, null);
+      });
+      final calls = <Map<String, dynamic>>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(jsonDecode(call.arguments as String) as Map<String, dynamic>);
+        return '{"success":true}';
+      });
+      const assistant = Assistant(
+        id: 'a1',
+        name: 'Assistant',
+        localToolIds: [
+          LocalToolNames.calendarUpdate,
+          LocalToolNames.screenTime,
+          LocalToolNames.phoneControl,
+        ],
+      );
+
+      await LocalToolsService.tryHandleToolCall(LocalToolNames.calendarUpdate, {
+        'event_id': 7,
+        'title': null,
+        'description': '',
+        'location': null,
+        'start': null,
+        'end': null,
+        'all_day': null,
+        'reminders': <int>[],
+      }, assistant);
+      await LocalToolsService.tryHandleToolCall(LocalToolNames.screenTime, {
+        'begin': null,
+        'end': null,
+        'range': 'today',
+        'top': null,
+      }, assistant);
+      await LocalToolsService.tryHandleToolCall(LocalToolNames.phoneControl, {
+        'action': 'tap',
+        'snapshot_id': 's1',
+        'x': 10,
+        'y': 20,
+        'node_id': null,
+        'duration_ms': null,
+      }, assistant);
+
+      expect(calls, [
+        {'event_id': 7, 'description': '', 'reminders': <int>[]},
+        {'range': 'today'},
+        {'action': 'tap', 'snapshot_id': 's1', 'x': 10, 'y': 20},
+      ]);
+    });
 
     test(
       'Android permanent denial reaches the UI and settings can open',

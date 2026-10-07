@@ -10,7 +10,11 @@ import '../../../../providers/settings_provider.dart';
 import '../../../../../utils/app_directories.dart';
 import '../../../../../utils/sandbox_path_resolver.dart';
 import '../../chat_api_helpers.dart';
+import '../../tool_schema_normalizer.dart';
+import '../../tool_call_argument_privacy.dart';
+import '../../generation/spend_round_control.dart';
 import '../../generation/tool_loop_runner.dart';
+import '../../generation/tool_result_images.dart';
 import '../../stream/sse_decode_loop.dart';
 import '../../stream/sse_framing.dart';
 import '../../stream/stream_chunk.dart';
@@ -24,33 +28,14 @@ List<Map<String, dynamic>> toResponsesToolsFormat(
   List<Map<String, dynamic>> tools,
 ) {
   return tools.map((tool) {
-    // Keep non-function tools (e.g., web_search) unchanged
-    if ((tool['type'] ?? '').toString() != 'function') {
-      return Map<String, dynamic>.from(tool);
-    }
-
-    // If already flattened (no nested 'function'), return as-is
-    if (tool['function'] is! Map) {
-      return Map<String, dynamic>.from(tool);
-    }
-
-    final fn = Map<String, dynamic>.from(tool['function'] as Map);
-    final out = <String, dynamic>{
-      'type': 'function',
-      if (fn['name'] != null) 'name': fn['name'],
-      if (fn['description'] != null) 'description': fn['description'],
-    };
-    final params = fn['parameters'];
-    if (params is Map<String, dynamic>) {
-      // Ensure parameters stays as-is (schema)
-      out['parameters'] = params;
-    }
-    // Preserve strict flag if present (either at tool-level or function-level)
-    final strict = (tool['strict'] ?? fn['strict']);
-    if (strict is bool) {
-      out['strict'] = strict;
-    }
-    return out;
+    if (tool['type'] != 'function') return Map<String, dynamic>.from(tool);
+    final normalized = normalizeToolDefinition(
+      tool,
+      ToolSchemaTarget.openaiStrict,
+    );
+    if (normalized['function'] is! Map) return normalized;
+    final fn = Map<String, dynamic>.from(normalized['function'] as Map);
+    return <String, dynamic>{'type': 'function', ...fn};
   }).toList();
 }
 
@@ -206,6 +191,7 @@ Stream<StreamChunk> runOpenAIResponsesToolFollowUps({
   required int approxPromptTokens,
   required int approxCompletionChars,
   StreamRoundRunner? retryRound,
+  SpendRoundControl? spendControl,
 }) async* {
   var usage = initialUsage;
   var chars = approxCompletionChars;
@@ -216,21 +202,34 @@ Stream<StreamChunk> runOpenAIResponsesToolFollowUps({
   String? lastToolSignature;
   var consecutiveDupeCount = 0;
 
+  final takesImages = modelTakesImages(config, modelId);
+
   yield* runClientToolFollowUps(
     initialCalls: initialCalls,
     onToolCall: onToolCall,
     append: (executed) {
       currentInput = [
         ...currentInput,
-        ...withResponsesFunctionCallItems(outputItemsForAppend, [
-          for (final item in executed) item.call,
-        ]),
+        ...withResponsesFunctionCallItems(
+          (ToolCallArgumentPrivacy.protocolValue(
+                    onToolCall,
+                    outputItemsForAppend,
+                  )
+                  as List)
+              .cast<Map<String, dynamic>>(),
+          [for (final item in executed) item.call],
+        ),
         for (final item in executed)
           <String, dynamic>{
             'type': 'function_call_output',
             'call_id': openaiTranscriptCallId(item.call),
             'output': item.content,
           },
+        // Function outputs hold only text; a screenshot follows them.
+        if (takesImages)
+          ?responsesToolImagesItem([
+            for (final item in executed) item.imagesForModel,
+          ]),
       ];
     },
     sendFollowUp: () async* {
@@ -296,7 +295,7 @@ Stream<StreamChunk> runOpenAIResponsesToolFollowUps({
           assistantHeaders: extraHeaders,
         ),
       );
-      req2.body = jsonEncode(body2);
+      req2.body = jsonEncode(spendControl?.decorateRequest(body2) ?? body2);
       final http.StreamedResponse resp2;
       try {
         resp2 = await client.send(req2);
@@ -304,6 +303,8 @@ Stream<StreamChunk> runOpenAIResponsesToolFollowUps({
           final errorBody = await resp2.stream.bytesToString();
           throw HttpException('HTTP ${resp2.statusCode}: $errorBody');
         }
+      } on SpendLimitExceeded {
+        rethrow;
       } on ProviderOAuthException {
         rethrow;
       } on HttpException {
@@ -315,7 +316,7 @@ Stream<StreamChunk> runOpenAIResponsesToolFollowUps({
         resp2.stream.transform(utf8.decoder),
       );
       final followUpDecoder = ResponsesStreamDecoder(
-        initialUsage: usage,
+        initialUsage: spendControl == null ? usage : null,
         sourceId: 'round-${round++}',
       );
       yield* decodeSseEvents(parseSseEventStrings(s2), followUpDecoder);
@@ -353,6 +354,7 @@ Stream<StreamChunk> runOpenAIResponsesToolFollowUps({
       );
     },
     retryRound: retryRound,
+    spendControl: spendControl,
     usageOf: () => usage,
   );
 }

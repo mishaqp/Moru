@@ -692,6 +692,26 @@ class EnvironmentInstaller implements EnvironmentManager {
     await _validateInstalledArchitecture();
   }
 
+  /// Turns the fast mode on once `su` and the chroot helper work, or off
+  /// after giving the app back the files it left owned by root in the app's
+  /// data (the folder holding the environment) and in its cache. Null when
+  /// done, else why not.
+  Future<String?> setRootChroot(bool enabled) async {
+    final dir = await _resolveEnvDir();
+    if (enabled) {
+      final probe = await channel.probeChroot(p.join(dir.path, 'rootfs'));
+      if (!probe.ok) return probe.output.isEmpty ? 'su failed' : probe.output;
+      await env.setRootChroot(true);
+      return null;
+    }
+    await env.setRootChroot(false);
+    final fixed = await channel.chrootFixOwner([
+      dir.parent.path,
+      Directory.systemTemp.path,
+    ]);
+    return fixed.ok ? null : fixed.output;
+  }
+
   Future<Directory> _resolveEnvDir() async {
     if (_resolvedEnvDir != null) return _resolvedEnvDir!;
     final dir =

@@ -50,10 +50,18 @@ IconData localToolIcon(String id) {
       return Lucide.CheckCircle;
     case LocalToolNames.assistantManager:
       return Lucide.Bot;
+    case LocalToolNames.mcpManager:
+      return Lucide.Server;
+    case LocalToolNames.spendControl:
+      return Lucide.Gauge;
+    case LocalToolNames.reportProblem:
+      return Lucide.Bug;
     case LocalToolNames.scheduledTasks:
       return Lucide.CalendarClock;
     case LocalToolNames.miniApps:
       return Lucide.LayoutGrid;
+    case LocalToolNames.rootShell:
+      return Lucide.ShieldAlert;
     default:
       return Lucide.Wrench;
   }
@@ -97,10 +105,18 @@ String localToolTitle(AppLocalizations l10n, String id) {
       return l10n.assistantEditLocalToolRemindersCompleteTitle;
     case LocalToolNames.assistantManager:
       return l10n.assistantManagerToolTitle;
+    case LocalToolNames.mcpManager:
+      return l10n.mcpManagerToolTitle;
+    case LocalToolNames.spendControl:
+      return l10n.spendControlTitle;
+    case LocalToolNames.reportProblem:
+      return l10n.problemReportToolTitle;
     case LocalToolNames.scheduledTasks:
       return l10n.scheduledTaskToolTitle;
     case LocalToolNames.miniApps:
       return l10n.miniAppsToolTitle;
+    case LocalToolNames.rootShell:
+      return l10n.rootShellToolTitle;
     default:
       return id;
   }

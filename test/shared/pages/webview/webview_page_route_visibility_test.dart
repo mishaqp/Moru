@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import '../../../support/fake_webview_platform.dart';
+import 'browser_test_actions.dart';
 
 /// `BrowserAgentSession.isRouteCurrent` is what
 /// `MobileBackgroundCoordinator.finish()` ultimately consults (through
@@ -79,7 +80,7 @@ void main() {
 
       expect(BrowserAgentSession.instance.isRouteCurrent, isTrue);
 
-      await tester.tap(find.byTooltip('Close'));
+      await closeBrowserFromMenu(tester);
       await tester.pumpAndSettle();
 
       expect(BrowserAgentSession.instance.isRouteCurrent, isFalse);

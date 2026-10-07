@@ -9,6 +9,183 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get appearanceSaveError => '无法保存外观。请重试。';
+
+  @override
+  String get appearanceSidebarBackground => '侧栏背景';
+
+  @override
+  String get appearanceSidebarSameAsChat => '与聊天相同';
+
+  @override
+  String get appearanceSidebarCustomBackground => '自定义背景';
+
+  @override
+  String get appearanceSidebarThemeBackground => '主题背景';
+
+  @override
+  String get appearanceSidebarMask => '侧栏背景遮罩';
+
+  @override
+  String get appearanceSidebarBlur => '侧栏背景模糊';
+
+  @override
+  String get appearanceSidebarOpacity => '侧栏背景不透明度';
+
+  @override
+  String get appearanceSidebarPhoneWidth => '手机侧栏宽度';
+
+  @override
+  String get appearanceSidebarWideWidth => '宽屏侧栏宽度';
+
+  @override
+  String get appearanceSidebarDensity => '聊天列表密度';
+
+  @override
+  String get appearanceSidebarCompact => '紧凑';
+
+  @override
+  String get appearanceSidebarNormal => '标准';
+
+  @override
+  String get appearanceSidebarSpacious => '宽松';
+
+  @override
+  String get appearanceSidebarCardRadius => '聊天卡片圆角';
+
+  @override
+  String get appearanceSidebarCardColor => '聊天卡片颜色';
+
+  @override
+  String get appearanceSidebarActiveCardColor => '当前聊天卡片颜色';
+
+  @override
+  String get appearanceSidebarResetColor => '使用主题颜色';
+
+  @override
+  String get appearanceSidebarTimestamp => '消息时间';
+
+  @override
+  String get appearanceSidebarAssistant => '助手图标和名称';
+
+  @override
+  String get appearanceSidebarModel => '模型图标和名称';
+
+  @override
+  String get appearanceSidebarLastPreview => '最后一条消息预览';
+
+  @override
+  String get appearanceSidebarGrouping => '聊天分组';
+
+  @override
+  String get appearanceSidebarGroupingDate => '按日期';
+
+  @override
+  String get appearanceSidebarGroupingAssistant => '按助手';
+
+  @override
+  String get appearanceSidebarGroupingNone => '不分组';
+
+  @override
+  String get appearanceSidebarDock => '侧栏底部按钮';
+
+  @override
+  String get appearanceSidebarDockHint => '选择按钮并拖动手柄调整顺序。';
+
+  @override
+  String get appearanceSidebarShortcutsHint => '选择置顶应用和页面，然后拖动调整顺序。';
+
+  @override
+  String get appearanceSidebarPreviewTitle => '旅行计划';
+
+  @override
+  String get appearanceSidebarPreviewOtherTitle => '新想法';
+
+  @override
+  String get appearanceSidebarPreviewMessage => '这里有一些可以开始的想法。';
+
+  @override
+  String get appearanceSidebarPreviewModel => '模型';
+
+  @override
+  String get appearanceSidebarReset => '重置侧栏外观';
+
+  @override
+  String get appearanceSettingsPageTitle => '外观';
+
+  @override
+  String get appearanceChatWindow => '聊天窗口';
+
+  @override
+  String get appearanceSidebar => '侧边栏';
+
+  @override
+  String get appearanceSidebarComingSoon => '侧边栏外观设置将在后续更新中提供。';
+
+  @override
+  String get appearanceSameBackground => '浅色与深色使用相同背景';
+
+  @override
+  String get appearanceSameBackgroundHint => '在两种主题中使用同一个背景。';
+
+  @override
+  String get appearanceBackground => '背景';
+
+  @override
+  String get appearanceNone => '无';
+
+  @override
+  String get appearancePhoto => '从相册选择照片';
+
+  @override
+  String get appearanceGif => 'GIF';
+
+  @override
+  String get appearanceVideo => '视频';
+
+  @override
+  String get appearanceAnimatedGradient => '动态渐变';
+
+  @override
+  String get appearanceChooseMedia => '选择媒体';
+
+  @override
+  String get appearanceReplaceMedia => '更换媒体';
+
+  @override
+  String get appearanceFit => '适配方式';
+
+  @override
+  String get appearanceFitCover => '覆盖';
+
+  @override
+  String get appearanceFitContain => '完整显示';
+
+  @override
+  String get appearanceFitFill => '拉伸';
+
+  @override
+  String get appearanceFitTile => '平铺';
+
+  @override
+  String get appearanceFocusHint => '拖动预览来调整背景位置。';
+
+  @override
+  String get appearanceCenterFocus => '背景居中';
+
+  @override
+  String get appearanceBrightness => '亮度';
+
+  @override
+  String get appearanceSaturation => '饱和度';
+
+  @override
+  String get appearanceMediaError => '无法使用此文件。请选择其他图片、GIF 或视频。';
+
+  @override
+  String get appearanceReset => '重置背景';
+
+  @override
   String get settingsSearchHint => '搜索设置';
 
   @override
@@ -940,19 +1117,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get desktopNavTranslateTooltip => '翻译';
 
   @override
-  String get desktopAvatarMenuUseEmoji => '使用表情符号';
-
-  @override
   String get cameraPermissionDeniedMessage => '未授予相机权限';
 
   @override
   String get openSystemSettings => '去设置';
-
-  @override
-  String get desktopAvatarMenuChangeFromImage => '从图片更换…';
-
-  @override
-  String get desktopAvatarMenuReset => '重置头像';
 
   @override
   String get assistantEditAvatarChooseImage => '选择图片';
@@ -2441,6 +2609,226 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sideDrawerMenuSelect => '多选';
+
+  @override
+  String get sideDrawerNewChat => '新对话';
+
+  @override
+  String get sideDrawerMoveToFolder => '移到文件夹';
+
+  @override
+  String get sideDrawerNoFolder => '不放入文件夹';
+
+  @override
+  String get sideDrawerNewFolder => '新建文件夹';
+
+  @override
+  String get sideDrawerFolderNameHint => '文件夹名称';
+
+  @override
+  String get sideDrawerFolderIcon => '图标';
+
+  @override
+  String get sideDrawerFolderDelete => '删除文件夹';
+
+  @override
+  String sideDrawerFolderDeleteContent(String name) {
+    return '“$name”中的对话会保留在列表中。';
+  }
+
+  @override
+  String get agentsTitle => '智能体';
+
+  @override
+  String get agentsIntro =>
+      'Claude Code 等编程智能体可以直接在你的对话中回答。它们运行在这台手机的 Linux 环境中，处理对话的文件，并使用你已在 Moru 中设置的模型和密钥，无需重复配置。';
+
+  @override
+  String get agentsSection => '智能体';
+
+  @override
+  String get agentsFooter => '安装需要几分钟并需要联网。如果缺少 Node.js，会先安装它。';
+
+  @override
+  String get agentsNeedEnvironment => '请先安装并启动 Linux 环境（设置 → 工作区与环境）。';
+
+  @override
+  String get agentsStatusInstalled => '已安装';
+
+  @override
+  String get agentsStatusMissing => '未安装';
+
+  @override
+  String get agentsStatusChecking => '检查中…';
+
+  @override
+  String get agentsStatusWorking => '处理中…';
+
+  @override
+  String get agentsInstall => '安装';
+
+  @override
+  String get agentsUpdate => '更新';
+
+  @override
+  String get agentsRemove => '移除';
+
+  @override
+  String get agentsCheck => '检查连接';
+
+  @override
+  String get agentsCancel => '取消';
+
+  @override
+  String get agentsSave => '保存';
+
+  @override
+  String get agentsLog => '日志';
+
+  @override
+  String get agentsMoruToolsAvailable => 'Moru 工具：可用';
+
+  @override
+  String get agentsMoruToolsUnavailable => 'Moru 工具：不可用';
+
+  @override
+  String agentsCheckOk(String name, String version) {
+    return '正常：$name $version 已响应。';
+  }
+
+  @override
+  String agentsCheckFailed(String error) {
+    return '智能体未能启动：$error';
+  }
+
+  @override
+  String agentsCheckModel(String model) {
+    return '检查使用默认对话模型：$model。';
+  }
+
+  @override
+  String get agentsNoModel => '请先选择带 API 密钥的默认对话模型（设置 → 默认模型）。';
+
+  @override
+  String get agentsDescClaudeCode =>
+      'Anthropic 的编程智能体：读取和编辑文件、运行命令和测试、规划较大的任务。';
+
+  @override
+  String get agentsDescCodex => 'OpenAI 的编程智能体：编写和修复代码、运行命令、讲解项目。';
+
+  @override
+  String get agentsDescOpenCode => '开源编程智能体，几乎支持所有服务商。适合作为第一个选择。';
+
+  @override
+  String get agentsApiAnthropic =>
+      '需要兼容 Anthropic API 的服务商：Anthropic、DeepSeek、Kimi、GLM、MiniMax 或 OpenRouter。';
+
+  @override
+  String get agentsApiCodex =>
+      '与 OpenAI 配合最佳。其他服务商需要兼容 OpenAI 的 API；如服务商支持 Responses API，请在服务商设置中开启。';
+
+  @override
+  String get agentsApiOpenai => '支持任何兼容 OpenAI 的服务商以及 Anthropic。';
+
+  @override
+  String get agentsApiCustom =>
+      'Moru 通过 MORU_AGENT_BASE_URL、MORU_AGENT_API_KEY 和 MORU_AGENT_MODEL（以及 OPENAI_* 变量）传递模型地址、密钥和名称。';
+
+  @override
+  String get agentsCustomAdd => '添加自定义智能体';
+
+  @override
+  String get agentsCustomName => '名称';
+
+  @override
+  String get agentsCustomCommand => '命令';
+
+  @override
+  String get agentsCustomHint =>
+      'Linux 环境中任何通过 stdin/stdout 使用 ACP（Agent Client Protocol）的程序。';
+
+  @override
+  String get agentsCustomDelete => '删除智能体';
+
+  @override
+  String get agentsFailureNode => '无法安装 Node.js，请查看日志。';
+
+  @override
+  String get agentsFailureInstall => '安装失败，请查看下方日志。';
+
+  @override
+  String get agentsFailureRemove => '无法移除智能体，请查看日志。';
+
+  @override
+  String get agentsStartChat => '开始对话';
+
+  @override
+  String get agentsChatMissing => '此助手的智能体已不在列表中，请在助手设置中另选一个。';
+
+  @override
+  String get agentsChatNoKey => '智能体需要带 API 密钥的模型，请为此助手或默认模型选择一个带密钥的模型。';
+
+  @override
+  String agentsChatNotInstalled(String name) {
+    return '$name 尚未安装，请在 设置 → 智能体 中安装。';
+  }
+
+  @override
+  String get assistantAgentTitle => '智能体';
+
+  @override
+  String get assistantAgentNone => '无 — 由模型回答';
+
+  @override
+  String get assistantAgentHint =>
+      '选择智能体后，由它在此助手的对话中回答并处理对话文件。它使用上面的对话模型发送自己的请求。';
+
+  @override
+  String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的图片预览';
+
+  @override
+  String get sideDrawerArchive => '归档';
+
+  @override
+  String get sideDrawerArchived => '已归档';
+
+  @override
+  String get sideDrawerUndo => '撤销';
+
+  @override
+  String get archivePageTitle => '归档';
+
+  @override
+  String get archivePageEmpty => '归档为空。向右滑动对话即可归档。';
+
+  @override
+  String get archivePageRestore => '恢复';
+
+  @override
+  String get archivePageRestored => '已恢复';
+
+  @override
+  String get archivePageSortArchived => '按归档时间';
+
+  @override
+  String get archivePageSortActivity => '按最后消息';
+
+  @override
+  String archivePageDeleteTitle(String title) {
+    return '删除“$title”？';
+  }
+
+  @override
+  String get archivePageDeleteContent => '该对话及其所有消息将被删除。';
+
+  @override
+  String get sideDrawerShortcutsTitle => '侧边栏快捷方式';
+
+  @override
+  String get sideDrawerShortcutsEmpty => '暂无小程序或浏览器书签';
+
+  @override
+  String get sideDrawerShortcutRemove => '从侧边栏移除';
 
   @override
   String sideDrawerSelectionTitle(int count) {
@@ -3945,9 +4333,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String chainOfThoughtProcessedSteps(Object count) {
     return '已处理 · $count 个步骤';
   }
-
-  @override
-  String get displaySettingsPageShowChatListDateTitle => '显示对话列表日期';
 
   @override
   String get displaySettingsPageEnableImageCropperTitle => '启用图片裁剪';
@@ -6999,9 +7384,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get migrationTargetDatabaseLabel => 'SQLite';
 
   @override
-  String get migrationChooseFolderButton => '选择文件夹并备份';
-
-  @override
   String get migrationSaveBackupButton => '保存备份 ZIP';
 
   @override
@@ -8176,11 +8558,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String workspaceEnvEngineAlpine(String version) {
-    return 'Alpine $version (iSH)';
-  }
-
-  @override
   String get workspaceEnvPhaseNotInstalled => '未安装';
 
   @override
@@ -8469,12 +8846,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get workspaceDeskBarEmptyHint => '从工具栏绑定工作区后即可在此浏览文件';
 
   @override
-  String get workspaceDeskOpenSystemTerminal => '在系统终端中打开';
-
-  @override
-  String get workspaceDeskReveal => '在文件管理器中显示';
-
-  @override
   String get workspaceEntryBind => '绑定工作区';
 
   @override
@@ -8507,12 +8878,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get workspaceEntryTerminal => '终端';
-
-  @override
-  String get workspaceEntryOpenSystemTerminal => '在系统终端中打开';
-
-  @override
-  String get workspaceEntryReveal => '在文件管理器中显示';
 
   @override
   String get workspaceEntrySessionSkills => '技能';
@@ -8706,9 +9071,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get workspacePreviewTable => '表格';
-
-  @override
-  String get workspacePreviewRevealFailed => '无法在文件管理器中显示此文件。';
 
   @override
   String get workspacePreviewEmptyTable => '此表格为空。';
@@ -9035,9 +9397,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get workspacePreviewEmptyHint => '此文件没有任何可预览的内容。';
-
-  @override
-  String get workspacePreviewRevealInFileManager => '在文件管理器中显示';
 
   @override
   String workspaceBindingSetAssistantDefault(String assistant) {
@@ -9425,6 +9784,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get workspaceEnvProotOptions => 'PRoot 配置';
+
+  @override
+  String get workspaceEnvRootChroot => '快速模式（root）';
+
+  @override
+  String get workspaceEnvRootChrootHint =>
+      '通过 su 在真正的 chroot 中运行 Linux 环境，而不是 PRoot：程序启动和运行快很多倍。命令以真正的 root 身份运行，可完全访问手机。关闭时文件会归还给 Moru。';
+
+  @override
+  String get workspaceEnvRootChrootChecking => '正在检查 root…';
+
+  @override
+  String get workspaceEnvRootChrootRestoring => '正在把文件归还给 Moru…';
+
+  @override
+  String get workspaceEnvRootChrootOn => '快速模式已开启';
+
+  @override
+  String get workspaceEnvRootChrootOff => '快速模式已关闭，恢复使用 PRoot';
+
+  @override
+  String workspaceEnvRootChrootFailed(String reason) {
+    return '快速模式不可用：$reason';
+  }
 
   @override
   String get workspaceEnvShellPath => 'Shell 路径';
@@ -10490,13 +10873,179 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserAddressEditorGo => '前往';
 
   @override
-  String get browserMinimize => '最小化';
+  String get browserMinimize => '收起至聊天';
 
   @override
   String get browserMiniExpand => '展开';
 
   @override
   String get browserMiniTitle => '浏览器';
+
+  @override
+  String get userscriptsTitle => '用户脚本';
+
+  @override
+  String get userscriptsHint =>
+      '类似 Tampermonkey 的脚本：会修改其适用的网站。只安装你信任的脚本——它们能看到这些网站上的一切。';
+
+  @override
+  String get userscriptsInstall => '安装';
+
+  @override
+  String get userscriptsEmpty => '还没有脚本。粘贴 .user.js 文件的链接，例如来自 greasyfork.org。';
+
+  @override
+  String get userscriptsBadLink => '请输入指向 .user.js 文件的 http(s) 链接';
+
+  @override
+  String get userscriptsNotAScript => '该文件不是用户脚本（没有 ==UserScript== 头）';
+
+  @override
+  String userscriptsInstalled(String name) {
+    return '已安装：$name';
+  }
+
+  @override
+  String userscriptsInstallFailed(String error) {
+    return '无法安装：$error';
+  }
+
+  @override
+  String get browserGoogleSignInBlocked =>
+      'Google 不允许在此内置浏览器中登录。请换一种方式登录，或在 Chrome 中打开该网站。';
+
+  @override
+  String get browserOpenInChrome => '在 Chrome 中打开';
+
+  @override
+  String get browserSslTitle => '连接不安全';
+
+  @override
+  String browserSslMessage(String site, String problem) {
+    return '$site 的证书无效（$problem）。可能有人试图窃取你的数据。';
+  }
+
+  @override
+  String get browserSslProceed => '仍然继续';
+
+  @override
+  String get browserSslBack => '返回';
+
+  @override
+  String get browserBookmarks => '书签';
+
+  @override
+  String get browserHistory => '历史记录';
+
+  @override
+  String get browserClearHistory => '清除';
+
+  @override
+  String get browserClearHistoryConfirm => '清除最近 7 天的历史记录？';
+
+  @override
+  String get browserLibrarySearch => '搜索';
+
+  @override
+  String get browserHistoryEmpty => '最近 7 天没有访问记录';
+
+  @override
+  String get browserBookmarksEmpty => '还没有书签。点按地址栏中的星标。';
+
+  @override
+  String get browserLibraryRemove => '删除';
+
+  @override
+  String get browserBookmarkAdded => '已添加书签';
+
+  @override
+  String get browserBookmarkRemoved => '已删除书签';
+
+  @override
+  String get browserTabsTooltip => '标签页';
+
+  @override
+  String get browserNewTab => '新标签页';
+
+  @override
+  String get browserCloseAllTabs => '全部关闭';
+
+  @override
+  String get browserTabByAssistant => '助手';
+
+  @override
+  String get browserDesktopSite => '桌面版网站';
+
+  @override
+  String get browserClearSiteData => '清除网站数据';
+
+  @override
+  String browserClearSiteDataConfirm(String site) {
+    return '退出 $site 并删除其在此浏览器中的数据？';
+  }
+
+  @override
+  String browserClearSiteDataDone(String site) {
+    return '已删除 $site 的数据';
+  }
+
+  @override
+  String browserTabsTitle(int count) {
+    return '标签页：$count';
+  }
+
+  @override
+  String browserDownloadDone(String file) {
+    return '已下载 $file';
+  }
+
+  @override
+  String get browserNoAppForLink => '手机上没有可打开此链接的应用。';
+
+  @override
+  String browserDownloadStarted(String file) {
+    return '正在下载 $file 到“下载”';
+  }
+
+  @override
+  String browserDownloadFailed(String file) {
+    return '无法下载 $file';
+  }
+
+  @override
+  String get browserDownloadUnsupported => '此文件由页面自行生成，暂时无法下载。';
+
+  @override
+  String browserPermissionQuestion(String what) {
+    return '允许此网站使用：$what？';
+  }
+
+  @override
+  String get browserPermissionCamera => '相机';
+
+  @override
+  String get browserPermissionMicrophone => '麦克风';
+
+  @override
+  String get browserPermissionLocation => '位置';
+
+  @override
+  String get browserPermissionProtectedMedia => '受保护的视频';
+
+  @override
+  String get browserPermissionAllow => '允许';
+
+  @override
+  String get browserPermissionBlock => '阻止';
+
+  @override
+  String get browserChallengeVerify => '网站要求验证你是真人。请自行完成验证，助手会等待。';
+
+  @override
+  String get browserChallengeRateLimited => '网站限制了请求频率。助手会放慢速度。';
+
+  @override
+  String get browserChallengeDenied => '网站拒绝自动访问。';
 
   @override
   String get chatHeaderFiles => '文件';
@@ -10804,6 +11353,208 @@ class AppLocalizationsZh extends AppLocalizations {
   String get miniAppsNotificationChannelDescription => '来自小应用的通知和提醒。';
 
   @override
+  String get miniAppsToolActionErrors => '读取应用错误日志';
+
+  @override
+  String get miniAppsToolActionVersions => '列出应用版本';
+
+  @override
+  String get miniAppsToolActionRollback => '回滚应用';
+
+  @override
+  String get miniAppsBackAgainToExit => '再按一次返回退出';
+
+  @override
+  String get miniAppsJobs => '后台任务';
+
+  @override
+  String get miniAppsJobsEmpty => '没有后台任务。可以让代理这样做，例如：“每天早上 8 点查看天气并通知我”。';
+
+  @override
+  String get miniAppsJobsFooter =>
+      '到设定时间，Moru 会在后台打开应用并运行任务最多 30 秒，即使 Moru 已关闭。错误会写入错误日志。';
+
+  @override
+  String get miniAppsJobRunNow => '立即运行';
+
+  @override
+  String get miniAppsJobStarted => '任务已开始';
+
+  @override
+  String get miniAppsJobEveryDay => '每天';
+
+  @override
+  String get miniAppsJobRunning => '运行中…';
+
+  @override
+  String get miniAppsToolActionJobs => '列出应用后台任务';
+
+  @override
+  String get miniAppsToolActionRunJob => '运行应用后台任务';
+
+  @override
+  String miniAppsJobNext(String time) {
+    return '下次：$time';
+  }
+
+  @override
+  String miniAppsJobLastDone(String time) {
+    return '上次运行 $time：完成';
+  }
+
+  @override
+  String miniAppsJobLastFailed(String time) {
+    return '上次运行 $time：失败';
+  }
+
+  @override
+  String get miniAppsToolActionServer => '读取应用服务器状态';
+
+  @override
+  String get rootShellToolTitle => 'Root 命令';
+
+  @override
+  String get rootShellToolSubtitle =>
+      '在已 root 的手机上以 root (su) 运行命令：系统设置、应用、日志、屏幕输入。每条命令都需要你确认。';
+
+  @override
+  String get miniAppsWebTitle => '网页服务器';
+
+  @override
+  String get miniAppsWebPort => '端口';
+
+  @override
+  String get miniAppsWebLocalhostOnly => '仅限本机';
+
+  @override
+  String get miniAppsWebLocalhostOnlySubtitle =>
+      '只监听 127.0.0.1：网络中无法访问，也没有 moru.local。';
+
+  @override
+  String get miniAppsWebPasswordEnabled => '需要密码';
+
+  @override
+  String get miniAppsWebPasswordEnabledSubtitle => '浏览器会要求输入密码，用户名任意。';
+
+  @override
+  String get miniAppsWebPassword => '密码';
+
+  @override
+  String get miniAppsWebStart => '启动';
+
+  @override
+  String get miniAppsWebStop => '停止';
+
+  @override
+  String get miniAppsWebRunning => '运行中。在浏览器中打开：';
+
+  @override
+  String get miniAppsWebCopied => '地址已复制';
+
+  @override
+  String get miniAppsWebInvalidPort => '端口必须在 1024 到 65535 之间。';
+
+  @override
+  String get miniAppsWebNoPassword => '请设置密码或关闭密码。';
+
+  @override
+  String get miniAppsWebFooter =>
+      '小应用会在浏览器中打开，数据与 Moru 中相同。moru.local 和 Wi-Fi 地址可在同一 Wi-Fi 的设备上使用，移动数据下不可用；127.0.0.1 可在本机浏览器中使用。服务器运行时 Moru 会保留一条通知，在通知中停止也会停止服务器。';
+
+  @override
+  String miniAppsWebNotification(String url) {
+    return '网页服务器：$url';
+  }
+
+  @override
+  String miniAppsWebPortInUse(String port) {
+    return '端口 $port 已被占用：请换一个。';
+  }
+
+  @override
+  String get miniAppsWebAutostart => '随 Moru 启动';
+
+  @override
+  String get miniAppsWebAutostartSubtitle => '每次启动 Moru 时自动开启服务器。';
+
+  @override
+  String get miniAppsServer => '服务器';
+
+  @override
+  String get miniAppsServerStarting => '启动中…';
+
+  @override
+  String get miniAppsServerIdle => '未运行。应用打开时运行。';
+
+  @override
+  String get miniAppsServerRestart => '重启';
+
+  @override
+  String get miniAppsServerNoOutput => '暂无输出。';
+
+  @override
+  String miniAppsServerRunning(String port) {
+    return '运行中，端口 $port';
+  }
+
+  @override
+  String miniAppsServerExited(String code) {
+    return '已停止，代码 $code';
+  }
+
+  @override
+  String get miniAppsSearch => '搜索应用';
+
+  @override
+  String get miniAppsBadgeGame => '游戏';
+
+  @override
+  String miniAppsJobFailed(String job) {
+    return '后台任务“$job”未能完成。打开应用查看原因。';
+  }
+
+  @override
+  String get miniAppsMore => '更多';
+
+  @override
+  String get miniAppsErrors => '错误日志';
+
+  @override
+  String get miniAppsErrorsEmpty => '没有记录到错误。';
+
+  @override
+  String get miniAppsErrorsFooter => '当前版本的错误。在聊天中让代理修复应用，它会读取此日志。';
+
+  @override
+  String get miniAppsErrorsCopy => '全部复制';
+
+  @override
+  String get miniAppsErrorsCopied => '日志已复制';
+
+  @override
+  String get miniAppsErrorsClear => '清空';
+
+  @override
+  String get miniAppsVersions => '版本';
+
+  @override
+  String get miniAppsVersionsEmpty => '还没有旧版本。';
+
+  @override
+  String get miniAppsVersionsFooter =>
+      'Moru 保留最近 5 个版本。回滚只更改应用代码，数据和提醒保持不变。当前版本也会保留，可以再切换回来。';
+
+  @override
+  String miniAppsVersionsTitle(String name) {
+    return '回滚“$name”';
+  }
+
+  @override
+  String miniAppsRolledBack(String date) {
+    return '已恢复 $date 的版本';
+  }
+
+  @override
   String get phoneControlTitle => '手机控制';
 
   @override
@@ -10875,11 +11626,987 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get toolApprovalsFullTrustDescription =>
       '跳过浏览器、MCP、Shell、文件写入等通常需要确认的工具的逐次确认。';
+
+  @override
+  String chatReasoningTailHint(String shown, String total) {
+    return '仅显示最后 $shown / 共 $total 字符';
+  }
+
+  @override
+  String get chatToolCopyDetails => '复制详情';
+
+  @override
+  String get chatToolRerunFromHere => '从这里重新运行';
+
+  @override
+  String get chatTokensTitle => '对话令牌';
+
+  @override
+  String get chatTokensContext => '上下文';
+
+  @override
+  String get chatTokensContextUsed => '已使用';
+
+  @override
+  String get chatTokensContextWindow => '上下文窗口';
+
+  @override
+  String get chatTokensMaxOutput => '最大回复';
+
+  @override
+  String get chatTokensSpent => '本对话消耗';
+
+  @override
+  String get chatTokensInput => '输入';
+
+  @override
+  String get chatTokensOutput => '输出';
+
+  @override
+  String get chatTokensCached => '缓存命中';
+
+  @override
+  String get chatTokensReplies => '回复数';
+
+  @override
+  String get chatTokensCost => '费用';
+
+  @override
+  String get chatInputHintQueue => 'AI 回复时也可输入：消息会排队发送';
+
+  @override
+  String get chatInputHintMiniApp => '让 AI 做个小程序：记录、游戏、工具';
+
+  @override
+  String get chatInputHintPaste => '粘贴长文本：会变成文件';
+
+  @override
+  String get chatInputHintTokens => '点发送旁的圆环查看令牌用量';
+
+  @override
+  String get chatInputHintToolMenu => '长按工具步骤可复制或重新运行';
+
+  @override
+  String get messageMoreSheetCopyFormatted => '带格式复制';
+
+  @override
+  String get agentsMode => '代理模式';
+
+  @override
+  String get agentsSessionOptions => '代理选项';
+
+  @override
+  String get agentsImageNotSent => '图片未发送给代理。';
+
+  @override
+  String get agentsErrorApiKey => '提供商的 API 密钥无效。';
+
+  @override
+  String get agentsErrorModel => '未找到模型。请检查提供商的模型设置。';
+
+  @override
+  String get agentsErrorNetwork => '无法连接网络。请检查网络连接后重试。';
+
+  @override
+  String get agentsErrorHeaders => '提供商请求头包含无效名称或换行符。请检查提供商的请求头设置。';
+
+  @override
+  String get agentsErrorTemporaryDirectory => '代理无法使用临时目录。请检查 Linux 环境后重试。';
+
+  @override
+  String get agentsShowDetails => '显示详情';
+
+  @override
+  String get agentsHideDetails => '隐藏详情';
+
+  @override
+  String get agentsDescKimiCode => 'Moonshot 编程代理：编辑文件并运行命令。';
+
+  @override
+  String get agentsDescDeepSeekHarness => 'DeepSeek 编程代理：在工作目录中处理文件和命令。';
+
+  @override
+  String get agentsApiCompatible =>
+      '通过 Anthropic、Chat Completions 或 Responses API 使用 Moru 服务商。';
+
+  @override
+  String get agentsWebOpen => '打开网页界面';
+
+  @override
+  String get agentsWebStop => '停止';
+
+  @override
+  String get agentsWebStarting => '正在启动网页界面…';
+
+  @override
+  String get agentsWebRunning => '网页界面正在后台运行。';
+
+  @override
+  String get agentsWebTimeout => '代理未在 120 秒内输出本地网页地址。请停止后重试。';
+
+  @override
+  String get agentsWebExited => '网页进程已退出。重新打开界面以再次启动。';
+
+  @override
+  String get agentsWebStartFailed => '无法启动网页界面。请检查 Linux 环境、代理安装和 Node.js 版本。';
+
+  @override
+  String get agentsWebStopped => '网页界面已停止。';
+
+  @override
+  String get agentsWebDeepSeekWorkspace =>
+      '请在 DeepSeek Harness 网页界面中选择或添加 /workspace 目录。';
+
+  @override
+  String agentsNodeVersionRequired(
+    String agent,
+    String requiredVersion,
+    String actual,
+  ) {
+    return '$agent 需要 Node.js $requiredVersion。Linux 环境中检测到：$actual。请更新 Node.js，重新打开此卡片后重试。';
+  }
+
+  @override
+  String get agentsNodeVersionUnknown => '无法获取版本';
+
+  @override
+  String get agentsNodeUpdateDebian =>
+      '在 Linux 终端中从 NodeSource 官方仓库安装 Node.js 24：\napt-get update\napt-get install -y ca-certificates curl bash\ncurl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\nbash /tmp/moru-node24-setup.sh\napt-get install -y nodejs\nnode --version\nnpm --version\n说明：https://github.com/nodesource/distributions/blob/master/DEV_README.md';
+
+  @override
+  String get agentsNodeUpdateAlpine =>
+      '在 Linux 终端中更新 Alpine 软件包：\napk update\napk add --upgrade nodejs npm\nnode --version\nnpm --version';
+
+  @override
+  String get agentsNodeUpdateUnknown =>
+      '此发行版暂无已确认的升级方法。请查阅其官方 Node.js 安装说明，然后重新打开此卡片。';
+
+  @override
+  String get workspaceEnvGroupDevelopment => '开发';
+
+  @override
+  String get workspaceEnvGroupAgents => 'AI 智能体';
+
+  @override
+  String get workspaceEnvGroupAgentsDetail =>
+      '“为智能体做准备”会安装编程智能体所需的系统组件；打开智能体可安装、更新或检查。';
+
+  @override
+  String get workspaceEnvGroupSsh => 'SSH';
+
+  @override
+  String get workspaceEnvPrepareAgents => '为智能体做准备';
+
+  @override
+  String get workspaceEnvPrepareAgentsDone => '智能体所需组件均已安装';
+
+  @override
+  String get workspaceEnvDependencyBuildTitle => '构建工具';
+
+  @override
+  String get workspaceEnvDependencyBuild => '编译器和 make，用于构建 Node 与 Python 模块';
+
+  @override
+  String get workspaceEnvDependencyProcessesTitle => '进程工具';
+
+  @override
+  String get workspaceEnvDependencyCompatTitle => 'glibc 兼容层';
+
+  @override
+  String get workspaceEnvDependencyCompat => '在 Alpine 上运行为常规 Linux 构建的程序';
+
+  @override
+  String get workspaceEnvDependencyBash => '智能体与脚本执行命令所用的 Shell';
+
+  @override
+  String get workspaceEnvDependencyRipgrep => '快速代码搜索，编程智能体使用它';
+
+  @override
+  String get workspaceEnvDependencySshTitle => 'SSH 客户端';
+
+  @override
+  String get workspaceEnvDependencySshpass => '为脚本提供密码登录';
+
+  @override
+  String get workspaceEnvDependencySshdTitle => 'SSH 服务器';
+
+  @override
+  String get workspaceEnvDependencySshd => '通过 SSH 连接到手机';
+
+  @override
+  String workspaceEnvInstallSelected(int count) {
+    return '安装所选（$count）';
+  }
+
+  @override
+  String get agentsCodexResponsesRequired =>
+      'Codex 仅支持提供 OpenAI Responses API 的服务商。请在服务商设置中启用，或选择其他智能体。';
+
+  @override
+  String get backgroundReliabilityHintTitle => '让任务持续运行';
+
+  @override
+  String get backgroundReliabilityHintDisabled =>
+      '后台执行已关闭。启用后，切换应用或关闭屏幕时任务可继续运行。';
+
+  @override
+  String get backgroundReliabilityHintRestricted =>
+      'Android 限制 Moru 的后台活动。离开此任务前，请检查应用的电池设置。';
+
+  @override
+  String get backgroundReliabilityHintStandby =>
+      '低功耗待机可能在任务运行期间暂停网络访问。请检查设备的节能设置。';
+
+  @override
+  String get backgroundReliabilityHintVendor =>
+      'Vivo 和小米可能停止后台任务。请在系统设置中允许后台活动和自启动。';
+
+  @override
+  String get backgroundReliabilityHintInterrupted =>
+      '上一个任务因 Moru 进程结束而中断。离开新任务前，请检查电池和后台活动设置。';
+
+  @override
+  String get backgroundReliabilityHintSettings => '后台设置';
+
+  @override
+  String get backgroundReliabilityHintDismiss => '关闭提示';
+
+  @override
+  String get backgroundLowPowerStandby => '低功耗待机';
+
+  @override
+  String get backgroundLowPowerStandbyDetail =>
+      '此设备模式即使在前台服务运行时也可能限制网络。电池优化豁免并不总能解除此限制。';
+
+  @override
+  String get backgroundPowerRestricted => '受限';
+
+  @override
+  String get backgroundPowerUnrestricted => '未报告限制';
+
+  @override
+  String get backgroundShellRunning => '正在运行后台命令';
+
+  @override
+  String get backgroundServerRunning => '小程序服务器正在运行';
+
+  @override
+  String get backgroundProtectionUnavailable => '无法启动后台保护。请保持 Moru 打开并重试。';
+
+  @override
+  String get chatInterruptedBody => '应用在回复完成前停止。已保存的部分回复和排队消息仍保留。继续将开始新的轮次。';
+
+  @override
+  String get chatContinueAfterInterruption => '继续';
+
+  @override
+  String get chatContinuePrompt => '中断后从已保存的上下文继续。采取进一步操作前，请检查已完成的工作。';
+
+  @override
+  String get queuedInputSaveFailed => '无法保存排队消息。草稿仍可使用。';
+
+  @override
+  String get notificationApprovalTitle => '需要批准';
+
+  @override
+  String get notificationApprovalBody => '智能体正在等待您的决定。';
+
+  @override
+  String get notificationApprovalAllow => '允许';
+
+  @override
+  String get notificationApprovalDeny => '拒绝';
+
+  @override
+  String get notificationApprovalStaleTitle => '批准请求已失效';
+
+  @override
+  String get notificationApprovalStaleBody => '打开聊天以查看此请求。';
+
+  @override
+  String get notificationApprovalChannelName => '智能体批准请求';
+
+  @override
+  String get notificationApprovalChannelDescription => '正在运行的智能体或工具请求您的决定。';
+
+  @override
+  String get backgroundShellCompleted => '后台命令已完成';
+
+  @override
+  String get backgroundShellFailed => '后台命令失败';
+
+  @override
+  String get agentsAuthTitle => '使用订阅登录';
+
+  @override
+  String get agentsAuthMode => '身份验证';
+
+  @override
+  String get agentsAuthProvider => 'API 服务商';
+
+  @override
+  String get agentsAuthSubscription => '订阅';
+
+  @override
+  String get agentsAuthProviderHint => '使用此助手的 API 服务商设置。';
+
+  @override
+  String get agentsAuthSubscriptionHint =>
+      '使用代理自己的 Claude 或 ChatGPT 登录。不传入 API 服务商的密钥或模型设置。';
+
+  @override
+  String get agentsAuthSignIn => '登录';
+
+  @override
+  String get agentsAuthCheck => '检查登录';
+
+  @override
+  String get agentsAuthSignOut => '退出登录';
+
+  @override
+  String get agentsAuthSignedIn => '已登录';
+
+  @override
+  String get agentsAuthSignedOut => '需要登录';
+
+  @override
+  String get agentsAuthUnknown => '尚未检查登录';
+
+  @override
+  String get agentsAuthWaiting => '请在浏览器中完成登录。';
+
+  @override
+  String get agentsAuthOpenBrowser => '打开登录页面';
+
+  @override
+  String get agentsAuthDeviceCode => '设备代码';
+
+  @override
+  String get agentsAuthCodexHint => '登录前，请在 ChatGPT 设置 → 安全中启用设备代码登录。';
+
+  @override
+  String get agentsAuthCode => '授权代码';
+
+  @override
+  String get agentsAuthSubmitCode => '提交代码';
+
+  @override
+  String get agentsAuthCodeHint => '如果浏览器要求复制代码，请粘贴完整代码，包括 # 后面的部分。';
+
+  @override
+  String get agentsAuthCancel => '取消登录';
+
+  @override
+  String get agentsAuthFailureEnvironment => '请先设置 Linux 环境。';
+
+  @override
+  String get agentsAuthFailureStart => '无法完成登录。请更新代理后重试。';
+
+  @override
+  String get agentsAuthFailureNetwork => '因网络连接问题登录失败。请重试。';
+
+  @override
+  String get agentsAuthFailureTimeout => '登录超时。请重试。';
+
+  @override
+  String get agentsAuthBrowserFailed => '无法打开登录页面。可以复制下方链接。';
+
+  @override
+  String get agentsErrorAuthRequired =>
+      '代理需要身份验证。请通过设置 → 代理登录，或检查所选提供商的 API 密钥。';
+
+  @override
+  String get agentsErrorAccountBusy => 'Codex 已在另一个聊天中运行。请等待回复完成或停止该回复。';
+
+  @override
+  String get computerTitle => '计算机';
+
+  @override
+  String get computerWorking => 'AI 正在工作…';
+
+  @override
+  String get computerDone => '完成';
+
+  @override
+  String get computerError => '错误';
+
+  @override
+  String get computerPreviousStep => '上一步';
+
+  @override
+  String get computerNextStep => '下一步';
+
+  @override
+  String get computerLatest => '跳到最新';
+
+  @override
+  String get computerOpenTerminal => '打开终端';
+
+  @override
+  String get computerOpenBrowser => '打开实时浏览器';
+
+  @override
+  String get computerOpenFile => '预览文件';
+
+  @override
+  String get computerCopyResult => '复制结果';
+
+  @override
+  String get computerNoResult => '暂无结果';
+
+  @override
+  String get computerParameters => '参数';
+
+  @override
+  String get computerResult => '结果';
+
+  @override
+  String get browserFloatingWindowTitle => '浏览器悬浮窗';
+
+  @override
+  String get browserFloatingWindowDescription =>
+      '最小化时显示实时浏览器悬浮窗。默认在输入框上方的「计算机」中显示 AI 操作。';
+
+  @override
+  String get computerMoreDetails => '详细结果';
+
+  @override
+  String get computerStopped => '已停止';
+
+  @override
+  String computerActionsCount(int count) {
+    return '$count 项操作';
+  }
+
+  @override
+  String get computerViewAction => '查看';
+
+  @override
+  String get computerBackgroundOutput => '后台任务输出';
+
+  @override
+  String get computerBackground => '后台运行';
+
+  @override
+  String computerRunningElapsed(String elapsed) {
+    return '运行中 · $elapsed';
+  }
+
+  @override
+  String computerExitElapsed(int code, String seconds) {
+    return '退出码 $code · $seconds 秒';
+  }
+
+  @override
+  String computerBrowserStep(String domain) {
+    return '浏览器 · $domain';
+  }
+
+  @override
+  String computerPlanProgress(int completed, int total) {
+    return '计划 · $completed/$total';
+  }
+
+  @override
+  String computerFileStep(String action, String name) {
+    return '$action · $name';
+  }
+
+  @override
+  String computerAddedLines(int count) {
+    return '（+$count 行）';
+  }
+
+  @override
+  String get computerActionCommand => '命令';
+
+  @override
+  String get computerActionOpen => '打开';
+
+  @override
+  String get computerActionClick => '点击';
+
+  @override
+  String get computerActionType => '输入';
+
+  @override
+  String get computerActionRead => '读取';
+
+  @override
+  String get computerActionWrite => '写入';
+
+  @override
+  String get computerActionEdit => '编辑';
+
+  @override
+  String get computerActionList => '列出';
+
+  @override
+  String get computerActionPlan => '计划';
+
+  @override
+  String get computerActionScreenshot => '截图';
+
+  @override
+  String get computerBrowserOpening => '正在打开…';
+
+  @override
+  String get computerBrowserClicking => '正在点击…';
+
+  @override
+  String get computerBrowserTyping => '正在输入…';
+
+  @override
+  String get computerBrowserReading => '正在读取页面';
+
+  @override
+  String get computerAllParameters => '所有参数（JSON）';
+
+  @override
+  String get computerParameterDirectory => '目录';
+
+  @override
+  String get computerParameterBackground => '后台';
+
+  @override
+  String get computerParameterTimeout => '超时';
+
+  @override
+  String get computerParameterUrl => '网址';
+
+  @override
+  String get computerParameterSelector => '选择器';
+
+  @override
+  String get computerParameterText => '文本';
+
+  @override
+  String get computerParameterPath => '路径';
+
+  @override
+  String get computerParameterRange => '范围';
+
+  @override
+  String computerStepPosition(int current, int total) {
+    return '第 $current 步，共 $total 步';
+  }
+
+  @override
+  String get browserActions => '操作';
+
+  @override
+  String browserActionsCount(int count) {
+    return '操作 · $count';
+  }
+
+  @override
+  String get browserCloseBrowser => '关闭浏览器';
+
+  @override
+  String get browserCloseWhileAiTitle => '关闭浏览器？';
+
+  @override
+  String get browserCloseWhileAiMessage => 'AI 操作将停止。';
+
+  @override
+  String get computerActionSummary => '总结';
+
+  @override
+  String get computerBrowserResultStatus => '状态';
+
+  @override
+  String get computerBrowserResultSuccess => '成功';
+
+  @override
+  String get computerBrowserResultError => '错误';
+
+  @override
+  String get computerBrowserResultTitle => '标题';
+
+  @override
+  String get computerParameterYes => '是';
+
+  @override
+  String get computerParameterNo => '否';
+
+  @override
+  String computerBrowserAction(String action) {
+    String _temp0 = intl.Intl.selectLogic(action, {
+      'open': '打开',
+      'observe': '查看',
+      'screenshot': '截图',
+      'read': '读取',
+      'collect': '收集列表',
+      'outline': '页面结构',
+      'wait_stable': '等待加载',
+      'wait_for': '等待元素',
+      'back': '后退',
+      'forward': '前进',
+      'reload': '刷新',
+      'scroll': '滚动',
+      'tabs': '标签页',
+      'new_tab': '新标签页',
+      'switch_tab': '切换标签页',
+      'close_tab': '关闭标签页',
+      'set_mode': '网站模式',
+      'close': '关闭浏览器',
+      'done': '完成',
+      'click': '点击',
+      'hover': '悬停',
+      'type': '输入',
+      'submit': '提交表单',
+      'press_key': '按键',
+      'eval_js': '执行页面代码',
+      'fetch': '页面请求',
+      'export_cookies': '导出 Cookie',
+      'other': '浏览器操作',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get problemReportToolTitle => '问题报告';
+
+  @override
+  String get problemReportToolSubtitle => '将技术诊断信息收集到私密 ZIP 文件。每次都需要确认。';
+
+  @override
+  String get problemReportConsent =>
+      'ZIP 将包含：\n• 应用版本和构建号\n• Android 版本、制造商和设备型号\n• 环境模式：PRoot/root\n• 界面、工具、日志设置及服务商类型，不含机密信息\n• 本次启动的技术事件：事件名称、错误类型和堆栈帧（最多 128 KiB）\n不包含聊天、消息文本或请求/上下文日志。机密信息会被移除。报告将在下次启动时删除，或在 24 小时后过期。';
+
+  @override
+  String get problemReportUnavailable => '报告已删除或无法分享。请创建新报告。';
+
+  @override
+  String get mcpManagerToolTitle => '管理 MCP 服务器';
+
+  @override
+  String get mcpManagerToolSubtitle => '允许模型在确认后添加、配置和测试 MCP 服务器。密钥需私下输入。';
+
+  @override
+  String get mcpManagerActionList => '列出 MCP 服务器';
+
+  @override
+  String get mcpManagerActionGet => '查看 MCP 服务器';
+
+  @override
+  String get mcpManagerActionAdd => '添加 MCP 服务器';
+
+  @override
+  String get mcpManagerActionUpdate => '更新 MCP 服务器';
+
+  @override
+  String get mcpManagerActionEnable => '启用 MCP 服务器';
+
+  @override
+  String get mcpManagerActionDisable => '停用 MCP 服务器';
+
+  @override
+  String get mcpManagerActionRemove => '删除 MCP 服务器';
+
+  @override
+  String get mcpManagerActionTest => '测试 MCP 服务器';
+
+  @override
+  String get mcpManagerActionSelect => '为助手选择 MCP 服务器';
+
+  @override
+  String get mcpManagerActionUnselect => '取消助手的 MCP 服务器选择';
+
+  @override
+  String get mcpManagerActionSetTool => '配置 MCP 工具';
+
+  @override
+  String get mcpManagerSecretHint =>
+      '请在此输入密钥。密钥仅保存到 MCP 设置，不会发送给模型或写入聊天记录。请求头如有需要，请包含 Bearer/Basic 前缀。';
+
+  @override
+  String get mcpManagerPrevious => '当前配置';
+
+  @override
+  String get mcpManagerValueSet => '已设置值';
+
+  @override
+  String get mcpManagerValueNeeded => '需要输入值';
+
+  @override
+  String get spendControlTitle => '費用控制';
+
+  @override
+  String get spendControlSubtitle => '查看費用並壓縮上下文。修改需要確認。';
+
+  @override
+  String get spendLimitsTitle => '費用限額';
+
+  @override
+  String get spendLimitsNote =>
+      '可設定每個聊天和裝置本地一天的限額。清空數值可關閉限額。Token 為輸入加輸出；快取屬於輸入。價格可能不完整。';
+
+  @override
+  String get spendChatUsd => '每個聊天 · 美元';
+
+  @override
+  String get spendChatTokens => '每個聊天 · Token';
+
+  @override
+  String get spendDailyUsd => '每天 · 美元';
+
+  @override
+  String get spendDailyTokens => '每天 · Token';
+
+  @override
+  String get spendWarningThreshold => '提醒閾值';
+
+  @override
+  String get spendHardStop => '達到限額時停止';
+
+  @override
+  String get spendHardStopNote => '已啟用的限額用盡時停止目前回覆並阻止新請求。未知費用無法用於執行美元限額。';
+
+  @override
+  String get spendHardStopMessage => '已達到費用限額。請在統計中調整限額或關閉達到限額時停止。';
+
+  @override
+  String spendCacheShare(String percent) {
+    return '快取 $percent%';
+  }
+
+  @override
+  String get spendResponseStopped => '回覆已停止：已達到費用限額。請在統計中調整限額以繼續。';
+
+  @override
+  String get spendDisabled => '關閉';
+
+  @override
+  String get spendValueHint => '留空表示不限額';
+
+  @override
+  String get spendInvalidValue => '請輸入正數或清空。Token 限額必須為整數。';
+
+  @override
+  String get spendInvalidThreshold => '請輸入 1 至 100 的整數百分比。';
+
+  @override
+  String spendChatRemaining(String remaining) {
+    return '聊天：剩餘 $remaining';
+  }
+
+  @override
+  String spendDailyRemaining(String remaining) {
+    return '今天：剩餘 $remaining';
+  }
+
+  @override
+  String spendWarningHint(String remaining) {
+    return '限額提醒 · $remaining';
+  }
+
+  @override
+  String spendLimitReachedHint(String remaining) {
+    return '已達到限額 · $remaining';
+  }
+
+  @override
+  String spendTokenAmount(String count) {
+    return '$count Token';
+  }
+
+  @override
+  String get spendPartialPrice => '價格不完整；剩餘美元為上限。';
+
+  @override
+  String get spendCompactAction => '壓縮上下文';
+
+  @override
+  String get spendSetLimitsAction => '修改費用限額';
+
+  @override
+  String get spendStatusAction => '查看費用';
+
+  @override
+  String get spendCompactNote => '壓縮將依你的壓縮設定建立包含摘要的新聊天。原聊天會保留；目前回覆仍在原聊天中完成。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
 class AppLocalizationsZhHans extends AppLocalizationsZh {
   AppLocalizationsZhHans() : super('zh_Hans');
+
+  @override
+  String get appearanceSaveError => '无法保存外观。请重试。';
+
+  @override
+  String get appearanceSidebarBackground => '侧栏背景';
+
+  @override
+  String get appearanceSidebarSameAsChat => '与聊天相同';
+
+  @override
+  String get appearanceSidebarCustomBackground => '自定义背景';
+
+  @override
+  String get appearanceSidebarThemeBackground => '主题背景';
+
+  @override
+  String get appearanceSidebarMask => '侧栏背景遮罩';
+
+  @override
+  String get appearanceSidebarBlur => '侧栏背景模糊';
+
+  @override
+  String get appearanceSidebarOpacity => '侧栏背景不透明度';
+
+  @override
+  String get appearanceSidebarPhoneWidth => '手机侧栏宽度';
+
+  @override
+  String get appearanceSidebarWideWidth => '宽屏侧栏宽度';
+
+  @override
+  String get appearanceSidebarDensity => '聊天列表密度';
+
+  @override
+  String get appearanceSidebarCompact => '紧凑';
+
+  @override
+  String get appearanceSidebarNormal => '标准';
+
+  @override
+  String get appearanceSidebarSpacious => '宽松';
+
+  @override
+  String get appearanceSidebarCardRadius => '聊天卡片圆角';
+
+  @override
+  String get appearanceSidebarCardColor => '聊天卡片颜色';
+
+  @override
+  String get appearanceSidebarActiveCardColor => '当前聊天卡片颜色';
+
+  @override
+  String get appearanceSidebarResetColor => '使用主题颜色';
+
+  @override
+  String get appearanceSidebarTimestamp => '消息时间';
+
+  @override
+  String get appearanceSidebarAssistant => '助手图标和名称';
+
+  @override
+  String get appearanceSidebarModel => '模型图标和名称';
+
+  @override
+  String get appearanceSidebarLastPreview => '最后一条消息预览';
+
+  @override
+  String get appearanceSidebarGrouping => '聊天分组';
+
+  @override
+  String get appearanceSidebarGroupingDate => '按日期';
+
+  @override
+  String get appearanceSidebarGroupingAssistant => '按助手';
+
+  @override
+  String get appearanceSidebarGroupingNone => '不分组';
+
+  @override
+  String get appearanceSidebarDock => '侧栏底部按钮';
+
+  @override
+  String get appearanceSidebarDockHint => '选择按钮并拖动手柄调整顺序。';
+
+  @override
+  String get appearanceSidebarShortcutsHint => '选择置顶应用和页面，然后拖动调整顺序。';
+
+  @override
+  String get appearanceSidebarPreviewTitle => '旅行计划';
+
+  @override
+  String get appearanceSidebarPreviewOtherTitle => '新想法';
+
+  @override
+  String get appearanceSidebarPreviewMessage => '这里有一些可以开始的想法。';
+
+  @override
+  String get appearanceSidebarPreviewModel => '模型';
+
+  @override
+  String get appearanceSidebarReset => '重置侧栏外观';
+
+  @override
+  String get appearanceSettingsPageTitle => '外观';
+
+  @override
+  String get appearanceChatWindow => '聊天窗口';
+
+  @override
+  String get appearanceSidebar => '侧边栏';
+
+  @override
+  String get appearanceSidebarComingSoon => '侧边栏外观设置将在后续更新中提供。';
+
+  @override
+  String get appearanceSameBackground => '浅色与深色使用相同背景';
+
+  @override
+  String get appearanceSameBackgroundHint => '在两种主题中使用同一个背景。';
+
+  @override
+  String get appearanceBackground => '背景';
+
+  @override
+  String get appearanceNone => '无';
+
+  @override
+  String get appearancePhoto => '从相册选择照片';
+
+  @override
+  String get appearanceGif => 'GIF';
+
+  @override
+  String get appearanceVideo => '视频';
+
+  @override
+  String get appearanceAnimatedGradient => '动态渐变';
+
+  @override
+  String get appearanceChooseMedia => '选择媒体';
+
+  @override
+  String get appearanceReplaceMedia => '更换媒体';
+
+  @override
+  String get appearanceFit => '适配方式';
+
+  @override
+  String get appearanceFitCover => '覆盖';
+
+  @override
+  String get appearanceFitContain => '完整显示';
+
+  @override
+  String get appearanceFitFill => '拉伸';
+
+  @override
+  String get appearanceFitTile => '平铺';
+
+  @override
+  String get appearanceFocusHint => '拖动预览来调整背景位置。';
+
+  @override
+  String get appearanceCenterFocus => '背景居中';
+
+  @override
+  String get appearanceBrightness => '亮度';
+
+  @override
+  String get appearanceSaturation => '饱和度';
+
+  @override
+  String get appearanceMediaError => '无法使用此文件。请选择其他图片、GIF 或视频。';
+
+  @override
+  String get appearanceReset => '重置背景';
 
   @override
   String get settingsSearchHint => '搜索设置';
@@ -11813,19 +13540,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get desktopNavTranslateTooltip => '翻译';
 
   @override
-  String get desktopAvatarMenuUseEmoji => '使用表情符号';
-
-  @override
   String get cameraPermissionDeniedMessage => '未授予相机权限';
 
   @override
   String get openSystemSettings => '去设置';
-
-  @override
-  String get desktopAvatarMenuChangeFromImage => '从图片更换…';
-
-  @override
-  String get desktopAvatarMenuReset => '重置头像';
 
   @override
   String get assistantEditAvatarChooseImage => '选择图片';
@@ -13314,6 +15032,226 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get sideDrawerMenuSelect => '多选';
+
+  @override
+  String get sideDrawerNewChat => '新对话';
+
+  @override
+  String get sideDrawerMoveToFolder => '移到文件夹';
+
+  @override
+  String get sideDrawerNoFolder => '不放入文件夹';
+
+  @override
+  String get sideDrawerNewFolder => '新建文件夹';
+
+  @override
+  String get sideDrawerFolderNameHint => '文件夹名称';
+
+  @override
+  String get sideDrawerFolderIcon => '图标';
+
+  @override
+  String get sideDrawerFolderDelete => '删除文件夹';
+
+  @override
+  String sideDrawerFolderDeleteContent(String name) {
+    return '“$name”中的对话会保留在列表中。';
+  }
+
+  @override
+  String get agentsTitle => '智能体';
+
+  @override
+  String get agentsIntro =>
+      'Claude Code 等编程智能体可以直接在你的对话中回答。它们运行在这台手机的 Linux 环境中，处理对话的文件，并使用你已在 Moru 中设置的模型和密钥，无需重复配置。';
+
+  @override
+  String get agentsSection => '智能体';
+
+  @override
+  String get agentsFooter => '安装需要几分钟并需要联网。如果缺少 Node.js，会先安装它。';
+
+  @override
+  String get agentsNeedEnvironment => '请先安装并启动 Linux 环境（设置 → 工作区与环境）。';
+
+  @override
+  String get agentsStatusInstalled => '已安装';
+
+  @override
+  String get agentsStatusMissing => '未安装';
+
+  @override
+  String get agentsStatusChecking => '检查中…';
+
+  @override
+  String get agentsStatusWorking => '处理中…';
+
+  @override
+  String get agentsInstall => '安装';
+
+  @override
+  String get agentsUpdate => '更新';
+
+  @override
+  String get agentsRemove => '移除';
+
+  @override
+  String get agentsCheck => '检查连接';
+
+  @override
+  String get agentsCancel => '取消';
+
+  @override
+  String get agentsSave => '保存';
+
+  @override
+  String get agentsLog => '日志';
+
+  @override
+  String get agentsMoruToolsAvailable => 'Moru 工具：可用';
+
+  @override
+  String get agentsMoruToolsUnavailable => 'Moru 工具：不可用';
+
+  @override
+  String agentsCheckOk(String name, String version) {
+    return '正常：$name $version 已响应。';
+  }
+
+  @override
+  String agentsCheckFailed(String error) {
+    return '智能体未能启动：$error';
+  }
+
+  @override
+  String agentsCheckModel(String model) {
+    return '检查使用默认对话模型：$model。';
+  }
+
+  @override
+  String get agentsNoModel => '请先选择带 API 密钥的默认对话模型（设置 → 默认模型）。';
+
+  @override
+  String get agentsDescClaudeCode =>
+      'Anthropic 的编程智能体：读取和编辑文件、运行命令和测试、规划较大的任务。';
+
+  @override
+  String get agentsDescCodex => 'OpenAI 的编程智能体：编写和修复代码、运行命令、讲解项目。';
+
+  @override
+  String get agentsDescOpenCode => '开源编程智能体，几乎支持所有服务商。适合作为第一个选择。';
+
+  @override
+  String get agentsApiAnthropic =>
+      '需要兼容 Anthropic API 的服务商：Anthropic、DeepSeek、Kimi、GLM、MiniMax 或 OpenRouter。';
+
+  @override
+  String get agentsApiCodex =>
+      '与 OpenAI 配合最佳。其他服务商需要兼容 OpenAI 的 API；如服务商支持 Responses API，请在服务商设置中开启。';
+
+  @override
+  String get agentsApiOpenai => '支持任何兼容 OpenAI 的服务商以及 Anthropic。';
+
+  @override
+  String get agentsApiCustom =>
+      'Moru 通过 MORU_AGENT_BASE_URL、MORU_AGENT_API_KEY 和 MORU_AGENT_MODEL（以及 OPENAI_* 变量）传递模型地址、密钥和名称。';
+
+  @override
+  String get agentsCustomAdd => '添加自定义智能体';
+
+  @override
+  String get agentsCustomName => '名称';
+
+  @override
+  String get agentsCustomCommand => '命令';
+
+  @override
+  String get agentsCustomHint =>
+      'Linux 环境中任何通过 stdin/stdout 使用 ACP（Agent Client Protocol）的程序。';
+
+  @override
+  String get agentsCustomDelete => '删除智能体';
+
+  @override
+  String get agentsFailureNode => '无法安装 Node.js，请查看日志。';
+
+  @override
+  String get agentsFailureInstall => '安装失败，请查看下方日志。';
+
+  @override
+  String get agentsFailureRemove => '无法移除智能体，请查看日志。';
+
+  @override
+  String get agentsStartChat => '开始对话';
+
+  @override
+  String get agentsChatMissing => '此助手的智能体已不在列表中，请在助手设置中另选一个。';
+
+  @override
+  String get agentsChatNoKey => '智能体需要带 API 密钥的模型，请为此助手或默认模型选择一个带密钥的模型。';
+
+  @override
+  String agentsChatNotInstalled(String name) {
+    return '$name 尚未安装，请在 设置 → 智能体 中安装。';
+  }
+
+  @override
+  String get assistantAgentTitle => '智能体';
+
+  @override
+  String get assistantAgentNone => '无 — 由模型回答';
+
+  @override
+  String get assistantAgentHint =>
+      '选择智能体后，由它在此助手的对话中回答并处理对话文件。它使用上面的对话模型发送自己的请求。';
+
+  @override
+  String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的图片预览';
+
+  @override
+  String get sideDrawerArchive => '归档';
+
+  @override
+  String get sideDrawerArchived => '已归档';
+
+  @override
+  String get sideDrawerUndo => '撤销';
+
+  @override
+  String get archivePageTitle => '归档';
+
+  @override
+  String get archivePageEmpty => '归档为空。向右滑动对话即可归档。';
+
+  @override
+  String get archivePageRestore => '恢复';
+
+  @override
+  String get archivePageRestored => '已恢复';
+
+  @override
+  String get archivePageSortArchived => '按归档时间';
+
+  @override
+  String get archivePageSortActivity => '按最后消息';
+
+  @override
+  String archivePageDeleteTitle(String title) {
+    return '删除“$title”？';
+  }
+
+  @override
+  String get archivePageDeleteContent => '该对话及其所有消息将被删除。';
+
+  @override
+  String get sideDrawerShortcutsTitle => '侧边栏快捷方式';
+
+  @override
+  String get sideDrawerShortcutsEmpty => '暂无小程序或浏览器书签';
+
+  @override
+  String get sideDrawerShortcutRemove => '从侧边栏移除';
 
   @override
   String sideDrawerSelectionTitle(int count) {
@@ -14818,9 +16756,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String chainOfThoughtProcessedSteps(Object count) {
     return '已处理 · $count 个步骤';
   }
-
-  @override
-  String get displaySettingsPageShowChatListDateTitle => '显示对话列表日期';
 
   @override
   String get displaySettingsPageEnableImageCropperTitle => '启用图片裁剪';
@@ -17801,9 +19736,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get migrationTargetDatabaseLabel => 'SQLite';
 
   @override
-  String get migrationChooseFolderButton => '选择文件夹并备份';
-
-  @override
   String get migrationSaveBackupButton => '保存备份 ZIP';
 
   @override
@@ -18978,11 +20910,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
-  String workspaceEnvEngineAlpine(String version) {
-    return 'Alpine $version (iSH)';
-  }
-
-  @override
   String get workspaceEnvPhaseNotInstalled => '未安装';
 
   @override
@@ -19271,12 +21198,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get workspaceDeskBarEmptyHint => '从工具栏绑定工作区后即可在此浏览文件';
 
   @override
-  String get workspaceDeskOpenSystemTerminal => '在系统终端中打开';
-
-  @override
-  String get workspaceDeskReveal => '在文件管理器中显示';
-
-  @override
   String get workspaceEntryBind => '绑定工作区';
 
   @override
@@ -19309,12 +21230,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get workspaceEntryTerminal => '终端';
-
-  @override
-  String get workspaceEntryOpenSystemTerminal => '在系统终端中打开';
-
-  @override
-  String get workspaceEntryReveal => '在文件管理器中显示';
 
   @override
   String get workspaceEntrySessionSkills => '技能';
@@ -19508,9 +21423,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get workspacePreviewTable => '表格';
-
-  @override
-  String get workspacePreviewRevealFailed => '无法在文件管理器中显示此文件。';
 
   @override
   String get workspacePreviewEmptyTable => '此表格为空。';
@@ -19837,9 +21749,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get workspacePreviewEmptyHint => '此文件没有任何可预览的内容。';
-
-  @override
-  String get workspacePreviewRevealInFileManager => '在文件管理器中显示';
 
   @override
   String workspaceBindingSetAssistantDefault(String assistant) {
@@ -20227,6 +22136,30 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get workspaceEnvProotOptions => 'PRoot 配置';
+
+  @override
+  String get workspaceEnvRootChroot => '快速模式（root）';
+
+  @override
+  String get workspaceEnvRootChrootHint =>
+      '通过 su 在真正的 chroot 中运行 Linux 环境，而不是 PRoot：程序启动和运行快很多倍。命令以真正的 root 身份运行，可完全访问手机。关闭时文件会归还给 Moru。';
+
+  @override
+  String get workspaceEnvRootChrootChecking => '正在检查 root…';
+
+  @override
+  String get workspaceEnvRootChrootRestoring => '正在把文件归还给 Moru…';
+
+  @override
+  String get workspaceEnvRootChrootOn => '快速模式已开启';
+
+  @override
+  String get workspaceEnvRootChrootOff => '快速模式已关闭，恢复使用 PRoot';
+
+  @override
+  String workspaceEnvRootChrootFailed(String reason) {
+    return '快速模式不可用：$reason';
+  }
 
   @override
   String get workspaceEnvShellPath => 'Shell 路径';
@@ -21292,13 +23225,179 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get browserAddressEditorGo => '前往';
 
   @override
-  String get browserMinimize => '最小化';
+  String get browserMinimize => '收起至聊天';
 
   @override
   String get browserMiniExpand => '展开';
 
   @override
   String get browserMiniTitle => '浏览器';
+
+  @override
+  String get userscriptsTitle => '用户脚本';
+
+  @override
+  String get userscriptsHint =>
+      '类似 Tampermonkey 的脚本：会修改其适用的网站。只安装你信任的脚本——它们能看到这些网站上的一切。';
+
+  @override
+  String get userscriptsInstall => '安装';
+
+  @override
+  String get userscriptsEmpty => '还没有脚本。粘贴 .user.js 文件的链接，例如来自 greasyfork.org。';
+
+  @override
+  String get userscriptsBadLink => '请输入指向 .user.js 文件的 http(s) 链接';
+
+  @override
+  String get userscriptsNotAScript => '该文件不是用户脚本（没有 ==UserScript== 头）';
+
+  @override
+  String userscriptsInstalled(String name) {
+    return '已安装：$name';
+  }
+
+  @override
+  String userscriptsInstallFailed(String error) {
+    return '无法安装：$error';
+  }
+
+  @override
+  String get browserGoogleSignInBlocked =>
+      'Google 不允许在此内置浏览器中登录。请换一种方式登录，或在 Chrome 中打开该网站。';
+
+  @override
+  String get browserOpenInChrome => '在 Chrome 中打开';
+
+  @override
+  String get browserSslTitle => '连接不安全';
+
+  @override
+  String browserSslMessage(String site, String problem) {
+    return '$site 的证书无效（$problem）。可能有人试图窃取你的数据。';
+  }
+
+  @override
+  String get browserSslProceed => '仍然继续';
+
+  @override
+  String get browserSslBack => '返回';
+
+  @override
+  String get browserBookmarks => '书签';
+
+  @override
+  String get browserHistory => '历史记录';
+
+  @override
+  String get browserClearHistory => '清除';
+
+  @override
+  String get browserClearHistoryConfirm => '清除最近 7 天的历史记录？';
+
+  @override
+  String get browserLibrarySearch => '搜索';
+
+  @override
+  String get browserHistoryEmpty => '最近 7 天没有访问记录';
+
+  @override
+  String get browserBookmarksEmpty => '还没有书签。点按地址栏中的星标。';
+
+  @override
+  String get browserLibraryRemove => '删除';
+
+  @override
+  String get browserBookmarkAdded => '已添加书签';
+
+  @override
+  String get browserBookmarkRemoved => '已删除书签';
+
+  @override
+  String get browserTabsTooltip => '标签页';
+
+  @override
+  String get browserNewTab => '新标签页';
+
+  @override
+  String get browserCloseAllTabs => '全部关闭';
+
+  @override
+  String get browserTabByAssistant => '助手';
+
+  @override
+  String get browserDesktopSite => '桌面版网站';
+
+  @override
+  String get browserClearSiteData => '清除网站数据';
+
+  @override
+  String browserClearSiteDataConfirm(String site) {
+    return '退出 $site 并删除其在此浏览器中的数据？';
+  }
+
+  @override
+  String browserClearSiteDataDone(String site) {
+    return '已删除 $site 的数据';
+  }
+
+  @override
+  String browserTabsTitle(int count) {
+    return '标签页：$count';
+  }
+
+  @override
+  String browserDownloadDone(String file) {
+    return '已下载 $file';
+  }
+
+  @override
+  String get browserNoAppForLink => '手机上没有可打开此链接的应用。';
+
+  @override
+  String browserDownloadStarted(String file) {
+    return '正在下载 $file 到“下载”';
+  }
+
+  @override
+  String browserDownloadFailed(String file) {
+    return '无法下载 $file';
+  }
+
+  @override
+  String get browserDownloadUnsupported => '此文件由页面自行生成，暂时无法下载。';
+
+  @override
+  String browserPermissionQuestion(String what) {
+    return '允许此网站使用：$what？';
+  }
+
+  @override
+  String get browserPermissionCamera => '相机';
+
+  @override
+  String get browserPermissionMicrophone => '麦克风';
+
+  @override
+  String get browserPermissionLocation => '位置';
+
+  @override
+  String get browserPermissionProtectedMedia => '受保护的视频';
+
+  @override
+  String get browserPermissionAllow => '允许';
+
+  @override
+  String get browserPermissionBlock => '阻止';
+
+  @override
+  String get browserChallengeVerify => '网站要求验证你是真人。请自行完成验证，助手会等待。';
+
+  @override
+  String get browserChallengeRateLimited => '网站限制了请求频率。助手会放慢速度。';
+
+  @override
+  String get browserChallengeDenied => '网站拒绝自动访问。';
 
   @override
   String get chatHeaderFiles => '文件';
@@ -21606,6 +23705,208 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get miniAppsNotificationChannelDescription => '来自小应用的通知和提醒。';
 
   @override
+  String get miniAppsToolActionErrors => '读取应用错误日志';
+
+  @override
+  String get miniAppsToolActionVersions => '列出应用版本';
+
+  @override
+  String get miniAppsToolActionRollback => '回滚应用';
+
+  @override
+  String get miniAppsBackAgainToExit => '再按一次返回退出';
+
+  @override
+  String get miniAppsJobs => '后台任务';
+
+  @override
+  String get miniAppsJobsEmpty => '没有后台任务。可以让代理这样做，例如：“每天早上 8 点查看天气并通知我”。';
+
+  @override
+  String get miniAppsJobsFooter =>
+      '到设定时间，Moru 会在后台打开应用并运行任务最多 30 秒，即使 Moru 已关闭。错误会写入错误日志。';
+
+  @override
+  String get miniAppsJobRunNow => '立即运行';
+
+  @override
+  String get miniAppsJobStarted => '任务已开始';
+
+  @override
+  String get miniAppsJobEveryDay => '每天';
+
+  @override
+  String get miniAppsJobRunning => '运行中…';
+
+  @override
+  String get miniAppsToolActionJobs => '列出应用后台任务';
+
+  @override
+  String get miniAppsToolActionRunJob => '运行应用后台任务';
+
+  @override
+  String miniAppsJobNext(String time) {
+    return '下次：$time';
+  }
+
+  @override
+  String miniAppsJobLastDone(String time) {
+    return '上次运行 $time：完成';
+  }
+
+  @override
+  String miniAppsJobLastFailed(String time) {
+    return '上次运行 $time：失败';
+  }
+
+  @override
+  String get miniAppsToolActionServer => '读取应用服务器状态';
+
+  @override
+  String get rootShellToolTitle => 'Root 命令';
+
+  @override
+  String get rootShellToolSubtitle =>
+      '在已 root 的手机上以 root (su) 运行命令：系统设置、应用、日志、屏幕输入。每条命令都需要你确认。';
+
+  @override
+  String get miniAppsWebTitle => '网页服务器';
+
+  @override
+  String get miniAppsWebPort => '端口';
+
+  @override
+  String get miniAppsWebLocalhostOnly => '仅限本机';
+
+  @override
+  String get miniAppsWebLocalhostOnlySubtitle =>
+      '只监听 127.0.0.1：网络中无法访问，也没有 moru.local。';
+
+  @override
+  String get miniAppsWebPasswordEnabled => '需要密码';
+
+  @override
+  String get miniAppsWebPasswordEnabledSubtitle => '浏览器会要求输入密码，用户名任意。';
+
+  @override
+  String get miniAppsWebPassword => '密码';
+
+  @override
+  String get miniAppsWebStart => '启动';
+
+  @override
+  String get miniAppsWebStop => '停止';
+
+  @override
+  String get miniAppsWebRunning => '运行中。在浏览器中打开：';
+
+  @override
+  String get miniAppsWebCopied => '地址已复制';
+
+  @override
+  String get miniAppsWebInvalidPort => '端口必须在 1024 到 65535 之间。';
+
+  @override
+  String get miniAppsWebNoPassword => '请设置密码或关闭密码。';
+
+  @override
+  String get miniAppsWebFooter =>
+      '小应用会在浏览器中打开，数据与 Moru 中相同。moru.local 和 Wi-Fi 地址可在同一 Wi-Fi 的设备上使用，移动数据下不可用；127.0.0.1 可在本机浏览器中使用。服务器运行时 Moru 会保留一条通知，在通知中停止也会停止服务器。';
+
+  @override
+  String miniAppsWebNotification(String url) {
+    return '网页服务器：$url';
+  }
+
+  @override
+  String miniAppsWebPortInUse(String port) {
+    return '端口 $port 已被占用：请换一个。';
+  }
+
+  @override
+  String get miniAppsWebAutostart => '随 Moru 启动';
+
+  @override
+  String get miniAppsWebAutostartSubtitle => '每次启动 Moru 时自动开启服务器。';
+
+  @override
+  String get miniAppsServer => '服务器';
+
+  @override
+  String get miniAppsServerStarting => '启动中…';
+
+  @override
+  String get miniAppsServerIdle => '未运行。应用打开时运行。';
+
+  @override
+  String get miniAppsServerRestart => '重启';
+
+  @override
+  String get miniAppsServerNoOutput => '暂无输出。';
+
+  @override
+  String miniAppsServerRunning(String port) {
+    return '运行中，端口 $port';
+  }
+
+  @override
+  String miniAppsServerExited(String code) {
+    return '已停止，代码 $code';
+  }
+
+  @override
+  String get miniAppsSearch => '搜索应用';
+
+  @override
+  String get miniAppsBadgeGame => '游戏';
+
+  @override
+  String miniAppsJobFailed(String job) {
+    return '后台任务“$job”未能完成。打开应用查看原因。';
+  }
+
+  @override
+  String get miniAppsMore => '更多';
+
+  @override
+  String get miniAppsErrors => '错误日志';
+
+  @override
+  String get miniAppsErrorsEmpty => '没有记录到错误。';
+
+  @override
+  String get miniAppsErrorsFooter => '当前版本的错误。在聊天中让代理修复应用，它会读取此日志。';
+
+  @override
+  String get miniAppsErrorsCopy => '全部复制';
+
+  @override
+  String get miniAppsErrorsCopied => '日志已复制';
+
+  @override
+  String get miniAppsErrorsClear => '清空';
+
+  @override
+  String get miniAppsVersions => '版本';
+
+  @override
+  String get miniAppsVersionsEmpty => '还没有旧版本。';
+
+  @override
+  String get miniAppsVersionsFooter =>
+      'Moru 保留最近 5 个版本。回滚只更改应用代码，数据和提醒保持不变。当前版本也会保留，可以再切换回来。';
+
+  @override
+  String miniAppsVersionsTitle(String name) {
+    return '回滚“$name”';
+  }
+
+  @override
+  String miniAppsRolledBack(String date) {
+    return '已恢复 $date 的版本';
+  }
+
+  @override
   String get phoneControlTitle => '手机控制';
 
   @override
@@ -21677,11 +23978,987 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get toolApprovalsFullTrustDescription =>
       '跳过浏览器、MCP、Shell、文件写入等通常需要确认的工具的逐次确认。';
+
+  @override
+  String chatReasoningTailHint(String shown, String total) {
+    return '仅显示最后 $shown / 共 $total 字符';
+  }
+
+  @override
+  String get chatToolCopyDetails => '复制详情';
+
+  @override
+  String get chatToolRerunFromHere => '从这里重新运行';
+
+  @override
+  String get chatTokensTitle => '对话令牌';
+
+  @override
+  String get chatTokensContext => '上下文';
+
+  @override
+  String get chatTokensContextUsed => '已使用';
+
+  @override
+  String get chatTokensContextWindow => '上下文窗口';
+
+  @override
+  String get chatTokensMaxOutput => '最大回复';
+
+  @override
+  String get chatTokensSpent => '本对话消耗';
+
+  @override
+  String get chatTokensInput => '输入';
+
+  @override
+  String get chatTokensOutput => '输出';
+
+  @override
+  String get chatTokensCached => '缓存命中';
+
+  @override
+  String get chatTokensReplies => '回复数';
+
+  @override
+  String get chatTokensCost => '费用';
+
+  @override
+  String get chatInputHintQueue => 'AI 回复时也可输入：消息会排队发送';
+
+  @override
+  String get chatInputHintMiniApp => '让 AI 做个小程序：记录、游戏、工具';
+
+  @override
+  String get chatInputHintPaste => '粘贴长文本：会变成文件';
+
+  @override
+  String get chatInputHintTokens => '点发送旁的圆环查看令牌用量';
+
+  @override
+  String get chatInputHintToolMenu => '长按工具步骤可复制或重新运行';
+
+  @override
+  String get messageMoreSheetCopyFormatted => '带格式复制';
+
+  @override
+  String get agentsMode => '代理模式';
+
+  @override
+  String get agentsSessionOptions => '代理选项';
+
+  @override
+  String get agentsImageNotSent => '图片未发送给代理。';
+
+  @override
+  String get agentsErrorApiKey => '提供商的 API 密钥无效。';
+
+  @override
+  String get agentsErrorModel => '未找到模型。请检查提供商的模型设置。';
+
+  @override
+  String get agentsErrorNetwork => '无法连接网络。请检查网络连接后重试。';
+
+  @override
+  String get agentsErrorHeaders => '提供商请求头包含无效名称或换行符。请检查提供商的请求头设置。';
+
+  @override
+  String get agentsErrorTemporaryDirectory => '代理无法使用临时目录。请检查 Linux 环境后重试。';
+
+  @override
+  String get agentsShowDetails => '显示详情';
+
+  @override
+  String get agentsHideDetails => '隐藏详情';
+
+  @override
+  String get agentsDescKimiCode => 'Moonshot 编程代理：编辑文件并运行命令。';
+
+  @override
+  String get agentsDescDeepSeekHarness => 'DeepSeek 编程代理：在工作目录中处理文件和命令。';
+
+  @override
+  String get agentsApiCompatible =>
+      '通过 Anthropic、Chat Completions 或 Responses API 使用 Moru 服务商。';
+
+  @override
+  String get agentsWebOpen => '打开网页界面';
+
+  @override
+  String get agentsWebStop => '停止';
+
+  @override
+  String get agentsWebStarting => '正在启动网页界面…';
+
+  @override
+  String get agentsWebRunning => '网页界面正在后台运行。';
+
+  @override
+  String get agentsWebTimeout => '代理未在 120 秒内输出本地网页地址。请停止后重试。';
+
+  @override
+  String get agentsWebExited => '网页进程已退出。重新打开界面以再次启动。';
+
+  @override
+  String get agentsWebStartFailed => '无法启动网页界面。请检查 Linux 环境、代理安装和 Node.js 版本。';
+
+  @override
+  String get agentsWebStopped => '网页界面已停止。';
+
+  @override
+  String get agentsWebDeepSeekWorkspace =>
+      '请在 DeepSeek Harness 网页界面中选择或添加 /workspace 目录。';
+
+  @override
+  String agentsNodeVersionRequired(
+    String agent,
+    String requiredVersion,
+    String actual,
+  ) {
+    return '$agent 需要 Node.js $requiredVersion。Linux 环境中检测到：$actual。请更新 Node.js，重新打开此卡片后重试。';
+  }
+
+  @override
+  String get agentsNodeVersionUnknown => '无法获取版本';
+
+  @override
+  String get agentsNodeUpdateDebian =>
+      '在 Linux 终端中从 NodeSource 官方仓库安装 Node.js 24：\napt-get update\napt-get install -y ca-certificates curl bash\ncurl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\nbash /tmp/moru-node24-setup.sh\napt-get install -y nodejs\nnode --version\nnpm --version\n说明：https://github.com/nodesource/distributions/blob/master/DEV_README.md';
+
+  @override
+  String get agentsNodeUpdateAlpine =>
+      '在 Linux 终端中更新 Alpine 软件包：\napk update\napk add --upgrade nodejs npm\nnode --version\nnpm --version';
+
+  @override
+  String get agentsNodeUpdateUnknown =>
+      '此发行版暂无已确认的升级方法。请查阅其官方 Node.js 安装说明，然后重新打开此卡片。';
+
+  @override
+  String get workspaceEnvGroupDevelopment => '开发';
+
+  @override
+  String get workspaceEnvGroupAgents => 'AI 智能体';
+
+  @override
+  String get workspaceEnvGroupAgentsDetail =>
+      '“为智能体做准备”会安装编程智能体所需的系统组件；打开智能体可安装、更新或检查。';
+
+  @override
+  String get workspaceEnvGroupSsh => 'SSH';
+
+  @override
+  String get workspaceEnvPrepareAgents => '为智能体做准备';
+
+  @override
+  String get workspaceEnvPrepareAgentsDone => '智能体所需组件均已安装';
+
+  @override
+  String get workspaceEnvDependencyBuildTitle => '构建工具';
+
+  @override
+  String get workspaceEnvDependencyBuild => '编译器和 make，用于构建 Node 与 Python 模块';
+
+  @override
+  String get workspaceEnvDependencyProcessesTitle => '进程工具';
+
+  @override
+  String get workspaceEnvDependencyCompatTitle => 'glibc 兼容层';
+
+  @override
+  String get workspaceEnvDependencyCompat => '在 Alpine 上运行为常规 Linux 构建的程序';
+
+  @override
+  String get workspaceEnvDependencyBash => '智能体与脚本执行命令所用的 Shell';
+
+  @override
+  String get workspaceEnvDependencyRipgrep => '快速代码搜索，编程智能体使用它';
+
+  @override
+  String get workspaceEnvDependencySshTitle => 'SSH 客户端';
+
+  @override
+  String get workspaceEnvDependencySshpass => '为脚本提供密码登录';
+
+  @override
+  String get workspaceEnvDependencySshdTitle => 'SSH 服务器';
+
+  @override
+  String get workspaceEnvDependencySshd => '通过 SSH 连接到手机';
+
+  @override
+  String workspaceEnvInstallSelected(int count) {
+    return '安装所选（$count）';
+  }
+
+  @override
+  String get agentsCodexResponsesRequired =>
+      'Codex 仅支持提供 OpenAI Responses API 的服务商。请在服务商设置中启用，或选择其他智能体。';
+
+  @override
+  String get backgroundReliabilityHintTitle => '让任务持续运行';
+
+  @override
+  String get backgroundReliabilityHintDisabled =>
+      '后台执行已关闭。启用后，切换应用或关闭屏幕时任务可继续运行。';
+
+  @override
+  String get backgroundReliabilityHintRestricted =>
+      'Android 限制 Moru 的后台活动。离开此任务前，请检查应用的电池设置。';
+
+  @override
+  String get backgroundReliabilityHintStandby =>
+      '低功耗待机可能在任务运行期间暂停网络访问。请检查设备的节能设置。';
+
+  @override
+  String get backgroundReliabilityHintVendor =>
+      'Vivo 和小米可能停止后台任务。请在系统设置中允许后台活动和自启动。';
+
+  @override
+  String get backgroundReliabilityHintInterrupted =>
+      '上一个任务因 Moru 进程结束而中断。离开新任务前，请检查电池和后台活动设置。';
+
+  @override
+  String get backgroundReliabilityHintSettings => '后台设置';
+
+  @override
+  String get backgroundReliabilityHintDismiss => '关闭提示';
+
+  @override
+  String get backgroundLowPowerStandby => '低功耗待机';
+
+  @override
+  String get backgroundLowPowerStandbyDetail =>
+      '此设备模式即使在前台服务运行时也可能限制网络。电池优化豁免并不总能解除此限制。';
+
+  @override
+  String get backgroundPowerRestricted => '受限';
+
+  @override
+  String get backgroundPowerUnrestricted => '未报告限制';
+
+  @override
+  String get backgroundShellRunning => '正在运行后台命令';
+
+  @override
+  String get backgroundServerRunning => '小程序服务器正在运行';
+
+  @override
+  String get backgroundProtectionUnavailable => '无法启动后台保护。请保持 Moru 打开并重试。';
+
+  @override
+  String get chatInterruptedBody => '应用在回复完成前停止。已保存的部分回复和排队消息仍保留。继续将开始新的轮次。';
+
+  @override
+  String get chatContinueAfterInterruption => '继续';
+
+  @override
+  String get chatContinuePrompt => '中断后从已保存的上下文继续。采取进一步操作前，请检查已完成的工作。';
+
+  @override
+  String get queuedInputSaveFailed => '无法保存排队消息。草稿仍可使用。';
+
+  @override
+  String get notificationApprovalTitle => '需要批准';
+
+  @override
+  String get notificationApprovalBody => '智能体正在等待您的决定。';
+
+  @override
+  String get notificationApprovalAllow => '允许';
+
+  @override
+  String get notificationApprovalDeny => '拒绝';
+
+  @override
+  String get notificationApprovalStaleTitle => '批准请求已失效';
+
+  @override
+  String get notificationApprovalStaleBody => '打开聊天以查看此请求。';
+
+  @override
+  String get notificationApprovalChannelName => '智能体批准请求';
+
+  @override
+  String get notificationApprovalChannelDescription => '正在运行的智能体或工具请求您的决定。';
+
+  @override
+  String get backgroundShellCompleted => '后台命令已完成';
+
+  @override
+  String get backgroundShellFailed => '后台命令失败';
+
+  @override
+  String get agentsAuthTitle => '使用订阅登录';
+
+  @override
+  String get agentsAuthMode => '身份验证';
+
+  @override
+  String get agentsAuthProvider => 'API 服务商';
+
+  @override
+  String get agentsAuthSubscription => '订阅';
+
+  @override
+  String get agentsAuthProviderHint => '使用此助手的 API 服务商设置。';
+
+  @override
+  String get agentsAuthSubscriptionHint =>
+      '使用代理自己的 Claude 或 ChatGPT 登录。不传入 API 服务商的密钥或模型设置。';
+
+  @override
+  String get agentsAuthSignIn => '登录';
+
+  @override
+  String get agentsAuthCheck => '检查登录';
+
+  @override
+  String get agentsAuthSignOut => '退出登录';
+
+  @override
+  String get agentsAuthSignedIn => '已登录';
+
+  @override
+  String get agentsAuthSignedOut => '需要登录';
+
+  @override
+  String get agentsAuthUnknown => '尚未检查登录';
+
+  @override
+  String get agentsAuthWaiting => '请在浏览器中完成登录。';
+
+  @override
+  String get agentsAuthOpenBrowser => '打开登录页面';
+
+  @override
+  String get agentsAuthDeviceCode => '设备代码';
+
+  @override
+  String get agentsAuthCodexHint => '登录前，请在 ChatGPT 设置 → 安全中启用设备代码登录。';
+
+  @override
+  String get agentsAuthCode => '授权代码';
+
+  @override
+  String get agentsAuthSubmitCode => '提交代码';
+
+  @override
+  String get agentsAuthCodeHint => '如果浏览器要求复制代码，请粘贴完整代码，包括 # 后面的部分。';
+
+  @override
+  String get agentsAuthCancel => '取消登录';
+
+  @override
+  String get agentsAuthFailureEnvironment => '请先设置 Linux 环境。';
+
+  @override
+  String get agentsAuthFailureStart => '无法完成登录。请更新代理后重试。';
+
+  @override
+  String get agentsAuthFailureNetwork => '因网络连接问题登录失败。请重试。';
+
+  @override
+  String get agentsAuthFailureTimeout => '登录超时。请重试。';
+
+  @override
+  String get agentsAuthBrowserFailed => '无法打开登录页面。可以复制下方链接。';
+
+  @override
+  String get agentsErrorAuthRequired =>
+      '代理需要身份验证。请通过设置 → 代理登录，或检查所选提供商的 API 密钥。';
+
+  @override
+  String get agentsErrorAccountBusy => 'Codex 已在另一个聊天中运行。请等待回复完成或停止该回复。';
+
+  @override
+  String get computerTitle => '计算机';
+
+  @override
+  String get computerWorking => 'AI 正在工作…';
+
+  @override
+  String get computerDone => '完成';
+
+  @override
+  String get computerError => '错误';
+
+  @override
+  String get computerPreviousStep => '上一步';
+
+  @override
+  String get computerNextStep => '下一步';
+
+  @override
+  String get computerLatest => '跳到最新';
+
+  @override
+  String get computerOpenTerminal => '打开终端';
+
+  @override
+  String get computerOpenBrowser => '打开实时浏览器';
+
+  @override
+  String get computerOpenFile => '预览文件';
+
+  @override
+  String get computerCopyResult => '复制结果';
+
+  @override
+  String get computerNoResult => '暂无结果';
+
+  @override
+  String get computerParameters => '参数';
+
+  @override
+  String get computerResult => '结果';
+
+  @override
+  String get browserFloatingWindowTitle => '浏览器悬浮窗';
+
+  @override
+  String get browserFloatingWindowDescription =>
+      '最小化时显示实时浏览器悬浮窗。默认在输入框上方的「计算机」中显示 AI 操作。';
+
+  @override
+  String get computerMoreDetails => '详细结果';
+
+  @override
+  String get computerStopped => '已停止';
+
+  @override
+  String computerActionsCount(int count) {
+    return '$count 项操作';
+  }
+
+  @override
+  String get computerViewAction => '查看';
+
+  @override
+  String get computerBackgroundOutput => '后台任务输出';
+
+  @override
+  String get computerBackground => '后台运行';
+
+  @override
+  String computerRunningElapsed(String elapsed) {
+    return '运行中 · $elapsed';
+  }
+
+  @override
+  String computerExitElapsed(int code, String seconds) {
+    return '退出码 $code · $seconds 秒';
+  }
+
+  @override
+  String computerBrowserStep(String domain) {
+    return '浏览器 · $domain';
+  }
+
+  @override
+  String computerPlanProgress(int completed, int total) {
+    return '计划 · $completed/$total';
+  }
+
+  @override
+  String computerFileStep(String action, String name) {
+    return '$action · $name';
+  }
+
+  @override
+  String computerAddedLines(int count) {
+    return '（+$count 行）';
+  }
+
+  @override
+  String get computerActionCommand => '命令';
+
+  @override
+  String get computerActionOpen => '打开';
+
+  @override
+  String get computerActionClick => '点击';
+
+  @override
+  String get computerActionType => '输入';
+
+  @override
+  String get computerActionRead => '读取';
+
+  @override
+  String get computerActionWrite => '写入';
+
+  @override
+  String get computerActionEdit => '编辑';
+
+  @override
+  String get computerActionList => '列出';
+
+  @override
+  String get computerActionPlan => '计划';
+
+  @override
+  String get computerActionScreenshot => '截图';
+
+  @override
+  String get computerBrowserOpening => '正在打开…';
+
+  @override
+  String get computerBrowserClicking => '正在点击…';
+
+  @override
+  String get computerBrowserTyping => '正在输入…';
+
+  @override
+  String get computerBrowserReading => '正在读取页面';
+
+  @override
+  String get computerAllParameters => '所有参数（JSON）';
+
+  @override
+  String get computerParameterDirectory => '目录';
+
+  @override
+  String get computerParameterBackground => '后台';
+
+  @override
+  String get computerParameterTimeout => '超时';
+
+  @override
+  String get computerParameterUrl => '网址';
+
+  @override
+  String get computerParameterSelector => '选择器';
+
+  @override
+  String get computerParameterText => '文本';
+
+  @override
+  String get computerParameterPath => '路径';
+
+  @override
+  String get computerParameterRange => '范围';
+
+  @override
+  String computerStepPosition(int current, int total) {
+    return '第 $current 步，共 $total 步';
+  }
+
+  @override
+  String get browserActions => '操作';
+
+  @override
+  String browserActionsCount(int count) {
+    return '操作 · $count';
+  }
+
+  @override
+  String get browserCloseBrowser => '关闭浏览器';
+
+  @override
+  String get browserCloseWhileAiTitle => '关闭浏览器？';
+
+  @override
+  String get browserCloseWhileAiMessage => 'AI 操作将停止。';
+
+  @override
+  String get computerActionSummary => '总结';
+
+  @override
+  String get computerBrowserResultStatus => '状态';
+
+  @override
+  String get computerBrowserResultSuccess => '成功';
+
+  @override
+  String get computerBrowserResultError => '错误';
+
+  @override
+  String get computerBrowserResultTitle => '标题';
+
+  @override
+  String get computerParameterYes => '是';
+
+  @override
+  String get computerParameterNo => '否';
+
+  @override
+  String computerBrowserAction(String action) {
+    String _temp0 = intl.Intl.selectLogic(action, {
+      'open': '打开',
+      'observe': '查看',
+      'screenshot': '截图',
+      'read': '读取',
+      'collect': '收集列表',
+      'outline': '页面结构',
+      'wait_stable': '等待加载',
+      'wait_for': '等待元素',
+      'back': '后退',
+      'forward': '前进',
+      'reload': '刷新',
+      'scroll': '滚动',
+      'tabs': '标签页',
+      'new_tab': '新标签页',
+      'switch_tab': '切换标签页',
+      'close_tab': '关闭标签页',
+      'set_mode': '网站模式',
+      'close': '关闭浏览器',
+      'done': '完成',
+      'click': '点击',
+      'hover': '悬停',
+      'type': '输入',
+      'submit': '提交表单',
+      'press_key': '按键',
+      'eval_js': '执行页面代码',
+      'fetch': '页面请求',
+      'export_cookies': '导出 Cookie',
+      'other': '浏览器操作',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get problemReportToolTitle => '问题报告';
+
+  @override
+  String get problemReportToolSubtitle => '将技术诊断信息收集到私密 ZIP 文件。每次都需要确认。';
+
+  @override
+  String get problemReportConsent =>
+      'ZIP 将包含：\n• 应用版本和构建号\n• Android 版本、制造商和设备型号\n• 环境模式：PRoot/root\n• 界面、工具、日志设置及服务商类型，不含机密信息\n• 本次启动的技术事件：事件名称、错误类型和堆栈帧（最多 128 KiB）\n不包含聊天、消息文本或请求/上下文日志。机密信息会被移除。报告将在下次启动时删除，或在 24 小时后过期。';
+
+  @override
+  String get problemReportUnavailable => '报告已删除或无法分享。请创建新报告。';
+
+  @override
+  String get mcpManagerToolTitle => '管理 MCP 服务器';
+
+  @override
+  String get mcpManagerToolSubtitle => '允许模型在确认后添加、配置和测试 MCP 服务器。密钥需私下输入。';
+
+  @override
+  String get mcpManagerActionList => '列出 MCP 服务器';
+
+  @override
+  String get mcpManagerActionGet => '查看 MCP 服务器';
+
+  @override
+  String get mcpManagerActionAdd => '添加 MCP 服务器';
+
+  @override
+  String get mcpManagerActionUpdate => '更新 MCP 服务器';
+
+  @override
+  String get mcpManagerActionEnable => '启用 MCP 服务器';
+
+  @override
+  String get mcpManagerActionDisable => '停用 MCP 服务器';
+
+  @override
+  String get mcpManagerActionRemove => '删除 MCP 服务器';
+
+  @override
+  String get mcpManagerActionTest => '测试 MCP 服务器';
+
+  @override
+  String get mcpManagerActionSelect => '为助手选择 MCP 服务器';
+
+  @override
+  String get mcpManagerActionUnselect => '取消助手的 MCP 服务器选择';
+
+  @override
+  String get mcpManagerActionSetTool => '配置 MCP 工具';
+
+  @override
+  String get mcpManagerSecretHint =>
+      '请在此输入密钥。密钥仅保存到 MCP 设置，不会发送给模型或写入聊天记录。请求头如有需要，请包含 Bearer/Basic 前缀。';
+
+  @override
+  String get mcpManagerPrevious => '当前配置';
+
+  @override
+  String get mcpManagerValueSet => '已设置值';
+
+  @override
+  String get mcpManagerValueNeeded => '需要输入值';
+
+  @override
+  String get spendControlTitle => '费用控制';
+
+  @override
+  String get spendControlSubtitle => '查看费用并压缩上下文。修改需要确认。';
+
+  @override
+  String get spendLimitsTitle => '费用限额';
+
+  @override
+  String get spendLimitsNote =>
+      '可设置每个聊天和设备本地一天的限额。清空数值可关闭限额。Token 为输入加输出；缓存属于输入。价格可能不完整。';
+
+  @override
+  String get spendChatUsd => '每个聊天 · 美元';
+
+  @override
+  String get spendChatTokens => '每个聊天 · Token';
+
+  @override
+  String get spendDailyUsd => '每天 · 美元';
+
+  @override
+  String get spendDailyTokens => '每天 · Token';
+
+  @override
+  String get spendWarningThreshold => '提醒阈值';
+
+  @override
+  String get spendHardStop => '达到限额时停止';
+
+  @override
+  String get spendHardStopNote => '已启用的限额用尽时停止当前回复并阻止新请求。未知费用无法用于执行美元限额。';
+
+  @override
+  String get spendHardStopMessage => '已达到费用限额。请在统计中调整限额或关闭达到限额时停止。';
+
+  @override
+  String spendCacheShare(String percent) {
+    return '缓存 $percent%';
+  }
+
+  @override
+  String get spendResponseStopped => '回复已停止：已达到费用限额。请在统计中调整限额以继续。';
+
+  @override
+  String get spendDisabled => '关闭';
+
+  @override
+  String get spendValueHint => '留空表示不限额';
+
+  @override
+  String get spendInvalidValue => '请输入正数或清空。Token 限额必须为整数。';
+
+  @override
+  String get spendInvalidThreshold => '请输入 1 至 100 的整数百分比。';
+
+  @override
+  String spendChatRemaining(String remaining) {
+    return '聊天：剩余 $remaining';
+  }
+
+  @override
+  String spendDailyRemaining(String remaining) {
+    return '今天：剩余 $remaining';
+  }
+
+  @override
+  String spendWarningHint(String remaining) {
+    return '限额提醒 · $remaining';
+  }
+
+  @override
+  String spendLimitReachedHint(String remaining) {
+    return '已达到限额 · $remaining';
+  }
+
+  @override
+  String spendTokenAmount(String count) {
+    return '$count Token';
+  }
+
+  @override
+  String get spendPartialPrice => '价格不完整；剩余美元为上限。';
+
+  @override
+  String get spendCompactAction => '压缩上下文';
+
+  @override
+  String get spendSetLimitsAction => '修改费用限额';
+
+  @override
+  String get spendStatusAction => '查看费用';
+
+  @override
+  String get spendCompactNote => '压缩将按你的压缩设置创建包含摘要的新聊天。原聊天会保留；当前回复仍在原聊天中完成。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
 class AppLocalizationsZhHant extends AppLocalizationsZh {
   AppLocalizationsZhHant() : super('zh_Hant');
+
+  @override
+  String get appearanceSaveError => '無法儲存外觀。請再試一次。';
+
+  @override
+  String get appearanceSidebarBackground => '側欄背景';
+
+  @override
+  String get appearanceSidebarSameAsChat => '與聊天相同';
+
+  @override
+  String get appearanceSidebarCustomBackground => '自訂背景';
+
+  @override
+  String get appearanceSidebarThemeBackground => '主題背景';
+
+  @override
+  String get appearanceSidebarMask => '側欄背景遮罩';
+
+  @override
+  String get appearanceSidebarBlur => '側欄背景模糊';
+
+  @override
+  String get appearanceSidebarOpacity => '側欄背景不透明度';
+
+  @override
+  String get appearanceSidebarPhoneWidth => '手機側欄寬度';
+
+  @override
+  String get appearanceSidebarWideWidth => '寬螢幕側欄寬度';
+
+  @override
+  String get appearanceSidebarDensity => '聊天清單密度';
+
+  @override
+  String get appearanceSidebarCompact => '緊湊';
+
+  @override
+  String get appearanceSidebarNormal => '標準';
+
+  @override
+  String get appearanceSidebarSpacious => '寬鬆';
+
+  @override
+  String get appearanceSidebarCardRadius => '聊天卡片圓角';
+
+  @override
+  String get appearanceSidebarCardColor => '聊天卡片顏色';
+
+  @override
+  String get appearanceSidebarActiveCardColor => '目前聊天卡片顏色';
+
+  @override
+  String get appearanceSidebarResetColor => '使用主題顏色';
+
+  @override
+  String get appearanceSidebarTimestamp => '訊息時間';
+
+  @override
+  String get appearanceSidebarAssistant => '助手圖示與名稱';
+
+  @override
+  String get appearanceSidebarModel => '模型圖示與名稱';
+
+  @override
+  String get appearanceSidebarLastPreview => '最後一則訊息預覽';
+
+  @override
+  String get appearanceSidebarGrouping => '聊天分組';
+
+  @override
+  String get appearanceSidebarGroupingDate => '依日期';
+
+  @override
+  String get appearanceSidebarGroupingAssistant => '依助手';
+
+  @override
+  String get appearanceSidebarGroupingNone => '不分組';
+
+  @override
+  String get appearanceSidebarDock => '側欄底部按鈕';
+
+  @override
+  String get appearanceSidebarDockHint => '選擇按鈕並拖曳把手調整順序。';
+
+  @override
+  String get appearanceSidebarShortcutsHint => '選擇置頂應用程式與頁面，再拖曳調整順序。';
+
+  @override
+  String get appearanceSidebarPreviewTitle => '旅行計畫';
+
+  @override
+  String get appearanceSidebarPreviewOtherTitle => '新點子';
+
+  @override
+  String get appearanceSidebarPreviewMessage => '這裡有一些可以開始的想法。';
+
+  @override
+  String get appearanceSidebarPreviewModel => '模型';
+
+  @override
+  String get appearanceSidebarReset => '重設側欄外觀';
+
+  @override
+  String get appearanceSettingsPageTitle => '外觀';
+
+  @override
+  String get appearanceChatWindow => '聊天視窗';
+
+  @override
+  String get appearanceSidebar => '側邊欄';
+
+  @override
+  String get appearanceSidebarComingSoon => '側邊欄外觀設定將在後續更新中提供。';
+
+  @override
+  String get appearanceSameBackground => '淺色與深色使用相同背景';
+
+  @override
+  String get appearanceSameBackgroundHint => '在兩種主題中使用同一個背景。';
+
+  @override
+  String get appearanceBackground => '背景';
+
+  @override
+  String get appearanceNone => '無';
+
+  @override
+  String get appearancePhoto => '從相簿選擇照片';
+
+  @override
+  String get appearanceGif => 'GIF';
+
+  @override
+  String get appearanceVideo => '影片';
+
+  @override
+  String get appearanceAnimatedGradient => '動態漸層';
+
+  @override
+  String get appearanceChooseMedia => '選擇媒體';
+
+  @override
+  String get appearanceReplaceMedia => '更換媒體';
+
+  @override
+  String get appearanceFit => '適配方式';
+
+  @override
+  String get appearanceFitCover => '覆蓋';
+
+  @override
+  String get appearanceFitContain => '完整顯示';
+
+  @override
+  String get appearanceFitFill => '拉伸';
+
+  @override
+  String get appearanceFitTile => '平鋪';
+
+  @override
+  String get appearanceFocusHint => '拖動預覽來調整背景位置。';
+
+  @override
+  String get appearanceCenterFocus => '背景置中';
+
+  @override
+  String get appearanceBrightness => '亮度';
+
+  @override
+  String get appearanceSaturation => '飽和度';
+
+  @override
+  String get appearanceMediaError => '無法使用此檔案。請選擇其他圖片、GIF 或影片。';
+
+  @override
+  String get appearanceReset => '重設背景';
 
   @override
   String get settingsSearchHint => '搜尋設定';
@@ -22615,19 +25892,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get desktopNavTranslateTooltip => '翻譯';
 
   @override
-  String get desktopAvatarMenuUseEmoji => '使用表情符號';
-
-  @override
   String get cameraPermissionDeniedMessage => '未授予相機權限';
 
   @override
   String get openSystemSettings => '前往設定';
-
-  @override
-  String get desktopAvatarMenuChangeFromImage => '從圖片更換…';
-
-  @override
-  String get desktopAvatarMenuReset => '重置頭像';
 
   @override
   String get assistantEditAvatarChooseImage => '選擇圖片';
@@ -24116,6 +27384,226 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sideDrawerMenuSelect => '多選';
+
+  @override
+  String get sideDrawerNewChat => '新對話';
+
+  @override
+  String get sideDrawerMoveToFolder => '移到資料夾';
+
+  @override
+  String get sideDrawerNoFolder => '不放入資料夾';
+
+  @override
+  String get sideDrawerNewFolder => '新增資料夾';
+
+  @override
+  String get sideDrawerFolderNameHint => '資料夾名稱';
+
+  @override
+  String get sideDrawerFolderIcon => '圖示';
+
+  @override
+  String get sideDrawerFolderDelete => '刪除資料夾';
+
+  @override
+  String sideDrawerFolderDeleteContent(String name) {
+    return '「$name」中的對話會保留在列表中。';
+  }
+
+  @override
+  String get agentsTitle => '智慧代理';
+
+  @override
+  String get agentsIntro =>
+      'Claude Code 等程式設計代理可以直接在你的對話中回答。它們執行在這支手機的 Linux 環境中，處理對話的檔案，並使用你已在 Moru 中設定的模型與金鑰，無需重複設定。';
+
+  @override
+  String get agentsSection => '智慧代理';
+
+  @override
+  String get agentsFooter => '安裝需要幾分鐘並需要連網。如果缺少 Node.js，會先安裝它。';
+
+  @override
+  String get agentsNeedEnvironment => '請先安裝並啟動 Linux 環境（設定 → 工作區與環境）。';
+
+  @override
+  String get agentsStatusInstalled => '已安裝';
+
+  @override
+  String get agentsStatusMissing => '未安裝';
+
+  @override
+  String get agentsStatusChecking => '檢查中…';
+
+  @override
+  String get agentsStatusWorking => '處理中…';
+
+  @override
+  String get agentsInstall => '安裝';
+
+  @override
+  String get agentsUpdate => '更新';
+
+  @override
+  String get agentsRemove => '移除';
+
+  @override
+  String get agentsCheck => '檢查連線';
+
+  @override
+  String get agentsCancel => '取消';
+
+  @override
+  String get agentsSave => '儲存';
+
+  @override
+  String get agentsLog => '記錄';
+
+  @override
+  String get agentsMoruToolsAvailable => 'Moru 工具：可用';
+
+  @override
+  String get agentsMoruToolsUnavailable => 'Moru 工具：無法使用';
+
+  @override
+  String agentsCheckOk(String name, String version) {
+    return '正常：$name $version 已回應。';
+  }
+
+  @override
+  String agentsCheckFailed(String error) {
+    return '代理未能啟動：$error';
+  }
+
+  @override
+  String agentsCheckModel(String model) {
+    return '檢查使用預設對話模型：$model。';
+  }
+
+  @override
+  String get agentsNoModel => '請先選擇帶 API 金鑰的預設對話模型（設定 → 預設模型）。';
+
+  @override
+  String get agentsDescClaudeCode =>
+      'Anthropic 的程式設計代理：讀取與編輯檔案、執行指令與測試、規劃較大的任務。';
+
+  @override
+  String get agentsDescCodex => 'OpenAI 的程式設計代理：撰寫與修正程式碼、執行指令、講解專案。';
+
+  @override
+  String get agentsDescOpenCode => '開源程式設計代理，幾乎支援所有服務商。適合作為第一個選擇。';
+
+  @override
+  String get agentsApiAnthropic =>
+      '需要相容 Anthropic API 的服務商：Anthropic、DeepSeek、Kimi、GLM、MiniMax 或 OpenRouter。';
+
+  @override
+  String get agentsApiCodex =>
+      '與 OpenAI 搭配最佳。其他服務商需要相容 OpenAI 的 API；如服務商支援 Responses API，請在服務商設定中開啟。';
+
+  @override
+  String get agentsApiOpenai => '支援任何相容 OpenAI 的服務商以及 Anthropic。';
+
+  @override
+  String get agentsApiCustom =>
+      'Moru 透過 MORU_AGENT_BASE_URL、MORU_AGENT_API_KEY 和 MORU_AGENT_MODEL（以及 OPENAI_* 變數）傳遞模型位址、金鑰與名稱。';
+
+  @override
+  String get agentsCustomAdd => '新增自訂代理';
+
+  @override
+  String get agentsCustomName => '名稱';
+
+  @override
+  String get agentsCustomCommand => '指令';
+
+  @override
+  String get agentsCustomHint =>
+      'Linux 環境中任何透過 stdin/stdout 使用 ACP（Agent Client Protocol）的程式。';
+
+  @override
+  String get agentsCustomDelete => '刪除代理';
+
+  @override
+  String get agentsFailureNode => '無法安裝 Node.js，請查看記錄。';
+
+  @override
+  String get agentsFailureInstall => '安裝失敗，請查看下方記錄。';
+
+  @override
+  String get agentsFailureRemove => '無法移除代理，請查看記錄。';
+
+  @override
+  String get agentsStartChat => '開始對話';
+
+  @override
+  String get agentsChatMissing => '此助手的代理已不在列表中，請在助手設定中另選一個。';
+
+  @override
+  String get agentsChatNoKey => '代理需要帶 API 金鑰的模型，請為此助手或預設模型選擇一個帶金鑰的模型。';
+
+  @override
+  String agentsChatNotInstalled(String name) {
+    return '$name 尚未安裝，請在 設定 → 智慧代理 中安裝。';
+  }
+
+  @override
+  String get assistantAgentTitle => '智慧代理';
+
+  @override
+  String get assistantAgentNone => '無 — 由模型回答';
+
+  @override
+  String get assistantAgentHint =>
+      '選擇代理後，由它在此助手的對話中回答並處理對話檔案。它使用上面的對話模型傳送自己的請求。';
+
+  @override
+  String get displaySettingsPageSidebarThumbnailsTitle => '聊天列表中的圖片預覽';
+
+  @override
+  String get sideDrawerArchive => '封存';
+
+  @override
+  String get sideDrawerArchived => '已封存';
+
+  @override
+  String get sideDrawerUndo => '復原';
+
+  @override
+  String get archivePageTitle => '封存';
+
+  @override
+  String get archivePageEmpty => '封存為空。向右滑動對話即可封存。';
+
+  @override
+  String get archivePageRestore => '還原';
+
+  @override
+  String get archivePageRestored => '已還原';
+
+  @override
+  String get archivePageSortArchived => '按封存時間';
+
+  @override
+  String get archivePageSortActivity => '按最後訊息';
+
+  @override
+  String archivePageDeleteTitle(String title) {
+    return '刪除「$title」？';
+  }
+
+  @override
+  String get archivePageDeleteContent => '該對話及其所有訊息將被刪除。';
+
+  @override
+  String get sideDrawerShortcutsTitle => '側邊欄捷徑';
+
+  @override
+  String get sideDrawerShortcutsEmpty => '暫無小程式或瀏覽器書籤';
+
+  @override
+  String get sideDrawerShortcutRemove => '從側邊欄移除';
 
   @override
   String sideDrawerSelectionTitle(int count) {
@@ -25619,9 +29107,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String chainOfThoughtProcessedSteps(Object count) {
     return '已處理 · $count 個步驟';
   }
-
-  @override
-  String get displaySettingsPageShowChatListDateTitle => '顯示對話列表日期';
 
   @override
   String get displaySettingsPageEnableImageCropperTitle => '啟用圖片裁剪';
@@ -28675,9 +32160,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get migrationTargetDatabaseLabel => 'SQLite';
 
   @override
-  String get migrationChooseFolderButton => '選擇資料夾並備份';
-
-  @override
   String get migrationSaveBackupButton => '儲存備份 ZIP';
 
   @override
@@ -29852,11 +33334,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String workspaceEnvEngineAlpine(String version) {
-    return 'Alpine $version (iSH)';
-  }
-
-  @override
   String get workspaceEnvPhaseNotInstalled => '未安裝';
 
   @override
@@ -30145,12 +33622,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get workspaceDeskBarEmptyHint => '從工具列綁定工作區後即可在此瀏覽檔案';
 
   @override
-  String get workspaceDeskOpenSystemTerminal => '在系統終端機中開啟';
-
-  @override
-  String get workspaceDeskReveal => '在檔案管理員中顯示';
-
-  @override
   String get workspaceEntryBind => '綁定工作區';
 
   @override
@@ -30183,12 +33654,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get workspaceEntryTerminal => '終端機';
-
-  @override
-  String get workspaceEntryOpenSystemTerminal => '在系統終端機中開啟';
-
-  @override
-  String get workspaceEntryReveal => '在檔案管理員中顯示';
 
   @override
   String get workspaceEntrySessionSkills => '技能';
@@ -30382,9 +33847,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get workspacePreviewTable => '表格';
-
-  @override
-  String get workspacePreviewRevealFailed => '無法在檔案管理員中顯示此檔案。';
 
   @override
   String get workspacePreviewEmptyTable => '此表格為空。';
@@ -30711,9 +34173,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get workspacePreviewEmptyHint => '此檔案沒有任何可預覽的內容。';
-
-  @override
-  String get workspacePreviewRevealInFileManager => '在檔案管理員中顯示';
 
   @override
   String workspaceBindingSetAssistantDefault(String assistant) {
@@ -31102,6 +34561,30 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get workspaceEnvProotOptions => 'PRoot 設定';
+
+  @override
+  String get workspaceEnvRootChroot => '快速模式（root）';
+
+  @override
+  String get workspaceEnvRootChrootHint =>
+      '透過 su 在真正的 chroot 中執行 Linux 環境，而不是 PRoot：程式啟動和執行快很多倍。指令以真正的 root 身分執行，可完全存取手機。關閉時檔案會歸還給 Moru。';
+
+  @override
+  String get workspaceEnvRootChrootChecking => '正在檢查 root…';
+
+  @override
+  String get workspaceEnvRootChrootRestoring => '正在把檔案歸還給 Moru…';
+
+  @override
+  String get workspaceEnvRootChrootOn => '快速模式已開啟';
+
+  @override
+  String get workspaceEnvRootChrootOff => '快速模式已關閉，恢復使用 PRoot';
+
+  @override
+  String workspaceEnvRootChrootFailed(String reason) {
+    return '快速模式無法使用：$reason';
+  }
 
   @override
   String get workspaceEnvShellPath => 'Shell 路徑';
@@ -32168,13 +35651,179 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get browserAddressEditorGo => '前往';
 
   @override
-  String get browserMinimize => '最小化';
+  String get browserMinimize => '收合至聊天';
 
   @override
   String get browserMiniExpand => '展開';
 
   @override
   String get browserMiniTitle => '瀏覽器';
+
+  @override
+  String get userscriptsTitle => '使用者腳本';
+
+  @override
+  String get userscriptsHint =>
+      '類似 Tampermonkey 的腳本：會修改其適用的網站。只安裝你信任的腳本——它們能看到這些網站上的一切。';
+
+  @override
+  String get userscriptsInstall => '安裝';
+
+  @override
+  String get userscriptsEmpty => '還沒有腳本。貼上 .user.js 檔案的連結，例如來自 greasyfork.org。';
+
+  @override
+  String get userscriptsBadLink => '請輸入指向 .user.js 檔案的 http(s) 連結';
+
+  @override
+  String get userscriptsNotAScript => '該檔案不是使用者腳本（沒有 ==UserScript== 標頭）';
+
+  @override
+  String userscriptsInstalled(String name) {
+    return '已安裝：$name';
+  }
+
+  @override
+  String userscriptsInstallFailed(String error) {
+    return '無法安裝：$error';
+  }
+
+  @override
+  String get browserGoogleSignInBlocked =>
+      'Google 不允許在此內建瀏覽器中登入。請改用其他方式登入，或在 Chrome 中開啟該網站。';
+
+  @override
+  String get browserOpenInChrome => '在 Chrome 中開啟';
+
+  @override
+  String get browserSslTitle => '連線不安全';
+
+  @override
+  String browserSslMessage(String site, String problem) {
+    return '$site 的憑證無效（$problem）。可能有人試圖竊取你的資料。';
+  }
+
+  @override
+  String get browserSslProceed => '仍要繼續';
+
+  @override
+  String get browserSslBack => '返回';
+
+  @override
+  String get browserBookmarks => '書籤';
+
+  @override
+  String get browserHistory => '歷史記錄';
+
+  @override
+  String get browserClearHistory => '清除';
+
+  @override
+  String get browserClearHistoryConfirm => '清除最近 7 天的歷史記錄？';
+
+  @override
+  String get browserLibrarySearch => '搜尋';
+
+  @override
+  String get browserHistoryEmpty => '最近 7 天沒有瀏覽記錄';
+
+  @override
+  String get browserBookmarksEmpty => '還沒有書籤。點按網址列中的星號。';
+
+  @override
+  String get browserLibraryRemove => '刪除';
+
+  @override
+  String get browserBookmarkAdded => '已加入書籤';
+
+  @override
+  String get browserBookmarkRemoved => '已移除書籤';
+
+  @override
+  String get browserTabsTooltip => '分頁';
+
+  @override
+  String get browserNewTab => '新分頁';
+
+  @override
+  String get browserCloseAllTabs => '全部關閉';
+
+  @override
+  String get browserTabByAssistant => '助手';
+
+  @override
+  String get browserDesktopSite => '電腦版網站';
+
+  @override
+  String get browserClearSiteData => '清除網站資料';
+
+  @override
+  String browserClearSiteDataConfirm(String site) {
+    return '登出 $site 並刪除其在此瀏覽器中的資料？';
+  }
+
+  @override
+  String browserClearSiteDataDone(String site) {
+    return '已刪除 $site 的資料';
+  }
+
+  @override
+  String browserTabsTitle(int count) {
+    return '分頁：$count';
+  }
+
+  @override
+  String browserDownloadDone(String file) {
+    return '已下載 $file';
+  }
+
+  @override
+  String get browserNoAppForLink => '手機上沒有可開啟此連結的應用程式。';
+
+  @override
+  String browserDownloadStarted(String file) {
+    return '正在下載 $file 到「下載」';
+  }
+
+  @override
+  String browserDownloadFailed(String file) {
+    return '無法下載 $file';
+  }
+
+  @override
+  String get browserDownloadUnsupported => '此檔案由頁面自行產生，暫時無法下載。';
+
+  @override
+  String browserPermissionQuestion(String what) {
+    return '允許此網站使用：$what？';
+  }
+
+  @override
+  String get browserPermissionCamera => '相機';
+
+  @override
+  String get browserPermissionMicrophone => '麥克風';
+
+  @override
+  String get browserPermissionLocation => '位置';
+
+  @override
+  String get browserPermissionProtectedMedia => '受保護的影片';
+
+  @override
+  String get browserPermissionAllow => '允許';
+
+  @override
+  String get browserPermissionBlock => '封鎖';
+
+  @override
+  String get browserChallengeVerify => '網站要求驗證你是真人。請自行完成驗證，助手會等待。';
+
+  @override
+  String get browserChallengeRateLimited => '網站限制了請求頻率。助手會放慢速度。';
+
+  @override
+  String get browserChallengeDenied => '網站拒絕自動存取。';
 
   @override
   String get chatHeaderFiles => '檔案';
@@ -32482,6 +36131,208 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get miniAppsNotificationChannelDescription => '來自小應用的通知和提醒。';
 
   @override
+  String get miniAppsToolActionErrors => '讀取應用錯誤日誌';
+
+  @override
+  String get miniAppsToolActionVersions => '列出應用版本';
+
+  @override
+  String get miniAppsToolActionRollback => '回滾應用';
+
+  @override
+  String get miniAppsBackAgainToExit => '再按一次返回退出';
+
+  @override
+  String get miniAppsJobs => '後台任務';
+
+  @override
+  String get miniAppsJobsEmpty => '沒有後台任務。可以讓代理這樣做，例如：「每天早上 8 點查看天氣並通知我」。';
+
+  @override
+  String get miniAppsJobsFooter =>
+      '到設定時間，Moru 會在後台開啟應用並執行任務最多 30 秒，即使 Moru 已關閉。錯誤會寫入錯誤日誌。';
+
+  @override
+  String get miniAppsJobRunNow => '立即執行';
+
+  @override
+  String get miniAppsJobStarted => '任務已開始';
+
+  @override
+  String get miniAppsJobEveryDay => '每天';
+
+  @override
+  String get miniAppsJobRunning => '執行中…';
+
+  @override
+  String get miniAppsToolActionJobs => '列出應用後台任務';
+
+  @override
+  String get miniAppsToolActionRunJob => '執行應用後台任務';
+
+  @override
+  String miniAppsJobNext(String time) {
+    return '下次：$time';
+  }
+
+  @override
+  String miniAppsJobLastDone(String time) {
+    return '上次執行 $time：完成';
+  }
+
+  @override
+  String miniAppsJobLastFailed(String time) {
+    return '上次執行 $time：失敗';
+  }
+
+  @override
+  String get miniAppsToolActionServer => '讀取應用伺服器狀態';
+
+  @override
+  String get rootShellToolTitle => 'Root 命令';
+
+  @override
+  String get rootShellToolSubtitle =>
+      '在已 root 的手機上以 root (su) 執行命令：系統設定、應用、日誌、螢幕輸入。每條命令都需要你確認。';
+
+  @override
+  String get miniAppsWebTitle => '網頁伺服器';
+
+  @override
+  String get miniAppsWebPort => '連接埠';
+
+  @override
+  String get miniAppsWebLocalhostOnly => '僅限本機';
+
+  @override
+  String get miniAppsWebLocalhostOnlySubtitle =>
+      '只監聽 127.0.0.1：網路中無法存取，也沒有 moru.local。';
+
+  @override
+  String get miniAppsWebPasswordEnabled => '需要密碼';
+
+  @override
+  String get miniAppsWebPasswordEnabledSubtitle => '瀏覽器會要求輸入密碼，使用者名稱任意。';
+
+  @override
+  String get miniAppsWebPassword => '密碼';
+
+  @override
+  String get miniAppsWebStart => '啟動';
+
+  @override
+  String get miniAppsWebStop => '停止';
+
+  @override
+  String get miniAppsWebRunning => '執行中。在瀏覽器中開啟：';
+
+  @override
+  String get miniAppsWebCopied => '地址已複製';
+
+  @override
+  String get miniAppsWebInvalidPort => '連接埠必須在 1024 到 65535 之間。';
+
+  @override
+  String get miniAppsWebNoPassword => '請設定密碼或關閉密碼。';
+
+  @override
+  String get miniAppsWebFooter =>
+      '小應用會在瀏覽器中開啟，資料與 Moru 中相同。moru.local 和 Wi-Fi 位址可在同一 Wi-Fi 的裝置上使用，行動數據下不可用；127.0.0.1 可在本機瀏覽器中使用。伺服器執行時 Moru 會保留一則通知，在通知中停止也會停止伺服器。';
+
+  @override
+  String miniAppsWebNotification(String url) {
+    return '網頁伺服器：$url';
+  }
+
+  @override
+  String miniAppsWebPortInUse(String port) {
+    return '連接埠 $port 已被佔用：請換一個。';
+  }
+
+  @override
+  String get miniAppsWebAutostart => '隨 Moru 啟動';
+
+  @override
+  String get miniAppsWebAutostartSubtitle => '每次啟動 Moru 時自動開啟伺服器。';
+
+  @override
+  String get miniAppsServer => '伺服器';
+
+  @override
+  String get miniAppsServerStarting => '啟動中…';
+
+  @override
+  String get miniAppsServerIdle => '未執行。應用開啟時執行。';
+
+  @override
+  String get miniAppsServerRestart => '重新啟動';
+
+  @override
+  String get miniAppsServerNoOutput => '尚無輸出。';
+
+  @override
+  String miniAppsServerRunning(String port) {
+    return '執行中，連接埠 $port';
+  }
+
+  @override
+  String miniAppsServerExited(String code) {
+    return '已停止，代碼 $code';
+  }
+
+  @override
+  String get miniAppsSearch => '搜尋應用';
+
+  @override
+  String get miniAppsBadgeGame => '遊戲';
+
+  @override
+  String miniAppsJobFailed(String job) {
+    return '後台任務「$job」未能完成。開啟應用查看原因。';
+  }
+
+  @override
+  String get miniAppsMore => '更多';
+
+  @override
+  String get miniAppsErrors => '錯誤日誌';
+
+  @override
+  String get miniAppsErrorsEmpty => '沒有記錄到錯誤。';
+
+  @override
+  String get miniAppsErrorsFooter => '目前版本的錯誤。在聊天中讓代理修復應用，它會讀取此日誌。';
+
+  @override
+  String get miniAppsErrorsCopy => '全部複製';
+
+  @override
+  String get miniAppsErrorsCopied => '日誌已複製';
+
+  @override
+  String get miniAppsErrorsClear => '清空';
+
+  @override
+  String get miniAppsVersions => '版本';
+
+  @override
+  String get miniAppsVersionsEmpty => '還沒有舊版本。';
+
+  @override
+  String get miniAppsVersionsFooter =>
+      'Moru 保留最近 5 個版本。回滾只更改應用程式碼，資料和提醒保持不變。目前版本也會保留，可以再切換回來。';
+
+  @override
+  String miniAppsVersionsTitle(String name) {
+    return '回滾「$name」';
+  }
+
+  @override
+  String miniAppsRolledBack(String date) {
+    return '已恢復 $date 的版本';
+  }
+
+  @override
   String get phoneControlTitle => '手機控制';
 
   @override
@@ -32553,4 +36404,803 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get toolApprovalsFullTrustDescription =>
       '略過瀏覽器、MCP、Shell、檔案寫入等通常需要確認的工具的逐次確認。';
+
+  @override
+  String chatReasoningTailHint(String shown, String total) {
+    return '僅顯示最後 $shown / 共 $total 字元';
+  }
+
+  @override
+  String get chatToolCopyDetails => '複製詳情';
+
+  @override
+  String get chatToolRerunFromHere => '從這裡重新執行';
+
+  @override
+  String get chatTokensTitle => '對話權杖';
+
+  @override
+  String get chatTokensContext => '上下文';
+
+  @override
+  String get chatTokensContextUsed => '已使用';
+
+  @override
+  String get chatTokensContextWindow => '上下文視窗';
+
+  @override
+  String get chatTokensMaxOutput => '最大回覆';
+
+  @override
+  String get chatTokensSpent => '本對話消耗';
+
+  @override
+  String get chatTokensInput => '輸入';
+
+  @override
+  String get chatTokensOutput => '輸出';
+
+  @override
+  String get chatTokensCached => '快取命中';
+
+  @override
+  String get chatTokensReplies => '回覆數';
+
+  @override
+  String get chatTokensCost => '費用';
+
+  @override
+  String get chatInputHintQueue => 'AI 回覆時也可輸入：訊息會排隊傳送';
+
+  @override
+  String get chatInputHintMiniApp => '讓 AI 做個小程式：記錄、遊戲、工具';
+
+  @override
+  String get chatInputHintPaste => '貼上長文字：會變成檔案';
+
+  @override
+  String get chatInputHintTokens => '點傳送旁的圓環查看權杖用量';
+
+  @override
+  String get chatInputHintToolMenu => '長按工具步驟可複製或重新執行';
+
+  @override
+  String get messageMoreSheetCopyFormatted => '帶格式複製';
+
+  @override
+  String get agentsMode => '代理模式';
+
+  @override
+  String get agentsSessionOptions => '代理選項';
+
+  @override
+  String get agentsImageNotSent => '圖片未傳送給代理。';
+
+  @override
+  String get agentsErrorApiKey => '供應商的 API 金鑰無效。';
+
+  @override
+  String get agentsErrorModel => '找不到模型。請檢查供應商的模型設定。';
+
+  @override
+  String get agentsErrorNetwork => '無法連線網路。請檢查網路連線後重試。';
+
+  @override
+  String get agentsErrorHeaders => '供應商請求標頭包含無效名稱或換行字元。請檢查供應商的請求標頭設定。';
+
+  @override
+  String get agentsErrorTemporaryDirectory => '代理無法使用暫存目錄。請檢查 Linux 環境後重試。';
+
+  @override
+  String get agentsShowDetails => '顯示詳細資訊';
+
+  @override
+  String get agentsHideDetails => '隱藏詳細資訊';
+
+  @override
+  String get agentsDescKimiCode => 'Moonshot 程式代理：編輯檔案並執行命令。';
+
+  @override
+  String get agentsDescDeepSeekHarness => 'DeepSeek 程式代理：在工作目錄中處理檔案和命令。';
+
+  @override
+  String get agentsApiCompatible =>
+      '透過 Anthropic、Chat Completions 或 Responses API 使用 Moru 供應商。';
+
+  @override
+  String get agentsWebOpen => '開啟網頁介面';
+
+  @override
+  String get agentsWebStop => '停止';
+
+  @override
+  String get agentsWebStarting => '正在啟動網頁介面…';
+
+  @override
+  String get agentsWebRunning => '網頁介面正在背景執行。';
+
+  @override
+  String get agentsWebTimeout => '代理未在 120 秒內輸出本機網頁位址。請停止後重試。';
+
+  @override
+  String get agentsWebExited => '網頁程序已結束。重新開啟介面以再次啟動。';
+
+  @override
+  String get agentsWebStartFailed => '無法啟動網頁介面。請檢查 Linux 環境、代理安裝和 Node.js 版本。';
+
+  @override
+  String get agentsWebStopped => '網頁介面已停止。';
+
+  @override
+  String get agentsWebDeepSeekWorkspace =>
+      '請在 DeepSeek Harness 網頁介面中選擇或新增 /workspace 目錄。';
+
+  @override
+  String agentsNodeVersionRequired(
+    String agent,
+    String requiredVersion,
+    String actual,
+  ) {
+    return '$agent 需要 Node.js $requiredVersion。Linux 環境中偵測到：$actual。請更新 Node.js，重新開啟此卡片後再試。';
+  }
+
+  @override
+  String get agentsNodeVersionUnknown => '無法取得版本';
+
+  @override
+  String get agentsNodeUpdateDebian =>
+      '在 Linux 終端中從 NodeSource 官方儲存庫安裝 Node.js 24：\napt-get update\napt-get install -y ca-certificates curl bash\ncurl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\nbash /tmp/moru-node24-setup.sh\napt-get install -y nodejs\nnode --version\nnpm --version\n說明：https://github.com/nodesource/distributions/blob/master/DEV_README.md';
+
+  @override
+  String get agentsNodeUpdateAlpine =>
+      '在 Linux 終端中更新 Alpine 套件：\napk update\napk add --upgrade nodejs npm\nnode --version\nnpm --version';
+
+  @override
+  String get agentsNodeUpdateUnknown =>
+      '此發行版暫無已確認的升級方法。請查閱其官方 Node.js 安裝說明，然後重新開啟此卡片。';
+
+  @override
+  String get workspaceEnvGroupDevelopment => '開發';
+
+  @override
+  String get workspaceEnvGroupAgents => 'AI 智慧體';
+
+  @override
+  String get workspaceEnvGroupAgentsDetail =>
+      '「為智慧體做準備」會安裝程式設計智慧體所需的系統元件；開啟智慧體可安裝、更新或檢查。';
+
+  @override
+  String get workspaceEnvGroupSsh => 'SSH';
+
+  @override
+  String get workspaceEnvPrepareAgents => '為智慧體做準備';
+
+  @override
+  String get workspaceEnvPrepareAgentsDone => '智慧體所需元件均已安裝';
+
+  @override
+  String get workspaceEnvDependencyBuildTitle => '建置工具';
+
+  @override
+  String get workspaceEnvDependencyBuild => '編譯器與 make，用於建置 Node 與 Python 模組';
+
+  @override
+  String get workspaceEnvDependencyProcessesTitle => '行程工具';
+
+  @override
+  String get workspaceEnvDependencyCompatTitle => 'glibc 相容層';
+
+  @override
+  String get workspaceEnvDependencyCompat => '在 Alpine 上執行為一般 Linux 建置的程式';
+
+  @override
+  String get workspaceEnvDependencyBash => '智慧體與腳本執行命令所用的 Shell';
+
+  @override
+  String get workspaceEnvDependencyRipgrep => '快速程式碼搜尋，程式設計智慧體使用它';
+
+  @override
+  String get workspaceEnvDependencySshTitle => 'SSH 用戶端';
+
+  @override
+  String get workspaceEnvDependencySshpass => '為腳本提供密碼登入';
+
+  @override
+  String get workspaceEnvDependencySshdTitle => 'SSH 伺服器';
+
+  @override
+  String get workspaceEnvDependencySshd => '透過 SSH 連線到手機';
+
+  @override
+  String workspaceEnvInstallSelected(int count) {
+    return '安裝所選（$count）';
+  }
+
+  @override
+  String get agentsCodexResponsesRequired =>
+      'Codex 僅支援提供 OpenAI Responses API 的服務商。請在服務商設定中啟用，或選擇其他代理。';
+
+  @override
+  String get backgroundReliabilityHintTitle => '讓工作持續執行';
+
+  @override
+  String get backgroundReliabilityHintDisabled =>
+      '背景執行已關閉。啟用後，切換應用程式或關閉螢幕時工作可繼續執行。';
+
+  @override
+  String get backgroundReliabilityHintRestricted =>
+      'Android 限制 Moru 的背景活動。離開此工作前，請檢查應用程式的電池設定。';
+
+  @override
+  String get backgroundReliabilityHintStandby =>
+      '低耗電待機可能在工作執行期間暫停網路存取。請檢查裝置的節能設定。';
+
+  @override
+  String get backgroundReliabilityHintVendor =>
+      'Vivo 和小米可能停止背景工作。請在系統設定中允許背景活動及自動啟動。';
+
+  @override
+  String get backgroundReliabilityHintInterrupted =>
+      '上一個工作因 Moru 程序結束而中斷。離開新工作前，請檢查電池和背景活動設定。';
+
+  @override
+  String get backgroundReliabilityHintSettings => '背景設定';
+
+  @override
+  String get backgroundReliabilityHintDismiss => '關閉提示';
+
+  @override
+  String get backgroundLowPowerStandby => '低耗電待機';
+
+  @override
+  String get backgroundLowPowerStandbyDetail =>
+      '此裝置模式即使在前景服務執行時也可能限制網路。電池最佳化豁免並不一定能解除此限制。';
+
+  @override
+  String get backgroundPowerRestricted => '受限';
+
+  @override
+  String get backgroundPowerUnrestricted => '未回報限制';
+
+  @override
+  String get backgroundShellRunning => '正在執行背景命令';
+
+  @override
+  String get backgroundServerRunning => '迷你應用程式伺服器執行中';
+
+  @override
+  String get backgroundProtectionUnavailable => '無法啟動背景保護。請保持 Moru 開啟並重試。';
+
+  @override
+  String get chatInterruptedBody => '應用程式在回覆完成前停止。已儲存的部分回覆和排隊訊息仍保留。繼續將開始新的回合。';
+
+  @override
+  String get chatContinueAfterInterruption => '繼續';
+
+  @override
+  String get chatContinuePrompt => '中斷後從已儲存的上下文繼續。採取進一步操作前，請檢查已完成的工作。';
+
+  @override
+  String get queuedInputSaveFailed => '無法儲存排隊訊息。草稿仍可使用。';
+
+  @override
+  String get notificationApprovalTitle => '需要批准';
+
+  @override
+  String get notificationApprovalBody => '代理程式正在等待您的決定。';
+
+  @override
+  String get notificationApprovalAllow => '允許';
+
+  @override
+  String get notificationApprovalDeny => '拒絕';
+
+  @override
+  String get notificationApprovalStaleTitle => '批准請求已失效';
+
+  @override
+  String get notificationApprovalStaleBody => '開啟聊天以查看此請求。';
+
+  @override
+  String get notificationApprovalChannelName => '代理程式批准請求';
+
+  @override
+  String get notificationApprovalChannelDescription => '執行中的代理程式或工具請求您的決定。';
+
+  @override
+  String get backgroundShellCompleted => '背景命令已完成';
+
+  @override
+  String get backgroundShellFailed => '背景命令失敗';
+
+  @override
+  String get agentsAuthTitle => '使用訂閱登入';
+
+  @override
+  String get agentsAuthMode => '身分驗證';
+
+  @override
+  String get agentsAuthProvider => 'API 服務商';
+
+  @override
+  String get agentsAuthSubscription => '訂閱';
+
+  @override
+  String get agentsAuthProviderHint => '使用此助手的 API 服務商設定。';
+
+  @override
+  String get agentsAuthSubscriptionHint =>
+      '使用代理自己的 Claude 或 ChatGPT 登入。不傳入 API 服務商的金鑰或模型設定。';
+
+  @override
+  String get agentsAuthSignIn => '登入';
+
+  @override
+  String get agentsAuthCheck => '檢查登入';
+
+  @override
+  String get agentsAuthSignOut => '登出';
+
+  @override
+  String get agentsAuthSignedIn => '已登入';
+
+  @override
+  String get agentsAuthSignedOut => '需要登入';
+
+  @override
+  String get agentsAuthUnknown => '尚未檢查登入';
+
+  @override
+  String get agentsAuthWaiting => '請在瀏覽器中完成登入。';
+
+  @override
+  String get agentsAuthOpenBrowser => '開啟登入頁面';
+
+  @override
+  String get agentsAuthDeviceCode => '裝置代碼';
+
+  @override
+  String get agentsAuthCodexHint => '登入前，請在 ChatGPT 設定 → 安全性中啟用裝置代碼登入。';
+
+  @override
+  String get agentsAuthCode => '授權代碼';
+
+  @override
+  String get agentsAuthSubmitCode => '提交代碼';
+
+  @override
+  String get agentsAuthCodeHint => '如果瀏覽器要求複製代碼，請貼上完整代碼，包括 # 後面的部分。';
+
+  @override
+  String get agentsAuthCancel => '取消登入';
+
+  @override
+  String get agentsAuthFailureEnvironment => '請先設定 Linux 環境。';
+
+  @override
+  String get agentsAuthFailureStart => '無法完成登入。請更新代理後重試。';
+
+  @override
+  String get agentsAuthFailureNetwork => '因網路連線問題登入失敗。請重試。';
+
+  @override
+  String get agentsAuthFailureTimeout => '登入逾時。請重試。';
+
+  @override
+  String get agentsAuthBrowserFailed => '無法開啟登入頁面。可以複製下方連結。';
+
+  @override
+  String get agentsErrorAuthRequired =>
+      '代理需要身分驗證。請透過設定 → 代理登入，或檢查所選提供者的 API 金鑰。';
+
+  @override
+  String get agentsErrorAccountBusy => 'Codex 已在另一個聊天中執行。請等待回覆完成或停止該回覆。';
+
+  @override
+  String get computerTitle => '電腦';
+
+  @override
+  String get computerWorking => 'AI 正在工作…';
+
+  @override
+  String get computerDone => '完成';
+
+  @override
+  String get computerError => '錯誤';
+
+  @override
+  String get computerPreviousStep => '上一步';
+
+  @override
+  String get computerNextStep => '下一步';
+
+  @override
+  String get computerLatest => '跳到最新';
+
+  @override
+  String get computerOpenTerminal => '開啟終端機';
+
+  @override
+  String get computerOpenBrowser => '開啟即時瀏覽器';
+
+  @override
+  String get computerOpenFile => '預覽檔案';
+
+  @override
+  String get computerCopyResult => '複製結果';
+
+  @override
+  String get computerNoResult => '尚無結果';
+
+  @override
+  String get computerParameters => '參數';
+
+  @override
+  String get computerResult => '結果';
+
+  @override
+  String get browserFloatingWindowTitle => '瀏覽器浮動視窗';
+
+  @override
+  String get browserFloatingWindowDescription =>
+      '縮小時顯示即時瀏覽器浮動視窗。預設在輸入框上方的「電腦」中顯示 AI 操作。';
+
+  @override
+  String get computerMoreDetails => '詳細結果';
+
+  @override
+  String get computerStopped => '已停止';
+
+  @override
+  String computerActionsCount(int count) {
+    return '$count 項操作';
+  }
+
+  @override
+  String get computerViewAction => '檢視';
+
+  @override
+  String get computerBackgroundOutput => '背景工作輸出';
+
+  @override
+  String get computerBackground => '背景執行';
+
+  @override
+  String computerRunningElapsed(String elapsed) {
+    return '執行中 · $elapsed';
+  }
+
+  @override
+  String computerExitElapsed(int code, String seconds) {
+    return '結束代碼 $code · $seconds 秒';
+  }
+
+  @override
+  String computerBrowserStep(String domain) {
+    return '瀏覽器 · $domain';
+  }
+
+  @override
+  String computerPlanProgress(int completed, int total) {
+    return '計畫 · $completed/$total';
+  }
+
+  @override
+  String computerFileStep(String action, String name) {
+    return '$action · $name';
+  }
+
+  @override
+  String computerAddedLines(int count) {
+    return '（+$count 行）';
+  }
+
+  @override
+  String get computerActionCommand => '命令';
+
+  @override
+  String get computerActionOpen => '開啟';
+
+  @override
+  String get computerActionClick => '點擊';
+
+  @override
+  String get computerActionType => '輸入';
+
+  @override
+  String get computerActionRead => '讀取';
+
+  @override
+  String get computerActionWrite => '寫入';
+
+  @override
+  String get computerActionEdit => '編輯';
+
+  @override
+  String get computerActionList => '列出';
+
+  @override
+  String get computerActionPlan => '計畫';
+
+  @override
+  String get computerActionScreenshot => '截圖';
+
+  @override
+  String get computerBrowserOpening => '正在開啟…';
+
+  @override
+  String get computerBrowserClicking => '正在點擊…';
+
+  @override
+  String get computerBrowserTyping => '正在輸入…';
+
+  @override
+  String get computerBrowserReading => '正在讀取頁面';
+
+  @override
+  String get computerAllParameters => '所有參數（JSON）';
+
+  @override
+  String get computerParameterDirectory => '目錄';
+
+  @override
+  String get computerParameterBackground => '背景';
+
+  @override
+  String get computerParameterTimeout => '逾時';
+
+  @override
+  String get computerParameterUrl => '網址';
+
+  @override
+  String get computerParameterSelector => '選擇器';
+
+  @override
+  String get computerParameterText => '文字';
+
+  @override
+  String get computerParameterPath => '路徑';
+
+  @override
+  String get computerParameterRange => '範圍';
+
+  @override
+  String computerStepPosition(int current, int total) {
+    return '第 $current 步，共 $total 步';
+  }
+
+  @override
+  String get browserActions => '操作';
+
+  @override
+  String browserActionsCount(int count) {
+    return '操作 · $count';
+  }
+
+  @override
+  String get browserCloseBrowser => '關閉瀏覽器';
+
+  @override
+  String get browserCloseWhileAiTitle => '關閉瀏覽器？';
+
+  @override
+  String get browserCloseWhileAiMessage => 'AI 操作將停止。';
+
+  @override
+  String get computerActionSummary => '總結';
+
+  @override
+  String get computerBrowserResultStatus => '狀態';
+
+  @override
+  String get computerBrowserResultSuccess => '成功';
+
+  @override
+  String get computerBrowserResultError => '錯誤';
+
+  @override
+  String get computerBrowserResultTitle => '標題';
+
+  @override
+  String get computerParameterYes => '是';
+
+  @override
+  String get computerParameterNo => '否';
+
+  @override
+  String computerBrowserAction(String action) {
+    String _temp0 = intl.Intl.selectLogic(action, {
+      'open': '開啟',
+      'observe': '檢視',
+      'screenshot': '截圖',
+      'read': '讀取',
+      'collect': '收集清單',
+      'outline': '頁面結構',
+      'wait_stable': '等待載入',
+      'wait_for': '等待元素',
+      'back': '返回',
+      'forward': '前進',
+      'reload': '重新整理',
+      'scroll': '捲動',
+      'tabs': '分頁',
+      'new_tab': '新增分頁',
+      'switch_tab': '切換分頁',
+      'close_tab': '關閉分頁',
+      'set_mode': '網站模式',
+      'close': '關閉瀏覽器',
+      'done': '完成',
+      'click': '點擊',
+      'hover': '游標移入',
+      'type': '輸入',
+      'submit': '送出表單',
+      'press_key': '按鍵',
+      'eval_js': '執行頁面程式碼',
+      'fetch': '頁面請求',
+      'export_cookies': '匯出 Cookie',
+      'other': '瀏覽器操作',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get problemReportToolTitle => '問題報告';
+
+  @override
+  String get problemReportToolSubtitle => '將技術診斷資訊收集到私密 ZIP 檔案。每次都需要確認。';
+
+  @override
+  String get problemReportConsent =>
+      'ZIP 將包含：\n• 應用版本和建置編號\n• Android 版本、製造商和裝置型號\n• 環境模式：PRoot/root\n• 介面、工具、日誌設定及服務商類型，不含機密資訊\n• 本次啟動的技術事件：事件名稱、錯誤類型和堆疊框架（最多 128 KiB）\n不包含聊天、訊息文字或請求/上下文日誌。機密資訊會被移除。報告將在下次啟動時刪除，或在 24 小時後過期。';
+
+  @override
+  String get problemReportUnavailable => '報告已刪除或無法分享。請建立新報告。';
+
+  @override
+  String get mcpManagerToolTitle => '管理 MCP 伺服器';
+
+  @override
+  String get mcpManagerToolSubtitle => '允許模型在確認後新增、設定和測試 MCP 伺服器。密鑰需私下輸入。';
+
+  @override
+  String get mcpManagerActionList => '列出 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionGet => '查看 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionAdd => '新增 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionUpdate => '更新 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionEnable => '啟用 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionDisable => '停用 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionRemove => '刪除 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionTest => '測試 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionSelect => '為助理選擇 MCP 伺服器';
+
+  @override
+  String get mcpManagerActionUnselect => '取消助理的 MCP 伺服器選擇';
+
+  @override
+  String get mcpManagerActionSetTool => '設定 MCP 工具';
+
+  @override
+  String get mcpManagerSecretHint =>
+      '請在此輸入密鑰。密鑰僅儲存至 MCP 設定，不會傳送給模型或寫入聊天記錄。請求標頭如有需要，請包含 Bearer/Basic 前綴。';
+
+  @override
+  String get mcpManagerPrevious => '目前設定';
+
+  @override
+  String get mcpManagerValueSet => '已設定值';
+
+  @override
+  String get mcpManagerValueNeeded => '需要輸入值';
+
+  @override
+  String get spendControlTitle => '費用控制';
+
+  @override
+  String get spendControlSubtitle => '查看費用並壓縮上下文。修改需要確認。';
+
+  @override
+  String get spendLimitsTitle => '費用限額';
+
+  @override
+  String get spendLimitsNote =>
+      '可設定每個聊天和裝置本地一天的限額。清空數值可關閉限額。Token 為輸入加輸出；快取屬於輸入。價格可能不完整。';
+
+  @override
+  String get spendChatUsd => '每個聊天 · 美元';
+
+  @override
+  String get spendChatTokens => '每個聊天 · Token';
+
+  @override
+  String get spendDailyUsd => '每天 · 美元';
+
+  @override
+  String get spendDailyTokens => '每天 · Token';
+
+  @override
+  String get spendWarningThreshold => '提醒閾值';
+
+  @override
+  String get spendHardStop => '達到限額時停止';
+
+  @override
+  String get spendHardStopNote => '已啟用的限額用盡時停止目前回覆並阻止新請求。未知費用無法用於執行美元限額。';
+
+  @override
+  String get spendHardStopMessage => '已達到費用限額。請在統計中調整限額或關閉達到限額時停止。';
+
+  @override
+  String spendCacheShare(String percent) {
+    return '快取 $percent%';
+  }
+
+  @override
+  String get spendResponseStopped => '回覆已停止：已達到費用限額。請在統計中調整限額以繼續。';
+
+  @override
+  String get spendDisabled => '關閉';
+
+  @override
+  String get spendValueHint => '留空表示不限額';
+
+  @override
+  String get spendInvalidValue => '請輸入正數或清空。Token 限額必須為整數。';
+
+  @override
+  String get spendInvalidThreshold => '請輸入 1 至 100 的整數百分比。';
+
+  @override
+  String spendChatRemaining(String remaining) {
+    return '聊天：剩餘 $remaining';
+  }
+
+  @override
+  String spendDailyRemaining(String remaining) {
+    return '今天：剩餘 $remaining';
+  }
+
+  @override
+  String spendWarningHint(String remaining) {
+    return '限額提醒 · $remaining';
+  }
+
+  @override
+  String spendLimitReachedHint(String remaining) {
+    return '已達到限額 · $remaining';
+  }
+
+  @override
+  String spendTokenAmount(String count) {
+    return '$count Token';
+  }
+
+  @override
+  String get spendPartialPrice => '價格不完整；剩餘美元為上限。';
+
+  @override
+  String get spendCompactAction => '壓縮上下文';
+
+  @override
+  String get spendSetLimitsAction => '修改費用限額';
+
+  @override
+  String get spendStatusAction => '查看費用';
+
+  @override
+  String get spendCompactNote => '壓縮將依你的壓縮設定建立包含摘要的新聊天。原聊天會保留；目前回覆仍在原聊天中完成。';
 }

@@ -1,3 +1,4 @@
+import '../../agents/pages/agents_page.dart';
 import 'package:flutter/material.dart';
 
 import '../../assistant/pages/assistant_settings_page.dart';
@@ -15,6 +16,7 @@ import '../../workspace/pages/workspace_settings_page.dart';
 import '../../world_book/pages/world_book_page.dart';
 import '../pages/about_page.dart';
 import '../pages/auto_retry_page.dart';
+import '../pages/appearance_settings_page.dart';
 import '../pages/display_settings_page.dart';
 import '../pages/image_settings_page.dart';
 import '../pages/log_viewer_page.dart';
@@ -32,6 +34,7 @@ import '../pages/tts_services_page.dart';
 import '../widgets/settings_search_target.dart';
 import 'settings_search_index.dart';
 import '../../mini_apps/pages/mini_apps_page.dart';
+import '../../mini_apps/pages/mini_app_web_page.dart';
 
 Future<void> openMobileSettingsSearchResult(
   BuildContext context,
@@ -42,6 +45,14 @@ Future<void> openMobileSettingsSearchResult(
     SettingsSearchDestination.theme => const ThemeSettingsPage(),
     SettingsSearchDestination.themeAdvanced =>
       const ThemeAdvancedSettingsPage(),
+    SettingsSearchDestination.appearance => AppearanceSettingsPage(
+      initialTab:
+          item.id.startsWith('appearanceSidebar') ||
+              item.id == 'displaySettingsPageSidebarThumbnailsTitle' ||
+              item.id == 'sideDrawerShortcutsTitle'
+          ? 1
+          : 0,
+    ),
     SettingsSearchDestination.chatDisplay =>
       const ChatItemDisplaySettingsPage(),
     SettingsSearchDestination.rendering => const RenderingSettingsPage(),
@@ -59,6 +70,7 @@ Future<void> openMobileSettingsSearchResult(
     SettingsSearchDestination.search => const SearchServicesPage(),
     SettingsSearchDestination.tts => const TtsServicesPage(),
     SettingsSearchDestination.mcp => const McpPage(),
+    SettingsSearchDestination.agents => const AgentsPage(),
     SettingsSearchDestination.workspace => const WorkspaceSettingsPage(),
     SettingsSearchDestination.skills => const SkillsPage(),
     SettingsSearchDestination.quickPhrases => const QuickPhrasesPage(),
@@ -71,6 +83,7 @@ Future<void> openMobileSettingsSearchResult(
     SettingsSearchDestination.storage => const StorageSpacePage(),
     SettingsSearchDestination.scheduledTasks => const ScheduledTasksPage(),
     SettingsSearchDestination.miniApps => const MiniAppsPage(),
+    SettingsSearchDestination.miniAppWeb => const MiniAppWebPage(),
     SettingsSearchDestination.stats => const StatsPage(),
     SettingsSearchDestination.toolSchemas => const ToolSchemaSettingsPage(),
     SettingsSearchDestination.logs => const LogViewerPage(),

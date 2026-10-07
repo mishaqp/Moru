@@ -93,7 +93,7 @@ void main() {
         (brightness == Brightness.light
                 ? buildLightTheme(null)
                 : buildDarkTheme(null))
-            .copyWith(platform: TargetPlatform.iOS);
+            .copyWith(platform: TargetPlatform.android);
     if (screenshotDir != null) {
       theme = theme.copyWith(
         textTheme: theme.textTheme.apply(fontFamily: 'WorldBookPreview'),

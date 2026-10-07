@@ -4,6 +4,7 @@ import '../../../core/models/chat_message.dart';
 class ActiveStreamingMessageStore {
   final Map<String, ChatMessage> _messagesByConversation =
       <String, ChatMessage>{};
+  final Map<String, String> _executionIdsByConversation = <String, String>{};
 
   ChatMessage? operator [](String conversationId) {
     return _messagesByConversation[conversationId];
@@ -16,12 +17,35 @@ class ActiveStreamingMessageStore {
     for (final message in _messagesByConversation.values) message.id,
   };
 
-  void put(ChatMessage message) {
+  List<ChatMessage> get messages =>
+      List<ChatMessage>.unmodifiable(_messagesByConversation.values);
+
+  void put(ChatMessage message, {String? executionId}) {
+    if (!isActive(message)) {
+      _executionIdsByConversation.remove(message.conversationId);
+    }
     _messagesByConversation[message.conversationId] = message;
+    if (executionId != null) {
+      _executionIdsByConversation[message.conversationId] = executionId;
+    }
   }
 
   bool isActive(ChatMessage message) {
     return _messagesByConversation[message.conversationId]?.id == message.id;
+  }
+
+  bool isExecutionActive(ChatMessage message, String executionId) =>
+      isActive(message) &&
+      _executionIdsByConversation[message.conversationId] == executionId;
+
+  String? executionIdFor(String conversationId) =>
+      _executionIdsByConversation[conversationId];
+
+  void invalidateExecution(String conversationId, {String? executionId}) {
+    if (executionId == null ||
+        _executionIdsByConversation[conversationId] == executionId) {
+      _executionIdsByConversation.remove(conversationId);
+    }
   }
 
   ChatMessage? cancellationTarget(
@@ -44,6 +68,7 @@ class ActiveStreamingMessageStore {
   void removeIfMatches(ChatMessage message) {
     if (_messagesByConversation[message.conversationId]?.id == message.id) {
       _messagesByConversation.remove(message.conversationId);
+      _executionIdsByConversation.remove(message.conversationId);
     }
   }
 }

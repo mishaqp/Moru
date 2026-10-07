@@ -1,38 +1,143 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../../core/services/api/tool_display_redaction.dart';
+import 'browser_agent_actions.dart';
 
 /// Result of a tool approval request.
 class ToolApprovalResult {
   final bool approved;
   final String? denyReason;
+  final Map<String, String>? _secretValues;
 
-  const ToolApprovalResult({required this.approved, this.denyReason});
+  const ToolApprovalResult({required this.approved, this.denyReason})
+    : _secretValues = null;
 
-  factory ToolApprovalResult.approved() =>
-      const ToolApprovalResult(approved: true);
+  const ToolApprovalResult._approved(this._secretValues)
+    : approved = true,
+      denyReason = null;
+
+  factory ToolApprovalResult.approved({Map<String, String>? secretValues}) =>
+      ToolApprovalResult._approved(
+        secretValues == null ? null : Map.of(secretValues),
+      );
   factory ToolApprovalResult.denied([String? reason]) =>
       ToolApprovalResult(approved: false, denyReason: reason);
+
+  /// Private, one-use inputs from the approval card, never tool arguments.
+  Map<String, String> takeSecretValues() {
+    final values = Map<String, String>.of(_secretValues ?? const {});
+    _secretValues?.clear();
+    return values;
+  }
 }
 
 typedef _PendingKey = ({String scope, String toolCallId});
 
+Object? _argumentSnapshot(Object? value) => switch (value) {
+  Map() => Map.unmodifiable({
+    for (final entry in value.entries)
+      entry.key: _argumentSnapshot(entry.value),
+  }),
+  List() => List.unmodifiable(value.map(_argumentSnapshot)),
+  _ => value,
+};
+
+bool _sameArguments(Object? left, Object? right) {
+  if (identical(left, right)) return true;
+  if (left is Map && right is Map) {
+    return left.length == right.length &&
+        left.entries.every(
+          (entry) =>
+              right.containsKey(entry.key) &&
+              _sameArguments(entry.value, right[entry.key]),
+        );
+  }
+  if (left is List && right is List) {
+    if (left.length != right.length) return false;
+    for (var i = 0; i < left.length; i++) {
+      if (!_sameArguments(left[i], right[i])) return false;
+    }
+    return true;
+  }
+  return left == right;
+}
+
+enum ToolApprovalActionStatus { resolved, stale }
+
+/// Immutable execution ownership captured before a tool or ACP callback starts.
+class ToolApprovalOwner {
+  const ToolApprovalOwner({
+    required this.conversationId,
+    required this.generationRunId,
+    required this.assistantMessageId,
+    required this.isActive,
+  });
+
+  final String conversationId;
+  final String generationRunId;
+  final String assistantMessageId;
+  final bool Function() isActive;
+  static final Object _key = Object();
+  static ToolApprovalOwner? get current =>
+      Zone.current[_key] as ToolApprovalOwner?;
+
+  Future<T> run<T>(Future<T> Function() action) =>
+      runZoned(action, zoneValues: {_key: this});
+}
+
 /// A pending approval request for an MCP tool call.
 class ToolApprovalRequest {
+  final String approvalId;
   final String toolCallId;
   final String toolName;
   final Map<String, dynamic> arguments;
+  // Private original snapshot: display redaction cannot prove call equality.
+  final Object? _executionArguments;
   final String? conversationId;
+  final ToolApprovalOwner? owner;
+  String? get generationRunId => owner?.generationRunId;
+  String? get assistantMessageId => owner?.assistantMessageId;
+  bool get hasLiveOwner => owner?.isActive() == true;
+  // Outside global trusted mode, these tools need fresh in-chat consent.
+  bool get requiresExplicitConsent =>
+      toolName == 'report_problem' ||
+      toolName == 'manage_mcp' ||
+      toolName == 'spend_control';
+  final List<String> secretFields;
+
+  /// Collect private inputs without asking for consent in global trusted mode.
+  final bool secretInputOnly;
   final Completer<ToolApprovalResult> _completer;
 
   ToolApprovalRequest({
+    required this.approvalId,
     required this.toolCallId,
     required this.toolName,
     required this.arguments,
+    Object? executionArguments,
     this.conversationId,
+    this.owner,
+    this.secretFields = const [],
+    this.secretInputOnly = false,
     required this._completer,
-  });
+  }) : _executionArguments = _argumentSnapshot(executionArguments ?? arguments);
 
   Future<ToolApprovalResult> get future => _completer.future;
+
+  ToolApprovalRequest _withSecretInputOnly(bool value) => ToolApprovalRequest(
+    approvalId: approvalId,
+    toolCallId: toolCallId,
+    toolName: toolName,
+    arguments: arguments,
+    executionArguments: _executionArguments,
+    conversationId: conversationId,
+    owner: owner,
+    secretFields: secretFields,
+    secretInputOnly: value,
+    completer: _completer,
+  );
 }
 
 /// Manages approval state for MCP tool calls that require user confirmation.
@@ -51,25 +156,38 @@ class ToolApprovalService extends ChangeNotifier {
   final Map<_PendingKey, ToolApprovalRequest> _pending = {};
   int _unscopedSeq = 0;
   bool _autoApproveAll = false;
+  bool _disposed = false;
 
-  /// Global trusted mode. When enabled, tool calls never create approval cards.
+  /// Global trusted mode, including private diagnostic exports.
   bool get autoApproveAll => _autoApproveAll;
 
   /// Synchronizes the global trusted mode from SettingsProvider.
   ///
-  /// Turning it on also approves requests that were already waiting, so an
-  /// agent cannot remain stuck behind a confirmation card after the user
-  /// enables trusted mode.
+  /// Turning it on approves waiting consent requests. Missing private inputs
+  /// remain pending and their card switches to Save/Cancel without losing input.
   void setAutoApproveAll(bool value) {
     if (_autoApproveAll == value) return;
     _autoApproveAll = value;
-    if (!value || _pending.isEmpty) return;
+    if (_pending.isEmpty) return;
 
-    final waiting = _pending.values.toList(growable: false);
-    _pending.clear();
-    for (final req in waiting) {
+    final waiting = _pending.entries.toList(growable: false);
+    for (final entry in waiting) {
+      final req = entry.value;
+      if (req.secretFields.isNotEmpty &&
+          (req.owner == null || req.hasLiveOwner)) {
+        if (req.toolName == 'manage_mcp') {
+          _pending[entry.key] = req._withSecretInputOnly(value);
+        }
+        continue;
+      }
+      if (!value) continue;
+      _pending.remove(entry.key);
       if (!req._completer.isCompleted) {
-        req._completer.complete(ToolApprovalResult.approved());
+        req._completer.complete(
+          req.owner != null && !req.hasLiveOwner
+              ? ToolApprovalResult.denied('cancelled')
+              : ToolApprovalResult.approved(),
+        );
       }
     }
     notifyListeners();
@@ -127,35 +245,169 @@ class ToolApprovalService extends ChangeNotifier {
     required String toolName,
     required Map<String, dynamic> arguments,
     String? conversationId,
+    ToolApprovalOwner? owner,
+    List<String> secretFields = const [],
+    bool secretInputOnly = false,
   }) {
-    if (_autoApproveAll) {
+    owner ??= ToolApprovalOwner.current;
+    conversationId ??= owner?.conversationId;
+    if (_disposed ||
+        (owner != null &&
+            (!owner.isActive() ||
+                owner.conversationId !=
+                    _storedConversationId(conversationId)))) {
+      return Future.value(ToolApprovalResult.denied('cancelled'));
+    }
+    if (_autoApproveAll && secretFields.isEmpty) {
       return Future<ToolApprovalResult>.value(ToolApprovalResult.approved());
     }
     final key = _storageKey(conversationId, toolCallId);
     final existing = _pending[key];
     if (existing != null) {
-      return existing.future;
+      // MCP consent describes one prepared change and private inputs are
+      // consumed once. A repeated backend id must get a fresh request.
+      if (toolName != 'manage_mcp' &&
+          toolName != 'spend_control' &&
+          toolName != 'manage_assistants' &&
+          existing.toolName == toolName &&
+          existing.generationRunId == owner?.generationRunId &&
+          existing.assistantMessageId == owner?.assistantMessageId &&
+          _sameArguments(existing._executionArguments, arguments)) {
+        return existing.future;
+      }
+      _pending.remove(key);
+      existing._completer.complete(ToolApprovalResult.denied('cancelled'));
     }
     final completer = Completer<ToolApprovalResult>();
+    final display = ToolDisplayRedaction.current;
+    final displayArguments = display == null
+        ? arguments
+        : Map<String, dynamic>.from(display.value(arguments) as Map);
+    if (display != null && toolName == 'browser_use') {
+      // These keys and a recognized action route the browser approval card.
+      // Their payload values remain display copies, never execution inputs.
+      for (final field in ['code', 'element_id']) {
+        if (arguments.containsKey(field)) {
+          displayArguments[field] = display.value(arguments[field]);
+        }
+      }
+      final action = (arguments['action'] ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
+      displayArguments['action'] = BrowserAgentActions.isKnown(action)
+          ? action
+          : display.text(action);
+    }
     _pending[key] = ToolApprovalRequest(
+      approvalId: const Uuid().v4(),
       toolCallId: toolCallId,
       toolName: toolName,
-      arguments: arguments,
+      arguments: displayArguments,
+      executionArguments: arguments,
       conversationId: _storedConversationId(conversationId),
+      owner: owner,
+      secretFields: List.unmodifiable(secretFields),
+      secretInputOnly: secretInputOnly || _autoApproveAll,
       completer: completer,
     );
     notifyListeners();
     return completer.future;
   }
 
+  /// External consent must identify the exact live request, without fallback.
+  ToolApprovalActionStatus resolveNotificationApproval({
+    required String approvalId,
+    required String conversationId,
+    required String generationRunId,
+    required String assistantMessageId,
+    required bool approved,
+  }) {
+    if (_disposed) return ToolApprovalActionStatus.stale;
+    final entries = _pending.entries.where(
+      (entry) => entry.value.approvalId == approvalId,
+    );
+    if (entries.isEmpty) return ToolApprovalActionStatus.stale;
+    final entry = entries.first;
+    final request = entry.value;
+    // A generic notification lacks the report's full disclosure in the chat.
+    if (approved &&
+        (request.requiresExplicitConsent || request.secretFields.isNotEmpty)) {
+      return ToolApprovalActionStatus.stale;
+    }
+    if (conversationId.isEmpty ||
+        generationRunId.isEmpty ||
+        assistantMessageId.isEmpty ||
+        request.conversationId != conversationId ||
+        request.generationRunId != generationRunId ||
+        request.assistantMessageId != assistantMessageId) {
+      return ToolApprovalActionStatus.stale;
+    }
+    final active = request.hasLiveOwner;
+    _pending.remove(entry.key);
+    request._completer.complete(
+      active
+          ? (approved
+                ? ToolApprovalResult.approved()
+                : ToolApprovalResult.denied())
+          : ToolApprovalResult.denied('cancelled'),
+    );
+    notifyListeners();
+    return active
+        ? ToolApprovalActionStatus.resolved
+        : ToolApprovalActionStatus.stale;
+  }
+
+  void cancelForRun(String conversationId, String generationRunId) {
+    final requests = _pending.values
+        .where(
+          (request) =>
+              request.conversationId == conversationId &&
+              request.generationRunId == generationRunId,
+        )
+        .toList();
+    if (requests.isEmpty) return;
+    for (final request in requests) {
+      _pending.removeWhere((_, value) => identical(request, value));
+      request._completer.complete(ToolApprovalResult.denied('cancelled'));
+    }
+    notifyListeners();
+  }
+
   /// Approve a pending tool call.
-  void approve(String toolCallId, {String? conversationId}) {
+  void approve(
+    String toolCallId, {
+    String? conversationId,
+    Map<String, String> secretValues = const {},
+  }) {
+    final pending = pendingFor(
+      toolCallId: toolCallId,
+      conversationId: conversationId,
+    );
+    if (pending != null &&
+        (pending.owner == null || pending.hasLiveOwner) &&
+        pending.secretFields.any(
+          (name) =>
+              secretValues[name]?.isNotEmpty != true ||
+              secretValues[name]!.length > 8192,
+        )) {
+      return;
+    }
     final req = _takePending(
       toolCallId: toolCallId,
       conversationId: conversationId,
     );
     if (req != null && !req._completer.isCompleted) {
-      req._completer.complete(ToolApprovalResult.approved());
+      req._completer.complete(
+        req.owner != null && !req.hasLiveOwner
+            ? ToolApprovalResult.denied('cancelled')
+            : ToolApprovalResult.approved(
+                secretValues: {
+                  for (final name in req.secretFields)
+                    name: secretValues[name]!,
+                },
+              ),
+      );
     }
     notifyListeners();
   }
@@ -266,5 +518,12 @@ class ToolApprovalService extends ChangeNotifier {
   static String? _storedConversationId(String? conversationId) {
     final trimmed = conversationId?.trim() ?? '';
     return trimmed.isEmpty ? null : trimmed;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    cancelAll();
+    super.dispose();
   }
 }

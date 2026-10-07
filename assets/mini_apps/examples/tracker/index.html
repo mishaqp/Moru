@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Вода за день</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="main.js" defer></script>
+</head>
+<body class="moru-app">
+  <main class="moru-container moru-stack">
+    <h1>Вода за день</h1>
+    <section class="moru-card moru-stack" aria-label="Сегодня">
+      <p id="date" class="moru-muted"></p>
+      <p class="total"><output id="total">0</output> мл</p>
+      <form id="add" class="moru-stack">
+        <label class="moru-field">Сколько выпили, мл
+          <input id="amount" type="number" min="1" max="5000" step="1" value="250" required inputmode="numeric">
+        </label>
+        <div class="moru-row">
+          <button class="moru-button" type="submit" disabled>Добавить</button>
+          <button id="undo" class="moru-button moru-button--secondary" type="button" disabled>Отменить последний</button>
+        </div>
+      </form>
+      <ul id="entries" class="moru-list" aria-label="Выпитая вода"></ul>
+    </section>
+    <p class="moru-muted">Можно записывать воду в чате Moru. Открытый трекер обновится сразу.</p>
+    <p id="status" role="status" aria-live="polite">Загрузка…</p>
+  </main>
+</body>
+</html>

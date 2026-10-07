@@ -963,7 +963,6 @@ void main() {
     test(
       'startup snapshot resolves old sandbox paths without following external links',
       () async {
-        if (Platform.isWindows) return;
         final outside = await Directory.systemTemp.createTemp(
           'kelivo-outside-attachment-',
         );
@@ -2852,9 +2851,6 @@ void main() {
           before,
         );
       },
-      skip: Platform.isWindows
-          ? 'Creating a symbolic link requires elevated Windows privileges.'
-          : false,
     );
 
     test('empty versioned asset roots clear old files on startup', () async {

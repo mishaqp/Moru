@@ -66,7 +66,6 @@ class WorkspaceSection extends StatefulWidget {
   static const Key nameKey = ValueKey<String>('workspace-section-name');
   static const Key filesKey = ValueKey<String>('workspace-section-files');
   static const Key terminalKey = ValueKey<String>('workspace-section-terminal');
-  static const Key revealKey = ValueKey<String>('workspace-section-reveal');
   static const Key environmentKey = ValueKey<String>(
     'workspace-section-environment',
   );
@@ -475,27 +474,12 @@ class _WorkspaceSectionState extends State<WorkspaceSection> {
               icon: Lucide.FolderOpen,
               onPressed: _openFiles,
             ),
-            if (runtime != null &&
-                (runtime.supportsSystemTerminal || runtime.supportsPty))
+            if (runtime != null && runtime.supportsPty)
               DesktopWorkspaceButton(
                 key: WorkspaceSection.terminalKey,
-                label: runtime.supportsSystemTerminal
-                    ? l10n.workspaceEntryOpenSystemTerminal
-                    : l10n.workspaceEntryTerminal,
+                label: l10n.workspaceEntryTerminal,
                 icon: Lucide.Terminal,
-                onPressed: runtime.supportsSystemTerminal
-                    ? () => unawaited(
-                        _openSystemThenClose(runtime, workspace, binding),
-                      )
-                    : _openTerminal,
-              ),
-            if (runtime != null)
-              DesktopWorkspaceButton(
-                key: WorkspaceSection.revealKey,
-                label: l10n.workspaceEntryReveal,
-                icon: Lucide.ExternalLink,
-                onPressed: () =>
-                    unawaited(_revealThenClose(runtime, workspace, binding)),
+                onPressed: _openTerminal,
               ),
           ],
         ),
@@ -592,23 +576,6 @@ class _WorkspaceSectionState extends State<WorkspaceSection> {
                   icon: Lucide.Terminal,
                   label: l10n.workspaceEntryTerminal,
                   onTap: _openTerminal,
-                )
-              else if (runtime != null && runtime.supportsSystemTerminal)
-                action(
-                  key: WorkspaceSection.terminalKey,
-                  icon: Lucide.Terminal,
-                  label: l10n.workspaceEntryOpenSystemTerminal,
-                  onTap: () => unawaited(
-                    _openSystemThenClose(runtime, workspace, binding),
-                  ),
-                ),
-              if (runtime != null && useDesktopWorkspaceLayout(context))
-                action(
-                  key: WorkspaceSection.revealKey,
-                  icon: Lucide.ExternalLink,
-                  label: l10n.workspaceEntryReveal,
-                  onTap: () =>
-                      unawaited(_revealThenClose(runtime, workspace, binding)),
                 ),
             ],
           ),
@@ -645,76 +612,6 @@ class _WorkspaceSectionState extends State<WorkspaceSection> {
     _afterClose((ctx) {
       unawaited(openTerminal(ctx, conversationId: id));
     });
-  }
-
-  Future<String> _hostCwd(Workspace workspace, WorkspaceBinding binding) async {
-    final root = await context.read<WorkspaceProvider>().hostRootFor(workspace);
-    final resolved = FileBrowserOps.joinInsideRoot(root, binding.cwd);
-    return resolved ?? root;
-  }
-
-  Future<void> _openSystemThenClose(
-    WorkspaceRuntime runtime,
-    Workspace workspace,
-    WorkspaceBinding binding,
-  ) async {
-    try {
-      final cwd = await _hostCwd(workspace, binding);
-      if (!mounted) return;
-      _afterClose((ctx) {
-        unawaited(() async {
-          try {
-            await runtime.openInSystemTerminal(cwd);
-          } catch (error) {
-            if (!ctx.mounted) return;
-            showAppSnackBar(
-              ctx,
-              message: error.toString(),
-              type: NotificationType.error,
-            );
-          }
-        }());
-      });
-    } catch (error) {
-      if (!mounted) return;
-      showAppSnackBar(
-        context,
-        message: error.toString(),
-        type: NotificationType.error,
-      );
-    }
-  }
-
-  Future<void> _revealThenClose(
-    WorkspaceRuntime runtime,
-    Workspace workspace,
-    WorkspaceBinding binding,
-  ) async {
-    try {
-      final cwd = await _hostCwd(workspace, binding);
-      if (!mounted) return;
-      _afterClose((ctx) {
-        unawaited(() async {
-          try {
-            await runtime.revealInFileManager(cwd);
-          } catch (error) {
-            if (!ctx.mounted) return;
-            showAppSnackBar(
-              ctx,
-              message: error.toString(),
-              type: NotificationType.error,
-            );
-          }
-        }());
-      });
-    } catch (error) {
-      if (!mounted) return;
-      showAppSnackBar(
-        context,
-        message: error.toString(),
-        type: NotificationType.error,
-      );
-    }
   }
 
   Widget _allowAllRow(AppLocalizations l10n, WorkspaceBinding binding) {

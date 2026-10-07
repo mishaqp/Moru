@@ -1,32 +1,15 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
-/// Platform-specific application data directory utilities.
-///
-/// - Windows/macOS/Linux: use the Application Support (app data) directory
-///   provided by `path_provider`.
-/// - Android/iOS: keep using the Application Documents directory.
 class AppDirectories {
   AppDirectories._();
 
-  /// Gets the root directory for application data storage.
-  ///
-  /// - Windows/macOS/Linux: Application Support directory
-  /// - Android/iOS: Application Documents directory
-  static Future<Directory> getAppDataDirectory() async {
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.windows:
-      case TargetPlatform.macOS:
-      case TargetPlatform.linux:
-        return await getApplicationSupportDirectory();
-      case TargetPlatform.android:
-      case TargetPlatform.iOS:
-      case TargetPlatform.fuchsia:
-        return await getApplicationDocumentsDirectory();
-    }
-  }
+  /// Android application data stays in the existing Documents directory.
+  static Future<Directory> getAppDataDirectory() =>
+      getApplicationDocumentsDirectory();
 
   /// Gets the directory for uploaded files.
   static Future<Directory> getUploadDirectory() async {
@@ -56,6 +39,28 @@ class AppDirectories {
   static Future<Directory> getCacheDirectory() async {
     final root = await getAppDataDirectory();
     return Directory('${root.path}/cache');
+  }
+
+  static String? _phoneDownloads;
+
+  /// The phone's public Downloads folder (where the browser saves files),
+  /// mounted at `/downloads` in the Linux environment; null off Android or
+  /// when the system does not name one.
+  static Future<String?> phoneDownloadsPath() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return null;
+    final known = _phoneDownloads;
+    if (known != null) return known;
+    try {
+      final path = await const MethodChannel(
+        'app.browser',
+      ).invokeMethod<String>('downloadsDir');
+      if (path == null || path.isEmpty) return null;
+      return _phoneDownloads = path;
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
   }
 
   /// Managed workspace roots: `<appData>/workspaces`.
@@ -104,8 +109,6 @@ class AppDirectories {
   /// Gets the platform-provided application cache directory.
   ///
   /// - Android: /data/user/0/`<package>`/cache
-  /// - iOS/macOS: Caches directory
-  /// - Windows/Linux: platform cache directory (app-specific on Linux via XDG)
   static Future<Directory> getSystemCacheDirectory() async {
     return await getApplicationCacheDirectory();
   }

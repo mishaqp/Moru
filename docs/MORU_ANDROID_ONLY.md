@@ -1,56 +1,91 @@
-# Moru product target: Android arm64-v8a only
+# Moru: только Android arm64-v8a
 
-The user explicitly selected **Android only**, one **arm64-v8a APK**. Do not
-build, release or repair iOS, macOS, Windows, desktop Linux or Web products.
-Do not add scheduled/Nightly builds. A Linux-hosted CI runner is a build machine,
-not a Linux application target.
+Moru — личный Android-форк Kelivo. Выпускается один APK для **arm64-v8a**.
+iOS, macOS, Windows, настольный Linux и Web не являются целями приложения.
+Nightly и сборки по расписанию не добавляются. Linux в CI — машина для проверок.
+Версия остаётся **0.1.47+48**.
 
-## Preserved Android features
+## Что удалено
 
-Keep the embedded PRoot/Linux environment, workspace, terminal/PTY, skills and
-STDIO MCP. They are functionality of the Android app, not separate Linux apps.
-The native iOS, macOS, Windows, Linux and Web projects have been removed from
-the repository, together with their build workflows. `flutter pub get` still
-writes plugin registrants into those folders; `.gitignore` keeps them out of
-git. When merging upstream Kelivo, resolve its changes to those folders by
-deleting them.
-`tool/test_android_only_policy.py` fails if a merge brings those folders, the
-removed desktop packages or new `lib/desktop/` files back; see "Updating Moru"
-in `AGENTS.md`.
+- ПК-ветки интерфейса, старые диалоги ассистента, экспорта и ASR, вызовы
+  системного терминала и файлового менеджера, перетаскивание файлов с ПК.
+  `isDesktop` в Dart-коде отсутствует.
+- Apple-настройки уведомлений, недостижимые Apple-ветки синхронизации файлов,
+  поля iSH и обработчик выхода из ПК-приложения. Резервные копии и миграция
+  используют прежние Android-сохранения, OAuth — прежний Android-браузер
+  с сохранённым loopback для Claude и ChatGPT.
+- `window_manager`, `desktop_drop` и четыре прямых override Sherpa для
+  iOS/Linux/macOS/Windows. `sherpa_onnx` и `sherpa_onnx_android` сохранены.
+- Пять нативных тестов ПК/iOS и тесты удалённого кода. Одиннадцать неиспользуемых
+  ключей убраны из всех пяти ARB; Dart-локализации пересозданы.
 
-## Build contract
+Платформенные проекты `ios/`, `macos/`, `windows/`, `linux/`, `web/` и
+`lib/desktop/` не возвращаются в git. `flutter pub get` может создавать
+регистраторы сторонних плагинов в игнорируемых папках. Федеративные Flutter-
+плагины, включая Sherpa, объявляют другие платформы транзитивно; это метаданные
+зависимостей, а не дополнительные цели Moru. В APK проверяются реальные библиотеки.
 
-- Flutter 3.44.9, existing pinned dependency/toolchain versions.
-- `flutter build apk --debug --target-platform=android-arm64` for PR validation.
-- `flutter build apk --release --target-platform=android-arm64` for signed release.
-- No split-per-ABI or universal/multi-ABI build.
-- Android `ndk.abiFilters`, CMake ABI and PRoot downloads all select arm64-v8a.
-- The four arm64 PRoot libraries are pinned by SHA-256 in `tool/proot_checksums.txt`.
-  Termux keeps only one proot build in its pool, so the pinned version and the
-  proot checksums (`libproot_exec.so`, `libproot_loader.so`) are bumped together
-  when the old build disappears
-  (last bump: 5.1.107.95, v0.1.29).
-- Verify actual ZIP library paths **and ELF architecture**, not the APK filename.
-- Keep the existing full Dart analyzer/Flutter test PR gates and add Android JVM
-  tests plus an actual arm64 build.
+## Что сохранено
 
-The Android workflow exports one APK and a separate diagnostic report archive.
-PR/debug artifacts are for validation; they are not permanent stable releases.
-Release signing is manual, master-only and requires the existing keystore secrets
-plus `.github/moru-signing-cert-sha256.txt`. It fails rather than silently choosing
-a new signing key. Never commit a private key or print it in logs.
+PRoot/Linux, рабочая папка, навыки, терминал/PTY и STDIO MCP работают внутри
+Android. Сохранены `HomeDesktopScaffold`, `AppBreakpoints.tablet`, широкие панели
+и прежние пороги ширины для планшетов, складных устройств и альбомной ориентации.
+`ResponsiveHelper.isWide` описывает размер Android-экрана.
 
-## Release identity
+Настройки, чаты, Documents, applicationId и подпись не мигрируются. Старые
+ПК-ключи остаются в хранилище; `desktop_send_shortcut_v1` продолжает обслуживать
+внешнюю Android-клавиатуру. Старые пути вложений ПК/iOS, идентификаторы инструментов
+и карточки их результатов нужны для импортированных чатов и резервных копий.
+Виджеты с названием `Ios` описывают стиль интерфейса Android. Режим «версия для ПК»
+и соответствующие User-Agent нужны Android-браузеру и поиску.
 
-Signed Moru releases are published on GitHub Releases as package
-`com.mishaqp.moru`, with the permanent certificate recorded in
-`.github/moru-signing-cert-sha256.txt` and a complete RU locale. Keep the
-application ID and signing certificate unchanged across releases.
+## Допустимые Linux-проверки в тестах
 
-## Regression evidence
+В `lib/` нет проверок платформ ПК/iOS. В тестах остаются восемь `Platform.isLinux`
+в шести файлах: они запускают POSIX-процессы на CI для проверки Android-команд,
+их отмены и STDIO MCP, без создания Linux-приложения:
 
-Four policy tests first failed on the original repository configuration in run
-35090292966 (job 104774740632): multi-ABI Gradle, multi-ABI PRoot fetching and pins,
-and seven inherited non-Android/multi-platform workflows. Final-head successful
-checks and a verified APK are required before merge; this document is not a claim
-of a completed on-device test.
+- `test/core/services/acp/acp_agent_manager_test.dart`;
+- `test/core/services/workspace/workspace_tools_service_test.dart`;
+- `test/core/services/workspace/generation_cancellation_test.dart`;
+- `test/core/services/mcp/workspace_stdio_transport_test.dart`;
+- `test/support/fake_workspace_runtime.dart`;
+- `test/support/fake_workspace_runtime_test.dart`.
+
+`tool/test_android_only_policy.py` запрещает возвращать платформенные папки,
+ПК/iOS-ветки Dart, удалённые пакеты, Apple API, старые виджеты и нативные тесты.
+Исключение `Platform.isLinux` ограничено перечисленными файлами.
+
+## Сборка и проверка
+
+Flutter **3.44.9**, существующие версии инструментов и зависимостей:
+
+```bash
+flutter build apk --debug --target-platform=android-arm64
+python3 tool/verify_apk_arm64.py build/app/outputs/flutter-apk/app-debug.apk
+flutter build apk --release --target-platform=android-arm64
+```
+
+Без универсального APK и `split-per-ABI`. Gradle, CMake и загрузка PRoot выбирают
+arm64-v8a. Четыре библиотеки PRoot закреплены SHA-256 в `tool/proot_checksums.txt`.
+Версия Termux PRoot и два её хеша (`libproot_exec.so`, `libproot_loader.so`)
+обновляются вместе, когда прежняя сборка исчезает из пула; текущая версия
+**5.1.107.96** закреплена в v0.1.47. Проверяются пути ZIP и архитектура ELF.
+
+Перед PR выполняется полный чеклист из `AGENTS.md`: форматирование изменённых
+файлов, анализатор, все Flutter-тесты и три Python-набора. Android CI дополнительно
+проверяет JVM-тесты, сборку APK, подпись и R8 keep rules. Widget-тесты проверяют
+телефон и широкие экраны, выбор даты и ASR; тесты хранения — старые настройки и чаты.
+Эти проверки не заменяют ручной запуск на телефоне и планшете.
+
+Очистка проверена на всех трёх этапах: форматтер, анализатор, затронутые тесты
+и arm64 debug-APK. Итоговый полный Flutter-набор: **7 541 тест**; Python:
+**14 + 6 + 3**. В итоговом APK только arm64-v8a и 19 нативных библиотек.
+
+## Идентичность релиза
+
+Пакет остаётся **`com.mishaqp.moru`**, сертификат — из
+`.github/moru-signing-cert-sha256.txt`, русская локаль сохранена.
+Стабильный релиз публикуется вручную из master с существующими секретами keystore;
+при отсутствии прежнего ключа сборка завершается ошибкой. Debug-APK предназначен
+для проверки. Workflow сохраняет один APK и отдельный архив диагностики.

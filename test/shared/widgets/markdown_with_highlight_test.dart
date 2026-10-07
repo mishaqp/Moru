@@ -396,6 +396,24 @@ void main() {
     source.value += '\r\n\r\nNext ![alt](${file.path}';
     await tester.pumpAndSettle();
     source.value += ')';
+    await tester.pump();
+    final reads = tester
+        .widgetList<FutureBuilder<Uint8List?>>(
+          find.byType(FutureBuilder<Uint8List?>),
+        )
+        .map((builder) => builder.future)
+        .whereType<Future<Uint8List?>>()
+        .toList();
+    var remaining = reads.length;
+    for (final read in reads) {
+      read.whenComplete(() => remaining--);
+    }
+    final deadline = Stopwatch()..start();
+    while (remaining > 0 && deadline.elapsed < const Duration(seconds: 10)) {
+      await tester.runAsync(() => Future<void>(() {}));
+      await tester.pump();
+    }
+    expect(remaining, 0, reason: 'checked local image read did not complete');
     await tester.pumpAndSettle();
     final markdown = tester
         .widgetList<GptMarkdown>(find.byType(GptMarkdown))
@@ -779,7 +797,7 @@ Inline ***strong emphasis*** text.
       await tester.pumpWidget(_markdownHarness('![42x24](missing-image.png)'));
       await tester.pump();
 
-      expect(find.byIcon(Icons.broken_image), findsOneWidget);
+      expect(find.byIcon(Lucide.ImageOff), findsOneWidget);
       expect(find.byType(Image), findsNothing);
     },
   );
@@ -1124,6 +1142,7 @@ Inline ***strong emphasis*** text.
       );
       await tester.pumpAndSettle();
 
+      var gestureNumber = 0;
       for (final value in [true, false]) {
         streaming.value = value;
         await tester.pumpAndSettle();
@@ -1145,14 +1164,30 @@ Inline ***strong emphasis*** text.
           // Separate the gestures so reversing at the previous endpoint does
           // not become a double click and select a word instead of a range.
           await tester.pump(const Duration(milliseconds: 400));
-          final gesture = await tester.startGesture(
-            reverse ? end : start,
+          // Pumping time does not advance TestPointer event timestamps.
+          // Separate drags on the Android recognizer's event clock as well.
+          final timeStamp = Duration(seconds: ++gestureNumber);
+          final gesture = await tester.createGesture(
             kind: ui.PointerDeviceKind.mouse,
           );
+          await gesture.down(reverse ? end : start, timeStamp: timeStamp);
           await tester.pump();
-          await gesture.moveTo(reverse ? start : end);
-          await tester.pump();
-          await gesture.up();
+          // Android starts the selection drag after crossing its slop. Send
+          // intermediate moves so the anchor stays in the starting paragraph.
+          for (var sample = 1; sample <= 12; sample++) {
+            await gesture.moveTo(
+              Offset.lerp(
+                reverse ? end : start,
+                reverse ? start : end,
+                sample / 12,
+              )!,
+              timeStamp: timeStamp + Duration(milliseconds: sample * 16),
+            );
+            await tester.pump();
+          }
+          await gesture.up(
+            timeStamp: timeStamp + const Duration(milliseconds: 200),
+          );
           await gesture.removePointer();
           await tester.pumpAndSettle();
           expect(selected, text, reason: 'streaming=$value reverse=$reverse');
@@ -1161,7 +1196,7 @@ Inline ***strong emphasis*** text.
         }
       }
     },
-    variant: TargetPlatformVariant.desktop(),
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
   for (final longReply in [false, true]) {
@@ -3282,7 +3317,7 @@ final price = "$12";
   testWidgets(
     'SelectableHighlightView keeps stock menu when iOS translation is unavailable',
     (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
       const channel = MethodChannel('app.ios_translation');
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

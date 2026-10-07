@@ -14,6 +14,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import '../../../support/business_test_harness.dart';
+import '../../../support/android_oauth_browser.dart';
 
 class _StuckBrowser implements OAuthCallback {
   @override
@@ -44,6 +45,7 @@ class _RealHttpOverrides extends HttpOverrides {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() => mockAndroidOAuthBrowser());
   test(
     'browser login opens once and exchanges a code using the original PKCE verifier',
     () async {
@@ -94,7 +96,7 @@ void main() {
           expect(prompt.browserAuthorization, true);
           expect(prompt.userCode, isNull);
         },
-        launcher: (url) async {
+        launcher: mockAndroidOAuthBrowser((url) async {
           launches++;
           authorization = url;
           expect(url.host, 'auth.openai.com');
@@ -117,7 +119,7 @@ void main() {
             client.close(force: true);
           }
           return true;
-        },
+        }),
       );
       expect(launches, 1);
       expect(prompts, 1);
@@ -187,7 +189,7 @@ void main() {
                 );
               },
               deviceCode: false,
-              launcher: (url) async {
+              launcher: mockAndroidOAuthBrowser((url) async {
                 launches++;
                 final submit = prompt.submitAuthorizationCode!;
                 final valid = Uri.parse('http://localhost:1455/auth/callback')
@@ -217,7 +219,7 @@ void main() {
                 expect(submit(valid.toString()), true);
                 expect(submit(valid.toString()), false);
                 return true;
-              },
+              }),
             )
             .timeout(const Duration(seconds: 4));
         expect(saved.plan, 'pro');

@@ -824,6 +824,7 @@ void main() {
         'skills',
         'workspaces',
         'sessions',
+        'mini_apps',
       ]) {
         expect(
           await Directory(
@@ -1198,15 +1199,11 @@ void main() {
         RestoreBundleStaging.debugIsolateExitDeadline = const Duration(
           milliseconds: 80,
         );
-        RestoreBundleStaging.debugIsolateTimeout = const Duration(
-          milliseconds: 150,
-        );
         debugSkipBackupIsolateKill = true;
         addTearDown(() {
           RestoreBundleStaging.debugCandidateValidateHangSeconds = 0;
           RestoreBundleStaging.debugIsolateKillGrace = null;
           RestoreBundleStaging.debugIsolateExitDeadline = null;
-          RestoreBundleStaging.debugIsolateTimeout = null;
           debugSkipBackupIsolateKill = false;
         });
 

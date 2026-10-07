@@ -13,7 +13,7 @@ class _LegacyMemoryTabBody extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final controller = TextEditingController(text: initial);
-    // Desktop: custom dialog; Mobile: keep bottom sheet
+    // Android: keep the bottom sheet
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

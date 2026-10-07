@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>График недели</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="main.js" defer></script>
+</head>
+<body class="moru-app">
+  <main class="moru-container moru-stack">
+    <h1>График недели</h1>
+    <section class="moru-card chart"><canvas id="chart" role="img" aria-label="Значения за семь дней недели"></canvas></section>
+    <form id="edit" class="moru-card moru-stack">
+      <label class="moru-field">День
+        <select id="day"><option value="0">Понедельник</option><option value="1">Вторник</option><option value="2">Среда</option><option value="3">Четверг</option><option value="4">Пятница</option><option value="5">Суббота</option><option value="6">Воскресенье</option></select>
+      </label>
+      <label class="moru-field">Значение<input id="value" type="number" min="0" max="1000000" step="any" value="2" required inputmode="decimal"></label>
+      <button class="moru-button" type="submit" disabled>Сохранить</button>
+    </form>
+    <p id="status" role="status" aria-live="polite">Загрузка…</p>
+  </main>
+</body>
+</html>

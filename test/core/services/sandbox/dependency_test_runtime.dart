@@ -7,6 +7,9 @@ import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 class DependencyTestRuntime extends WorkspaceRuntime {
   final requests = <CommandRequest>[];
   final installed = <EnvironmentDependency>{};
+
+  /// First lines the probe reports for installed dependencies.
+  final versions = <EnvironmentDependency, String>{};
   Completer<void>? installGate;
   bool failInstall = false;
   bool incompleteProbe = false;
@@ -25,6 +28,9 @@ class DependencyTestRuntime extends WorkspaceRuntime {
           : [
               for (final dependency in EnvironmentDependency.values)
                 '__kelivo_dep_${dependency.name}=${installed.contains(dependency) ? 1 : 0}\n',
+              for (final MapEntry(:key, :value) in versions.entries)
+                if (installed.contains(key))
+                  '__kelivo_ver_${key.name}=$value\n',
             ].join();
       yield CommandOutput(
         OutputStreamKind.stdout,

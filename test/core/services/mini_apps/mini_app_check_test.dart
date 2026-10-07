@@ -157,4 +157,27 @@ void main() {
       'loaded': false,
     });
   });
+
+  test('a blank screen or console error fails the publish check', () {
+    expect(
+      const MiniAppCheckReport(loaded: true, visibleContent: 0).ok,
+      isFalse,
+    );
+    expect(
+      const MiniAppCheckReport(
+        loaded: true,
+        visibleContent: 1,
+        console: ['error: Initialization failed'],
+      ).ok,
+      isFalse,
+    );
+    expect(
+      const MiniAppCheckReport(
+        loaded: true,
+        visibleContent: 1,
+        console: ['warning: Software renderer'],
+      ).ok,
+      isTrue,
+    );
+  });
 }

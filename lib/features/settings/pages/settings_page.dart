@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../scheduled_tasks/pages/scheduled_tasks_page.dart';
+import '../../agents/pages/agents_page.dart';
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -35,6 +36,7 @@ import '../../stats/pages/stats_page.dart';
 import '../../../core/services/storage/storage_usage_service.dart';
 import '../../../core/services/haptics.dart';
 import '../../mini_apps/pages/mini_apps_page.dart';
+import '../../mini_apps/pages/mini_app_web_page.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
@@ -275,6 +277,17 @@ class SettingsPage extends StatelessWidget {
                   ).push(MaterialPageRoute(builder: (_) => const McpPage()));
                 },
               ),
+              if (defaultTargetPlatform == TargetPlatform.android) ...[
+                _iosDivider(context),
+                _iosNavRow(
+                  context,
+                  icon: LucideIcons.bot,
+                  label: l10n.agentsTitle,
+                  onTap: () => Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => const AgentsPage())),
+                ),
+              ],
               if (BrowserAgentTool.supported) ...[
                 _iosDivider(context),
                 _iosNavRow(
@@ -324,6 +337,15 @@ class SettingsPage extends StatelessWidget {
                   label: l10n.miniAppsTitle,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const MiniAppsPage()),
+                  ),
+                ),
+                _iosDivider(context),
+                _iosNavRow(
+                  context,
+                  icon: Lucide.Globe,
+                  label: l10n.miniAppsWebTitle,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const MiniAppWebPage()),
                   ),
                 ),
                 _iosDivider(context),
@@ -442,21 +464,17 @@ class SettingsPage extends StatelessWidget {
                   ).push(MaterialPageRoute(builder: (_) => const StatsPage()));
                 },
               ),
-              if (settings.requestLogEnabled ||
-                  settings.flutterLogEnabled ||
-                  settings.contextLogEnabled) ...[
-                _iosDivider(context),
-                _iosNavRow(
-                  context,
-                  icon: Lucide.FileText,
-                  label: l10n.settingsPageLogs,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const LogViewerPage()),
-                    );
-                  },
-                ),
-              ],
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.FileText,
+                label: l10n.settingsPageLogs,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const LogViewerPage()),
+                  );
+                },
+              ),
               _iosDivider(context),
               _iosNavRow(
                 context,

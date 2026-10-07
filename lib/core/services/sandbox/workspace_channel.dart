@@ -10,8 +10,7 @@ const String kWorkspaceEventChannel = 'app.workspace/events';
 
 /// Thin typed client over the workspace method/event channels.
 ///
-/// Android (proot) and iOS (iSH) register the same channel names. Callers omit
-/// platform-specific keys (e.g. [ExecArgs.rootfsDir] on iOS) rather than
+/// Android PRoot uses these channel names. Callers omit optional keys rather than
 /// sending nulls.
 class WorkspaceChannel {
   WorkspaceChannel({
@@ -57,6 +56,23 @@ class WorkspaceChannel {
     }
   }
 
+  /// Whether the fast mode works here: su grants root, the helper can make
+  /// a private mount namespace, the rootfs has a shell. [output] says why
+  /// not.
+  Future<({bool ok, String output})> probeChroot(String rootfsDir) async {
+    final raw = await _invoke('probeChroot', {'rootfsDir': rootfsDir});
+    final map = _asStringKeyedMap(raw, 'probeChroot');
+    return (ok: map['ok'] == true, output: '${map['output'] ?? ''}');
+  }
+
+  /// Gives root-owned files the fast mode left under [dirs] (folders of the
+  /// app) back to the app.
+  Future<({bool ok, String output})> chrootFixOwner(List<String> dirs) async {
+    final raw = await _invoke('chrootFixOwner', {'dirs': dirs});
+    final map = _asStringKeyedMap(raw, 'chrootFixOwner');
+    return (ok: map['ok'] == true, output: '${map['output'] ?? ''}');
+  }
+
   Future<void> exec(ExecArgs args) async {
     await _invoke('exec', args.toMap());
   }
@@ -79,6 +95,7 @@ class WorkspaceChannel {
     List<BindMount> binds = const <BindMount>[],
     List<String> prootArguments = const [],
     String? shell,
+    bool chroot = false,
     required int cols,
     required int rows,
   }) async {
@@ -91,6 +108,7 @@ class WorkspaceChannel {
       'binds': [for (final bind in binds) bind.toMap()],
       if (prootArguments.isNotEmpty) 'prootArguments': prootArguments,
       if (shell != null && shell.isNotEmpty) 'shell': shell,
+      if (chroot) 'chroot': true,
       'cols': cols,
       'rows': rows,
     });
@@ -320,13 +338,6 @@ class ProbeResult {
     this.nativeLibDir,
     this.reason,
     this.uid,
-    this.engine,
-    this.installed,
-    this.booted,
-    this.needsRestart,
-    this.rootfsVersion,
-    this.bundledVersion,
-    this.rootfsDir,
   });
 
   final bool supported;
@@ -339,15 +350,6 @@ class ProbeResult {
   /// Present when a future plugin reports the app uid. Android probe does not.
   final int? uid;
 
-  /// iOS reports `ish`. Android omits this.
-  final String? engine;
-  final bool? installed;
-  final bool? booted;
-  final bool? needsRestart;
-  final String? rootfsVersion;
-  final String? bundledVersion;
-  final String? rootfsDir;
-
   factory ProbeResult.fromMap(Map<String, Object?> map) {
     return ProbeResult(
       supported: map['supported'] == true,
@@ -357,13 +359,6 @@ class ProbeResult {
       nativeLibDir: _readString(map['nativeLibDir']),
       reason: _readString(map['reason']),
       uid: _readInt(map['uid']),
-      engine: _readString(map['engine']),
-      installed: _readBool(map['installed']),
-      booted: _readBool(map['booted']),
-      needsRestart: _readBool(map['needsRestart']),
-      rootfsVersion: _readString(map['rootfsVersion']),
-      bundledVersion: _readString(map['bundledVersion']),
-      rootfsDir: _readString(map['rootfsDir']),
     );
   }
 }
@@ -380,7 +375,9 @@ class ExecArgs {
     this.env = const <String, String>{},
     this.binds = const <BindMount>[],
     this.prootArguments = const [],
+    this.emulateHardLinks = true,
     this.shell,
+    this.chroot = false,
   });
 
   final String runId;
@@ -393,7 +390,11 @@ class ExecArgs {
   final Map<String, String> env;
   final List<BindMount> binds;
   final List<String> prootArguments;
+  final bool emulateHardLinks;
   final String? shell;
+
+  /// Runs in the fast mode's chroot (as root, through su) instead of PRoot.
+  final bool chroot;
 
   Map<String, Object?> toMap() => {
     'runId': runId,
@@ -403,10 +404,12 @@ class ExecArgs {
     'command': command,
     'timeoutMs': timeoutMs,
     if (keepStdinOpen) 'keepStdinOpen': true,
+    if (!emulateHardLinks) 'emulateHardLinks': false,
     'env': env,
     'binds': [for (final bind in binds) bind.toMap()],
     if (prootArguments.isNotEmpty) 'prootArguments': prootArguments,
     if (shell != null && shell!.isNotEmpty) 'shell': shell,
+    if (chroot) 'chroot': true,
   };
 }
 
@@ -468,10 +471,5 @@ int? _readInt(Object? value) {
   if (value is int) return value;
   if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value);
-  return null;
-}
-
-bool? _readBool(Object? value) {
-  if (value is bool) return value;
   return null;
 }

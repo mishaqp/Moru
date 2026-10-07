@@ -129,6 +129,31 @@ void main() {
     );
   }
 
+  test('the fast mode turns on only when su and the chroot helper work, and '
+      'turning it off gives the files back to the app', () async {
+    final installer = buildInstaller(servingTarball());
+    workspace.chrootProbe = {'ok': false, 'output': 'Permission denied'};
+    expect(await installer.setRootChroot(true), 'Permission denied');
+    expect(env.rootChroot, isFalse);
+    expect(
+      workspace.chrootProbeCalls.single['rootfsDir'],
+      p.join(envDir.path, 'rootfs'),
+    );
+
+    workspace.chrootProbe = {'ok': true, 'output': 'moru_chroot ok'};
+    expect(await installer.setRootChroot(true), isNull);
+    expect(env.rootChroot, isTrue);
+    expect(workspace.fixOwnerCalls, isEmpty);
+
+    expect(await installer.setRootChroot(false), isNull);
+    expect(env.rootChroot, isFalse);
+    // The app's data (the environment's parent) and its cache.
+    expect(workspace.fixOwnerCalls.single, [
+      envDir.parent.path,
+      Directory.systemTemp.path,
+    ]);
+  });
+
   test('switching source removes the previous partial archive', () async {
     final part = File(
       p.join(
@@ -649,6 +674,9 @@ class _WorkspaceHarness {
   String Function(String path)? sha256Override;
   final List<bool> keepScreenOnCalls = <bool>[];
   Map<String, Object?>? patchArgs;
+  Map<String, Object?> chrootProbe = {'ok': true, 'output': 'moru_chroot ok'};
+  final List<Map<String, Object?>> chrootProbeCalls = [];
+  final List<List<Object?>> fixOwnerCalls = [];
 
   void install() {
     final messenger =
@@ -717,6 +745,16 @@ class _WorkspaceHarness {
         case 'keepScreenOn':
           keepScreenOnCalls.add((call.arguments as Map)['enabled'] == true);
           return null;
+        case 'probeChroot':
+          chrootProbeCalls.add(
+            Map<String, Object?>.from(call.arguments as Map),
+          );
+          return chrootProbe;
+        case 'chrootFixOwner':
+          fixOwnerCalls.add(
+            List<Object?>.from((call.arguments as Map)['dirs']),
+          );
+          return <String, Object?>{'ok': true, 'output': ''};
         default:
           return null;
       }

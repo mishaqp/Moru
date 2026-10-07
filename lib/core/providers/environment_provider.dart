@@ -15,6 +15,7 @@ class EnvironmentProvider extends ChangeNotifier {
   static const String privacyModeKey = 'environment_privacy_mode_v1';
   static const String rootfsSelectionKey = 'environment_rootfs_selection_v1';
   static const String prootOptionsKey = 'environment_proot_options_v1';
+  static const String rootChrootKey = 'environment_root_chroot_v1';
 
   EnvironmentProvider({required this.preferences}) {
     loaded = _load();
@@ -115,6 +116,17 @@ class EnvironmentProvider extends ChangeNotifier {
   String get localArchivePath => _localArchivePath;
   String get prootShell => _prootShell;
   List<String> get prootArguments => List.unmodifiable(_prootArguments);
+
+  /// The fast mode: commands run as root in a real chroot through su and
+  /// Moru's helper instead of PRoot.
+  bool _rootChroot = false;
+  bool get rootChroot => _rootChroot;
+
+  Future<void> setRootChroot(bool enabled) async {
+    await preferences.setBool(rootChrootKey, enabled);
+    _rootChroot = enabled;
+    notifyListeners();
+  }
 
   Future<void> setRootfsSelection({
     required String imageId,
@@ -246,6 +258,7 @@ class EnvironmentProvider extends ChangeNotifier {
       _prootShell = data['shell'] as String;
       _prootArguments = (data['args'] as List).cast<String>();
     }
+    _rootChroot = preferences.getBool(rootChrootKey) ?? false;
     final rawState = preferences.getString(stateKey);
     if (rawState != null && rawState.isNotEmpty) {
       try {

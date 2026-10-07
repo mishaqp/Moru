@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
+import 'conversation_list_metadata.dart';
+
 part 'conversation.g.dart';
 
 @HiveType(typeId: 1)
@@ -77,6 +79,9 @@ class Conversation extends HiveObject {
   // legacy adapter must stay frozen, and Hive source data predates extras.
   final Map<String, dynamic> extras;
 
+  // Derived by the list query only; excluded from Hive, JSON and row writes.
+  final ConversationListMetadata? listMetadata;
+
   Conversation({
     String? id,
     required this.title,
@@ -96,6 +101,7 @@ class Conversation extends HiveObject {
     this.chatModelProvider,
     this.chatModelId,
     this.extras = const <String, dynamic>{},
+    this.listMetadata,
   }) : id = id ?? const Uuid().v4(),
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now(),
@@ -126,6 +132,7 @@ class Conversation extends HiveObject {
     String? chatModelProvider,
     String? chatModelId,
     Map<String, dynamic>? extras,
+    ConversationListMetadata? listMetadata,
     bool clearSummary = false,
     bool clearInjectedMemoryHash = false,
     bool clearChatModel = false,
@@ -155,6 +162,7 @@ class Conversation extends HiveObject {
           : (chatModelProvider ?? this.chatModelProvider),
       chatModelId: clearChatModel ? null : (chatModelId ?? this.chatModelId),
       extras: extras ?? this.extras,
+      listMetadata: listMetadata ?? this.listMetadata,
     );
   }
 

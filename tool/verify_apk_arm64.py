@@ -9,6 +9,7 @@ import zipfile
 REQUIRED = {
     'libflutter.so', 'libtermux_pty.so', 'libproot_exec.so',
     'libproot_loader.so', 'libtalloc.so', 'libandroid-shmem.so',
+    'libmoru_chroot.so',
 }
 
 

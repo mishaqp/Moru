@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import '../../../support/fake_webview_platform.dart';
+import 'browser_test_actions.dart';
 
 void main() {
   setUp(() {
@@ -60,4 +61,47 @@ void main() {
 
     expect(approval.pendingRequests, isEmpty);
   });
+
+  testWidgets(
+    'closing while awaiting approval confirms and denies only its owner',
+    (tester) async {
+      final approval = ToolApprovalService();
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        approval.dispose();
+      });
+      BrowserAgentSession.instance.setOwnerConversationId('conv-1');
+      final owned = approval.requestApproval(
+        toolCallId: 'same-call',
+        toolName: 'browser_use',
+        arguments: {'action': 'click', 'element_id': 2},
+        conversationId: 'conv-1',
+      );
+      final other = approval.requestApproval(
+        toolCallId: 'same-call',
+        toolName: 'browser_use',
+        arguments: {'action': 'click', 'element_id': 2},
+        conversationId: 'conv-2',
+      );
+      await tester.pumpWidget(
+        agentApp(
+          const WebViewPage(url: 'https://example.com', agentSession: true),
+          approval: approval,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      await closeBrowserFromMenu(tester);
+      expect(find.text('Close browser?'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pump();
+      expect(approval.pendingRequests, hasLength(2));
+      await closeBrowserFromMenu(tester, confirm: true);
+      expect((await owned).approved, isFalse);
+      expect(approval.pendingRequests, hasLength(1));
+      expect(approval.pendingRequests.single.conversationId, 'conv-2');
+      approval.deny('same-call', conversationId: 'conv-2');
+      await other;
+    },
+  );
 }

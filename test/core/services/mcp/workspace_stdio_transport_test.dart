@@ -271,7 +271,7 @@ void main() {
       await transport.onClose;
       await sub.cancel();
     },
-    skip: !(Platform.isMacOS || Platform.isLinux),
+    skip: !(Platform.isLinux),
   );
 }
 

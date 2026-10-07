@@ -1,28 +1,35 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/services/browser/browser_agent_session.dart';
+import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/workspace/task_plan.dart';
 import '../../../core/services/workspace/tool_run_registry.dart';
-import 'running_tool_bar.dart';
+import '../../chat/models/computer_step.dart';
+import '../../chat/widgets/computer_response_scope.dart';
+import 'computer_status_panel.dart';
 import 'task_plan_bar.dart';
 
-/// One row above the composer for what the agent is doing: the open task
-/// plan and the running command side by side, each taking the full width
-/// when alone. The plan's checklist opens above the row. Hidden when there
-/// is neither.
+/// One action strip above the composer, with the existing task plan nearby.
+/// Finished responses briefly show their final result; background jobs retain
+/// access while running. All controllers remain owned by their existing hosts.
 class ComposerStatusStrip extends StatefulWidget {
   const ComposerStatusStrip({
     super.key,
     required this.conversationId,
     required this.generating,
+    this.steps,
+    this.responseId,
   });
 
-  final String? conversationId;
+  static const resultDuration = Duration(seconds: 4);
 
-  /// The plan is live progress: once the reply ends it stays only in the
-  /// reply's own update_plan card, even if the model left a step open.
-  /// Background commands outlive the reply and keep their chip.
+  final String? conversationId;
   final bool generating;
+  final List<ComputerStep>? steps;
+  final String? responseId;
 
   @override
   State<ComposerStatusStrip> createState() => _ComposerStatusStripState();
@@ -30,6 +37,10 @@ class ComposerStatusStrip extends StatefulWidget {
 
 class _ComposerStatusStripState extends State<ComposerStatusStrip> {
   bool _planOpen = false;
+  bool _showCompleted = false;
+  String? _responseId;
+  bool? _wasGenerating;
+  Timer? _collapse;
 
   static T? _watch<T>(BuildContext context) {
     try {
@@ -40,72 +51,277 @@ class _ComposerStatusStripState extends State<ComposerStatusStrip> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final plan = _watch<TaskPlanRegistry>(context)?.of(widget.conversationId);
-    final openPlan = widget.generating && plan != null && !plan.isDone
-        ? plan
-        : null;
-    final runs =
-        _watch<ToolRunRegistry>(context)?.runningIn(widget.conversationId) ??
-        const <ToolRun>[];
-    final cs = Theme.of(context).colorScheme;
-
-    Widget? content;
-    if (openPlan != null || runs.isNotEmpty) {
-      content = Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (openPlan != null && _planOpen)
-              Container(
-                margin: const EdgeInsets.only(bottom: 6),
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: TaskPlanChecklist(plan: openPlan),
-              ),
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (openPlan != null)
-                    Expanded(
-                      child: TaskPlanChip(
-                        plan: openPlan,
-                        expanded: _planOpen,
-                        onTap: () => setState(() => _planOpen = !_planOpen),
-                      ),
-                    ),
-                  if (openPlan != null && runs.isNotEmpty)
-                    const SizedBox(width: 6),
-                  if (runs.isNotEmpty)
-                    Expanded(
-                      child: RunningToolChip(
-                        key: ValueKey(runs.last.toolCallId),
-                        run: runs.last,
-                        moreCount: runs.length - 1,
-                        conversationId: widget.conversationId,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
+  void didUpdateWidget(ComposerStatusStrip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.conversationId != widget.conversationId) {
+      _collapse?.cancel();
+      _responseId = null;
+      _wasGenerating = null;
+      _showCompleted = false;
+      _planOpen = false;
+    } else if (oldWidget.generating && !widget.generating) {
+      _showCompleted = true;
+      _collapse?.cancel();
+      _collapse = Timer(ComposerStatusStrip.resultDuration, () {
+        if (mounted) setState(() => _showCompleted = false);
+      });
+    } else if (!oldWidget.generating && widget.generating) {
+      _collapse?.cancel();
+      _showCompleted = false;
     }
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      alignment: Alignment.bottomCenter,
-      // Clipping keeps a strip that is still growing from painting over the
-      // chips next to it.
-      clipBehavior: Clip.hardEdge,
-      child: content ?? const SizedBox(width: double.infinity),
+  }
+
+  @override
+  void dispose() {
+    _collapse?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final source = ComputerToolSource.maybeOf(context);
+    final registry = _watch<ToolRunRegistry>(context);
+    final plan = _watch<TaskPlanRegistry>(context)?.of(widget.conversationId);
+    final browser = BrowserAgentSession.instance;
+
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        if (source != null) source.updates,
+        browser.minimized,
+        browser.currentActivity,
+      ]),
+      builder: (context, _) {
+        final responseId =
+            widget.responseId ??
+            (source == null
+                ? null
+                : latestComputerResponseId(source.readMessages()));
+        if (_responseId != responseId) {
+          _responseId = responseId;
+          _wasGenerating = null;
+          _showCompleted = false;
+          _collapse?.cancel();
+        }
+        bool belongsToResponse(ToolRun run) =>
+            run.background ||
+            (responseId != null && run.responseId == responseId);
+        final runs = [
+          for (final run
+              in registry?.runningIn(widget.conversationId) ??
+                  const <ToolRun>[])
+            if (belongsToResponse(run)) run,
+        ];
+        // These identities belong to the response that opens the sheet.
+        // The composer may switch chats while that route is still visible.
+        final conversationId = widget.conversationId;
+        final suppliedSteps = widget.steps;
+        bool isSameResponse() =>
+            widget.conversationId == conversationId &&
+            (widget.responseId ??
+                    (source == null
+                        ? null
+                        : latestComputerResponseId(source.readMessages()))) ==
+                responseId;
+        ChatService? chat;
+        try {
+          chat = context.read<ChatService>();
+        } on ProviderNotFoundException {
+          chat = null;
+        }
+        bool readResponseRunning() {
+          final capturedMessages =
+              chat?.getMessages(conversationId ?? '') ??
+              source?.readMessages() ??
+              const [];
+          final response = capturedMessages
+              .where(
+                (message) =>
+                    message.id == responseId &&
+                    message.conversationId == conversationId,
+              )
+              .firstOrNull;
+          return response?.isStreaming ??
+              (isSameResponse() && widget.generating);
+        }
+
+        final retainedRuns = {for (final run in runs) run.runtimeRunId: run};
+        var retainedResponseSteps = suppliedSteps ?? const <ComputerStep>[];
+        List<ComputerStep> readSteps() {
+          final live = responseId == null
+              ? null
+              : source?.readSteps(responseId);
+          var responseSteps = isSameResponse()
+              ? widget.steps ?? live ?? const <ComputerStep>[]
+              : (live?.isNotEmpty == true ? live : suppliedSteps) ??
+                    const <ComputerStep>[];
+          if (responseSteps.isEmpty && responseId != null) {
+            responseSteps = computerStepsFromEvents(
+              chat?.getToolEvents(responseId) ?? const [],
+            );
+          }
+          if (responseSteps.isEmpty) {
+            responseSteps = retainedResponseSteps;
+          }
+          final previousRuns = {
+            for (final step in retainedResponseSteps)
+              if (step.run != null) step.id: step.run,
+          };
+          var steps = withComputerRuns(
+            [
+              for (final step in responseSteps)
+                step.run == null && previousRuns[step.id] != null
+                    ? step.withRun(previousRuns[step.id])
+                    : step,
+            ],
+            registry,
+            conversationId,
+            responseId: responseId,
+          );
+          retainedResponseSteps = steps;
+          final ids = steps.map((step) => step.id).toSet();
+          final representedRuns = steps
+              .map((step) => step.run?.runtimeRunId)
+              .toSet();
+          for (final run
+              in registry?.runningIn(conversationId) ?? const <ToolRun>[]) {
+            if (belongsToResponse(run)) retainedRuns[run.runtimeRunId] = run;
+          }
+          final background = retainedRuns.values.toList()
+            ..sort((a, b) => a.startedAt.compareTo(b.startedAt));
+          steps = [
+            // Prior jobs precede this reply's steps, so they cannot steal
+            // automatic selection from the newest action of this reply.
+            for (final run in background)
+              if (!ids.contains(run.runtimeRunId) &&
+                  !representedRuns.contains(run.runtimeRunId))
+                ComputerStep(
+                  id: run.runtimeRunId,
+                  toolName: run.toolName,
+                  arguments: {if (run.command != null) 'command': run.command},
+                  run: run,
+                ),
+            ...steps,
+          ];
+          if (steps.isEmpty &&
+              browser.minimized.value &&
+              browser.ownerConversationId == conversationId &&
+              responseId == null) {
+            steps = [
+              ComputerStep(
+                id: 'parked-browser',
+                toolName: 'browser_use',
+                arguments: {
+                  'action': 'observe',
+                  if (browser.pageUrl.value != null)
+                    'url': browser.pageUrl.value,
+                },
+                loading:
+                    browser.currentActivity.value?.outcome ==
+                    BrowserActivityOutcome.running,
+              ),
+            ];
+          }
+          return steps;
+        }
+
+        final steps = readSteps();
+        final generating =
+            readResponseRunning() && !steps.any((step) => step.responseStopped);
+        if (_wasGenerating == true && !generating) {
+          _showCompleted = true;
+          _collapse?.cancel();
+          _collapse = Timer(ComposerStatusStrip.resultDuration, () {
+            if (mounted) setState(() => _showCompleted = false);
+          });
+        }
+        _wasGenerating = generating;
+        final openPlan = generating && plan != null && !plan.isDone
+            ? plan
+            : null;
+        final showComputer =
+            steps.isNotEmpty &&
+            (generating ||
+                _showCompleted ||
+                runs.isNotEmpty ||
+                (responseId == null && browser.minimized.value));
+        Widget? content;
+        if (openPlan != null || showComputer) {
+          final cs = Theme.of(context).colorScheme;
+          final panel = showComputer
+              ? ComputerStatusPanel(
+                  key: ValueKey((widget.conversationId, responseId)),
+                  steps: steps,
+                  generating: generating,
+                  conversationId: widget.conversationId,
+                  updates: Listenable.merge([
+                    if (source != null) source.updates,
+                    if (registry != null) registry,
+                  ]),
+                  readSteps: readSteps,
+                  readResponseRunning: readResponseRunning,
+                )
+              : null;
+          final chip = openPlan == null
+              ? null
+              : TaskPlanChip(
+                  plan: openPlan,
+                  expanded: _planOpen,
+                  onTap: () => setState(() => _planOpen = !_planOpen),
+                );
+          content = Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (openPlan != null && _planOpen)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: TaskPlanChecklist(plan: openPlan),
+                  ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (chip != null &&
+                        panel != null &&
+                        constraints.maxWidth >= 600) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: chip),
+                          const SizedBox(width: 6),
+                          Expanded(flex: 2, child: panel),
+                        ],
+                      );
+                    }
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (chip != null) chip,
+                        if (chip != null && panel != null)
+                          const SizedBox(height: 6),
+                        if (panel != null) panel,
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
+        }
+        return AnimatedSize(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.bottomCenter,
+          clipBehavior: Clip.hardEdge,
+          child: content ?? const SizedBox(width: double.infinity),
+        );
+      },
     );
   }
 }

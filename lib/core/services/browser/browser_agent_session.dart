@@ -1,12 +1,26 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:math' as math;
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show WidgetsBinding;
+import 'package:path/path.dart' as p;
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
+import '../../../utils/app_directories.dart';
 import '../../../utils/utf16_safe_cut.dart';
+import 'browser_guard.dart';
+import 'browser_handoffs.dart';
+import 'browser_library.dart';
+import 'browser_page_scripts.dart';
+import 'browser_tabs.dart';
+import 'browser_userscripts.dart';
 import 'browser_research.dart';
+import 'browser_thumbnail_cache.dart';
 
 /// Lifecycle state of a [BrowserActivity]: [running] the moment it is
 /// recorded (before the call's own result is known), then one of the
@@ -32,6 +46,7 @@ class BrowserActivity {
     this.outcome = BrowserActivityOutcome.running,
     required this.startedAt,
     this.finishedAt,
+    this.pageKey,
   });
 
   final String id;
@@ -41,11 +56,16 @@ class BrowserActivity {
   final DateTime startedAt;
   final DateTime? finishedAt;
 
+  /// Opaque identity of the tab and public page, never a retained URL.
+  final String? pageKey;
+
   Duration? get duration => finishedAt?.difference(startedAt);
 
   BrowserActivity withOutcome(
     BrowserActivityOutcome outcome, {
     DateTime? finishedAt,
+    String? pageKey,
+    bool replacePageKey = false,
   }) => BrowserActivity(
     id: id,
     action: action,
@@ -53,8 +73,22 @@ class BrowserActivity {
     outcome: outcome,
     startedAt: startedAt,
     finishedAt: finishedAt ?? this.finishedAt,
+    pageKey: replacePageKey ? pageKey : this.pageKey,
   );
 }
+
+/// The user pressed Stop while a `browser_use` action ran.
+class BrowserStoppedException implements Exception {
+  const BrowserStoppedException();
+
+  @override
+  String toString() => 'The user stopped this browser action.';
+}
+
+/// Shows a page's JavaScript dialog to the user. Returns `ok`, `accepted`,
+/// `declined`, the prompt's text, or null when a prompt was cancelled.
+typedef BrowserDialogPresenter =
+    Future<String?> Function(String kind, String message, String? defaultText);
 
 class BrowserAgentProtocolException implements Exception {
   const BrowserAgentProtocolException(this.message);
@@ -174,13 +208,45 @@ class BrowserAgentSession {
 
   static final BrowserAgentSession instance = BrowserAgentSession._();
 
-  WebViewController? _controller;
+  // ---------------------------------------------------------------------------
+  // Tabs
+  // ---------------------------------------------------------------------------
+
+  /// At most this many pages are open at once.
+  static const int maxTabs = 5;
+
+  /// A tab the model opened and has not used for this long is closed, unless
+  /// it is the one on screen.
+  static const Duration agentTabIdle = Duration(minutes: 15);
+
+  final List<BrowserTab> _tabs = <BrowserTab>[];
+  BrowserTab? _active;
+  int _nextTabId = 0;
+  Timer? _idleTimer;
+
+  /// The open tabs, for the tab list, the mini window and the page, which
+  /// shows the active one.
+  final ValueNotifier<List<BrowserTabInfo>> tabs =
+      ValueNotifier<List<BrowserTabInfo>>(const <BrowserTabInfo>[]);
+
+  /// Makes the WebView of a new tab, set up like the browser page's own;
+  /// set by the page, which knows how.
+  WebViewController Function()? controllerFactory;
+
+  /// Replaced in tests.
+  @visibleForTesting
+  DateTime Function() clock = DateTime.now;
+
+  WebViewController? get _controller => _active?.controller;
+
+  static final BrowserNavigationHistory _noHistory = BrowserNavigationHistory();
+  BrowserNavigationHistory get _history => _active?.history ?? _noHistory;
+
   Completer<void>? _attachedCompleter;
   Completer<void>? _readyCompleter;
   bool _loading = false;
   int _navigationSequence = 0;
   Future<void> Function()? _closeHandler;
-  final BrowserNavigationHistory _history = BrowserNavigationHistory();
 
   /// The conversation currently driving `browser_use` calls against this
   /// session, refreshed on every dispatch by [BrowserAgentTool.execute].
@@ -205,8 +271,8 @@ class BrowserAgentSession {
   /// taskId -> conversationId for every browser Ask-AI request this
   /// session has started but whose `MobileBackgroundCoordinator.finish()`
   /// notification decision hasn't run yet. [taskId] matches
-  /// `MobileBackgroundCoordinator`'s own per-run id (`generationRunId`, or
-  /// the assistant message id when no run id exists) exactly, so a lookup
+  /// `MobileBackgroundCoordinator`'s captured execution id (the durable run id
+  /// or an opaque token for a temporary generation) exactly, so a lookup
   /// here can never partially match a different run for the same
   /// conversation.
   ///
@@ -254,18 +320,63 @@ class BrowserAgentSession {
   /// for anything that should stay live while visible.
   List<BrowserActivity> get recentActivity => recentActivityNotifier.value;
 
+  // Keep lifetime counts for at most the same number of public pages as the
+  // recent log has entries. Repeated actions on one page do not lose its count
+  // when old detail rows age out.
+  final Map<String, int> _pageActionCounts = {};
+
+  void _countActivity(String? key) {
+    if (key == null) return;
+    final count = _pageActionCounts.remove(key) ?? 0;
+    _pageActionCounts[key] = count + 1;
+    while (_pageActionCounts.length > _maxRecentActivity) {
+      _pageActionCounts.remove(_pageActionCounts.keys.first);
+    }
+  }
+
+  void _uncountActivity(String? key) {
+    if (key == null) return;
+    final count = _pageActionCounts[key];
+    if (count == null) return;
+    if (count == 1) {
+      _pageActionCounts.remove(key);
+    } else {
+      _pageActionCounts[key] = count - 1;
+    }
+  }
+
+  /// Captures display-safe page identity using an already captured tab ID.
+  String? activityPageKey(String? url, {required String? tabId}) {
+    if (url == null ||
+        url.isEmpty ||
+        !BrowserThumbnailCache.canPreviewPage(url)) {
+      return null;
+    }
+    return sha256.convert(utf8.encode('${tabId ?? ''}\n$url')).toString();
+  }
+
+  /// Number of AI actions on this exact page of the active tab.
+  int activityCountForPage(String? url) {
+    final key = activityPageKey(url, tabId: _active?.id);
+    if (key == null) return 0;
+    return _pageActionCounts[key] ?? 0;
+  }
+
   /// Starts a new activity and returns its id, to later resolve via
   /// [resolveActivity]. ids are unique for the process lifetime (never
   /// reused across sessions), so a late resolution can never land on a
   /// newer, unrelated call that happens to be "last" by the time it arrives.
   String recordActivity({required String action, String? detail}) {
+    if (recentActivity.isEmpty) _pageActionCounts.clear();
     final id = 'browser-activity-${_nextActivityId++}';
     final activity = BrowserActivity(
       id: id,
       action: action,
       detail: detail,
       startedAt: DateTime.now(),
+      pageKey: activityPageKey(_pageUrl ?? _active?.url, tabId: _active?.id),
     );
+    _countActivity(activity.pageKey);
     currentActivity.value = activity;
     final next = <BrowserActivity>[...recentActivityNotifier.value, activity];
     recentActivityNotifier.value = next.length > _maxRecentActivity
@@ -280,13 +391,33 @@ class BrowserAgentSession {
   /// entirely, so no id from a previous session can ever match again), the
   /// entry aged out of the bounded log, or it was already resolved — a late
   /// or duplicate result must never overwrite a newer outcome.
-  void resolveActivity(String id, BrowserActivityOutcome outcome) {
+  void resolveActivity(
+    String id,
+    BrowserActivityOutcome outcome, {
+    String? destinationPageKey,
+    bool destinationCaptured = false,
+  }) {
     final list = recentActivityNotifier.value;
     final index = list.indexWhere((activity) => activity.id == id);
     if (index == -1) return;
     final existing = list[index];
     if (existing.outcome != BrowserActivityOutcome.running) return;
-    final resolved = existing.withOutcome(outcome, finishedAt: DateTime.now());
+    // Use only action-owned evidence, captured before later awaits. The user
+    // may have navigated or switched tabs while this call was completing.
+    final destinationKey =
+        destinationCaptured && outcome == BrowserActivityOutcome.ok
+        ? destinationPageKey
+        : existing.pageKey;
+    if (destinationKey != existing.pageKey) {
+      _uncountActivity(existing.pageKey);
+      _countActivity(destinationKey);
+    }
+    final resolved = existing.withOutcome(
+      outcome,
+      finishedAt: DateTime.now(),
+      pageKey: destinationKey,
+      replacePageKey: true,
+    );
     final next = List<BrowserActivity>.of(list);
     next[index] = resolved;
     recentActivityNotifier.value = next;
@@ -296,6 +427,304 @@ class BrowserAgentSession {
   }
 
   bool get isAttached => _controller != null;
+  String? get activeTabId => _active?.id;
+  String? pageUrlForTab(String? tabId) =>
+      tabId == null ? null : _tabById(tabId)?.url;
+
+  // ---------------------------------------------------------------------------
+  // Screenshots
+  // ---------------------------------------------------------------------------
+
+  static const MethodChannel _browserChannel = MethodChannel('app.browser');
+
+  /// Screenshots kept on disk; older ones are deleted.
+  static const int keptScreenshots = 40;
+
+  /// A JPEG of what the WebView shows now. Replaced in tests.
+  @visibleForTesting
+  Future<Uint8List> Function(WebViewController controller) captureBytes =
+      _nativeCapture;
+
+  /// Where screenshots are saved. Replaced in tests.
+  @visibleForTesting
+  Future<Directory> Function() screenshotDirectory = () async => Directory(
+    p.join((await AppDirectories.getImagesDirectory()).path, 'browser'),
+  );
+
+  static Future<Uint8List> _nativeCapture(WebViewController controller) async {
+    final platform = controller.platform;
+    if (platform is! AndroidWebViewController) {
+      throw PlatformException(
+        code: 'unsupported',
+        message: 'Screenshots need the Android browser.',
+      );
+    }
+    final bytes = await _browserChannel.invokeMethod<Uint8List>('capture', {
+      'id': platform.webViewIdentifier,
+    });
+    if (bytes == null || bytes.isEmpty) {
+      throw PlatformException(code: 'empty', message: 'The picture is empty.');
+    }
+    return bytes;
+  }
+
+  /// Saves a picture of the page as it shows now and returns its path with
+  /// the viewport size in CSS pixels, so points in it map to click x/y.
+  Future<Map<String, dynamic>> screenshot() async {
+    // Keep the originating controller/action through readiness and native
+    // capture. The next chat must never supply pixels to this chat's result.
+    final controller = _requireController();
+    final thumbnailConversationId = ownerConversationId;
+    final thumbnailStepId = currentActivity.value?.id;
+    bool ownsCapture() =>
+        identical(controller, _controller) &&
+        ownerConversationId == thumbnailConversationId &&
+        currentActivity.value?.id == thumbnailStepId;
+    try {
+      await waitUntilReady();
+    } catch (_) {
+      if (!ownsCapture()) throw const BrowserStoppedException();
+      rethrow;
+    }
+    if (!ownsCapture() || _loading) throw const BrowserStoppedException();
+    // Redirects may finish while waiting, under the same owner and action.
+    // From this ready page onward every async read must share its identity.
+    final navigationSequence = _navigationSequence;
+    final thumbnailPageUrl = _pageUrl ?? _active?.url;
+    final thumbnailCapturedAt = DateTime.now();
+    final thumbnailPageKey = activityPageKey(
+      thumbnailPageUrl,
+      tabId: _active?.id,
+    );
+    final thumbnailSequence = BrowserThumbnailCache.instance
+        .reserveCaptureSequence();
+    void verifyCapture() {
+      if (!ownsCapture() ||
+          _loading ||
+          navigationSequence != _navigationSequence) {
+        throw const BrowserStoppedException();
+      }
+    }
+
+    final Uint8List bytes;
+    try {
+      bytes = await _interruptible(captureBytes(controller));
+    } on PlatformException catch (error) {
+      return {
+        'ok': false,
+        'error': 'screenshot_failed',
+        'message': error.message ?? error.code,
+      };
+    }
+    verifyCapture();
+    Map<String, dynamic> viewport = const {};
+    try {
+      viewport = await _runJson(
+        'JSON.stringify({width: window.innerWidth, height: window.innerHeight})',
+      );
+    } catch (_) {}
+    verifyCapture();
+    final url = await controller.currentUrl();
+    verifyCapture();
+    // Bytes and their page metadata now form a consistent snapshot. Later
+    // disk/decode work retains this owner even if another chat takes over.
+    final dir = await screenshotDirectory();
+    await dir.create(recursive: true);
+    final file = File(
+      p.join(dir.path, 'shot-${DateTime.now().microsecondsSinceEpoch}.jpg'),
+    );
+    await file.writeAsBytes(bytes, flush: true);
+    await _pruneScreenshots(dir);
+    if (thumbnailConversationId != null &&
+        BrowserThumbnailCache.canPreviewPage(thumbnailPageUrl) &&
+        BrowserThumbnailCache.canPreviewPage(url)) {
+      await BrowserThumbnailCache.instance.capture(
+        conversationId: thumbnailConversationId,
+        stepId: thumbnailStepId ?? file.path,
+        sourcePath: file.path,
+        sourceDirectory: dir,
+        pageUrl: url,
+        captureSequence: thumbnailSequence,
+        capturedAt: thumbnailCapturedAt,
+        pageKey: thumbnailPageKey,
+      );
+    }
+    return {
+      'ok': true,
+      'screenshot': file.path,
+      'url': url,
+      if (viewport.isNotEmpty) 'viewport': viewport,
+    };
+  }
+
+  static Future<void> _pruneScreenshots(Directory dir) async {
+    final shots = <File>[
+      await for (final entity in dir.list())
+        if (entity is File && p.basename(entity.path).startsWith('shot-'))
+          entity,
+    ]..sort((a, b) => b.path.compareTo(a.path));
+    for (final old in shots.skip(keptScreenshots)) {
+      try {
+        await old.delete();
+      } on FileSystemException {
+        // Gone already.
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Guard: challenge pages, JavaScript dialogs, pacing, Stop
+  // ---------------------------------------------------------------------------
+
+  /// The verification or refusal the current page shows, if any; the page
+  /// shows a banner for it.
+  final ValueNotifier<BrowserChallenge?> challenge =
+      ValueNotifier<BrowserChallenge?>(null);
+
+  String? _pageUrl;
+  int? _mainFrameStatus;
+
+  /// An HTTP error of a request; only the page's own one counts.
+  void noteHttpError(Uri? uri, int? status) {
+    if (uri != null && uri.toString() == _pageUrl) _mainFrameStatus = status;
+  }
+
+  /// Looks for a verification or refusal on the current page and publishes
+  /// it on [challenge]. Never throws: a page that cannot be read has none.
+  Future<BrowserChallenge?> checkChallenge() async {
+    final controller = _controller;
+    if (controller == null) return null;
+    Map<String, dynamic>? signals;
+    try {
+      signals = await _runJson(BrowserGuard.challengeScript);
+    } catch (_) {}
+    final url = await controller.currentUrl();
+    final found = BrowserGuard.classify(
+      status: _mainFrameStatus,
+      url: url,
+      signals: signals,
+    );
+    challenge.value = found;
+    return found;
+  }
+
+  /// Shows dialogs to the user while they look at the browser page and
+  /// nothing runs; set by that page.
+  BrowserDialogPresenter? dialogPresenter;
+
+  final List<BrowserDialogRecord> _dialogs = <BrowserDialogRecord>[];
+
+  /// Answers the page's `alert`, `confirm` and `prompt` so they never hang
+  /// it: the user answers them while looking at the page, otherwise the page
+  /// gets the default (OK, accept, the suggested text) and the model hears
+  /// about it with its next result.
+  void installDialogHandlers(WebViewController controller) {
+    controller
+      ..setOnJavaScriptAlertDialog((request) async {
+        await _answerDialog('alert', request.message, null);
+      })
+      ..setOnJavaScriptConfirmDialog(
+        (request) async =>
+            await _answerDialog('confirm', request.message, null) == 'accepted',
+      )
+      ..setOnJavaScriptTextInputDialog(
+        (request) async =>
+            await _answerDialog(
+              'prompt',
+              request.message,
+              request.defaultText ?? '',
+            ) ??
+            '',
+      );
+  }
+
+  Future<String?> _answerDialog(
+    String kind,
+    String message,
+    String? defaultText,
+  ) async {
+    final presenter = dialogPresenter;
+    final agentRunning =
+        currentActivity.value?.outcome == BrowserActivityOutcome.running;
+    if (presenter != null && isRouteCurrent && !agentRunning) {
+      return presenter(kind, message, defaultText);
+    }
+    final answer = switch (kind) {
+      'alert' => 'ok',
+      'confirm' => 'accepted',
+      _ => defaultText ?? '',
+    };
+    _dialogs.add(
+      BrowserDialogRecord(kind: kind, message: message, answer: answer),
+    );
+    if (_dialogs.length > 10) _dialogs.removeAt(0);
+    return answer;
+  }
+
+  /// The dialogs answered for the model since it last asked, oldest first.
+  List<Map<String, Object?>> drainDialogs() {
+    final drained = [for (final dialog in _dialogs) dialog.toJson()];
+    _dialogs.clear();
+    return drained;
+  }
+
+  final Map<String, DateTime> _lastActionAt = <String, DateTime>{};
+  final math.Random _random = math.Random();
+
+  /// Waits as long as [BrowserGuard.throttle] asks before [action] on the
+  /// site of [url] (the current page when null).
+  Future<void> pace(String action, {String? url}) async {
+    final target = url ?? await _controller?.currentUrl();
+    final host = BrowserGuard.host(target);
+    if (host == null) return;
+    final last = _lastActionAt[host];
+    final delay = BrowserGuard.throttle(
+      action,
+      target,
+      sinceLast: last == null ? null : DateTime.now().difference(last),
+      jitter: _random.nextDouble(),
+    );
+    if (delay > Duration.zero) {
+      await _interruptible(Future<void>.delayed(delay));
+    }
+    _lastActionAt[host] = DateTime.now();
+  }
+
+  Completer<void>? _stopSignal;
+
+  /// A `browser_use` action starts; [requestStop] ends its waits.
+  void beginAction() {
+    _active?.lastUsed = clock();
+    _stopSignal = Completer<void>()..future.ignore();
+  }
+
+  void endAction() {
+    _stopSignal = null;
+  }
+
+  /// Stops the running action at its next wait (loading, pacing, polling).
+  void requestStop() {
+    final signal = _stopSignal;
+    if (signal != null && !signal.isCompleted) {
+      signal.completeError(const BrowserStoppedException());
+    }
+  }
+
+  @visibleForTesting
+  bool get stopRequested => _stopSignal?.isCompleted ?? false;
+
+  Future<T> _interruptible<T>(Future<T> future) {
+    final signal = _stopSignal;
+    if (signal == null) return future;
+    if (signal.isCompleted) {
+      future.ignore();
+      return Future<T>.error(const BrowserStoppedException());
+    }
+    return Future.any<T>([
+      future,
+      signal.future.then<T>((_) => throw const BrowserStoppedException()),
+    ]);
+  }
 
   /// The live controller, for the mini window and a page re-expanding it.
   WebViewController? get controller => _controller;
@@ -316,10 +745,10 @@ class BrowserAgentSession {
     if (!identical(_controller, controller)) return;
     isRouteCurrent = false;
     _closeHandler = closeMinimized;
-    controller.setNavigationDelegate(
-      NavigationDelegate(
-        onPageStarted: pageStarted,
-        onPageFinished: pageFinished,
+    unawaited(
+      BrowserHandoffs.instance.setNavigationDelegate(
+        controller,
+        _tabDelegate(_active!),
       ),
     );
     _parked = true;
@@ -365,13 +794,42 @@ class BrowserAgentSession {
   void expectNavigation() {
     _loading = true;
     _readyCompleter = Completer<void>();
+    _expectedSequence = _navigationSequence;
+  }
+
+  int _expectedSequence = -1;
+  String? _expectedUrl;
+
+  /// A download started. When the navigation the session waits for turned
+  /// into it (a link to a PDF or an archive), no page will load: the wait
+  /// ends here instead of timing out.
+  void downloadStarted(String? url) {
+    if (!_loading) return;
+    final same = url != null && (url == _expectedUrl || url == _pageUrl);
+    if (_navigationSequence != _expectedSequence && !same) return;
+    _loading = false;
+    _active?.loading = false;
+    pageLoading.value = false;
+    final ready = _readyCompleter;
+    if (ready != null && !ready.isCompleted) ready.complete();
   }
 
   void register(
     WebViewController controller, {
     Future<void> Function()? onClose,
   }) {
-    _controller = controller;
+    var tab = _tabFor(controller);
+    if (tab == null) {
+      tab = BrowserTab(
+        id: 'tab${++_nextTabId}',
+        controller: controller,
+        byAgent: false,
+        lastUsed: clock(),
+      );
+      _tabs.add(tab);
+    }
+    _active = tab;
+    _publishTabsSoon();
     _closeHandler = onClose;
     final attached = _attachedCompleter;
     if (attached != null && !attached.isCompleted) attached.complete();
@@ -380,7 +838,17 @@ class BrowserAgentSession {
 
   void unregister(WebViewController controller) {
     if (!identical(_controller, controller)) return;
-    _controller = null;
+    for (final tab in _tabs) {
+      if (!identical(tab.controller, controller)) {
+        // Stop the background pages: their scripts and media keep running.
+        unawaited(tab.controller.loadRequest(Uri.parse('about:blank')));
+      }
+    }
+    _tabs.clear();
+    _active = null;
+    _idleTimer?.cancel();
+    _idleTimer = null;
+    _publishTabsSoon();
     _closeHandler = null;
     _attachedCompleter = null;
     _parked = false;
@@ -390,7 +858,11 @@ class BrowserAgentSession {
     ownerConversationId = null;
     isRouteCurrent = false;
     _askAiTasks.clear();
+    challenge.value = null;
+    _dialogs.clear();
+    dialogPresenter = null;
     currentActivity.value = null;
+    _pageActionCounts.clear();
     recentActivityNotifier.value = const <BrowserActivity>[];
     final ready = _readyCompleter;
     if (ready != null && !ready.isCompleted) {
@@ -399,9 +871,428 @@ class BrowserAgentSession {
     _readyCompleter = null;
   }
 
+  BrowserTab? _tabFor(WebViewController controller) {
+    for (final tab in _tabs) {
+      if (identical(tab.controller, controller)) return tab;
+    }
+    return null;
+  }
+
+  BrowserTab? _tabById(String id) {
+    for (final tab in _tabs) {
+      if (tab.id == id) return tab;
+    }
+    return null;
+  }
+
+  bool _tabsPublishScheduled = false;
+
+  List<BrowserTabInfo> _tabInfos() => List<BrowserTabInfo>.unmodifiable([
+    for (final tab in _tabs) tab.info(active: identical(tab, _active)),
+  ]);
+
+  void _publishTabs() {
+    tabs.value = _tabInfos();
+  }
+
+  /// [_publishTabs] for [register] and [unregister]: a page calls them
+  /// while widgets build, when listeners (the mini window) must not
+  /// rebuild, so the update waits until that synchronous build is over.
+  void _publishTabsSoon() {
+    if (_tabsPublishScheduled) return;
+    _tabsPublishScheduled = true;
+    scheduleMicrotask(() {
+      _tabsPublishScheduled = false;
+      _publishTabs();
+    });
+  }
+
+  List<Map<String, Object?>> _tabsJson() => [
+    for (final info in _tabInfos()) info.toJson(),
+  ];
+
+  Future<void> _refreshTitle(BrowserTab tab) async {
+    final url = tab.url;
+    String? title;
+    try {
+      title = await tab.controller.getTitle();
+    } catch (_) {
+      // No title (the page went away meanwhile); the visit still counts.
+    }
+    if (!_tabs.contains(tab) || tab.url != url) return;
+    if (url != null) onVisit(url, title);
+    if (title == null || title == tab.title) return;
+    tab.title = title;
+    _publishTabs();
+  }
+
+  /// A page finished loading in a tab: the user scripts that match it run.
+  /// Replaced in tests.
+  @visibleForTesting
+  void Function(WebViewController controller, String url) onPageLoaded =
+      (controller, url) => unawaited(
+        BrowserUserscripts.instance.runIn(controller, url).catchError((
+          Object error,
+        ) {
+          debugPrint('Userscripts: $error');
+          return const <String>[];
+        }),
+      );
+
+  /// A page finished loading in a tab: it goes into the history.
+  /// Replaced in tests.
+  @visibleForTesting
+  void Function(String url, String? title) onVisit = (url, title) => unawaited(
+    BrowserLibrary.instance
+        .recordVisit(url, title)
+        .catchError((Object error) => debugPrint('Browser history: $error')),
+  );
+
+  /// Navigation of a tab while the browser page does not drive it (it is in
+  /// the background, or the browser is minimized): the tab keeps its own
+  /// address, title and history, and the active one feeds the session.
+  NavigationDelegate _tabDelegate(BrowserTab tab) => NavigationDelegate(
+    onPageStarted: (url) {
+      if (identical(tab, _active)) {
+        pageStarted(url);
+        return;
+      }
+      tab
+        ..url = url
+        ..loading = true;
+      _publishTabs();
+    },
+    onPageFinished: (url) {
+      if (identical(tab, _active)) {
+        pageFinished(url);
+        return;
+      }
+      tab
+        ..url = url
+        ..loading = false;
+      tab.history.reconcileCommitted(url);
+      _publishTabs();
+      unawaited(_refreshTitle(tab));
+      onPageLoaded(tab.controller, url);
+    },
+    onHttpError: (error) {
+      if (identical(tab, _active)) {
+        noteHttpError(error.request?.uri, error.response?.statusCode);
+      }
+    },
+  );
+
+  /// Puts [tab] on screen: the session's page state becomes the tab's.
+  void _activate(BrowserTab tab) {
+    _active = tab;
+    tab.lastUsed = clock();
+    _navigationSequence++;
+    _loading = tab.loading;
+    final ready = _readyCompleter;
+    if (ready != null && !ready.isCompleted) {
+      ready.completeError(StateError('The tab changed.'));
+      ready.future.ignore();
+    }
+    _readyCompleter = tab.loading ? Completer<void>() : null;
+    _pageUrl = tab.url;
+    _mainFrameStatus = null;
+    challenge.value = null;
+    pageUrl.value = tab.url;
+    pageLoading.value = tab.loading;
+    _publishTabs();
+  }
+
+  /// Opens a new tab and puts it on screen, loading [url] when given.
+  Future<Map<String, dynamic>> newTab({
+    String? url,
+    bool byAgent = false,
+    WebViewController? preparedController,
+    bool Function()? mayOpen,
+  }) {
+    return _newTab(
+      url: url == null ? null : Uri.tryParse(url),
+      byAgent: byAgent,
+      preparedController: preparedController,
+      mayOpen: mayOpen,
+    );
+  }
+
+  Future<Map<String, dynamic>> _newTab({
+    Uri? url,
+    required bool byAgent,
+    WebViewController? preparedController,
+    bool Function()? mayOpen,
+  }) async {
+    final factory = controllerFactory;
+    if (!isAttached || factory == null) {
+      return {
+        'ok': false,
+        'error': 'browser_not_open',
+        'message': 'Open the browser first (action=open).',
+      };
+    }
+    if (_tabs.length >= maxTabs) {
+      return {
+        'ok': false,
+        'error': 'too_many_tabs',
+        'message': 'At most $maxTabs tabs are open. Close one first.',
+        'tabs': _tabsJson(),
+      };
+    }
+    final controller = preparedController ?? factory();
+    if (_tabFor(controller) != null) {
+      throw StateError('A new tab requires a fresh controller.');
+    }
+    final tab = BrowserTab(
+      id: 'tab${++_nextTabId}',
+      controller: controller,
+      byAgent: byAgent,
+      lastUsed: clock(),
+    );
+    // Ordinary tabs keep their existing capacity reservation during setup.
+    if (preparedController == null) _tabs.add(tab);
+    await BrowserHandoffs.instance.setNavigationDelegate(
+      controller,
+      _tabDelegate(tab),
+    );
+    installDialogHandlers(controller);
+    await _switchAway();
+    // A prepared agent controller may be revoked while native delegate setup
+    // runs, or the browser may close before the handoff reaches this point.
+    if (preparedController != null) {
+      if (!isAttached || mayOpen?.call() == false) {
+        return {'ok': false, 'error': 'browser_target_stopped'};
+      }
+      if (_tabs.length >= maxTabs) {
+        return {'ok': false, 'error': 'too_many_tabs'};
+      }
+      _tabs.add(tab);
+    }
+    _activate(tab);
+    if (byAgent) _ensureIdleTimer();
+    if (url != null) {
+      await load(url);
+    } else {
+      expectNavigation();
+      await controller.loadRequest(Uri.parse('about:blank'));
+    }
+    return {'ok': true, 'tab_id': tab.id, 'tabs': _tabsJson()};
+  }
+
+  /// The active tab stops being driven by the page before another one
+  /// takes the screen.
+  Future<void> _switchAway() async {
+    final previous = _active;
+    if (previous == null) return;
+    await BrowserHandoffs.instance.setNavigationDelegate(
+      previous.controller,
+      _tabDelegate(previous),
+    );
+  }
+
+  /// Puts the tab [id] on screen.
+  Future<Map<String, dynamic>> switchTab(String id) async {
+    final tab = _tabById(id);
+    if (tab == null) {
+      return {
+        'ok': false,
+        'error': 'no_such_tab',
+        'message': 'There is no tab $id.',
+        'tabs': _tabsJson(),
+      };
+    }
+    if (!identical(tab, _active)) {
+      await _switchAway();
+      _activate(tab);
+    }
+    return {
+      'ok': true,
+      'tab_id': tab.id,
+      if (tab.url != null) 'url': tab.url,
+      'tabs': _tabsJson(),
+    };
+  }
+
+  /// Closes the tab [id]; closing the last one closes the browser.
+  Future<Map<String, dynamic>> closeTab(String id) async {
+    final tab = _tabById(id);
+    if (tab == null) {
+      return {
+        'ok': false,
+        'error': 'no_such_tab',
+        'message': 'There is no tab $id.',
+        'tabs': _tabsJson(),
+      };
+    }
+    if (_tabs.length == 1) return close();
+    if (identical(tab, _active)) {
+      final index = _tabs.indexOf(tab);
+      final next = _tabs[index + 1 < _tabs.length ? index + 1 : index - 1];
+      await _switchAway();
+      _activate(next);
+    }
+    _removeTab(tab);
+    return {'ok': true, 'closed': id, 'tabs': _tabsJson()};
+  }
+
+  void _removeTab(BrowserTab tab) {
+    _tabs.remove(tab);
+    unawaited(tab.controller.loadRequest(Uri.parse('about:blank')));
+    if (!_tabs.any((t) => t.byAgent)) {
+      _idleTimer?.cancel();
+      _idleTimer = null;
+    }
+    _publishTabs();
+  }
+
+  void _ensureIdleTimer() {
+    _idleTimer ??= Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => closeIdleAgentTabs(),
+    );
+  }
+
+  /// Closes the tabs the model opened and left unused for [agentTabIdle],
+  /// except the one on screen; returns their ids.
+  List<String> closeIdleAgentTabs() {
+    final now = clock();
+    final idle = [
+      for (final tab in _tabs)
+        if (tab.byAgent &&
+            !identical(tab, _active) &&
+            now.difference(tab.lastUsed) >= agentTabIdle)
+          tab,
+    ];
+    for (final tab in idle) {
+      _removeTab(tab);
+    }
+    return [for (final tab in idle) tab.id];
+  }
+
+  /// The open tabs for the model.
+  Map<String, dynamic> listTabs() => {
+    'ok': true,
+    'tabs': _tabsJson(),
+    'max_tabs': maxTabs,
+  };
+
+  /// Lays pages out at their own width (a desktop page's 1000+ px, shown
+  /// zoomed out like Chrome's desktop site) instead of the phone's; the
+  /// plugin turns it off. Replaced in tests.
+  @visibleForTesting
+  Future<void> Function(WebViewController controller, bool wide)
+  setWideViewport = (controller, wide) async {
+    final platform = controller.platform;
+    if (platform is AndroidWebViewController) {
+      await platform.setUseWideViewPort(wide);
+    }
+  };
+
+  /// Shows the active tab's sites as on a computer or as on a phone, and
+  /// reloads it.
+  Future<Map<String, dynamic>> setDesktopMode(bool desktop) async {
+    final tab = _active;
+    if (tab == null) {
+      return {
+        'ok': false,
+        'error': 'browser_not_open',
+        'message': 'Shared browser is not open.',
+      };
+    }
+    if (tab.desktop != desktop) {
+      final controller = tab.controller;
+      tab.mobileUserAgent ??= await controller.getUserAgent();
+      await controller.setUserAgent(
+        desktop ? desktopUserAgent(tab.mobileUserAgent) : null,
+      );
+      await setWideViewport(controller, desktop);
+      tab.desktop = desktop;
+      _publishTabs();
+      final url = tab.url;
+      if (url != null && url != 'about:blank') {
+        // A fresh load, not reload(): a reload keeps the request's old
+        // user agent, so the site kept sending its phone version.
+        await load(Uri.parse(url));
+      }
+    }
+    return {
+      'ok': true,
+      'mode': desktop ? 'desktop' : 'mobile',
+      if (tab.url != null) 'url': tab.url,
+    };
+  }
+
+  /// Signs the active tab's site out: deletes its cookies and the page's
+  /// storage in this browser, then reloads. Other sites keep theirs.
+  Future<Map<String, dynamic>> clearSiteData() async {
+    final tab = _active;
+    final url = tab?.url;
+    final host = BrowserGuard.host(url);
+    if (tab == null || url == null || host == null) {
+      return {'ok': false, 'error': 'no_site', 'message': 'No site is open.'};
+    }
+    try {
+      await tab.controller.runJavaScript(_clearStorageScript);
+    } catch (_) {
+      // A page without storage access (an error page) has nothing to clear.
+    }
+    try {
+      await _browserChannel.invokeMethod<int>('clearCookies', {'url': url});
+    } on MissingPluginException {
+      // Not on the phone (tests).
+    }
+    expectNavigation();
+    await tab.controller.reload();
+    await waitUntilReady();
+    return {'ok': true, 'site': host};
+  }
+
+  static const String _clearStorageScript = r'''
+(() => {
+  try { localStorage.clear(); } catch (e) {}
+  try { sessionStorage.clear(); } catch (e) {}
+  try {
+    if (indexedDB.databases) {
+      indexedDB.databases().then((dbs) => dbs.forEach((db) => {
+        if (db.name) indexedDB.deleteDatabase(db.name);
+      }));
+    }
+  } catch (e) {}
+  try {
+    if (window.caches) caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+  } catch (e) {}
+  try {
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()));
+    }
+  } catch (e) {}
+})();
+''';
+
+  /// The page the shared browser shows, for the mini window.
+  final ValueNotifier<String?> pageUrl = ValueNotifier<String?>(null);
+
+  /// Whether that page is still loading.
+  final ValueNotifier<bool> pageLoading = ValueNotifier<bool>(false);
+
   void pageStarted(String url) {
+    final tab = _active;
+    if (tab != null) {
+      tab
+        ..url = url
+        ..loading = true;
+      _publishTabs();
+    }
     _navigationSequence++;
     _loading = true;
+    pageLoading.value = true;
+    pageUrl.value = url;
+    _pageUrl = url;
+    _mainFrameStatus = null;
+    // Known from the address alone; other checks need the page.
+    challenge.value = BrowserGuard.isGoogleSignIn(url)
+        ? const BrowserChallenge(kind: 'google_sign_in', blocking: false)
+        : null;
     final previous = _readyCompleter;
     if (previous == null || previous.isCompleted) {
       _readyCompleter = Completer<void>();
@@ -409,7 +1300,18 @@ class BrowserAgentSession {
   }
 
   void pageFinished(String url) {
+    final tab = _active;
+    if (tab != null) {
+      tab
+        ..url = url
+        ..loading = false;
+      unawaited(_refreshTitle(tab));
+      onPageLoaded(tab.controller, url);
+    }
     _loading = false;
+    _pageUrl = url;
+    pageLoading.value = false;
+    pageUrl.value = url;
     // The single, central reconciliation point for every committed
     // navigation on the shared controller — see
     // BrowserNavigationHistory's doc comment for the full contract. This
@@ -418,6 +1320,25 @@ class BrowserAgentSession {
     // address bar or tapping a link, so `_history` never drifts from what
     // native back/forward would actually do.
     _history.reconcileCommitted(url);
+    final ready = _readyCompleter;
+    if (ready != null && !ready.isCompleted) ready.complete();
+  }
+
+  /// A navigation was refused before its page loaded (an invalid
+  /// certificate): the tab shows [shownUrl] again, the wait ends, and the
+  /// refused address is not a visit.
+  void navigationBlocked(String? shownUrl) {
+    final tab = _active;
+    if (tab != null) {
+      tab
+        ..url = shownUrl
+        ..loading = false;
+      _publishTabs();
+    }
+    _loading = false;
+    pageLoading.value = false;
+    pageUrl.value = shownUrl;
+    _pageUrl = shownUrl;
     final ready = _readyCompleter;
     if (ready != null && !ready.isCompleted) ready.complete();
   }
@@ -438,12 +1359,13 @@ class BrowserAgentSession {
     }
     if (!_loading) return;
     final ready = _readyCompleter ??= Completer<void>();
-    await ready.future.timeout(timeout);
+    await _interruptible(ready.future.timeout(timeout));
   }
 
   Future<void> load(Uri uri) async {
     final controller = _requireController();
     expectNavigation();
+    _expectedUrl = uri.toString();
     await controller.loadRequest(uri);
     // waitUntilReady() only returns once pageFinished() has already run,
     // which is where `_history` is reconciled centrally — no separate push
@@ -530,6 +1452,105 @@ class BrowserAgentSession {
     return _withCurrentUrl(visibleResult);
   }
 
+  /// Clicks the page at viewport point ([x], [y]) in CSS pixels, for what
+  /// observe lists no element for: canvases, maps, custom widgets.
+  /// Taps the WebView at fractions of the visible page like a finger: the
+  /// page gets trusted events. False where there is no Android WebView.
+  /// Replaced in tests.
+  @visibleForTesting
+  Future<bool> Function(WebViewController controller, double fx, double fy)
+  nativeTap = (controller, fx, fy) =>
+      _nativeInput(controller, 'tap', {'fx': fx, 'fy': fy});
+
+  /// Presses [key] on the WebView like a keyboard; false where there is no
+  /// Android WebView or the key has no Android equivalent. Replaced in
+  /// tests.
+  @visibleForTesting
+  Future<bool> Function(WebViewController controller, String key) nativeKey =
+      (controller, key) => _nativeInput(controller, 'key', {'key': key});
+
+  static Future<bool> _nativeInput(
+    WebViewController controller,
+    String method,
+    Map<String, Object?> args,
+  ) async {
+    final platform = controller.platform;
+    if (platform is! AndroidWebViewController) return false;
+    try {
+      return await _browserChannel.invokeMethod<bool>(method, {
+            'id': platform.webViewIdentifier,
+            ...args,
+          }) ??
+          false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  /// The center of element [elementId] of the latest observe, scrolled into
+  /// view, for a real tap on it.
+  Future<Map<String, dynamic>> elementCenter(int elementId) async {
+    await waitUntilReady();
+    return _runJson(
+      BrowserPageScripts.elementCenter.replaceAll(
+        '__ELEMENT_ID__',
+        '$elementId',
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> clickAt(num x, num y) async {
+    await waitUntilReady();
+    final controller = _requireController();
+    final beforeUrl = await controller.currentUrl();
+    final beforeSequence = _navigationSequence;
+    // What is there, and where it is on the visible page.
+    final probe = await _runJson(_pointerScript('probe', x: x, y: y));
+    if (probe['ok'] != true) return _withCurrentUrl(probe);
+    final fx = (probe['fx'] as num).toDouble();
+    final fy = (probe['fy'] as num).toDouble();
+    final Map<String, dynamic> result;
+    if (await nativeTap(controller, fx, fy)) {
+      result = Map<String, dynamic>.of(probe)
+        ..remove('fx')
+        ..remove('fy')
+        ..['trusted'] = true;
+    } else {
+      result = await _runJson(_pointerScript('click', x: x, y: y));
+    }
+    if (result['ok'] == true) {
+      await _settleAfterInteraction(
+        navigationSequence: beforeSequence,
+        urlBefore: beforeUrl,
+        navigationGrace: const Duration(seconds: 1),
+      );
+    }
+    return _withCurrentUrl(result);
+  }
+
+  /// Moves the pointer over an element from observe or a viewport point,
+  /// which opens hover menus and tooltips.
+  Future<Map<String, dynamic>> hover({int? elementId, num? x, num? y}) async {
+    await waitUntilReady();
+    final result = await _runJson(
+      _pointerScript('hover', elementId: elementId, x: x, y: y),
+    );
+    // Menus open on the next frames.
+    await _interruptible(
+      Future<void>.delayed(const Duration(milliseconds: 200)),
+    );
+    return result;
+  }
+
+  static String _pointerScript(String mode, {int? elementId, num? x, num? y}) =>
+      _pointerScriptTemplate
+          .replaceAll('__MODE__', jsonEncode(mode))
+          .replaceAll('__ELEMENT_ID__', '${elementId ?? 0}')
+          .replaceAll('__X__', '${x ?? -1}')
+          .replaceAll('__Y__', '${y ?? -1}');
+
   Future<Map<String, dynamic>> type(int elementId, String text) async {
     await waitUntilReady();
     final controller = _requireController();
@@ -572,9 +1593,11 @@ class BrowserAgentSession {
     final controller = _requireController();
     final beforeUrl = await controller.currentUrl();
     final beforeSequence = _navigationSequence;
-    final result = await _runJson(
-      _pressKeyScript.replaceAll('__KEY__', jsonEncode(key)),
-    );
+    final result = await nativeKey(controller, key)
+        ? <String, dynamic>{'ok': true, 'key': key, 'trusted': true}
+        : await _runJson(
+            _pressKeyScript.replaceAll('__KEY__', jsonEncode(key)),
+          );
     if (result['ok'] == true) {
       await _settleAfterInteraction(
         navigationSequence: beforeSequence,
@@ -618,6 +1641,7 @@ class BrowserAgentSession {
       result = await _runJson(
         _readScript
             .replaceAll('__SELECTOR__', jsonEncode(selector ?? ''))
+            .replaceAll('__MODE__', jsonEncode(request.mode))
             .replaceAll('__MAX_CHARS__', '$browserResearchMaxChars'),
       );
     } on BrowserAgentProtocolException catch (error) {
@@ -642,7 +1666,7 @@ class BrowserAgentSession {
         url: result['url']?.toString(),
         title: result['title']?.toString(),
         text: text,
-        extractMode: 'raw',
+        extractMode: request.mode == 'readability' ? 'readability' : 'raw',
         scope: scope,
         readTruncated: truncated,
         researchText: scope == RenderedScope.fullPage ? text : null,
@@ -704,9 +1728,290 @@ class BrowserAgentSession {
           'elapsed_ms': DateTime.now().difference(start).inMilliseconds,
         };
       }
-      await Future<void>.delayed(const Duration(milliseconds: 150));
+      await _interruptible(
+        Future<void>.delayed(const Duration(milliseconds: 150)),
+      );
     }
   }
+
+  static int _fetchSequence = 0;
+
+  // ---------------------------------------------------------------------------
+  // Collecting data
+  // ---------------------------------------------------------------------------
+
+  /// Scrolls down and collects the items of a list or feed (search
+  /// results, posts, products) until [maxItems] are found, the page ends or
+  /// scrolling brings nothing new. [selector] picks the items; without it
+  /// the largest group of alike elements is used.
+  Future<Map<String, dynamic>> collect({
+    String? selector,
+    int maxItems = 50,
+    int maxScrolls = 10,
+  }) async {
+    await waitUntilReady();
+    final limit = maxItems.clamp(1, 200);
+    final scrolls = maxScrolls.clamp(0, 30);
+    final script = BrowserPageScripts.collect.replaceAll(
+      '__SELECTOR__',
+      jsonEncode(selector ?? ''),
+    );
+    final items = <Map<String, dynamic>>[];
+    final seen = <String>{};
+    String? used;
+    var scrolled = 0;
+    var stale = 0;
+    var atBottom = false;
+    while (true) {
+      final result = await _runJson(script);
+      if (result['ok'] != true) return result;
+      used ??= result['selector'] as String?;
+      var added = 0;
+      for (final raw in (result['items'] as List? ?? const [])) {
+        if (raw is! Map || items.length >= limit) continue;
+        final item = Map<String, dynamic>.from(raw);
+        if (seen.add('${item['text']}|${item['href']}')) {
+          items.add(item);
+          added++;
+        }
+      }
+      atBottom = result['at_bottom'] == true;
+      stale = added == 0 ? stale + 1 : 0;
+      if (items.length >= limit || scrolled >= scrolls || stale >= 2) break;
+      if (atBottom && added == 0) break;
+      await _runJson(
+        'JSON.stringify((window.scrollBy(0, Math.round(window.innerHeight * 0.85)), {ok: true}))',
+      );
+      scrolled++;
+      // Feeds load the next items after a scroll.
+      await waitStable(quietMs: 400, timeoutMs: 3000);
+    }
+    return {
+      'ok': true,
+      if (used != null) 'selector': used,
+      'count': items.length,
+      'items': items,
+      'scrolls': scrolled,
+      'reached_end': atBottom,
+      if (items.isEmpty)
+        'hint':
+            'No repeated items found; pass selector (e.g. "article" or ".result").',
+    };
+  }
+
+  /// A compact map of the page's structure, cheaper than observe with
+  /// scope=document for learning how a site is built.
+  Future<Map<String, dynamic>> outline({int maxLines = 120}) async {
+    await waitUntilReady();
+    return _runJson(
+      BrowserPageScripts.outline.replaceAll(
+        '__MAX_LINES__',
+        '${maxLines.clamp(10, 300)}',
+      ),
+    );
+  }
+
+  /// Waits until the page has loaded and nothing in it changed for
+  /// [quietMs] (a single-page app finished rendering), or [timeoutMs].
+  Future<Map<String, dynamic>> waitStable({
+    int quietMs = 600,
+    int timeoutMs = 10000,
+  }) async {
+    await waitUntilReady();
+    final quiet = quietMs.clamp(100, 5000);
+    final start = DateTime.now();
+    final deadline = start.add(
+      Duration(milliseconds: timeoutMs.clamp(500, 30000)),
+    );
+    while (true) {
+      final state = await _runJson(BrowserPageScripts.quietFor);
+      final elapsed = DateTime.now().difference(start).inMilliseconds;
+      final quietFor = (state['quiet_ms'] as num?)?.toInt() ?? 0;
+      if (state['ready'] == true && quietFor >= quiet) {
+        return {'ok': true, 'stable': true, 'elapsed_ms': elapsed};
+      }
+      if (DateTime.now().isAfter(deadline)) {
+        return {
+          'ok': true,
+          'stable': false,
+          'elapsed_ms': elapsed,
+          'message': 'The page kept changing (animations, live updates).',
+        };
+      }
+      await _interruptible(
+        Future<void>.delayed(const Duration(milliseconds: 150)),
+      );
+    }
+  }
+
+  /// Longest text [typeLikeHuman] types key by key.
+  static const int humanTypingMaxChars = 500;
+
+  /// Pause between keys of [typeLikeHuman]; replaced in tests.
+  @visibleForTesting
+  Duration Function() keyPause = () =>
+      Duration(milliseconds: 45 + math.Random().nextInt(90));
+
+  /// Types [text] into element [elementId] a few keys at a time with
+  /// keyboard events and pauses, for fields that ignore pasted text.
+  Future<Map<String, dynamic>> typeLikeHuman(int elementId, String text) async {
+    if (text.length > humanTypingMaxChars) {
+      return {
+        'ok': false,
+        'error': 'text_too_long',
+        'message':
+            'Human typing takes at most $humanTypingMaxChars characters; '
+            'type longer text without human.',
+      };
+    }
+    await waitUntilReady();
+    final started = await _runJson(
+      BrowserPageScripts.typingStart.replaceAll('__ELEMENT_ID__', '$elementId'),
+    );
+    if (started['ok'] != true) return started;
+    final chars = text.runes.map(String.fromCharCode).toList();
+    for (var i = 0; i < chars.length; i += 2) {
+      final chunk = chars.skip(i).take(2).join();
+      final step = await _runJson(
+        BrowserPageScripts.typingKeys.replaceAll('__TEXT__', jsonEncode(chunk)),
+      );
+      if (step['ok'] != true) return step;
+      await _interruptible(Future<void>.delayed(keyPause()));
+    }
+    await _runJson(BrowserPageScripts.typingEnd);
+    return {
+      'ok': true,
+      'element_id': elementId,
+      'typed_length': text.length,
+      'human': true,
+    };
+  }
+
+  /// Requests [url] from inside the page with its cookies and login, like
+  /// the page's own scripts: an API the site calls, a JSON feed, a page of
+  /// the same site without opening it. Other sites answer only when they
+  /// allow it (CORS). Text answers come back cut to [maxChars]; binary ones
+  /// only with their type and size.
+  Future<Map<String, dynamic>> fetchInPage({
+    required String url,
+    String method = 'GET',
+    String? body,
+    Map<String, String> headers = const {},
+    int maxChars = 20000,
+    int timeoutMs = 20000,
+  }) async {
+    await waitUntilReady();
+    final controller = _requireController();
+    final base = Uri.tryParse(await controller.currentUrl() ?? '');
+    final target = base == null ? Uri.tryParse(url) : base.resolve(url);
+    if (target == null ||
+        !(target.isScheme('http') || target.isScheme('https'))) {
+      return {
+        'ok': false,
+        'error': 'invalid_url',
+        'message': 'fetch needs an http(s) URL or a path of the open page.',
+      };
+    }
+    final verb = method.toUpperCase();
+    const verbs = {'GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'};
+    if (!verbs.contains(verb)) {
+      return {
+        'ok': false,
+        'error': 'invalid_method',
+        'message': 'method must be one of ${verbs.join(', ')}.',
+      };
+    }
+    final id = 'f${++_fetchSequence}';
+    final start = _fetchStartScript
+        .replaceAll('__ID__', jsonEncode(id))
+        .replaceAll('__URL__', jsonEncode(target.toString()))
+        .replaceAll('__METHOD__', jsonEncode(verb))
+        .replaceAll('__HEADERS__', jsonEncode(headers))
+        .replaceAll(
+          '__BODY__',
+          body == null || verb == 'GET' || verb == 'HEAD'
+              ? 'null'
+              : jsonEncode(body),
+        )
+        .replaceAll('__MAX__', '${maxChars.clamp(100, 200000)}');
+    await _runJson(start);
+    final poll = _fetchPollScript.replaceAll('__ID__', jsonEncode(id));
+    final deadline = DateTime.now().add(
+      Duration(milliseconds: timeoutMs.clamp(1000, 60000)),
+    );
+    while (true) {
+      final result = await _runJson(poll);
+      if (result['done'] == true) {
+        result.remove('done');
+        if (result['ok'] != true) {
+          result['error'] ??= 'fetch_failed';
+          result['message'] =
+              '${result['message'] ?? 'The request failed.'} Requests to '
+              'other sites need them to allow it (CORS): open that site first.';
+        }
+        return result;
+      }
+      if (DateTime.now().isAfter(deadline)) {
+        await _runJson(_fetchForgetScript.replaceAll('__ID__', jsonEncode(id)));
+        return {
+          'ok': false,
+          'error': 'timeout',
+          'message': 'No answer in time.',
+        };
+      }
+      await _interruptible(
+        Future<void>.delayed(const Duration(milliseconds: 150)),
+      );
+    }
+  }
+
+  static const String _fetchStartScript = r'''
+(() => {
+  const store = window.__moruFetch = window.__moruFetch || {};
+  const slot = store[__ID__] = {done: false};
+  const init = {method: __METHOD__, credentials: 'include', headers: __HEADERS__};
+  const body = __BODY__;
+  if (body !== null) init.body = body;
+  const textual = /^(text\/|application\/(json|xml|javascript|x-www-form-urlencoded|ld\+json|rss\+xml|atom\+xml))|\+(json|xml)(;|$)/i;
+  fetch(__URL__, init).then(async (response) => {
+    const type = response.headers.get('content-type') || '';
+    const answer = {
+      done: true, ok: true, status: response.status, url: response.url,
+      content_type: type
+    };
+    if (init.method !== 'HEAD' && (type === '' || textual.test(type))) {
+      const text = await response.text();
+      answer.text = text.slice(0, __MAX__);
+      answer.total_chars = text.length;
+      answer.truncated = text.length > __MAX__;
+    } else if (init.method !== 'HEAD') {
+      const size = response.headers.get('content-length');
+      answer.binary = true;
+      if (size) answer.bytes = Number(size);
+      answer.note = 'Binary answer: open or click it in the browser to download it.';
+    }
+    Object.assign(slot, answer);
+  }).catch((error) => {
+    Object.assign(slot, {done: true, ok: false, message: String(error && error.message || error)});
+  });
+  return JSON.stringify({started: true});
+})()
+''';
+
+  static const String _fetchPollScript = r'''
+(() => {
+  const store = window.__moruFetch || {};
+  const slot = store[__ID__];
+  if (!slot) return JSON.stringify({done: true, ok: false, error: 'page_changed', message: 'The page changed during the request.'});
+  if (!slot.done) return JSON.stringify({done: false});
+  delete store[__ID__];
+  return JSON.stringify(slot);
+})()
+''';
+
+  static const String _fetchForgetScript = r'''
+(() => { if (window.__moruFetch) delete window.__moruFetch[__ID__]; return JSON.stringify({ok: true}); })()
+''';
 
   /// Runs [code] as the page's own script and returns its last expression, JSON-encoded.
   /// Caller (the `eval_js` tool) is responsible for pattern-blocking and approval.
@@ -814,13 +2119,17 @@ class BrowserAgentSession {
       }
       final currentUrl = await _requireController().currentUrl();
       if (urlBefore != null && currentUrl != null && currentUrl != urlBefore) {
-        await Future<void>.delayed(const Duration(milliseconds: 40));
+        await _interruptible(
+          Future<void>.delayed(const Duration(milliseconds: 40)),
+        );
         if (_loading) {
           await waitUntilReady(timeout: const Duration(seconds: 15));
         }
         return;
       }
-      await Future<void>.delayed(const Duration(milliseconds: 40));
+      await _interruptible(
+        Future<void>.delayed(const Duration(milliseconds: 40)),
+      );
     }
   }
 
@@ -918,6 +2227,128 @@ class BrowserAgentSession {
     element_id: id,
     may_navigate: mayNavigate
   });
+})();
+''';
+
+  static const String _pointerScriptTemplate = r'''
+(() => {
+  const mode = __MODE__;
+  const id = __ELEMENT_ID__;
+  let x = __X__;
+  let y = __Y__;
+  let element = null;
+  if (id > 0) {
+    const elements = window.__moruBrowserElementRegistry;
+    element = elements instanceof Map ? elements.get(id) : null;
+    if (!element || !element.isConnected) {
+      return JSON.stringify({
+        ok: false,
+        error: 'stale_element',
+        message: 'The element is no longer on the page. Observe again.'
+      });
+    }
+    element.scrollIntoView({block: 'center', inline: 'center'});
+    const rect = element.getBoundingClientRect();
+    x = rect.left + rect.width / 2;
+    y = rect.top + rect.height / 2;
+  } else {
+    if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) {
+      return JSON.stringify({
+        ok: false,
+        error: 'point_outside_viewport',
+        message: 'x and y are CSS pixels inside the viewport (' +
+            window.innerWidth + 'x' + window.innerHeight + ').'
+      });
+    }
+    element = document.elementFromPoint(x, y);
+    if (!element) {
+      return JSON.stringify({
+        ok: false,
+        error: 'nothing_at_point',
+        message: 'There is no element at that point.'
+      });
+    }
+  }
+  // A point over a frame of the same site goes on to the element inside
+  // it, in the frame's own coordinates; another site's frame is closed to
+  // scripts, so the model is told to open it instead.
+  let view = window;
+  let fx = x;
+  let fy = y;
+  let framed = false;
+  while (element && (element.tagName === 'IFRAME' || element.tagName === 'FRAME')) {
+    let inner = null;
+    try {
+      inner = element.contentDocument;
+    } catch (e) {}
+    if (!inner) {
+      // A real tap reaches another site's frame too; a script cannot.
+      if (mode === 'probe') break;
+      return JSON.stringify({
+        ok: false,
+        error: 'cross_origin_frame',
+        message: 'The point is inside a frame of another site, which the ' +
+            'browser cannot reach. Open its address instead.',
+        frame_src: String(element.src || '').slice(0, 300)
+      });
+    }
+    const box = element.getBoundingClientRect();
+    fx -= box.left + element.clientLeft;
+    fy -= box.top + element.clientTop;
+    const target = inner.elementFromPoint(fx, fy);
+    if (!target) break;
+    view = inner.defaultView || view;
+    element = target;
+    framed = true;
+  }
+  if (mode === 'probe') {
+    const vv = window.visualViewport;
+    const vw = vv ? vv.width : window.innerWidth;
+    const vh = vv ? vv.height : window.innerHeight;
+    const px = (x - (vv ? vv.offsetLeft : 0)) / vw;
+    const py = (y - (vv ? vv.offsetTop : 0)) / vh;
+    if (px < 0 || px > 1 || py < 0 || py > 1) {
+      return JSON.stringify({
+        ok: false,
+        error: 'point_outside_view',
+        message: 'The point is not on the visible part of the page. Scroll first.'
+      });
+    }
+    const probeLabel = String(element.innerText || element.getAttribute('aria-label') ||
+        element.getAttribute('title') || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    const found = {ok: true, x: Math.round(x), y: Math.round(y), fx: px, fy: py,
+        tag: element.tagName.toLowerCase()};
+    if (framed) found.in_frame = true;
+    if (probeLabel) found.text = probeLabel;
+    return JSON.stringify(found);
+  }
+  const base = {bubbles: true, cancelable: true, view, clientX: fx, clientY: fy};
+  const pointer = (type) => {
+    try {
+      element.dispatchEvent(new PointerEvent(type, Object.assign({pointerType: 'touch', isPrimary: true}, base)));
+    } catch (e) {}
+  };
+  const mouse = (type) => element.dispatchEvent(new MouseEvent(type, base));
+  pointer('pointerover');
+  pointer('pointerenter');
+  mouse('mouseover');
+  mouse('mouseenter');
+  mouse('mousemove');
+  if (mode === 'click') {
+    pointer('pointerdown');
+    mouse('mousedown');
+    if (typeof element.focus === 'function') element.focus();
+    pointer('pointerup');
+    mouse('mouseup');
+    element.click();
+  }
+  const tag = element.tagName.toLowerCase();
+  const label = String(element.innerText || element.getAttribute('aria-label') ||
+      element.getAttribute('title') || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  const result = {ok: true, x: Math.round(x), y: Math.round(y), tag};
+  if (framed) result.in_frame = true;
+  if (label) result.text = label;
+  return JSON.stringify(result);
 })();
 ''';
 
@@ -1136,7 +2567,14 @@ class BrowserAgentSession {
       el.dispatchEvent(new KeyboardEvent('keypress', init));
     }
     el.dispatchEvent(new KeyboardEvent('keyup', init));
-    return JSON.stringify({ok: true, key, default_prevented: down.defaultPrevented});
+    // A script's Enter does not submit a form the way a keyboard's does.
+    let submitted = false;
+    if (key === 'Enter' && !down.defaultPrevented && el.form &&
+        el.tagName === 'INPUT' && typeof el.form.requestSubmit === 'function') {
+      el.form.requestSubmit();
+      submitted = true;
+    }
+    return JSON.stringify({ok: true, key, default_prevented: down.defaultPrevented, submitted});
   } catch (e) {
     return JSON.stringify({ok: false, error: 'js_failed', message: String(e)});
   }
@@ -1199,8 +2637,36 @@ class BrowserAgentSession {
 (() => {
   const selector = __SELECTOR__;
   const maxChars = __MAX_CHARS__;
+  const mode = __MODE__;
+  // Reader mode: the element holding most of the paragraph text (the
+  // article), without menus, headers, footers, sidebars, forms and ads.
+  const article = () => {
+    const direct = document.querySelector('article, main, [role=main], [itemprop=articleBody]');
+    let best = null;
+    let bestScore = 0;
+    document.querySelectorAll('p').forEach((p) => {
+      const length = (p.textContent || '').trim().length;
+      if (length < 40) return;
+      for (let node = p.parentElement, depth = 0; node && depth < 3; node = node.parentElement, depth++) {
+        node.__moruScore = (node.__moruScore || 0) + length / (depth + 1);
+        if (node.__moruScore > bestScore) {
+          bestScore = node.__moruScore;
+          best = node;
+        }
+      }
+    });
+    document.querySelectorAll('*').forEach((node) => { delete node.__moruScore; });
+    if (direct && (!best || direct.contains(best))) return direct;
+    return best || direct || document.body;
+  };
+  const boilerplate = 'nav, header, footer, aside, form, button, iframe, svg, ' +
+      '[role=navigation], [role=banner], [role=contentinfo], [role=complementary], ' +
+      '[aria-hidden=true], .ad, .ads, .advert, .advertisement, .cookie, .newsletter, ' +
+      '.share, .social, .related, .comments, #comments, .sidebar';
   let root;
-  if (selector) {
+  if (!selector && mode === 'readability') {
+    root = article();
+  } else if (selector) {
     root = document.querySelector(selector);
     if (!root) {
       return JSON.stringify({
@@ -1227,6 +2693,9 @@ class BrowserAgentSession {
   // leaks into the "page text" the way textContent normally would.
   const clone = root.cloneNode(true);
   clone.querySelectorAll('script, style, noscript, template').forEach((el) => el.remove());
+  if (mode === 'readability') {
+    clone.querySelectorAll(boilerplate).forEach((el) => el.remove());
+  }
   const raw = (clone.textContent || '').toString();
   const truncated = raw.length > maxChars;
   const text = truncated ? raw.slice(0, maxChars) : raw;
@@ -1385,6 +2854,7 @@ class BrowserAgentSession {
     title: document.title || '',
     page: {
       scroll_y: Math.round(window.scrollY),
+      viewport_w: window.innerWidth,
       viewport_h: window.innerHeight,
       document_h: doc.scrollHeight,
       at_top: window.scrollY <= 1,

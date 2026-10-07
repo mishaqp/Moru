@@ -121,7 +121,6 @@ void main() {
     });
 
     test('rejects linked main files without touching the target', () async {
-      if (Platform.isWindows) return;
       final target = File(p.join(root.path, 'target.sqlite'));
       await target.writeAsString('not sqlite', flush: true);
       final link = Link(p.join(root.path, 'kelivo.db'));

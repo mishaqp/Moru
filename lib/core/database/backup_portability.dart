@@ -14,6 +14,7 @@ final class BackupPortability {
     'environment_state_v1',
     'environment_disk_usage_v1',
     'environment_rootfs_selection_v1',
+    'environment_root_chroot_v1',
     'environment_proot_options_v1',
     'environment_variables_v1',
   };

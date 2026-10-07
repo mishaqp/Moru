@@ -20,6 +20,8 @@ import '../../chat/widgets/chat_message_widget.dart' show ToolUIPart;
 import '../services/message_builder_service.dart';
 import '../services/message_generation_service.dart';
 import '../services/chat_suggestion_service.dart';
+import '../services/tool_approval_service.dart';
+import '../../../core/services/api/tool_call_cancellation.dart';
 import '../utils/model_display_helper.dart';
 import 'chat_actions.dart';
 import 'queued_input_queue.dart';
@@ -83,6 +85,19 @@ class PreparedConversationSwitch {
   final FetchedConversationWindow window;
 }
 
+class _QueuedDrainAttempt {
+  _QueuedDrainAttempt(this.conversationId);
+
+  final String conversationId;
+  final Completer<void> ready = Completer<void>();
+  final Completer<void> released = Completer<void>();
+  String? taskId;
+
+  void settle() {
+    if (!ready.isCompleted) ready.complete();
+  }
+}
+
 /// ViewModel for the home page, combining actions + services.
 ///
 /// This ViewModel:
@@ -121,6 +136,9 @@ class HomeViewModel extends ChangeNotifier {
     _chatActions.onMessagesChanged = _onMessagesChanged;
     _chatActions.onSendPairAppended = () => onScrollToBottom?.call();
     _chatActions.onLoadingChanged = _onLoadingChanged;
+    _chatActions.onPreparationOwnerRegistered = _onPreparationOwnerRegistered;
+    _chatActions.onGenerationReadyForNext = _awaitQueuedGenerationHandoff;
+    _chatActions.onRuntimeStop = _chatService.holdQueuedInputsAfterRuntimeStop;
     _chatActions.onContentUpdated = _onContentUpdated;
     _chatActions.onStreamError = _onStreamError;
     _chatActions.onMaybeGenerateTitle = _onMaybeGenerateTitle;
@@ -130,6 +148,8 @@ class HomeViewModel extends ChangeNotifier {
     _chatActions.onAssistantMessageFinished = _onAssistantMessageFinished;
     _chatActions.onFileProcessingStarted = _onFileProcessingStarted;
     _chatActions.onFileProcessingFinished = _onFileProcessingFinished;
+    _generationController.toolHandlerService.compactContext =
+        compactForSpendControl;
   }
 
   // ============================================================================
@@ -168,7 +188,68 @@ class HomeViewModel extends ChangeNotifier {
   /// that arrives mid-stream is parked here and sent by
   /// [_drainQueuedInputIfReady] once the current one settles.
   final QueuedInputQueue _queuedInputs = QueuedInputQueue();
-  bool _isDrainingQueuedInput = false;
+  _QueuedDrainAttempt? _queuedDrainAttempt;
+  bool get _isDrainingQueuedInput => _queuedDrainAttempt != null;
+  final Map<String, Future<void>> _queuedIdleHandoffs = {};
+  String? _queuedDrainDeferredConversationId;
+  Future<void>? _queuedInputsRestore;
+  bool _queuedInputsRestored = false;
+  Future<void>? _queueMutationTail;
+  int _queueMutationsPending = 0;
+  bool _queuedDrainDeferred = false;
+
+  Future<void> restoreQueuedInputs() {
+    if (_queuedInputsRestored) return Future<void>.value();
+    return _queuedInputsRestore ??= _restoreQueuedInputs();
+  }
+
+  Future<void> _restoreQueuedInputs() async {
+    try {
+      _queuedInputs.restore(await _chatService.loadQueuedInputs());
+      _queuedInputsRestored = true;
+      notifyListeners();
+    } finally {
+      _queuedInputsRestore = null;
+    }
+  }
+
+  Future<T> _mutateQueue<T>(Future<T> Function() operation) {
+    _queueMutationsPending++;
+    // Start the first operation in its caller's zone, rather than capturing
+    // scheduling state when this ViewModel is constructed.
+    final tail = _queueMutationTail;
+    final next = tail == null
+        ? Future<T>.sync(operation)
+        : tail.then((_) => operation());
+    _queueMutationTail = next.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return next.whenComplete(() {
+      _queueMutationsPending--;
+      if (_queueMutationsPending == 0 && _queuedDrainDeferred) {
+        _queuedDrainDeferred = false;
+        // An idle transition can arrive while persistence blocks a claim.
+        // Recheck the selected chat only for that deferred request, so an
+        // ordinary save does not retry a previously refused queued send.
+        unawaited(drainQueuedInputs());
+      }
+    });
+  }
+
+  void _queueWriteFailed() => onError?.call(
+    AppLocalizations.of(_contextProvider)!.queuedInputSaveFailed,
+  );
+
+  Future<void> flushAllActiveGenerationProgress() =>
+      _chatActions.flushAllActiveGenerationProgress();
+
+  Set<String> get interruptedMessageIds => _chatService.interruptedMessageIds;
+
+  Future<void> drainQueuedInputs() async {
+    final conversationId = currentConversation?.id;
+    if (conversationId != null) await _drainQueuedInputIfReady(conversationId);
+  }
 
   /// Function to get localized title
   final String Function(BuildContext context) getTitleForLocale;
@@ -283,8 +364,111 @@ class HomeViewModel extends ChangeNotifier {
   void _onLoadingChanged(String conversationId, bool loading) {
     notifyListeners();
     if (!loading) {
-      unawaited(_drainQueuedInputIfReady(conversationId));
+      _startQueuedGenerationHandoff(conversationId);
     }
+  }
+
+  void _onPreparationOwnerRegistered(String conversationId, String taskId) {
+    final attempt = _queuedDrainAttempt;
+    if (attempt == null || attempt.conversationId != conversationId) return;
+    attempt.taskId = taskId;
+    // A provisional owner already protects all successor preparation I/O.
+    // Transfer reports the durable id again for terminal identity checks.
+    attempt.settle();
+  }
+
+  Future<void> _startQueuedGenerationHandoff(String conversationId) {
+    final handoff = _prepareQueuedGenerationHandoff(conversationId).catchError((
+      Object error,
+      StackTrace stack,
+    ) {
+      debugPrint('Queued generation handoff failed: $error');
+    });
+    _queuedIdleHandoffs[conversationId] = handoff;
+    return handoff;
+  }
+
+  Future<void> _prepareQueuedGenerationHandoff(String conversationId) async {
+    if (currentConversation?.id != conversationId ||
+        _chatService.isQueueHeldAfterInterruption(conversationId)) {
+      return;
+    }
+    while (_queuedDrainAttempt != null &&
+        _queuedDrainAttempt!.conversationId != conversationId) {
+      final previous = _queuedDrainAttempt!;
+      _queuedDrainDeferredConversationId = conversationId;
+      await previous.released.future;
+      if (currentConversation?.id != conversationId ||
+          _chatService.isQueueHeldAfterInterruption(conversationId)) {
+        return;
+      }
+    }
+    // The native owner stays registered through the actual persistence
+    // barrier, rather than an idle timeout or an immediate drain refusal.
+    while (_queueMutationsPending > 0) {
+      final tail = _queueMutationTail;
+      if (tail == null) return;
+      await tail;
+    }
+    if (currentConversation?.id != conversationId ||
+        _chatService.isQueueHeldAfterInterruption(conversationId)) {
+      return;
+    }
+    final operation = _drainQueuedInputIfReady(conversationId);
+    final attempt = _queuedDrainAttempt;
+    if (attempt != null && attempt.conversationId == conversationId) {
+      // Await registration or the exact refused/empty attempt, not the
+      // successor's generation or a second attempt after a failed begin.
+      await Future.any<void>([attempt.ready.future, operation]);
+    } else {
+      await operation;
+    }
+  }
+
+  Future<void> _awaitQueuedGenerationHandoff(
+    String conversationId,
+    String finishingTaskId,
+  ) async {
+    final attempt = _queuedDrainAttempt;
+    if (attempt?.conversationId == conversationId &&
+        attempt?.taskId == finishingTaskId) {
+      // A terminal failure can arrive before its queued send returns. Its
+      // committed input is consumed; relinquish only this drain's token so
+      // its own registration cannot stand in for a successor or deadlock it.
+      _releaseQueuedDrainAttempt(attempt!);
+      attempt.settle();
+      _startQueuedGenerationHandoff(conversationId);
+    }
+    final handoff =
+        _queuedIdleHandoffs[conversationId] ??
+        _startQueuedGenerationHandoff(conversationId);
+    try {
+      await handoff;
+      final successor = _queuedDrainAttempt;
+      if (successor != null &&
+          successor.conversationId == currentConversation?.id &&
+          successor.taskId != finishingTaskId) {
+        await successor.ready.future;
+      }
+    } finally {
+      if (identical(_queuedIdleHandoffs[conversationId], handoff)) {
+        _queuedIdleHandoffs.remove(conversationId);
+      }
+    }
+  }
+
+  void _releaseQueuedDrainAttempt(_QueuedDrainAttempt attempt) {
+    if (identical(_queuedDrainAttempt, attempt)) {
+      _queuedDrainAttempt = null;
+      final deferred = _queuedDrainDeferredConversationId;
+      _queuedDrainDeferredConversationId = null;
+      if (deferred != null &&
+          deferred == currentConversation?.id &&
+          deferred != attempt.conversationId) {
+        unawaited(drainQueuedInputs());
+      }
+    }
+    if (!attempt.released.isCompleted) attempt.released.complete();
   }
 
   void _onContentUpdated(String messageId, String content, int totalTokens) {
@@ -443,6 +627,12 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   Future<ChatInputSubmissionResult> sendMessage(ChatInputData input) async {
+    final settings = _contextProvider.read<SettingsProvider>();
+    final initialId = currentConversation?.id;
+    final initialHoldRevision = initialId == null
+        ? null
+        : _chatService.queueHoldRevisionFor(initialId);
+    await restoreQueuedInputs();
     final content = input.text.trim();
     if (content.isEmpty &&
         input.imagePaths.isEmpty &&
@@ -463,23 +653,55 @@ class HomeViewModel extends ChangeNotifier {
 
     final activeConversation = currentConversation!;
     if (_chatController.isConversationLoading(activeConversation.id)) {
-      return _queueInput(activeConversation.id, input);
+      final error = await _chatActions.spendStopError(
+        settings,
+        activeConversation.id,
+      );
+      if (error != null) {
+        onError?.call(error);
+        return ChatInputSubmissionResult.rejected;
+      }
+    }
+    final holdRevision = activeConversation.id == initialId
+        ? initialHoldRevision!
+        : _chatService.queueHoldRevisionFor(activeConversation.id);
+    if (_chatController.isConversationLoading(activeConversation.id)) {
+      return _queueInput(activeConversation.id, input, holdRevision);
     }
 
-    final success = await _sendMessageToConversation(input, activeConversation);
+    final success = await _sendMessageToConversation(
+      input,
+      activeConversation,
+      acknowledgeHoldRevision: holdRevision,
+    );
     return success
         ? ChatInputSubmissionResult.sent
         : ChatInputSubmissionResult.rejected;
   }
 
   /// Parks [input] behind the running generation of [conversationId].
-  ChatInputSubmissionResult _queueInput(
+  Future<ChatInputSubmissionResult> _queueInput(
     String conversationId,
     ChatInputData input,
-  ) {
-    _queuedInputs.enqueue(conversationId, input);
-    notifyListeners();
-    return ChatInputSubmissionResult.queued;
+    int holdRevision,
+  ) async {
+    final result = await _mutateQueue(() async {
+      final item = _queuedInputs.enqueue(conversationId, input);
+      try {
+        await _chatService.putQueuedInput(item);
+      } catch (_) {
+        _queuedInputs.remove(item.id);
+        _queueWriteFailed();
+        return ChatInputSubmissionResult.rejected;
+      }
+      await _acknowledgeExplicitInput(conversationId, holdRevision);
+      notifyListeners();
+      return ChatInputSubmissionResult.queued;
+    });
+    if (result == ChatInputSubmissionResult.queued) {
+      unawaited(_drainQueuedInputIfReady(conversationId));
+    }
+    return result;
   }
 
   /// Drops every pending message of one conversation without sending it.
@@ -492,11 +714,35 @@ class HomeViewModel extends ChangeNotifier {
 
   /// Removes one pending message, returning it so the caller can restore the
   /// draft. Returns null when [id] is not queued any more.
-  QueuedChatInput? removeQueuedInput(String id) {
-    final removed = _queuedInputs.remove(id);
-    if (removed != null) notifyListeners();
-    return removed;
-  }
+  Future<QueuedChatInput?> removeQueuedInput(String id) =>
+      _mutateQueue(() async {
+        final matches = _queuedInputs.items.where((item) => item.id == id);
+        if (matches.isEmpty) return null;
+        final item = matches.first;
+        try {
+          await _chatService.removeQueuedInput(item);
+        } catch (_) {
+          _queueWriteFailed();
+          return null;
+        }
+        final removed = _queuedInputs.remove(id);
+        notifyListeners();
+        return removed;
+      });
+
+  Future<bool> beginQueuedInputEdit(QueuedChatInput item) =>
+      _mutateQueue(() async {
+        if (_queuedInputs.indexOf(item.id) < 0) return false;
+        try {
+          await _chatService.setQueuedInputEditing(item, true);
+        } catch (_) {
+          _queueWriteFailed();
+          return false;
+        }
+        _queuedInputs.setEditing(item.id, true);
+        notifyListeners();
+        return true;
+      });
 
   /// Index of [id] among the pending messages of its own conversation, or -1.
   ///
@@ -508,21 +754,33 @@ class HomeViewModel extends ChangeNotifier {
   ///
   /// [index] is clamped, so an edit that finishes after other items were sent
   /// still lands in a valid position instead of being dropped.
-  bool insertQueuedInput({
+  Future<bool> insertQueuedInput({
     required String id,
     required String conversationId,
     required int index,
     required ChatInputData input,
-  }) {
-    final inserted = _queuedInputs.reinsert(
-      id: id,
-      conversationId: conversationId,
-      index: index,
-      input: input,
-    );
+  }) => _mutateQueue(() async {
+    try {
+      await _chatService.putQueuedInput(
+        QueuedChatInput(id: id, conversationId: conversationId, input: input),
+        index: index,
+      );
+    } catch (_) {
+      _queueWriteFailed();
+      return false;
+    }
+    final existing = _queuedInputs.replaceInput(id, input);
+    final inserted =
+        existing != null ||
+        _queuedInputs.reinsert(
+          id: id,
+          conversationId: conversationId,
+          index: index,
+          input: input,
+        );
     if (inserted) notifyListeners();
     return inserted;
-  }
+  });
 
   /// Applies an edit made to a pending message.
   ///
@@ -538,6 +796,7 @@ class HomeViewModel extends ChangeNotifier {
     required int index,
     required ChatInputData input,
   }) async {
+    final holdRevision = _chatService.queueHoldRevisionFor(conversationId);
     final content = input.text.trim();
     if (content.isEmpty &&
         input.imagePaths.isEmpty &&
@@ -545,28 +804,35 @@ class HomeViewModel extends ChangeNotifier {
       return ChatInputSubmissionResult.rejected;
     }
 
-    Future<ChatInputSubmissionResult> park() async {
-      insertQueuedInput(
-        id: id,
-        conversationId: conversationId,
-        index: index,
-        input: input,
+    if (!await insertQueuedInput(
+      id: id,
+      conversationId: conversationId,
+      index: index,
+      input: input,
+    )) {
+      return ChatInputSubmissionResult.rejected;
+    }
+    await _acknowledgeExplicitInput(conversationId, holdRevision);
+    await _drainQueuedInputIfReady(conversationId);
+    return _queuedInputs.items.any((item) => item.id == id)
+        ? ChatInputSubmissionResult.queued
+        : ChatInputSubmissionResult.sent;
+  }
+
+  Future<void> _acknowledgeExplicitInput(
+    String conversationId,
+    int holdRevision,
+  ) async {
+    try {
+      await _chatService.acknowledgeInterruptedConversation(
+        conversationId,
+        expectedHoldRevision: holdRevision,
       );
-      return ChatInputSubmissionResult.queued;
+    } catch (error) {
+      // The input itself is already durable. Preserve its acknowledgement and
+      // leave the queue held if the separate recovery acknowledgement fails.
+      debugPrint('Could not acknowledge chat interruption: $error');
     }
-
-    final conversation = currentConversation;
-    if (conversation == null || conversation.id != conversationId) {
-      return park();
-    }
-    if (_chatController.isConversationLoading(conversationId)) {
-      return park();
-    }
-
-    final success = await _sendMessageToConversation(input, conversation);
-    return success
-        ? ChatInputSubmissionResult.sent
-        : ChatInputSubmissionResult.rejected;
   }
 
   /// Drops the oldest pending message and hands its content back so the
@@ -574,17 +840,19 @@ class HomeViewModel extends ChangeNotifier {
   ///
   /// Refused while a drain owns the head: the send is already past the point
   /// where a cancel could stop it, and returning the text would duplicate it.
-  ChatInputData? cancelCurrentQueuedInput() {
+  Future<ChatInputData?> cancelCurrentQueuedInput() async {
     final head = currentQueuedInput;
     if (head == null || _isDrainingQueuedInput) return null;
-    final removed = removeQueuedInput(head.id);
+    final removed = await removeQueuedInput(head.id);
     return removed == null ? null : _cloneInput(removed.input);
   }
 
   Future<bool> _sendMessageToConversation(
     ChatInputData input,
-    Conversation conversation,
-  ) async {
+    Conversation conversation, {
+    String? queuedInputId,
+    int? acknowledgeHoldRevision,
+  }) async {
     final content = input.text.trim();
     if (content.isEmpty &&
         input.imagePaths.isEmpty &&
@@ -594,8 +862,6 @@ class HomeViewModel extends ChangeNotifier {
 
     _chatActions.onScheduleImageSanitize = onScheduleImageSanitize;
 
-    await _clearSuggestionsFor(conversation.id);
-
     onHapticFeedback?.call();
 
     // The indicator is raised by the generation itself, once the assistant
@@ -603,6 +869,14 @@ class HomeViewModel extends ChangeNotifier {
     final result = await _chatActions.sendMessage(
       input: input,
       conversation: conversation,
+      queuedInputId: queuedInputId,
+      beforePreparation: () => _clearSuggestionsFor(conversation.id),
+      onGenerationCommitted: acknowledgeHoldRevision == null
+          ? null
+          : (_) => _acknowledgeExplicitInput(
+              conversation.id,
+              acknowledgeHoldRevision,
+            ),
     );
 
     if (!result.success) {
@@ -641,12 +915,21 @@ class HomeViewModel extends ChangeNotifier {
   /// also the only state a fresh send can leave it in; the remaining items stay
   /// queued for the next idle moment.
   Future<void> _drainQueuedInputIfReady(String conversationId) async {
-    if (_isDrainingQueuedInput) return;
+    if (!_queuedInputsRestored) return;
+    final previous = _queuedDrainAttempt;
+    if (previous != null) {
+      if (previous.conversationId != conversationId &&
+          currentConversation?.id == conversationId) {
+        _queuedDrainDeferredConversationId = conversationId;
+      }
+      return;
+    }
     if (_pruneQueuedInputsWithoutConversation()) notifyListeners();
     if (!_canDrain(conversationId)) return;
-    _isDrainingQueuedInput = true;
+    final attempt = _queuedDrainAttempt = _QueuedDrainAttempt(conversationId);
     try {
-      while (_canDrain(conversationId)) {
+      while (identical(_queuedDrainAttempt, attempt) &&
+          _canDrain(conversationId)) {
         // Claiming removes the item synchronously, so a drain re-entered from
         // a loading callback can never send the same message twice.
         final head = _queuedInputs.claimHeadFor(conversationId);
@@ -657,21 +940,29 @@ class HomeViewModel extends ChangeNotifier {
         final success = await _sendMessageToConversation(
           head.input,
           conversation,
+          queuedInputId: _chatService.isTemporaryConversation(conversationId)
+              ? null
+              : head.id,
         );
         if (!success) {
           // The send was refused (for example a racing claim on the same
           // conversation). Put the message back so the draft is never lost.
-          insertQueuedInput(
-            id: head.id,
-            conversationId: head.conversationId,
-            index: 0,
-            input: head.input,
-          );
+          // A failure after begin committed has already consumed the durable
+          // input. It must never be reinserted and executed a second time.
+          if (await _chatService.isQueuedInputPending(head)) {
+            _queuedInputs.reinsert(
+              id: head.id,
+              conversationId: head.conversationId,
+              index: 0,
+              input: head.input,
+            );
+          }
           return;
         }
       }
     } finally {
-      _isDrainingQueuedInput = false;
+      attempt.settle();
+      _releaseQueuedDrainAttempt(attempt);
       notifyListeners();
     }
   }
@@ -683,7 +974,15 @@ class HomeViewModel extends ChangeNotifier {
   bool _canDrain(String conversationId) {
     final conversation = currentConversation;
     if (conversation == null || conversation.id != conversationId) return false;
-    return !_chatController.isConversationLoading(conversationId);
+    if (_chatService.isQueueHeldAfterInterruption(conversationId) ||
+        _chatController.isConversationLoading(conversationId)) {
+      return false;
+    }
+    if (_queueMutationsPending > 0) {
+      _queuedDrainDeferred = true;
+      return false;
+    }
+    return true;
   }
 
   /// Drops pending messages whose conversation no longer exists.
@@ -709,16 +1008,18 @@ class HomeViewModel extends ChangeNotifier {
     }
 
     // Set up image sanitization callback before regenerating
+    final holdRevision = _chatService.queueHoldRevisionFor(conversation.id);
     _chatActions.onScheduleImageSanitize = onScheduleImageSanitize;
 
     onHapticFeedback?.call();
-    await _clearSuggestionsFor(conversation.id);
-
     final result = await _chatActions.regenerateAtMessage(
       message: message,
       conversation: conversation,
       assistantAsNewReply: assistantAsNewReply,
       allowImagesApiRouting: allowImagesApiRouting,
+      beforePreparation: () => _clearSuggestionsFor(conversation.id),
+      onGenerationCommitted: (_) =>
+          _acknowledgeExplicitInput(conversation.id, holdRevision),
     );
 
     if (!result.success) {
@@ -738,6 +1039,7 @@ class HomeViewModel extends ChangeNotifier {
   Future<bool> continueAssistantMessageAfterToolAnswer(
     ChatMessage message, {
     bool allowImagesApiRouting = true,
+    Future<void> Function()? beforePreparation,
   }) async {
     final conversation = currentConversation;
     if (conversation == null) {
@@ -745,12 +1047,21 @@ class HomeViewModel extends ChangeNotifier {
     }
 
     _chatActions.onScheduleImageSanitize = onScheduleImageSanitize;
-    await _clearSuggestionsFor(conversation.id);
-
+    final holdRevision = _chatService.queueHoldRevisionFor(conversation.id);
     final result = await _chatActions.continueAssistantMessageAfterToolAnswer(
       message: message,
       conversation: conversation,
       allowImagesApiRouting: allowImagesApiRouting,
+      beforePreparation: () async {
+        await beforePreparation?.call();
+        await _clearSuggestionsFor(conversation.id);
+      },
+      onGenerationCommitted: (runId) async {
+        if (runId != null ||
+            _chatService.isTemporaryConversation(conversation.id)) {
+          await _acknowledgeExplicitInput(conversation.id, holdRevision);
+        }
+      },
     );
 
     if (!result.success) {
@@ -1335,12 +1646,60 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> compactForSpendControl(
+    String conversationId, {
+    void Function()? checkAllowed,
+  }) async {
+    if (!_contextProvider.mounted) {
+      return {'ok': false, 'error': 'compact_unavailable'};
+    }
+    final settings = _contextProvider.read<SettingsProvider>();
+    final owner = ToolApprovalOwner.current;
+    void checkActive() {
+      checkAllowed?.call();
+      ToolCallCancellation.current?.throwIfCancelled();
+      if (!_contextProvider.mounted || (owner != null && !owner.isActive())) {
+        throw StateError('tool_call_cancelled');
+      }
+    }
+
+    checkActive();
+    Conversation? created;
+    final error = await compressContext(
+      conversationId: conversationId,
+      options: CompressContextOptions(
+        mode: settings.compressLimitMode,
+        maxChars: settings.compressMaxChars,
+        keepUserMessages: settings.compressKeepUserMessages,
+      ),
+      onCreated: (conversation) => created = conversation,
+      checkActive: checkActive,
+    );
+    return error == null && created != null
+        ? {
+            'ok': true,
+            'conversation_id': created!.id,
+            'message':
+                'Created a summarized chat. This reply stays in the original chat; use the summarized chat for the next message.',
+          }
+        : {
+            'ok': false,
+            'error': 'compact_failed',
+            'message': error ?? 'No summarized chat was created.',
+          };
+  }
+
   /// Compress context: summarize messages via LLM, create new conversation with summary.
   /// Returns null on success, or an error key string on failure.
   Future<String?> compressContext({
     required CompressContextOptions options,
+    String? conversationId,
+    ValueChanged<Conversation>? onCreated,
+    void Function()? checkActive,
   }) async {
-    final convo = currentConversation;
+    final convo = conversationId == null
+        ? currentConversation
+        : _chatService.getConversation(conversationId);
     if (convo == null) return 'no_conversation';
 
     final locale = Localizations.localeOf(_contextProvider).toLanguageTag();
@@ -1351,9 +1710,17 @@ class HomeViewModel extends ChangeNotifier {
         : ap.currentAssistant;
 
     // Get messages and collapse to selected versions
-    final allMsgs = await _chatController
-        .allMessagesForCurrentConversationContext();
-    final collapsed = collapseVersions(allMsgs);
+    final allMsgs = await _chatController.messagesForCompleteHistoryContext(
+      convo,
+    );
+    final collapsed = _messageBuilderService.collapseVersions(
+      conversationId == null
+          ? allMsgs
+          : allMsgs.where((message) => !message.isStreaming).toList(),
+      currentConversation?.id == convo.id
+          ? _chatController.versionSelections
+          : convo.versionSelections,
+    );
     if (collapsed.isEmpty) return 'no_messages';
 
     List<ChatMessage>? keptMessages;
@@ -1399,22 +1766,26 @@ class HomeViewModel extends ChangeNotifier {
     );
 
     Future<String> summarizeContent(String content, String label) async {
+      checkActive?.call();
       return summarizeWithContextRetry(
         content,
         summarize: (text) async {
+          checkActive?.call();
           stage = label;
           inputLength = text.length;
           final prompt = settings.compressPrompt
               .replaceAll('{content}', text)
               .replaceAll('{locale}', locale);
-          return (await ChatApiService.generateText(
+          final result = await ChatApiService.generateText(
             conversationId: convo.id,
             config: cfg,
             modelId: mdlId,
             prompt: prompt,
             thinkingBudget: budget,
             skipImageParsing: true,
-          )).trim();
+          );
+          checkActive?.call();
+          return result.trim();
         },
         onSplitRetry: (e, st, text) {
           FlutterLogger.log(
@@ -1483,6 +1854,10 @@ class HomeViewModel extends ChangeNotifier {
       }
 
       if (summary.isEmpty) return 'empty_summary';
+      checkActive?.call();
+      if (_chatService.getConversation(convo.id) == null) {
+        return 'no_conversation';
+      }
 
       if (keptMessages != null) {
         final summaryMsg = ChatMessage(
@@ -1495,14 +1870,27 @@ class HomeViewModel extends ChangeNotifier {
           title: convo.title,
           assistantId: convo.assistantId,
           sourceMessages: [summaryMsg, ...keptMessages],
+          activate: conversationId == null,
+          // Retained replies are context, not new paid generations.
+          copyUsage: conversationId == null,
         );
+
+        onCreated?.call(newConvo);
+        checkActive?.call();
+        if (conversationId != null &&
+            (currentConversation?.id != convo.id ||
+                _chatService.isTemporaryConversation(convo.id))) {
+          return null;
+        }
 
         _chatService.setCurrentConversation(newConvo.id);
         await _chatController.setCurrentConversationAndLoad(
           _chatService.getConversation(newConvo.id) ?? newConvo,
         );
         _restoreMessageUiState();
-        _streamController.clearAllState();
+        _streamController.clearAllState(
+          keepMessageIds: _chatActions.activeStreamingMessageIds,
+        );
         onConversationSwitched?.call();
         notifyListeners();
         onScrollToBottom?.call();
@@ -1511,10 +1899,16 @@ class HomeViewModel extends ChangeNotifier {
       }
 
       // Create new conversation with the summary as first user message
-      final newConvo = await _chatService.createDraftConversation(
-        title: convo.title,
-        assistantId: convo.assistantId,
-      );
+      final newConvo = conversationId != null
+          ? await _chatService.createConversation(
+              title: convo.title,
+              assistantId: convo.assistantId,
+              activate: false,
+            )
+          : await _chatService.createDraftConversation(
+              title: convo.title,
+              assistantId: convo.assistantId,
+            );
 
       await _chatService.addMessage(
         conversationId: newConvo.id,
@@ -1522,12 +1916,22 @@ class HomeViewModel extends ChangeNotifier {
         content: summary,
       );
 
+      onCreated?.call(newConvo);
+      checkActive?.call();
+      if (conversationId != null &&
+          (currentConversation?.id != convo.id ||
+              _chatService.isTemporaryConversation(convo.id))) {
+        return null;
+      }
+
       // Switch to the new conversation
       _chatService.setCurrentConversation(newConvo.id);
       await _chatController.setCurrentConversationAndLoad(
         _chatService.getConversation(newConvo.id) ?? newConvo,
       );
-      _streamController.clearAllState();
+      _streamController.clearAllState(
+        keepMessageIds: _chatActions.activeStreamingMessageIds,
+      );
       onConversationSwitched?.call();
       notifyListeners();
       onScrollToBottom?.call();
@@ -1730,7 +2134,7 @@ class HomeViewModel extends ChangeNotifier {
     );
     final provKey = settings.titleModelProvider ?? chatModel.providerKey;
     final mdlId = settings.titleModelId ?? chatModel.modelId;
-    if (provKey == null || mdlId == null) return;
+    if (provKey == null || mdlId == null || isAcpModelSource(provKey)) return;
     final cfg = settings.getProviderConfig(provKey);
     final budget = settings.titleGenerationThinkingBudgetFor(
       assistant?.thinkingBudget,
@@ -2000,7 +2404,7 @@ class HomeViewModel extends ChangeNotifier {
     );
     final provKey = settings.suggestionModelProvider ?? chatModel.providerKey;
     final mdlId = settings.suggestionModelId ?? chatModel.modelId;
-    if (provKey == null || mdlId == null) return;
+    if (provKey == null || mdlId == null || isAcpModelSource(provKey)) return;
     final locale = Localizations.localeOf(_contextProvider).toLanguageTag();
     final budget = settings.suggestionGenerationThinkingBudgetFor(
       assistant?.thinkingBudget,

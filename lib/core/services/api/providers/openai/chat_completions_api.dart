@@ -10,7 +10,10 @@ import '../../../../providers/settings_provider.dart';
 import '../../../../utils/multimodal_input_utils.dart';
 import '../../../../../utils/sandbox_path_resolver.dart';
 import '../../chat_api_helpers.dart';
+import '../../tool_schema_normalizer.dart';
+import '../../generation/spend_round_control.dart';
 import '../../generation/tool_loop_runner.dart';
+import '../../generation/tool_result_images.dart';
 import '../../stream/sse_decode_loop.dart';
 import '../../stream/sse_framing.dart';
 import '../../stream/stream_chunk.dart';
@@ -94,23 +97,10 @@ Map<String, dynamic> copyChatCompletionMessage(Map<String, dynamic> m) {
 List<Map<String, dynamic>> cleanToolsForCompatibility(
   List<Map<String, dynamic>> tools,
 ) {
-  final cleaned = tools.map((tool) {
-    final result = Map<String, dynamic>.from(tool);
-    final fn = result['function'];
-    if (fn is Map) {
-      final fnMap = Map<String, dynamic>.from(fn);
-      final params = fnMap['parameters'];
-      if (params is Map) {
-        fnMap['parameters'] = cleanSchemaForGemini(
-          Map<String, dynamic>.from(params),
-        );
-      }
-      result['function'] = fnMap;
-    }
-    return result;
-  }).toList();
-  // print('[ChatApi/Tools] Cleaned ${cleaned.length} tools: ${jsonEncode(cleaned)}');
-  return cleaned;
+  return [
+    for (final tool in tools)
+      normalizeToolDefinition(tool, ToolSchemaTarget.openai),
+  ];
 }
 
 bool _isRemoteImageContentPart(dynamic part) {
@@ -755,6 +745,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
   required int approxCompletionChars,
   required bool includeReasoningDetailsOnDone,
   StreamRoundRunner? retryRound,
+  SpendRoundControl? spendControl,
 }) async* {
   var usage = initialUsage;
   var chars = approxCompletionChars;
@@ -784,6 +775,11 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
           reasoningDetails: reasoningDetails(),
         ),
         ...openaiToolResultMessages(executed),
+        // Tool messages hold only text; a screenshot follows them.
+        if (canImageInput)
+          ?openaiToolImagesMessage([
+            for (final item in executed) item.imagesForModel,
+          ]),
       ];
     },
     sendFollowUp: () async* {
@@ -806,8 +802,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
         if (topP != null) 'top_p': topP,
         if (isReasoning && effort != 'off' && effort != 'auto')
           'reasoning_effort': effort,
-        if (tools != null && tools.isNotEmpty)
-          'tools': cleanToolsForCompatibility(tools),
+        if (tools != null && tools.isNotEmpty) 'tools': tools,
         if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
       };
       applyMaxTokens(body2);
@@ -859,6 +854,12 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
         isReasoning: isReasoning,
         thinkingBudget: thinkingBudget,
       );
+      if (body2['tools'] is List) {
+        body2['tools'] = cleanToolsForCompatibility([
+          for (final tool in (body2['tools'] as List).whereType<Map>())
+            Map<String, dynamic>.from(tool),
+        ]);
+      }
       final req2 = http.Request('POST', url);
       req2.headers.addAll(
         customHeaders(
@@ -872,7 +873,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
           assistantHeaders: extraHeaders,
         ),
       );
-      req2.body = jsonEncode(body2);
+      req2.body = jsonEncode(spendControl?.decorateRequest(body2) ?? body2);
       final http.StreamedResponse resp2;
       try {
         resp2 = await client.send(req2);
@@ -880,6 +881,8 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
           final errorBody = await resp2.stream.bytesToString();
           throw HttpException('HTTP ${resp2.statusCode}: $errorBody');
         }
+      } on SpendLimitExceeded {
+        rethrow;
       } on ProviderOAuthException {
         rethrow;
       } on HttpException {
@@ -894,7 +897,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
         wantsImageOutput: wantsImageOutput,
         needsReasoningEcho: needsReasoningEcho,
         allowReasoningSnapshots: reasoningDetailsAllowSnapshots,
-        initialUsage: usage,
+        initialUsage: spendControl == null ? usage : null,
         sourceId: 'round-${round++}',
       );
       yield* decodeSseEvents(
@@ -902,6 +905,9 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
         roundDecoder,
       );
       usage = roundDecoder.usage ?? usage;
+      if (spendControl != null && roundDecoder.usage != null) {
+        yield Usage(roundDecoder.usage!);
+      }
       // Add this round. `=` would drop earlier rounds when usage is absent.
       chars += roundDecoder.approxCompletionChars;
       lastRound = roundDecoder;
@@ -927,6 +933,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
       );
     },
     retryRound: retryRound,
+    spendControl: spendControl,
     usageOf: () => usage,
   );
 }
@@ -952,6 +959,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
   required Map<String, String>? extraHeaders,
   required TokenUsage? initialUsage,
   StreamRoundRunner? retryRound,
+  SpendRoundControl? spendControl,
 }) async* {
   var usage = initialUsage;
   var lastObj = firstObj;
@@ -978,6 +986,11 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
           reasoningDetails: msg['reasoning_details'],
         ),
         ...openaiToolResultMessages(executed),
+        // Tool messages hold only text; a screenshot follows them.
+        if (canImageInput)
+          ?openaiToolImagesMessage([
+            for (final item in executed) item.imagesForModel,
+          ]),
       ];
     },
     sendFollowUp: () async* {
@@ -1008,7 +1021,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
         skipImageParsing: skipImageParsing,
       );
       reqBody.remove('stream');
-      req.body = jsonEncode(reqBody);
+      req.body = jsonEncode(spendControl?.decorateRequest(reqBody) ?? reqBody);
       final resp2 = await client.send(req);
       if (resp2.statusCode < 200 || resp2.statusCode >= 300) {
         final errorBody = await resp2.stream.bytesToString();
@@ -1020,6 +1033,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
       final roundUsage = openaiUsageFromObj(lastObj);
       if (roundUsage != null) {
         usage = (usage ?? const TokenUsage()).merge(roundUsage);
+        if (spendControl != null) yield Usage(roundUsage);
       }
     },
     takeCallsAfterRound: () =>
@@ -1054,6 +1068,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
       );
     },
     retryRound: retryRound,
+    spendControl: spendControl,
     usageOf: () => usage,
   );
 }

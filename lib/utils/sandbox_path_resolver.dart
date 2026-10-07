@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'app_directories.dart';
 import 'kelivo_file_uri.dart';
 
-/// Resolves persisted absolute file paths that include the iOS sandbox UUID
-/// to the current app container path after an app update.
+/// Resolves legacy attachment paths, including imported iOS sandbox UUIDs,
+/// against the current Android app data. Keep this for old chats and backups.
 ///
 /// Example:
 ///   Before update: /var/mobile/Containers/Data/Application/ABC/Documents/upload/x.png

@@ -85,7 +85,7 @@ void main() {
       expect(fragment, contains('/tmp'));
       expect(fragment, contains('- /mounts/<name>/'));
       expect(fragment, isNot(contains('from iOS Files')));
-      expect(fragment.contains('iCloud'), platform == TargetPlatform.iOS);
+      expect(fragment.contains('iCloud'), false);
       expect(
         fragment.contains('on-device folders'),
         platform == TargetPlatform.android,

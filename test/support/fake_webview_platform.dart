@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
@@ -19,6 +20,7 @@ class FakeWebViewPlatform extends WebViewPlatform {
   /// (e.g. one built inside a private `State`), as long as nothing else
   /// creates a `WebViewController` in between.
   static FakeWebViewController? lastCreated;
+  static void Function(FakeWebViewController)? onCreated;
 
   @override
   PlatformWebViewController createPlatformWebViewController(
@@ -26,6 +28,7 @@ class FakeWebViewPlatform extends WebViewPlatform {
   ) {
     final controller = FakeWebViewController(params);
     lastCreated = controller;
+    onCreated?.call(controller);
     return controller;
   }
 
@@ -55,6 +58,24 @@ class FakeNavigationDelegate extends PlatformNavigationDelegate {
   WebResourceErrorCallback? onWebResourceError;
   ProgressCallback? onProgress;
   NavigationRequestCallback? onNavigationRequest;
+  HttpResponseErrorCallback? onHttpError;
+  SslAuthErrorCallback? onSslAuthError;
+  HttpAuthRequestCallback? onHttpAuthRequest;
+
+  @override
+  Future<void> setOnHttpAuthRequest(HttpAuthRequestCallback callback) async {
+    onHttpAuthRequest = callback;
+  }
+
+  @override
+  Future<void> setOnSSlAuthError(SslAuthErrorCallback onSslAuthError) async {
+    this.onSslAuthError = onSslAuthError;
+  }
+
+  @override
+  Future<void> setOnHttpError(HttpResponseErrorCallback onHttpError) async {
+    this.onHttpError = onHttpError;
+  }
 
   @override
   Future<void> setOnPageStarted(PageEventCallback onPageStarted) async {
@@ -126,17 +147,53 @@ class FakeWebViewController extends PlatformWebViewController {
   Future<void> setPlatformNavigationDelegate(
     PlatformNavigationDelegate handler,
   ) async {
+    final setup = onSetNavigationDelegate;
+    if (setup != null) await setup();
     _delegate = handler as FakeNavigationDelegate;
+    delegatesSet++;
   }
 
+  /// How many navigation delegates were set; the real plugin resets its
+  /// download listener with each one.
+  int delegatesSet = 0;
+  Future<void> Function()? onSetNavigationDelegate;
+  FakeNavigationDelegate? get navigationDelegate => _delegate;
+
   @override
-  Future<void> setJavaScriptMode(JavaScriptMode javaScriptMode) async {}
+  Future<void> setJavaScriptMode(JavaScriptMode javaScriptMode) async {
+    this.javaScriptMode = javaScriptMode;
+  }
+
+  JavaScriptMode? javaScriptMode;
+  List<String> get javaScriptChannels => _channels.keys.toList();
+  List<String> get loadedUrls => List.unmodifiable(_history);
+  Future<void> Function(LoadRequestParams params)? onLoadRequest;
 
   @override
   Future<void> setBackgroundColor(Color color) async {}
 
   @override
-  Future<void> setUserAgent(String? userAgent) async {}
+  Future<void> setUserAgent(String? userAgent) async {
+    this.userAgent = userAgent;
+  }
+
+  /// The user agent set on this WebView; null is the WebView's own.
+  String? userAgent;
+
+  static const String defaultUserAgent =
+      'Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/AP1A; wv) '
+      'AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 '
+      'Chrome/131.0.6778.39 Mobile Safari/537.36';
+
+  /// The page title; the host of the current address by default.
+  String? title;
+
+  @override
+  Future<String?> getTitle() async =>
+      title ?? Uri.tryParse(currentUrlSync ?? '')?.host;
+
+  @override
+  Future<String?> getUserAgent() async => userAgent ?? defaultUserAgent;
 
   @override
   Future<void> addJavaScriptChannel(
@@ -160,6 +217,10 @@ class FakeWebViewController extends PlatformWebViewController {
   @override
   Future<void> loadRequest(LoadRequestParams params) async {
     _navigateTo(params.uri.toString());
+    final handler = onLoadRequest;
+    if (handler != null) {
+      await handler(params);
+    }
   }
 
   /// The most recent HTML string passed to [loadHtmlString].
@@ -228,9 +289,30 @@ class FakeWebViewController extends PlatformWebViewController {
     _delegate?.onPageFinished?.call(url);
   }
 
+  void simulateProgress(int progress) {
+    _delegate?.onProgress?.call(progress);
+  }
+
+  void simulateSslError(PlatformSslAuthError error) {
+    _delegate?.onSslAuthError?.call(error);
+  }
+
   void simulateWebResourceError(WebResourceError error) {
     _delegate?.onWebResourceError?.call(error);
   }
+
+  void simulateHttpAuthRequest(HttpAuthRequest request) {
+    _delegate?.onHttpAuthRequest?.call(request);
+  }
+
+  void simulateHttpError(HttpResponseError error) {
+    _delegate?.onHttpError?.call(error);
+  }
+
+  Future<NavigationDecision?> simulateNavigationRequest(String url) async =>
+      _delegate?.onNavigationRequest?.call(
+        NavigationRequest(url: url, isMainFrame: true),
+      );
 
   @override
   Future<bool> canGoBack() async => _index > 0;
@@ -263,6 +345,37 @@ class FakeWebViewController extends PlatformWebViewController {
     if (url != null) _fireNavigation(url);
   }
 
+  Future<void> Function(JavaScriptAlertDialogRequest)? onAlert;
+  Future<bool> Function(JavaScriptConfirmDialogRequest)? onConfirm;
+  Future<String> Function(JavaScriptTextInputDialogRequest)? onPrompt;
+
+  @override
+  Future<void> setOnPlatformPermissionRequest(
+    void Function(PlatformWebViewPermissionRequest request) onPermissionRequest,
+  ) async {
+    onPermission = onPermissionRequest;
+  }
+
+  void Function(PlatformWebViewPermissionRequest request)? onPermission;
+
+  @override
+  Future<void> setOnJavaScriptAlertDialog(
+    Future<void> Function(JavaScriptAlertDialogRequest request)
+    onJavaScriptAlertDialog,
+  ) async => onAlert = onJavaScriptAlertDialog;
+
+  @override
+  Future<void> setOnJavaScriptConfirmDialog(
+    Future<bool> Function(JavaScriptConfirmDialogRequest request)
+    onJavaScriptConfirmDialog,
+  ) async => onConfirm = onJavaScriptConfirmDialog;
+
+  @override
+  Future<void> setOnJavaScriptTextInputDialog(
+    Future<String> Function(JavaScriptTextInputDialogRequest request)
+    onJavaScriptTextInputDialog,
+  ) async => onPrompt = onJavaScriptTextInputDialog;
+
   @override
   Future<String?> currentUrl() async => currentUrlSync;
 
@@ -286,4 +399,17 @@ class FakeWebViewWidget extends PlatformWebViewWidget {
 
   @override
   Widget build(BuildContext context) => const SizedBox.expand();
+}
+
+/// A certificate error the test answers; [answer] says what the page did.
+class FakeSslAuthError extends PlatformSslAuthError {
+  FakeSslAuthError() : super(certificate: null, description: 'expired');
+
+  final Completer<String> answer = Completer<String>();
+
+  @override
+  Future<void> proceed() async => answer.complete('proceed');
+
+  @override
+  Future<void> cancel() async => answer.complete('cancel');
 }

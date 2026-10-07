@@ -18,6 +18,136 @@ void main() {
     expect(session.recentActivity.single.action, 'open');
   });
 
+  test(
+    'page counts retain opaque identity through navigation and resolution',
+    () {
+      session.pageStarted('https://example.com/first');
+      session.pageFinished('https://example.com/first');
+      final first = session.recordActivity(action: 'observe');
+      session.resolveActivity(first, BrowserActivityOutcome.ok);
+      expect(session.activityCountForPage('https://example.com/first'), 1);
+      final key = session.recentActivity.single.pageKey!;
+      expect(key, isNot(contains('example.com')));
+      expect(key, isNot(contains('/first')));
+
+      final opening = session.recordActivity(action: 'open');
+      session.pageStarted('https://example.com/second');
+      session.pageFinished('https://example.com/second');
+      session.resolveActivity(
+        opening,
+        BrowserActivityOutcome.ok,
+        destinationPageKey: session.activityPageKey(
+          'https://example.com/second',
+          tabId: null,
+        ),
+        destinationCaptured: true,
+      );
+      expect(session.activityCountForPage('https://example.com/first'), 1);
+      expect(session.activityCountForPage('https://example.com/second'), 1);
+      expect(session.recentActivity.first.pageKey, key);
+    },
+  );
+
+  test('late resolution cannot borrow a newer action destination page', () {
+    session.pageStarted('https://example.com/first');
+    session.pageFinished('https://example.com/first');
+    final older = session.recordActivity(action: 'open');
+    session.pageStarted('https://example.com/second');
+    session.pageFinished('https://example.com/second');
+    final newer = session.recordActivity(action: 'observe');
+    session.resolveActivity(newer, BrowserActivityOutcome.ok);
+    session.resolveActivity(older, BrowserActivityOutcome.ok);
+    expect(session.activityCountForPage('https://example.com/first'), 1);
+    expect(session.activityCountForPage('https://example.com/second'), 1);
+  });
+
+  test('authentication pages retain no activity page identity', () {
+    const url = 'https://auth.openai.com/authorize?code=private&state=secret';
+    session.pageStarted(url);
+    session.pageFinished(url);
+    session.recordActivity(action: 'observe');
+    expect(session.recentActivity.single.pageKey, isNull);
+    expect(session.activityCountForPage(url), 0);
+  });
+
+  test(
+    'actions after a redirect use the committed page rather than the started URL',
+    () {
+      const source = 'https://example.com/redirect';
+      const landing = 'https://example.com/home';
+      session.pageStarted(source);
+      session.pageFinished(landing);
+      session.recordActivity(action: 'observe');
+      expect(session.activityCountForPage(landing), 1);
+      expect(session.activityCountForPage(source), 0);
+    },
+  );
+
+  test(
+    'a redirect to an authentication page retains no public attribution',
+    () {
+      session.pageStarted('https://example.com/redirect');
+      session.pageFinished('https://auth.openai.com/authorize?code=private');
+      session.recordActivity(action: 'observe');
+      expect(session.recentActivity.single.pageKey, isNull);
+      expect(session.activityCountForPage('https://example.com/redirect'), 0);
+    },
+  );
+
+  test('the current page counter includes actions beyond the bounded log', () {
+    const url = 'https://example.com/many';
+    session.pageStarted(url);
+    session.pageFinished(url);
+    for (var i = 0; i < 41; i++) {
+      final id = session.recordActivity(action: 'scroll');
+      session.resolveActivity(id, BrowserActivityOutcome.ok);
+    }
+    expect(session.recentActivity, hasLength(30));
+    expect(session.activityCountForPage(url), 41);
+  });
+
+  test(
+    'current activity retains captured destination after manual navigation',
+    () {
+      const source = 'https://example.com/source';
+      const target = 'https://example.com/target';
+      const manual = 'https://example.com/manual';
+      session.pageStarted(source);
+      session.pageFinished(source);
+      final id = session.recordActivity(action: 'open');
+      final destination = session.activityPageKey(target, tabId: null);
+      session.pageStarted(manual);
+      session.pageFinished(manual);
+      session.resolveActivity(
+        id,
+        BrowserActivityOutcome.ok,
+        destinationPageKey: destination,
+        destinationCaptured: true,
+      );
+      expect(session.activityCountForPage(source), 0);
+      expect(session.activityCountForPage(target), 1);
+      expect(session.activityCountForPage(manual), 0);
+    },
+  );
+
+  test('a captured auth destination removes original page attribution', () {
+    const source = 'https://example.com/source';
+    session.pageStarted(source);
+    session.pageFinished(source);
+    final id = session.recordActivity(action: 'open');
+    session.resolveActivity(
+      id,
+      BrowserActivityOutcome.ok,
+      destinationPageKey: session.activityPageKey(
+        'https://auth.openai.com/authorize?code=private',
+        tabId: null,
+      ),
+      destinationCaptured: true,
+    );
+    expect(session.activityCountForPage(source), 0);
+    expect(session.recentActivity.single.pageKey, isNull);
+  });
+
   test('recordActivity returns a unique id per call, even for repeats', () {
     final first = session.recordActivity(action: 'click');
     final second = session.recordActivity(action: 'click');

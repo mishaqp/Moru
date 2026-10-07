@@ -74,6 +74,35 @@ void main() {
     },
   );
 
+  test(
+    'download selection keeps Android precedence and universal fallback',
+    () {
+      expect(
+        const UpdateInfo(
+          app: 'Moru',
+          version: '1',
+          downloads: {
+            'android': 'https://example.com/android.apk',
+            'universal': 'https://example.com/universal.apk',
+          },
+        ).bestDownloadUrl(),
+        'https://example.com/android.apk',
+      );
+      expect(
+        const UpdateInfo(
+          app: 'Moru',
+          version: '1',
+          downloads: {'universal': 'https://example.com/universal.apk'},
+        ).bestDownloadUrl(),
+        'https://example.com/universal.apk',
+      );
+      expect(
+        const UpdateInfo(app: 'Moru', version: '1').bestDownloadUrl(),
+        isNull,
+      );
+    },
+  );
+
   for (final scenario in ['upstream', 'draft', 'prerelease', 'wrong-abi']) {
     test('does not advertise $scenario as a Moru update', () async {
       final data = _release();

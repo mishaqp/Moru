@@ -10,10 +10,11 @@ import '../workspace/workspace_runtime.dart';
 /// MCP over the guest's raw pipes. A PTY would echo input and mix stderr into
 /// stdout, corrupting the newline-delimited JSON protocol.
 class WorkspaceStdioTransport implements ClientTransport {
-  WorkspaceStdioTransport._(this._runtime, this._runId);
+  WorkspaceStdioTransport._(this._runtime, this._runId, this._stderrFilter);
 
   final WorkspaceStdioRuntime _runtime;
   final String _runId;
+  final String Function(List<int> bytes)? _stderrFilter;
   final _messages = StreamController<dynamic>.broadcast();
   final _closed = Completer<void>();
   final _started = Completer<void>();
@@ -33,13 +34,19 @@ class WorkspaceStdioTransport implements ClientTransport {
     final reason = _exitCode == null
         ? (_failure ?? error).toString()
         : 'STDIO process exited (code $_exitCode)';
-    final stderr = utf8.decode(_stderr, allowMalformed: true).trim();
+    final stderr = stderrTail;
     return stderr.isEmpty ? reason : '$reason\n\n$stderr';
   }
+
+  /// Bounded stderr joined across byte chunks, independent of pipe failure.
+  String get stderrTail => utf8.decode(_stderr, allowMalformed: true).trim();
 
   bool get failed => _failure != null || _exitCode != null;
 
   void _recordStderr(List<int> bytes) {
+    // ACP filters incrementally before this byte cap. A cap on raw stderr
+    // could retain an almost-complete secret without its matching prefix.
+    if (_stderrFilter != null) bytes = utf8.encode(_stderrFilter(bytes));
     if (bytes.length >= _stderrLimit) {
       _stderr
         ..clear()
@@ -60,12 +67,16 @@ class WorkspaceStdioTransport implements ClientTransport {
     Map<String, String> environment = const {},
     Duration startupTimeout = const Duration(seconds: 30),
     bool Function()? isCancelled,
+    bool emulateHardLinks = true,
+    String Function(List<int> bytes)? stderrFilter,
+    bool? expectedRootChroot,
   }) async {
     if (command.trim().isEmpty) throw ArgumentError('STDIO command is empty');
     final launch = 'exec ${[command, ...arguments].map(_quote).join(' ')}';
     final transport = WorkspaceStdioTransport._(
       runtime,
       'mcp-${const Uuid().v4()}',
+      stderrFilter,
     );
     transport._lines = transport._stdout.stream
         .transform(utf8.decoder)
@@ -96,6 +107,8 @@ class WorkspaceStdioTransport implements ClientTransport {
             mounts: mounts,
             env: environment,
             keepStdinOpen: true,
+            emulateHardLinks: emulateHardLinks,
+            expectedRootChroot: expectedRootChroot,
             timeout: Duration.zero,
             isCancelled: () =>
                 transport._closing || isCancelled?.call() == true,
@@ -140,6 +153,9 @@ class WorkspaceStdioTransport implements ClientTransport {
       return transport;
     } catch (_) {
       transport.close();
+      // Failed startup still owns a native process until cancellation finishes.
+      // Callers must be able to release process settings after this returns.
+      await transport.onClose;
       rethrow;
     }
   }

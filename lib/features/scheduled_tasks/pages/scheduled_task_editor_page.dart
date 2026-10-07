@@ -708,9 +708,9 @@ class _ScheduledTaskEditorPageState extends State<ScheduledTaskEditorPage> {
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth: ResponsiveHelper.isDesktop(context) ? 1080 : 640,
+                maxWidth: ResponsiveHelper.isWide(context) ? 1080 : 640,
               ),
-              child: ResponsiveHelper.isDesktop(context)
+              child: ResponsiveHelper.isWide(context)
                   ? _tabletLayout(l)
                   : _mobileLayout(l),
             ),

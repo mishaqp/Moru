@@ -102,6 +102,360 @@ abstract class AppLocalizations {
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
+  /// No description provided for @appearanceSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save appearance. Try again.'**
+  String get appearanceSaveError;
+
+  /// No description provided for @appearanceSidebarBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar background'**
+  String get appearanceSidebarBackground;
+
+  /// No description provided for @appearanceSidebarSameAsChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Same as chat'**
+  String get appearanceSidebarSameAsChat;
+
+  /// No description provided for @appearanceSidebarCustomBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom background'**
+  String get appearanceSidebarCustomBackground;
+
+  /// No description provided for @appearanceSidebarThemeBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme background'**
+  String get appearanceSidebarThemeBackground;
+
+  /// No description provided for @appearanceSidebarMask.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar background mask'**
+  String get appearanceSidebarMask;
+
+  /// No description provided for @appearanceSidebarBlur.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar background blur'**
+  String get appearanceSidebarBlur;
+
+  /// No description provided for @appearanceSidebarOpacity.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar background opacity'**
+  String get appearanceSidebarOpacity;
+
+  /// No description provided for @appearanceSidebarPhoneWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar width on phones'**
+  String get appearanceSidebarPhoneWidth;
+
+  /// No description provided for @appearanceSidebarWideWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar width on wide screens'**
+  String get appearanceSidebarWideWidth;
+
+  /// No description provided for @appearanceSidebarDensity.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat list density'**
+  String get appearanceSidebarDensity;
+
+  /// No description provided for @appearanceSidebarCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact'**
+  String get appearanceSidebarCompact;
+
+  /// No description provided for @appearanceSidebarNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get appearanceSidebarNormal;
+
+  /// No description provided for @appearanceSidebarSpacious.
+  ///
+  /// In en, this message translates to:
+  /// **'Spacious'**
+  String get appearanceSidebarSpacious;
+
+  /// No description provided for @appearanceSidebarCardRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat card corner radius'**
+  String get appearanceSidebarCardRadius;
+
+  /// No description provided for @appearanceSidebarCardColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat card color'**
+  String get appearanceSidebarCardColor;
+
+  /// No description provided for @appearanceSidebarActiveCardColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Active chat card color'**
+  String get appearanceSidebarActiveCardColor;
+
+  /// No description provided for @appearanceSidebarResetColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Use theme color'**
+  String get appearanceSidebarResetColor;
+
+  /// No description provided for @appearanceSidebarTimestamp.
+  ///
+  /// In en, this message translates to:
+  /// **'Message timestamp'**
+  String get appearanceSidebarTimestamp;
+
+  /// No description provided for @appearanceSidebarAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant icon and name'**
+  String get appearanceSidebarAssistant;
+
+  /// No description provided for @appearanceSidebarModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model icon and name'**
+  String get appearanceSidebarModel;
+
+  /// No description provided for @appearanceSidebarLastPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Last message preview'**
+  String get appearanceSidebarLastPreview;
+
+  /// No description provided for @appearanceSidebarGrouping.
+  ///
+  /// In en, this message translates to:
+  /// **'Group chats'**
+  String get appearanceSidebarGrouping;
+
+  /// No description provided for @appearanceSidebarGroupingDate.
+  ///
+  /// In en, this message translates to:
+  /// **'By date'**
+  String get appearanceSidebarGroupingDate;
+
+  /// No description provided for @appearanceSidebarGroupingAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'By assistant'**
+  String get appearanceSidebarGroupingAssistant;
+
+  /// No description provided for @appearanceSidebarGroupingNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No grouping'**
+  String get appearanceSidebarGroupingNone;
+
+  /// No description provided for @appearanceSidebarDock.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar dock buttons'**
+  String get appearanceSidebarDock;
+
+  /// No description provided for @appearanceSidebarDockHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose buttons and drag their handles to reorder.'**
+  String get appearanceSidebarDockHint;
+
+  /// No description provided for @appearanceSidebarShortcutsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose pinned apps and pages, then drag to reorder.'**
+  String get appearanceSidebarShortcutsHint;
+
+  /// No description provided for @appearanceSidebarPreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip plans'**
+  String get appearanceSidebarPreviewTitle;
+
+  /// No description provided for @appearanceSidebarPreviewOtherTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New ideas'**
+  String get appearanceSidebarPreviewOtherTitle;
+
+  /// No description provided for @appearanceSidebarPreviewMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Here are a few ideas to get started.'**
+  String get appearanceSidebarPreviewMessage;
+
+  /// No description provided for @appearanceSidebarPreviewModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get appearanceSidebarPreviewModel;
+
+  /// No description provided for @appearanceSidebarReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset sidebar appearance'**
+  String get appearanceSidebarReset;
+
+  /// No description provided for @appearanceSettingsPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get appearanceSettingsPageTitle;
+
+  /// No description provided for @appearanceChatWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat window'**
+  String get appearanceChatWindow;
+
+  /// No description provided for @appearanceSidebar.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar'**
+  String get appearanceSidebar;
+
+  /// No description provided for @appearanceSidebarComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar appearance will be available in a future update.'**
+  String get appearanceSidebarComingSoon;
+
+  /// No description provided for @appearanceSameBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Same for light and dark'**
+  String get appearanceSameBackground;
+
+  /// No description provided for @appearanceSameBackgroundHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use one background in both themes.'**
+  String get appearanceSameBackgroundHint;
+
+  /// No description provided for @appearanceBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get appearanceBackground;
+
+  /// No description provided for @appearanceNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get appearanceNone;
+
+  /// No description provided for @appearancePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo gallery'**
+  String get appearancePhoto;
+
+  /// No description provided for @appearanceGif.
+  ///
+  /// In en, this message translates to:
+  /// **'GIF'**
+  String get appearanceGif;
+
+  /// No description provided for @appearanceVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get appearanceVideo;
+
+  /// No description provided for @appearanceAnimatedGradient.
+  ///
+  /// In en, this message translates to:
+  /// **'Animated gradient'**
+  String get appearanceAnimatedGradient;
+
+  /// No description provided for @appearanceChooseMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose media'**
+  String get appearanceChooseMedia;
+
+  /// No description provided for @appearanceReplaceMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace media'**
+  String get appearanceReplaceMedia;
+
+  /// No description provided for @appearanceFit.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit'**
+  String get appearanceFit;
+
+  /// No description provided for @appearanceFitCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover'**
+  String get appearanceFitCover;
+
+  /// No description provided for @appearanceFitContain.
+  ///
+  /// In en, this message translates to:
+  /// **'Contain'**
+  String get appearanceFitContain;
+
+  /// No description provided for @appearanceFitFill.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill'**
+  String get appearanceFitFill;
+
+  /// No description provided for @appearanceFitTile.
+  ///
+  /// In en, this message translates to:
+  /// **'Tile'**
+  String get appearanceFitTile;
+
+  /// No description provided for @appearanceFocusHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag the preview to position the background.'**
+  String get appearanceFocusHint;
+
+  /// No description provided for @appearanceCenterFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Center background'**
+  String get appearanceCenterFocus;
+
+  /// No description provided for @appearanceBrightness.
+  ///
+  /// In en, this message translates to:
+  /// **'Brightness'**
+  String get appearanceBrightness;
+
+  /// No description provided for @appearanceSaturation.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturation'**
+  String get appearanceSaturation;
+
+  /// No description provided for @appearanceMediaError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not use this file. Choose another image, GIF or video.'**
+  String get appearanceMediaError;
+
+  /// No description provided for @appearanceReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset backgrounds'**
+  String get appearanceReset;
+
   /// No description provided for @settingsSearchHint.
   ///
   /// In en, this message translates to:
@@ -1884,12 +2238,6 @@ abstract class AppLocalizations {
   /// **'Translate'**
   String get desktopNavTranslateTooltip;
 
-  /// No description provided for @desktopAvatarMenuUseEmoji.
-  ///
-  /// In en, this message translates to:
-  /// **'Use emoji'**
-  String get desktopAvatarMenuUseEmoji;
-
   /// No description provided for @cameraPermissionDeniedMessage.
   ///
   /// In en, this message translates to:
@@ -1901,18 +2249,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open Settings'**
   String get openSystemSettings;
-
-  /// No description provided for @desktopAvatarMenuChangeFromImage.
-  ///
-  /// In en, this message translates to:
-  /// **'Change from image…'**
-  String get desktopAvatarMenuChangeFromImage;
-
-  /// No description provided for @desktopAvatarMenuReset.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset avatar'**
-  String get desktopAvatarMenuReset;
 
   /// No description provided for @assistantEditAvatarChooseImage.
   ///
@@ -4703,6 +5039,408 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select'**
   String get sideDrawerMenuSelect;
+
+  /// No description provided for @sideDrawerNewChat.
+  ///
+  /// In en, this message translates to:
+  /// **'New chat'**
+  String get sideDrawerNewChat;
+
+  /// No description provided for @sideDrawerMoveToFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to folder'**
+  String get sideDrawerMoveToFolder;
+
+  /// No description provided for @sideDrawerNoFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'No folder'**
+  String get sideDrawerNoFolder;
+
+  /// No description provided for @sideDrawerNewFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'New folder'**
+  String get sideDrawerNewFolder;
+
+  /// No description provided for @sideDrawerFolderNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder name'**
+  String get sideDrawerFolderNameHint;
+
+  /// No description provided for @sideDrawerFolderIcon.
+  ///
+  /// In en, this message translates to:
+  /// **'Icon'**
+  String get sideDrawerFolderIcon;
+
+  /// No description provided for @sideDrawerFolderDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete folder'**
+  String get sideDrawerFolderDelete;
+
+  /// No description provided for @sideDrawerFolderDeleteContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Chats in \"{name}\" stay in the list.'**
+  String sideDrawerFolderDeleteContent(String name);
+
+  /// No description provided for @agentsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Agents'**
+  String get agentsTitle;
+
+  /// No description provided for @agentsIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Coding agents such as Claude Code can answer in your chats. They run in the Linux environment on this phone, work with the chat\'s files and use the model and key you already set up in Moru — nothing to configure twice.'**
+  String get agentsIntro;
+
+  /// No description provided for @agentsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Agents'**
+  String get agentsSection;
+
+  /// No description provided for @agentsFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Installing takes a few minutes and needs the internet. Node.js is installed first if it is missing.'**
+  String get agentsFooter;
+
+  /// No description provided for @agentsNeedEnvironment.
+  ///
+  /// In en, this message translates to:
+  /// **'Install and start the Linux environment first (Settings → Workspace & environment).'**
+  String get agentsNeedEnvironment;
+
+  /// No description provided for @agentsStatusInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed'**
+  String get agentsStatusInstalled;
+
+  /// No description provided for @agentsStatusMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Not installed'**
+  String get agentsStatusMissing;
+
+  /// No description provided for @agentsStatusChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get agentsStatusChecking;
+
+  /// No description provided for @agentsStatusWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'Working…'**
+  String get agentsStatusWorking;
+
+  /// No description provided for @agentsInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Install'**
+  String get agentsInstall;
+
+  /// No description provided for @agentsUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get agentsUpdate;
+
+  /// No description provided for @agentsRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get agentsRemove;
+
+  /// No description provided for @agentsCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check connection'**
+  String get agentsCheck;
+
+  /// No description provided for @agentsCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get agentsCancel;
+
+  /// No description provided for @agentsSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get agentsSave;
+
+  /// No description provided for @agentsLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Log'**
+  String get agentsLog;
+
+  /// No description provided for @agentsMoruToolsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Moru tools: available'**
+  String get agentsMoruToolsAvailable;
+
+  /// No description provided for @agentsMoruToolsUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Moru tools: unavailable'**
+  String get agentsMoruToolsUnavailable;
+
+  /// No description provided for @agentsCheckOk.
+  ///
+  /// In en, this message translates to:
+  /// **'It works: {name} {version} answered.'**
+  String agentsCheckOk(String name, String version);
+
+  /// No description provided for @agentsCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The agent did not start: {error}'**
+  String agentsCheckFailed(String error);
+
+  /// No description provided for @agentsCheckModel.
+  ///
+  /// In en, this message translates to:
+  /// **'The check uses your default chat model: {model}.'**
+  String agentsCheckModel(String model);
+
+  /// No description provided for @agentsNoModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a default chat model with an API key first (Settings → Default Model).'**
+  String get agentsNoModel;
+
+  /// No description provided for @agentsDescClaudeCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Anthropic\'s coding agent: reads and edits files, runs commands and tests, plans larger tasks.'**
+  String get agentsDescClaudeCode;
+
+  /// No description provided for @agentsDescCodex.
+  ///
+  /// In en, this message translates to:
+  /// **'OpenAI\'s coding agent: writes and fixes code, runs commands, explains projects.'**
+  String get agentsDescCodex;
+
+  /// No description provided for @agentsDescOpenCode.
+  ///
+  /// In en, this message translates to:
+  /// **'An open-source coding agent that works with almost any provider. A good first choice.'**
+  String get agentsDescOpenCode;
+
+  /// No description provided for @agentsApiAnthropic.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs a provider with an Anthropic-compatible API: Anthropic, DeepSeek, Kimi, GLM, MiniMax or OpenRouter.'**
+  String get agentsApiAnthropic;
+
+  /// No description provided for @agentsApiCodex.
+  ///
+  /// In en, this message translates to:
+  /// **'Best with OpenAI. Other providers need an OpenAI-compatible API; turn on the Responses API in the provider if it supports it.'**
+  String get agentsApiCodex;
+
+  /// No description provided for @agentsApiOpenai.
+  ///
+  /// In en, this message translates to:
+  /// **'Works with any OpenAI-compatible provider and with Anthropic.'**
+  String get agentsApiOpenai;
+
+  /// No description provided for @agentsApiCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Moru passes the model\'s address, key and name as MORU_AGENT_BASE_URL, MORU_AGENT_API_KEY and MORU_AGENT_MODEL (and as OPENAI_* variables).'**
+  String get agentsApiCustom;
+
+  /// No description provided for @agentsCustomAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your own agent'**
+  String get agentsCustomAdd;
+
+  /// No description provided for @agentsCustomName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get agentsCustomName;
+
+  /// No description provided for @agentsCustomCommand.
+  ///
+  /// In en, this message translates to:
+  /// **'Command'**
+  String get agentsCustomCommand;
+
+  /// No description provided for @agentsCustomHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Any program in the Linux environment that speaks ACP (Agent Client Protocol) over stdin/stdout.'**
+  String get agentsCustomHint;
+
+  /// No description provided for @agentsCustomDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete agent'**
+  String get agentsCustomDelete;
+
+  /// No description provided for @agentsFailureNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Node.js could not be installed. See the log.'**
+  String get agentsFailureNode;
+
+  /// No description provided for @agentsFailureInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Installation failed. See the log below.'**
+  String get agentsFailureInstall;
+
+  /// No description provided for @agentsFailureRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'The agent could not be removed. See the log.'**
+  String get agentsFailureRemove;
+
+  /// No description provided for @agentsStartChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a chat'**
+  String get agentsStartChat;
+
+  /// No description provided for @agentsChatMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This assistant\'s agent is not in the list any more. Pick another in the assistant\'s settings.'**
+  String get agentsChatMissing;
+
+  /// No description provided for @agentsChatNoKey.
+  ///
+  /// In en, this message translates to:
+  /// **'The agent needs a model with an API key. Choose one with a key for this assistant or as the default model.'**
+  String get agentsChatNoKey;
+
+  /// No description provided for @agentsChatNotInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is not installed yet. Install it in Settings → Agents.'**
+  String agentsChatNotInstalled(String name);
+
+  /// No description provided for @assistantAgentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent'**
+  String get assistantAgentTitle;
+
+  /// No description provided for @assistantAgentNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None — the model answers'**
+  String get assistantAgentNone;
+
+  /// No description provided for @assistantAgentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'With an agent, it answers in this assistant\'s chats and works with the chat\'s files. It uses the chat model above for its own requests.'**
+  String get assistantAgentHint;
+
+  /// No description provided for @displaySettingsPageSidebarThumbnailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Image previews in the chat list'**
+  String get displaySettingsPageSidebarThumbnailsTitle;
+
+  /// No description provided for @sideDrawerArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get sideDrawerArchive;
+
+  /// No description provided for @sideDrawerArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat archived'**
+  String get sideDrawerArchived;
+
+  /// No description provided for @sideDrawerUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get sideDrawerUndo;
+
+  /// No description provided for @archivePageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get archivePageTitle;
+
+  /// No description provided for @archivePageEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing archived. Swipe a chat to the right to put it here.'**
+  String get archivePageEmpty;
+
+  /// No description provided for @archivePageRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get archivePageRestore;
+
+  /// No description provided for @archivePageRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat restored'**
+  String get archivePageRestored;
+
+  /// No description provided for @archivePageSortArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'By date archived'**
+  String get archivePageSortArchived;
+
+  /// No description provided for @archivePageSortActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'By last message'**
+  String get archivePageSortActivity;
+
+  /// No description provided for @archivePageDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{title}\"?'**
+  String archivePageDeleteTitle(String title);
+
+  /// No description provided for @archivePageDeleteContent.
+  ///
+  /// In en, this message translates to:
+  /// **'The chat and all its messages will be deleted.'**
+  String get archivePageDeleteContent;
+
+  /// No description provided for @sideDrawerShortcutsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sidebar shortcuts'**
+  String get sideDrawerShortcutsTitle;
+
+  /// No description provided for @sideDrawerShortcutsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No mini apps or browser bookmarks yet'**
+  String get sideDrawerShortcutsEmpty;
+
+  /// No description provided for @sideDrawerShortcutRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from sidebar'**
+  String get sideDrawerShortcutRemove;
 
   /// No description provided for @sideDrawerSelectionTitle.
   ///
@@ -7520,12 +8258,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Processed · {count} steps'**
   String chainOfThoughtProcessedSteps(Object count);
-
-  /// No description provided for @displaySettingsPageShowChatListDateTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show Chat List Dates'**
-  String get displaySettingsPageShowChatListDateTitle;
 
   /// No description provided for @displaySettingsPageEnableImageCropperTitle.
   ///
@@ -13189,12 +13921,6 @@ abstract class AppLocalizations {
   /// **'SQLite'**
   String get migrationTargetDatabaseLabel;
 
-  /// No description provided for @migrationChooseFolderButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose Folder and Back Up'**
-  String get migrationChooseFolderButton;
-
   /// No description provided for @migrationSaveBackupButton.
   ///
   /// In en, this message translates to:
@@ -15313,12 +16039,6 @@ abstract class AppLocalizations {
   /// **'Ubuntu {version} (PRoot)'**
   String workspaceEnvEngineUbuntu(String version);
 
-  /// No description provided for @workspaceEnvEngineAlpine.
-  ///
-  /// In en, this message translates to:
-  /// **'Alpine {version} (iSH)'**
-  String workspaceEnvEngineAlpine(String version);
-
   /// No description provided for @workspaceEnvPhaseNotInstalled.
   ///
   /// In en, this message translates to:
@@ -15865,18 +16585,6 @@ abstract class AppLocalizations {
   /// **'Bind a workspace from the toolbar to browse files here'**
   String get workspaceDeskBarEmptyHint;
 
-  /// No description provided for @workspaceDeskOpenSystemTerminal.
-  ///
-  /// In en, this message translates to:
-  /// **'Open in system terminal'**
-  String get workspaceDeskOpenSystemTerminal;
-
-  /// No description provided for @workspaceDeskReveal.
-  ///
-  /// In en, this message translates to:
-  /// **'Reveal in file manager'**
-  String get workspaceDeskReveal;
-
   /// No description provided for @workspaceEntryBind.
   ///
   /// In en, this message translates to:
@@ -15942,18 +16650,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Terminal'**
   String get workspaceEntryTerminal;
-
-  /// No description provided for @workspaceEntryOpenSystemTerminal.
-  ///
-  /// In en, this message translates to:
-  /// **'Open in system terminal'**
-  String get workspaceEntryOpenSystemTerminal;
-
-  /// No description provided for @workspaceEntryReveal.
-  ///
-  /// In en, this message translates to:
-  /// **'Reveal in file manager'**
-  String get workspaceEntryReveal;
 
   /// No description provided for @workspaceEntrySessionSkills.
   ///
@@ -16302,12 +16998,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Table'**
   String get workspacePreviewTable;
-
-  /// No description provided for @workspacePreviewRevealFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn’t show this file in the file manager.'**
-  String get workspacePreviewRevealFailed;
 
   /// No description provided for @workspacePreviewEmptyTable.
   ///
@@ -16894,12 +17584,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'There\'s nothing to preview.'**
   String get workspacePreviewEmptyHint;
-
-  /// No description provided for @workspacePreviewRevealInFileManager.
-  ///
-  /// In en, this message translates to:
-  /// **'Show in Files'**
-  String get workspacePreviewRevealInFileManager;
 
   /// No description provided for @workspaceBindingSetAssistantDefault.
   ///
@@ -17626,6 +18310,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'PRoot options'**
   String get workspaceEnvProotOptions;
+
+  /// No description provided for @workspaceEnvRootChroot.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast mode (root)'**
+  String get workspaceEnvRootChroot;
+
+  /// No description provided for @workspaceEnvRootChrootHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Runs the Linux environment in a real chroot through su instead of PRoot: programs start and work many times faster. Commands run as real root with full access to the phone. Turning it off gives the files back to Moru.'**
+  String get workspaceEnvRootChrootHint;
+
+  /// No description provided for @workspaceEnvRootChrootChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking root…'**
+  String get workspaceEnvRootChrootChecking;
+
+  /// No description provided for @workspaceEnvRootChrootRestoring.
+  ///
+  /// In en, this message translates to:
+  /// **'Giving files back to Moru…'**
+  String get workspaceEnvRootChrootRestoring;
+
+  /// No description provided for @workspaceEnvRootChrootOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast mode is on'**
+  String get workspaceEnvRootChrootOn;
+
+  /// No description provided for @workspaceEnvRootChrootOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast mode is off, PRoot is back'**
+  String get workspaceEnvRootChrootOff;
+
+  /// No description provided for @workspaceEnvRootChrootFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast mode is unavailable: {reason}'**
+  String workspaceEnvRootChrootFailed(String reason);
 
   /// No description provided for @workspaceEnvShellPath.
   ///
@@ -19640,7 +20366,7 @@ abstract class AppLocalizations {
   /// No description provided for @browserMinimize.
   ///
   /// In en, this message translates to:
-  /// **'Minimize'**
+  /// **'Minimize to chat'**
   String get browserMinimize;
 
   /// No description provided for @browserMiniExpand.
@@ -19654,6 +20380,294 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Browser'**
   String get browserMiniTitle;
+
+  /// No description provided for @userscriptsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'User scripts'**
+  String get userscriptsTitle;
+
+  /// No description provided for @userscriptsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Scripts like in Tampermonkey: they change the sites they are made for. Install only scripts you trust — they see everything on those sites.'**
+  String get userscriptsHint;
+
+  /// No description provided for @userscriptsInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Install'**
+  String get userscriptsInstall;
+
+  /// No description provided for @userscriptsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No scripts yet. Paste a link to a .user.js file, e.g. from greasyfork.org.'**
+  String get userscriptsEmpty;
+
+  /// No description provided for @userscriptsBadLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an http(s) link to a .user.js file'**
+  String get userscriptsBadLink;
+
+  /// No description provided for @userscriptsNotAScript.
+  ///
+  /// In en, this message translates to:
+  /// **'That file is not a user script (no ==UserScript== header)'**
+  String get userscriptsNotAScript;
+
+  /// No description provided for @userscriptsInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed: {name}'**
+  String userscriptsInstalled(String name);
+
+  /// No description provided for @userscriptsInstallFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not install: {error}'**
+  String userscriptsInstallFailed(String error);
+
+  /// No description provided for @browserGoogleSignInBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Google does not allow signing in inside this browser. Sign in another way or open the site in Chrome.'**
+  String get browserGoogleSignInBlocked;
+
+  /// No description provided for @browserOpenInChrome.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Chrome'**
+  String get browserOpenInChrome;
+
+  /// No description provided for @browserSslTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection is not secure'**
+  String get browserSslTitle;
+
+  /// No description provided for @browserSslMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The certificate of {site} is not valid ({problem}). Someone may be trying to steal your data.'**
+  String browserSslMessage(String site, String problem);
+
+  /// No description provided for @browserSslProceed.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue anyway'**
+  String get browserSslProceed;
+
+  /// No description provided for @browserSslBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Go back'**
+  String get browserSslBack;
+
+  /// No description provided for @browserBookmarks.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmarks'**
+  String get browserBookmarks;
+
+  /// No description provided for @browserHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get browserHistory;
+
+  /// No description provided for @browserClearHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get browserClearHistory;
+
+  /// No description provided for @browserClearHistoryConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear the history of the last 7 days?'**
+  String get browserClearHistoryConfirm;
+
+  /// No description provided for @browserLibrarySearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get browserLibrarySearch;
+
+  /// No description provided for @browserHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No pages visited in the last 7 days'**
+  String get browserHistoryEmpty;
+
+  /// No description provided for @browserBookmarksEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No bookmarks yet. Tap the star in the address bar.'**
+  String get browserBookmarksEmpty;
+
+  /// No description provided for @browserLibraryRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get browserLibraryRemove;
+
+  /// No description provided for @browserBookmarkAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmarked'**
+  String get browserBookmarkAdded;
+
+  /// No description provided for @browserBookmarkRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmark removed'**
+  String get browserBookmarkRemoved;
+
+  /// No description provided for @browserTabsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Tabs'**
+  String get browserTabsTooltip;
+
+  /// No description provided for @browserNewTab.
+  ///
+  /// In en, this message translates to:
+  /// **'New tab'**
+  String get browserNewTab;
+
+  /// No description provided for @browserCloseAllTabs.
+  ///
+  /// In en, this message translates to:
+  /// **'Close all'**
+  String get browserCloseAllTabs;
+
+  /// No description provided for @browserTabByAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'assistant'**
+  String get browserTabByAssistant;
+
+  /// No description provided for @browserDesktopSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Desktop site'**
+  String get browserDesktopSite;
+
+  /// No description provided for @browserClearSiteData.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear site data'**
+  String get browserClearSiteData;
+
+  /// No description provided for @browserClearSiteDataConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out of {site} and delete its data in this browser?'**
+  String browserClearSiteDataConfirm(String site);
+
+  /// No description provided for @browserClearSiteDataDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Data of {site} deleted'**
+  String browserClearSiteDataDone(String site);
+
+  /// No description provided for @browserTabsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tabs: {count}'**
+  String browserTabsTitle(int count);
+
+  /// No description provided for @browserDownloadDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded {file}'**
+  String browserDownloadDone(String file);
+
+  /// No description provided for @browserNoAppForLink.
+  ///
+  /// In en, this message translates to:
+  /// **'No app on the phone opens this link.'**
+  String get browserNoAppForLink;
+
+  /// No description provided for @browserDownloadStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading {file} to Downloads'**
+  String browserDownloadStarted(String file);
+
+  /// No description provided for @browserDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not download {file}'**
+  String browserDownloadFailed(String file);
+
+  /// No description provided for @browserDownloadUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This file is made by the page itself and cannot be downloaded yet.'**
+  String get browserDownloadUnsupported;
+
+  /// No description provided for @browserPermissionQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow this site to use: {what}?'**
+  String browserPermissionQuestion(String what);
+
+  /// No description provided for @browserPermissionCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'camera'**
+  String get browserPermissionCamera;
+
+  /// No description provided for @browserPermissionMicrophone.
+  ///
+  /// In en, this message translates to:
+  /// **'microphone'**
+  String get browserPermissionMicrophone;
+
+  /// No description provided for @browserPermissionLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'location'**
+  String get browserPermissionLocation;
+
+  /// No description provided for @browserPermissionProtectedMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'protected video'**
+  String get browserPermissionProtectedMedia;
+
+  /// No description provided for @browserPermissionAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get browserPermissionAllow;
+
+  /// No description provided for @browserPermissionBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Block'**
+  String get browserPermissionBlock;
+
+  /// No description provided for @browserChallengeVerify.
+  ///
+  /// In en, this message translates to:
+  /// **'The site asks to confirm you are a person. Complete the check yourself; the assistant waits.'**
+  String get browserChallengeVerify;
+
+  /// No description provided for @browserChallengeRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'The site limits requests. The assistant slows down.'**
+  String get browserChallengeRateLimited;
+
+  /// No description provided for @browserChallengeDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'The site refuses automated access.'**
+  String get browserChallengeDenied;
 
   /// No description provided for @chatHeaderFiles.
   ///
@@ -20225,6 +21239,360 @@ abstract class AppLocalizations {
   /// **'Notifications and reminders from your mini apps.'**
   String get miniAppsNotificationChannelDescription;
 
+  /// No description provided for @miniAppsToolActionErrors.
+  ///
+  /// In en, this message translates to:
+  /// **'Read app error log'**
+  String get miniAppsToolActionErrors;
+
+  /// No description provided for @miniAppsToolActionVersions.
+  ///
+  /// In en, this message translates to:
+  /// **'List app versions'**
+  String get miniAppsToolActionVersions;
+
+  /// No description provided for @miniAppsToolActionRollback.
+  ///
+  /// In en, this message translates to:
+  /// **'Roll back app'**
+  String get miniAppsToolActionRollback;
+
+  /// No description provided for @miniAppsBackAgainToExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Back again to exit'**
+  String get miniAppsBackAgainToExit;
+
+  /// No description provided for @miniAppsJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Background jobs'**
+  String get miniAppsJobs;
+
+  /// No description provided for @miniAppsJobsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No background jobs. Ask the agent, e.g. “every morning at 8 check the weather and notify me”.'**
+  String get miniAppsJobsEmpty;
+
+  /// No description provided for @miniAppsJobsFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'At the set time Moru opens the app out of sight and runs the job for up to 30 seconds, even when Moru is closed. Errors go to the error log.'**
+  String get miniAppsJobsFooter;
+
+  /// No description provided for @miniAppsJobRunNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Run now'**
+  String get miniAppsJobRunNow;
+
+  /// No description provided for @miniAppsJobStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Job started'**
+  String get miniAppsJobStarted;
+
+  /// No description provided for @miniAppsJobEveryDay.
+  ///
+  /// In en, this message translates to:
+  /// **'every day'**
+  String get miniAppsJobEveryDay;
+
+  /// No description provided for @miniAppsJobRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running…'**
+  String get miniAppsJobRunning;
+
+  /// No description provided for @miniAppsToolActionJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'List app background jobs'**
+  String get miniAppsToolActionJobs;
+
+  /// No description provided for @miniAppsToolActionRunJob.
+  ///
+  /// In en, this message translates to:
+  /// **'Run app background job'**
+  String get miniAppsToolActionRunJob;
+
+  /// No description provided for @miniAppsJobNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {time}'**
+  String miniAppsJobNext(String time);
+
+  /// No description provided for @miniAppsJobLastDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Last run {time}: done'**
+  String miniAppsJobLastDone(String time);
+
+  /// No description provided for @miniAppsJobLastFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Last run {time}: failed'**
+  String miniAppsJobLastFailed(String time);
+
+  /// No description provided for @miniAppsToolActionServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Read app server state'**
+  String get miniAppsToolActionServer;
+
+  /// No description provided for @rootShellToolTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Root commands'**
+  String get rootShellToolTitle;
+
+  /// No description provided for @rootShellToolSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Run commands as root (su) on a rooted phone: system settings, apps, logs, screen input. You approve every command.'**
+  String get rootShellToolSubtitle;
+
+  /// No description provided for @miniAppsWebTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Web server'**
+  String get miniAppsWebTitle;
+
+  /// No description provided for @miniAppsWebPort.
+  ///
+  /// In en, this message translates to:
+  /// **'Port'**
+  String get miniAppsWebPort;
+
+  /// No description provided for @miniAppsWebLocalhostOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Only this phone'**
+  String get miniAppsWebLocalhostOnly;
+
+  /// No description provided for @miniAppsWebLocalhostOnlySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen on 127.0.0.1 only: no access from the network and no moru.local.'**
+  String get miniAppsWebLocalhostOnlySubtitle;
+
+  /// No description provided for @miniAppsWebPasswordEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Require a password'**
+  String get miniAppsWebPasswordEnabled;
+
+  /// No description provided for @miniAppsWebPasswordEnabledSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The browser asks for it; any user name works.'**
+  String get miniAppsWebPasswordEnabledSubtitle;
+
+  /// No description provided for @miniAppsWebPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get miniAppsWebPassword;
+
+  /// No description provided for @miniAppsWebStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get miniAppsWebStart;
+
+  /// No description provided for @miniAppsWebStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get miniAppsWebStop;
+
+  /// No description provided for @miniAppsWebRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running. Open in a browser:'**
+  String get miniAppsWebRunning;
+
+  /// No description provided for @miniAppsWebCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Address copied'**
+  String get miniAppsWebCopied;
+
+  /// No description provided for @miniAppsWebInvalidPort.
+  ///
+  /// In en, this message translates to:
+  /// **'The port must be from 1024 to 65535.'**
+  String get miniAppsWebInvalidPort;
+
+  /// No description provided for @miniAppsWebNoPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a password or turn the password off.'**
+  String get miniAppsWebNoPassword;
+
+  /// No description provided for @miniAppsWebFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Your mini apps open in a browser with the same data as in Moru. moru.local and the Wi-Fi address work on devices in the same Wi-Fi, not over mobile data; 127.0.0.1 works in a browser on this phone. While the server runs, Moru keeps a notification; stopping it there stops the server.'**
+  String get miniAppsWebFooter;
+
+  /// No description provided for @miniAppsWebNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Web server: {url}'**
+  String miniAppsWebNotification(String url);
+
+  /// No description provided for @miniAppsWebPortInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Port {port} is already in use: choose another one.'**
+  String miniAppsWebPortInUse(String port);
+
+  /// No description provided for @miniAppsWebAutostart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with Moru'**
+  String get miniAppsWebAutostart;
+
+  /// No description provided for @miniAppsWebAutostartSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start the server whenever Moru starts.'**
+  String get miniAppsWebAutostartSubtitle;
+
+  /// No description provided for @miniAppsServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get miniAppsServer;
+
+  /// No description provided for @miniAppsServerStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting…'**
+  String get miniAppsServerStarting;
+
+  /// No description provided for @miniAppsServerIdle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not running. It starts while the app is open.'**
+  String get miniAppsServerIdle;
+
+  /// No description provided for @miniAppsServerRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart'**
+  String get miniAppsServerRestart;
+
+  /// No description provided for @miniAppsServerNoOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'No output yet.'**
+  String get miniAppsServerNoOutput;
+
+  /// No description provided for @miniAppsServerRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running on port {port}'**
+  String miniAppsServerRunning(String port);
+
+  /// No description provided for @miniAppsServerExited.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped with code {code}'**
+  String miniAppsServerExited(String code);
+
+  /// No description provided for @miniAppsSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search apps'**
+  String get miniAppsSearch;
+
+  /// No description provided for @miniAppsBadgeGame.
+  ///
+  /// In en, this message translates to:
+  /// **'Game'**
+  String get miniAppsBadgeGame;
+
+  /// No description provided for @miniAppsJobFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Background job \"{job}\" failed. Open the app to see why.'**
+  String miniAppsJobFailed(String job);
+
+  /// No description provided for @miniAppsMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get miniAppsMore;
+
+  /// No description provided for @miniAppsErrors.
+  ///
+  /// In en, this message translates to:
+  /// **'Error log'**
+  String get miniAppsErrors;
+
+  /// No description provided for @miniAppsErrorsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No errors recorded.'**
+  String get miniAppsErrorsEmpty;
+
+  /// No description provided for @miniAppsErrorsFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Errors of the current version. Ask the agent in the chat to fix the app: it reads this log.'**
+  String get miniAppsErrorsFooter;
+
+  /// No description provided for @miniAppsErrorsCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy all'**
+  String get miniAppsErrorsCopy;
+
+  /// No description provided for @miniAppsErrorsCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Log copied'**
+  String get miniAppsErrorsCopied;
+
+  /// No description provided for @miniAppsErrorsClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get miniAppsErrorsClear;
+
+  /// No description provided for @miniAppsVersions.
+  ///
+  /// In en, this message translates to:
+  /// **'Versions'**
+  String get miniAppsVersions;
+
+  /// No description provided for @miniAppsVersionsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No earlier versions yet.'**
+  String get miniAppsVersionsEmpty;
+
+  /// No description provided for @miniAppsVersionsFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Moru keeps the last 5 versions. Rolling back changes only the app\'s code; its data and reminders stay. The current version is kept, so you can return to it.'**
+  String get miniAppsVersionsFooter;
+
+  /// No description provided for @miniAppsVersionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Roll back “{name}”'**
+  String miniAppsVersionsTitle(String name);
+
+  /// No description provided for @miniAppsRolledBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored the version of {date}'**
+  String miniAppsRolledBack(String date);
+
   /// No description provided for @phoneControlTitle.
   ///
   /// In en, this message translates to:
@@ -20356,6 +21724,1426 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skip per-action confirmations for browser, MCP, shell, file writes, and other tools that normally require approval.'**
   String get toolApprovalsFullTrustDescription;
+
+  /// Above a streaming reasoning that shows only its end; shown and total are sizes like 8K.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing the last {shown} of {total} characters'**
+  String chatReasoningTailHint(String shown, String total);
+
+  /// Long-press menu of a tool call: copies the call, its arguments and result.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy details'**
+  String get chatToolCopyDetails;
+
+  /// Long-press menu of a tool call: regenerates the reply it belongs to.
+  ///
+  /// In en, this message translates to:
+  /// **'Rerun from here'**
+  String get chatToolRerunFromHere;
+
+  /// Sheet opened from the context ring by the send button.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat tokens'**
+  String get chatTokensTitle;
+
+  /// No description provided for @chatTokensContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Context'**
+  String get chatTokensContext;
+
+  /// No description provided for @chatTokensContextUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'In use'**
+  String get chatTokensContextUsed;
+
+  /// No description provided for @chatTokensContextWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Context window'**
+  String get chatTokensContextWindow;
+
+  /// No description provided for @chatTokensMaxOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'Max reply'**
+  String get chatTokensMaxOutput;
+
+  /// No description provided for @chatTokensSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'Spent in this chat'**
+  String get chatTokensSpent;
+
+  /// No description provided for @chatTokensInput.
+  ///
+  /// In en, this message translates to:
+  /// **'Input'**
+  String get chatTokensInput;
+
+  /// No description provided for @chatTokensOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'Output'**
+  String get chatTokensOutput;
+
+  /// No description provided for @chatTokensCached.
+  ///
+  /// In en, this message translates to:
+  /// **'From cache'**
+  String get chatTokensCached;
+
+  /// No description provided for @chatTokensReplies.
+  ///
+  /// In en, this message translates to:
+  /// **'Replies'**
+  String get chatTokensReplies;
+
+  /// No description provided for @chatTokensCost.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost'**
+  String get chatTokensCost;
+
+  /// Composer placeholders shown in turn, one more each time the field is focused.
+  ///
+  /// In en, this message translates to:
+  /// **'Type while AI answers: your message waits in line'**
+  String get chatInputHintQueue;
+
+  /// No description provided for @chatInputHintMiniApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask for a mini app: a tracker, a game, a tool'**
+  String get chatInputHintMiniApp;
+
+  /// No description provided for @chatInputHintPaste.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste long text: it becomes a file'**
+  String get chatInputHintPaste;
+
+  /// No description provided for @chatInputHintTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the ring by Send to see the tokens'**
+  String get chatInputHintTokens;
+
+  /// No description provided for @chatInputHintToolMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press a tool step to copy or rerun it'**
+  String get chatInputHintToolMenu;
+
+  /// Copies the message as rich text (HTML) that keeps headings, lists and tables when pasted.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy with formatting'**
+  String get messageMoreSheetCopyFormatted;
+
+  /// No description provided for @agentsMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent mode'**
+  String get agentsMode;
+
+  /// Chip and sheet title for the live agent session options such as its model and reasoning effort.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent options'**
+  String get agentsSessionOptions;
+
+  /// No description provided for @agentsImageNotSent.
+  ///
+  /// In en, this message translates to:
+  /// **'An image was not sent to the agent.'**
+  String get agentsImageNotSent;
+
+  /// No description provided for @agentsErrorApiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid API key for the provider.'**
+  String get agentsErrorApiKey;
+
+  /// No description provided for @agentsErrorModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model not found. Check the provider model settings.'**
+  String get agentsErrorModel;
+
+  /// No description provided for @agentsErrorNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'No network connection. Check your connection and try again.'**
+  String get agentsErrorNetwork;
+
+  /// No description provided for @agentsErrorHeaders.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider headers contain an invalid name or a line break. Check the provider header settings.'**
+  String get agentsErrorHeaders;
+
+  /// No description provided for @agentsErrorTemporaryDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'The agent cannot use its temporary directory. Check the Linux environment and try again.'**
+  String get agentsErrorTemporaryDirectory;
+
+  /// No description provided for @agentsShowDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Show details'**
+  String get agentsShowDetails;
+
+  /// No description provided for @agentsHideDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide details'**
+  String get agentsHideDetails;
+
+  /// No description provided for @agentsDescKimiCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Moonshot’s coding agent: edits files and runs commands.'**
+  String get agentsDescKimiCode;
+
+  /// No description provided for @agentsDescDeepSeekHarness.
+  ///
+  /// In en, this message translates to:
+  /// **'DeepSeek’s coding agent: works on files and commands in a workspace.'**
+  String get agentsDescDeepSeekHarness;
+
+  /// No description provided for @agentsApiCompatible.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses the Moru provider with Anthropic, Chat Completions or Responses API.'**
+  String get agentsApiCompatible;
+
+  /// No description provided for @agentsWebOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open web interface'**
+  String get agentsWebOpen;
+
+  /// No description provided for @agentsWebStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get agentsWebStop;
+
+  /// No description provided for @agentsWebStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting the web interface…'**
+  String get agentsWebStarting;
+
+  /// No description provided for @agentsWebRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'The web interface is running in the background.'**
+  String get agentsWebRunning;
+
+  /// No description provided for @agentsWebTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The agent did not print a local web address within 120 seconds. Stop it and try again.'**
+  String get agentsWebTimeout;
+
+  /// No description provided for @agentsWebExited.
+  ///
+  /// In en, this message translates to:
+  /// **'The web process exited. Open the interface again to restart it.'**
+  String get agentsWebExited;
+
+  /// No description provided for @agentsWebStartFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start the web interface. Check the Linux environment, agent installation and Node.js version.'**
+  String get agentsWebStartFailed;
+
+  /// No description provided for @agentsWebStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'The web interface was stopped.'**
+  String get agentsWebStopped;
+
+  /// No description provided for @agentsWebDeepSeekWorkspace.
+  ///
+  /// In en, this message translates to:
+  /// **'For DeepSeek Harness, choose or add /workspace in the web interface.'**
+  String get agentsWebDeepSeekWorkspace;
+
+  /// No description provided for @agentsNodeVersionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'{agent} requires Node.js {requiredVersion}. Detected in the Linux environment: {actual}. Update Node.js, reopen this card and try again.'**
+  String agentsNodeVersionRequired(
+    String agent,
+    String requiredVersion,
+    String actual,
+  );
+
+  /// No description provided for @agentsNodeVersionUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'version unavailable'**
+  String get agentsNodeVersionUnknown;
+
+  /// No description provided for @agentsNodeUpdateDebian.
+  ///
+  /// In en, this message translates to:
+  /// **'In the Linux terminal, install Node.js 24 from the official NodeSource repository:\napt-get update\napt-get install -y ca-certificates curl bash\ncurl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/moru-node24-setup.sh\nbash /tmp/moru-node24-setup.sh\napt-get install -y nodejs\nnode --version\nnpm --version\nInstructions: https://github.com/nodesource/distributions/blob/master/DEV_README.md'**
+  String get agentsNodeUpdateDebian;
+
+  /// No description provided for @agentsNodeUpdateAlpine.
+  ///
+  /// In en, this message translates to:
+  /// **'In the Linux terminal, update the Alpine packages:\napk update\napk add --upgrade nodejs npm\nnode --version\nnpm --version'**
+  String get agentsNodeUpdateAlpine;
+
+  /// No description provided for @agentsNodeUpdateUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'No verified upgrade method is available for this distribution. Check its official Node.js installation instructions; then reopen this card.'**
+  String get agentsNodeUpdateUnknown;
+
+  /// No description provided for @workspaceEnvGroupDevelopment.
+  ///
+  /// In en, this message translates to:
+  /// **'Development'**
+  String get workspaceEnvGroupDevelopment;
+
+  /// No description provided for @workspaceEnvGroupAgents.
+  ///
+  /// In en, this message translates to:
+  /// **'AI agents'**
+  String get workspaceEnvGroupAgents;
+
+  /// No description provided for @workspaceEnvGroupAgentsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'“Prepare for agents” installs what coding agents need from the system; open an agent to install, update or check it.'**
+  String get workspaceEnvGroupAgentsDetail;
+
+  /// No description provided for @workspaceEnvGroupSsh.
+  ///
+  /// In en, this message translates to:
+  /// **'SSH'**
+  String get workspaceEnvGroupSsh;
+
+  /// No description provided for @workspaceEnvPrepareAgents.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare for agents'**
+  String get workspaceEnvPrepareAgents;
+
+  /// No description provided for @workspaceEnvPrepareAgentsDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything agents need is installed'**
+  String get workspaceEnvPrepareAgentsDone;
+
+  /// No description provided for @workspaceEnvDependencyBuildTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Build tools'**
+  String get workspaceEnvDependencyBuildTitle;
+
+  /// No description provided for @workspaceEnvDependencyBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'Compiler and make, to build Node and Python modules'**
+  String get workspaceEnvDependencyBuild;
+
+  /// No description provided for @workspaceEnvDependencyProcessesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Processes'**
+  String get workspaceEnvDependencyProcessesTitle;
+
+  /// No description provided for @workspaceEnvDependencyCompatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'glibc compatibility'**
+  String get workspaceEnvDependencyCompatTitle;
+
+  /// No description provided for @workspaceEnvDependencyCompat.
+  ///
+  /// In en, this message translates to:
+  /// **'Runs programs built for regular Linux on Alpine'**
+  String get workspaceEnvDependencyCompat;
+
+  /// No description provided for @workspaceEnvDependencyBash.
+  ///
+  /// In en, this message translates to:
+  /// **'The shell agents and scripts run commands in'**
+  String get workspaceEnvDependencyBash;
+
+  /// No description provided for @workspaceEnvDependencyRipgrep.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast code search, used by coding agents'**
+  String get workspaceEnvDependencyRipgrep;
+
+  /// No description provided for @workspaceEnvDependencySshTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'SSH client'**
+  String get workspaceEnvDependencySshTitle;
+
+  /// No description provided for @workspaceEnvDependencySshpass.
+  ///
+  /// In en, this message translates to:
+  /// **'Password logins for scripts'**
+  String get workspaceEnvDependencySshpass;
+
+  /// No description provided for @workspaceEnvDependencySshdTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'SSH server'**
+  String get workspaceEnvDependencySshdTitle;
+
+  /// No description provided for @workspaceEnvDependencySshd.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to the phone over SSH'**
+  String get workspaceEnvDependencySshd;
+
+  /// No description provided for @workspaceEnvInstallSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Install selected ({count})'**
+  String workspaceEnvInstallSelected(int count);
+
+  /// No description provided for @agentsCodexResponsesRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Codex only works with providers that support the OpenAI Responses API. Enable it in the provider settings or choose another agent.'**
+  String get agentsCodexResponsesRequired;
+
+  /// No description provided for @backgroundReliabilityHintTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep this task running'**
+  String get backgroundReliabilityHintTitle;
+
+  /// No description provided for @backgroundReliabilityHintDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Background execution is off. Enable it to keep this task running when you switch apps or turn off the screen.'**
+  String get backgroundReliabilityHintDisabled;
+
+  /// No description provided for @backgroundReliabilityHintRestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Android restricts Moru in the background. Check the app’s battery settings before leaving this task.'**
+  String get backgroundReliabilityHintRestricted;
+
+  /// No description provided for @backgroundReliabilityHintStandby.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Power Standby can pause network access even while this task is running. Check your device’s power settings.'**
+  String get backgroundReliabilityHintStandby;
+
+  /// No description provided for @backgroundReliabilityHintVendor.
+  ///
+  /// In en, this message translates to:
+  /// **'Vivo and Xiaomi can stop background tasks. Allow background activity and autostart in system settings.'**
+  String get backgroundReliabilityHintVendor;
+
+  /// No description provided for @backgroundReliabilityHintInterrupted.
+  ///
+  /// In en, this message translates to:
+  /// **'A previous task stopped when Moru’s process ended. Check battery and background activity settings before leaving another task.'**
+  String get backgroundReliabilityHintInterrupted;
+
+  /// No description provided for @backgroundReliabilityHintSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Background settings'**
+  String get backgroundReliabilityHintSettings;
+
+  /// No description provided for @backgroundReliabilityHintDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss tip'**
+  String get backgroundReliabilityHintDismiss;
+
+  /// No description provided for @backgroundLowPowerStandby.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Power Standby'**
+  String get backgroundLowPowerStandby;
+
+  /// No description provided for @backgroundLowPowerStandbyDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'This device mode can restrict network access even with a foreground service. A battery optimization exception does not always disable it.'**
+  String get backgroundLowPowerStandbyDetail;
+
+  /// No description provided for @backgroundPowerRestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Restricted'**
+  String get backgroundPowerRestricted;
+
+  /// No description provided for @backgroundPowerUnrestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'No restriction reported'**
+  String get backgroundPowerUnrestricted;
+
+  /// No description provided for @backgroundShellRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running background command'**
+  String get backgroundShellRunning;
+
+  /// No description provided for @backgroundServerRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Mini app server running'**
+  String get backgroundServerRunning;
+
+  /// No description provided for @backgroundProtectionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Background protection could not start. Keep Moru open and try again.'**
+  String get backgroundProtectionUnavailable;
+
+  /// No description provided for @chatInterruptedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The app stopped before this reply finished. Your saved partial reply and queued messages are preserved. Continuing starts a new turn.'**
+  String get chatInterruptedBody;
+
+  /// No description provided for @chatContinueAfterInterruption.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get chatContinueAfterInterruption;
+
+  /// No description provided for @chatContinuePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue from the saved context after the interruption. Check what has already completed before taking further actions.'**
+  String get chatContinuePrompt;
+
+  /// No description provided for @queuedInputSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save the queued message. Your draft is still available.'**
+  String get queuedInputSaveFailed;
+
+  /// No description provided for @notificationApprovalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval needed'**
+  String get notificationApprovalTitle;
+
+  /// No description provided for @notificationApprovalBody.
+  ///
+  /// In en, this message translates to:
+  /// **'An agent is waiting for your decision.'**
+  String get notificationApprovalBody;
+
+  /// No description provided for @notificationApprovalAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get notificationApprovalAllow;
+
+  /// No description provided for @notificationApprovalDeny.
+  ///
+  /// In en, this message translates to:
+  /// **'Deny'**
+  String get notificationApprovalDeny;
+
+  /// No description provided for @notificationApprovalStaleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval no longer available'**
+  String get notificationApprovalStaleTitle;
+
+  /// No description provided for @notificationApprovalStaleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the chat to check this request.'**
+  String get notificationApprovalStaleBody;
+
+  /// No description provided for @notificationApprovalChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent approvals'**
+  String get notificationApprovalChannelName;
+
+  /// No description provided for @notificationApprovalChannelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Decisions requested by a running agent or tool.'**
+  String get notificationApprovalChannelDescription;
+
+  /// No description provided for @backgroundShellCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Background command finished'**
+  String get backgroundShellCompleted;
+
+  /// No description provided for @backgroundShellFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Background command failed'**
+  String get backgroundShellFailed;
+
+  /// No description provided for @agentsAuthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with subscription'**
+  String get agentsAuthTitle;
+
+  /// No description provided for @agentsAuthMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication'**
+  String get agentsAuthMode;
+
+  /// No description provided for @agentsAuthProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'API provider'**
+  String get agentsAuthProvider;
+
+  /// No description provided for @agentsAuthSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription'**
+  String get agentsAuthSubscription;
+
+  /// No description provided for @agentsAuthProviderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this assistant’s API provider settings.'**
+  String get agentsAuthProviderHint;
+
+  /// No description provided for @agentsAuthSubscriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the agent’s own Claude or ChatGPT sign-in. API provider keys and model overrides are not used.'**
+  String get agentsAuthSubscriptionHint;
+
+  /// No description provided for @agentsAuthSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get agentsAuthSignIn;
+
+  /// No description provided for @agentsAuthCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check sign-in'**
+  String get agentsAuthCheck;
+
+  /// No description provided for @agentsAuthSignOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get agentsAuthSignOut;
+
+  /// No description provided for @agentsAuthSignedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in'**
+  String get agentsAuthSignedIn;
+
+  /// No description provided for @agentsAuthSignedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in required'**
+  String get agentsAuthSignedOut;
+
+  /// No description provided for @agentsAuthUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in not checked'**
+  String get agentsAuthUnknown;
+
+  /// No description provided for @agentsAuthWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete sign-in in your browser.'**
+  String get agentsAuthWaiting;
+
+  /// No description provided for @agentsAuthOpenBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open sign-in page'**
+  String get agentsAuthOpenBrowser;
+
+  /// No description provided for @agentsAuthDeviceCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Device code'**
+  String get agentsAuthDeviceCode;
+
+  /// No description provided for @agentsAuthCodexHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable device code login in ChatGPT Settings → Security before signing in.'**
+  String get agentsAuthCodexHint;
+
+  /// No description provided for @agentsAuthCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorization code'**
+  String get agentsAuthCode;
+
+  /// No description provided for @agentsAuthSubmitCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit code'**
+  String get agentsAuthSubmitCode;
+
+  /// No description provided for @agentsAuthCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If your browser asks you to copy a code, paste the complete code here, including the part after #.'**
+  String get agentsAuthCodeHint;
+
+  /// No description provided for @agentsAuthCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel sign-in'**
+  String get agentsAuthCancel;
+
+  /// No description provided for @agentsAuthFailureEnvironment.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up the Linux environment first.'**
+  String get agentsAuthFailureEnvironment;
+
+  /// No description provided for @agentsAuthFailureStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in could not be completed. Update the agent and try again.'**
+  String get agentsAuthFailureStart;
+
+  /// No description provided for @agentsAuthFailureNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in failed because of a network connection. Try again.'**
+  String get agentsAuthFailureNetwork;
+
+  /// No description provided for @agentsAuthFailureTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in timed out. Try again.'**
+  String get agentsAuthFailureTimeout;
+
+  /// No description provided for @agentsAuthBrowserFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The sign-in page could not be opened. You can copy the link below.'**
+  String get agentsAuthBrowserFailed;
+
+  /// No description provided for @agentsErrorAuthRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'The agent needs authentication. Sign in under Settings → Agents, or check the selected provider’s API key.'**
+  String get agentsErrorAuthRequired;
+
+  /// No description provided for @agentsErrorAccountBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Codex is already active in another chat. Finish or stop that reply before continuing.'**
+  String get agentsErrorAccountBusy;
+
+  /// No description provided for @computerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Computer'**
+  String get computerTitle;
+
+  /// No description provided for @computerWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'AI is working…'**
+  String get computerWorking;
+
+  /// No description provided for @computerDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get computerDone;
+
+  /// No description provided for @computerError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get computerError;
+
+  /// No description provided for @computerPreviousStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous step'**
+  String get computerPreviousStep;
+
+  /// No description provided for @computerNextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step'**
+  String get computerNextStep;
+
+  /// No description provided for @computerLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to latest'**
+  String get computerLatest;
+
+  /// No description provided for @computerOpenTerminal.
+  ///
+  /// In en, this message translates to:
+  /// **'Open terminal'**
+  String get computerOpenTerminal;
+
+  /// No description provided for @computerOpenBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open live browser'**
+  String get computerOpenBrowser;
+
+  /// No description provided for @computerOpenFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview file'**
+  String get computerOpenFile;
+
+  /// No description provided for @computerCopyResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy result'**
+  String get computerCopyResult;
+
+  /// No description provided for @computerNoResult.
+  ///
+  /// In en, this message translates to:
+  /// **'No result yet'**
+  String get computerNoResult;
+
+  /// No description provided for @computerParameters.
+  ///
+  /// In en, this message translates to:
+  /// **'Parameters'**
+  String get computerParameters;
+
+  /// No description provided for @computerResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Result'**
+  String get computerResult;
+
+  /// No description provided for @browserFloatingWindowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Floating browser window'**
+  String get browserFloatingWindowTitle;
+
+  /// No description provided for @browserFloatingWindowDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Show a floating live browser when minimized. By default, AI actions appear in Computer above the composer.'**
+  String get browserFloatingWindowDescription;
+
+  /// No description provided for @computerMoreDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed result'**
+  String get computerMoreDetails;
+
+  /// No description provided for @computerStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped'**
+  String get computerStopped;
+
+  /// No description provided for @computerActionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} action} other{{count} actions}}'**
+  String computerActionsCount(int count);
+
+  /// No description provided for @computerViewAction.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get computerViewAction;
+
+  /// No description provided for @computerBackgroundOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'Background job output'**
+  String get computerBackgroundOutput;
+
+  /// No description provided for @computerBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'In background'**
+  String get computerBackground;
+
+  /// No description provided for @computerRunningElapsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Running · {elapsed}'**
+  String computerRunningElapsed(String elapsed);
+
+  /// No description provided for @computerExitElapsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit code {code} · {seconds} s'**
+  String computerExitElapsed(int code, String seconds);
+
+  /// No description provided for @computerBrowserStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser · {domain}'**
+  String computerBrowserStep(String domain);
+
+  /// No description provided for @computerPlanProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan · {completed}/{total}'**
+  String computerPlanProgress(int completed, int total);
+
+  /// No description provided for @computerFileStep.
+  ///
+  /// In en, this message translates to:
+  /// **'{action} · {name}'**
+  String computerFileStep(String action, String name);
+
+  /// No description provided for @computerAddedLines.
+  ///
+  /// In en, this message translates to:
+  /// **'(+{count} lines)'**
+  String computerAddedLines(int count);
+
+  /// No description provided for @computerActionCommand.
+  ///
+  /// In en, this message translates to:
+  /// **'Command'**
+  String get computerActionCommand;
+
+  /// No description provided for @computerActionOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get computerActionOpen;
+
+  /// No description provided for @computerActionClick.
+  ///
+  /// In en, this message translates to:
+  /// **'Click'**
+  String get computerActionClick;
+
+  /// No description provided for @computerActionType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get computerActionType;
+
+  /// No description provided for @computerActionRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Read'**
+  String get computerActionRead;
+
+  /// No description provided for @computerActionWrite.
+  ///
+  /// In en, this message translates to:
+  /// **'Write'**
+  String get computerActionWrite;
+
+  /// No description provided for @computerActionEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get computerActionEdit;
+
+  /// No description provided for @computerActionList.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get computerActionList;
+
+  /// No description provided for @computerActionPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get computerActionPlan;
+
+  /// No description provided for @computerActionScreenshot.
+  ///
+  /// In en, this message translates to:
+  /// **'Screenshot'**
+  String get computerActionScreenshot;
+
+  /// No description provided for @computerBrowserOpening.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening…'**
+  String get computerBrowserOpening;
+
+  /// No description provided for @computerBrowserClicking.
+  ///
+  /// In en, this message translates to:
+  /// **'Clicking…'**
+  String get computerBrowserClicking;
+
+  /// No description provided for @computerBrowserTyping.
+  ///
+  /// In en, this message translates to:
+  /// **'Typing…'**
+  String get computerBrowserTyping;
+
+  /// No description provided for @computerBrowserReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading page'**
+  String get computerBrowserReading;
+
+  /// No description provided for @computerAllParameters.
+  ///
+  /// In en, this message translates to:
+  /// **'All parameters (JSON)'**
+  String get computerAllParameters;
+
+  /// No description provided for @computerParameterDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'Directory'**
+  String get computerParameterDirectory;
+
+  /// No description provided for @computerParameterBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get computerParameterBackground;
+
+  /// No description provided for @computerParameterTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeout'**
+  String get computerParameterTimeout;
+
+  /// No description provided for @computerParameterUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'URL'**
+  String get computerParameterUrl;
+
+  /// No description provided for @computerParameterSelector.
+  ///
+  /// In en, this message translates to:
+  /// **'Selector'**
+  String get computerParameterSelector;
+
+  /// No description provided for @computerParameterText.
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get computerParameterText;
+
+  /// No description provided for @computerParameterPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Path'**
+  String get computerParameterPath;
+
+  /// No description provided for @computerParameterRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Range'**
+  String get computerParameterRange;
+
+  /// No description provided for @computerStepPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String computerStepPosition(int current, int total);
+
+  /// No description provided for @browserActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions'**
+  String get browserActions;
+
+  /// No description provided for @browserActionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions · {count}'**
+  String browserActionsCount(int count);
+
+  /// No description provided for @browserCloseBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Close browser'**
+  String get browserCloseBrowser;
+
+  /// No description provided for @browserCloseWhileAiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Close browser?'**
+  String get browserCloseWhileAiTitle;
+
+  /// No description provided for @browserCloseWhileAiMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The AI action will stop.'**
+  String get browserCloseWhileAiMessage;
+
+  /// No description provided for @computerActionSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get computerActionSummary;
+
+  /// No description provided for @computerBrowserResultStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get computerBrowserResultStatus;
+
+  /// No description provided for @computerBrowserResultSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Success'**
+  String get computerBrowserResultSuccess;
+
+  /// No description provided for @computerBrowserResultError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get computerBrowserResultError;
+
+  /// No description provided for @computerBrowserResultTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get computerBrowserResultTitle;
+
+  /// No description provided for @computerParameterYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get computerParameterYes;
+
+  /// No description provided for @computerParameterNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get computerParameterNo;
+
+  /// No description provided for @computerBrowserAction.
+  ///
+  /// In en, this message translates to:
+  /// **'{action, select, open{Open} observe{Inspect} screenshot{Screenshot} read{Read} collect{Collect} outline{Page outline} wait_stable{Wait until loaded} wait_for{Wait for element} back{Back} forward{Forward} reload{Reload} scroll{Scroll} tabs{Tabs} new_tab{New tab} switch_tab{Switch tab} close_tab{Close tab} set_mode{Site mode} close{Close browser} done{Done} click{Click} hover{Hover} type{Type} submit{Submit form} press_key{Press key} eval_js{Run page code} fetch{Page request} export_cookies{Export cookies} other{Browser action}}'**
+  String computerBrowserAction(String action);
+
+  /// No description provided for @problemReportToolTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Problem report'**
+  String get problemReportToolTitle;
+
+  /// No description provided for @problemReportToolSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a private ZIP of technical diagnostics. Confirmation is required every time.'**
+  String get problemReportToolSubtitle;
+
+  /// No description provided for @problemReportConsent.
+  ///
+  /// In en, this message translates to:
+  /// **'The ZIP will contain:\n• App version and build number\n• Android version, manufacturer and device model\n• Environment mode: PRoot/root\n• Interface, tool and logging settings and provider types, without secrets\n• Technical events from this app run: event names, error types and stack frames (up to 128 KiB)\nChats, message text and request/context logs are excluded. Secrets are removed. The report is deleted at the next app launch or expires after 24 hours.'**
+  String get problemReportConsent;
+
+  /// No description provided for @problemReportUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This report was deleted or could not be shared. Create a new report.'**
+  String get problemReportUnavailable;
+
+  /// No description provided for @mcpManagerToolTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage MCP servers'**
+  String get mcpManagerToolTitle;
+
+  /// No description provided for @mcpManagerToolSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let the model add, configure and test MCP servers after confirmation. Secrets are entered privately.'**
+  String get mcpManagerToolSubtitle;
+
+  /// No description provided for @mcpManagerActionList.
+  ///
+  /// In en, this message translates to:
+  /// **'List MCP servers'**
+  String get mcpManagerActionList;
+
+  /// No description provided for @mcpManagerActionGet.
+  ///
+  /// In en, this message translates to:
+  /// **'Read MCP server'**
+  String get mcpManagerActionGet;
+
+  /// No description provided for @mcpManagerActionAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add MCP server'**
+  String get mcpManagerActionAdd;
+
+  /// No description provided for @mcpManagerActionUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update MCP server'**
+  String get mcpManagerActionUpdate;
+
+  /// No description provided for @mcpManagerActionEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable MCP server'**
+  String get mcpManagerActionEnable;
+
+  /// No description provided for @mcpManagerActionDisable.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable MCP server'**
+  String get mcpManagerActionDisable;
+
+  /// No description provided for @mcpManagerActionRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove MCP server'**
+  String get mcpManagerActionRemove;
+
+  /// No description provided for @mcpManagerActionTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Test MCP server'**
+  String get mcpManagerActionTest;
+
+  /// No description provided for @mcpManagerActionSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Select MCP server for assistant'**
+  String get mcpManagerActionSelect;
+
+  /// No description provided for @mcpManagerActionUnselect.
+  ///
+  /// In en, this message translates to:
+  /// **'Unselect MCP server for assistant'**
+  String get mcpManagerActionUnselect;
+
+  /// No description provided for @mcpManagerActionSetTool.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure MCP tool'**
+  String get mcpManagerActionSetTool;
+
+  /// No description provided for @mcpManagerSecretHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter secret values here. They are saved only in MCP settings and are never sent to the model or chat history. Include Bearer/Basic when needed for a header.'**
+  String get mcpManagerSecretHint;
+
+  /// No description provided for @mcpManagerPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Current configuration'**
+  String get mcpManagerPrevious;
+
+  /// No description provided for @mcpManagerValueSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Value set'**
+  String get mcpManagerValueSet;
+
+  /// No description provided for @mcpManagerValueNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Value needed'**
+  String get mcpManagerValueNeeded;
+
+  /// No description provided for @spendControlTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spend control'**
+  String get spendControlTitle;
+
+  /// No description provided for @spendControlSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Check spending and compact context. Changes ask for confirmation.'**
+  String get spendControlSubtitle;
+
+  /// No description provided for @spendLimitsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending limits'**
+  String get spendLimitsTitle;
+
+  /// No description provided for @spendLimitsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional budgets for each chat and the device’s local day. Clear a value to disable it. Tokens count input + output; cached tokens are part of input. Prices may be incomplete.'**
+  String get spendLimitsNote;
+
+  /// No description provided for @spendChatUsd.
+  ///
+  /// In en, this message translates to:
+  /// **'Per chat · USD'**
+  String get spendChatUsd;
+
+  /// No description provided for @spendChatTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Per chat · tokens'**
+  String get spendChatTokens;
+
+  /// No description provided for @spendDailyUsd.
+  ///
+  /// In en, this message translates to:
+  /// **'Per day · USD'**
+  String get spendDailyUsd;
+
+  /// No description provided for @spendDailyTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Per day · tokens'**
+  String get spendDailyTokens;
+
+  /// No description provided for @spendWarningThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'Warning threshold'**
+  String get spendWarningThreshold;
+
+  /// No description provided for @spendHardStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Hard stop'**
+  String get spendHardStop;
+
+  /// No description provided for @spendHardStopNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop the current reply and block new requests when an enabled budget is exhausted. Unknown costs cannot enforce a dollar limit.'**
+  String get spendHardStopNote;
+
+  /// No description provided for @spendHardStopMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending limit reached. Change the limits or turn off Hard stop in Statistics.'**
+  String get spendHardStopMessage;
+
+  /// No description provided for @spendCacheShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Cache {percent}%'**
+  String spendCacheShare(String percent);
+
+  /// No description provided for @spendResponseStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply stopped: spending limit reached. Change limits in Statistics to continue.'**
+  String get spendResponseStopped;
+
+  /// No description provided for @spendDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get spendDisabled;
+
+  /// No description provided for @spendValueHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty means no limit'**
+  String get spendValueHint;
+
+  /// No description provided for @spendInvalidValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a positive number, or clear to disable. Token limits need whole numbers.'**
+  String get spendInvalidValue;
+
+  /// No description provided for @spendInvalidThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a whole percentage from 1 to 100.'**
+  String get spendInvalidThreshold;
+
+  /// No description provided for @spendChatRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat: {remaining} left'**
+  String spendChatRemaining(String remaining);
+
+  /// No description provided for @spendDailyRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Today: {remaining} left'**
+  String spendDailyRemaining(String remaining);
+
+  /// No description provided for @spendWarningHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget warning · {remaining}'**
+  String spendWarningHint(String remaining);
+
+  /// No description provided for @spendLimitReachedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget reached · {remaining}'**
+  String spendLimitReachedHint(String remaining);
+
+  /// No description provided for @spendTokenAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tokens'**
+  String spendTokenAmount(String count);
+
+  /// No description provided for @spendPartialPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price incomplete; remaining USD is an upper bound.'**
+  String get spendPartialPrice;
+
+  /// No description provided for @spendCompactAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact context'**
+  String get spendCompactAction;
+
+  /// No description provided for @spendSetLimitsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Change spending limits'**
+  String get spendSetLimitsAction;
+
+  /// No description provided for @spendStatusAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Check spending'**
+  String get spendStatusAction;
+
+  /// No description provided for @spendCompactNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Compression creates a new chat with a summary using your compression settings. The original chat stays available; this reply finishes there.'**
+  String get spendCompactNote;
 }
 
 class _AppLocalizationsDelegate

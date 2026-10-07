@@ -20,6 +20,128 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('ToolHandlerService tool schema sanitization', () {
+    for (final kind in const [
+      ProviderKind.openai,
+      ProviderKind.claude,
+      ProviderKind.local,
+    ]) {
+      test('preserves nested schema constraints for $kind', () {
+        final number = <String, dynamic>{
+          'type': 'number',
+          'minimum': 1,
+          'maximum': 10,
+          'exclusiveMinimum': 0,
+          'exclusiveMaximum': 11,
+          'default': 5,
+          'title': 'Amount',
+        };
+        final string = <String, dynamic>{
+          'type': 'string',
+          'minLength': 1,
+          'maxLength': 40,
+          'pattern': r'^[a-z]+$',
+          'format': 'hostname',
+          'default': 'example',
+          'title': 'Host',
+        };
+        final schema = <String, dynamic>{
+          'type': 'object',
+          'title': 'Options',
+          'default': {'title': 'literal', 'custom': true},
+          r'$defs': {'Amount': number},
+          'properties': {
+            'amount': {r'$ref': r'#/$defs/Amount'},
+            'hosts': {
+              'type': 'array',
+              'minItems': 1,
+              'maxItems': 3,
+              'uniqueItems': true,
+              'default': ['example'],
+              'items': string,
+            },
+            'overrides': {'type': 'object', 'additionalProperties': number},
+          },
+        };
+
+        final output = ToolHandlerService.sanitizeToolParametersForProvider(
+          schema,
+          kind,
+        );
+
+        expect(output['title'], 'Options');
+        expect(output['default'], {'title': 'literal', 'custom': true});
+        final properties = output['properties'] as Map;
+        expect(properties['amount'], number);
+        expect(properties['hosts'], {
+          'type': 'array',
+          'minItems': 1,
+          'maxItems': 3,
+          'uniqueItems': true,
+          'default': ['example'],
+          'items': string,
+        });
+        expect(properties['overrides']['additionalProperties'], number);
+        expect(schema[r'$defs'], {'Amount': number});
+      });
+    }
+
+    test('preserves only Gemini-supported constraints for Google', () {
+      final output = ToolHandlerService.sanitizeToolParametersForProvider({
+        'type': 'object',
+        'title': 'Options',
+        'default': {'custom': true},
+        'properties': {
+          'amount': {
+            'type': 'number',
+            'minimum': 1,
+            'maximum': 10,
+            'exclusiveMinimum': 0,
+            'exclusiveMaximum': 11,
+          },
+          'hosts': {
+            'type': 'array',
+            'minItems': 1,
+            'maxItems': 3,
+            'uniqueItems': true,
+            'items': {
+              'type': 'string',
+              'minLength': 1,
+              'maxLength': 40,
+              'pattern': r'^[a-z]+$',
+              'format': 'hostname',
+              'title': 'Host',
+              'default': 'example',
+            },
+          },
+        },
+      }, ProviderKind.google);
+
+      expect(output['title'], 'Options');
+      expect(output['default'], {'custom': true});
+      expect(output['properties']['amount'], {
+        'type': 'number',
+        'minimum': 1,
+        'maximum': 10,
+        'description':
+            'Source constraint exclusiveMinimum: 0.\nSource constraint exclusiveMaximum: 11.',
+      });
+      expect(output['properties']['hosts'], {
+        'type': 'array',
+        'minItems': 1,
+        'maxItems': 3,
+        'description': 'Source constraint uniqueItems: true.',
+        'items': {
+          'type': 'string',
+          'minLength': 1,
+          'maxLength': 40,
+          'pattern': r'^[a-z]+$',
+          'format': 'hostname',
+          'title': 'Host',
+          'default': 'example',
+        },
+      });
+    });
+
     for (final kind in const [ProviderKind.openai, ProviderKind.claude]) {
       test('preserves and sanitizes additionalProperties for $kind', () {
         final input = <String, dynamic>{
@@ -129,9 +251,17 @@ void main() {
       }, ProviderKind.openai);
 
       final props = output['properties'] as Map<String, dynamic>;
-      expect(props['remote'], {'description': 'kept'});
-      expect(props['dangling'], isEmpty);
-      expect(props['anchor'], isEmpty);
+      expect(
+        props['remote']['description'],
+        startsWith('kept\nUnresolved schema reference:'),
+      );
+      for (final name in ['remote', 'dangling', 'anchor']) {
+        expect(props[name], isNot(contains('type')));
+        expect(
+          props[name]['description'],
+          contains('Unresolved schema reference:'),
+        );
+      }
     });
 
     test('cuts a recursive \$ref without inventing a type', () {
@@ -259,9 +389,18 @@ void main() {
           'post',
           'text',
         }, reason: '$kind');
-        expect((output['properties']['early'] as Map)['items'], {
-          'type': 'string',
-        });
+        final early = output['properties']['early'] as Map;
+        if (kind == ProviderKind.google) {
+          expect(
+            early['description'],
+            contains('Source constraint prefixItems:'),
+          );
+          expect(early['items']['anyOf'], isA<List>());
+        } else {
+          expect((early['prefixItems'] as List).first, {'type': 'string'});
+          expect((early['prefixItems'] as List).length, 2);
+          expect(early['items'], isEmpty);
+        }
       }
     });
 

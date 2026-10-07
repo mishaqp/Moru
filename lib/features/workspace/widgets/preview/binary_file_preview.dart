@@ -24,7 +24,6 @@ class BinaryFilePreview extends StatelessWidget {
   static const Key openWithKey = ValueKey<String>('file-preview-open-with');
   static const Key shareKey = ValueKey<String>('file-preview-share');
   static const Key exportKey = ValueKey<String>('file-preview-export');
-  static const Key revealKey = ValueKey<String>('file-preview-reveal');
 
   static const double desktopCardMaxWidth = 440;
 
@@ -132,15 +131,6 @@ class BinaryFilePreview extends StatelessWidget {
                       label: l10n.workspaceFilesExportItem,
                       onTap: () => unawaited(exportPreviewFile(context, file)),
                     ),
-                    if (desktop)
-                      IosTileButton(
-                        key: revealKey,
-                        icon: Lucide.FolderOpen,
-                        label: revealInFileManagerLabel(l10n),
-                        onTap: () => unawaited(
-                          revealPreviewFileInFileManager(context, file),
-                        ),
-                      ),
                   ],
                 ),
               ],

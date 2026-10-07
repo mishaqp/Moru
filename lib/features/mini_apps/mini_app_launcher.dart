@@ -14,19 +14,25 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/models/assistant.dart';
 import '../../core/providers/assistant_provider.dart';
+import '../../core/providers/environment_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/api/chat_api_service.dart';
 import '../../core/services/mini_apps/mini_app_bridge.dart';
 import '../../core/services/mini_apps/mini_app_fetch.dart';
+import '../../core/services/mini_apps/mini_app_jobs.dart';
 import '../../core/services/mini_apps/mini_app_reminders.dart';
+import '../../core/services/mini_apps/mini_app_servers.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/scheduled_tasks_service.dart';
+import '../../core/services/workspace/workspace_runtime.dart';
 import '../home/services/local_tools_service.dart';
 import '../../icons/lucide_adapter.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/ios_settings_rows.dart';
 import '../../shared/widgets/option_sheet.dart';
 import '../../shared/widgets/snackbar.dart';
+import 'mini_app_job_runner.dart';
 import 'pages/mini_app_page.dart';
 
 /// Opens mini apps from links, lists and home screen shortcuts.
@@ -54,6 +60,102 @@ class MiniAppLauncher {
     return reminders;
   }();
 
+  /// Servers of the open apps and running jobs.
+  static final MiniAppServers servers = MiniAppServers(
+    store: MiniAppStore.instance,
+    fetch: fetcher,
+  );
+
+  /// The Linux environment for app servers: the workspace runtime once it
+  /// is ready, and the environment variables from settings.
+  static MiniAppServerEnvironment serverEnvironment(
+    WorkspaceRuntimeProvider runtime,
+    EnvironmentProvider environment,
+  ) => MiniAppServerEnvironment(
+    runtime: () async {
+      await runtime.initialization;
+      final status = await runtime.refresh();
+      return status.ready ? runtime.runtime : null;
+    },
+    variables: () async => (await environment.loadExecutionConfig()).variables,
+  );
+
+  static MiniAppJobs? _jobs;
+
+  /// Background jobs of the installed apps; deleting an app unschedules its
+  /// own.
+  static MiniAppJobs get jobs => _jobs ??= () {
+    final jobs = MiniAppJobs(
+      store: MiniAppStore.instance,
+      scheduler: MiniAppJobScheduler.platform,
+    );
+    MiniAppStore.instance.addDeleteHook(jobs.cancelAll);
+    return jobs;
+  }();
+
+  /// Runs job [jobId] of app [appId] out of sight: the planner's executor
+  /// for mini app jobs.
+  static Future<void> runJob(
+    String appId,
+    String jobId,
+    String function,
+    ScheduledRunCancellation cancellation, {
+    required SettingsProvider settings,
+    required AssistantProvider assistants,
+    required MiniAppServerEnvironment environment,
+  }) async {
+    final store = MiniAppStore.instance;
+    await store.load();
+    final app = store.byId(appId);
+    if (app == null) {
+      // The app is gone; its job must not fire again.
+      await jobs.scheduler.delete(MiniAppJobs.scheduledId(appId, jobId));
+      throw StateError('app_missing');
+    }
+    await Future.wait([settings.loaded, assistants.loaded]);
+    final server = servers.lease(app, environment);
+    try {
+      await MiniAppJobRunner.run(
+        store: store,
+        app: app,
+        jobId: jobId,
+        function: function,
+        host: hostFor(
+          app,
+          settings,
+          assistants,
+          background: true,
+          server: server.fetch,
+          serverUrl: server.url,
+        ),
+        cancellation: cancellation,
+      );
+    } catch (e) {
+      // A silent journal entry is easy to miss; tell the user the job that
+      // was meant to run in the background did not, unless they cancelled it.
+      if (!cancellation.cancelled) {
+        unawaited(_notifyJobFailed(app, jobId).catchError((_) {}));
+      }
+      rethrow;
+    } finally {
+      await server.release();
+    }
+  }
+
+  static Future<void> _notifyJobFailed(MiniApp app, String jobId) async {
+    await NotificationService.ensureAndroidNotificationsPermission();
+    await NotificationService.showMiniApp(
+      id: MiniAppReminders.notificationIds(app.id, '_job_$jobId', null).first,
+      appId: app.id,
+      title: app.name,
+      body: jobFailedBody(jobId),
+    );
+  }
+
+  /// Text of that notification; the home page sets the user's language.
+  static String Function(String jobId) jobFailedBody = (jobId) =>
+      'Background job "$jobId" failed. Open the app to see why.';
+
   /// The model `moru.ai.ask` uses: the current assistant's chat model, else
   /// the default model, the same order the chat uses.
   static ({String provider, String model})? askModelFor(
@@ -67,13 +169,18 @@ class MiniAppLauncher {
     return (provider: provider, model: model);
   }
 
-  /// What [app] may use besides its storage: the chat model, notifications
-  /// and reminders.
+  /// What [app] may use besides its storage: the chat model, notifications,
+  /// reminders, jobs, vibration. [close] leaves the app screen; [background]
+  /// marks a run without one.
   static MiniAppHost hostFor(
     MiniApp app,
     SettingsProvider settings,
-    AssistantProvider assistants,
-  ) => MiniAppHost(
+    AssistantProvider assistants, {
+    Future<void> Function()? close,
+    bool background = false,
+    Future<Map<String, Object?>> Function(Map<String, dynamic> args)? server,
+    Future<String> Function(String path)? serverUrl,
+  }) => MiniAppHost(
     ask: (prompt, system) async {
       final target = askModelFor(settings, assistants.currentAssistant);
       if (target == null) {
@@ -107,6 +214,19 @@ class MiniAppLauncher {
     reminders: reminders,
     fetch: fetcher,
     calendar: _calendar,
+    vibrate: (pattern) =>
+        _channel.invokeMethod<void>('vibrate', {'pattern': pattern}),
+    haptic: (kind) => switch (kind) {
+      'medium' => HapticFeedback.mediumImpact(),
+      'heavy' => HapticFeedback.heavyImpact(),
+      'selection' => HapticFeedback.selectionClick(),
+      _ => HapticFeedback.lightImpact(),
+    },
+    close: close,
+    jobs: jobs,
+    background: background,
+    server: server,
+    serverUrl: serverUrl,
   );
 
   /// Shared by every open app, so connections are reused.
@@ -134,6 +254,8 @@ class MiniAppLauncher {
   static void ensureInitialized() {
     if (_initialized) return;
     _initialized = true;
+    unawaited(reminders.rescheduleAll().catchError((_) {}));
+    unawaited(jobs.rescheduleAll().catchError((_) {}));
     _channel.setMethodCallHandler((call) async {
       if (call.method != 'onOpenApp') return;
       final id = '${call.arguments ?? ''}'.trim();

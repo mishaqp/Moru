@@ -1,0 +1,171 @@
+/* Moru UI 1.0.0. Controls are opt-in through .moru-app / .moru-* classes. */
+:root, .moru-app[data-moru-theme="light"] {
+  --moru-bg: #fefbff;
+  --moru-surface: #ffffff;
+  --moru-text: #1a1b21;
+  --moru-muted: #45464f;
+  --moru-accent: #4d5c92;
+  --moru-on-accent: #ffffff;
+  --moru-border: #c6c6d0;
+  --moru-radius: 16px;
+  --moru-space: 16px;
+}
+
+:root[data-moru-theme="dark"], .moru-app[data-moru-theme="dark"] {
+  color-scheme: dark;
+  --moru-bg: #1a1b21;
+  --moru-surface: #25262d;
+  --moru-text: #f1f0f7;
+  --moru-muted: #c6c6d0;
+  --moru-accent: #b6c4ff;
+  --moru-on-accent: #1d2d61;
+  --moru-border: #45464f;
+}
+
+:root[data-moru-theme="light"], .moru-app[data-moru-theme="light"] {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-moru-theme]) {
+    color-scheme: dark;
+    --moru-bg: #1a1b21;
+    --moru-surface: #25262d;
+    --moru-text: #f1f0f7;
+    --moru-muted: #c6c6d0;
+    --moru-accent: #b6c4ff;
+    --moru-on-accent: #1d2d61;
+    --moru-border: #45464f;
+  }
+}
+
+.moru-app {
+  box-sizing: border-box;
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-top: calc(var(--moru-space) + max(env(safe-area-inset-top, 0px), var(--moru-safe-top, 0px)));
+  padding-right: calc(var(--moru-space) + max(env(safe-area-inset-right, 0px), var(--moru-safe-right, 0px)));
+  padding-bottom: calc(var(--moru-space) + max(env(safe-area-inset-bottom, 0px), var(--moru-safe-bottom, 0px)));
+  padding-left: calc(var(--moru-space) + max(env(safe-area-inset-left, 0px), var(--moru-safe-left, 0px)));
+  background: var(--moru-bg);
+  color: var(--moru-text);
+  font: 1rem/1.5 system-ui, sans-serif;
+  overflow-wrap: anywhere;
+  -webkit-text-size-adjust: 100%;
+}
+
+.moru-app *, .moru-app *::before, .moru-app *::after {
+  box-sizing: border-box;
+}
+
+.moru-app :is(h1, h2, h3, p) { margin: 0; }
+.moru-app h1 { font-size: clamp(1.5rem, 5vw, 2rem); line-height: 1.25; }
+.moru-app h2 { font-size: 1.25rem; line-height: 1.3; }
+.moru-app :is(img, canvas, video) { max-width: 100%; }
+.moru-app a { color: var(--moru-accent); text-underline-offset: 0.2em; }
+.moru-app :is(button, input, select, textarea) { font: inherit; }
+.moru-app :is(button, a, input, select, textarea) { -webkit-tap-highlight-color: transparent; }
+.moru-app :is(input, select, textarea) { scroll-margin-block: 24px; }
+
+.moru-container { width: 100%; max-width: 960px; margin-inline: auto; }
+.moru-stack { display: grid; gap: var(--moru-space); min-width: 0; }
+.moru-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-width: 0; }
+.moru-row > * { min-width: 0; }
+.moru-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: var(--moru-space); }
+.moru-muted { color: var(--moru-muted); }
+.moru-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+
+.moru-card {
+  min-width: 0;
+  padding: var(--moru-space);
+  background: var(--moru-surface);
+  border: 1px solid var(--moru-border);
+  border-radius: var(--moru-radius);
+}
+
+.moru-button, .moru-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 44px;
+  max-width: 100%;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--moru-accent);
+  color: var(--moru-on-accent);
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.moru-button--secondary, .moru-tab {
+  background: var(--moru-surface);
+  color: var(--moru-text);
+  border-color: var(--moru-border);
+}
+
+.moru-button--quiet { background: transparent; color: var(--moru-accent); }
+.moru-button:active:not(:disabled), .moru-tab:active:not(:disabled) { transform: scale(0.98); }
+.moru-button:disabled, .moru-tab:disabled,
+.moru-app :is(button, input, select, textarea):disabled,
+.moru-app [aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+
+.moru-app :focus-visible,
+.moru-button:focus-visible, .moru-tab:focus-visible {
+  outline: 3px solid var(--moru-accent);
+  outline-offset: 3px;
+}
+
+.moru-field { display: grid; gap: 6px; min-width: 0; font-weight: 500; }
+.moru-field :is(input, select, textarea), .moru-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--moru-border);
+  border-radius: 12px;
+  background: var(--moru-surface);
+  color: var(--moru-text);
+  font: inherit;
+  font-weight: 400;
+}
+.moru-field textarea, textarea.moru-input { min-height: 112px; resize: vertical; }
+.moru-field :is(input, textarea)::placeholder, .moru-input::placeholder { color: var(--moru-muted); opacity: 1; }
+.moru-field :is(input, select, textarea)[aria-invalid="true"] { border-style: dashed; border-width: 2px; }
+.moru-field small { font-weight: 400; color: var(--moru-muted); }
+.moru-checkbox { display: flex; gap: 10px; align-items: center; min-height: 44px; cursor: pointer; }
+.moru-checkbox input { width: 22px; height: 22px; accent-color: var(--moru-accent); }
+
+.moru-list { list-style: none; padding: 0; margin: 0; }
+.moru-list-item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 12px 0; }
+.moru-list-item + .moru-list-item { border-top: 1px solid var(--moru-border); }
+.moru-list-item > * { min-width: 0; }
+.moru-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 4px; scroll-padding-inline: 4px; }
+.moru-tab { flex: 0 0 auto; }
+.moru-tab[aria-selected="true"], .moru-tab[aria-current="page"] {
+  background: var(--moru-accent);
+  color: var(--moru-on-accent);
+  border-color: var(--moru-accent);
+}
+.moru-app [hidden] { display: none !important; }
+
+@media (max-width: 360px) {
+  .moru-app { --moru-space: 12px; }
+  .moru-button { padding-inline: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moru-app *, .moru-app *::before, .moru-app *::after,
+  .moru-button, .moru-tab { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .moru-button:active, .moru-tab:active { transform: none; }
+}

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:Kelivo/core/models/auto_retry_options.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'package:Kelivo/core/services/api/generation/spend_round_control.dart';
 import 'package:Kelivo/core/services/api/stream/stream_chunk.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -60,6 +61,137 @@ Future<HttpServer> _dropConnectionServer(void Function() onRequest) async {
 }
 
 void main() {
+  test(
+    'initial OpenAI retry does not inherit un-emitted failed usage',
+    () async {
+      var requests = 0;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.listen((request) async {
+        requests++;
+        await request.drain<void>();
+        request.response.headers.contentType = ContentType(
+          'text',
+          'event-stream',
+        );
+        if (requests == 1) {
+          request.response.write(
+            'data: ${jsonEncode({
+              'choices': [],
+              'usage': {
+                'prompt_tokens': 100,
+                'completion_tokens': 20,
+                'prompt_tokens_details': {'cached_tokens': 90},
+              },
+            })}\n\n',
+          );
+          request.response.write(
+            'data: {"error":{"message":"HTTP 429: too many requests"}}\n\n',
+          );
+        } else {
+          request.response.write(
+            'data: ${jsonEncode({
+              'choices': [
+                {
+                  'index': 0,
+                  'delta': {'content': 'recovered'},
+                  'finish_reason': 'stop',
+                },
+              ],
+              'usage': {
+                'prompt_tokens': 10,
+                'completion_tokens': 0,
+                'prompt_tokens_details': {'cached_tokens': 0},
+              },
+            })}\n\n',
+          );
+          request.response.write('data: [DONE]\n\n');
+        }
+        await request.response.close();
+      });
+      final control = SpendRoundControl(
+        beforeRequest: (usage, rounds) async => null,
+      );
+      final chunks = await ChatApiService.sendMessageStream(
+        config: _openAIConfig(
+          'http://${server.address.address}:${server.port}/v1',
+        ),
+        modelId: 'gpt-4o-mini',
+        messages: [
+          {'role': 'user', 'content': 'Hi'},
+        ],
+        retryOverride: _retryTwice(),
+        spendControl: control,
+      ).toList();
+
+      expect(requests, 2);
+      expect(chunks.whereType<RetryAttemptStart>(), hasLength(1));
+      expect(control.completedRounds, 1);
+      expect(control.completedUsage.promptTokens, 10);
+      expect(control.completedUsage.completionTokens, 0);
+      expect(control.completedUsage.cachedTokens, 0);
+      expect(control.pendingUsage, isNull);
+    },
+  );
+
+  test(
+    'initial Responses usage prevents replay after a transient error',
+    () async {
+      var requests = 0;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.listen((request) async {
+        requests++;
+        await request.drain<void>();
+        request.response.headers.contentType = ContentType(
+          'text',
+          'event-stream',
+        );
+        request.response.write(
+          'data: ${jsonEncode({
+            'output': {'content': ''},
+            'usage': {
+              'input_tokens': 100,
+              'output_tokens': 20,
+              'input_tokens_details': {'cached_tokens': 90},
+            },
+          })}\n\n',
+        );
+        request.response.write(
+          'data: {"error":{"message":"HTTP 429: too many requests"}}\n\n',
+        );
+        await request.response.close();
+      });
+      final control = SpendRoundControl(
+        beforeRequest: (usage, rounds) async => null,
+      );
+      final chunks = <StreamChunk>[];
+      await expectLater(
+        ChatApiService.sendMessageStream(
+          config: _openAIConfig(
+            'http://${server.address.address}:${server.port}/v1',
+          ).copyWith(useResponseApi: true),
+          modelId: 'gpt-4o-mini',
+          messages: [
+            {'role': 'user', 'content': 'Hi'},
+          ],
+          retryOverride: _retryTwice(),
+          spendControl: control,
+        ).map((chunk) {
+          chunks.add(chunk);
+          return chunk;
+        }).toList(),
+        throwsA(isA<HttpException>()),
+      );
+
+      expect(requests, 1);
+      expect(chunks.whereType<Usage>(), hasLength(1));
+      expect(chunks.whereType<RetryAttemptStart>(), isEmpty);
+      expect(control.completedRounds, 0);
+      expect(control.pendingUsage!.cachedTokens, 90);
+    },
+  );
+
   test('image generation does not retry status-less network errors', () async {
     var requests = 0;
     final server = await _dropConnectionServer(() => requests++);

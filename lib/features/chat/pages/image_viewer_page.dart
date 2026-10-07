@@ -1,21 +1,19 @@
-import 'dart:convert';
-import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
-import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import '../../../icons/lucide_adapter.dart';
-import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/safe_resize_image.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../../../shared/widgets/markdown_image_provider.dart';
+import '../../../core/services/workspace/workspace_file_access.dart';
+import '../../workspace/widgets/files/file_browser_ops.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 
@@ -770,25 +768,19 @@ class _ImageViewerPageState extends State<ImageViewerPage>
 
   ImageProvider _createProviderFor(String src) {
     if (src.startsWith('http://') || src.startsWith('https://')) {
-      return NetworkImage(src);
+      return MarkdownImageProvider(src);
     }
     if (src.startsWith('data:')) {
       try {
-        final base64Marker = 'base64,';
-        final idx = src.indexOf(base64Marker);
-        if (idx != -1) {
-          final bytes = base64Decode(src.substring(idx + base64Marker.length));
-          final size = _readImageSizeFromBytes(bytes);
-          if (size != null) {
-            _rememberImageNaturalSize(src, size, notify: false);
-          }
-          return MemoryImage(bytes);
+        final bytes = decodeMarkdownImageData(src);
+        final size = _readImageSizeFromBytes(bytes);
+        if (size != null) {
+          _rememberImageNaturalSize(src, size, notify: false);
         }
+        return markdownImageFromBytes(bytes, source: src);
       } catch (_) {}
     }
-    final fixed = SandboxPathResolver.fix(src);
-    // Use a FileImage with a unique key per path so Hero tags remain stable
-    return FileImage(File(fixed));
+    return MarkdownImageProvider(src);
   }
 
   bool _canDragDismiss() {
@@ -832,58 +824,36 @@ class _ImageViewerPageState extends State<ImageViewerPage>
       ..forward();
   }
 
+  Future<({Uint8List bytes, String? mimeType})> _readViewerSource(String src) {
+    final provider = _baseProviderFor(src);
+    if (provider is MemoryImage) {
+      if (provider.bytes.isEmpty ||
+          provider.bytes.length > kMaxMarkdownImageBytes) {
+        throw const FormatException('Image is empty or too large');
+      }
+      return SynchronousFuture((
+        bytes: provider.bytes,
+        mimeType: sniffClipboardImageMime(provider.bytes),
+      ));
+    }
+    return (provider is MarkdownImageProvider
+            ? provider
+            : MarkdownImageProvider(src))
+        .readSource();
+  }
+
   Future<void> _saveCurrent() async {
     if (_saving) return;
     setState(() => _saving = true);
     final l10n = AppLocalizations.of(context)!;
     try {
       final src = widget.images[_index];
-      Uint8List? bytes;
-
-      if (src.startsWith('data:')) {
-        final marker = 'base64,';
-        final idx = src.indexOf(marker);
-        if (idx != -1) {
-          bytes = base64Decode(src.substring(idx + marker.length));
-        }
-      } else if (src.startsWith('http://') || src.startsWith('https://')) {
-        final resp = await http.get(Uri.parse(src));
-        if (resp.statusCode >= 200 && resp.statusCode < 300) {
-          bytes = resp.bodyBytes;
-        } else {
-          if (!mounted) return;
-          showAppSnackBar(
-            context,
-            message: l10n.imageViewerPageSaveFailed('HTTP ${resp.statusCode}'),
-            type: NotificationType.error,
-          );
-          return;
-        }
-      } else {
-        final local = SandboxPathResolver.fix(src);
-        final file = File(local);
-        if (await file.exists()) {
-          bytes = await file.readAsBytes();
-        } else {
-          if (!mounted) return;
-          showAppSnackBar(
-            context,
-            message: l10n.imageViewerPageSaveFailed('file-missing'),
-            type: NotificationType.error,
-          );
-          return;
-        }
-      }
-
-      if (bytes == null || bytes.isEmpty) {
-        if (!mounted) return;
-        showAppSnackBar(
-          context,
-          message: l10n.imageViewerPageSaveFailed('empty-bytes'),
-          type: NotificationType.error,
-        );
-        return;
-      }
+      final source = await _readViewerSource(src);
+      final bytes = await markdownImageRasterBytes(
+        source.bytes,
+        source: src,
+        mimeType: source.mimeType,
+      );
 
       final name = 'kelivo-${DateTime.now().millisecondsSinceEpoch}';
       final result = await ImageGallerySaverPlus.saveImage(
@@ -956,84 +926,86 @@ class _ImageViewerPageState extends State<ImageViewerPage>
         );
       }
       final src = widget.images[_index];
-      String? pathToSave;
-      File? temp;
-      if (src.startsWith('data:')) {
-        final i = src.indexOf('base64,');
-        if (i != -1) {
-          final bytes = base64Decode(src.substring(i + 7));
-          final tmp = await getTemporaryDirectory();
-          temp = await File(
-            p.join(
-              tmp.path,
-              'kelivo_${DateTime.now().millisecondsSinceEpoch}.png',
-            ),
-          ).create(recursive: true);
-          await temp.writeAsBytes(bytes);
-          pathToSave = temp.path;
-        }
-      } else if (src.startsWith('http')) {
-        // Try download and share
-        final resp = await http.get(Uri.parse(src));
-        if (resp.statusCode >= 200 && resp.statusCode < 300) {
-          final tmp = await getTemporaryDirectory();
-          final ext = p.extension(Uri.parse(src).path);
-          temp = await File(
-            p.join(
-              tmp.path,
-              'kelivo_${DateTime.now().millisecondsSinceEpoch}${ext.isNotEmpty ? ext : '.jpg'}',
-            ),
-          ).create(recursive: true);
-          await temp.writeAsBytes(resp.bodyBytes);
-          pathToSave = temp.path;
-        } else {
-          if (!mounted) return;
-          // fallback to sharing url as text
+      ({Uint8List bytes, String? mimeType}) source;
+      try {
+        source = await _readViewerSource(src);
+      } catch (_) {
+        if (!mounted) return;
+        if (src.startsWith('https://') || src.startsWith('http://')) {
           await SharePlus.instance.share(
             ShareParams(text: src, sharePositionOrigin: anchor),
           );
           return;
         }
-      } else {
-        final local = SandboxPathResolver.fix(src);
-        final f = File(local);
-        if (await f.exists()) {
-          pathToSave = f.path;
-        }
+        rethrow;
       }
-      if (pathToSave == null) {
-        if (!mounted) return;
-        showAppSnackBar(
-          context,
-          message: l10n.imageViewerPageShareFailed('empty-source'),
-          type: NotificationType.error,
-        );
-        return;
-      }
+      final svg = isMarkdownSvg(
+        source.bytes,
+        source: src,
+        mimeType: source.mimeType,
+      );
+      final format = _formatFromMagicBytes(source.bytes);
+      final bmp =
+          source.bytes.length >= 2 &&
+          source.bytes[0] == 0x42 &&
+          source.bytes[1] == 0x4d;
+      final ext = svg
+          ? 'svg'
+          : bmp
+          ? 'bmp'
+          : format.isEmpty
+          ? 'png'
+          : format;
+      final tmp = await FileBrowserOps.createPrivateTemporaryDirectory();
+      var keepForExternalOpen = false;
       try {
-        await SharePlus.instance.share(
-          ShareParams(files: [XFile(pathToSave)], sharePositionOrigin: anchor),
-        );
-      } on MissingPluginException catch (_) {
-        // Fallback: open system chooser by opening file
-        final res = await OpenFilex.open(pathToSave);
-        if (!mounted) return;
-        if (res.type != ResultType.done) {
-          showAppSnackBar(
-            context,
-            message: l10n.imageViewerPageShareFailedOpenFile(res.message),
-            type: NotificationType.error,
-          );
+        final pathToSave = p.join(tmp.path, 'image.$ext');
+        final destination = await WorkspaceFileAccess(
+          roots: [tmp.path],
+        ).openWrite(pathToSave);
+        try {
+          await destination.handle.writeFrom(source.bytes);
+          await destination.handle.flush();
+        } finally {
+          await destination.close();
         }
-      } on PlatformException catch (_) {
-        final res = await OpenFilex.open(pathToSave);
-        if (!mounted) return;
-        if (res.type != ResultType.done) {
-          showAppSnackBar(
-            context,
-            message: l10n.imageViewerPageShareFailedOpenFile(res.message),
-            type: NotificationType.error,
+        try {
+          await SharePlus.instance.share(
+            ShareParams(
+              files: [XFile(pathToSave)],
+              sharePositionOrigin: anchor,
+            ),
           );
+        } on MissingPluginException catch (_) {
+          // Fallback: open system chooser by opening file
+          final res = await OpenFilex.open(pathToSave);
+          keepForExternalOpen = res.type == ResultType.done;
+          if (!mounted) return;
+          if (res.type != ResultType.done) {
+            showAppSnackBar(
+              context,
+              message: l10n.imageViewerPageShareFailedOpenFile(res.message),
+              type: NotificationType.error,
+            );
+          }
+        } on PlatformException catch (_) {
+          final res = await OpenFilex.open(pathToSave);
+          keepForExternalOpen = res.type == ResultType.done;
+          if (!mounted) return;
+          if (res.type != ResultType.done) {
+            showAppSnackBar(
+              context,
+              message: l10n.imageViewerPageShareFailedOpenFile(res.message),
+              type: NotificationType.error,
+            );
+          }
+        }
+      } finally {
+        // OpenFilex returns as soon as Android launches the recipient. Retain
+        // that private copy for its later FileProvider read, as the previous
+        // temporary-file fallback did. SharePlus copies its source itself.
+        if (!keepForExternalOpen) {
+          await tmp.delete(recursive: true);
         }
       }
     } catch (e) {
@@ -1092,7 +1064,7 @@ class _ImageViewerPageState extends State<ImageViewerPage>
                 ),
               ),
               if (_hasMultipleImages && !compact)
-                _buildDesktopPageArrows(context, opacity: chromeOpacity),
+                _buildWidePageArrows(context, opacity: chromeOpacity),
               _buildActionChrome(
                 context,
                 compact: compact,
@@ -1345,10 +1317,7 @@ class _ImageViewerPageState extends State<ImageViewerPage>
     );
   }
 
-  Widget _buildDesktopPageArrows(
-    BuildContext context, {
-    required double opacity,
-  }) {
+  Widget _buildWidePageArrows(BuildContext context, {required double opacity}) {
     final l10n = AppLocalizations.of(context)!;
     return IgnorePointer(
       ignoring: opacity <= 0.01,

@@ -105,6 +105,7 @@ class InteractiveDrawer extends StatefulWidget {
     this.drawerWidth,
     this.duration = const Duration(milliseconds: 250),
     this.curve = Curves.easeOutCubic,
+    this.backgroundColor,
     this.scrimColor,
     this.maxScrimOpacity = 0.5,
     this.barrierDismissible = true,
@@ -135,6 +136,9 @@ class InteractiveDrawer extends StatefulWidget {
 
   /// Default curve for programmatic animations (drag is always linear).
   final Curve curve;
+
+  /// Material fill behind the moving content. Defaults to the theme surface.
+  final Color? backgroundColor;
 
   /// Scrim base color (applied INSIDE the child only).
   final Color? scrimColor;
@@ -388,7 +392,7 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Material(
-      color: cs.surface,
+      color: widget.backgroundColor ?? cs.surface,
       child: LayoutBuilder(
         builder: (context, constraints) {
           if (widget.tabletMode) {

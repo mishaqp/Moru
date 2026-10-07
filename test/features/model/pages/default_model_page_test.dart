@@ -94,7 +94,7 @@ void main() {
   testWidgets(
     'follow-current title picker opens on the conversation model',
     (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       try {

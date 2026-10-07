@@ -70,17 +70,12 @@ class FakeWorkspaceRuntime extends WorkspaceRuntime {
   int statusCalls = 0;
   ScriptedPtySession? lastPty;
   final List<ScriptedPtySession> ptys = <ScriptedPtySession>[];
-  String? lastSystemDir;
-  String? lastRevealPath;
   List<Mount>? lastMounts;
   String? lastCwd;
   Map<String, String>? lastEnv;
 
   @override
   bool get supportsPty => ptySupported;
-
-  @override
-  bool get supportsSystemTerminal => !ptySupported;
 
   @override
   Future<RuntimeStatus> status() async {
@@ -115,15 +110,5 @@ class FakeWorkspaceRuntime extends WorkspaceRuntime {
     lastPty = session;
     ptys.add(session);
     return session;
-  }
-
-  @override
-  Future<void> openInSystemTerminal(String hostDir) async {
-    lastSystemDir = hostDir;
-  }
-
-  @override
-  Future<void> revealInFileManager(String hostPath) async {
-    lastRevealPath = hostPath;
   }
 }

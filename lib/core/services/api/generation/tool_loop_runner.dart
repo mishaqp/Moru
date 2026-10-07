@@ -1,8 +1,11 @@
 import '../../../../utils/mcp_structured_image.dart';
 import '../../../models/token_usage.dart';
 import '../chat_api_helpers.dart';
+import '../tool_call_argument_privacy.dart';
 import '../stream/stream_chunk.dart';
 import '../stream/stream_chunk_emit.dart';
+import 'tool_result_images.dart';
+import 'spend_round_control.dart';
 
 typedef StreamRoundRunner =
     Stream<StreamChunk> Function(Stream<StreamChunk> Function() sendRound);
@@ -12,6 +15,7 @@ final class ExecutedClientTool {
     required this.call,
     required this.content,
     this.metadata,
+    this.images = const [],
   });
 
   final EmitToolCall call;
@@ -21,6 +25,12 @@ final class ExecutedClientTool {
 
   /// Result metadata (e.g. `mcpResult`). Merged with [call.metadata] on emit.
   final Map<String, dynamic>? metadata;
+
+  /// Images the tool returned, loaded for models that take image input.
+  final List<ToolResultImage> images;
+
+  ({String name, List<ToolResultImage> images}) get imagesForModel =>
+      (name: call.name, images: images);
 }
 
 EmitToolResult _emitExecuted(ExecutedClientTool item) {
@@ -43,7 +53,14 @@ Stream<StreamChunk> executeClientTools({
 }) async* {
   if (calls.isEmpty) return;
   if (emitCalls) {
-    yield* emitToolCalls(calls, usage: usage, totalTokens: totalTokens);
+    yield* emitToolCalls(
+      [
+        for (final call in calls)
+          ToolCallArgumentPrivacy.callForModel(onToolCall, call),
+      ],
+      usage: usage,
+      totalTokens: totalTokens,
+    );
   }
   final executed = <ExecutedClientTool>[];
   for (final call in calls) {
@@ -76,9 +93,12 @@ Stream<StreamChunk> runClientToolFollowUps({
   StreamRoundRunner? retryRound,
   bool emitCalls = false,
   TokenUsage? Function()? usageOf,
+  SpendRoundControl? spendControl,
 }) async* {
   var calls = List<EmitToolCall>.from(initialCalls);
+  spendControl?.recordInitialUsage(usageOf?.call());
   while (calls.isNotEmpty) {
+    await spendControl?.beforeRequest();
     final usage = usageOf?.call();
     final totalTokens = usage?.totalTokens ?? 0;
     final executed = <ExecutedClientTool>[];
@@ -86,7 +106,14 @@ Stream<StreamChunk> runClientToolFollowUps({
     // follow-ups have no decoder emitting ToolCall*, so later rounds would
     // otherwise land as ToolCallResult-only cards with empty name/args.
     if (emitCalls) {
-      yield* emitToolCalls(calls, usage: usage, totalTokens: totalTokens);
+      yield* emitToolCalls(
+        [
+          for (final call in calls)
+            ToolCallArgumentPrivacy.callForModel(onToolCall, call),
+        ],
+        usage: usage,
+        totalTokens: totalTokens,
+      );
     }
     for (final call in calls) {
       executed.add(await _executeClientTool(call, onToolCall));
@@ -97,7 +124,9 @@ Stream<StreamChunk> runClientToolFollowUps({
       totalTokens: totalTokens,
     );
     append(executed);
-    yield* retryRound?.call(sendFollowUp) ?? sendFollowUp();
+    await spendControl?.beforeRequest();
+    final round = retryRound?.call(sendFollowUp) ?? sendFollowUp();
+    yield* spendControl?.trackRound(round) ?? round;
     calls = takeCallsAfterRound();
   }
   yield* finish();
@@ -117,20 +146,31 @@ Stream<StreamChunk> runProviderToolRounds({
   bool executeAfterRound = true,
   StreamRoundRunner? retryRound,
   TokenUsage? Function()? usageOf,
+  SpendRoundControl? spendControl,
 }) async* {
   while (true) {
-    yield* retryRound?.call(sendRound) ?? sendRound();
+    await spendControl?.beforeRequest();
+    final round = retryRound?.call(sendRound) ?? sendRound();
+    yield* spendControl?.trackRound(round) ?? round;
     final calls = takeCalls();
     if (calls.isEmpty && !continueWithoutCalls()) {
       yield* finish();
       return;
     }
+    await spendControl?.beforeRequest();
     final executed = <ExecutedClientTool>[];
     if (executeAfterRound && calls.isNotEmpty && onToolCall != null) {
       final usage = usageOf?.call();
       final totalTokens = usage?.totalTokens ?? 0;
       if (emitCalls) {
-        yield* emitToolCalls(calls, usage: usage, totalTokens: totalTokens);
+        yield* emitToolCalls(
+          [
+            for (final call in calls)
+              ToolCallArgumentPrivacy.callForModel(onToolCall, call),
+          ],
+          usage: usage,
+          totalTokens: totalTokens,
+        );
       }
       for (final call in calls) {
         executed.add(await _executeClientTool(call, onToolCall));
@@ -152,8 +192,9 @@ Future<ExecutedClientTool> _executeClientTool(
   final raw = await onToolCall(call.name, call.arguments, toolCallId: call.id);
   final parsed = ClientToolResult.fromHandler(raw);
   return ExecutedClientTool(
-    call: call,
+    call: ToolCallArgumentPrivacy.callForModel(onToolCall, call),
     content: parsed.content,
     metadata: parsed.metadata,
+    images: await loadToolResultImages(parsed.metadata),
   );
 }

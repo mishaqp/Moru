@@ -38,8 +38,51 @@ void main() {
   });
 
   test('Codex model discovery identifies the current stable client', () {
-    expect(codexClientVersion, '0.156.1');
+    expect(codexClientVersion, '0.160.0');
   });
+
+  test(
+    'model discovery sends the stable Codex client version in query and header',
+    () async {
+      final requests = <http.Request>[];
+      final rows = await adapter.models(
+        OAuthWire(
+          MockClient((request) async {
+            requests.add(request);
+            return json({
+              'models': [
+                {'slug': 'gpt-6.1-sol'},
+              ],
+            });
+          }),
+        ),
+        stored,
+      );
+
+      expect(requests, hasLength(1));
+      final request = requests.single;
+      expect(request.method, 'GET');
+      expect(
+        request.url,
+        Uri.parse(
+          'https://chatgpt.com/backend-api/codex/models?client_version=0.160.0',
+        ),
+      );
+      expect(
+        request.headers.map((key, value) => MapEntry(key.toLowerCase(), value)),
+        {
+          'accept': 'application/json',
+          'authorization': 'Bearer old-access',
+          'chatgpt-account-id': 'workspace',
+          'originator': 'kelivo',
+          'version': '0.160.0',
+          'user-agent': 'Kelivo',
+          'openai-beta': 'responses=experimental',
+        },
+      );
+      expect(rows.single['id'], 'gpt-6.1-sol');
+    },
+  );
 
   test('email-only identity is accepted without using sub as a workspace', () {
     final credentials = adapter.credentials({

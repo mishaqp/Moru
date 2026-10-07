@@ -17,16 +17,19 @@ import 'package:Kelivo/core/services/workspace/workspace_runtime.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_check.dart';
 import 'package:Kelivo/core/services/mini_apps/mini_app_store.dart';
 import 'package:Kelivo/core/services/workspace/workspace_tools_service.dart';
+import 'package:Kelivo/core/services/api/generation/tool_result_images.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
 import 'package:Kelivo/utils/mcp_structured_image.dart';
 
 import '../../../support/fake_workspace_runtime.dart';
+import '../../../support/fake_process_keep_alive.dart';
 
 class _RecordingApproval extends ToolApprovalService {
   int calls = 0;
   String? lastName;
   bool allow = true;
   String denyReason = 'nope';
+  void Function()? onRequest;
 
   @override
   Future<ToolApprovalResult> requestApproval({
@@ -34,9 +37,13 @@ class _RecordingApproval extends ToolApprovalService {
     required String toolName,
     required Map<String, dynamic> arguments,
     String? conversationId,
+    ToolApprovalOwner? owner,
+    List<String> secretFields = const [],
+    bool secretInputOnly = false,
   }) async {
     calls++;
     lastName = toolName;
+    onRequest?.call();
     if (allow) return ToolApprovalResult.approved();
     return ToolApprovalResult.denied(denyReason);
   }
@@ -88,7 +95,7 @@ class _ManualRuntime extends FakeWorkspaceRuntime {
 }
 
 void main() {
-  final canRunReal = Platform.isMacOS || Platform.isLinux;
+  final canRunReal = Platform.isLinux;
 
   late Directory tmp;
   late Directory workspaceDir;
@@ -182,6 +189,9 @@ void main() {
     return WorkspaceToolsService(
       registry: registry,
       runtimeProvider: provider,
+      keepAlive: FakeProcessKeepAlive(),
+      reportBackgroundShellResult:
+          ({required id, required conversationId, required succeeded}) async {},
       onShellCompleted: onShellCompleted,
       loadEnvironment: loadEnvironment,
       updateConversationExtras: (id, update) async {
@@ -460,6 +470,43 @@ void main() {
   );
 
   group('publish_mini_app', () {
+    for (final args in <Map<String, dynamic>>[
+      {},
+      {'path': null},
+      {'path': 42},
+      {'path': true},
+      {
+        'path': <String>['app'],
+      },
+      {'path': ''},
+      {'path': '   '},
+    ]) {
+      test('rejects invalid required path $args before installation', () async {
+        final candidate = args['path']?.toString() ?? '';
+        final app = Directory(p.join(workspaceDir.path, candidate))
+          ..createSync(recursive: true);
+        File(p.join(app.path, 'moru-app.json')).writeAsStringSync(
+          jsonEncode({'id': 'unexpected', 'name': 'Unexpected'}),
+        );
+        File(p.join(app.path, 'index.html')).writeAsStringSync('<p>hi</p>');
+        final store = MiniAppStore(
+          root: () async => Directory(p.join(tmp.path, 'installed')),
+        );
+        final tools = WorkspaceToolsService(
+          registry: registry,
+          miniApps: store,
+        );
+        final result = await tools.handle(
+          ctx(),
+          WorkspaceToolsService.miniAppTool,
+          args,
+          toolCallId: 'invalid-publish',
+        );
+        expect(jsonOf(result)['error'], 'invalid_arguments');
+        expect(store.byId('unexpected'), isNull);
+      });
+    }
+
     test('installs a workspace folder and returns its link', () async {
       final app = Directory(p.join(workspaceDir.path, 'apps', 'water'))
         ..createSync(recursive: true);
@@ -756,6 +803,8 @@ void main() {
           await tools.handle(ctx(), 'shell', {
             'command': 'npm run dev',
             'background': true,
+            'cwd': null,
+            'timeout_seconds': null,
           }, toolCallId: 'bg'),
         );
         expect(started['background'], isTrue);
@@ -763,7 +812,7 @@ void main() {
         final jobId = started['job_id'] as String;
         expect(runtime.requests.single.timeout, const Duration(seconds: 3600));
         // A background job does not follow the reply's cancellation.
-        expect(runtime.requests.single.isCancelled, isNull);
+        expect(runtime.requests.single.isCancelled?.call(), isFalse);
 
         runtime.job.add(
           CommandOutput(
@@ -775,11 +824,14 @@ void main() {
         final peek = jsonOf(
           await tools.handle(ctx(), 'shell_output', {
             'job_id': jobId,
+            'wait_seconds': null,
+            'stop': null,
           }, toolCallId: 'peek'),
         );
         expect(peek['status'], 'running');
         expect(peek['stdout'], contains('ready on :3000'));
         expect(peek.containsKey('exit_code'), isFalse);
+        expect(runtime.cancelled, isEmpty);
 
         runtime.job.add(
           const CommandExited(
@@ -856,6 +908,61 @@ void main() {
       expect(plans.of('conv-1')?.steps, hasLength(2));
     });
 
+    test(
+      'update_plan keeps valid final and multiple-working-step behavior',
+      () async {
+        final plans = TaskPlanRegistry();
+        addTearDown(plans.dispose);
+        final tools = WorkspaceToolsService(registry: registry, plans: plans);
+        for (final statuses in [
+          ['completed', 'completed'],
+          ['in_progress', 'in_progress'],
+        ]) {
+          final result = await tools.handle(ctx(), 'update_plan', {
+            'plan': [
+              {'step': 'First', 'status': statuses[0]},
+              {'step': 'Second', 'status': statuses[1]},
+            ],
+          }, toolCallId: 'valid-plan');
+          expect(jsonOf(result)['ok'], isTrue);
+          expect(plans.of('conv-1')?.steps, hasLength(2));
+          expect(plans.of('conv-1')?.isDone, statuses.first == 'completed');
+        }
+      },
+    );
+
+    for (final invalidEntry in <Object?>[
+      null,
+      'step',
+      {},
+      {'step': 42, 'status': 'pending'},
+      {'step': '', 'status': 'pending'},
+      {'step': 'Read', 'status': null},
+      {'step': 'Read', 'status': 'finished'},
+      {'step': 'Read', 'status': true},
+    ]) {
+      test(
+        'update_plan rejects malformed entry $invalidEntry without updating',
+        () async {
+          final plans = TaskPlanRegistry();
+          addTearDown(plans.dispose);
+          const original = TaskPlan([
+            PlanStep('Original', PlanStepStatus.pending),
+          ]);
+          plans.set('conv-1', original);
+          final tools = WorkspaceToolsService(registry: registry, plans: plans);
+          final result = await tools.handle(ctx(), 'update_plan', {
+            'plan': [
+              {'step': 'Valid', 'status': 'pending'},
+              invalidEntry,
+            ],
+          }, toolCallId: 'invalid-plan');
+          expect(jsonOf(result)['error'], 'invalid_arguments');
+          expect(plans.of('conv-1'), same(original));
+        },
+      );
+    }
+
     test('shell_output is offered only together with shell', () {
       final tools = service(runtime: FakeWorkspaceRuntime());
       List<String> names(Set<String> disabled) => [
@@ -885,6 +992,101 @@ void main() {
   });
 
   group('file tools', () {
+    test('optional nulls preserve file-tool defaults', () async {
+      File(
+        p.join(workspaceDir.path, 'note.txt'),
+      ).writeAsStringSync('needle\nNeedle');
+      Directory(p.join(workspaceDir.path, 'sub')).createSync();
+      File(
+        p.join(workspaceDir.path, 'sub', 'deep.txt'),
+      ).writeAsStringSync('needle');
+      final tools = service();
+      final cases = <String, (Map<String, dynamic>, Map<String, dynamic>)>{
+        'read_file': ({'path': 'note.txt'}, {'offset': null, 'limit': null}),
+        'list_dir': ({}, {'path': null, 'depth': null}),
+        'glob': ({'pattern': '**/*.txt'}, {'path': null}),
+        'grep': (
+          {'pattern': 'needle'},
+          {'path': null, 'ignore_case': null, 'limit': null},
+        ),
+      };
+      for (final entry in cases.entries) {
+        final omitted = client(
+          await tools.handle(
+            ctx(),
+            entry.key,
+            entry.value.$1,
+            toolCallId: '${entry.key}-omitted',
+          ),
+        ).content;
+        final nullable = client(
+          await tools.handle(ctx(), entry.key, {
+            ...entry.value.$1,
+            ...entry.value.$2,
+          }, toolCallId: '${entry.key}-null'),
+        ).content;
+        expect(nullable, omitted, reason: entry.key);
+      }
+    });
+
+    for (final value in <Object?>[
+      null,
+      42,
+      true,
+      <String>['text'],
+    ]) {
+      test(
+        'write_file rejects non-string content $value without writing',
+        () async {
+          final target = File(p.join(workspaceDir.path, 'note.txt'))
+            ..writeAsStringSync('original');
+          final result = await service().handle(ctx(), 'write_file', {
+            'path': target.path,
+            'content': value,
+          }, toolCallId: 'write-invalid');
+          expect(jsonOf(result)['error'], 'invalid_arguments');
+          expect(target.readAsStringSync(), 'original');
+        },
+      );
+
+      for (final field in ['old_string', 'new_string']) {
+        test(
+          'edit_file rejects non-string $field $value without editing',
+          () async {
+            final target = File(p.join(workspaceDir.path, 'note.txt'))
+              ..writeAsStringSync('original');
+            final result = await service().handle(ctx(), 'edit_file', {
+              'path': target.path,
+              'old_string': 'original',
+              'new_string': 'replacement',
+              field: value,
+            }, toolCallId: 'edit-invalid');
+            expect(jsonOf(result)['error'], 'invalid_arguments');
+            expect(target.readAsStringSync(), 'original');
+          },
+        );
+      }
+    }
+
+    test('empty string content and replacement remain valid', () async {
+      final target = File(p.join(workspaceDir.path, 'note.txt'))
+        ..writeAsStringSync('original');
+      final tools = service();
+      final edited = await tools.handle(ctx(), 'edit_file', {
+        'path': target.path,
+        'old_string': 'original',
+        'new_string': '',
+      }, toolCallId: 'edit-empty');
+      expect(jsonOf(edited)['ok'], isTrue);
+      expect(target.readAsStringSync(), isEmpty);
+      final written = await tools.handle(ctx(), 'write_file', {
+        'path': target.path,
+        'content': '',
+      }, toolCallId: 'write-empty');
+      expect(jsonOf(written)['ok'], isTrue);
+      expect(target.readAsStringSync(), isEmpty);
+    });
+
     test(
       'external mounts appear in prompt and readonly beats allow-all',
       () async {
@@ -990,6 +1192,28 @@ void main() {
       expect(result.metadata, contains(kMcpResultMetadataKey));
     });
 
+    test(
+      'read_file image does not reopen a replaced source for the model',
+      () async {
+        final png = Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]);
+        final file = File(p.join(workspaceDir.path, 'original.png'))
+          ..writeAsBytesSync(png);
+        final result = client(
+          await service().handle(ctx(), 'read_file', {
+            'path': file.path,
+          }, toolCallId: 'read-img-swap'),
+        );
+        final replacement = File(p.join(tmp.path, 'replacement.png'))
+          ..writeAsBytesSync([1, 2, 3, 4]);
+        file.deleteSync();
+        Link(file.path).createSync(replacement.path);
+
+        final images = await loadToolResultImages(result.metadata);
+        expect(images.single.base64, base64Encode(png));
+        expect(result.content, isNot(contains(file.path)));
+      },
+    );
+
     test('write_file and edit_file content shapes', () async {
       final tools = service();
       final native = ctx();
@@ -1085,6 +1309,28 @@ void main() {
   });
 
   group('approval', () {
+    test('shell disabled during approval does not start a process', () async {
+      final runtime = _SandboxedRuntime();
+      final provider = WorkspaceRuntimeProvider()..register(runtime);
+      var enabled = true;
+      final tools = WorkspaceToolsService(
+        registry: registry,
+        runtimeProvider: provider,
+        isToolEnabled: (_, _) => enabled,
+      );
+      final approval = _RecordingApproval()..onRequest = () => enabled = false;
+      final result = await tools.handle(
+        ctx(sandboxed: true, allowAll: false, shellNeedsApproval: true),
+        'shell',
+        {'command': 'touch should-not-run'},
+        toolCallId: 'revoked-shell',
+        approvalService: approval,
+      );
+      expect(jsonOf(result)['error'], 'tool_disabled');
+      expect(runtime.requests, isEmpty);
+      expect(registry.all, isEmpty);
+    });
+
     test('shell asks when shellNeedsApproval', () async {
       final approval = _RecordingApproval();
       final runtime = _SandboxedRuntime();
@@ -1164,7 +1410,7 @@ void main() {
     () async {
       final tools = service();
       final context = ctx(sandboxed: true);
-      final fileName = Platform.isWindows ? 'report 报告.txt' : 'report:报告.txt';
+      final fileName = 'report:报告.txt';
       final path = '/workspace/$fileName';
       final write = metaOf(
         await tools.handle(context, 'write_file', {
@@ -1197,9 +1443,7 @@ void main() {
       );
       expect(
         write.files.single.link,
-        Platform.isWindows
-            ? 'kelivo://workspace/report%20%E6%8A%A5%E5%91%8A.txt'
-            : 'kelivo://workspace/report%3A%E6%8A%A5%E5%91%8A.txt',
+        'kelivo://workspace/report%3A%E6%8A%A5%E5%91%8A.txt',
       );
       expect(
         KelivoLink.tryParse(write.files.single.link!)?.relativePath,

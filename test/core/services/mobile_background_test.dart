@@ -344,6 +344,208 @@ void main() {
     },
   );
   test(
+    'runtime Stop still cancels when durable queue hold persistence fails',
+    () async {
+      await coordinator.configure(
+        const MobileBackgroundSettings(notificationsEnabled: true),
+        l10n,
+      );
+      final events = <String>[];
+      await coordinator.start(
+        id: 'stopped',
+        conversationId: 'chat',
+        title: 'Private',
+        beforeRuntimeStop: () async {
+          events.add('queue held in memory');
+          throw StateError('hold write failed');
+        },
+        cancel: () async {
+          events.add('cancel');
+          await coordinator.finish('stopped', BackgroundTaskOutcome.cancelled);
+        },
+      );
+      final response = Completer<void>();
+      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .handlePlatformMessage(
+            channel.name,
+            const StandardMethodCodec().encodeMethodCall(
+              const MethodCall('cancelTasks', {
+                'ids': ['stopped'],
+              }),
+            ),
+            (_) => response.complete(),
+          );
+      await response.future;
+      await pumpEventQueue();
+      await coordinator.flush();
+      expect(events, ['queue held in memory', 'cancel']);
+      expect(coordinator.activeTaskIds, isEmpty);
+      expect(notifications, isEmpty);
+    },
+  );
+  test(
+    'runtime Stop targets preparation identity while transfer awaits native acknowledgement',
+    () async {
+      await start('preparation', conversationId: 'chat');
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      var cancelled = false;
+      intercept = (call) async {
+        if (call.method == 'sync' &&
+            (((call.arguments as Map)['tasks'] as List).firstOrNull
+                    as Map?)?['id'] ==
+                'run' &&
+            !entered.isCompleted) {
+          entered.complete();
+          await release.future;
+        }
+        return <String, Object?>{};
+      };
+      final transfer = coordinator.transferTask(
+        fromId: 'preparation',
+        id: 'run',
+        conversationId: 'chat',
+        assistantMessageId: 'assistant',
+        title: 'Private',
+        cancel: () async {
+          cancelled = true;
+          await coordinator.finish('run', BackgroundTaskOutcome.cancelled);
+        },
+      );
+      await entered.future;
+      final response = Completer<void>();
+      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .handlePlatformMessage(
+            channel.name,
+            const StandardMethodCodec().encodeMethodCall(
+              const MethodCall('cancelTasks', {
+                'ids': ['preparation'],
+              }),
+            ),
+            (_) => response.complete(),
+          );
+      await response.future;
+      await pumpEventQueue();
+      try {
+        expect(cancelled, isTrue);
+      } finally {
+        release.complete();
+        await transfer;
+        await coordinator.flush();
+      }
+      expect(coordinator.activeTaskIds, isEmpty);
+      expect(notifications, isEmpty);
+    },
+  );
+  test(
+    'runtime Stop invalidates consent ownership before durable hold write completes',
+    () async {
+      final hold = Completer<void>();
+      var cancelled = false;
+      await coordinator.start(
+        id: 'waiting',
+        conversationId: 'chat',
+        title: 'Waiting',
+        beforeRuntimeStop: () => hold.future,
+        cancel: () async {
+          cancelled = true;
+        },
+      );
+      final response = Completer<void>();
+      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .handlePlatformMessage(
+            channel.name,
+            const StandardMethodCodec().encodeMethodCall(
+              const MethodCall('cancelTasks', {
+                'ids': ['waiting'],
+              }),
+            ),
+            (_) => response.complete(),
+          );
+      await response.future;
+      expect(coordinator.isTaskStopping('waiting'), isTrue);
+      expect(cancelled, isFalse);
+      hold.complete();
+      await pumpEventQueue();
+      expect(cancelled, isTrue);
+      await coordinator.finish('waiting', BackgroundTaskOutcome.cancelled);
+    },
+  );
+  test(
+    'stopped preparation transfers suppression through delayed hold and retires both identities',
+    () async {
+      await coordinator.configure(
+        const MobileBackgroundSettings(
+          androidEnabled: true,
+          notificationsEnabled: true,
+        ),
+        l10n,
+      );
+      final hold = Completer<void>();
+      final cancelled = Completer<void>();
+      await coordinator.start(
+        id: 'preparation',
+        conversationId: 'chat',
+        title: 'Preparing',
+        beforeRuntimeStop: () => hold.future,
+        cancel: () async {
+          await coordinator.finish('run', BackgroundTaskOutcome.cancelled);
+          cancelled.complete();
+        },
+      );
+      final response = Completer<void>();
+      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .handlePlatformMessage(
+            channel.name,
+            const StandardMethodCodec().encodeMethodCall(
+              const MethodCall('cancelTasks', {
+                'ids': ['preparation'],
+              }),
+            ),
+            (_) => response.complete(),
+          );
+      await response.future;
+      expect(cancelled.isCompleted, isFalse);
+      final snapshotCount = snapshots().length;
+      try {
+        expect(
+          await coordinator.transferTask(
+            fromId: 'preparation',
+            id: 'run',
+            conversationId: 'chat',
+            assistantMessageId: 'assistant',
+            title: 'Reply',
+            cancel: () async {},
+          ),
+          isTrue,
+        );
+        expect(coordinator.isTaskStopping('run'), isTrue);
+        expect(
+          snapshots()
+              .skip(snapshotCount)
+              .expand((snapshot) => snapshot['tasks'] as List),
+          isEmpty,
+        );
+      } finally {
+        hold.complete();
+        await cancelled.future;
+        await coordinator.flush();
+      }
+      expect(coordinator.activeTaskIds, isEmpty);
+      expect(notifications, isEmpty);
+      // Reusing an ID after its ACK also makes suppression cleanup observable.
+      // Real execution UUIDs are never reused.
+      for (final retiredId in ['preparation', 'run']) {
+        await start(retiredId, conversationId: 'chat');
+        expect(
+          (snapshots().last['tasks'] as List).single,
+          containsPair('id', retiredId),
+        );
+        await coordinator.finish(retiredId, BackgroundTaskOutcome.cancelled);
+      }
+    },
+  );
+  test(
     'scheduled completion notifies once with the saved reply preview',
     () async {
       coordinator.didChangeAppLifecycleState(AppLifecycleState.detached);
@@ -380,6 +582,84 @@ void main() {
       expect(coordinator.settings.notificationsEnabled, isFalse);
     },
   );
+  for (final finishing in [false, true]) {
+    test(
+      'runtime Stop of ${finishing ? 'finishing' : 'handoff'} owner cancels queued successor without touching another chat',
+      () async {
+        await coordinator.start(
+          id: 'old',
+          conversationId: 'chat',
+          title: 'Old',
+          cancel: () async {},
+        );
+        await start('unrelated', conversationId: 'other');
+        final entered = Completer<void>();
+        final release = Completer<void>();
+        intercept = (call) async {
+          if (call.method == 'sync' && !entered.isCompleted) {
+            entered.complete();
+            await release.future;
+          }
+          return <String, Object?>{};
+        };
+        if (!finishing) {
+          coordinator.update('old', phase: BackgroundTaskPhase.generating);
+        }
+        final barrier = finishing
+            ? coordinator.finish('old', BackgroundTaskOutcome.completed)
+            : coordinator.flush();
+        await entered.future;
+        var cancelled = false;
+        final successor = coordinator.start(
+          id: 'next',
+          conversationId: 'chat',
+          title: 'Next',
+          cancel: () async {
+            cancelled = true;
+            await coordinator.finish('next', BackgroundTaskOutcome.cancelled);
+          },
+        );
+        final response = Completer<void>();
+        await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .handlePlatformMessage(
+              channel.name,
+              const StandardMethodCodec().encodeMethodCall(
+                const MethodCall('cancelTasks', {
+                  'ids': ['old'],
+                }),
+              ),
+              (_) => response.complete(),
+            );
+        await response.future;
+        await pumpEventQueue();
+        final blockedSnapshotCount = snapshots().length;
+        try {
+          expect(cancelled, isTrue);
+        } finally {
+          release.complete();
+          await barrier;
+          await successor;
+          await coordinator.flush();
+        }
+        expect(
+          coordinator.activeTaskIds,
+          finishing ? {'unrelated'} : {'old', 'unrelated'},
+        );
+        expect(
+          snapshots()
+              .skip(blockedSnapshotCount)
+              .expand((snapshot) => snapshot['tasks'] as List)
+              .map((task) => (task as Map)['id']),
+          isNot(contains('next')),
+        );
+        expect(notifications, isEmpty);
+        if (!finishing) {
+          await coordinator.finish('old', BackgroundTaskOutcome.completed);
+        }
+        await coordinator.finish('unrelated', BackgroundTaskOutcome.cancelled);
+      },
+    );
+  }
 
   test(
     'scheduled notifications respect privacy and persisted outcomes',

@@ -6,9 +6,8 @@ import 'package:path/path.dart' as p;
 
 /// Opens the system save dialog and writes [bytes] to the chosen location.
 ///
-/// Desktop returns a filesystem path and we write the file ourselves. Android
-/// and iOS require [FilePicker.saveFile] `bytes` so the system Files / SAF
-/// picker can export without going through the share sheet.
+/// Android requires [FilePicker.saveFile] `bytes` so the system SAF picker
+/// can export without going through the share sheet.
 Future<String?> saveBytesWithPicker({
   required String fileName,
   required List<int> bytes,

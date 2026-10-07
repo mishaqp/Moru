@@ -86,7 +86,7 @@ void main() {
       final service = ChatService();
       final settings = SettingsProvider(createBusinessTestPreferences());
       final background = MobileBackgroundCoordinator(
-        platform: TargetPlatform.linux,
+        platform: TargetPlatform.android,
       );
       var currentConversation = 'conversation-1';
       late ChatActions actions;

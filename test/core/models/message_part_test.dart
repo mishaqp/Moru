@@ -36,6 +36,15 @@ void main() {
       expect(part.encodePayload(), payload);
     });
 
+    test('agent diagnostics hydrate as a typed durable part', () {
+      const payload =
+          '{"message":"Internal error","details":"safe diagnostic reason"}';
+      final part = MessagePart.fromRow('agent_error', payload);
+      expect(part, isA<AgentErrorPart>());
+      expect(part.kind, 'agent_error');
+      expect(jsonDecode(part.encodePayload()), jsonDecode(payload));
+    });
+
     test('ImagePart roundtrips required and optional fields', () {
       final payload = jsonEncode({
         'uri': '/tmp/a.png',

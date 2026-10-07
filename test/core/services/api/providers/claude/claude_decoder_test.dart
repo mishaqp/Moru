@@ -428,10 +428,10 @@ void main() {
           },
         }),
       );
-      expect(decoder.usage!.promptTokens, 25);
+      expect(decoder.usage!.promptTokens, 40);
       expect(decoder.usage!.completionTokens, 1);
       expect(decoder.usage!.cachedTokens, 15);
-      expect(start.chunks.whereType<Usage>().single.usage.promptTokens, 25);
+      expect(start.chunks.whereType<Usage>().single.usage.promptTokens, 40);
 
       final delta = decoder.accept(
         _event('message_delta', {
@@ -440,17 +440,56 @@ void main() {
           'usage': {'output_tokens': 15},
         }),
       );
-      expect(decoder.usage!.promptTokens, 25);
+      expect(decoder.usage!.promptTokens, 40);
       expect(decoder.usage!.completionTokens, 15);
       expect(decoder.usage!.cachedTokens, 15);
-      expect(decoder.usage!.totalTokens, 40);
+      expect(decoder.usage!.totalTokens, 55);
       final streamed = delta.chunks.whereType<Usage>().single.usage;
-      expect(streamed.promptTokens, 25);
+      expect(streamed.promptTokens, 40);
       expect(streamed.completionTokens, 15);
       expect(streamed.cachedTokens, 15);
-      expect(streamed.totalTokens, 40);
+      expect(streamed.totalTokens, 55);
     },
   );
+
+  test('cached-only Claude input still counts in prompt and total tokens', () {
+    final usage = claudeUsageFromMap({
+      'input_tokens': 0,
+      'output_tokens': 2,
+      'cache_read_input_tokens': 10,
+      'cache_creation_input_tokens': 5,
+    });
+    expect(usage.promptTokens, 15);
+    expect(usage.cachedTokens, 15);
+    expect(usage.completionTokens, 2);
+    expect(usage.totalTokens, 17);
+  });
+
+  test('partial Claude usage preserves cache when input is updated', () {
+    final decoder = ClaudeStreamDecoder();
+    decoder.accept(
+      _event('message_start', {
+        'type': 'message_start',
+        'message': {
+          'usage': {
+            'input_tokens': 25,
+            'cache_read_input_tokens': 10,
+            'cache_creation_input_tokens': 5,
+            'output_tokens': 0,
+          },
+        },
+      }),
+    );
+    decoder.accept(
+      _event('message_delta', {
+        'type': 'message_delta',
+        'usage': {'input_tokens': 30, 'output_tokens': 2},
+      }),
+    );
+    expect(decoder.usage!.promptTokens, 45);
+    expect(decoder.usage!.cachedTokens, 15);
+    expect(decoder.usage!.totalTokens, 47);
+  });
 
   test('follow-up decoder usage is the last round only', () {
     final first = ClaudeStreamDecoder();

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../generation/tool_result_images.dart';
 import '../../../../../utils/utf16_safe_cut.dart';
 
 import '../../../../models/token_usage.dart';
@@ -33,6 +34,7 @@ class ClaudeStreamDecoder implements StreamChunkDecoder {
   final Map<String, String> toolResults = <String, String>{};
 
   TokenUsage? _round;
+  final Map<String, dynamic> _roundUsageFields = {};
 
   TokenUsage? get usage {
     if (_round == null) return initialUsage;
@@ -74,6 +76,10 @@ class ClaudeStreamDecoder implements StreamChunkDecoder {
   void recordToolResult(String id, String content) {
     toolResults[id] = content;
   }
+
+  /// Images of client tool results run mid-stream, by call id.
+  final Map<String, List<ToolResultImage>> toolResultImages =
+      <String, List<ToolResultImage>>{};
 
   /// Surfaces hosted calls from a complete non-streaming response.
   ///
@@ -409,7 +415,10 @@ class ClaudeStreamDecoder implements StreamChunkDecoder {
         obj['usage'] ??
         (obj['message'] is Map ? (obj['message'] as Map)['usage'] : null);
     if (rawUsage is Map) {
-      final parsed = claudeUsageFromMap(rawUsage.cast<String, dynamic>());
+      // Later usage frames may update input/output while omitting cache fields.
+      // Preserve this round's raw fields before normalizing cache-inclusive input.
+      _roundUsageFields.addAll(rawUsage.cast<String, dynamic>());
+      final parsed = claudeUsageFromMap(_roundUsageFields);
       _round = (_round ?? const TokenUsage()).merge(parsed);
       chunks.add(Usage(usage!));
     }
@@ -680,10 +689,10 @@ TokenUsage claudeUsageFromMap(Map<String, dynamic> usage) {
       _readClaudeUsageInt(usage['cache_read_input_tokens']) +
       _readClaudeUsageInt(usage['cache_creation_input_tokens']);
   return TokenUsage(
-    promptTokens: inTok,
+    promptTokens: inTok + cached,
     completionTokens: outTok,
     cachedTokens: cached,
-    totalTokens: inTok + outTok,
+    totalTokens: inTok + cached + outTok,
   );
 }
 

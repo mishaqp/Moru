@@ -8,19 +8,13 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/form_sheet.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../shared/widgets/section_card.dart';
-import '../../settings/widgets/custom_theme_widgets.dart';
 
-Future<void> showMcpJsonImport(
-  BuildContext context, {
-  bool desktop = false,
-}) async {
+Future<void> showMcpJsonImport(BuildContext context) async {
   final provider = context.read<McpProvider>();
-  final child = _McpJsonImport(provider: provider);
-  if (desktop) {
-    await showAppDialog<void>(context, maxWidth: 640, child: child);
-  } else {
-    await showFormSheet<void>(context, builder: (_) => child);
-  }
+  await showFormSheet<void>(
+    context,
+    builder: (_) => _McpJsonImport(provider: provider),
+  );
 }
 
 class _McpJsonImport extends StatefulWidget {

@@ -10,6 +10,15 @@ import 'package:Kelivo/features/home/services/local_tools_service.dart';
 
 import '../../../support/business_test_harness.dart';
 
+const _legacyBackgroundSettings = {
+  'background': '/legacy/assistant-background.jpg',
+  'useGradientBackground': true,
+  'gradientBackgroundAnimated': false,
+  'gradientBackgroundPhase': 7.0,
+  'gradientBackgroundOffsetX': 0.4,
+  'gradientBackgroundOffsetY': -0.6,
+};
+
 const _catalog = AssistantManagerCatalog(
   providers: [
     AssistantManagerProvider(
@@ -28,6 +37,12 @@ const _catalog = AssistantManagerCatalog(
   mcpServers: [AssistantManagerOption(id: 'mcp-1', name: 'Files')],
   skills: [AssistantManagerOption(id: 'skill-1', name: 'Writer')],
   workspaces: [AssistantManagerOption(id: 'ws-1', name: 'Project')],
+  agents: [
+    AssistantManagerOption(id: 'opencode', name: 'OpenCode'),
+    AssistantManagerOption(id: 'claude-code', name: 'Claude Code'),
+    AssistantManagerOption(id: 'codex', name: 'Codex'),
+    AssistantManagerOption(id: 'custom:mine', name: 'Custom'),
+  ],
   localToolIds: [LocalToolNames.timeInfo, LocalToolNames.calculate],
 );
 
@@ -57,6 +72,253 @@ void main() {
     );
   });
 
+  test(
+    'strict nullable settings preserve omitted values and explicit clears',
+    () async {
+      await assistants.updateAssistant(
+        assistants
+            .getById(mainId)!
+            .copyWith(
+              temperature: 0.7,
+              topP: 0.8,
+              streamOutput: false,
+              localToolIds: [LocalToolNames.calculate],
+              chatModelProvider: 'openai',
+              chatModelId: 'gpt-5',
+            ),
+      );
+      final schema =
+          AssistantManagerTool
+                  .definition['function']['parameters']['properties']['settings']['properties']
+              as Map;
+      final nullableSettings = {
+        for (final key in schema.keys) key as String: null,
+      };
+      final updated = await _run(tool, {
+        'action': 'update',
+        'assistant_id': mainId,
+        'settings': {...nullableSettings, 'name': 'Renamed'},
+        'clear': ['temperature'],
+      });
+      expect(updated['ok'], isTrue, reason: '$updated');
+      final current = assistants.getById(mainId)!;
+      expect(current.name, 'Renamed');
+      expect(current.temperature, isNull);
+      expect(current.topP, 0.8);
+      expect(current.streamOutput, isFalse);
+      expect(current.localToolIds, [LocalToolNames.calculate]);
+      expect(current.chatModelProvider, 'openai');
+      expect(current.chatModelId, 'gpt-5');
+
+      for (final action in ['create', 'duplicate']) {
+        final result = await _run(tool, {
+          'action': action,
+          'assistant_id': action == 'duplicate' ? mainId : null,
+          'settings': {...nullableSettings, 'name': action},
+          'clear': null,
+        });
+        expect(result['ok'], isTrue, reason: '$result');
+        final created = assistants.getById(result['created']['id'])!;
+        expect(created.name, action);
+        if (action == 'duplicate') {
+          expect(created.topP, 0.8);
+          expect(created.chatModelId, 'gpt-5');
+        }
+      }
+    },
+  );
+
+  test(
+    'assistant results redact saved credentials without changing settings',
+    () async {
+      const secret = 'ASSISTANT_HEADER_PRIVATE_SENTINEL';
+      const ordinary = '/workspace/context.json';
+      await assistants.updateAssistant(
+        assistants
+            .getById(mainId)!
+            .copyWith(
+              customHeaders: [
+                {'name': 'Authorization', 'value': 'Bearer $secret'},
+                {'name': 'X-Api-Key', 'value': secret},
+                {'name': 'X-Context', 'value': ordinary},
+              ],
+              systemPrompt: 'Keep $secret private.',
+            ),
+      );
+      final original = assistants.getById(mainId)!.toJson();
+      final read = await _run(tool, {'action': 'get', 'assistant_id': mainId});
+      expect(read['ok'], isTrue);
+      expect(jsonEncode(read), isNot(contains(secret)));
+      expect(read['settings']['customHeaders'][2]['value'], ordinary);
+      expect(assistants.getById(mainId)!.toJson(), original);
+
+      final copied = await _run(tool, {
+        'action': 'duplicate',
+        'assistant_id': mainId,
+      });
+      expect(copied['ok'], isTrue);
+      expect(jsonEncode(copied), isNot(contains(secret)));
+      final copiedId = copied['created']['id'] as String;
+      expect(
+        assistants.getById(copiedId)!.customHeaders,
+        original['customHeaders'],
+      );
+
+      final updated = await _run(tool, {
+        'action': 'update',
+        'assistant_id': mainId,
+        'settings': {'name': 'Renamed'},
+      });
+      expect(updated['ok'], isTrue);
+      expect(jsonEncode(updated), isNot(contains(secret)));
+      expect(
+        assistants.getById(mainId)!.customHeaders,
+        original['customHeaders'],
+      );
+    },
+  );
+
+  test(
+    'regex flag types are checked before updating assistant settings',
+    () async {
+      final original = assistants.getById(mainId)!.toJson();
+      for (final field in ['visualOnly', 'replaceOnly', 'enabled']) {
+        final result = await _run(tool, {
+          'action': 'update',
+          'assistant_id': mainId,
+          'settings': {
+            'name': 'Rejected rename',
+            'regexRules': [
+              {
+                'name': 'Rule',
+                'pattern': 'old',
+                'replacement': 'new',
+                'scopes': ['assistant'],
+                field: 'false',
+              },
+            ],
+          },
+        });
+        expect(result['error'], 'invalid_settings', reason: '$field: $result');
+        expect(assistants.getById(mainId)!.toJson(), original);
+      }
+      final valid = await _run(tool, {
+        'action': 'update',
+        'assistant_id': mainId,
+        'settings': {
+          'regexRules': [
+            {
+              'name': 'Rule',
+              'pattern': 'old',
+              'replacement': 'new',
+              'scopes': ['assistant'],
+              'visualOnly': null,
+              'replaceOnly': null,
+              'enabled': null,
+            },
+          ],
+        },
+      });
+      expect(valid['ok'], isTrue, reason: '$valid');
+      final rule = assistants.getById(mainId)!.regexRules.single;
+      expect(rule.visualOnly, isFalse);
+      expect(rule.replaceOnly, isFalse);
+      expect(rule.enabled, isTrue);
+    },
+  );
+
+  test(
+    'non-finite numeric settings return structured errors without writes',
+    () async {
+      final original = assistants.getById(mainId)!.toJson();
+      for (final field in ['temperature', 'maxTokens']) {
+        for (final value in [
+          double.infinity,
+          double.negativeInfinity,
+          double.nan,
+        ]) {
+          final result = await _run(tool, {
+            'action': 'update',
+            'assistant_id': mainId,
+            'settings': {'name': 'Rejected rename', field: value},
+          });
+          expect(
+            result['error'],
+            'invalid_settings',
+            reason: '$field: $result',
+          );
+          expect(assistants.getById(mainId)!.toJson(), original);
+        }
+      }
+    },
+  );
+
+  test('invalid-setting errors do not echo supplied private values', () async {
+    const secret = 'SUPPLIED_ASSISTANT_PRIVATE_SENTINEL';
+    final result = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {'streamOutput': 'password=$secret'},
+    });
+    expect(result['error'], 'invalid_settings');
+    expect(jsonEncode(result), isNot(contains(secret)));
+  });
+
+  test('updating unrelated settings prunes inherited dead MCP ids', () async {
+    await assistants.updateAssistant(
+      assistants.getById(mainId)!.copyWith(mcpServerIds: ['mcp-1', 'removed']),
+    );
+    final result = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {'name': 'Renamed'},
+    });
+    expect(result['ok'], isTrue, reason: '$result');
+    expect(assistants.getById(mainId)!.mcpServerIds, ['mcp-1']);
+  });
+
+  test('explicitly retaining an old dead MCP id prunes it', () async {
+    await assistants.updateAssistant(
+      assistants.getById(mainId)!.copyWith(mcpServerIds: ['removed']),
+    );
+    final result = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {
+        'mcpServerIds': ['removed'],
+      },
+    });
+    expect(result['ok'], isTrue, reason: '$result');
+    expect(assistants.getById(mainId)!.mcpServerIds, isEmpty);
+    final invalid = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {
+        'mcpServerIds': ['new-unknown'],
+      },
+    });
+    expect(invalid['ok'], isFalse);
+    expect(invalid['error'], 'invalid_settings');
+  });
+
+  test('retaining old dead ids works after provider read filtering', () async {
+    await assistants.updateAssistant(
+      assistants.getById(mainId)!.copyWith(mcpServerIds: ['mcp-1', 'removed']),
+    );
+    assistants.bindMcpServers(liveMcpServerIds: () => {'mcp-1'});
+    expect(assistants.getById(mainId)!.mcpServerIds, ['mcp-1']);
+    final result = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {
+        'name': 'Renamed',
+        'mcpServerIds': ['mcp-1', 'removed'],
+      },
+    });
+    expect(result['ok'], isTrue, reason: '$result');
+    expect(assistants.getStoredMcpServerIds(mainId), ['mcp-1']);
+  });
+
   test('only changes need approval', () {
     for (final action in ['create', 'update', 'duplicate', 'delete']) {
       expect(
@@ -77,6 +339,291 @@ void main() {
       );
     }
   });
+
+  test('the schema documents provider and subscription authentication', () {
+    final settings =
+        AssistantManagerTool
+                .definition['function']['parameters']['properties']['settings']['properties']
+            as Map;
+    expect(settings['agentAuthMode'], isA<Map>());
+    expect(settings['agentAuthMode']['type'], 'string');
+    expect(settings['agentAuthMode']['enum'], ['provider', 'subscription']);
+  });
+
+  test('retired assistant backgrounds are absent from tool settings', () async {
+    await assistants.updateAssistant(
+      Assistant.fromJson({
+        ...assistants.getById(mainId)!.toJson(),
+        ..._legacyBackgroundSettings,
+      }),
+    );
+    final schema =
+        AssistantManagerTool
+                .definition['function']['parameters']['properties']['settings']['properties']
+            as Map;
+    final result = await _run(tool, {'action': 'get', 'assistant_id': mainId});
+    expect(result['ok'], isTrue, reason: '$result');
+    final settings = result['settings'] as Map;
+    for (final key in _legacyBackgroundSettings.keys) {
+      expect(schema.containsKey(key), isFalse, reason: key);
+      expect(settings.containsKey(key), isFalse, reason: key);
+      expect(AssistantManagerTool.clearableSettings, isNot(contains(key)));
+    }
+  });
+
+  test('background changes and resets are rejected atomically', () async {
+    await assistants.updateAssistant(
+      Assistant.fromJson({
+        ...assistants.getById(mainId)!.toJson(),
+        ..._legacyBackgroundSettings,
+      }),
+    );
+    final original = assistants.getById(mainId)!.toJson();
+    for (final action in ['create', 'update', 'duplicate']) {
+      for (final entry in _legacyBackgroundSettings.entries) {
+        for (final change in [
+          {
+            'settings': {'name': 'Rejected change', entry.key: entry.value},
+          },
+          {
+            'settings': {'name': 'Rejected change'},
+            'clear': [entry.key],
+          },
+        ]) {
+          final result = await _run(tool, {
+            'action': action,
+            if (action != 'create') 'assistant_id': mainId,
+            ...change,
+          });
+          expect(result['ok'], isFalse, reason: '$action $change');
+          expect(result['error'], 'invalid_settings', reason: '$result');
+          expect(assistants.assistants.map((a) => a.id), [mainId]);
+          expect(assistants.getById(mainId)!.toJson(), original);
+        }
+      }
+    }
+  });
+
+  test(
+    'updates and copies preserve stored retired background values',
+    () async {
+      await assistants.updateAssistant(
+        Assistant.fromJson({
+          ...assistants.getById(mainId)!.toJson(),
+          ..._legacyBackgroundSettings,
+        }),
+      );
+      final updated = await _run(tool, {
+        'action': 'update',
+        'assistant_id': mainId,
+        'settings': {'name': 'Renamed', 'temperature': 0.8},
+      });
+      expect(updated['ok'], isTrue, reason: '$updated');
+      final copied = await _run(tool, {
+        'action': 'duplicate',
+        'assistant_id': mainId,
+        'settings': {'name': 'Copy'},
+      });
+      expect(copied['ok'], isTrue, reason: '$copied');
+      final copyId = copied['created']['id'] as String;
+      for (final id in [mainId, copyId]) {
+        final json = assistants.getById(id)!.toJson();
+        for (final entry in _legacyBackgroundSettings.entries) {
+          expect(json[entry.key], entry.value, reason: '$id ${entry.key}');
+        }
+        expect(json['temperature'], 0.8);
+      }
+      expect(assistants.getById(mainId)!.name, 'Renamed');
+      expect(assistants.getById(copyId)!.name, 'Copy');
+    },
+  );
+
+  for (final agentId in ['claude-code', 'codex']) {
+    test('creates a $agentId assistant using its own account', () async {
+      final result = await _run(tool, {
+        'action': 'create',
+        'settings': {
+          'name': 'Subscription',
+          'agentId': agentId,
+          'agentAuthMode': 'subscription',
+        },
+      });
+      expect(result['ok'], isTrue, reason: '$result');
+      final id = result['created']['id'] as String;
+      final settings = assistants.getById(id)!.toJson();
+      expect(settings['agentId'], agentId);
+      expect(settings['agentAuthMode'], 'subscription');
+      expect(settings['chatModelProvider'], isNull);
+      expect(settings['chatModelId'], isNull);
+    });
+  }
+
+  test('agent session options are set, validated and cleared', () async {
+    final created = await _run(tool, {
+      'action': 'create',
+      'settings': {
+        'name': 'Options',
+        'agentId': 'codex',
+        'agentConfig': {'model': 'gpt-6-astra', 'reasoning_effort': 'high'},
+      },
+    });
+    expect(created['ok'], isTrue, reason: '$created');
+    final id = created['created']['id'] as String;
+    expect(assistants.getById(id)!.agentConfig, {
+      'model': 'gpt-6-astra',
+      'reasoning_effort': 'high',
+    });
+
+    for (final invalid in [
+      'high',
+      {'model': 1},
+      {'': 'x'},
+      {for (var i = 0; i < 17; i++) 'k$i': 'v'},
+    ]) {
+      final result = await _run(tool, {
+        'action': 'update',
+        'assistant_id': id,
+        'settings': {'agentConfig': invalid},
+      });
+      expect(result['ok'], isFalse, reason: '$invalid');
+      expect(result['error'], 'invalid_settings');
+    }
+    expect(assistants.getById(id)!.agentConfig, hasLength(2));
+
+    final cleared = await _run(tool, {
+      'action': 'update',
+      'assistant_id': id,
+      'clear': ['agentConfig'],
+    });
+    expect(cleared['ok'], isTrue, reason: '$cleared');
+    expect(assistants.getById(id)!.agentConfig, isEmpty);
+    expect(assistants.getById(id)!.agentId, 'codex');
+  });
+
+  test(
+    'rejects unsupported or invalid subscription requests atomically',
+    () async {
+      for (final settings in [
+        {'name': 'A', 'agentAuthMode': 'subscription'},
+        {'name': 'A', 'agentId': 'opencode', 'agentAuthMode': 'subscription'},
+        {
+          'name': 'A',
+          'agentId': 'custom:mine',
+          'agentAuthMode': 'subscription',
+        },
+        {'name': 'A', 'agentId': 'codex', 'agentAuthMode': 'unknown'},
+        {'name': 'A', 'agentId': 'codex', 'agentAuthMode': true},
+      ]) {
+        final result = await _run(tool, {
+          'action': 'create',
+          'settings': settings,
+        });
+        expect(result['ok'], isFalse, reason: '$settings');
+        expect(result['error'], 'invalid_settings');
+        expect(assistants.assistants.map((a) => a.id), [mainId]);
+      }
+    },
+  );
+
+  test(
+    'mode changes and copies preserve provider settings and the source',
+    () async {
+      await assistants.updateAssistant(
+        Assistant.fromJson({
+          ...assistants.getById(mainId)!.toJson(),
+          'agentId': 'codex',
+          'agentAuthMode': 'subscription',
+          'chatModelProvider': 'openai',
+          'chatModelId': 'gpt-5',
+        }),
+      );
+
+      final duplicate = await _run(tool, {
+        'action': 'duplicate',
+        'assistant_id': mainId,
+      });
+      expect(duplicate['ok'], isTrue, reason: '$duplicate');
+      final copyId = duplicate['created']['id'] as String;
+      expect(
+        assistants.getById(copyId)!.toJson()['agentAuthMode'],
+        'subscription',
+      );
+      final switched = await _run(tool, {
+        'action': 'update',
+        'assistant_id': copyId,
+        'settings': {'agentAuthMode': 'provider'},
+      });
+      expect(switched['ok'], isTrue, reason: '$switched');
+      final copy = assistants.getById(copyId)!;
+      expect(copy.toJson()['agentAuthMode'], 'provider');
+      expect(copy.agentId, 'codex');
+      expect(copy.chatModelProvider, 'openai');
+      expect(copy.chatModelId, 'gpt-5');
+      expect(
+        assistants.getById(mainId)!.toJson()['agentAuthMode'],
+        'subscription',
+      );
+    },
+  );
+
+  test(
+    'an unsupported agent change or agent removal restores provider mode',
+    () async {
+      for (final mutation in [
+        {
+          'settings': {'agentId': 'opencode'},
+        },
+        {
+          'clear': ['agentId'],
+        },
+      ]) {
+        await assistants.updateAssistant(
+          Assistant.fromJson({
+            ...assistants.getById(mainId)!.toJson(),
+            'agentId': 'codex',
+            'agentAuthMode': 'subscription',
+          }),
+        );
+        final changed = await _run(tool, {
+          'action': 'update',
+          'assistant_id': mainId,
+          ...mutation,
+        });
+        expect(changed['ok'], isTrue, reason: '$changed');
+        expect(
+          assistants.getById(mainId)!.toJson()['agentAuthMode'],
+          'provider',
+        );
+      }
+    },
+  );
+
+  test(
+    'setting subscription while removing or changing an agent is rejected',
+    () async {
+      await assistants.updateAssistant(
+        assistants.getById(mainId)!.copyWith(agentId: 'codex'),
+      );
+      for (final mutation in [
+        {
+          'settings': {'agentId': 'opencode', 'agentAuthMode': 'subscription'},
+        },
+        {
+          'settings': {'agentAuthMode': 'subscription'},
+          'clear': ['agentId'],
+        },
+      ]) {
+        final changed = await _run(tool, {
+          'action': 'update',
+          'assistant_id': mainId,
+          ...mutation,
+        });
+        expect(changed['ok'], isFalse, reason: '$changed');
+        expect(changed['error'], 'invalid_settings');
+        expect(assistants.getById(mainId)!.agentId, 'codex');
+      }
+    },
+  );
 
   test('creates an assistant with every kind of setting', () async {
     final result = await _run(tool, {
@@ -347,5 +894,41 @@ void main() {
       'not_found',
     );
     expect((await _run(tool, {'action': 'fly'}))['error'], 'invalid_action');
+  });
+
+  test('an agent is set from the options, checked and cleared', () async {
+    final options = await _run(tool, {'action': 'options'});
+    expect(options['agents'], [
+      {'id': 'opencode', 'name': 'OpenCode', 'installed': true},
+      {'id': 'claude-code', 'name': 'Claude Code', 'installed': true},
+      {'id': 'codex', 'name': 'Codex', 'installed': true},
+      {'id': 'custom:mine', 'name': 'Custom', 'installed': true},
+    ]);
+
+    final bad = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {'agentId': 'nope'},
+    });
+    expect(bad['ok'], isFalse);
+    expect(assistants.getById(mainId)!.agentId, isNull);
+
+    final set = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'settings': {'agentId': 'opencode'},
+    });
+    expect(set['ok'], isTrue, reason: '$set');
+    expect(assistants.getById(mainId)!.agentId, 'opencode');
+    final got = await _run(tool, {'action': 'get', 'assistant_id': mainId});
+    expect(got['settings']['agentId'], 'opencode');
+
+    final cleared = await _run(tool, {
+      'action': 'update',
+      'assistant_id': mainId,
+      'clear': ['agentId'],
+    });
+    expect(cleared['ok'], isTrue, reason: '$cleared');
+    expect(assistants.getById(mainId)!.agentId, isNull);
   });
 }

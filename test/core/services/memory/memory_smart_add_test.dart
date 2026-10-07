@@ -6,6 +6,7 @@ import 'package:Kelivo/core/database/business_preferences.dart';
 import 'package:Kelivo/core/database/business_repository.dart';
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/memory_entry.dart';
+import 'package:Kelivo/core/services/api/tool_call_cancellation.dart';
 import 'package:Kelivo/core/services/memory/memory_prompts.dart';
 import 'package:Kelivo/core/services/memory/memory_repository.dart';
 import 'package:Kelivo/core/services/memory/memory_smart_add.dart';
@@ -55,6 +56,50 @@ void main() {
     await preferences.setString(
       BusinessEntityKind.assistant.sourceKey,
       jsonEncode(list),
+    );
+  }
+
+  for (final fails in [false, true]) {
+    test(
+      'Stop during Smart Add LLM prevents fallback writes, requestFails=$fails',
+      () async {
+        await seedAssistant('a1');
+        var cancelled = false;
+        final cancellation = ToolCallCancellation(
+          isCancelled: () => cancelled,
+          cancelled: Future<void>.value(),
+        );
+        await expectLater(
+          cancellation.run(
+            () => smartAdd.addOne(
+              item: const SmartAddItem(
+                type: MemoryType.identity,
+                content: 'Must not save after Stop',
+                scope: MemoryScope.global,
+              ),
+              visibilityAssistantId: 'a1',
+              source: MemorySource.manual,
+              lang: MemoryPromptLang.en,
+              llmCall: (_) async {
+                cancelled = true;
+                if (fails) throw StateError('tool_call_cancelled');
+                return '{"action":"NEW"}';
+              },
+            ),
+          ),
+          throwsStateError,
+        );
+        expect(
+          await chatRepository.findExactMemory(
+            assistantId: 'a1',
+            type: MemoryType.identity,
+            contentNormalized: MemoryEntry.normalizeContent(
+              'Must not save after Stop',
+            ),
+          ),
+          isNull,
+        );
+      },
     );
   }
 

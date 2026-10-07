@@ -13,8 +13,12 @@ import '../../../../utils/markdown_media_sanitizer.dart';
 import '../../../../utils/sandbox_path_resolver.dart';
 import '../builtin_tools.dart';
 import '../chat_api_helpers.dart';
+import '../tool_schema_normalizer.dart';
+import '../tool_call_argument_privacy.dart';
 import '../gemini_tool_config.dart';
+import '../generation/spend_round_control.dart';
 import '../generation/tool_loop_runner.dart';
+import '../generation/tool_result_images.dart';
 import '../google_service_account_auth.dart';
 import '../stream/sse_framing.dart';
 import '../stream/stream_chunk.dart';
@@ -450,6 +454,7 @@ Stream<StreamChunk> sendGoogleStream(
   bool stream = true,
   bool skipImageParsing = false,
   StreamRoundRunner? retryRound,
+  SpendRoundControl? spendControl,
 }) async* {
   // Check for Vertex AI Claude models (prefix "claude-")
   // If it's a Claude model on Vertex, route to special handling
@@ -472,6 +477,7 @@ Stream<StreamChunk> sendGoogleStream(
       stream: stream,
       skipImageParsing: skipImageParsing,
       retryRound: retryRound,
+      spendControl: spendControl,
     );
     return;
   }
@@ -483,6 +489,7 @@ Stream<StreamChunk> sendGoogleStream(
   final enableYoutube = builtIns.contains(BuiltInToolNames.youtube);
   // Effective model features (includes user overrides)
   final effective = effectiveModelInfo(config, modelId);
+  final takesImages = effective.input.contains(Modality.image);
   final isReasoning = _shouldRequestGoogleThoughts(config, modelId, effective);
   // Non-streaming path: use generateContent
   if (!stream) {
@@ -678,7 +685,7 @@ Stream<StreamChunk> sendGoogleStream(
           if (desc.isNotEmpty) 'description': desc,
         };
         if (params != null) {
-          d['parameters'] = cleanSchemaForGemini(params, stringEnumOnly: true);
+          d['parameters'] = params;
         }
         decls.add(d);
       }
@@ -752,6 +759,7 @@ Stream<StreamChunk> sendGoogleStream(
     };
     final extraG = customBody(config, modelId, assistantBody: extraBody);
     if (extraG.isNotEmpty) baseBody.addAll(extraG);
+    normalizeNativeToolSchemas(baseBody, ToolSchemaTarget.gemini);
 
     TokenUsage? totalUsage;
     List<Map<String, dynamic>> currentContents =
@@ -763,6 +771,7 @@ Stream<StreamChunk> sendGoogleStream(
 
     yield* runProviderToolRounds(
       retryRound: retryRound,
+      spendControl: spendControl,
       sendRound: () async* {
         pendingCalls = [];
         lastParts = [];
@@ -772,7 +781,7 @@ Stream<StreamChunk> sendGoogleStream(
         req.headers.addAll(headers);
         final body = Map<String, dynamic>.from(baseBody);
         body['contents'] = _googleApiContents(currentContents);
-        req.body = jsonEncode(body);
+        req.body = jsonEncode(spendControl?.decorateRequest(body) ?? body);
         final resp = await client.send(req);
         if (resp.statusCode < 200 || resp.statusCode >= 300) {
           final errorBody = await resp.stream.bytesToString();
@@ -780,18 +789,19 @@ Stream<StreamChunk> sendGoogleStream(
         }
         final txt = await decodeUtf8Stream(resp.stream);
         final obj = jsonDecode(txt) as Map<String, dynamic>;
+        TokenUsage? roundUsage;
         try {
           final u = (obj['usageMetadata'] as Map?)?.cast<String, dynamic>();
           if (u != null) {
             final prompt = (u['promptTokenCount'] ?? 0) as int? ?? 0;
             final completion = (u['candidatesTokenCount'] ?? 0) as int? ?? 0;
-            totalUsage = (totalUsage ?? const TokenUsage()).merge(
-              TokenUsage(
-                promptTokens: prompt,
-                completionTokens: completion,
-                cachedTokens: 0,
-              ),
+            roundUsage = TokenUsage(
+              promptTokens: prompt,
+              completionTokens: completion,
+              cachedTokens: (u['cachedContentTokenCount'] ?? 0) as int,
             );
+            totalUsage = (totalUsage ?? const TokenUsage()).merge(roundUsage);
+            if (spendControl != null) yield Usage(roundUsage);
           }
         } catch (_) {}
         final candidates = (obj['candidates'] as List?) ?? const <dynamic>[];
@@ -890,8 +900,10 @@ Stream<StreamChunk> sendGoogleStream(
           yield* emitDelta(
             ids: StreamChunkIds('round-${currentContents.length}'),
             reasoning: reasoningStr,
-            usage: totalUsage,
-            totalTokens: totalUsage?.totalTokens ?? 0,
+            usage: spendControl == null ? totalUsage : roundUsage,
+            totalTokens:
+                (spendControl == null ? totalUsage : roundUsage)?.totalTokens ??
+                0,
           );
         }
         lastText = buf.toString();
@@ -913,7 +925,13 @@ Stream<StreamChunk> sendGoogleStream(
       append: (executed) {
         currentContents = [
           ...currentContents,
-          {'role': 'model', 'parts': lastParts},
+          {
+            'role': 'model',
+            'parts': ToolCallArgumentPrivacy.protocolValue(
+              onToolCall,
+              lastParts,
+            ),
+          },
           {
             'role': 'user',
             'parts': [
@@ -933,6 +951,9 @@ Stream<StreamChunk> sendGoogleStream(
                               as Map)['id'],
                   },
                 },
+              if (takesImages)
+                for (final item in executed)
+                  ...geminiToolImageParts(item.images),
             ],
           },
         ];
@@ -1159,13 +1180,7 @@ Stream<StreamChunk> sendGoogleStream(
         if (desc.isNotEmpty) 'description': desc,
       };
       if (params != null) {
-        // Google Gemini requires strict JSON Schema compliance
-        // Fix array properties that are missing 'items' field
-        final cleanedParams = cleanSchemaForGemini(
-          params,
-          stringEnumOnly: true,
-        );
-        d['parameters'] = cleanedParams;
+        d['parameters'] = params;
       }
       decls.add(d);
     }
@@ -1201,6 +1216,7 @@ Stream<StreamChunk> sendGoogleStream(
 
   yield* runProviderToolRounds(
     retryRound: retryRound,
+    spendControl: spendControl,
     sendRound: () async* {
       pendingCalls = [];
       lastRoundCalls = [];
@@ -1273,7 +1289,8 @@ Stream<StreamChunk> sendGoogleStream(
         body.addAll(extra);
       }
       body['contents'] = _googleApiContents(convo);
-      request.body = jsonEncode(body);
+      normalizeNativeToolSchemas(body, ToolSchemaTarget.gemini);
+      request.body = jsonEncode(spendControl?.decorateRequest(body) ?? body);
 
       final resp = await client.send(request);
       if (resp.statusCode < 200 || resp.statusCode >= 300) {
@@ -1288,7 +1305,7 @@ Stream<StreamChunk> sendGoogleStream(
         persistThoughtSigs: persistGeminiThoughtSigs,
         expectImage: expectImage,
         receivedImage: receivedImage,
-        initialUsage: usage,
+        initialUsage: spendControl == null ? usage : null,
         citations: builtinCitations,
         sourceId: sourceId,
       );
@@ -1359,7 +1376,8 @@ Stream<StreamChunk> sendGoogleStream(
           yield await sanitizeStreamChunk(chunk, sanitizeTextIfNeeded);
           if (chunk is ToolCallEnd &&
               decoder.isClientFunctionCall(chunk.id) &&
-              onToolCall != null) {
+              onToolCall != null &&
+              spendControl == null) {
             final call = decoder.functionCallById(chunk.id)!;
             if (call.result.isEmpty) {
               final emitCall = emitToolCall(
@@ -1386,6 +1404,9 @@ Stream<StreamChunk> sendGoogleStream(
               )) {
                 if (resultChunk is ToolCallResult) {
                   call.result = (resultChunk.output ?? '').toString();
+                  call.images = await loadToolResultImages(
+                    resultChunk.metadata,
+                  );
                 }
                 yield resultChunk;
               }
@@ -1409,6 +1430,7 @@ Stream<StreamChunk> sendGoogleStream(
             'name': call.name,
             'args': call.args,
             'result': call.result,
+            'images': call.images,
             'thoughtSigKey': call.thoughtSigKey,
             'thoughtSigVal': call.thoughtSigVal,
             'part': call.part,
@@ -1446,8 +1468,10 @@ Stream<StreamChunk> sendGoogleStream(
           yield* emitDelta(
             ids: StreamChunkIds(sourceId),
             content: sanitized,
-            usage: usage,
-            totalTokens: totalTokens,
+            usage: spendControl == null ? usage : decoder.usage,
+            totalTokens: spendControl == null
+                ? totalTokens
+                : decoder.usage?.totalTokens ?? 0,
           );
         }
       }
@@ -1486,12 +1510,28 @@ Stream<StreamChunk> sendGoogleStream(
     },
     takeCalls: () => pendingCalls,
     continueWithoutCalls: () => retryMalformed,
-    executeAfterRound: false,
+    executeAfterRound: spendControl != null,
     onToolCall: onToolCall,
     append: (executed) {
       if (retryMalformed) return;
+      if (spendControl != null) {
+        final resultsById = {for (final item in executed) item.call.id: item};
+        for (final call in lastRoundCalls) {
+          final result = resultsById[call['id']];
+          if (result != null) {
+            call['result'] = result.content;
+            call['images'] = result.images;
+          }
+        }
+      }
       if (isGemini3) {
-        convo.add({'role': 'model', 'parts': lastRoundModelParts});
+        convo.add({
+          'role': 'model',
+          'parts': ToolCallArgumentPrivacy.protocolValue(
+            onToolCall,
+            lastRoundModelParts,
+          ),
+        });
         final responseParts = <Map<String, dynamic>>[];
         for (final c in lastRoundCalls) {
           final name = (c['name'] ?? '').toString();
@@ -1505,11 +1545,20 @@ Stream<StreamChunk> sendGoogleStream(
           }
           responseParts.add({
             'functionResponse': {
-              'name': name,
+              'name': ToolCallArgumentPrivacy.nameForModel(onToolCall, name),
               'response': responseObj,
               if (apiId != null) 'id': apiId,
             },
           });
+        }
+        if (takesImages) {
+          for (final c in lastRoundCalls) {
+            responseParts.addAll(
+              geminiToolImageParts(
+                (c['images'] as List<ToolResultImage>?) ?? const [],
+              ),
+            );
+          }
         }
         convo.add({'role': 'user', 'parts': responseParts});
         return;
@@ -1523,7 +1572,14 @@ Stream<StreamChunk> sendGoogleStream(
         final thoughtSigVal = c['thoughtSigVal'];
 
         final part = <String, dynamic>{
-          'functionCall': {'name': name, 'args': args},
+          'functionCall': {
+            'name': ToolCallArgumentPrivacy.nameForModel(onToolCall, name),
+            'args': ToolCallArgumentPrivacy.argumentsForModel(
+              onToolCall,
+              name,
+              args,
+            ),
+          },
         };
         if (thoughtSigKey != null && thoughtSigVal != null) {
           part[thoughtSigKey] = thoughtSigVal;
@@ -1543,8 +1599,15 @@ Stream<StreamChunk> sendGoogleStream(
           'role': 'user',
           'parts': [
             {
-              'functionResponse': {'name': name, 'response': responseObj},
+              'functionResponse': {
+                'name': ToolCallArgumentPrivacy.nameForModel(onToolCall, name),
+                'response': responseObj,
+              },
             },
+            if (takesImages)
+              ...geminiToolImageParts(
+                (c['images'] as List<ToolResultImage>?) ?? const [],
+              ),
           ],
         });
       }

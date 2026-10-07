@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import 'workspace_runtime.dart';
+import 'workspace_file_access.dart';
 
 /// Thrown when a model path contains NUL or `..` escapes a zone.
 class PathResolutionException implements Exception {
@@ -36,7 +37,15 @@ class WorkspacePaths {
     required String skillsHostDir,
     List<Mount> externalMounts = const [],
     this.loadExternalMounts,
-  }) : _externalMounts = List.unmodifiable(externalMounts),
+    String? downloadsHostDir,
+  }) : _downloads = downloadsHostDir == null
+           ? null
+           : Mount(host: _canonHost(downloadsHostDir), guest: guestDownloads),
+       _externalMounts = List.unmodifiable([
+         ...externalMounts,
+         if (downloadsHostDir != null)
+           Mount(host: _canonHost(downloadsHostDir), guest: guestDownloads),
+       ]),
        sandboxed = true,
        workspaceHostRoot = _canonHost(workspaceHostRoot),
        sessionHostDir = _canonHost(sessionHostDir),
@@ -48,6 +57,7 @@ class WorkspacePaths {
     required String sessionHostDir,
     required String skillsHostDir,
   }) : _externalMounts = const [],
+       _downloads = null,
        loadExternalMounts = null,
        sandboxed = false,
        workspaceHostRoot = _canonHost(workspaceHostRoot),
@@ -61,12 +71,35 @@ class WorkspacePaths {
   final String skillsHostDir;
   final String tmpHostRoot;
   List<Mount> _externalMounts;
+
+  /// The phone's Downloads folder, where the browser saves files, at
+  /// [guestDownloads]; null where it is not available.
+  final Mount? _downloads;
   final Future<List<Mount>> Function()? loadExternalMounts;
   List<Mount> get externalMounts => List.unmodifiable(_externalMounts);
 
+  WorkspaceFileAccess get fileAccess => WorkspaceFileAccess(
+    roots: [
+      workspaceHostRoot,
+      sessionHostDir,
+      skillsHostDir,
+      tmpHostRoot,
+      ..._externalMounts.map((mount) => mount.host),
+    ],
+    readOnlyRoots: [
+      skillsHostDir,
+      ..._externalMounts
+          .where((mount) => mount.readOnly)
+          .map((mount) => mount.host),
+    ],
+  );
+
   Future<void> refreshExternalMounts() async {
     if (loadExternalMounts != null) {
-      _externalMounts = await loadExternalMounts!();
+      _externalMounts = [
+        ...await loadExternalMounts!(),
+        if (_downloads != null) _downloads,
+      ];
     }
   }
 
@@ -78,6 +111,7 @@ class WorkspacePaths {
   static const String guestChat = '/chat';
   static const String guestSkills = '/skills';
   static const String guestTmp = '/tmp';
+  static const String guestDownloads = '/downloads';
 
   String get modelRoot => sandboxed ? guestWorkspace : workspaceHostRoot;
 
@@ -394,40 +428,6 @@ class WorkspacePaths {
 
   /// Follows existing symlinks, including parents of a not-yet-created file.
   static Future<String> resolveHostPath(String hostPath) async {
-    try {
-      if (await FileSystemEntity.isLink(hostPath)) {
-        return p.canonicalize(await Link(hostPath).resolveSymbolicLinks());
-      }
-    } on FileSystemException {
-      // Fall through to file/dir/parent walk.
-    }
-    try {
-      if (await File(hostPath).exists()) {
-        return p.canonicalize(await File(hostPath).resolveSymbolicLinks());
-      }
-    } on FileSystemException {
-      // Continue.
-    }
-    try {
-      if (await Directory(hostPath).exists()) {
-        return p.canonicalize(await Directory(hostPath).resolveSymbolicLinks());
-      }
-    } on FileSystemException {
-      // Continue.
-    }
-
-    final parts = <String>[];
-    var current = p.normalize(hostPath);
-    while (true) {
-      parts.add(p.basename(current));
-      final parent = p.dirname(current);
-      if (parent == current) return _canonHost(hostPath);
-      try {
-        final realParent = await Directory(parent).resolveSymbolicLinks();
-        return p.canonicalize(p.join(realParent, p.joinAll(parts.reversed)));
-      } on FileSystemException {
-        current = parent;
-      }
-    }
+    return WorkspaceFileAccess.resolvePath(hostPath);
   }
 }

@@ -10,6 +10,7 @@ enum SettingsSearchDestination {
   colorMode,
   theme,
   themeAdvanced,
+  appearance,
   chatDisplay,
   rendering,
   behavior,
@@ -25,6 +26,7 @@ enum SettingsSearchDestination {
   search,
   tts,
   mcp,
+  agents,
   workspace,
   skills,
   quickPhrases,
@@ -36,6 +38,7 @@ enum SettingsSearchDestination {
   storage,
   scheduledTasks,
   miniApps,
+  miniAppWeb,
   hotkeys,
   stats,
   toolSchemas,
@@ -50,6 +53,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.colorMode => l.settingsPageColorMode,
     SettingsSearchDestination.theme => l.displaySettingsPageThemeSettingsTitle,
     SettingsSearchDestination.themeAdvanced => l.themeAdvancedSettingsPageTitle,
+    SettingsSearchDestination.appearance => l.appearanceSettingsPageTitle,
     SettingsSearchDestination.chatDisplay =>
       l.displaySettingsPageChatItemDisplayTitle,
     SettingsSearchDestination.rendering =>
@@ -69,6 +73,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.search => l.settingsPageSearch,
     SettingsSearchDestination.tts => l.settingsPageTts,
     SettingsSearchDestination.mcp => l.settingsPageMcp,
+    SettingsSearchDestination.agents => l.agentsTitle,
     SettingsSearchDestination.workspace => l.settingsPageWorkspace,
     SettingsSearchDestination.skills => l.settingsPageSkills,
     SettingsSearchDestination.quickPhrases => l.settingsPageQuickPhrase,
@@ -81,6 +86,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.storage => l.settingsPageChatStorage,
     SettingsSearchDestination.scheduledTasks => l.scheduledTasksTitle,
     SettingsSearchDestination.miniApps => l.miniAppsTitle,
+    SettingsSearchDestination.miniAppWeb => l.miniAppsWebTitle,
     SettingsSearchDestination.hotkeys => l.settingsPageHotkeys,
     SettingsSearchDestination.stats => l.settingsPageStatistics,
     SettingsSearchDestination.toolSchemas => l.toolSchemaSettingsPageTitle,
@@ -94,6 +100,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.colorMode => LucideIcons.sunMoon,
     SettingsSearchDestination.theme => LucideIcons.palette,
     SettingsSearchDestination.themeAdvanced => LucideIcons.layers,
+    SettingsSearchDestination.appearance => LucideIcons.image,
     SettingsSearchDestination.chatDisplay => LucideIcons.messageCircle,
     SettingsSearchDestination.rendering => LucideIcons.textInitial,
     SettingsSearchDestination.behavior => LucideIcons.settings2,
@@ -109,6 +116,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.search => LucideIcons.globe,
     SettingsSearchDestination.tts => LucideIcons.volume2,
     SettingsSearchDestination.mcp => LucideIcons.terminal,
+    SettingsSearchDestination.agents => LucideIcons.bot,
     SettingsSearchDestination.workspace => LucideIcons.folderCode,
     SettingsSearchDestination.skills => LucideIcons.wandSparkles,
     SettingsSearchDestination.quickPhrases => LucideIcons.zap,
@@ -120,6 +128,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
     SettingsSearchDestination.storage => LucideIcons.hardDrive,
     SettingsSearchDestination.scheduledTasks => LucideIcons.clock,
     SettingsSearchDestination.miniApps => LucideIcons.layoutGrid,
+    SettingsSearchDestination.miniAppWeb => LucideIcons.earth,
     SettingsSearchDestination.hotkeys => LucideIcons.keyboard,
     SettingsSearchDestination.stats => LucideIcons.chartColumnBig,
     SettingsSearchDestination.toolSchemas => LucideIcons.wrench,
@@ -131,6 +140,7 @@ extension SettingsSearchDestinationDetails on SettingsSearchDestination {
   bool get isDisplaySection => switch (this) {
     SettingsSearchDestination.theme ||
     SettingsSearchDestination.themeAdvanced ||
+    SettingsSearchDestination.appearance ||
     SettingsSearchDestination.chatDisplay ||
     SettingsSearchDestination.rendering ||
     SettingsSearchDestination.behavior ||
@@ -264,6 +274,14 @@ class SettingsSearchIndex {
       targetLabel: null,
     );
     add(
+      'appearance',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSettingsPageTitle,
+      page: true,
+      keywords:
+          'appearance background wallpaper photo gif video animated gradient внешний вид фон обои фото видео градиент 外观 外觀 背景 壁纸 壁紙 视频 影片 动态渐变 動態漸層',
+    );
+    add(
       'chatDisplay',
       SettingsSearchDestination.chatDisplay,
       (l) => l.displaySettingsPageChatItemDisplayTitle,
@@ -382,6 +400,13 @@ class SettingsSearchIndex {
       keywords: 'mcp server tools sse stdio streamable 工具 服务器 伺服器',
     );
     add(
+      'agents',
+      SettingsSearchDestination.agents,
+      (l) => l.agentsTitle,
+      page: true,
+      keywords: 'agents acp claude code codex opencode агенты агент 智能体 代理',
+    );
+    add(
       'workspace',
       SettingsSearchDestination.workspace,
       (l) => l.settingsPageWorkspace,
@@ -464,6 +489,16 @@ class SettingsSearchIndex {
     );
 
     add(
+      'miniAppWeb',
+      SettingsSearchDestination.miniAppWeb,
+      (l) => l.miniAppsWebTitle,
+      page: true,
+      keywords:
+          'web server lan wifi browser localhost mdns веб сервер сеть браузер '
+          '网页 服务器 局域网 網頁 伺服器',
+    );
+
+    add(
       'stats',
       SettingsSearchDestination.stats,
       (l) => l.settingsPageStatistics,
@@ -522,9 +557,148 @@ class SettingsSearchIndex {
     );
     add(
       'displaySettingsPageChatBackgroundMaskTitle',
-      SettingsSearchDestination.display,
+      SettingsSearchDestination.appearance,
       (l) => l.displaySettingsPageChatBackgroundMaskTitle,
       keywords: 'background wallpaper opacity 背景 壁纸 壁紙 蒙版 透明度',
+    );
+    add(
+      'appearanceSameBackground',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSameBackground,
+      keywords:
+          'shared light dark same theme общий светлая тёмная одинаковый 浅色 深色 淺色 深色 相同',
+    );
+    add(
+      'appearanceBackground',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceBackground,
+      keywords:
+          'photo gallery gif video gradient wallpaper фон обои галерея видео градиент 图片 圖片 视频 影片 渐变 漸層',
+    );
+    add(
+      'appearanceBlur',
+      SettingsSearchDestination.appearance,
+      (l) => l.messageStyleSettingsPageBlur,
+      keywords: 'background blur размытие 模糊',
+    );
+    add(
+      'appearanceBrightness',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceBrightness,
+      keywords: 'background brightness яркость 亮度',
+    );
+    add(
+      'appearanceSaturation',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSaturation,
+      keywords: 'background saturation насыщенность 饱和度 飽和度',
+    );
+    add(
+      'appearanceSidebarBackground',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarBackground,
+      keywords:
+          'sidebar wallpaper same chat custom theme фон боковая панель обои 侧栏 背景 側欄',
+    );
+    add(
+      'appearanceSidebarMask',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarMask,
+      keywords: 'sidebar overlay mask маска боковая панель 侧栏 遮罩 側欄',
+    );
+    add(
+      'appearanceSidebarBlur',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarBlur,
+      keywords: 'sidebar blur размытие боковая панель 侧栏 模糊 側欄',
+    );
+    add(
+      'appearanceSidebarOpacity',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarOpacity,
+      keywords: 'sidebar opacity прозрачность боковая панель 侧栏 不透明度 側欄',
+    );
+    add(
+      'appearanceSidebarPhoneWidth',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarPhoneWidth,
+      keywords:
+          'sidebar phone width ширина телефона боковая панель 手机 侧栏 宽度 手機 側欄 寬度',
+    );
+    add(
+      'appearanceSidebarWideWidth',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarWideWidth,
+      keywords:
+          'sidebar tablet landscape width ширина планшет 侧栏 宽屏 宽度 側欄 寬螢幕 寬度',
+    );
+    add(
+      'appearanceSidebarDensity',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarDensity,
+      keywords:
+          'sidebar list compact spacious density плотность список 侧栏 列表 密度 側欄 清單',
+    );
+    add(
+      'appearanceSidebarCardRadius',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarCardRadius,
+      keywords:
+          'sidebar card radius corners скругление карточки 侧栏 卡片 圆角 側欄 圓角',
+    );
+    add(
+      'appearanceSidebarCardColor',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarCardColor,
+      keywords: 'sidebar card color цвет карточки 侧栏 卡片 颜色 側欄 顏色',
+    );
+    add(
+      'appearanceSidebarActiveCardColor',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarActiveCardColor,
+      keywords:
+          'sidebar active card color цвет активный чат 侧栏 当前 卡片 颜色 側欄 目前 顏色',
+    );
+    add(
+      'appearanceSidebarTimestamp',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarTimestamp,
+      keywords: 'sidebar timestamp time дата время сообщения 侧栏 消息 时间 側欄 訊息 時間',
+    );
+    add(
+      'appearanceSidebarAssistant',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarAssistant,
+      keywords:
+          'sidebar assistant icon name ассистент значок имя 侧栏 助手 图标 名称 側欄 圖示 名稱',
+    );
+    add(
+      'appearanceSidebarModel',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarModel,
+      keywords:
+          'sidebar model icon name модель значок название 侧栏 模型 图标 名称 側欄 圖示 名稱',
+    );
+    add(
+      'appearanceSidebarLastPreview',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarLastPreview,
+      keywords:
+          'sidebar last message preview последнее сообщение превью 侧栏 消息 预览 側欄 訊息 預覽',
+    );
+    add(
+      'appearanceSidebarGrouping',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarGrouping,
+      keywords:
+          'sidebar grouping date assistant group группировка дата ассистент 侧栏 分组 日期 助手 側欄 分組',
+    );
+    add(
+      'appearanceSidebarDock',
+      SettingsSearchDestination.appearance,
+      (l) => l.appearanceSidebarDock,
+      keywords:
+          'sidebar dock buttons reorder profile settings memory apps environment translate tasks кнопки нижняя панель порядок 侧栏 按钮 排序 側欄 按鈕',
     );
     add(
       'displaySettingsPageChatInputBackgroundOpacityTitle',
@@ -704,9 +878,14 @@ class SettingsSearchIndex {
       (l) => l.displaySettingsPageMessageNavButtonsTitle,
     );
     add(
-      'displaySettingsPageShowChatListDateTitle',
-      SettingsSearchDestination.behavior,
-      (l) => l.displaySettingsPageShowChatListDateTitle,
+      'displaySettingsPageSidebarThumbnailsTitle',
+      SettingsSearchDestination.appearance,
+      (l) => l.displaySettingsPageSidebarThumbnailsTitle,
+    );
+    add(
+      'sideDrawerShortcutsTitle',
+      SettingsSearchDestination.appearance,
+      (l) => l.sideDrawerShortcutsTitle,
     );
     add(
       'displaySettingsPageKeepSidebarOpenOnAssistantTapTitle',

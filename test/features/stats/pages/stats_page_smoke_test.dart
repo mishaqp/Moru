@@ -365,6 +365,13 @@ void main() {
     expect(find.text('12'), findsOneWidget);
     expect(find.textContaining('12 /'), findsNothing);
     expect(find.textContaining('Current Branch'), findsNothing);
+    expect(find.text('Spending limits'), findsOneWidget);
+    expect(find.text('Off'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Usage Trend'),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Usage Trend'), findsOneWidget);
 
     await tester.drag(find.byType(ListView), const Offset(0, -700));
@@ -372,6 +379,22 @@ void main() {
 
     expect(find.text('Model Usage'), findsOneWidget);
     expect(find.text('No statistics yet'), findsNWidgets(3));
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('spending limits open within existing statistics', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_harness(_snapshot()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Spending limits'));
+    await tester.pumpAndSettle();
+    expect(find.text('Per chat · USD'), findsOneWidget);
+    expect(find.text('Per day · tokens'), findsOneWidget);
+    expect(find.text('Hard stop'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
   });
 
   testWidgets('rankings show top five and expand to all rows', (tester) async {

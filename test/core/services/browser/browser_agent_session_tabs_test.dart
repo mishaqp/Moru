@@ -1,0 +1,269 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:Kelivo/core/services/browser/browser_agent_session.dart';
+import 'package:Kelivo/core/services/browser/browser_tabs.dart';
+import 'package:Kelivo/features/home/services/browser_agent_tool.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+
+import '../../../support/fake_webview_platform.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  final session = BrowserAgentSession.instance;
+  late FakeWebViewController first;
+  late WebViewController firstController;
+  final created = <FakeWebViewController>[];
+
+  setUp(() async {
+    installFakeWebViewPlatform();
+    created.clear();
+    session.controllerFactory = () {
+      final controller = WebViewController();
+      created.add(FakeWebViewPlatform.lastCreated!);
+      return controller;
+    };
+    firstController = WebViewController();
+    first = FakeWebViewPlatform.lastCreated!;
+    // What the browser page does: its own delegate feeds the session.
+    await firstController.setNavigationDelegate(
+      NavigationDelegate(
+        onPageStarted: session.pageStarted,
+        onPageFinished: session.pageFinished,
+      ),
+    );
+    session.register(
+      firstController,
+      onClose: () async {
+        session.unregister(session.controller!);
+      },
+    );
+    await session.load(Uri.parse('https://first.example/'));
+    await Future<void>.delayed(Duration.zero);
+  });
+
+  tearDown(() async {
+    if (session.isAttached) session.unregister(session.controller!);
+    session.clock = DateTime.now;
+    await Future<void>.delayed(Duration.zero);
+  });
+
+  Future<Map<String, dynamic>> run(Map<String, dynamic> args) async =>
+      jsonDecode(await BrowserAgentTool.execute(args)) as Map<String, dynamic>;
+
+  List<String?> urls() => [for (final t in session.tabs.value) t.url];
+
+  test('AI opening a redirect counts the committed destination page', () async {
+    first.onLoadRequest = (request) async {
+      if (request.uri.path == '/redirect') {
+        await firstController.loadRequest(
+          Uri.parse('https://first.example/home'),
+        );
+      }
+    };
+    final result = await run({
+      'action': 'open',
+      'url': 'https://first.example/redirect',
+    });
+    expect(result['ok'], isTrue);
+    expect(session.activityCountForPage('https://first.example/home'), 1);
+    expect(session.activityCountForPage('https://first.example/redirect'), 0);
+  });
+
+  test('a new tab opens alongside and the old one keeps its page', () async {
+    final opened = await run({
+      'action': 'new_tab',
+      'url': 'https://second.example/',
+    });
+    expect(opened['ok'], isTrue);
+    final second = created.single;
+    expect(identical(session.controller!.platform, second), isTrue);
+    expect(urls(), ['https://first.example/', 'https://second.example/']);
+    expect([for (final t in session.tabs.value) t.active], [false, true]);
+
+    // The background tab navigates on its own; the session's page is still
+    // the second tab.
+    await firstController.loadRequest(Uri.parse('https://first.example/b'));
+    expect(urls().first, 'https://first.example/b');
+    expect(session.pageUrl.value, 'https://second.example/');
+
+    // Actions work on the active tab.
+    second.jsHandler = (_) => jsonEncode({'ok': true, 'url': 'x'});
+    first.jsHandler = (_) => throw StateError('the background tab was used');
+    expect((await run({'action': 'observe'}))['ok'], isTrue);
+
+    final firstId = session.tabs.value.first.id;
+    final switched = await run({'action': 'switch_tab', 'tab_id': firstId});
+    expect(switched['ok'], isTrue);
+    expect(identical(session.controller, firstController), isTrue);
+    expect(session.pageUrl.value, 'https://first.example/b');
+    // Its history went on in the background.
+    final back = await run({'action': 'back'});
+    expect(back['url'], 'https://first.example/');
+  });
+
+  test('closing the active tab shows its neighbour; the last one closes the '
+      'browser', () async {
+    await run({'action': 'new_tab', 'url': 'https://second.example/'});
+    final closed = await run({'action': 'close_tab'});
+    expect(closed['ok'], isTrue);
+    expect(urls(), ['https://first.example/']);
+    expect(identical(session.controller, firstController), isTrue);
+    // The closed tab stops its page.
+    expect(await created.single.currentUrl(), 'about:blank');
+
+    final last = await run({'action': 'close_tab'});
+    expect(last['closed'], isTrue);
+    expect(session.isAttached, isFalse);
+  });
+
+  test('at most five tabs; unknown ids are reported', () async {
+    for (var i = 0; i < BrowserAgentSession.maxTabs - 1; i++) {
+      expect((await run({'action': 'new_tab'}))['ok'], isTrue);
+    }
+    final refused = await run({'action': 'new_tab'});
+    expect(refused['error'], 'too_many_tabs');
+    expect(refused['tabs'], hasLength(BrowserAgentSession.maxTabs));
+    expect(
+      (await run({'action': 'switch_tab', 'tab_id': 'nope'}))['error'],
+      'no_such_tab',
+    );
+    expect(
+      (await run({'action': 'new_tab', 'url': 'file:///etc/passwd'}))['error'],
+      'invalid_url',
+    );
+  });
+
+  for (final prepared in [false, true]) {
+    test(
+      'concurrent handoffs share the last tab slot (prepared=$prepared)',
+      () async {
+        for (var i = 1; i < BrowserAgentSession.maxTabs - 1; i++) {
+          await session.newTab(url: 'https://tab$i.example/');
+        }
+        final firstEntered = Completer<void>();
+        final secondEntered = Completer<void>();
+        final release = Completer<void>();
+        var entered = 0;
+        WebViewController makeController() {
+          final controller = WebViewController();
+          (controller.platform as FakeWebViewController)
+              .onSetNavigationDelegate = () async {
+            entered++;
+            (entered == 1 ? firstEntered : secondEntered).complete();
+            await release.future;
+          };
+          return controller;
+        }
+
+        session.controllerFactory = makeController;
+        final one = session.newTab(
+          url: 'https://one.example/',
+          byAgent: !prepared,
+          preparedController: prepared ? makeController() : null,
+          mayOpen: prepared ? () => true : null,
+        );
+        await firstEntered.future;
+        final two = session.newTab(
+          url: 'https://two.example/',
+          byAgent: !prepared,
+          preparedController: prepared ? makeController() : null,
+          mayOpen: prepared ? () => true : null,
+        );
+        // The second request either reaches the same native setup barrier or
+        // refuses the slot already reserved by the first ordinary tab.
+        await Future.any<void>([secondEntered.future, two.then<void>((_) {})]);
+        release.complete();
+        final results = await Future.wait([one, two]);
+        expect(results.where((result) => result['ok'] == true), hasLength(1));
+        expect(
+          results.where((result) => result['error'] == 'too_many_tabs'),
+          hasLength(1),
+        );
+        expect(session.tabs.value, hasLength(BrowserAgentSession.maxTabs));
+      },
+    );
+  }
+
+  test('tabs the model left unused for 15 minutes close, except the one on '
+      'screen and the user\'s', () async {
+    var now = DateTime(2026, 9, 28, 12);
+    session.clock = () => now;
+    await run({'action': 'new_tab', 'url': 'https://a.example/'});
+    await run({'action': 'new_tab', 'url': 'https://b.example/'});
+    final ids = [for (final t in session.tabs.value) t.id];
+    // The user's own first tab is on screen now; b was used last.
+    await session.switchTab(ids.first);
+
+    now = now.add(const Duration(minutes: 14));
+    expect(session.closeIdleAgentTabs(), isEmpty);
+    now = now.add(const Duration(minutes: 2));
+    expect(session.closeIdleAgentTabs(), [ids[1], ids[2]]);
+    expect([for (final t in session.tabs.value) t.id], [ids.first]);
+  });
+
+  test('desktop mode sets a desktop user agent of the same Chrome and '
+      'reloads; mobile restores the WebView\'s own', () async {
+    final wide = <bool>[];
+    final originalWide = session.setWideViewport;
+    session.setWideViewport = (_, value) async => wide.add(value);
+    addTearDown(() => session.setWideViewport = originalWide);
+    final desktop = await run({'action': 'set_mode', 'mode': 'desktop'});
+    expect(desktop['mode'], 'desktop');
+    expect(
+      first.userAgent,
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
+      '(KHTML, like Gecko) Chrome/131.0.6778.39 Safari/537.36',
+    );
+    expect(session.tabs.value.single.desktop, isTrue);
+
+    await run({'action': 'set_mode', 'mode': 'mobile'});
+    expect(first.userAgent, isNull);
+    // Desktop pages get their own width, the phone layout the screen's.
+    expect(wide, [true, false]);
+    expect(session.tabs.value.single.desktop, isFalse);
+    expect(
+      (await run({'action': 'set_mode', 'mode': 'tv'}))['error'],
+      'invalid_mode',
+    );
+  });
+
+  test('desktopUserAgent falls back to a current Chrome', () {
+    expect(desktopUserAgent(null), contains('Chrome/'));
+    expect(desktopUserAgent('x'), isNot(contains('Mobile')));
+  });
+
+  test('clearing site data empties the page storage, expires the site '
+      'cookies and reloads', () async {
+    final scripts = <String>[];
+    first.jsHandler = (script) {
+      scripts.add(script);
+      return 'null';
+    };
+    final cleared = <String>[];
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(const MethodChannel('app.browser'), (
+      call,
+    ) async {
+      if (call.method == 'clearCookies') {
+        cleared.add((call.arguments as Map)['url'] as String);
+        return 2;
+      }
+      return null;
+    });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(
+        const MethodChannel('app.browser'),
+        null,
+      ),
+    );
+
+    final result = await session.clearSiteData();
+    expect(result, {'ok': true, 'site': 'first.example'});
+    expect(scripts.single, contains('localStorage.clear()'));
+    expect(cleared, ['https://first.example/']);
+  });
+}

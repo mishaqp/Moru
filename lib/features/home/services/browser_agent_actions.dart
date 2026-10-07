@@ -44,12 +44,44 @@ class BrowserAgentActions {
       descriptionEn: 'List visible elements and text.',
     ),
     BrowserAgentAction(
+      id: 'screenshot',
+      requiresApproval: false,
+      labelRu: 'Снимок экрана',
+      labelEn: 'Screenshot',
+      descriptionRu: 'Картинка страницы для модели: капчи, графики, вёрстка.',
+      descriptionEn: 'A picture of the page for the model: captchas, charts.',
+    ),
+    BrowserAgentAction(
       id: 'read',
       requiresApproval: false,
       labelRu: 'Прочитать текст',
       labelEn: 'Read text',
       descriptionRu: 'Извлечение полного читаемого текста страницы.',
       descriptionEn: 'Extract the full readable page text.',
+    ),
+    BrowserAgentAction(
+      id: 'collect',
+      requiresApproval: false,
+      labelRu: 'Собрать список',
+      labelEn: 'Collect a list',
+      descriptionRu: 'Прокрутка ленты или выдачи со сбором всех пунктов.',
+      descriptionEn: 'Scroll a feed or results and collect every item.',
+    ),
+    BrowserAgentAction(
+      id: 'outline',
+      requiresApproval: false,
+      labelRu: 'Структура страницы',
+      labelEn: 'Page outline',
+      descriptionRu: 'Короткая карта: заголовки, формы, списки, таблицы.',
+      descriptionEn: 'A short map: headings, forms, lists, tables.',
+    ),
+    BrowserAgentAction(
+      id: 'wait_stable',
+      requiresApproval: false,
+      labelRu: 'Дождаться загрузки',
+      labelEn: 'Wait until loaded',
+      descriptionRu: 'Пауза, пока страница не перестанет меняться.',
+      descriptionEn: 'Pause until the page stops changing.',
     ),
     BrowserAgentAction(
       id: 'wait_for',
@@ -92,6 +124,46 @@ class BrowserAgentActions {
       descriptionEn: 'Scroll the page up or down.',
     ),
     BrowserAgentAction(
+      id: 'tabs',
+      requiresApproval: false,
+      labelRu: 'Список вкладок',
+      labelEn: 'List tabs',
+      descriptionRu: 'Открытые вкладки и какая из них на экране.',
+      descriptionEn: 'The open tabs and which one is on screen.',
+    ),
+    BrowserAgentAction(
+      id: 'new_tab',
+      requiresApproval: false,
+      labelRu: 'Новая вкладка',
+      labelEn: 'New tab',
+      descriptionRu: 'Открыть страницу рядом, не теряя текущую.',
+      descriptionEn: 'Open a page alongside, keeping the current one.',
+    ),
+    BrowserAgentAction(
+      id: 'switch_tab',
+      requiresApproval: false,
+      labelRu: 'Переключить вкладку',
+      labelEn: 'Switch tab',
+      descriptionRu: 'Показать другую открытую вкладку.',
+      descriptionEn: 'Show another open tab.',
+    ),
+    BrowserAgentAction(
+      id: 'close_tab',
+      requiresApproval: false,
+      labelRu: 'Закрыть вкладку',
+      labelEn: 'Close tab',
+      descriptionRu: 'Закрыть вкладку; последняя закрывает браузер.',
+      descriptionEn: 'Close a tab; the last one closes the browser.',
+    ),
+    BrowserAgentAction(
+      id: 'set_mode',
+      requiresApproval: false,
+      labelRu: 'Версия для ПК или телефона',
+      labelEn: 'Desktop or mobile site',
+      descriptionRu: 'Показать сайт как на компьютере или как на телефоне.',
+      descriptionEn: 'Show the site as on a computer or as on a phone.',
+    ),
+    BrowserAgentAction(
       id: 'close',
       requiresApproval: false,
       labelRu: 'Закрыть браузер',
@@ -112,8 +184,17 @@ class BrowserAgentActions {
       requiresApproval: true,
       labelRu: 'Нажать',
       labelEn: 'Click',
-      descriptionRu: 'Нажатие на элемент.',
-      descriptionEn: 'Click an element.',
+      descriptionRu: 'Нажатие на элемент или на точку страницы.',
+      descriptionEn: 'Click an element or a point on the page.',
+    ),
+    BrowserAgentAction(
+      id: 'hover',
+      requiresApproval: false,
+      labelRu: 'Навести указатель',
+      labelEn: 'Hover',
+      descriptionRu:
+          'Наведение на элемент или точку: открывает меню и подсказки.',
+      descriptionEn: 'Move the pointer over an element or point to open menus.',
     ),
     BrowserAgentAction(
       id: 'type',
@@ -147,6 +228,29 @@ class BrowserAgentActions {
       descriptionRu:
           'Может прочитать или изменить что угодно на открытой странице.',
       descriptionEn: 'Can read or change anything on the currently open page.',
+    ),
+    BrowserAgentAction(
+      id: 'fetch',
+      requiresApproval: false,
+      labelRu: 'Запрос со входом сайта',
+      labelEn: 'Request with the site login',
+      descriptionRu:
+          'Запрос изнутри страницы с её куки. Чтение без подтверждения, '
+          'отправка данных — с подтверждением.',
+      descriptionEn:
+          'A request from inside the page with its cookies. Reading needs '
+          'no approval, sending data does.',
+    ),
+    BrowserAgentAction(
+      id: 'export_cookies',
+      requiresApproval: true,
+      labelRu: 'Куки для терминала',
+      labelEn: 'Cookies for the terminal',
+      descriptionRu:
+          'Файл с куки открытого сайта в папке чата для curl и wget.',
+      descriptionEn:
+          "A file with the open site's cookies in the chat folder for curl "
+          'and wget.',
     ),
   ];
 

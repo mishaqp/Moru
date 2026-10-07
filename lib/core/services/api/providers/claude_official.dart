@@ -13,7 +13,11 @@ import '../../../utils/multimodal_input_utils.dart';
 import '../../../../utils/mcp_structured_image.dart';
 import '../builtin_tools.dart';
 import '../chat_api_helpers.dart';
+import '../tool_schema_normalizer.dart';
+import '../tool_call_argument_privacy.dart';
+import '../generation/spend_round_control.dart';
 import '../generation/tool_loop_runner.dart';
+import '../generation/tool_result_images.dart';
 import '../stream/sse_framing.dart';
 import '../stream/stream_chunk.dart';
 import '../stream/stream_chunk_emit.dart';
@@ -58,8 +62,10 @@ Stream<StreamChunk> sendClaudeStream(
   bool builtInSearchOnly = false,
   bool skipImageParsing = false,
   StreamRoundRunner? retryRound,
+  SpendRoundControl? spendControl,
 }) async* {
   final upstreamModelId = apiModelId(config, modelId);
+  final takesImages = modelTakesImages(config, modelId);
   // Endpoint and headers (constant across rounds)
   final base = config.baseUrl.endsWith('/')
       ? config.baseUrl.substring(0, config.baseUrl.length - 1)
@@ -257,7 +263,10 @@ Stream<StreamChunk> sendClaudeStream(
   // replays from its text alone and stores nothing.
   final turnResponses = <List<Map<String, dynamic>>>[];
   Stream<StreamChunk> recordTurn(List<Map<String, dynamic>> response) async* {
-    turnResponses.add(response);
+    turnResponses.add(
+      (ToolCallArgumentPrivacy.protocolValue(onToolCall, response) as List)
+          .cast<Map<String, dynamic>>(),
+    );
     if (toolUseIdsInBlocks(turnResponses.expand((b) => b)).isNotEmpty) {
       yield ProviderArtifact(
         kind: claudeTurnArtifactKind,
@@ -329,6 +338,7 @@ Stream<StreamChunk> sendClaudeStream(
 
   yield* runProviderToolRounds(
     retryRound: retryRound,
+    spendControl: spendControl,
     sendRound: () async* {
       final omitSamplingParams = claudeShouldOmitSamplingParams(
         upstreamModelId,
@@ -384,10 +394,14 @@ Stream<StreamChunk> sendClaudeStream(
         body.addAll(extraClaude);
       }
 
+      normalizeNativeToolSchemas(body, ToolSchemaTarget.claude);
+
       http.Request buildRequest() {
         final request = http.Request('POST', url);
         request.headers.addAll(baseHeaders);
-        request.body = jsonEncode(body);
+        request.body = jsonEncode(
+          spendControl?.decorateRequest(body, systemField: 'system') ?? body,
+        );
         return request;
       }
 
@@ -425,9 +439,9 @@ Stream<StreamChunk> sendClaudeStream(
         try {
           final u = (obj['usage'] as Map?)?.cast<String, dynamic>();
           if (u != null) {
-            totalUsage = (totalUsage ?? const TokenUsage()).merge(
-              claudeUsageFromMap(u),
-            );
+            final roundUsage = claudeUsageFromMap(u);
+            totalUsage = (totalUsage ?? const TokenUsage()).merge(roundUsage);
+            if (spendControl != null) yield Usage(roundUsage);
           }
         } catch (_) {}
         container =
@@ -496,7 +510,11 @@ Stream<StreamChunk> sendClaudeStream(
         }
         // The continuation round sends these, so they go through the same
         // sanitising as replayed history; the stored copy stays whole.
-        lastAssistantBlocks = history.sanitize(assistantBlocks);
+        lastAssistantBlocks = history.sanitize(
+          (ToolCallArgumentPrivacy.protocolValue(onToolCall, assistantBlocks)
+                  as List)
+              .cast<Map<String, dynamic>>(),
+        );
         nonStreamText.write(joinedTextOfBlocks(assistantBlocks));
         final decoder = ClaudeStreamDecoder(
           skipRedactedThinkingBlocks: skipRedactedThinkingBlocks,
@@ -533,7 +551,7 @@ Stream<StreamChunk> sendClaudeStream(
             ? decodeClaudeOAuthToolName
             : null,
         skipRedactedThinkingBlocks: skipRedactedThinkingBlocks,
-        initialUsage: totalUsage,
+        initialUsage: spendControl == null ? totalUsage : null,
         serverToolNames: declaredServerToolNames,
         sourceId: 'round-${streamRound++}',
       );
@@ -569,6 +587,7 @@ Stream<StreamChunk> sendClaudeStream(
             if (chunk is ToolCallEnd &&
                 decoder.isClientTool(chunk.id) &&
                 onToolCall != null &&
+                spendControl == null &&
                 executedToolIds.add(chunk.id)) {
               final tool = decoder.clientTools[chunk.id]!;
               final args = tool.decodedArguments;
@@ -588,6 +607,8 @@ Stream<StreamChunk> sendClaudeStream(
                     tool.id,
                     (resultChunk.output ?? '').toString(),
                   );
+                  decoder.toolResultImages[tool.id] =
+                      await loadToolResultImages(resultChunk.metadata);
                 }
                 yield resultChunk;
               }
@@ -625,7 +646,11 @@ Stream<StreamChunk> sendClaudeStream(
 
       // The continuation round sends these as they are, so they go through the
       // same sanitising as replayed history — the stored copy stays whole.
-      lastAssistantBlocks = history.sanitize(assistantBlocks);
+      lastAssistantBlocks = history.sanitize(
+        (ToolCallArgumentPrivacy.protocolValue(onToolCall, assistantBlocks)
+                as List)
+            .cast<Map<String, dynamic>>(),
+      );
       yield* recordTurn(assistantBlocks);
       if (decoder.clientTools.isEmpty) {
         pauseTurn = (lastStopReason ?? '') == 'pause_turn';
@@ -640,27 +665,34 @@ Stream<StreamChunk> sendClaudeStream(
             arguments: tool.decodedArguments,
           ),
       ];
+      if (spendControl != null) return;
       for (final tool in decoder.clientTools.values) {
         var res = toolResultsContent[tool.id] ?? '';
+        var images = decoder.toolResultImages[tool.id] ?? const [];
         if (res.isEmpty && onToolCall != null) {
-          res = ClientToolResult.fromHandler(
+          final parsed = ClientToolResult.fromHandler(
             await onToolCall(
               tool.name,
               tool.decodedArguments,
               toolCallId: tool.id,
             ),
-          ).content;
+          );
+          res = parsed.content;
+          images = await loadToolResultImages(parsed.metadata);
         }
         lastStreamResults.add({
           'type': 'tool_result',
           'tool_use_id': tool.id,
-          'content': claudeToolResultContent(res),
+          'content': claudeToolResultWithImages(
+            res,
+            takesImages ? images : const [],
+          ),
         });
       }
     },
     takeCalls: () => pendingCalls,
     continueWithoutCalls: () => pauseTurn,
-    executeAfterRound: !stream,
+    executeAfterRound: !stream || spendControl != null,
     emitCalls: !stream,
     onToolCall: onToolCall,
     append: (executed) {
@@ -671,14 +703,17 @@ Stream<StreamChunk> sendClaudeStream(
         ];
         return;
       }
-      final results = stream
+      final results = stream && spendControl == null
           ? lastStreamResults
           : [
               for (final item in executed)
                 <String, dynamic>{
                   'type': 'tool_result',
                   'tool_use_id': item.call.id,
-                  'content': claudeToolResultContent(item.content),
+                  'content': claudeToolResultWithImages(
+                    item.content,
+                    takesImages ? item.images : const [],
+                  ),
                 },
             ];
       convo = [

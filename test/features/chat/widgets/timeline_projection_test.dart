@@ -28,6 +28,16 @@ List<TimelineToolRef> _toolsIn(TimelineProjection projected) {
 }
 
 void main() {
+  test(
+    'stopped payload stays terminal even while its response snapshot is live',
+    () {
+      final tool = parseTimelineToolPayload(
+        '{"id":"plan","name":"update_plan","metadata":{"computer":{"status":"stopped"}}}',
+        isStreaming: true,
+      )!;
+      expect(tool.loading, isFalse);
+    },
+  );
   test('missing reasoning metadata defaults to collapsed after tool calls', () {
     final projected = projectAssistantTimeline(
       parts: const [

@@ -15,6 +15,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import '../../../support/business_test_harness.dart';
+import '../../../support/android_oauth_browser.dart';
 
 class _RealHttpOverrides extends HttpOverrides {}
 
@@ -166,6 +167,7 @@ http.Response messageResponse(
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() => mockAndroidOAuthBrowser());
   late SettingsProvider settings;
   setUp(() async {
     final harness = await createBusinessTestHarness();
@@ -239,7 +241,7 @@ void main() {
         OAuthWire(MockClient((_) async => response(tokenResponse()))),
         OAuthCancellation(),
         (_) async {},
-        launcher: (url) async {
+        launcher: mockAndroidOAuthBrowser((url) async {
           final redirect = Uri.parse(url.queryParameters['redirect_uri']!);
           final client = HttpOverrides.runWithHttpOverrides(
             HttpClient.new,
@@ -261,7 +263,7 @@ void main() {
             client.close(force: true);
           }
           return true;
-        },
+        }),
       );
       expect(value.accessToken, 'sk-ant-oat-access');
     },
@@ -328,10 +330,10 @@ void main() {
           wire,
           cancellationA,
           (_) async {},
-          launcher: (url) async {
+          launcher: mockAndroidOAuthBrowser((url) async {
             launchedA.complete(url);
             return true;
-          },
+          }),
         );
         final cancelledA = expectLater(
           loginA,
@@ -372,7 +374,7 @@ void main() {
               (prompt) async {
                 if (beforeBrowserLaunch) await sendStaleCallbacks(prompt.url);
               },
-              launcher: (urlB) async {
+              launcher: mockAndroidOAuthBrowser((urlB) async {
                 if (!beforeBrowserLaunch) await sendStaleCallbacks(urlB);
                 expect(
                   await sendLoopbackCallback(
@@ -386,7 +388,7 @@ void main() {
                   HttpStatus.ok,
                 );
                 return true;
-              },
+              }),
             )
             .timeout(const Duration(seconds: 3));
 
@@ -411,7 +413,7 @@ void main() {
         ),
         OAuthCancellation(),
         (_) async {},
-        launcher: (url) async {
+        launcher: mockAndroidOAuthBrowser((url) async {
           final redirect = Uri.parse(url.queryParameters['redirect_uri']!);
           await sendLoopbackCallback(
             redirect.replace(
@@ -422,7 +424,7 @@ void main() {
             ),
           );
           return true;
-        },
+        }),
       );
       await expectLater(
         login.timeout(const Duration(seconds: 3)),

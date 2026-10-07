@@ -29,7 +29,7 @@ class FileImportHelper {
 
       final staging = await targetDir.createTemp('.import-');
       try {
-        // File picking, paste and desktop drop can all carry large binaries.
+        // File picking and paste can all carry large binaries.
         // Keep both copying and duplicate detection bounded in memory.
         final temp = File(p.join(staging.path, 'file'));
         final output = await temp.open(mode: FileMode.write);

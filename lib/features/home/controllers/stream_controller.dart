@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/message_part.dart';
 import '../../../core/models/token_usage.dart';
@@ -14,6 +15,7 @@ import '../../chat/utils/tool_timing.dart';
 import '../../chat/widgets/chat_message_widget.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
 import 'streaming_content_notifier.dart';
+import '../services/spend_control_service.dart';
 
 export 'streaming_content_notifier.dart';
 
@@ -1508,7 +1510,9 @@ class StreamController {
                 metadata: e['metadata'] is Map
                     ? Map<String, dynamic>.from(e['metadata'] as Map)
                     : null,
-                loading: !(e['content']?.toString().isNotEmpty == true),
+                loading:
+                    message.isStreaming &&
+                    !(e['content']?.toString().isNotEmpty == true),
               ),
             )
             .toList();
@@ -1571,6 +1575,7 @@ class GenerationContext {
   GenerationContext({
     required this.assistantMessage,
     required this.apiMessages,
+    this.spendWarning,
     required this.userImagePaths,
     required this.allowImagesApiRouting,
     required this.providerKey,
@@ -1588,13 +1593,15 @@ class GenerationContext {
     this.ocrActive = false,
     this.generateTitleOnFinish = true,
     this.generationRunId,
+    String? executionId,
     this.scheduled = false,
     this.scheduledNotify = true,
     this.scheduledPreview = true,
-  });
+  }) : executionId = executionId ?? generationRunId ?? const Uuid().v4();
 
   final ChatMessage assistantMessage;
   final List<Map<String, dynamic>> apiMessages;
+  final String? spendWarning;
   final List<String> userImagePaths;
   final bool allowImagesApiRouting;
   final String providerKey;
@@ -1612,6 +1619,9 @@ class GenerationContext {
   final bool ocrActive;
   final bool generateTitleOnFinish;
   final String? generationRunId;
+
+  /// Captured once for every actual execution, including legacy continuation.
+  final String executionId;
   final bool scheduled;
   final bool scheduledNotify, scheduledPreview;
 }
@@ -1623,6 +1633,7 @@ class StreamingState {
       partsHandler = StreamChunkHandler(seed: ctx.assistantMessage.parts);
 
   final GenerationContext ctx;
+  bool runtimeAttached = false;
   final StreamTextBuffer _content;
   String get fullContentRaw => _content.value;
   set fullContentRaw(String text) => _content.value = text;
@@ -1630,6 +1641,7 @@ class StreamingState {
   void appendContent(String delta) => _content.add(delta);
   int totalTokens = 0;
   TokenUsage? usage;
+  SpendControlSession? spendSession;
   final StreamTextBuffer _bufferedReasoning = StreamTextBuffer();
   String get bufferedReasoning => _bufferedReasoning.value;
   set bufferedReasoning(String text) => _bufferedReasoning.value = text;

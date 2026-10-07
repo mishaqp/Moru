@@ -59,6 +59,7 @@ class HomeMobileScaffold extends StatelessWidget {
     required this.onOpenGlobalSearchResult,
     this.appBarOverride,
     required this.body,
+    this.backgroundActive = true,
   });
 
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -87,43 +88,54 @@ class HomeMobileScaffold extends StatelessWidget {
   onOpenGlobalSearchResult;
   final PreferredSizeWidget? appBarOverride;
   final Widget body;
+  final bool backgroundActive;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final drawerWidth = context.select<SettingsProvider, double>(
+      (settings) =>
+          settings.sidebarAppearance.widthFor(screenWidth, wide: false),
+    );
 
-    return InteractiveDrawer(
-      controller: drawerController,
-      side: DrawerSide.left,
-      drawerWidth: MediaQuery.sizeOf(context).width * 0.75,
-      scrimColor: cs.onSurface,
-      maxScrimOpacity: 0.12,
-      barrierDismissible: true,
-      drawer: SideDrawer(
-        userName: context.watch<UserProvider>().name,
-        assistantName: _getAssistantName(context),
-        closePickerTicker: assistantPickerCloseTick,
-        loadingConversationIds: loadingConversationIds,
-        globalSearchMode: globalSearchMode,
-        globalSearchQuery: globalSearchQuery,
-        onGlobalSearchQueryChanged: onGlobalSearchQueryChanged,
-        onEnterGlobalSearch: onEnterGlobalSearch,
-        onExitGlobalSearch: onExitGlobalSearch,
-        onOpenGlobalSearchResult: (conversationId, messageId) async {
-          await onOpenGlobalSearchResult(conversationId, messageId);
-          drawerController.close();
-        },
-        onSelectConversation: (id, {closeDrawer = true}) {
-          onSelectConversation(id);
-          if (closeDrawer) drawerController.close();
-        },
-        onNewConversation: ({closeDrawer = true}) async {
-          await onCreateNewConversation();
-          if (closeDrawer) drawerController.close();
-        },
-      ),
-      child: ChatFrostedBackdrop(
-        backdrop: const MobileBackgroundLayer(),
+    // Keep shared artwork in screen coordinates while the chat slides aside.
+    return ChatFrostedBackdrop(
+      active: backgroundActive,
+      backdrop: const MobileBackgroundLayer(),
+      child: InteractiveDrawer(
+        controller: drawerController,
+        side: DrawerSide.left,
+        backgroundColor: Colors.transparent,
+        // Most of the screen, with the chat dimmed at the edge so it still shows
+        // where the panel came from.
+        drawerWidth: drawerWidth,
+        scrimColor: Colors.black,
+        maxScrimOpacity: 0.32,
+        barrierDismissible: true,
+        drawer: SideDrawer(
+          userName: context.watch<UserProvider>().name,
+          assistantName: _getAssistantName(context),
+          closePickerTicker: assistantPickerCloseTick,
+          loadingConversationIds: loadingConversationIds,
+          globalSearchMode: globalSearchMode,
+          globalSearchQuery: globalSearchQuery,
+          onGlobalSearchQueryChanged: onGlobalSearchQueryChanged,
+          onEnterGlobalSearch: onEnterGlobalSearch,
+          onExitGlobalSearch: onExitGlobalSearch,
+          onOpenGlobalSearchResult: (conversationId, messageId) async {
+            await onOpenGlobalSearchResult(conversationId, messageId);
+            drawerController.close();
+          },
+          onSelectConversation: (id, {closeDrawer = true}) {
+            onSelectConversation(id);
+            if (closeDrawer) drawerController.close();
+          },
+          onNewConversation: ({closeDrawer = true}) async {
+            await onCreateNewConversation();
+            if (closeDrawer) drawerController.close();
+          },
+        ),
         child: Scaffold(
           key: scaffoldKey,
           resizeToAvoidBottomInset: true,

@@ -11,10 +11,12 @@ import '../logging/context_log_models.dart';
 import '../../utils/multimodal_input_utils.dart';
 import 'generation/text_generation_result.dart';
 import 'generation/tool_loop_runner.dart';
+import 'generation/spend_round_control.dart';
 import 'stream/stream_chunk.dart';
 import 'stream/stream_chunk_handler.dart';
 
 import '../../models/auto_retry_options.dart';
+import '../../models/token_usage.dart';
 import 'chat_api_helpers.dart';
 import 'provider_request_headers.dart';
 import 'providers/claude_official.dart';
@@ -27,6 +29,7 @@ import 'providers/openai_responses.dart';
 import 'providers/zhipu_layout_parsing.dart';
 import 'retry_policy.dart';
 import 'tool_call_cancellation.dart';
+import 'tool_call_argument_privacy.dart';
 import 'stream/retrying_stream.dart';
 import 'stream/stream_chunk_emit.dart';
 
@@ -153,7 +156,12 @@ class ChatApiService {
     );
   }
 
-  static http.Client _clientFor(ProviderConfig cfg, CancelToken cancelToken) {
+  static http.Client _clientFor(
+    ProviderConfig cfg,
+    CancelToken cancelToken, {
+    bool logResponsePayloads = true,
+    bool logRequests = true,
+  }) {
     final enabled = cfg.proxyEnabled == true;
     final host = (cfg.proxyHost ?? '').trim();
     final portStr = (cfg.proxyPort ?? '').trim();
@@ -171,9 +179,15 @@ class ChatApiService {
           password: pass.isEmpty ? null : pass,
         ),
         cancelToken: cancelToken,
+        logResponsePayloads: logResponsePayloads,
+        logRequests: logRequests,
       );
     }
-    return DioHttpClient(cancelToken: cancelToken);
+    return DioHttpClient(
+      cancelToken: cancelToken,
+      logResponsePayloads: logResponsePayloads,
+      logRequests: logRequests,
+    );
   }
 
   static Stream<StreamChunk> sendMessageStream({
@@ -200,6 +214,7 @@ class ChatApiService {
     // Disallow media, tools and body overrides for detached text generation.
     bool textOnly = false,
     AutoRetryOptions? retryOverride,
+    SpendRoundControl? spendControl,
   }) async* {
     if (config.id == SettingsProvider.retiredLocalModelProviderKey ||
         config.providerType == ProviderKind.local) {
@@ -267,6 +282,14 @@ class ChatApiService {
           ? const <String>[]
           : userImagePaths;
       final toolHandler = textOnly ? null : onToolCall;
+      final protectedHandler = toolHandler == null
+          ? null
+          : ToolCallArgumentPrivacy.propagate(
+              toolHandler,
+              (name, args, {toolCallId}) => toolCancellation.run(
+                () => toolHandler(name, args, toolCallId: toolCallId),
+              ),
+            );
 
       final imageOutput = effectiveModelInfo(
         config,
@@ -301,36 +324,57 @@ class ChatApiService {
         );
       }
 
-      yield* retryRound(
-        () => _sendOnce(
-          config: config,
-          modelId: modelId,
-          messages: safeMessages,
-          userImagePaths: safeUserImagePaths,
-          thinkingBudget: thinkingBudget,
-          temperature: temperature,
-          topP: topP,
-          maxTokens: maxTokens,
-          tools: textOnly ? null : tools,
-          onToolCall: toolHandler == null
-              ? null
-              : (name, args, {toolCallId}) => toolCancellation.run(
-                  () => toolHandler(name, args, toolCallId: toolCallId),
-                ),
-          extraHeaders: sessionHeaders,
-          extraBody: textOnly ? null : extraBody,
-          stream: stream,
-          builtInSearchOnly: builtInSearchOnly,
-          skipImageParsing:
-              textOnly || skipImageParsing || !parseMarkdownImageLinks,
-          kind: kind,
-          useOpenAIImagesApi: useOpenAIImagesApi,
-          useZhipuLayoutParsing: useZhipuLayoutParsing,
-          sessionToken: sessionToken,
-          retryRound: retryRound,
-          conversationId: conversationId,
+      await spendControl?.beforeRequest();
+      TokenUsage? finalUsage;
+      await for (final chunk in ToolCallArgumentPrivacy.publishStream(
+        retryRound(
+          () => _sendOnce(
+            config: config,
+            modelId: modelId,
+            messages:
+                (ToolCallArgumentPrivacy.protocolValue(
+                          protectedHandler,
+                          safeMessages,
+                        )
+                        as List)
+                    .cast<Map<String, dynamic>>(),
+            userImagePaths: safeUserImagePaths,
+            thinkingBudget: thinkingBudget,
+            temperature: temperature,
+            topP: topP,
+            maxTokens: maxTokens,
+            tools: textOnly ? null : tools,
+            onToolCall: protectedHandler,
+            extraHeaders: sessionHeaders,
+            extraBody: textOnly ? null : extraBody,
+            stream: stream,
+            builtInSearchOnly: builtInSearchOnly,
+            skipImageParsing:
+                textOnly || skipImageParsing || !parseMarkdownImageLinks,
+            kind: kind,
+            useOpenAIImagesApi: useOpenAIImagesApi,
+            useZhipuLayoutParsing: useZhipuLayoutParsing,
+            sessionToken: sessionToken,
+            retryRound: retryRound,
+            conversationId: conversationId,
+            spendControl: spendControl,
+          ),
         ),
-      );
+        protectedHandler,
+      )) {
+        if (chunk is Usage) {
+          finalUsage = (finalUsage ?? const TokenUsage()).merge(chunk.usage);
+          if (spendControl != null && spendControl.completedRounds == 0) {
+            spendControl.pendingUsage = finalUsage;
+          }
+        }
+        if (chunk is Finish &&
+            spendControl != null &&
+            spendControl.completedRounds == 0) {
+          spendControl.recordInitialUsage(finalUsage);
+        }
+        yield chunk;
+      }
     } finally {
       if (rid.isNotEmpty) {
         final cur = _activeCancelTokens[rid];
@@ -395,6 +439,7 @@ class ChatApiService {
     required bool useZhipuLayoutParsing,
     required CancelToken sessionToken,
     required StreamRoundRunner retryRound,
+    SpendRoundControl? spendControl,
     String? conversationId,
   }) async* {
     if (sessionToken.isCancelled) {
@@ -403,7 +448,12 @@ class ChatApiService {
     final cancelToken = CancelToken();
     _bridgeCancel(sessionToken, cancelToken);
     final client = ProviderOAuthService.instance.authenticatedClient(
-      _clientFor(config, cancelToken),
+      _clientFor(
+        config,
+        cancelToken,
+        logResponsePayloads: !ToolCallArgumentPrivacy.hasPolicy(onToolCall),
+        logRequests: spendControl == null,
+      ),
       config,
     );
     try {
@@ -446,6 +496,7 @@ class ChatApiService {
             builtInSearchOnly: builtInSearchOnly,
             skipImageParsing: skipImageParsing,
             retryRound: retryRound,
+            spendControl: spendControl,
           );
         } else {
           yield* sendOpenAIChatCompletionsStream(
@@ -466,6 +517,7 @@ class ChatApiService {
             builtInSearchOnly: builtInSearchOnly,
             skipImageParsing: skipImageParsing,
             retryRound: retryRound,
+            spendControl: spendControl,
           );
         }
       } else if (kind == ProviderKind.claude) {
@@ -487,6 +539,7 @@ class ChatApiService {
           builtInSearchOnly: builtInSearchOnly,
           skipImageParsing: skipImageParsing,
           retryRound: retryRound,
+          spendControl: spendControl,
         );
       } else if (kind == ProviderKind.google) {
         final isVertex = config.vertexAI == true;
@@ -510,6 +563,7 @@ class ChatApiService {
             stream: stream,
             skipImageParsing: skipImageParsing,
             retryRound: retryRound,
+            spendControl: spendControl,
           );
         } else if (isVertex) {
           yield* sendGoogleVertexStream(
@@ -529,6 +583,7 @@ class ChatApiService {
             stream: stream,
             skipImageParsing: skipImageParsing,
             retryRound: retryRound,
+            spendControl: spendControl,
           );
         } else {
           yield* sendGoogleGeminiStream(
@@ -548,6 +603,7 @@ class ChatApiService {
             stream: stream,
             skipImageParsing: skipImageParsing,
             retryRound: retryRound,
+            spendControl: spendControl,
           );
         }
       }
@@ -579,6 +635,7 @@ class ChatApiService {
     bool parseMarkdownImageLinks = true,
     bool textOnly = false,
     AutoRetryOptions? retryOverride,
+    SpendRoundControl? spendControl,
     void Function(RetryPending? pending)? onRetry,
   }) async {
     final handler = StreamChunkHandler(
@@ -607,6 +664,7 @@ class ChatApiService {
       parseMarkdownImageLinks: parseMarkdownImageLinks,
       textOnly: textOnly,
       retryOverride: retryOverride,
+      spendControl: spendControl,
     )) {
       if (chunk is RetryAttemptStart) {
         onRetry?.call(null);

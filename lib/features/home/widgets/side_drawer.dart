@@ -7,17 +7,16 @@ import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../core/providers/settings_provider.dart';
-import '../../chat/widgets/chat_gradient_background.dart';
 import '../../../core/providers/backup_reminder_provider.dart';
+import '../../../core/models/chat_folder.dart';
 import '../../../core/models/chat_item.dart';
+import '../../../core/models/sidebar_appearance.dart';
+import '../../../core/models/conversation_list_metadata.dart';
 import '../../../core/providers/user_provider.dart';
-import '../../settings/pages/settings_page.dart';
-import '../../translate/pages/translate_page.dart';
 import '../../backup/pages/backup_page.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/update_provider.dart';
 import '../../../core/models/assistant.dart';
-import '../../chat/pages/chat_history_page.dart';
 import 'package:flutter/services.dart';
 import 'dart:io' show File;
 import 'dart:math' as math;
@@ -26,11 +25,11 @@ import 'package:intl/intl.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:animations/animations.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/search_highlight.dart';
 import '../../../utils/avatar_cache.dart';
-import 'dart:ui' as ui;
 import '../../../shared/widgets/ios_checkbox.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../core/services/haptics.dart';
@@ -45,6 +44,12 @@ import '../controllers/chat_actions.dart';
 import '../utils/model_display_helper.dart';
 import 'assistant_avatar.dart';
 import 'assistant_entry_actions.dart';
+import 'sidebar_bottom_bar.dart';
+import 'chat_folders.dart';
+import 'chat_thumbnails.dart';
+import '../../chat/pages/chat_archive_page.dart';
+import 'sidebar_glass.dart';
+import 'sidebar_omni_parts.dart';
 import 'sidebar_selection_bars.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 import '../../../shared/widgets/section_card.dart';
@@ -136,6 +141,11 @@ class SideDrawer extends StatefulWidget {
 }
 
 class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
+  /// Rows and bars without their own fill: the tablet side panel, and the
+  /// glass theme, where a solid fill would cover the frosted backdrop.
+  bool _clearSurfaces(BuildContext context) =>
+      sidebarSurfacesClear(context, embedded: widget.embedded);
+
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   final GlobalKey _assistantTileKey = GlobalKey();
@@ -164,6 +174,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   bool? _cachedSidebarRowsInitialized;
   String? _cachedSidebarRowsQuery;
   String? _cachedSidebarRowsAssistantId;
+  List<ChatFolder>? _cachedSidebarRowsFolders;
+  SidebarGrouping? _cachedSidebarRowsGrouping;
   List<_SidebarRow>? _cachedSidebarRows;
 
   bool _selectionMode = false;
@@ -206,6 +218,61 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       _query = widget.globalSearchQuery;
     }
     // Update check moved to app startup (main.dart)
+  }
+
+  /// Asks, then deletes [chat] and moves on to the next chat when it was the
+  /// open one. True when it was deleted.
+  Future<bool> _deleteChat(ChatItem chat) async {
+    final l10n = AppLocalizations.of(context)!;
+    final chatService = context.read<ChatService>();
+    final confirmed = await _confirmDeleteConversation(context, chat);
+    if (!mounted || !confirmed) return false;
+    final deletingCurrent = chatService.currentConversationId == chat.id;
+    final nextId = _nextRecentConversationExcluding(chatService, {chat.id});
+    await ChatActions.cancelActiveGenerationFor(chat.id);
+    await chatService.deleteConversation(chat.id);
+    if (!mounted) return true;
+    showAppSnackBar(
+      context,
+      message: l10n.sideDrawerDeleteSnackbar(chat.title),
+      type: NotificationType.success,
+      duration: const Duration(seconds: 3),
+    );
+    _handlePostDeleteNavigation(
+      chatService: chatService,
+      deletingCurrent: deletingCurrent,
+      nextConversationId: nextId,
+    );
+    return true;
+  }
+
+  /// Opens the archive; a chat picked there opens here.
+  Future<void> _openArchive(String? assistantId) async {
+    final selectedId = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => ChatArchivePage(assistantId: assistantId),
+      ),
+    );
+    if (selectedId == null || selectedId.isEmpty || !mounted) return;
+    final closeDrawer = !context
+        .read<SettingsProvider>()
+        .keepSidebarOpenOnTopicTap;
+    widget.onSelectConversation?.call(selectedId, closeDrawer: closeDrawer);
+  }
+
+  /// Puts [id] into the archive; the snackbar offers to take it back.
+  Future<void> _archiveChat(String id) async {
+    final l10n = AppLocalizations.of(context)!;
+    final chatService = context.read<ChatService>();
+    final changed = await chatService.setConversationsArchived([id], true);
+    if (changed == 0 || !mounted) return;
+    showAppSnackBar(
+      context,
+      message: l10n.sideDrawerArchived,
+      actionLabel: l10n.sideDrawerUndo,
+      onAction: () =>
+          unawaited(chatService.setConversationsArchived([id], false)),
+    );
   }
 
   void _showChatMenu(
@@ -320,6 +387,20 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         await chatService.togglePinConversation(chat.id);
                       },
                     ),
+                    row(
+                      icon: Lucide.Archive,
+                      label: l10n.sideDrawerArchive,
+                      action: () => _archiveChat(chat.id),
+                    ),
+                    row(
+                      icon: Lucide.FolderInput,
+                      label: l10n.sideDrawerMoveToFolder,
+                      action: () => moveChatToFolder(
+                        context,
+                        chatId: chat.id,
+                        currentFolderId: chat.folderId,
+                      ),
+                    ),
                     if (titleGenerationEnabled)
                       row(
                         icon: Lucide.RefreshCw,
@@ -357,7 +438,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                     .where(
                                       (c) =>
                                           c.assistantId == currentAid &&
-                                          c.id != chat.id,
+                                          c.id != chat.id &&
+                                          !ChatService.isArchived(c),
                                     )
                                     .toList()
                                   ..sort(
@@ -406,32 +488,9 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       label: l10n.sideDrawerMenuDelete,
                       color: Theme.of(context).colorScheme.error,
                       action: () async {
-                        final confirmed = await _confirmDeleteConversation(
-                          context,
-                          chat,
-                        );
-                        if (!mounted) return;
-                        if (!confirmed) return;
-                        final deletingCurrent =
-                            chatService.currentConversationId == chat.id;
-                        final nextId = _nextRecentConversationExcluding(
-                          chatService,
-                          {chat.id},
-                        );
-                        await ChatActions.cancelActiveGenerationFor(chat.id);
-                        await chatService.deleteConversation(chat.id);
-                        if (!context.mounted) return;
-                        showAppSnackBar(
-                          context,
-                          message: l10n.sideDrawerDeleteSnackbar(chat.title),
-                          type: NotificationType.success,
-                          duration: const Duration(seconds: 3),
-                        );
-                        _handlePostDeleteNavigation(
-                          chatService: chatService,
-                          deletingCurrent: deletingCurrent,
-                          nextConversationId: nextId,
-                        );
+                        if (!await _deleteChat(chat) || !context.mounted) {
+                          return;
+                        }
                         Navigator.of(context).maybePop();
                       },
                     ),
@@ -652,7 +711,9 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
               .getAllConversations()
               .where(
                 (c) =>
-                    c.assistantId == currentAid && !excludeIds.contains(c.id),
+                    c.assistantId == currentAid &&
+                    !excludeIds.contains(c.id) &&
+                    !ChatService.isArchived(c),
               )
               .toList()
             ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
@@ -752,7 +813,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     );
     final provKey = settings.titleModelProvider ?? chatModel.providerKey;
     final mdlId = settings.titleModelId ?? chatModel.modelId;
-    if (provKey == null || mdlId == null) return;
+    if (provKey == null || mdlId == null || isAcpModelSource(provKey)) return;
     final cfg = settings.getProviderConfig(provKey);
     final budget = settings.titleGenerationThinkingBudgetFor(
       assistant?.thinkingBudget,
@@ -1185,7 +1246,13 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     final pattern = sameYear
         ? l10n.sideDrawerDateShortPattern
         : l10n.sideDrawerDateFullPattern;
-    final fmt = DateFormat(pattern);
+    // In the app's language ("25 сент."), not the default English.
+    final locale = Localizations.localeOf(context);
+    final tag = locale.toLanguageTag();
+    final fmt = DateFormat(
+      pattern,
+      DateFormat.localeExists(tag) ? tag : locale.languageCode,
+    );
     return fmt.format(date);
   }
 
@@ -1220,11 +1287,18 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     required String? assistantId,
     required ChatService chatService,
   }) {
+    // The folder list is replaced, never changed in place, so a new list
+    // means new folders.
+    final settings = context.read<SettingsProvider>();
+    final folders = settings.sidebarFolders;
+    final grouping = settings.sidebarAppearance.grouping;
     if (_cachedSidebarRows != null &&
         _cachedSidebarRowsRevision == revision &&
         _cachedSidebarRowsInitialized == initialized &&
         _cachedSidebarRowsQuery == query &&
-        _cachedSidebarRowsAssistantId == assistantId) {
+        _cachedSidebarRowsAssistantId == assistantId &&
+        _cachedSidebarRowsGrouping == grouping &&
+        identical(_cachedSidebarRowsFolders, folders)) {
       return _cachedSidebarRows!;
     }
     SideDrawer.debugSidebarRowsComputeCount++;
@@ -1232,12 +1306,16 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       chatService: chatService,
       assistantId: assistantId,
       query: query,
+      folders: folders,
+      grouping: grouping,
     );
+    _cachedSidebarRowsFolders = folders;
     _cachedSidebarRows = rows;
     _cachedSidebarRowsRevision = revision;
     _cachedSidebarRowsInitialized = initialized;
     _cachedSidebarRowsQuery = query;
     _cachedSidebarRowsAssistantId = assistantId;
+    _cachedSidebarRowsGrouping = grouping;
     return rows;
   }
 
@@ -1245,33 +1323,57 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     required ChatService chatService,
     required String? assistantId,
     required String query,
+    required List<ChatFolder> folders,
+    required SidebarGrouping grouping,
   }) {
     final q = query.trim().toLowerCase();
     final pinned = <ChatItem>[];
     final rest = <ChatItem>[];
+    final byAssistant = <String?, List<ChatItem>>{};
+    final folderIds = {for (final f in folders) f.id};
+    final inFolders = <String, List<ChatItem>>{
+      for (final f in folders) f.id: <ChatItem>[],
+    };
     // Single pass: filter assistant + query, split pinned/rest via ChatItem.isPinned.
     for (final c in chatService.getAllConversations()) {
-      if (c.assistantId != assistantId && c.assistantId != null) continue;
+      if (grouping != SidebarGrouping.assistant &&
+          c.assistantId != assistantId &&
+          c.assistantId != null) {
+        continue;
+      }
+      if (ChatService.isArchived(c)) continue;
       final title = c.title;
       if (q.isNotEmpty && !title.toLowerCase().contains(q)) continue;
+      // A folder that no longer exists does not hold its chats.
+      final folderId = ChatService.folderOf(c);
       final item = ChatItem(
         id: c.id,
         title: title,
         created: c.updatedAt,
         isPinned: c.isPinned,
+        folderId: folderIds.contains(folderId) ? folderId : null,
       );
       if (item.isPinned) {
         pinned.add(item);
+      } else if (item.folderId != null) {
+        inFolders[item.folderId]!.add(item);
       } else {
         rest.add(item);
+        if (grouping == SidebarGrouping.assistant) {
+          byAssistant.putIfAbsent(c.assistantId, () => []).add(item);
+        }
       }
     }
     pinned.sort((a, b) => b.created.compareTo(a.created));
-    final groups = _groupByDate(rest);
 
     final rows = <_SidebarRow>[];
     if (pinned.isNotEmpty) {
-      rows.add(const _SidebarHeaderRow(kind: _SidebarHeaderKind.pinned));
+      rows.add(
+        _SidebarHeaderRow(
+          kind: _SidebarHeaderKind.pinned,
+          count: pinned.length,
+        ),
+      );
       for (var i = 0; i < pinned.length; i++) {
         rows.add(
           _SidebarTileRow(
@@ -1282,10 +1384,75 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         );
       }
     }
-    for (final group in groups) {
+    // Folders follow the pinned chats, in the user's order. While searching,
+    // a folder without a match is left out.
+    for (final folder in folders) {
+      final items = inFolders[folder.id]!
+        ..sort((a, b) => b.created.compareTo(a.created));
+      if (items.isEmpty && q.isNotEmpty) continue;
+      rows.add(
+        _SidebarHeaderRow(
+          kind: _SidebarHeaderKind.folder,
+          count: items.length,
+          folder: folder,
+        ),
+      );
+      for (var i = 0; i < items.length; i++) {
+        rows.add(
+          _SidebarTileRow(
+            chat: items[i],
+            indexInSection: i,
+            kind: _SidebarHeaderKind.folder,
+            folderId: folder.id,
+          ),
+        );
+      }
+    }
+    if (grouping == SidebarGrouping.none) {
+      rest.sort((a, b) => b.created.compareTo(a.created));
+      for (var i = 0; i < rest.length; i++) {
+        rows.add(
+          _SidebarTileRow(
+            chat: rest[i],
+            indexInSection: i,
+            kind: _SidebarHeaderKind.ungrouped,
+          ),
+        );
+      }
+      return rows;
+    }
+    if (grouping == SidebarGrouping.assistant) {
+      // Recent sections first, preserving each assistant's chat order.
+      final groups = byAssistant.entries.toList()
+        ..sort(
+          (a, b) => b.value.first.created.compareTo(a.value.first.created),
+        );
+      for (final group in groups) {
+        rows.add(
+          _SidebarHeaderRow(
+            kind: _SidebarHeaderKind.assistant,
+            count: group.value.length,
+            assistantId: group.key,
+          ),
+        );
+        for (var i = 0; i < group.value.length; i++) {
+          rows.add(
+            _SidebarTileRow(
+              chat: group.value[i],
+              indexInSection: i,
+              kind: _SidebarHeaderKind.assistant,
+              assistantId: group.key,
+            ),
+          );
+        }
+      }
+      return rows;
+    }
+    for (final group in _groupByDate(rest)) {
       rows.add(
         _SidebarHeaderRow(
           kind: _SidebarHeaderKind.date,
+          count: group.items.length,
           dateBucket: group.date,
         ),
       );
@@ -1417,6 +1584,12 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       // Subscribe to list revision so an external delete rebuilds them too.
       context.select<ChatService, int>(
         (service) => service.conversationListRevision,
+      );
+      context.select<SettingsProvider, SidebarGrouping>(
+        (settings) => settings.sidebarAppearance.grouping,
+      );
+      context.select<SettingsProvider, List<ChatFolder>>(
+        (settings) => settings.sidebarFolders,
       );
       if (_selectionAssistantId != null &&
           _selectionAssistantId != currentAssistantId) {
@@ -1563,7 +1736,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             children: [
               // Fixed header + search
               Padding(
-                padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1631,322 +1804,145 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: Builder(
-                                          builder: (context) {
-                                            final canSwipeSwitch =
-                                                _searchController.text
-                                                    .trim()
-                                                    .isEmpty;
-                                            final centerCaption =
-                                                _searchController.text
-                                                    .trim()
-                                                    .isEmpty;
-                                            return GestureDetector(
-                                              behavior:
-                                                  HitTestBehavior.translucent,
-                                              onHorizontalDragStart:
-                                                  canSwipeSwitch
-                                                  ? (_) {
-                                                      _mobileSearchSwipeDx = 0;
-                                                      _mobileSearchSwipeHandled =
-                                                          false;
-                                                    }
-                                                  : null,
-                                              onHorizontalDragUpdate:
-                                                  canSwipeSwitch
-                                                  ? (details) {
-                                                      if (_mobileSearchSwipeHandled) {
-                                                        return;
-                                                      }
-                                                      _mobileSearchSwipeDx +=
-                                                          details.delta.dx;
-                                                      if (_mobileSearchSwipeDx
-                                                              .abs() >=
-                                                          18) {
-                                                        _mobileSearchSwipeDx =
-                                                            0;
-                                                        _mobileSearchSwipeHandled =
-                                                            true;
-                                                        _toggleGlobalSearchMode();
-                                                        Haptics.light();
-                                                      }
-                                                    }
-                                                  : null,
-                                              onHorizontalDragEnd:
-                                                  canSwipeSwitch
-                                                  ? (_) {
-                                                      _mobileSearchSwipeDx = 0;
-                                                      _mobileSearchSwipeHandled =
-                                                          false;
-                                                    }
-                                                  : null,
-                                              child: Stack(
-                                                alignment: Alignment.center,
-                                                children: [
-                                                  TextField(
-                                                    focusNode:
-                                                        _mobileSearchFocusNode,
-                                                    controller:
-                                                        _searchController,
-                                                    textInputAction:
-                                                        widget.globalSearchMode
-                                                        ? TextInputAction.search
-                                                        : TextInputAction.done,
-                                                    onSubmitted:
-                                                        widget.globalSearchMode
-                                                        ? (_) =>
-                                                              _submitMobileGlobalSearch()
-                                                        : null,
-                                                    decoration: InputDecoration(
-                                                      hintText: centerCaption
-                                                          ? ''
-                                                          : _mobileSearchHint(),
-                                                      filled: true,
-                                                      fillColor: context
-                                                          .appColors
-                                                          .surfaceFill
-                                                          .withValues(
-                                                            alpha: 0.80,
-                                                          ),
-                                                      isDense: true,
-                                                      isCollapsed: true,
-                                                      prefixIcon: Padding(
-                                                        padding:
-                                                            const EdgeInsets.only(
-                                                              left: 6,
-                                                              right: 2,
-                                                            ),
-                                                        child: GestureDetector(
-                                                          behavior:
-                                                              HitTestBehavior
-                                                                  .opaque,
-                                                          onTap: () {
-                                                            _toggleGlobalSearchMode();
-                                                            Haptics.light();
-                                                          },
-                                                          child: Padding(
-                                                            padding:
-                                                                const EdgeInsets.all(
-                                                                  6,
-                                                                ),
-                                                            child: AnimatedSwitcher(
-                                                              duration:
-                                                                  const Duration(
-                                                                    milliseconds:
-                                                                        210,
-                                                                  ),
-                                                              switchInCurve: Curves
-                                                                  .easeOutBack,
-                                                              switchOutCurve:
-                                                                  Curves.easeIn,
-                                                              transitionBuilder:
-                                                                  (
-                                                                    child,
-                                                                    animation,
-                                                                  ) {
-                                                                    return FadeTransition(
-                                                                      opacity:
-                                                                          animation,
-                                                                      child: ScaleTransition(
-                                                                        scale:
-                                                                            animation,
-                                                                        child:
-                                                                            child,
-                                                                      ),
-                                                                    );
-                                                                  },
-                                                              child: _mobileModeSearchIcon(
-                                                                textBase
-                                                                    .withValues(
-                                                                      alpha:
-                                                                          0.72,
-                                                                    ),
-                                                                key: ValueKey<bool>(
-                                                                  widget
-                                                                      .globalSearchMode,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      prefixIconConstraints:
-                                                          const BoxConstraints(
-                                                            minWidth: 0,
-                                                            minHeight: 0,
-                                                          ),
-                                                      suffixIcon:
-                                                          _searchController
-                                                              .text
-                                                              .isNotEmpty
-                                                          ? Padding(
-                                                              padding:
-                                                                  const EdgeInsets.only(
-                                                                    right: 6,
-                                                                  ),
-                                                              child: Row(
-                                                                mainAxisSize:
-                                                                    MainAxisSize
-                                                                        .min,
-                                                                children: [
-                                                                  if (widget
-                                                                      .globalSearchMode)
-                                                                    GestureDetector(
-                                                                      behavior:
-                                                                          HitTestBehavior
-                                                                              .opaque,
-                                                                      onTap: () {
-                                                                        Haptics.light();
-                                                                        _submitMobileGlobalSearch();
-                                                                      },
-                                                                      child: Padding(
-                                                                        padding:
-                                                                            const EdgeInsets.all(
-                                                                              4,
-                                                                            ),
-                                                                        child: Icon(
-                                                                          Lucide
-                                                                              .Search,
-                                                                          size:
-                                                                              16,
-                                                                          color: textBase.withValues(
-                                                                            alpha:
-                                                                                0.75,
-                                                                          ),
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                ],
-                                                              ),
-                                                            )
-                                                          : null,
-                                                      suffixIconConstraints:
-                                                          const BoxConstraints(
-                                                            minWidth: 0,
-                                                            minHeight: 0,
-                                                          ),
-                                                      contentPadding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 14,
-                                                            vertical: 10,
-                                                          ),
-                                                      border: OutlineInputBorder(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              16,
-                                                            ),
-                                                        borderSide:
-                                                            const BorderSide(
-                                                              color: Colors
-                                                                  .transparent,
-                                                            ),
-                                                      ),
-                                                      enabledBorder: OutlineInputBorder(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              16,
-                                                            ),
-                                                        borderSide:
-                                                            const BorderSide(
-                                                              color: Colors
-                                                                  .transparent,
-                                                            ),
-                                                      ),
-                                                      focusedBorder: OutlineInputBorder(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              16,
-                                                            ),
-                                                        borderSide:
-                                                            const BorderSide(
-                                                              color: Colors
-                                                                  .transparent,
-                                                            ),
-                                                      ),
-                                                    ),
-                                                    textAlignVertical:
-                                                        TextAlignVertical
-                                                            .center,
-                                                    style: TextStyle(
-                                                      color: textBase,
-                                                      fontSize: 14,
-                                                    ),
-                                                  ),
-                                                  if (centerCaption)
-                                                    IgnorePointer(
-                                                      child: Padding(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 40,
-                                                            ),
-                                                        child: Text(
-                                                          _mobileSearchHint(),
-                                                          textAlign:
-                                                              TextAlign.center,
-                                                          maxLines: 1,
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                          style: TextStyle(
-                                                            color: textBase
-                                                                .withValues(
-                                                                  alpha: 0.55,
-                                                                ),
-                                                            fontSize: 14,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      // 历史按钮（圆形，无水波纹）
-                                      SizedBox(
-                                        width: 44,
-                                        height: 44,
-                                        child: Center(
-                                          child: IosIconButton(
-                                            size: 20,
-                                            color: textBase,
-                                            icon: Lucide.History,
-                                            padding: const EdgeInsets.all(8),
-                                            onTap: () async {
-                                              final selectedId =
-                                                  await Navigator.of(
-                                                    context,
-                                                  ).push<String>(
-                                                    MaterialPageRoute(
-                                                      builder: (_) =>
-                                                          ChatHistoryPage(
-                                                            assistantId:
-                                                                currentAssistantId,
-                                                          ),
-                                                    ),
-                                                  );
-                                              if (selectedId != null &&
-                                                  selectedId.isNotEmpty) {
-                                                if (!context.mounted) {
-                                                  return;
+                                        child: GestureDetector(
+                                          // Swiping the search switches
+                                          // between this assistant's chats
+                                          // and all of them.
+                                          behavior: HitTestBehavior.translucent,
+                                          onHorizontalDragStart:
+                                              _searchController.text
+                                                  .trim()
+                                                  .isEmpty
+                                              ? (_) {
+                                                  _mobileSearchSwipeDx = 0;
+                                                  _mobileSearchSwipeHandled =
+                                                      false;
                                                 }
-                                                final closeDrawer = !context
-                                                    .read<SettingsProvider>()
-                                                    .keepSidebarOpenOnTopicTap;
-                                                widget.onSelectConversation
-                                                    ?.call(
-                                                      selectedId,
-                                                      closeDrawer: closeDrawer,
-                                                    );
-                                              }
+                                              : null,
+                                          onHorizontalDragUpdate:
+                                              _searchController.text
+                                                  .trim()
+                                                  .isEmpty
+                                              ? (details) {
+                                                  if (_mobileSearchSwipeHandled) {
+                                                    return;
+                                                  }
+                                                  _mobileSearchSwipeDx +=
+                                                      details.delta.dx;
+                                                  if (_mobileSearchSwipeDx
+                                                          .abs() >=
+                                                      18) {
+                                                    _mobileSearchSwipeDx = 0;
+                                                    _mobileSearchSwipeHandled =
+                                                        true;
+                                                    _toggleGlobalSearchMode();
+                                                    Haptics.light();
+                                                  }
+                                                }
+                                              : null,
+                                          onHorizontalDragEnd:
+                                              _searchController.text
+                                                  .trim()
+                                                  .isEmpty
+                                              ? (_) {
+                                                  _mobileSearchSwipeDx = 0;
+                                                  _mobileSearchSwipeHandled =
+                                                      false;
+                                                }
+                                              : null,
+                                          child: SidebarSearchField(
+                                            controller: _searchController,
+                                            focusNode: _mobileSearchFocusNode,
+                                            hint: _mobileSearchHint(),
+                                            glass: context
+                                                .select<SettingsProvider, bool>(
+                                                  (s) => s.glassTheme,
+                                                ),
+                                            // The mode icon: a tap switches
+                                            // to searching every chat.
+                                            leading: _mobileModeSearchIcon(
+                                              textBase.withValues(alpha: 0.72),
+                                              key: ValueKey<bool>(
+                                                widget.globalSearchMode,
+                                              ),
+                                            ),
+                                            onLeadingTap: () {
+                                              _toggleGlobalSearchMode();
+                                              Haptics.light();
                                             },
+                                            textInputAction:
+                                                widget.globalSearchMode
+                                                ? TextInputAction.search
+                                                : TextInputAction.done,
+                                            onSubmitted: widget.globalSearchMode
+                                                ? (_) =>
+                                                      _submitMobileGlobalSearch()
+                                                : null,
+                                            trailing:
+                                                widget.globalSearchMode &&
+                                                    _searchController
+                                                        .text
+                                                        .isNotEmpty
+                                                ? GestureDetector(
+                                                    behavior:
+                                                        HitTestBehavior.opaque,
+                                                    onTap: () {
+                                                      Haptics.light();
+                                                      _submitMobileGlobalSearch();
+                                                    },
+                                                    child: Icon(
+                                                      Lucide.Search,
+                                                      size: 16,
+                                                      color: textBase
+                                                          .withValues(
+                                                            alpha: 0.75,
+                                                          ),
+                                                    ),
+                                                  )
+                                                : null,
                                           ),
                                         ),
                                       ),
+                                      const SizedBox(width: 10),
+                                      SidebarRoundButton(
+                                        key: const ValueKey<String>(
+                                          'sidebar-archive',
+                                        ),
+                                        icon: Lucide.Archive,
+                                        tooltip: AppLocalizations.of(
+                                          context,
+                                        )!.archivePageTitle,
+                                        glass: context
+                                            .select<SettingsProvider, bool>(
+                                              (s) => s.glassTheme,
+                                            ),
+                                        onTap: () => unawaited(
+                                          _openArchive(currentAssistantId),
+                                        ),
+                                      ),
+                                      if (widget.onNewConversation != null) ...[
+                                        const SizedBox(width: 10),
+                                        SidebarRoundButton(
+                                          key: const ValueKey<String>(
+                                            'sidebar-new-chat',
+                                          ),
+                                          icon: Lucide.Plus,
+                                          tooltip: AppLocalizations.of(
+                                            context,
+                                          )!.sideDrawerNewChat,
+                                          primary: true,
+                                          glass: false,
+                                          onTap: () {
+                                            Haptics.light();
+                                            widget.onNewConversation!(
+                                              closeDrawer: true,
+                                            );
+                                          },
+                                        ),
+                                      ],
                                     ],
                                   ),
-                                  const SizedBox(height: 6),
+                                  const SizedBox(height: 12),
                                   AnimatedSize(
                                     duration: const Duration(milliseconds: 140),
                                     curve: Curves.easeOutCubic,
@@ -1982,7 +1978,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                     ),
 
                     if (!widget.globalSearchMode) ...[
-                      SizedBox(height: 12),
+                      const SizedBox(height: 4),
 
                       // 桌面端：替换为 Tab（助手 / 话题）
                       Padding(
@@ -1990,14 +1986,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         child: KeyedSubtree(
                           key: _assistantTileKey,
                           child: IosCardPress(
-                            baseColor: (() {
-                              final embedded = widget.embedded;
-                              final base = embedded
-                                  ? Colors.transparent
-                                  : cs.surface;
-                              return base;
-                            })(),
-                            borderRadius: BorderRadius.circular(16),
+                            baseColor: Colors.transparent,
+                            borderRadius: BorderRadius.circular(14),
                             onTap: _toggleAssistantPicker,
                             onLongPress: (() {
                               final id = context
@@ -2007,15 +1997,15 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                 _openAssistantSettings(id);
                               }
                             }),
-                            padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
+                            padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
                             child: Row(
                               children: [
                                 AssistantAvatar(
                                   assistant: ap.currentAssistant,
                                   fallbackName: widget.assistantName,
-                                  size: 32,
+                                  size: 24,
                                 ),
-                                const SizedBox(width: 16),
+                                const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
                                     (ap.currentAssistant?.name ??
@@ -2023,8 +2013,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: AppFontWeights.medium,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
                                       color: textBase,
                                     ),
                                   ),
@@ -2036,8 +2026,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                   curve: Curves.easeOutCubic,
                                   child: Icon(
                                     Lucide.ChevronDown,
-                                    size: 18,
-                                    color: textBase.withValues(alpha: 0.7),
+                                    size: 16,
+                                    color: textBase.withValues(alpha: 0.6),
                                   ),
                                 ),
                               ],
@@ -2077,6 +2067,12 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       final assistantId = context
                           .watch<AssistantProvider>()
                           .currentAssistantId;
+                      context.select<SettingsProvider, SidebarGrouping>(
+                        (settings) => settings.sidebarAppearance.grouping,
+                      );
+                      context.select<SettingsProvider, List<ChatFolder>>(
+                        (settings) => settings.sidebarFolders,
+                      );
                       // Use last-activity time (updatedAt) for ordering and grouping.
                       // Flattened + memoized by
                       // (revision, initialized, query, assistantId).
@@ -2091,9 +2087,9 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         assistantsExpanded: _assistantsExpanded,
                         buildAssistants: () =>
                             _buildAssistantsList(context, inlineMode: true),
-                        buildConversations: (leading, padding) =>
+                        buildConversations: (listContext, leading, padding) =>
                             _buildConversationsList(
-                              context,
+                              listContext,
                               cs,
                               textBase,
                               chatService,
@@ -2149,114 +2145,56 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         },
                       )
                     : (widget.showBottomBar
-                          ? Container(
+                          ? Stack(
                               key: const ValueKey<String>('sidebar-user-bar'),
-                              padding: const EdgeInsets.fromLTRB(
-                                16,
-                                10,
-                                16,
-                                12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: widget.embedded
-                                    ? Colors.transparent
-                                    : cs.surface,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const SizedBox(width: 6),
-                                      // 用户头像（可点击更换）—移除水波纹
-                                      GestureDetector(
-                                        behavior: HitTestBehavior.opaque,
-                                        onTap: () => _editAvatar(context),
-                                        child: avatarWidget(
-                                          widget.userName,
-                                          context.watch<UserProvider>(),
-                                          size: 40,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 20),
-                                      // 用户名称（可点击编辑，垂直居中）
-                                      Expanded(
-                                        child: IosCardPress(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          baseColor: Colors.transparent,
-                                          onTap: () => _editUserName(context),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 0,
-                                          ),
-                                          child: SizedBox(
-                                            height: 45,
-                                            child: Align(
-                                              alignment: Alignment.centerLeft,
-                                              child: Text(
-                                                widget.userName,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight:
-                                                      AppFontWeights.emphasis,
-                                                  color: textBase,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      // 翻译按钮（圆形，无水波纹）
-                                      SizedBox(
-                                        width: 45,
-                                        height: 45,
-                                        child: Center(
-                                          child: IosIconButton(
-                                            size: 22,
-                                            color: textBase,
-                                            icon: Lucide.Languages,
-                                            padding: const EdgeInsets.all(10),
-                                            onTap: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      const TranslatePage(),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      // 设置按钮（圆形，无水波纹）
-                                      SizedBox(
-                                        width: 45,
-                                        height: 45,
-                                        child: Center(
-                                          child: IosIconButton(
-                                            size: 22,
-                                            color: textBase,
-                                            icon: Lucide.Settings,
-                                            padding: const EdgeInsets.all(10),
-                                            onTap: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      const SettingsPage(),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                              clipBehavior: Clip.none,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  decoration: BoxDecoration(
+                                    color: _clearSurfaces(context)
+                                        ? Colors.transparent
+                                        : cs.surface,
                                   ),
-                                ],
-                              ),
+                                  child: SidebarBottomBar(
+                                    glass: context
+                                        .select<SettingsProvider, bool>(
+                                          (s) => s.glassTheme,
+                                        ),
+                                    avatar: avatarWidget(
+                                      widget.userName,
+                                      context.watch<UserProvider>(),
+                                      size: 22,
+                                    ),
+                                    onAvatarTap: () => _editAvatar(context),
+                                  ),
+                                ),
+                                // Solid bars fade the list into them; glass
+                                // has no solid bar to fade into.
+                                if (!_clearSurfaces(context))
+                                  Positioned(
+                                    left: 0,
+                                    right: 0,
+                                    top: -20,
+                                    child: IgnorePointer(
+                                      child: Container(
+                                        height: 20,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [
+                                              cs.surface.withValues(alpha: 0.0),
+                                              cs.surface.withValues(alpha: 0.8),
+                                              cs.surface.withValues(alpha: 1.0),
+                                            ],
+                                            stops: const [0.0, 0.6, 1.0],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             )
                           : const SizedBox.shrink(
                               key: ValueKey<String>('sidebar-no-bar'),
@@ -2264,35 +2202,6 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
               ),
             ],
           ),
-
-          // iOS-style blur/fade effect above user area
-          // The legacy user-bar fade is positioned for its fixed 62px height.
-          // The selection action bar is shorter and owns its own top shadow;
-          // keeping this fade would expose a thin strip of list content between
-          // the fade and the action bar.
-          if (!widget.embedded && !_selectionMode)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 62, // Approximate height of user area
-              child: IgnorePointer(
-                child: Container(
-                  height: 20,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        cs.surface.withValues(alpha: 0.0),
-                        cs.surface.withValues(alpha: 0.8),
-                        cs.surface.withValues(alpha: 1.0),
-                      ],
-                      stops: const [0.0, 0.6, 1.0],
-                    ),
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -2312,51 +2221,22 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             child: drawerBody,
           );
 
+    final panel = Stack(
+      fit: StackFit.expand,
+      children: [
+        const SidebarGlassBackdrop(),
+        Material(color: Colors.transparent, child: inner),
+      ],
+    );
     if (widget.embedded) {
       return ClipRect(
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-          child: Material(
-            color: cs.surface.withValues(alpha: 0.60),
-            child: SizedBox(width: widget.embeddedWidth ?? 300, child: inner),
-          ),
-        ),
+        child: SizedBox(width: widget.embeddedWidth ?? 300, child: panel),
       );
     }
-
-    final glass = context.select<SettingsProvider, bool>((s) => s.glassTheme);
-    if (glass) {
-      // Glass: the list sits on a still copy of the colour backdrop under a
-      // translucent veil, instead of a solid panel.
-      return Drawer(
-        backgroundColor: Colors.transparent,
-        width: MediaQuery.sizeOf(context).width,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            ChatGradientBackgroundHost(
-              enabled: false,
-              phase: 7,
-              accent: cs.primary,
-              child: const ChatGradientBackground(),
-            ),
-            ColoredBox(
-              color: cs.surface.withValues(
-                alpha: Theme.of(context).brightness == Brightness.dark
-                    ? 0.58
-                    : 0.5,
-              ),
-            ),
-            inner,
-          ],
-        ),
-      );
-    }
-
     return Drawer(
-      backgroundColor: cs.surface,
+      backgroundColor: Colors.transparent,
       width: MediaQuery.sizeOf(context).width,
-      child: inner,
+      child: panel,
     );
   }
 
@@ -2409,7 +2289,12 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         final chatService = context.read<ChatService>();
         final all = chatService.getAllConversations();
         // Filter conversations owned by this assistant and pick the newest
-        final recent = all.where((c) => c.assistantId == assistant.id).toList();
+        final recent = all
+            .where(
+              (c) =>
+                  c.assistantId == assistant.id && !ChatService.isArchived(c),
+            )
+            .toList();
         if (recent.isNotEmpty) {
           // getAllConversations is already sorted by updatedAt desc
           widget.onSelectConversation?.call(
@@ -2511,6 +2396,10 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       ),
                     ),
                     const SizedBox(height: 10),
+                    // The dock has no room for the name; it is edited here.
+                    row(l10n.sideDrawerSetNicknameTitle, () async {
+                      await _editUserName(context);
+                    }),
                     row(l10n.sideDrawerChooseImage, () async {
                       await _pickLocalImage(context);
                     }),
@@ -3415,14 +3304,33 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       }
     }
 
-    final showDates = context.watch<SettingsProvider>().showChatListDate;
+    // A card or background preference does not change list membership.
+    final collapsed = context.select<SettingsProvider, Set<String>>(
+      (settings) => settings.sidebarCollapsedSections,
+    );
     final visibleRows = <_SidebarRow>[
       for (final row in rows)
-        if (row is! _SidebarHeaderRow ||
-            row.kind != _SidebarHeaderKind.date ||
-            showDates)
+        if (row is! _SidebarTileRow ||
+            !collapsed.contains(
+              _sidebarSectionKey(
+                row.kind,
+                row.dateBucket,
+                row.folderId,
+                row.assistantId,
+              ),
+            ))
           row,
     ];
+    // Each day gets its own icon, stable across rebuilds and restarts.
+    final usedIcons = <int>{};
+    final headerIcons = <String, IconData>{
+      for (final row in visibleRows.whereType<_SidebarHeaderRow>())
+        if (row.kind == _SidebarHeaderKind.date)
+          _sidebarSectionKey(row.kind, row.dateBucket): sidebarSectionIcon(
+            _sidebarSectionKey(row.kind, row.dateBucket),
+            usedIcons,
+          ),
+    };
 
     final leadingCount = leading != null ? 1 : 0;
     final bannerCount = banner != null ? 1 : 0;
@@ -3440,56 +3348,103 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         ),
         child: child,
       ),
-      child: ListView.builder(
-        key: ValueKey(listSignature),
-        controller: controller,
-        padding: padding ?? EdgeInsets.zero,
-        itemCount: prefixCount + visibleRows.length,
-        itemBuilder: (context, index) {
-          if (leading != null && index == 0) return leading;
-          if (banner != null && index == leadingCount) return banner;
-          final rowIndex = index - prefixCount;
-          final row = visibleRows[rowIndex];
-          if (row is _SidebarHeaderRow) {
-            final headerLabel = switch (row.kind) {
-              _SidebarHeaderKind.pinned => AppLocalizations.of(
-                context,
-              )!.sideDrawerPinnedLabel,
-              _SidebarHeaderKind.date => _dateLabel(context, row.dateBucket!),
-            };
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(14, 6, 0, 6),
-              child:
-                  Text(
-                        headerLabel,
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: AppFontWeights.semibold,
-                          color: cs.primary,
-                        ),
-                      )
-                      .animate()
-                      .fadeIn(duration: 180.ms)
-                      .moveY(
-                        begin: 4,
-                        end: 0,
-                        duration: 220.ms,
-                        curve: Curves.easeOutCubic,
+      // One open row at a time; opening another closes the last.
+      child: SlidableAutoCloseBehavior(
+        child: ListView.builder(
+          key: ValueKey(listSignature),
+          controller: controller,
+          padding: padding ?? EdgeInsets.zero,
+          itemCount: prefixCount + visibleRows.length,
+          itemBuilder: (context, index) {
+            if (leading != null && index == 0) return leading;
+            if (banner != null && index == leadingCount) return banner;
+            final rowIndex = index - prefixCount;
+            final row = visibleRows[rowIndex];
+            if (row is _SidebarHeaderRow) {
+              final key = _sidebarSectionKey(
+                row.kind,
+                row.dateBucket,
+                row.folder?.id,
+                row.assistantId,
+              );
+              final headerLabel = switch (row.kind) {
+                _SidebarHeaderKind.pinned => AppLocalizations.of(
+                  context,
+                )!.sideDrawerPinnedLabel,
+                _SidebarHeaderKind.folder => row.folder!.name,
+                _SidebarHeaderKind.date => _dateLabel(context, row.dateBucket!),
+                _SidebarHeaderKind.assistant =>
+                  row.assistantId == null
+                      ? AppLocalizations.of(context)!.memoryEntryScopeGlobal
+                      : context
+                                .read<AssistantProvider>()
+                                .getById(row.assistantId!)
+                                ?.name ??
+                            AppLocalizations.of(
+                              context,
+                            )!.homePageDefaultAssistant,
+                _SidebarHeaderKind.ungrouped => '',
+              };
+              return Padding(
+                // Sections stand 14 apart, as in OmniBot.
+                padding: EdgeInsets.only(top: rowIndex == 0 ? 0 : 14),
+                child: SidebarSectionHeader(
+                  key: ValueKey<String>('sidebar-section-$key'),
+                  icon: switch (row.kind) {
+                    _SidebarHeaderKind.pinned => Lucide.Pin,
+                    _SidebarHeaderKind.folder => chatFolderIcon(
+                      row.folder!.icon,
+                    ),
+                    _SidebarHeaderKind.date => headerIcons[key]!,
+                    _SidebarHeaderKind.assistant => Lucide.Bot,
+                    _SidebarHeaderKind.ungrouped => Lucide.MessagesSquare,
+                  },
+                  onLongPress: row.folder == null
+                      ? null
+                      : () =>
+                            unawaited(showChatFolderMenu(context, row.folder!)),
+                  label: headerLabel,
+                  count: row.count,
+                  expanded: !collapsed.contains(key),
+                  onTap: () {
+                    Haptics.light();
+                    unawaited(
+                      context.read<SettingsProvider>().toggleSidebarSection(
+                        key,
                       ),
-            );
-          }
+                    );
+                  },
+                ),
+              );
+            }
 
-          final tile = row as _SidebarTileRow;
-          final isPinnedSection = tile.kind == _SidebarHeaderKind.pinned;
-          // Cap absolute-index stagger to the first ~8 visual items so
-          // virtualized far rows (e.g. index 1000) never wait multiple seconds.
-          final staggerDelay = SideDrawer.debugSidebarTileStaggerDelay(
-            indexInSection: tile.indexInSection,
-            pinnedSection: isPinnedSection,
-          );
-          final chatTile =
-              _ChatTile(
+            final tile = row as _SidebarTileRow;
+            final isPinnedSection = tile.kind == _SidebarHeaderKind.pinned;
+            // Cap absolute-index stagger to the first ~8 visual items so
+            // virtualized far rows (e.g. index 1000) never wait multiple
+            // seconds.
+            final staggerDelay = SideDrawer.debugSidebarTileStaggerDelay(
+              indexInSection: tile.indexInSection,
+              pinnedSection: isPinnedSection,
+            );
+            return SidebarChatSlidable(
+                  key: ValueKey<String>('sidebar-swipe-${tile.chat.id}'),
+                  itemKey: tile.chat.id,
+                  enabled: !_selectionMode,
+                  pinned: tile.chat.isPinned,
+                  onDelete: () => unawaited(_deleteChat(tile.chat)),
+                  onPin: () => unawaited(
+                    context.read<ChatService>().togglePinConversation(
+                      tile.chat.id,
+                    ),
+                  ),
+                  onCopy: () => unawaited(
+                    context.read<ChatService>().duplicateConversation(
+                      tile.chat.id,
+                    ),
+                  ),
+                  onArchive: () => unawaited(_archiveChat(tile.chat.id)),
+                  child: _ChatTile(
                     chat: tile.chat,
                     textColor: textBase,
                     loading: widget.loadingConversationIds.contains(
@@ -3512,38 +3467,43 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                     onLongPress: () => _showChatMenu(context, tile.chat),
                     onSecondaryTap: (pos) =>
                         _showChatMenu(context, tile.chat, anchor: pos),
-                  )
-                  .animate(
-                    key: ValueKey(
-                      isPinnedSection
-                          ? 'pin-${tile.chat.id}'
-                          : 'grp-${_sidebarDateBucketKey(tile.dateBucket)}-${tile.chat.id}',
-                    ),
-                  )
-                  .fadeIn(duration: 220.ms, delay: staggerDelay)
-                  .moveY(
-                    begin: isPinnedSection ? 8 : 6,
-                    end: 0,
-                    duration: (isPinnedSection ? 260 : 240).ms,
-                    curve: Curves.easeOutCubic,
-                    delay: staggerDelay,
-                  );
-
-          final isLastInSection =
-              rowIndex + 1 >= visibleRows.length ||
-              visibleRows[rowIndex + 1] is _SidebarHeaderRow;
-          final needsSectionGap =
-              isLastInSection && (isPinnedSection || showDates);
-          if (!needsSectionGap) return chatTile;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: chatTile,
-          );
-        },
+                  ),
+                )
+                .animate(
+                  key: ValueKey(
+                    isPinnedSection
+                        ? 'pin-${tile.chat.id}'
+                        : 'grp-${_sidebarSectionKey(tile.kind, tile.dateBucket, tile.folderId, tile.assistantId)}-${tile.chat.id}',
+                  ),
+                )
+                .fadeIn(duration: 220.ms, delay: staggerDelay)
+                .moveY(
+                  begin: isPinnedSection ? 8 : 6,
+                  end: 0,
+                  duration: (isPinnedSection ? 260 : 240).ms,
+                  curve: Curves.easeOutCubic,
+                  delay: staggerDelay,
+                );
+          },
+        ),
       ),
     );
   }
 }
+
+/// The key a folded section is remembered by: `pinned`, or the day.
+String _sidebarSectionKey(
+  _SidebarHeaderKind kind,
+  DateTime? day, [
+  String? folderId,
+  String? assistantId,
+]) => switch (kind) {
+  _SidebarHeaderKind.pinned => 'pinned',
+  _SidebarHeaderKind.folder => 'folder:$folderId',
+  _SidebarHeaderKind.date => 'date:${_sidebarDateBucketKey(day)}',
+  _SidebarHeaderKind.assistant => 'assistant:${assistantId ?? 'shared'}',
+  _SidebarHeaderKind.ungrouped => 'ungrouped',
+};
 
 /// Max absolute index that still contributes to tile enter stagger.
 /// Indices beyond this share the same delay (~112–140ms).
@@ -3563,21 +3523,32 @@ class _ChatGroup {
   _ChatGroup({required this.date, required this.items});
 }
 
-enum _SidebarHeaderKind { pinned, date }
+enum _SidebarHeaderKind { pinned, folder, date, assistant, ungrouped }
 
 sealed class _SidebarRow {
   const _SidebarRow();
 }
 
 class _SidebarHeaderRow extends _SidebarRow {
-  const _SidebarHeaderRow({required this.kind, this.dateBucket})
-    : assert(
-        kind == _SidebarHeaderKind.pinned
-            ? dateBucket == null
-            : dateBucket != null,
-      );
+  const _SidebarHeaderRow({
+    required this.kind,
+    required this.count,
+    this.dateBucket,
+    this.folder,
+    this.assistantId,
+  }) : assert(
+         (kind == _SidebarHeaderKind.date) == (dateBucket != null) &&
+             (kind == _SidebarHeaderKind.folder) == (folder != null),
+       );
 
   final _SidebarHeaderKind kind;
+
+  /// The folder of a folder header.
+  final ChatFolder? folder;
+  final String? assistantId;
+
+  /// Chats in the section.
+  final int count;
 
   /// Stable local calendar day for date headers; null when [kind] is pinned.
   /// Localized label is resolved at render time from [AppLocalizations].
@@ -3590,6 +3561,8 @@ class _SidebarTileRow extends _SidebarRow {
     required this.indexInSection,
     required this.kind,
     this.dateBucket,
+    this.folderId,
+    this.assistantId,
   });
   final ChatItem chat;
   final int indexInSection;
@@ -3597,6 +3570,10 @@ class _SidebarTileRow extends _SidebarRow {
 
   /// Stable local-day bucket for date-section animation keys; null when pinned.
   final DateTime? dateBucket;
+
+  /// The folder section the row is in; null outside folders.
+  final String? folderId;
+  final String? assistantId;
 }
 
 class _ChatTile extends StatefulWidget {
@@ -3629,96 +3606,151 @@ class _ChatTile extends StatefulWidget {
 class _ChatTileState extends State<_ChatTile> {
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     // Per-tile current-conversation subscription (cache plan measure 16):
     // switching the open chat rebuilds only the affected tiles, not the list.
     final isCurrent = context.select<ChatService, bool>(
       (service) => service.currentConversationId == widget.chat.id,
     );
-    final embedded =
-        context.findAncestorWidgetOfExactType<SideDrawer>()?.embedded ?? false;
-    final Color tileColor;
-    if (widget.selectionMode) {
-      tileColor = widget.selected
-          ? cs.primary.withValues(alpha: embedded ? 0.20 : 0.16)
-          : (embedded ? Colors.transparent : cs.surface);
-    } else if (embedded) {
-      // In tablet embedded mode, keep current highlight, others transparent
-      tileColor = isCurrent
-          ? cs.primary.withValues(alpha: 0.16)
-          : Colors.transparent;
-    } else {
-      tileColor = isCurrent ? cs.primary.withValues(alpha: 0.12) : cs.surface;
+    final presentation = context.select((SettingsProvider settings) {
+      final value = settings.sidebarAppearance;
+      // Only presentation fields used by this row participate in equality.
+      return (
+        density: value.density,
+        cardRadius: value.cardRadius,
+        cardColor: value.cardColor,
+        activeCardColor: value.activeCardColor,
+        showTimestamp: value.showTimestamp,
+        showAssistant: value.showAssistant,
+        showModel: value.showModel,
+        showPreview: value.showPreview,
+        showThumbnails: settings.sidebarThumbnails,
+      );
+    });
+    final appearance = context.read<SettingsProvider>().sidebarAppearance;
+    final showThumbs = presentation.showThumbnails;
+    ConversationListMetadata? metadata;
+    if (appearance.showPreview ||
+        appearance.showTimestamp ||
+        appearance.showModel) {
+      metadata = context.select<ChatService, ConversationListMetadata?>(
+        (service) => service.getConversationListMetadata(widget.chat.id),
+      );
     }
-    final base = tileColor;
-    final double vGap = 4;
-    return Padding(
-      padding: EdgeInsets.only(bottom: vGap),
-      child: GestureDetector(
-        onLongPress: () {
-          if (widget.selectionMode) return;
-          widget.onLongPress?.call();
-        },
-        child: IosCardPress(
-          baseColor: base,
-          borderRadius: BorderRadius.circular(16),
-          haptics: false,
-          onTap: widget.selectionMode
-              ? () {
-                  Haptics.light();
-                  widget.onToggleSelect?.call();
-                }
-              : widget.onTap,
-          onLongPress: widget.selectionMode ? null : widget.onLongPress,
-          padding: EdgeInsets.fromLTRB(14, 10, 8, 10),
-          child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(end: widget.selectionMode ? 1 : 0),
-            duration: const Duration(milliseconds: 240),
-            curve: Curves.easeOutCubic,
-            builder: (context, t, child) {
-              return Row(
-                children: [
-                  ClipRect(
-                    child: SizedBox(
-                      width: 28 * t,
-                      child: Opacity(
-                        opacity: t,
-                        child: Transform.scale(
-                          scale: 0.8 + 0.2 * t,
-                          child: IgnorePointer(
-                            child: IosCheckbox(
-                              value: widget.selected,
-                              size: 20,
-                              hitTestSize: 20,
-                              enableHaptics: false,
-                              onChanged: (_) {},
-                            ),
-                          ),
+    Assistant? assistant;
+    String? modelName;
+    if (appearance.showAssistant || appearance.showModel) {
+      final summary = context
+          .select<
+            ChatService,
+            ({String? assistantId, String? modelId, String? providerId})
+          >((service) {
+            final conversation = service.getConversation(widget.chat.id);
+            return (
+              assistantId: conversation?.assistantId,
+              modelId: conversation?.chatModelId,
+              providerId: conversation?.chatModelProvider,
+            );
+          });
+      assistant = context.select<AssistantProvider, Assistant?>(
+        (provider) =>
+            provider.getById(summary.assistantId ?? '') ??
+            (summary.assistantId == null ? provider.currentAssistant : null),
+      );
+      if (appearance.showModel) {
+        final conversation = context.read<ChatService>().getConversation(
+          widget.chat.id,
+        );
+        modelName = context.select<SettingsProvider, String?>((settings) {
+          final modelId =
+              metadata?.lastAssistantModelId ?? metadata?.lastMessageModelId;
+          final providerId =
+              metadata?.lastAssistantProviderId ??
+              metadata?.lastMessageProviderId;
+          if (modelId == null || modelId.isEmpty) {
+            return getModelDisplayInfo(
+              settings,
+              conversation: conversation,
+              assistant: assistant,
+            ).modelDisplay;
+          }
+          if (providerId == null) return modelId;
+          final override = settings
+              .getProviderConfig(providerId)
+              .modelOverrides[modelId];
+          if (override is Map) {
+            final name = override['name']?.toString().trim();
+            if (name != null && name.isNotEmpty) return name;
+            final apiId = (override['apiModelId'] ?? override['api_model_id'])
+                ?.toString()
+                .trim();
+            if (apiId != null && apiId.isNotEmpty) return apiId;
+          }
+          return modelId;
+        });
+      }
+    }
+    String? timestamp;
+    if (appearance.showTimestamp && metadata?.lastMessageAt != null) {
+      final locale = Localizations.localeOf(context);
+      final tag = locale.toLanguageTag();
+      timestamp = DateFormat.yMMMd(
+        DateFormat.localeExists(tag) ? tag : locale.languageCode,
+      ).add_Hm().format(metadata!.lastMessageAt.toLocal());
+    }
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: widget.selectionMode ? 1 : 0),
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+      builder: (context, t, _) => SidebarConversationCard(
+        appearance: appearance,
+        title: widget.chat.title,
+        isCurrent: isCurrent,
+        isSelected: widget.selected,
+        selectionMode: widget.selectionMode,
+        preview: metadata?.lastMessagePreview,
+        timestamp: timestamp,
+        assistantName: appearance.showAssistant
+            ? assistant?.name ??
+                  AppLocalizations.of(context)!.homePageDefaultAssistant
+            : null,
+        assistantIcon: appearance.showAssistant && assistant != null
+            ? AssistantAvatar(assistant: assistant, size: 12)
+            : null,
+        modelName: modelName,
+        thumbnails: showThumbs ? ChatThumbnails(chatId: widget.chat.id) : null,
+        loadingIndicator: widget.loading ? _LoadingDot() : null,
+        // Preserve the checkbox's row height without mounting its invisible
+        // render subtree. Selection entry initializes it on the first frame;
+        // exit keeps it mounted until the transition reaches zero.
+        selectionIndicator: t == 0 && !widget.selectionMode
+            ? const SizedBox(width: 0, height: 20)
+            : ClipRect(
+                child: SizedBox(
+                  width: 28 * t,
+                  child: Opacity(
+                    opacity: t,
+                    child: Transform.scale(
+                      scale: 0.8 + 0.2 * t,
+                      child: IgnorePointer(
+                        child: IosCheckbox(
+                          value: widget.selected,
+                          size: 20,
+                          hitTestSize: 20,
+                          enableHaptics: false,
+                          onChanged: (_) {},
                         ),
                       ),
                     ),
                   ),
-                  Expanded(
-                    child: Text(
-                      widget.chat.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: widget.textColor,
-                        fontWeight: AppFontWeights.regular,
-                      ),
-                    ),
-                  ),
-                  if (widget.loading) ...[
-                    const SizedBox(width: 8),
-                    _LoadingDot(),
-                  ],
-                ],
-              );
-            },
-          ),
-        ),
+                ),
+              ),
+        onTap: widget.selectionMode
+            ? () {
+                Haptics.light();
+                widget.onToggleSelect?.call();
+              }
+            : widget.onTap,
+        onLongPress: widget.selectionMode ? null : widget.onLongPress,
       ),
     );
   }
@@ -3827,16 +3859,20 @@ class _LegacyListArea extends StatelessWidget {
 
   /// Builds the virtualized conversations list that owns scrolling, with the
   /// inline assistants [leading] widget and shared [padding].
-  final Widget Function(Widget leading, EdgeInsets padding) buildConversations;
+  final Widget Function(
+    BuildContext context,
+    Widget leading,
+    EdgeInsets padding,
+  )
+  buildConversations;
 
   @override
   Widget build(BuildContext context) {
+    // OmniBot's list: 16 from the panel edges, a row's own 4 inside that.
     final padding = EdgeInsets.fromLTRB(
-      10,
-      (context.watch<SettingsProvider>().showChatListDate || assistantsExpanded)
-          ? 4
-          : 10,
-      10,
+      16,
+      assistantsExpanded ? 4 : 10,
+      16,
       16,
     );
     final leading = AnimatedSize(
@@ -3857,7 +3893,7 @@ class _LegacyListArea extends StatelessWidget {
               ),
       ),
     );
-    return buildConversations(leading, padding);
+    return buildConversations(context, leading, padding);
   }
 }
 
@@ -3892,9 +3928,9 @@ class _AssistantInlineTileState extends State<_AssistantInlineTile> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final embedded = widget.embedded;
-    final Color tileColor = (embedded ? Colors.transparent : cs.surface);
-    final Color bg = tileColor;
+    final Color bg = sidebarSurfacesClear(context, embedded: widget.embedded)
+        ? Colors.transparent
+        : cs.surface;
     final content = IosCardPress(
       baseColor: bg,
       borderRadius: BorderRadius.circular(16),

@@ -32,7 +32,7 @@ void main() {
             home: Scaffold(
               body: Builder(
                 builder: (context) => TextButton(
-                  onPressed: () => showMcpJsonImport(context, desktop: true),
+                  onPressed: () => showMcpJsonImport(context),
                   child: const Text('Open'),
                 ),
               ),
@@ -69,6 +69,6 @@ void main() {
       expect(provider.getById('saved')!.command, 'sh');
       await tester.pumpWidget(const SizedBox.shrink());
     },
-    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 }

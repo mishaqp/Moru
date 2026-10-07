@@ -133,6 +133,88 @@ void main() {
     expect(result['updated'], containsPair('repeat', 'custom'));
   });
 
+  test('nullable unused fields leave a repeating schedule unchanged', () async {
+    stored = [
+      ScheduledTask(
+        id: 't1',
+        name: 'Gym',
+        prompt: 'Remind me to train',
+        assistantId: 'a1',
+        hour: 7,
+        minute: 0,
+        weekdays: const [1, 3, 5],
+        startDate: DateTime(2026, 9, 25),
+        endDate: DateTime(2026, 10, 30),
+      ),
+    ];
+
+    final result = await run({
+      'action': 'update',
+      'task_id': 't1',
+      'name': null,
+      'prompt': null,
+      'time': '07:45',
+      'repeat': null,
+      'date': null,
+      'weekdays': null,
+      'start_date': null,
+      'end_date': null,
+      'target': null,
+      'assistant_id': null,
+      'enabled': null,
+      'notify': null,
+    });
+
+    expect(result['ok'], isTrue);
+    final task = stored.single;
+    expect((task.hour, task.minute), (7, 45));
+    expect(task.weekdays, [1, 3, 5]);
+    expect(task.startDate, DateTime(2026, 9, 25));
+    expect(task.endDate, DateTime(2026, 10, 30));
+    expect(task.name, 'Gym');
+    expect(task.prompt, 'Remind me to train');
+  });
+
+  test('daily creation accepts null for unused custom weekdays', () async {
+    final result = await run({
+      'action': 'create',
+      'name': 'News',
+      'prompt': 'Summarize the news',
+      'time': '08:30',
+      'repeat': 'daily',
+      'weekdays': null,
+    });
+
+    expect(result['ok'], isTrue);
+    expect(stored.single.weekdays, [1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  test('null date bounds keep the existing repeating date bounds', () async {
+    stored = [
+      ScheduledTask(
+        id: 't1',
+        name: 'Gym',
+        prompt: 'Train',
+        assistantId: 'a1',
+        hour: 7,
+        minute: 0,
+        startDate: DateTime(2026, 9, 25),
+        endDate: DateTime(2026, 10, 30),
+      ),
+    ];
+
+    final result = await run({
+      'action': 'update',
+      'task_id': 't1',
+      'start_date': null,
+      'end_date': null,
+    });
+
+    expect(result['ok'], isTrue);
+    expect(stored.single.startDate, DateTime(2026, 9, 25));
+    expect(stored.single.endDate, DateTime(2026, 10, 30));
+  });
+
   test('delete removes the task by id', () async {
     stored = [
       const ScheduledTask(

@@ -288,6 +288,7 @@ class DataSync {
     'skills',
     'workspaces',
     'sessions',
+    'mini_apps',
   ];
   // A 16 MiB metadata cap keeps manifest parsing and entry metadata bounded.
   static const _maxManifestBytes = 16 * 1024 * 1024;
@@ -2008,7 +2009,7 @@ class DataSync {
     }
   }
 
-  /// Ensures the temporary directory exists (some macOS installs may not create the cache folder until first use).
+  /// Ensures the temporary directory exists before the first cache write.
   Future<Directory> _ensureTempDir() async {
     Directory dir = await getTemporaryDirectory();
     if (!await dir.exists()) {

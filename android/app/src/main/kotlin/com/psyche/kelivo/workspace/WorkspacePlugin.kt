@@ -56,6 +56,8 @@ class WorkspacePlugin(private val context: Context) {
             try {
                 when (call.method) {
                     "probe" -> result.success(probe())
+                    "probeChroot" -> runAsync(result) { probeChroot(asMap(call.arguments)) }
+                    "chrootFixOwner" -> runAsync(result) { chrootFixOwner(asMap(call.arguments)) }
                     "setEnvironmentBusy" -> {
                         environmentBusy = asMap(call.arguments)["busy"] == true
                         if (environmentBusy) {
@@ -191,9 +193,60 @@ class WorkspacePlugin(private val context: Context) {
                 timeoutMs = number(args["timeoutMs"], 60_000L),
                 keepStdinOpen = args["keepStdinOpen"] == true,
                 prootArguments = parseStringList(args["prootArguments"]),
+                emulateHardLinks = args["emulateHardLinks"] != false,
                 shell = args["shell"]?.toString(),
+                chroot = chrootOptions(args),
             ),
         )
+    }
+
+    /** The fast mode's chroot, when the call asks for it. */
+    private fun chrootOptions(args: Map<*, *>): ChrootOptions? {
+        if (args["chroot"] != true) return null
+        return ChrootOptions(
+            uid = Process.myUid(),
+            gid = android.system.Os.getgid(),
+            appDataDir = File(context.applicationInfo.dataDir),
+        )
+    }
+
+    /** Whether the fast mode can run here: su, the helper, the rootfs. */
+    private fun probeChroot(args: Map<*, *>): Map<String, Any?> {
+        val nativeLibDir = File(context.applicationInfo.nativeLibraryDir)
+        val helper = File(nativeLibDir, ChrootCommand.HELPER_LIB)
+        if (!helper.isFile) {
+            return mapOf("ok" to false, "exitCode" to -1, "output" to "helper missing: ${helper.absolutePath}")
+        }
+        val result = ChrootCommand.runRoot(
+            ChrootCommand.probeArgv(nativeLibDir, File(requiredString(args, "rootfsDir"))),
+            // su may ask the root manager for permission first.
+            60,
+        )
+        return mapOf(
+            "ok" to (result.exitCode == 0 && result.output.contains("moru_chroot ok")),
+            "exitCode" to result.exitCode,
+            "output" to result.output,
+            "timedOut" to result.timedOut,
+        )
+    }
+
+    /** Root-owned files the fast mode left in the app's folders go back to the app. */
+    private fun chrootFixOwner(args: Map<*, *>): Map<String, Any?> {
+        val appData = File(context.applicationInfo.dataDir).canonicalPath + "/"
+        val dirs = parseStringList(args["dirs"]).map { File(it).canonicalFile }
+        require(dirs.isNotEmpty() && dirs.all { (it.path + "/").startsWith(appData) }) {
+            "only folders of the app"
+        }
+        val result = ChrootCommand.runRoot(
+            ChrootCommand.fixOwnerArgv(
+                File(context.applicationInfo.nativeLibraryDir),
+                Process.myUid(),
+                android.system.Os.getgid(),
+                dirs,
+            ),
+            600,
+        )
+        return mapOf("ok" to (result.exitCode == 0), "exitCode" to result.exitCode, "output" to result.output)
     }
 
     private fun ptyOpen(args: Map<*, *>): Int {
@@ -209,6 +262,7 @@ class WorkspacePlugin(private val context: Context) {
             rows = number(args["rows"], 24L).toInt(),
             prootArguments = parseStringList(args["prootArguments"]),
             shell = args["shell"]?.toString(),
+            chroot = chrootOptions(args),
         )
     }
 

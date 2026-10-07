@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ловец монет</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="main.js" defer></script>
+</head>
+<body class="moru-app">
+  <main class="moru-container moru-stack">
+    <h1>Ловец монет</h1>
+    <div class="moru-row"><p>Очки: <output id="score">0</output></p><p>Рекорд: <output id="best">0</output></p></div>
+    <div id="stage" aria-label="Игровое поле. Перетаскивайте героя пальцем."></div>
+    <div class="moru-row controls">
+      <button id="left" class="moru-button moru-button--secondary" aria-label="Влево">←</button>
+      <button id="start" class="moru-button" disabled>Начать</button>
+      <button id="pause" class="moru-button moru-button--secondary" disabled>Пауза</button>
+      <button id="right" class="moru-button moru-button--secondary" aria-label="Вправо">→</button>
+    </div>
+    <p id="status" role="status" aria-live="polite">Загрузка…</p>
+    <p class="moru-muted">Собирайте жёлтые монеты. Красный шар завершит игру. Перетаскивайте героя или нажимайте стрелки.</p>
+  </main>
+</body>
+</html>

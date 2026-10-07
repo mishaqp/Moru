@@ -16,6 +16,8 @@ import '../../models/environment_variable.dart';
 import '../../providers/external_mounts_provider.dart';
 import '../../providers/workspace_provider.dart';
 import '../chat/chat_service.dart';
+import '../keep_alive.dart';
+import '../mobile_background.dart';
 import '../mini_apps/mini_app_store.dart';
 import '../mini_apps/mini_app_check.dart';
 import 'conversation_files.dart';
@@ -26,6 +28,7 @@ import 'output_buffer.dart';
 import 'task_plan.dart';
 import 'tool_run_registry.dart';
 import 'workspace_paths.dart';
+import 'workspace_file_access.dart';
 import 'workspace_runtime.dart';
 import 'workspace_session_sync.dart';
 import 'workspace_tool_context.dart';
@@ -41,6 +44,13 @@ typedef ConversationExtrasUpdater =
       Map<String, dynamic> Function(Map<String, dynamic> extras) update,
     );
 
+typedef BackgroundShellResultReporter =
+    Future<void> Function({
+      required String id,
+      required String conversationId,
+      required bool succeeded,
+    });
+
 /// Per-generation workspace tool definitions, approval, and execution.
 class WorkspaceToolsService {
   WorkspaceToolsService({
@@ -55,8 +65,14 @@ class WorkspaceToolsService {
     this.plans,
     this.miniApps,
     this.checkMiniApp,
+    ProcessKeepAlive? keepAlive,
+    BackgroundShellResultReporter? reportBackgroundShellResult,
   }) : registry = registry ?? ToolRunRegistry(),
-       runtimeProvider = runtimeProvider ?? WorkspaceRuntimeProvider();
+       runtimeProvider = runtimeProvider ?? WorkspaceRuntimeProvider(),
+       _keepAliveOverride = keepAlive,
+       _reportBackgroundShellResult =
+           reportBackgroundShellResult ??
+           MobileBackgroundCoordinator.instance.reportBackgroundShellResult;
 
   static const Set<String> toolNames = {
     'shell',
@@ -107,6 +123,11 @@ class WorkspaceToolsService {
   final bool Function(String workspaceId, String tool)? isToolEnabled;
   final Future<EnvironmentExecutionConfig> Function()? loadEnvironment;
   final TaskPlanRegistry? plans;
+  final ProcessKeepAlive? _keepAliveOverride;
+  ProcessKeepAlive get _keepAlive =>
+      _keepAliveOverride ?? ProcessKeepAlive.instance;
+  final BackgroundShellResultReporter _reportBackgroundShellResult;
+  final Map<String, _BackgroundJob> _backgroundJobs = {};
 
   /// Where published mini apps go; [MiniAppStore.instance] when null.
   final MiniAppStore? miniApps;
@@ -157,11 +178,12 @@ class WorkspaceToolsService {
         status = await runtime.status();
       } catch (e) {
         debugPrint('Workspace runtime status failed: $e');
+        // Its path and mount policy is unknown. Do not expose native host
+        // paths after a failed sandbox probe.
+        return null;
       }
     }
-    final sandboxed = runtime != null
-        ? (status?.sandboxed ?? false)
-        : Platform.isAndroid;
+    final sandboxed = status?.sandboxed ?? Platform.isAndroid;
 
     final sessionDir = await AppDirectories.sessionDir(conversationId);
     final skillsDir = await AppDirectories.getSkillsDirectory();
@@ -172,6 +194,7 @@ class WorkspaceToolsService {
             skillsHostDir: skillsDir.path,
             externalMounts: await externalMounts?.resolveMounts() ?? const [],
             loadExternalMounts: externalMounts?.resolveMounts,
+            downloadsHostDir: await AppDirectories.phoneDownloadsPath(),
           )
         : WorkspacePaths.native(
             workspaceHostRoot: hostRoot,
@@ -442,15 +465,28 @@ class WorkspaceToolsService {
       _fn(
         miniAppTool,
         [
+          'First read mini_apps with action:"guide" for all APIs, bundled',
+          'offline libraries, Moru UI kit and tested complete examples.',
+          'Publish a built folder directly: {path:"project/dist", manifest:',
+          '{id:"game", name:"Game"}}. Vite + TypeScript builds work: set',
+          'Vite base:"./"; modules, fetch of relative assets and WASM work.',
+          'No copying build files into tool arguments; binary files are copied',
+          'directly (up to 500 files / 20 MiB for the complete app). To patch',
+          'only selected files: {path:"patch-folder", app_id:"game", files:',
+          '["main.js","style.css"]}; other files/data are kept and versions',
+          'and rollback work. Optional manifest merges metadata for a patch.',
           'Publish a web app you built in the workspace as a Moru mini app:',
           'the user opens it inside Moru and can pin it to the home screen.',
           'The folder needs moru-app.json: {"id": "water-tracker" (lowercase,',
           'digits, dashes), "name": "Вода", "description": "...",',
           '"entry": "index.html" (default), "icon": "icon.svg" (optional, SVG)}.',
           'Build a static, phone-first page (HTML/CSS/JS, no server, dark and',
-          'light friendly). Use classic relative <script src> and <link> tags;',
-          'type="module" scripts and fetch() of local files are blocked, so',
-          'bundle modules first. Save data only with window.moru.storage',
+          'light friendly via prefers-color-scheme). Make it look finished: system',
+          'font, one accent color, 8 px spacing grid, tap targets of 44 px or',
+          'more, rounded cards, 150-250 ms transitions, empty states, and',
+          'padding from env(safe-area-inset-*). Use classic relative <script src> and <link> tags;',
+          'module scripts and fetch() of relative local files work offline.',
+          'Save shared data with window.moru.storage',
           '(async get(key), set(key, jsonValue), remove(key), keys()), and',
           'describe the keys and their format in moru-app.json "data" so the',
           'chat can update them; redraw on window "moru:storage" events, sent',
@@ -464,6 +500,58 @@ class WorkspaceToolsService {
           'Calendar: "permissions": ["calendar"], then moru.calendar.list({range:',
           '"today"|"week"|"month", begin, end, query}) and moru.calendar.add(',
           '{title, start, end, description, location, all_day, reminders}).',
+          'Server: for work a page cannot do (files, parsing, heavy compute,',
+          'any language: Python, Node.js, Java...), add "server": {"command":',
+          '"python3 server.py"} to moru-app.json. While the app is open (or a',
+          'job runs) Moru runs the command in the Linux environment with cwd',
+          '/app (the published files, read-only), a writable folder /data kept',
+          'with the app (install dependencies there, e.g. a venv), and must',
+          'listen on 127.0.0.1:\$PORT. The page calls it with await',
+          'moru.server.fetch("/api/x", {method, headers, body: string}) ->',
+          '{status, ok, headers, body, json()}, for small requests: each one',
+          'goes through Moru. For anything live (video or a game screen,',
+          'audio, progress, input that must feel instant) connect directly:',
+          'await moru.server.url("/stream") gives',
+          'http://127.0.0.1:<port>/stream?moru_token=... for <img src> with an',
+          'MJPEG stream (multipart/x-mixed-replace), <video>, EventSource,',
+          'fetch, or new WebSocket(url.replace("http", "ws")). Never poll',
+          'frames or send key presses through moru.server.fetch. The server',
+          'must refuse requests whose moru_token query parameter or',
+          'X-Moru-Token header is not \$MORU_SERVER_TOKEN (other apps of the',
+          'phone can reach the port) and send Access-Control-Allow-Origin: *',
+          'for fetch from the page. Keep long-lived workers (one encoder, one',
+          'input connection) instead of starting a process per frame or key.',
+          'After a server restart call url() again (the port changes). In the',
+          'Wi-Fi web host url() is unavailable: fall back to moru.server.fetch.',
+          'The first start can take long:',
+          'show a loading state. Test the server in the shell before publishing.',
+          'The publish check starts a copy of it with an empty /data for up to',
+          '20 s and reports "server" (ready, exit_code, output); a server that',
+          'first installs dependencies may not be ready in time there. The',
+          'mini_apps tool action "server" shows the real one\'s state and output.',
+          'Background: moru.jobs.set(id, {time: "HH:mm", days?: [1-7], run:',
+          '"fnName"}), remove(id), list(): at that time, even with Moru closed,',
+          'Moru opens the app out of sight and calls the global function',
+          'window.fnName (declare it with function or assign window.fnName);',
+          'it may return a promise and gets 30 s. It can use storage, fetch,',
+          'ai.ask and notify; check (await moru.app.info()).background to skip',
+          'UI-only work. Jobs the page sets on start during the publish check',
+          'are scheduled for the installed app when the check is ok',
+          '("jobs_scheduled"), so run_job works right after publishing. Test',
+          'a job with the mini_apps tool (run_job, then jobs and errors).',
+          'Games: set "fullscreen": true (no app bar, system bars hidden;',
+          'back shows Moru\'s controls, a second back leaves),',
+          '"orientation": "landscape"|"portrait"|"any" and "keepAwake": true in',
+          'moru-app.json; moru.vibrate(ms or [on, off, on...]),',
+          'moru.haptic("light"|"medium"|"heavy"|"selection"), moru.app.close().',
+          'For games: viewport with user-scalable=no and viewport-fit=cover;',
+          'body margin 0, overflow hidden, touch-action none, user-select none;',
+          'a canvas sized to innerWidth/innerHeight times devicePixelRatio and',
+          'resized on "resize"; a requestAnimationFrame loop with delta time',
+          'capped at ~50 ms; pointer events for touch with big on-screen',
+          'controls; pause on document "visibilitychange"; a start screen, a',
+          'pause button and game over with restart; keep the best score in',
+          'moru.storage. Audio may start from game code (Web Audio).',
           'Moru adds moru.js automatically. Publishing the',
           'same id again updates the app and keeps its data. Afterwards give',
           'the user the link from the result as [Open <name>](kelivo://app/<id>).',
@@ -476,8 +564,56 @@ class WorkspaceToolsService {
           'path': {
             'type': 'string',
             'description':
-                'Folder with moru-app.json, in model path vocabulary '
+                'App/build/patch folder, in model path vocabulary '
                 '(${vocab.join(', ')}).',
+          },
+          'manifest': {
+            'type': 'object',
+            'description':
+                'Optional moru-app.json metadata. Full publish: id and name '
+                'required; patch: merges non-null metadata, cannot change id.',
+            'properties': {
+              'id': {'type': 'string'},
+              'name': {'type': 'string'},
+              'description': {'type': 'string'},
+              'entry': {'type': 'string'},
+              'icon': {'type': 'string'},
+              'data': {'type': 'string'},
+              'network': {
+                'type': 'array',
+                'items': {'type': 'string'},
+              },
+              'permissions': {
+                'type': 'array',
+                'items': {'type': 'string'},
+              },
+              'fullscreen': {'type': 'boolean'},
+              'orientation': {
+                'type': 'string',
+                'enum': ['any', 'portrait', 'landscape'],
+              },
+              'keepAwake': {'type': 'boolean'},
+              'server': {
+                'type': 'object',
+                'properties': {
+                  'command': {'type': 'string'},
+                },
+                'required': ['command'],
+              },
+            },
+          },
+          'app_id': {
+            'type': 'string',
+            'description': 'Installed app to patch; requires files.',
+          },
+          'files': {
+            'type': 'array',
+            'minItems': 1,
+            'maxItems': MiniAppStore.maxFiles,
+            'items': {'type': 'string'},
+            'description':
+                'Patch only these relative files from path; requires app_id. '
+                'Use manifest for metadata changes, not moru-app.json in files.',
           },
         },
         ['path'],
@@ -833,6 +969,13 @@ class WorkspaceToolsService {
       conversationId: conversationId ?? ctx.conversationId,
     );
     if (denied != null) return denied;
+    if (!_enabled(ctx, tool)) {
+      return _errorResult(
+        tool: tool,
+        error: 'tool_disabled',
+        message: 'This tool is disabled for the workspace',
+      );
+    }
 
     final background = _boolArg(args, 'background');
     final timeoutSeconds = background
@@ -862,10 +1005,13 @@ class WorkspaceToolsService {
       command: command,
       conversationId: conversationId ?? ctx.conversationId,
       runtimeRunId: runtimeRunId,
+      responseId: ToolApprovalOwner.current?.assistantMessageId,
+      background: background,
     );
+    final job = background ? _BackgroundJob(runtime, run) : null;
     final request = CommandRequest(
       runId: runtimeRunId,
-      isCancelled: background ? null : cancellation?.isCancelled,
+      isCancelled: job == null ? cancellation?.isCancelled : () => job.stopped,
       command: command,
       cwd: cwd,
       timeout: Duration(seconds: timeoutSeconds),
@@ -873,15 +1019,72 @@ class WorkspaceToolsService {
       mounts: ctx.paths.mounts,
     );
     if (background) {
+      _backgroundJobs[runtimeRunId] = job!;
+      // Observe Stop before awaiting service promotion. If Stop wins, no
+      // process may start when a late acknowledgement arrives.
+      job.released = _keepAlive.released.listen((id) {
+        if (id != runtimeRunId) return;
+        unawaited(job.stop().catchError((_) {}));
+      });
+      try {
+        await _keepAlive.hold(
+          runtimeRunId,
+          MobileBackgroundCoordinator.instance.backgroundShellRunningText,
+        );
+      } on ProcessKeepAliveException {
+        try {
+          run.complete(status: ToolRunStatus.failed);
+        } finally {
+          await _releaseBackgroundOwner(job);
+        }
+        return _errorResult(
+          tool: tool,
+          error: ProcessKeepAliveException.code,
+          message: MobileBackgroundCoordinator
+              .instance
+              .backgroundProtectionUnavailableText,
+          meta: const WorkspaceToolMetadata(
+            tool: tool,
+            status: 'error',
+            code: ProcessKeepAliveException.code,
+          ),
+        );
+      }
+      if (job.stopped) {
+        try {
+          run.complete(status: ToolRunStatus.cancelled);
+        } finally {
+          await _releaseBackgroundOwner(job);
+        }
+        return _errorResult(
+          tool: tool,
+          error: 'cancelled',
+          message: 'The background command was stopped.',
+          meta: const WorkspaceToolMetadata(
+            tool: tool,
+            status: 'cancelled',
+            cancelled: true,
+          ),
+        );
+      }
       // The job outlives this reply: ending or stopping the reply leaves it
       // running; the running strip and shell_output can stop it.
-      unawaited(_driveBackgroundJob(runtime, request, run));
+      job.executing = true;
+      unawaited(
+        _driveBackgroundJob(
+          runtime,
+          request,
+          run,
+          job,
+          conversationId ?? ctx.conversationId,
+        ),
+      );
       await _markToolsUsed(ctx, conversationId: conversationId, status: 'ok');
       return ClientToolResult(
         jsonEncode(<String, Object?>{
           'background': true,
           'job_id': runtimeRunId,
-          'status': 'running',
+          'status': run.status.name,
           'hint':
               'Call $shellOutputTool with this job_id to read output, wait '
               'for it or stop it.',
@@ -1060,43 +1263,77 @@ class WorkspaceToolsService {
     WorkspaceRuntime runtime,
     CommandRequest request,
     ToolRun run,
+    _BackgroundJob job,
+    String? conversationId,
   ) async {
     CommandExited? exited;
     try {
-      await for (final event in runtime.run(request)) {
-        switch (event) {
-          case CommandStarted():
-            break;
-          case CommandOutput(:final kind, :final bytes):
-            if (kind == OutputStreamKind.stdout) {
-              run.appendStdout(bytes);
-            } else {
-              run.appendStderr(bytes);
-            }
-          case CommandExited():
-            exited = event;
+      try {
+        await for (final event in runtime.run(request)) {
+          switch (event) {
+            case CommandStarted():
+              break;
+            case CommandOutput(:final kind, :final bytes):
+              if (kind == OutputStreamKind.stdout) {
+                run.appendStdout(bytes);
+              } else {
+                run.appendStderr(bytes);
+              }
+            case CommandExited():
+              exited = event;
+          }
         }
+      } catch (_) {
+        debugPrint('Background command failed.');
       }
-    } catch (error) {
-      debugPrint('Background job ${request.runId} failed: $error');
+      job.executing = false;
+      final done = exited;
+      run.complete(
+        status: job.stopped || done?.cancelled == true
+            ? ToolRunStatus.cancelled
+            : done == null
+            ? ToolRunStatus.failed
+            : done.timedOut
+            ? ToolRunStatus.timedOut
+            : done.exitCode == 0
+            ? ToolRunStatus.succeeded
+            : ToolRunStatus.failed,
+        exitCode: done?.exitCode,
+      );
+      try {
+        await onShellCompleted?.call();
+      } catch (error) {
+        debugPrint('Workspace post-command refresh failed: $error');
+      }
+      try {
+        if (conversationId != null && run.status != ToolRunStatus.cancelled) {
+          // The runtime identity, captured chat and generic result are the only
+          // values allowed into the notification boundary.
+          await _reportBackgroundShellResult(
+            id: request.runId,
+            conversationId: conversationId,
+            succeeded: run.status == ToolRunStatus.succeeded,
+          );
+        }
+      } catch (_) {
+        debugPrint('Background command result notification failed.');
+      }
+    } finally {
+      job.executing = false;
+      await _releaseBackgroundOwner(job);
     }
-    final done = exited;
-    run.complete(
-      status: done == null
-          ? ToolRunStatus.failed
-          : done.cancelled
-          ? ToolRunStatus.cancelled
-          : done.timedOut
-          ? ToolRunStatus.timedOut
-          : done.exitCode == 0
-          ? ToolRunStatus.succeeded
-          : ToolRunStatus.failed,
-      exitCode: done?.exitCode,
-    );
+  }
+
+  Future<void> _releaseBackgroundOwner(_BackgroundJob job) async {
     try {
-      await onShellCompleted?.call();
-    } catch (error) {
-      debugPrint('Workspace post-command refresh failed: $error');
+      await _keepAlive.release(job.run.runtimeRunId);
+    } catch (_) {
+      debugPrint('Background command owner release failed.');
+    } finally {
+      await job.released?.cancel();
+      if (identical(_backgroundJobs[job.run.runtimeRunId], job)) {
+        _backgroundJobs.remove(job.run.runtimeRunId);
+      }
     }
   }
 
@@ -1121,7 +1358,12 @@ class WorkspaceToolsService {
       );
     }
     if (_boolArg(args, 'stop') && run.status == ToolRunStatus.running) {
-      await runtimeProvider.runtime?.cancel(run.runtimeRunId);
+      final job = _backgroundJobs[run.runtimeRunId];
+      if (job != null) {
+        await job.stop();
+      } else {
+        await runtimeProvider.runtime?.cancel(run.runtimeRunId);
+      }
       await _waitForRun(run, const Duration(seconds: 5));
     }
     final waitSeconds = (_intArg(args, 'wait_seconds') ?? 0).clamp(
@@ -1171,6 +1413,26 @@ class WorkspaceToolsService {
     String? conversationId,
   ) {
     const tool = planTool;
+    final entries = args['plan'];
+    if (entries is! List ||
+        entries.any(
+          (entry) =>
+              entry is! Map ||
+              entry['step'] is! String ||
+              (entry['step'] as String).trim().isEmpty ||
+              !const {
+                'pending',
+                'in_progress',
+                'completed',
+              }.contains(entry['status']),
+        )) {
+      return _errorResult(
+        tool: tool,
+        error: 'invalid_arguments',
+        message:
+            'Each plan entry must have a non-empty string step and a valid status',
+      );
+    }
     final plan = TaskPlan.fromArguments(args);
     if (plan == null) {
       return _errorResult(
@@ -1248,7 +1510,10 @@ class WorkspaceToolsService {
         files: [_fileFor(ctx, resolved)],
       );
       if (result.imageBytes != null) {
-        final uri = resolved.hostPath;
+        // Reuse bytes read from the checked descriptor. A pathname can be
+        // replaced before the UI or the next model request loads this result.
+        final uri =
+            'data:${result.imageMime};base64,${base64Encode(result.imageBytes!)}';
         await _maybeNoteSkillRead(ctx, resolved);
         await _markToolsUsed(
           ctx,
@@ -1319,14 +1584,12 @@ class WorkspaceToolsService {
         message: 'path is required',
       );
     }
-    final content = args.containsKey('content')
-        ? args['content']?.toString() ?? ''
-        : null;
-    if (content == null) {
+    final content = args['content'];
+    if (content is! String) {
       return _errorResult(
         tool: tool,
         error: 'invalid_arguments',
-        message: 'content is required',
+        message: 'content must be a string',
       );
     }
     late final ResolvedPath resolved;
@@ -1403,11 +1666,13 @@ class WorkspaceToolsService {
         message: 'path is required',
       );
     }
-    if (!args.containsKey('old_string') || !args.containsKey('new_string')) {
+    final oldString = args['old_string'];
+    final newString = args['new_string'];
+    if (oldString is! String || newString is! String) {
       return _errorResult(
         tool: tool,
         error: 'invalid_arguments',
-        message: 'old_string and new_string are required',
+        message: 'old_string and new_string must be strings',
       );
     }
     late final ResolvedPath resolved;
@@ -1435,8 +1700,8 @@ class WorkspaceToolsService {
             checkCancelled: ToolCallCancellation.current?.throwIfCancelled,
           ).editFile(
             path,
-            args['old_string']?.toString() ?? '',
-            args['new_string']?.toString() ?? '',
+            oldString,
+            newString,
             replaceAll: _boolArg(args, 'replace_all'),
             cwd: ctx.cwd,
           );
@@ -1485,9 +1750,37 @@ class WorkspaceToolsService {
     Map<String, dynamic> args,
   ) async {
     const tool = miniAppTool;
-    final path = _stringArg(args, 'path', fallback: ctx.cwd);
+    final path = args['path'];
+    if (path is! String || path.trim().isEmpty) {
+      return _errorResult(
+        tool: tool,
+        error: 'invalid_arguments',
+        message: 'path must be a non-empty string',
+      );
+    }
+    final manifest = args['manifest'];
+    final appId = args['app_id'];
+    final files = args['files'];
+    final partial = appId != null || files != null;
+    if ((manifest != null && manifest is! Map<String, dynamic>) ||
+        (partial &&
+            (appId is! String ||
+                appId.trim().isEmpty ||
+                files is! List ||
+                files.isEmpty ||
+                files.any((file) => file is! String || file.trim().isEmpty)))) {
+      return _errorResult(
+        tool: tool,
+        error: 'invalid_arguments',
+        message:
+            'manifest must be an object. Partial updates need a non-empty '
+            'app_id and files (a non-empty list of relative file paths).',
+      );
+    }
     try {
       final resolved = await ctx.paths.resolveReal(path, cwd: ctx.cwd);
+      final sourceAccess = ctx.paths.fileAccess;
+      await sourceAccess.resolve(resolved.hostPath);
       if (resolved.zone == WorkspaceZone.outside ||
           !await Directory(resolved.hostPath).exists()) {
         return _errorResult(
@@ -1496,9 +1789,22 @@ class WorkspaceToolsService {
           message: '$path is not a folder in the workspace.',
         );
       }
-      final result = await (miniApps ?? MiniAppStore.instance).install(
-        Directory(resolved.hostPath),
-      );
+      final store = miniApps ?? MiniAppStore.instance;
+      final source = Directory(resolved.hostPath);
+      final metadata = manifest as Map<String, dynamic>?;
+      final result = partial
+          ? await store.updateFiles(
+              (appId as String).trim(),
+              source,
+              files: (files as List).cast<String>(),
+              manifest: metadata,
+              sourceAccess: sourceAccess,
+            )
+          : await store.install(
+              source,
+              manifest: metadata,
+              sourceAccess: sourceAccess,
+            );
       final app = result.app;
       final check = await _checkMiniApp(app);
       final meta = WorkspaceToolMetadata(
@@ -1522,6 +1828,15 @@ class WorkspaceToolsService {
       );
     } on MiniAppException catch (e) {
       return _errorResult(tool: tool, error: e.code, message: e.message);
+    } on WorkspaceFileAccessException catch (e) {
+      return _errorResult(tool: tool, error: 'path_error', message: e.message);
+    } on FileSystemException {
+      return _errorResult(
+        tool: tool,
+        error: 'source_unavailable',
+        message:
+            'The source folder changed or could not be read. Publish it again after the build completes.',
+      );
     } on PathResolutionException catch (e) {
       return _errorResult(tool: tool, error: 'path_error', message: e.message);
     }
@@ -1870,6 +2185,8 @@ class WorkspaceToolsService {
         WorkspacePaths.guestSkills,
         WorkspacePaths.guestTmp,
         ExternalMount.root,
+        if (paths.mounts.any((m) => m.guest == WorkspacePaths.guestDownloads))
+          '${WorkspacePaths.guestDownloads} (phone Downloads, where the browser saves files)',
       ];
     }
     return [
@@ -1887,9 +2204,13 @@ class WorkspaceToolsService {
     }
     switch (status.engine) {
       case 'proot':
+        if (status.rootChroot) {
+          return 'Engine: Linux in a real chroot, fast mode: commands run as '
+              'real root with full access to the phone (Android is outside '
+              'the chroot but reachable, e.g. /proc, /dev, /sys); be careful '
+              'with destructive commands. Check /etc/os-release for distro';
+        }
         return 'Engine: Linux (PRoot); check /etc/os-release for distro';
-      case 'ish':
-        return 'Engine: Alpine (iSH)';
       case 'process':
       case 'fake':
         return 'Engine: native shell';
@@ -1997,5 +2318,23 @@ class WorkspaceToolsService {
     if (value is bool) return value;
     if (value is String) return value.toLowerCase() == 'true';
     return false;
+  }
+}
+
+/// Frozen runtime ownership: changing the registered runtime or the active
+/// reply cannot change which process a background job's Stop action cancels.
+class _BackgroundJob {
+  _BackgroundJob(this.runtime, this.run);
+
+  final WorkspaceRuntime runtime;
+  final ToolRun run;
+  StreamSubscription<String>? released;
+  bool stopped = false;
+  bool executing = false;
+
+  Future<void> stop() async {
+    if (stopped) return;
+    stopped = true;
+    if (executing) await runtime.cancel(run.runtimeRunId);
   }
 }

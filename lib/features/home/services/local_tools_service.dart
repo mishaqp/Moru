@@ -8,9 +8,12 @@ import 'package:math_expressions/math_expressions.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/models/health_data_type.dart';
 import 'assistant_manager_tool.dart';
+import 'mcp_manager_tool.dart';
 import 'browser_agent_tool.dart';
 import 'mini_app_data_tool.dart';
+import 'root_shell_tool.dart';
 import 'scheduled_task_tool.dart';
+import 'spend_control_tool.dart';
 
 typedef TextToSpeechStarter = Future<void> Function(String text);
 
@@ -36,8 +39,12 @@ class LocalToolNames {
   static const String remindersCreate = 'reminders_create';
   static const String remindersComplete = 'reminders_complete';
   static const String assistantManager = AssistantManagerTool.toolName;
+  static const String mcpManager = McpManagerTool.toolName;
+  static const String spendControl = SpendControlTool.toolName;
+  static const String reportProblem = 'report_problem';
   static const String scheduledTasks = ScheduledTaskTool.toolName;
   static const String miniApps = MiniAppDataTool.toolName;
+  static const String rootShell = RootShellTool.toolName;
 
   static const List<String> all = [
     timeInfo,
@@ -59,11 +66,16 @@ class LocalToolNames {
     remindersCreate,
     remindersComplete,
     assistantManager,
+    mcpManager,
+    spendControl,
+    reportProblem,
     scheduledTasks,
     miniApps,
+    rootShell,
   ];
 
   static const List<String> requiresUserApproval = [
+    reportProblem,
     calendarCreate,
     calendarUpdate,
     calendarDelete,
@@ -76,16 +88,32 @@ class LocalToolNames {
     if (name == assistantManager) {
       return AssistantManagerTool.requiresApproval(arguments);
     }
+    if (name == mcpManager) return McpManagerTool.requiresApproval(arguments);
+    if (name == spendControl) {
+      return SpendControlTool.requiresApproval(arguments);
+    }
     if (name == scheduledTasks) {
       return ScheduledTaskTool.requiresApproval(arguments);
     }
+    if (name == miniApps) return MiniAppDataTool.requiresApproval(arguments);
+    if (name == rootShell) {
+      final command = arguments['command'];
+      return command is! String || !RootShellTool.isReadOnly(command);
+    }
     if (name != browserUse) return false;
     final action = (arguments['action'] ?? '').toString().trim().toLowerCase();
+    if (action == 'fetch') {
+      // Reading is like opening a page; sending with the user's login is
+      // like submitting a form.
+      final method = (arguments['method'] ?? 'GET').toString().toUpperCase();
+      return method != 'GET' && method != 'HEAD';
+    }
     return action == 'click' ||
         action == 'type' ||
         action == 'submit' ||
         action == 'press_key' ||
-        action == 'eval_js';
+        action == 'eval_js' ||
+        action == 'export_cookies';
   }
 }
 
@@ -97,7 +125,7 @@ class PhoneControlStatus {
 }
 
 /// Platform availability of the device-backed local tools (implemented over
-/// a MethodChannel in the Android/iOS host apps).
+/// a MethodChannel in the Android host app).
 class DeviceLocalTools {
   const DeviceLocalTools._();
 
@@ -145,8 +173,7 @@ class DeviceLocalTools {
   static bool get locationSupported =>
       (defaultTargetPlatform == TargetPlatform.android);
 
-  /// HealthKit type IDs the current OS can query. Until prefetch finishes,
-  /// version-gated types (daylight) are omitted.
+  /// No HealthKit queries run on Android; stored type IDs remain compatible.
   static List<String> get availableHealthTypeIds {
     return const [];
   }
@@ -179,8 +206,7 @@ class DeviceLocalTools {
   }
 
   /// Returns true when calendar full access is already granted.
-  /// Uses the native EventKit / Android calendar permission path (not
-  /// permission_handler), so it works without iOS PERMISSION_EVENTS macros.
+  /// Uses the native Android calendar permission path.
   static Future<bool> hasCalendarPermission() async {
     if (!calendarSupported) return false;
     try {
@@ -194,8 +220,7 @@ class DeviceLocalTools {
   }
 
   /// Requests calendar full access via the native channel.
-  /// Returns true only when granted. On iOS, permanently denied / restricted
-  /// states open the app Settings page.
+  /// Returns true only when granted.
   static Future<bool> requestCalendarPermission() async {
     if (!calendarSupported) return false;
     try {
@@ -250,15 +275,14 @@ class DeviceLocalTools {
     return false;
   }
 
-  /// Presents the HealthKit read sheet for [types] only. The returned flag is
-  /// only that the request completed; iOS does not reveal per-type read grants.
+  /// Compatibility API for saved HealthKit selections; unavailable on Android.
   static Future<bool> requestHealthPermission({
     List<String> types = const [],
   }) async {
     return false;
   }
 
-  /// Opens this app's system settings page on Android or iOS.
+  /// Opens this app's Android system settings page.
   static Future<void> openAppSettings() async {
     if (!locationSupported) return;
     try {
@@ -300,6 +324,8 @@ class LocalToolsService {
       case LocalToolNames.remindersComplete:
         return false;
       case LocalToolNames.miniApps:
+      case LocalToolNames.rootShell:
+      case LocalToolNames.reportProblem:
         return defaultTargetPlatform == TargetPlatform.android;
       default:
         return true;
@@ -363,10 +389,30 @@ class LocalToolsService {
         return _remindersCompleteDefinition;
       case LocalToolNames.assistantManager:
         return AssistantManagerTool.definition;
+      case LocalToolNames.mcpManager:
+        return McpManagerTool.definition;
+      case LocalToolNames.spendControl:
+        return SpendControlTool.definition;
+      case LocalToolNames.reportProblem:
+        return {
+          'type': 'function',
+          'function': {
+            'name': LocalToolNames.reportProblem,
+            'description':
+                'Collect a private Moru problem report when the user reports an app bug or asks for diagnostics. Requires fresh confirmation unless global full access is enabled. Creates a ZIP with app version/build, Android version and device model, PRoot/root mode, allowlisted settings without secrets and up to 128 KiB of technical events from this app run (event names, error types and package stack frames). Chat/message text, request/context logs and credentials are excluded. Returns file name/path, size, included categories and a brief diagnostic summary, never the full journal. The chat shows a Share button. Files are private, outside model file roots, and removed on the next app launch or expire after 24 hours. Use the summary to diagnose or draft an issue; do not try to open the private ZIP with file tools.',
+            'parameters': {
+              'type': 'object',
+              'properties': <String, dynamic>{},
+              'additionalProperties': false,
+            },
+          },
+        };
       case LocalToolNames.scheduledTasks:
         return ScheduledTaskTool.definition;
       case LocalToolNames.miniApps:
         return MiniAppDataTool.definition;
+      case LocalToolNames.rootShell:
+        return RootShellTool.definition;
       default:
         throw ArgumentError.value(name, 'name', 'Unknown local tool');
     }
@@ -664,7 +710,7 @@ class LocalToolsService {
     'function': {
       'name': LocalToolNames.browserUse,
       'description':
-          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, submit a form (action=submit) or synthesize a key press on the focused element (action=press_key, e.g. Enter), scroll, use browser history, read the full page text with action=read, wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again), or run arbitrary JavaScript with action=eval_js when nothing else covers the task. click, type, submit, press_key, and eval_js each require explicit user approval unless full tool trust is on; open, observe, read, scroll, back/forward/reload, wait_for, and done never do. Call action=done with a short summary once the browser task is complete, so the app can show that clearly instead of leaving the last action as the visible status. Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
+          'Control Moru Shared Browser. Open a URL, observe the current viewport, interact using element IDs from the latest observation, submit a form (action=submit) or synthesize a key press on the focused element (action=press_key, e.g. Enter), scroll, use browser history, read the full page text with action=read, wait for a CSS selector to reach a state with action=wait_for (e.g. after a click that loads content asynchronously, before observing again), or run arbitrary JavaScript with action=eval_js when nothing else covers the task. click, type, submit, press_key, and eval_js each require explicit user approval unless full tool trust is on; open, observe, read, scroll, back/forward/reload, wait_for, and done never do. click also takes x and y (CSS pixels in the viewport; observe reports its size) for things observe lists no element for, such as canvases and maps; clicks at x/y and press_key are real touches and key presses the page cannot tell from those of a person, and click with element_id plus trusted=true taps that element the same way when a site ignores a normal click; hover moves the pointer over an element_id or x/y to open hover menus and needs no approval. screenshot attaches a picture of the viewport for models that read images (charts, captchas to describe, canvas pages, visual layout); screenshot: true on any other action attaches one taken after it. Actions are paced per site like a person would act, so do not add your own waits between them. A result may carry "challenge" (a captcha, Cloudflare check, rate limit or refusal): then follow its "next" advice - ask the user to complete a verification themselves and never try to solve it; while a blocking check is shown, click/hover/type/submit/press_key/eval_js are refused. A result may carry "dialogs": alert/confirm/prompt boxes the page opened, already answered with the default (OK / accept / suggested text). fetch requests a URL or path from inside the page with its login (JSON APIs of the site, feeds) and returns the text; other sites answer only if they allow it (CORS); GET/HEAD need no approval, other methods do. export_cookies (needs approval and a workspace) writes the cookies of the open site to a file in /chat for curl -b or wget in the terminal and returns its path, never the values. collect scrolls a feed or result list and returns its items (text, href) in one call: pass selector for the item element, or leave it out to use the largest group of alike elements; max_items and max_scrolls bound it. outline returns a compact map of the page (landmarks, headings, forms, lists, tables), cheaper than observe with scope=document. wait_stable waits until the page stops changing (single-page apps after a click). read with extract_mode=readability returns only the article text. type with human=true types key by key with pauses, for fields that ignore pasted text. Tabs: up to 5 pages stay open; new_tab opens one alongside (optionally with url) and makes it active, tabs lists them with tab_id, switch_tab and close_tab take tab_id (close_tab without it closes the active one); every other action works on the active tab. Tabs you open and leave unused for 15 minutes are closed. set_mode with mode=desktop shows sites as on a computer, mode=mobile as on a phone. A result may carry "handoffs": files the page downloaded (to the phone Downloads folder; status downloading, then done with the real path, or failed), sites not opened because their certificate is invalid (ssl_error) and links for other apps that were not opened while you worked. A result with error "stopped_by_user" means the user pressed Stop: do not repeat the action unless asked. Call action=done with a short summary once the browser task is complete, so the app can show that clearly instead of leaving the last action as the visible status. Observe defaults are intentionally compact to save tokens; request scope=document or larger limits only when needed. Observe again after navigation, scrolling, or stale-element errors. Never claim an action succeeded unless ok=true.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -673,7 +719,9 @@ class LocalToolsService {
             'enum': [
               'open',
               'observe',
+              'screenshot',
               'click',
+              'hover',
               'type',
               'submit',
               'press_key',
@@ -682,8 +730,18 @@ class LocalToolsService {
               'forward',
               'reload',
               'read',
+              'collect',
+              'outline',
               'wait_for',
+              'wait_stable',
               'eval_js',
+              'fetch',
+              'export_cookies',
+              'tabs',
+              'new_tab',
+              'switch_tab',
+              'close_tab',
+              'set_mode',
               'done',
               'close',
             ],
@@ -696,7 +754,17 @@ class LocalToolsService {
           'element_id': {
             'type': 'integer',
             'description':
-                'Interactive element ID returned by the latest observe. Required for click/type. For submit, may be the submit button or any element inside the target form.',
+                'Interactive element ID returned by the latest observe. Required for type; for click and hover unless x and y are given. For submit, may be the submit button or any element inside the target form.',
+          },
+          'x': {
+            'type': 'number',
+            'description':
+                'click/hover: horizontal viewport point in CSS pixels, with y, instead of element_id.',
+          },
+          'y': {
+            'type': 'number',
+            'description':
+                'click/hover: vertical viewport point in CSS pixels, with x.',
           },
           'text': {
             'type': 'string',
@@ -733,6 +801,35 @@ class LocalToolsService {
             'description':
                 'Set false when only interactive elements are needed to save tokens.',
           },
+          'tab_id': {
+            'type': 'string',
+            'description': 'switch_tab/close_tab: a tab_id from action=tabs.',
+          },
+          'mode': {
+            'type': 'string',
+            'enum': ['desktop', 'mobile'],
+            'description': 'set_mode: desktop or mobile version of sites.',
+          },
+          'method': {
+            'type': 'string',
+            'enum': ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
+            'description': 'fetch: HTTP method, GET by default.',
+          },
+          'body': {
+            'type': 'string',
+            'description': 'fetch: request body for POST/PUT/PATCH.',
+          },
+          'headers': {
+            'type': 'object',
+            'additionalProperties': {'type': 'string'},
+            'description':
+                'fetch: extra request headers, e.g. {"Content-Type": "application/json"}.',
+          },
+          'screenshot': {
+            'type': 'boolean',
+            'description':
+                'Attach a picture of the viewport taken after this action (models that read images only).',
+          },
           'direction': {
             'type': 'string',
             'enum': ['up', 'down', 'top', 'bottom'],
@@ -748,7 +845,7 @@ class LocalToolsService {
           'selector': {
             'type': 'string',
             'description':
-                'CSS selector. For action=read: optional, reads one element instead of the whole page (cannot combine with focus). Required for action=wait_for.',
+                'CSS selector. For action=read: optional, reads one element instead of the whole page (cannot combine with focus). Required for action=wait_for. For action=collect: the item element (optional).',
           },
           'source_id': {
             'type': 'string',
@@ -761,6 +858,43 @@ class LocalToolsService {
             'maximum': 65536,
             'default': 8000,
             'description': 'Maximum characters returned by action=read.',
+          },
+          'max_items': {
+            'type': 'integer',
+            'minimum': 1,
+            'maximum': 200,
+            'default': 50,
+            'description': 'collect: stop after this many items.',
+          },
+          'max_scrolls': {
+            'type': 'integer',
+            'minimum': 0,
+            'maximum': 30,
+            'default': 10,
+            'description': 'collect: scroll at most this many screens.',
+          },
+          'quiet_ms': {
+            'type': 'integer',
+            'minimum': 100,
+            'maximum': 5000,
+            'default': 600,
+            'description': 'wait_stable: how long the page must not change.',
+          },
+          'trusted': {
+            'type': 'boolean',
+            'description':
+                'click with element_id: tap its center with a real touch instead of a script click, for pages that ignore script clicks (a click that changes nothing). Clicks at x/y are always real touches.',
+          },
+          'human': {
+            'type': 'boolean',
+            'description':
+                'type: key by key with pauses like a person (max 500 characters).',
+          },
+          'extract_mode': {
+            'type': 'string',
+            'enum': ['auto', 'readability'],
+            'description':
+                'For action=read: readability returns only the article text, without menus, headers, footers, sidebars and ads (reader mode). auto reads the whole page.',
           },
           'focus': {
             'type': 'string',
@@ -1022,7 +1156,7 @@ class LocalToolsService {
           'end': {
             'type': 'string',
             'description':
-                "End time, same formats as 'start'. Defaults to 1 hour after start.",
+                "End time, same formats as 'start'. Defaults to 1 hour after start, or the next local day for an all-day event.",
           },
           'all_day': {
             'type': 'boolean',
@@ -1268,7 +1402,13 @@ class LocalToolsService {
     try {
       final result = await _deviceToolsChannel.invokeMethod<String>(
         method,
-        jsonEncode(args),
+        // Nullable optional slots in strict calls mean omitted. The Android
+        // handlers use JSONObject.has/optString, where JSON null can otherwise
+        // replace a field, remove reminders or fail an optional time parse.
+        jsonEncode({
+          for (final entry in args.entries)
+            if (entry.value != null) entry.key: entry.value,
+        }),
       );
       if (result == null || result.isEmpty) {
         return jsonEncode({

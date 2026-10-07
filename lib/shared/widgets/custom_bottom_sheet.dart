@@ -12,10 +12,14 @@ import 'ios_tactile.dart';
 typedef CustomBottomSheetBuilder =
     Widget Function(BuildContext context, ScrollController scrollController);
 
+typedef CustomBottomSheetHeaderBuilder =
+    Widget Function(BuildContext context, VoidCallback onClose);
+
 Future<T?> showCustomBottomSheet<T>({
   required BuildContext context,
   required String title,
   required CustomBottomSheetBuilder builder,
+  CustomBottomSheetHeaderBuilder? headerBuilder,
   int? count,
   String? closeSemanticLabel,
   double partialHeightFactor = 0.60,
@@ -36,6 +40,7 @@ Future<T?> showCustomBottomSheet<T>({
         expandedHeightFactor: expandedHeightFactor,
         onDismiss: () => _closeSheetRoute(dialogContext),
         builder: builder,
+        headerBuilder: headerBuilder,
       );
     },
   );
@@ -61,6 +66,7 @@ class CustomBottomSheet extends StatefulWidget {
     this.closeSemanticLabel,
     this.child,
     this.builder,
+    this.headerBuilder,
     this.partialHeightFactor = 0.60,
     this.expandedHeightFactor = 0.90,
   }) : assert(
@@ -78,6 +84,7 @@ class CustomBottomSheet extends StatefulWidget {
   final VoidCallback onDismiss;
   final Widget? child;
   final CustomBottomSheetBuilder? builder;
+  final CustomBottomSheetHeaderBuilder? headerBuilder;
   final double partialHeightFactor;
   final double expandedHeightFactor;
 
@@ -267,12 +274,13 @@ class _CustomBottomSheetState extends State<CustomBottomSheet>
                 },
                 child: _DragHandle(color: handleColor),
               ),
-              _SheetHeader(
-                title: widget.title,
-                count: widget.count,
-                closeSemanticLabel: widget.closeSemanticLabel,
-                onClose: _dismiss,
-              ),
+              widget.headerBuilder?.call(context, _dismiss) ??
+                  _SheetHeader(
+                    title: widget.title,
+                    count: widget.count,
+                    closeSemanticLabel: widget.closeSemanticLabel,
+                    onClose: _dismiss,
+                  ),
               Expanded(
                 child: Listener(
                   onPointerDown: (event) =>

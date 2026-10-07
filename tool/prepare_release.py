@@ -19,11 +19,14 @@ def _one(directory: Path, pattern: str) -> Path:
 
 
 def prepare_release(root: Path, apk_dir: Path, reports_dir: Path,
-                    destination: Path, commit: str) -> dict:
+                    destination: Path, commit: str,
+                    prerelease: int | None = None) -> dict:
     versions = re.findall(r'^version:\s*(\d+\.\d+\.\d+)\+([1-9]\d*)\s*$',
                           (root / 'pubspec.yaml').read_text(), re.M)
     if len(versions) != 1 or not re.fullmatch(r'[0-9a-f]{40}', commit):
         raise ValueError('A stable version+build and exact commit SHA are required')
+    if prerelease is not None and prerelease < 1:
+        raise ValueError('A pre-release number must be positive')
     version, version_code = versions[0]
     pin = (root / '.github/moru-signing-cert-sha256.txt').read_text().strip().lower()
     if not re.fullmatch(r'[0-9a-f]{64}', pin):
@@ -49,9 +52,11 @@ def prepare_release(root: Path, apk_dir: Path, reports_dir: Path,
         raise ValueError('APK must contain only arm64-v8a')
     if "application-label:'Moru'" not in badging or 'application-debuggable' in badging:
         raise ValueError('APK must be a non-debuggable Moru release')
-    filename = f'Moru-v{version}-arm64-v8a-release.apk'
+    tag = f'v{version}' if prerelease is None else f'v{version}-pre.{prerelease}'
+    filename = f'Moru-{tag}-arm64-v8a-release.apk'
     metadata = {
-        'tag': f'v{version}', 'version': version, 'version_code': int(version_code),
+        'tag': tag, 'prerelease': prerelease is not None,
+        'version': version, 'version_code': int(version_code),
         'package': 'com.mishaqp.moru', 'abi': 'arm64-v8a', 'commit': commit,
         'filename': filename, 'sha256': digest, 'size_bytes': apk.stat().st_size,
         'certificate_sha256': pin,
@@ -69,10 +74,12 @@ def main() -> None:
     parser.add_argument('--reports-dir', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--commit', required=True)
+    parser.add_argument('--prerelease', type=int,
+                        help='Publish as vX.Y.Z-pre.N instead of the stable tag')
     args = parser.parse_args()
     try:
         metadata = prepare_release(Path.cwd(), args.apk_dir, args.reports_dir,
-                                   args.output, args.commit)
+                                   args.output, args.commit, args.prerelease)
     except (ValueError, OSError) as error:
         parser.exit(1, f'Release validation failed: {error}\n')
     print(json.dumps(metadata, indent=2))

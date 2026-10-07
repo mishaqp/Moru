@@ -17,9 +17,11 @@ import '../../../core/models/assistant_regex.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../shared/widgets/ios_checkbox.dart';
+import 'interrupted_reply_notice.dart';
 import '../../chat/widgets/chat_message_widget.dart';
 import '../../chat/widgets/timeline_projection.dart';
 import '../../chat/widgets/timeline_visibility.dart';
+import '../../chat/utils/chat_ui_work.dart';
 import '../../chat/utils/thinking_tag_parser.dart';
 import '../../chat/widgets/message_more_sheet.dart';
 import '../controllers/stream_controller.dart' as stream_ctrl;
@@ -106,6 +108,8 @@ class MessageListView extends StatefulWidget {
     this.removingSlotIds = const <String>{},
     this.onVersionChange,
     this.onRegenerateMessage,
+    this.interruptedMessageIds = const {},
+    this.onContinueInterruptedReply,
     this.onResendMessage,
     this.onTranslateMessage,
     this.onEditMessage,
@@ -203,6 +207,8 @@ class MessageListView extends StatefulWidget {
   // Callbacks
   final OnVersionChange? onVersionChange;
   final OnRegenerateMessage? onRegenerateMessage;
+  final Set<String> interruptedMessageIds;
+  final OnRegenerateMessage? onContinueInterruptedReply;
   final OnResendMessage? onResendMessage;
   final OnTranslateMessage? onTranslateMessage;
   final OnEditMessage? onEditMessage;
@@ -360,7 +366,10 @@ class _MessageListViewState extends State<MessageListView> {
     _snapshotToolSignatures();
   }
 
-  void _refreshRenderModels() {
+  void _refreshRenderModels() =>
+      ChatUiWork.measure('history.project', _projectRenderModels);
+
+  void _projectRenderModels() {
     _effectiveRenderModels =
         widget.renderModels ??
         MessageRenderModelProjector.project(
@@ -602,7 +611,16 @@ class _MessageListViewState extends State<MessageListView> {
     return _estimateMessageExtent(index, crossAxisExtent) + footerExtent;
   }
 
-  double _estimateMessageExtent(int? index, double crossAxisExtent) {
+  double _estimateMessageExtent(int? index, double crossAxisExtent) =>
+      ChatUiWork.measure(
+        'history.estimate',
+        () => _computeMessageExtent(index, crossAxisExtent),
+        messageId: index != null && index < _effectiveRenderModels.length
+            ? _effectiveRenderModels[index].message.id
+            : null,
+      );
+
+  double _computeMessageExtent(int? index, double crossAxisExtent) {
     // A null index asks whether one extent fits every item. Answering with a
     // positive number makes SuperSliverList apply it to the whole list without
     // ever consulting the per-item branch below, so this has to be 0.
@@ -611,6 +629,9 @@ class _MessageListViewState extends State<MessageListView> {
     if (index < 0 || index >= models.length) return _estimateChrome;
 
     final message = models[index].message;
+    final interruptedExtent = widget.interruptedMessageIds.contains(message.id)
+        ? InterruptedReplyNotice.estimateExtent(context, crossAxisExtent)
+        : 0.0;
     final snapshot = _streamingSnapshot(message);
     final estimateParts = snapshot?.parts ?? message.parts;
     final text = snapshot != null && snapshot.content.isNotEmpty
@@ -638,7 +659,7 @@ class _MessageListViewState extends State<MessageListView> {
               part is ImagePart,
         );
     if (text.isEmpty && !hasReasoning && !hasTools && !hasStructuredTimeline) {
-      return _estimateChrome;
+      return _estimateChrome + interruptedExtent;
     }
 
     // Layout asks for the same item repeatedly (every resize, every window
@@ -659,6 +680,7 @@ class _MessageListViewState extends State<MessageListView> {
       snapshot?.timelineStructureSignature ?? 0,
       snapshot?.reasoningFinishedAt,
       message.isStreaming,
+      interruptedExtent,
     );
     final estimateContent = text;
     final cached = _extentEstimateCache[message.id];
@@ -788,9 +810,9 @@ class _MessageListViewState extends State<MessageListView> {
       toolSignature: toolSignature,
       partsSignature: partsSignature,
       streamingSignature: streamingSignature,
-      extent: extent,
+      extent: extent + interruptedExtent,
     );
-    return extent;
+    return extent + interruptedExtent;
   }
 
   /// Timeline height from the same projector the renderer uses.
@@ -871,6 +893,7 @@ class _MessageListViewState extends State<MessageListView> {
       toolCountAtSplit: toolCountAtSplit,
       transformText: _estimateVisualTransform,
       partsArrivalOrdered: message.isStreaming,
+      isStreaming: message.isStreaming,
       inlineThinkingExpanded: !settings.collapseThinking,
     );
     bool isPending(TimelineToolRef tool) => _isPendingApproval(
@@ -2090,7 +2113,6 @@ class _MessageListViewState extends State<MessageListView> {
                               context,
                               isStreaming: isStreaming,
                               message: message,
-                              index: index,
                               r: r,
                               t: t,
                               useAssistAvatar: useAssistAvatar,
@@ -2108,7 +2130,6 @@ class _MessageListViewState extends State<MessageListView> {
                           : _buildChatMessageWidget(
                               context,
                               message: message,
-                              index: index,
                               r: r,
                               t: t,
                               useAssistAvatar: useAssistAvatar,
@@ -2215,7 +2236,6 @@ class _MessageListViewState extends State<MessageListView> {
     BuildContext context, {
     required bool isStreaming,
     required ChatMessage message,
-    required int index,
     required stream_ctrl.ReasoningData? r,
     required TranslationUiState? t,
     required bool useAssistAvatar,
@@ -2280,7 +2300,6 @@ class _MessageListViewState extends State<MessageListView> {
           child: _buildChatMessageWidget(
             context,
             message: streamingMessage,
-            index: index,
             r: streamingReasoning,
             t: t,
             useAssistAvatar: useAssistAvatar,
@@ -2309,7 +2328,6 @@ class _MessageListViewState extends State<MessageListView> {
   Widget _buildChatMessageWidget(
     BuildContext context, {
     required ChatMessage message,
-    required int index,
     required stream_ctrl.ReasoningData? r,
     required TranslationUiState? t,
     required bool useAssistAvatar,
@@ -2330,7 +2348,7 @@ class _MessageListViewState extends State<MessageListView> {
     RetryStatus? retryStatus,
   }) {
     final currentIdx = availableVersions.indexOf(selectedVersion);
-    return ChatMessageWidget(
+    final chat = ChatMessageWidget(
       message: message,
       enableStreamingTextMotion: enableStreamingTextMotion,
       versionIndex: currentIdx < 0 ? selectedIdx : currentIdx,
@@ -2428,9 +2446,15 @@ class _MessageListViewState extends State<MessageListView> {
         } else if (action == MessageMoreAction.fork) {
           await widget.onForkConversation?.call(message);
         } else if (action == MessageMoreAction.share) {
-          widget.onShareMessage?.call(index, widget.messages);
+          final currentIndex = _messageIndexById[message.id];
+          if (currentIndex != null) {
+            widget.onShareMessage?.call(currentIndex, widget.messages);
+          }
         } else if (action == MessageMoreAction.selectMessages) {
-          widget.onSelectMessages?.call(index, widget.messages);
+          final currentIndex = _messageIndexById[message.id];
+          if (currentIndex != null) {
+            widget.onSelectMessages?.call(currentIndex, widget.messages);
+          }
         }
       },
       toolParts: message.role == 'assistant'
@@ -2475,7 +2499,9 @@ class _MessageListViewState extends State<MessageListView> {
           : null,
       isProcessingFiles: isProcessingFiles,
       suggestions: suggestions,
-      onSuggestionTap: widget.onSuggestionTap,
+      onSuggestionTap: widget.onSuggestionTap == null
+          ? null
+          : (suggestion) => widget.onSuggestionTap!(suggestion),
       onRecoveredAskUserAnswer: widget.onRecoveredAskUserAnswer == null
           ? null
           : (part, result) =>
@@ -2485,6 +2511,77 @@ class _MessageListViewState extends State<MessageListView> {
       onInlineImageAspect: (imageKey, aspectRatio) {
         _onInlineImageAspect(message.id, imageKey, aspectRatio);
       },
+    );
+    final retained = _CachedChatMessage(
+      // Position is not a visual input; menu actions resolve the current index.
+      inputs: [
+        message,
+        gid,
+        chat.showModelIcon,
+        chat.useAssistantAvatar,
+        chat.useAssistantName,
+        chat.assistantName,
+        chat.assistantAvatar,
+        chat.showUserAvatar,
+        chat.showTokenStats,
+        chat.versionIndex,
+        chat.versionCount,
+        chat.onPrevVersion != null,
+        chat.onNextVersion != null,
+        availableVersions.length,
+        ...availableVersions,
+        chat.reasoningText,
+        chat.reasoningExpanded,
+        chat.reasoningLoading,
+        chat.reasoningStartAt,
+        chat.reasoningFinishedAt,
+        chat.onToggleReasoning != null,
+        chat.translationExpanded,
+        chat.onToggleTranslation != null,
+        chat.hideStreamingIndicator,
+        chat.isProcessingFiles,
+        chat.retryStatus,
+        chat.enableStreamingTextMotion,
+        chat.showThinkingCards,
+        chat.showToolCards,
+        chat.onSuggestionTap != null,
+        chat.onRecoveredAskUserAnswer != null,
+        chat.suggestions.length,
+        ...chat.suggestions,
+        chat.toolParts?.length,
+        ...?chat.toolParts,
+        chat.contentSplitOffsets?.length,
+        ...?chat.contentSplitOffsets,
+        chat.reasoningCountAtSplit?.length,
+        ...?chat.reasoningCountAtSplit,
+        chat.toolCountAtSplit?.length,
+        ...?chat.toolCountAtSplit,
+        chat.reasoningSegments?.length,
+        for (final segment
+            in chat.reasoningSegments ?? const <ReasoningSegment>[])
+          (
+            segment.text,
+            segment.expanded,
+            segment.loading,
+            segment.startAt,
+            segment.finishedAt,
+            segment.toolStartIndex,
+          ),
+      ],
+      child: chat,
+    );
+    if (!widget.interruptedMessageIds.contains(message.id)) return retained;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InterruptedReplyNotice(
+          key: ValueKey('interrupted-${message.id}'),
+          onContinue: widget.onContinueInterruptedReply == null
+              ? null
+              : () => widget.onContinueInterruptedReply!(message),
+        ),
+        retained,
+      ],
     );
   }
 
@@ -2631,6 +2728,31 @@ final class _ExtentEstimate {
   final int partsSignature;
   final int streamingSignature;
   final double extent;
+}
+
+/// Retains a mounted message's widget when only the list/scroll state changed.
+/// Descendants still observe their theme, settings, TTS and approval providers.
+/// The cache belongs to the row, so callbacks never retain an unmounted context.
+class _CachedChatMessage extends StatefulWidget {
+  const _CachedChatMessage({required this.inputs, required this.child});
+  final List<Object?> inputs;
+  final ChatMessageWidget child;
+
+  @override
+  State<_CachedChatMessage> createState() => _CachedChatMessageState();
+}
+
+class _CachedChatMessageState extends State<_CachedChatMessage> {
+  ChatMessageWidget? _child;
+
+  @override
+  void didUpdateWidget(_CachedChatMessage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!listEquals(oldWidget.inputs, widget.inputs)) _child = null;
+  }
+
+  @override
+  Widget build(BuildContext context) => _child ??= widget.child;
 }
 
 final class _MessagePresentation {

@@ -100,6 +100,50 @@ class BrowserSettingsPage extends StatelessWidget {
                 : l10n.browserSettingsTrustOff,
           ),
           const SizedBox(height: 14),
+          Material(
+            color: cs.surfaceContainerHigh,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: cs.outline.withValues(alpha: 0.12)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.browserFloatingWindowTitle,
+                          style: TextStyle(fontWeight: AppFontWeights.semibold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.browserFloatingWindowDescription,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            height: 1.3,
+                            color: cs.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  IosSwitch(
+                    key: const ValueKey('browser_floating_window_switch'),
+                    value: settings.browserFloatingWindow,
+                    onChanged: settings.setBrowserFloatingWindow,
+                    semanticLabel: l10n.browserFloatingWindowTitle,
+                    hitTestSize: 48,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
           for (var i = 0; i < _groups.length; i++) ...[
             if (i > 0) const SizedBox(height: 14),
             _ActionGroupCard(

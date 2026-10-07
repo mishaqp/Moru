@@ -4,6 +4,9 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/services/mini_apps/mini_app_bridge.dart';
 import '../../core/services/mini_apps/mini_app_check.dart';
+import '../../core/services/mini_apps/mini_app_jobs.dart';
+import '../../core/services/mini_apps/mini_app_local_session.dart';
+import '../../core/services/mini_apps/mini_app_servers.dart';
 import '../../core/services/mini_apps/mini_app_store.dart';
 import 'mini_app_launcher.dart';
 
@@ -19,16 +22,27 @@ class MiniAppChecker {
   /// after the load event.
   static const Duration settle = Duration(seconds: 2);
 
-  static Future<MiniAppCheckReport> run(MiniApp app) async {
+  static Future<MiniAppCheckReport> run(
+    MiniApp app, {
+    MiniAppServerEnvironment? serverEnvironment,
+    MiniAppJobs? jobs,
+  }) async {
     final sandbox = await MiniAppSandbox.create(
       app,
       fetch: MiniAppLauncher.fetcher,
+      serverEnvironment: serverEnvironment,
     );
     final bridge = sandbox.bridge;
     final console = <String>[];
     final loaded = Completer<void>();
     final controller = WebViewController();
+    MiniAppLocalSession? local;
     try {
+      local = await MiniAppLocalSession.start(
+        store: sandbox.store,
+        app: sandbox.app,
+        ephemeral: true,
+      );
       await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
       await controller.addJavaScriptChannel(
         'MoruBridge',
@@ -46,15 +60,17 @@ class MiniAppChecker {
       });
       await controller.setNavigationDelegate(
         NavigationDelegate(
-          onPageFinished: (_) {
+          onPageFinished: (url) {
+            if (local!.pageFinished(url)) return;
             if (!loaded.isCompleted) loaded.complete();
           },
-          onNavigationRequest: (request) => request.url.startsWith('file://')
+          onNavigationRequest: (request) => local!.allowsNavigation(request.url)
               ? NavigationDecision.navigate
               : NavigationDecision.prevent,
         ),
       );
-      await controller.loadFile(sandbox.app.entryPath);
+      await local.prepare(controller);
+      await controller.loadRequest(local.entryUri(sandbox.app));
       var didLoad = true;
       try {
         await loaded.future.timeout(loadTimeout);
@@ -70,17 +86,36 @@ class MiniAppChecker {
         );
         visible = result is num ? result.toInt() : int.tryParse('$result');
       }
+      final failedCalls = List.of(bridge.failedCalls);
+      var scheduled = const <String>[];
+      // Jobs of an app that works are scheduled for the installed app.
+      if (jobs != null &&
+          didLoad &&
+          bridge.pageErrors.isEmpty &&
+          failedCalls.isEmpty) {
+        try {
+          scheduled = await sandbox.adoptJobs(jobs);
+        } on MiniAppException catch (e) {
+          failedCalls.add('jobs.set: ${e.message}');
+        }
+      }
       return MiniAppCheckReport(
         loaded: didLoad,
         pageErrors: List.of(bridge.pageErrors),
         console: console,
-        failedCalls: List.of(bridge.failedCalls),
+        failedCalls: failedCalls,
         visibleContent: visible,
+        server: await sandbox.serverStatus(),
+        scheduledJobs: scheduled,
       );
     } finally {
       // Stop the app's timers before its sandbox goes away.
-      await controller.loadHtmlString('');
-      await sandbox.dispose();
+      try {
+        await controller.loadHtmlString('<!doctype html><html></html>');
+      } finally {
+        await local?.close();
+        await sandbox.dispose();
+      }
     }
   }
 }

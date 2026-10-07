@@ -30,9 +30,6 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
   bool get supportsPty => true;
 
   @override
-  bool get supportsSystemTerminal => false;
-
-  @override
   Future<RuntimeStatus> status() async {
     await env.loaded;
     if (!{
@@ -81,16 +78,22 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
         sandboxed: true,
       );
     }
-    return const RuntimeStatus(ready: true, engine: 'proot', sandboxed: true);
+    return RuntimeStatus(
+      ready: true,
+      engine: 'proot',
+      sandboxed: true,
+      rootChroot: env.rootChroot,
+    );
   }
 
   @override
   Stream<CommandEvent> run(CommandRequest request) async* {
     await _requireReady();
+    final immutableExecArgs = _execArgs(request);
     yield* runChannelCommand(
       channel: channel,
       request: request,
-      args: _execArgs(request),
+      args: immutableExecArgs,
     );
   }
 
@@ -114,7 +117,7 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
     await _requireReady();
     // Unique per open, never a counter: the native session map lives on the
     // platform side and outlives the Dart isolate, so a hot restart would hand
-    // out ids that are still registered there — iSH rejects the open, proot
+    // out ids that are still registered there — PRoot
     // silently kills the older session.
     final sessionId = 'pty-${const Uuid().v4()}';
     final session = ChannelPtySession(channel: channel, sessionId: sessionId);
@@ -129,6 +132,7 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
       rows: rows,
       prootArguments: this.env.prootArguments,
       shell: this.env.prootShell,
+      chroot: this.env.rootChroot,
     );
     return session;
   }
@@ -140,19 +144,12 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
     }
   }
 
-  @override
-  Future<void> openInSystemTerminal(String hostDir) {
-    throw UnsupportedError('System terminal is not supported by this runtime');
-  }
-
-  @override
-  Future<void> revealInFileManager(String hostPath) {
-    throw UnsupportedError(
-      'Reveal in file manager is not supported by this runtime',
-    );
-  }
-
   ExecArgs _execArgs(CommandRequest request) {
+    final rootChroot = env.rootChroot;
+    final expectedRootChroot = request.expectedRootChroot;
+    if (expectedRootChroot != null && expectedRootChroot != rootChroot) {
+      throw StateError('Agent startup cancelled: Linux runtime mode changed');
+    }
     return ExecArgs(
       runId: request.runId,
       rootfsDir: rootfsDir.path,
@@ -161,10 +158,12 @@ class AndroidProotRuntime implements WorkspaceStdioRuntime {
       command: request.command,
       timeoutMs: request.timeout.inMilliseconds,
       keepStdinOpen: request.keepStdinOpen,
+      emulateHardLinks: request.emulateHardLinks,
       env: request.env,
       binds: _binds(request.mounts),
       prootArguments: env.prootArguments,
       shell: env.prootShell,
+      chroot: rootChroot,
     );
   }
 

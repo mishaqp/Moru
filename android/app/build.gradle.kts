@@ -117,6 +117,9 @@ tasks.findByName("preBuild")?.dependsOn("fetchProot")
 
 dependencies {
     implementation("androidx.browser:browser:1.9.0")
+    // Already bundled by webview_flutter_android; needed to retain its client
+    // callbacks when mini-app requests are intercepted on Android API 24/25.
+    implementation("androidx.webkit:webkit:1.15.0")
     implementation("org.tukaani:xz:1.10")
     // Required for core library desugaring (used by flutter_local_notifications)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")

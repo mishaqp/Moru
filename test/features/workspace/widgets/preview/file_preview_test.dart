@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+// ignore: depend_on_referenced_packages
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 import 'package:Kelivo/core/database/app_database.dart';
 import 'package:Kelivo/core/database/extension_entity_store.dart';
@@ -115,6 +117,23 @@ class _FakeChatService extends ChatService {
   }
 }
 
+class _PreviewPaths extends PathProviderPlatform {
+  _PreviewPaths(this.root);
+  final String root;
+  @override
+  Future<String?> getApplicationDocumentsPath() async => root;
+  @override
+  Future<String?> getApplicationSupportPath() async => root;
+}
+
+class _PreviewOpenedObserver extends NavigatorObserver {
+  final opened = Completer<void>();
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (previousRoute != null && !opened.isCompleted) opened.complete();
+  }
+}
+
 class _RecordingResolver extends FileLinkResolver {
   _RecordingResolver(WorkspaceProvider workspaces)
     : super(workspaces: workspaces);
@@ -123,22 +142,16 @@ class _RecordingResolver extends FileLinkResolver {
   File? result;
 
   @override
-  Future<FileSystemEntity?> resolveToHostEntry(
+  Future<ResolvedWorkspaceEntry?> resolveToHostAccess(
     KelivoLink link, {
     required String conversationId,
     required WorkspaceBinding binding,
   }) async {
     calls.add(link);
-    return result;
+    return result == null
+        ? null
+        : ResolvedWorkspaceEntry(entry: result!, rootPath: result!.parent.path);
   }
-}
-
-Future<void> _pumpAsyncUi(WidgetTester tester) async {
-  await tester.pump();
-  await tester.runAsync(() async {
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-  });
-  await tester.pump();
 }
 
 Future<void> _loadCodePreview(WidgetTester tester) async {
@@ -206,8 +219,18 @@ Future<void> _openPreview(
     ),
   );
   await tester.tap(find.text('open-preview'));
-  await tester.pump();
-  await tester.pump();
+  final deadline = Stopwatch()..start();
+  while (find.byType(FilePreviewFrame).evaluate().isEmpty &&
+      find.byType(ImageViewerPage).evaluate().isEmpty &&
+      deadline.elapsed < const Duration(seconds: 10)) {
+    await tester.runAsync(() => Future<void>(() {}));
+    await tester.pump();
+  }
+  expect(
+    find.byType(FilePreviewFrame).evaluate().isNotEmpty ||
+        find.byType(ImageViewerPage).evaluate().isNotEmpty,
+    isTrue,
+  );
 }
 
 Widget _previewHarness({required Widget child}) {
@@ -225,12 +248,18 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late Directory tempDir;
+  late PathProviderPlatform previousPaths;
 
   setUp(() {
     tempDir = Directory.systemTemp.createTempSync('kelivo_preview_');
+    previousPaths = PathProviderPlatform.instance;
+    final privateRoot = Directory(p.join(tempDir.path, 'private-app-data'))
+      ..createSync();
+    PathProviderPlatform.instance = _PreviewPaths(privateRoot.path);
   });
 
   tearDown(() {
+    PathProviderPlatform.instance = previousPaths;
     if (tempDir.existsSync()) {
       tempDir.deleteSync(recursive: true);
     }
@@ -327,6 +356,27 @@ void main() {
     expect(find.byType(MarkdownWithCodeHighlight), findsOneWidget);
   });
 
+  testWidgets('a short markdown preview starts at the left content edge', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final markdown = File(p.join(tempDir.path, 'test.md'))
+      ..writeAsStringSync('привет');
+    await tester.pumpWidget(
+      _previewHarness(
+        child: MarkdownFilePreview(file: markdown, autoLoad: false),
+      ),
+    );
+    await _loadMarkdownPreview(tester);
+    final text = find.text('привет', findRichText: true).last;
+    expect(tester.getTopLeft(text).dx, closeTo(16, 0.01));
+    expect(tester.widget<RichText>(text).textAlign, TextAlign.start);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('large markdown bypasses parsing and uses lazy plain text', (
     tester,
   ) async {
@@ -380,7 +430,7 @@ void main() {
     expect(find.byKey(BinaryFilePreview.openWithKey), findsOneWidget);
     expect(find.byKey(BinaryFilePreview.shareKey), findsOneWidget);
     expect(find.byKey(BinaryFilePreview.exportKey), findsOneWidget);
-    expect(find.byKey(BinaryFilePreview.revealKey), findsNothing);
+    expect(find.byIcon(Lucide.FolderOpen), findsNothing);
     expect(find.byKey(FilePreviewFrame.exportActionKey), findsOneWidget);
     expect(find.byIcon(Lucide.Copy), findsNothing);
     expect(find.text('Copy path'), findsNothing);
@@ -429,7 +479,7 @@ void main() {
     expect(iconParent, isA<Column>());
   });
 
-  testWidgets('binary zip preview uses an archive glyph and desktop actions', (
+  testWidgets('wide Android zip preview keeps its three supported actions', (
     tester,
   ) async {
     _setDesktopView(tester);
@@ -444,26 +494,19 @@ void main() {
     expect(find.byKey(BinaryFilePreview.openWithKey), findsOneWidget);
     expect(find.byKey(BinaryFilePreview.shareKey), findsOneWidget);
     expect(find.byKey(BinaryFilePreview.exportKey), findsOneWidget);
-    expect(find.byKey(BinaryFilePreview.revealKey), findsOneWidget);
+    expect(find.byIcon(Lucide.FolderOpen), findsNothing);
     expect(find.text('Open with…'), findsOneWidget);
     expect(find.text('Share'), findsOneWidget);
     expect(find.text('Export'), findsOneWidget);
-    final revealLabel = Platform.isMacOS
-        ? 'Show in Finder'
-        : Platform.isWindows
-        ? 'Show in File Explorer'
-        : 'Show in Files';
-    expect(find.text(revealLabel), findsOneWidget);
     final openRect = tester.getRect(find.byKey(BinaryFilePreview.openWithKey));
     final shareRect = tester.getRect(find.byKey(BinaryFilePreview.shareKey));
     final exportRect = tester.getRect(find.byKey(BinaryFilePreview.exportKey));
-    final revealRect = tester.getRect(find.byKey(BinaryFilePreview.revealKey));
     expect(openRect.height, closeTo(shareRect.height, 1));
-    expect(exportRect.height, closeTo(revealRect.height, 1));
+    expect(exportRect.height, closeTo(openRect.height, 1));
     final desktopButtons = tester
         .widgetList<IosTileButton>(find.byType(IosTileButton))
         .toList();
-    expect(desktopButtons, hasLength(4));
+    expect(desktopButtons, hasLength(3));
     expect(
       desktopButtons.every((button) => button.backgroundColor == null),
       isTrue,
@@ -503,7 +546,8 @@ void main() {
     expect(uri.scheme, 'http');
     expect(uri.host, '127.0.0.1');
     expect(uri.port, greaterThan(0));
-    expect(uri.path, '/page.html');
+    expect(uri.pathSegments, hasLength(2));
+    expect(uri.pathSegments.last, 'page.html');
   });
 
   testWidgets('desktop preview opens via dialog, not a bottom sheet', (
@@ -528,6 +572,21 @@ void main() {
 
     await _openPreview(tester, image, kind: FilePreviewKind.image);
     expect(find.byType(ImageViewerPage), findsOneWidget);
+  });
+
+  testWidgets('explicit image preview retains bytes outside model roots', (
+    tester,
+  ) async {
+    final selected = Directory(
+      p.join(Directory.current.path, '.dart_tool'),
+    ).createTempSync('selected_image_');
+    addTearDown(() => selected.deleteSync(recursive: true));
+    final file = File(p.join(selected.path, 'selected.png'))
+      ..writeAsBytesSync(_pngBytes);
+    await _openPreview(tester, file, kind: FilePreviewKind.image);
+    final viewer = tester.widget<ImageViewerPage>(find.byType(ImageViewerPage));
+    expect(viewer.imageProviders[file.path], isA<MemoryImage>());
+    expect((viewer.imageProviders[file.path] as MemoryImage).bytes, _pngBytes);
   });
 
   testWidgets('desktop image preview has a single close and no page counter', (
@@ -650,6 +709,7 @@ void main() {
       await database.close();
     });
     final resolver = _RecordingResolver(workspaces)..result = previewFile;
+    final navigation = _PreviewOpenedObserver();
 
     final conversation = Conversation(
       id: 'conv-workspace',
@@ -670,6 +730,7 @@ void main() {
           Provider<FileLinkResolver>.value(value: resolver),
         ],
         child: MaterialApp(
+          navigatorObservers: [navigation],
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: const Scaffold(
@@ -683,11 +744,23 @@ void main() {
     await tester.pump();
     final link = find.text('foo');
     final richLink = find.textContaining('foo', findRichText: true);
-    await tester.tap(link.evaluate().isNotEmpty ? link : richLink.first);
-    await _pumpAsyncUi(tester);
-    if (find.byType(CodeFilePreview).evaluate().isNotEmpty) {
-      await _loadCodePreview(tester);
+    await tester.runAsync(
+      () => tester.tap(link.evaluate().isNotEmpty ? link : richLink.first),
+    );
+    while (!navigation.opened.isCompleted) {
+      await tester.pump();
+      await tester.runAsync(() => Future<void>(() {}));
     }
+    await navigation.opened.future;
+    // didPush registers the route before its transition builds the preview.
+    // Advance that transition while draining the real IO event queue, then
+    // await the preview's loader before trying to settle its busy spinner.
+    while (find.byType(CodeFilePreview).evaluate().isEmpty) {
+      await tester.pump(const Duration(milliseconds: 16));
+      await tester.runAsync(() => Future<void>(() {}));
+    }
+    await _loadCodePreview(tester);
+    await tester.pumpAndSettle();
 
     expect(resolver.calls, hasLength(1));
     expect(resolver.calls.single.kind, KelivoLinkKind.workspaceFile);

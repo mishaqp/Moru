@@ -45,7 +45,9 @@ import '../../../core/models/assistant_regex.dart';
 import '../../../core/utils/multimodal_input_utils.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
+import '../../chat/utils/chat_ui_work.dart';
 import 'ocr_service.dart';
+import 'spend_control_service.dart';
 
 /// Result of §7.6 memory-prefix resolution.
 ///
@@ -221,6 +223,21 @@ class MessageBuilderService {
     required Map<String, int> versionSelections,
     required Conversation? currentConversation,
     bool includeToolMessages = false,
+  }) => ChatUiWork.measure(
+    'send.buildApiMessages',
+    () => _buildApiMessages(
+      messages: messages,
+      versionSelections: versionSelections,
+      currentConversation: currentConversation,
+      includeToolMessages: includeToolMessages,
+    ),
+  );
+
+  List<Map<String, dynamic>> _buildApiMessages({
+    required List<ChatMessage> messages,
+    required Map<String, int> versionSelections,
+    required Conversation? currentConversation,
+    required bool includeToolMessages,
   }) {
     final tIndex = currentConversation?.truncateIndex ?? -1;
     final List<ChatMessage> sourceAll =
@@ -2311,6 +2328,15 @@ When asked what you are or what you can do, answer in terms of this app and whic
       }
       apiMessages.insert(0, message);
     }
+  }
+
+  /// Request-only: never mutate history or write a frozen message prompt.
+  void injectSpendWarning(
+    List<Map<String, dynamic>> apiMessages,
+    SpendControlStatus status,
+  ) {
+    final warning = status.systemWarning;
+    if (warning != null) _appendToSystemMessage(apiMessages, warning);
   }
 
   /// Apply context message limit based on assistant settings.

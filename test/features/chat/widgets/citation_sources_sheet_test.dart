@@ -117,7 +117,7 @@ void main() {
   testWidgets('citation sources opener keeps bottom sheet on mobile targets', (
     tester,
   ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
 
     try {
       await tester.pumpWidget(

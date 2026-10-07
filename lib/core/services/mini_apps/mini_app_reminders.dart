@@ -44,25 +44,47 @@ class MiniAppReminders {
       );
     }
     final reminder = normalize(raw, fallbackTitle: store.byId(appId)?.name);
-    final all = await store.readReminders(appId);
-    if (!all.containsKey(id) && all.length >= maxReminders) {
-      throw const MiniAppException(
-        'too_many_reminders',
-        'An app may keep at most $maxReminders reminders.',
-      );
-    }
-    await _cancel(appId, id, all[id]);
-    all[id] = reminder;
-    await store.writeReminders(appId, all);
+    await store.updateReminders(appId, (all) async {
+      if (!all.containsKey(id) && all.length >= maxReminders) {
+        throw const MiniAppException(
+          'too_many_reminders',
+          'An app may keep at most $maxReminders reminders.',
+        );
+      }
+      await _cancel(appId, id, all[id]);
+      all[id] = reminder;
+    });
     await _schedule(appId, id, reminder);
   }
 
   Future<void> remove(String appId, String id) async {
-    final all = await store.readReminders(appId);
-    final previous = all.remove(id);
-    if (previous == null) return;
-    await _cancel(appId, id, previous);
-    await store.writeReminders(appId, all);
+    await store.updateReminders(appId, (all) async {
+      final previous = all.remove(id);
+      if (previous != null) await _cancel(appId, id, previous);
+    });
+  }
+
+  /// Schedules every stored reminder again. Notification ids are derived from
+  /// the reminder, so this only replaces what is already scheduled; after a
+  /// backup restore it brings the restored apps' reminders back.
+  Future<void> rescheduleAll() async {
+    await store.load();
+    for (final app in store.apps) {
+      final all = await store.readReminders(app.id);
+      for (final entry in all.entries) {
+        final reminder = entry.value;
+        if (reminder is! Map) continue;
+        try {
+          await _schedule(
+            app.id,
+            entry.key,
+            normalize(reminder, fallbackTitle: app.name),
+          );
+        } on MiniAppException {
+          // A damaged definition stays unscheduled; the app can set it again.
+        }
+      }
+    }
   }
 
   /// Cancels every reminder of the app, for example before it is deleted.

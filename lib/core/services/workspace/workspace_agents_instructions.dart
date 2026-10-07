@@ -1,10 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 import 'workspace_tool_context.dart';
+import 'workspace_file_access.dart';
 
 /// One `AGENTS.md` file that was found and read inside a bound workspace.
 class WorkspaceAgentsFile {
@@ -91,10 +91,11 @@ class WorkspaceAgentsInstructions {
     int maxFileCount = maxFiles,
   }) async {
     final files = <WorkspaceAgentsFile>[];
+    final access = WorkspaceFileAccess(roots: [ctx.paths.workspaceHostRoot]);
     try {
       for (final hostPath in candidateHostPaths(ctx)) {
         if (files.length >= maxFileCount) break;
-        final content = await _readFile(hostPath, maxBytes);
+        final content = await _readFile(hostPath, maxBytes, access);
         if (content == null) continue;
         files.add(
           WorkspaceAgentsFile(
@@ -159,18 +160,23 @@ class WorkspaceAgentsInstructions {
   }
 
   /// Reads one file, or returns `null` when it must be skipped.
-  static Future<String?> _readFile(String hostPath, int maxBytes) async {
+  static Future<String?> _readFile(
+    String hostPath,
+    int maxBytes,
+    WorkspaceFileAccess access,
+  ) async {
     try {
-      final file = File(hostPath);
-      final length = await file.length();
-      if (length == 0 || length > maxBytes) return null;
-      final bytes = await file.readAsBytes();
+      if (maxBytes < 1) return null;
+      final bytes = await access.readBytes(hostPath, maxBytes: maxBytes + 1);
       if (bytes.isEmpty || bytes.length > maxBytes) return null;
       // Malformed bytes are replaced instead of failing the whole request.
       var text = utf8.decode(bytes, allowMalformed: true);
       if (text.startsWith('\uFEFF')) text = text.substring(1);
       text = text.trim();
       return text.isEmpty ? null : text;
+    } on WorkspaceFileAccessException {
+      // A link outside the real workspace contributes no instructions.
+      return null;
     } catch (e) {
       debugPrint('Workspace AGENTS.md skipped: $hostPath ($e)');
       return null;

@@ -7,13 +7,17 @@ import '../../../theme/app_semantic_colors.dart';
 import '../../chat/widgets/token_display_widget.dart';
 
 /// How full the model's context window is, as a small ring by the send
-/// button. Tapping it shows the numbers.
+/// button. Tapping it shows the numbers, or runs [onTap].
 class ContextUsageRing extends StatelessWidget {
   const ContextUsageRing({
     super.key,
     required this.usedTokens,
     required this.windowTokens,
+    this.onTap,
   });
+
+  /// Opens the details instead of the tooltip.
+  final VoidCallback? onTap;
 
   /// Tokens the next request starts from.
   final int usedTokens;
@@ -46,35 +50,44 @@ class ContextUsageRing extends StatelessWidget {
             TokenStatsRow.compact(windowTokens!),
             (ratio * 100).round(),
           );
-    return Tooltip(
-      message: message,
-      triggerMode: TooltipTriggerMode.tap,
-      showDuration: const Duration(seconds: 4),
-      child: Semantics(
-        label: message,
-        child: SizedBox(
-          width: 32,
-          height: 32,
-          child: Center(
-            child: SizedBox(
-              width: 18,
-              height: 18,
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(end: (ratio ?? 0).clamp(0.0, 1.0)),
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, _) => CustomPaint(
-                  painter: _RingPainter(
-                    progress: value,
-                    color: color,
-                    trackColor: cs.onSurface.withValues(alpha: 0.12),
-                  ),
+    final ring = Semantics(
+      label: message,
+      button: onTap != null,
+      child: SizedBox(
+        width: 32,
+        height: 32,
+        child: Center(
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(end: (ratio ?? 0).clamp(0.0, 1.0)),
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) => CustomPaint(
+                painter: _RingPainter(
+                  progress: value,
+                  color: color,
+                  trackColor: cs.onSurface.withValues(alpha: 0.12),
                 ),
               ),
             ),
           ),
         ),
       ),
+    );
+    if (onTap case final onTap?) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: ring,
+      );
+    }
+    return Tooltip(
+      message: message,
+      triggerMode: TooltipTriggerMode.tap,
+      showDuration: const Duration(seconds: 4),
+      child: ring,
     );
   }
 }

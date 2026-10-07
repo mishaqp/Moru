@@ -518,17 +518,28 @@ abstract final class MemoryTools {
         tool: memoryUpdate,
       );
     }
-    final content = (args['content'] ?? '').toString();
-    if (content.trim().isEmpty) {
+    final content = args['content'];
+    if (content is! String || content.trim().isEmpty) {
       return toolError(
         error: 'invalid_memory_content',
-        message: 'Memory content must not be empty.',
+        message: 'Memory content must be a non-empty string.',
         tool: memoryUpdate,
       );
     }
 
-    final scopeArg = args['scope']?.toString();
-    final scope = resolveWriteScope(assistant.memoryWriteScope, scopeArg);
+    final scopeArg = args['scope'];
+    if (scopeArg != null &&
+        (scopeArg is! String || !{'global', 'assistant'}.contains(scopeArg))) {
+      return toolError(
+        error: 'invalid_memory_scope',
+        message: 'scope must be one of: global, assistant.',
+        tool: memoryUpdate,
+      );
+    }
+    final scope = resolveWriteScope(
+      assistant.memoryWriteScope,
+      scopeArg as String?,
+    );
     final assistantId = scope == MemoryScope.assistant ? assistant.id : null;
 
     // Real Smart Add when wired (§12.6); else exact-duplicate → SKIP / NEW.
@@ -649,7 +660,7 @@ abstract final class MemoryTools {
     MemoryTraceStep? traceStep,
   }) async {
     final id = (args['id'] ?? '').toString().trim();
-    final content = (args['content'] ?? '').toString();
+    final content = args['content'];
     if (id.isEmpty) {
       return toolError(
         error: 'invalid_memory_id',
@@ -657,10 +668,10 @@ abstract final class MemoryTools {
         tool: memoryEdit,
       );
     }
-    if (content.trim().isEmpty) {
+    if (content is! String || content.trim().isEmpty) {
       return toolError(
         error: 'invalid_memory_content',
-        message: 'Memory content must not be empty.',
+        message: 'Memory content must be a non-empty string.',
         tool: memoryEdit,
       );
     }
@@ -790,9 +801,13 @@ abstract final class MemoryTools {
       }
       final map = item.cast<String, dynamic>();
       final key = (map['key'] ?? '').toString();
-      final value = (map['value'] ?? '').toString();
+      final value = map['value'];
       if (!UserProfileField.isValidKey(key)) {
         rejected.add({'key': key, 'reason': 'unknown_key'});
+        continue;
+      }
+      if (value is! String) {
+        rejected.add({'key': key, 'reason': 'invalid_value'});
         continue;
       }
       if (value.trim().isEmpty) {

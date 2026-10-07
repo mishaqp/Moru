@@ -18,6 +18,7 @@ import '../model_override_resolver.dart';
 import '../custom_request_merger.dart';
 import 'builtin_tools.dart';
 import 'provider_request_headers.dart';
+import 'tool_schema_normalizer.dart';
 
 typedef ToolCallHandler =
     Future<Object?> Function(
@@ -406,7 +407,7 @@ Future<String?> tryEncodeBase64File(
     if (resolved == null) return null;
     final file = File(resolved);
     if (!await file.exists()) return null;
-    return _encodeBase64File(resolved, withPrefix: withPrefix);
+    return await _encodeBase64File(resolved, withPrefix: withPrefix);
   } catch (_) {
     return null;
   }
@@ -678,140 +679,14 @@ double? claudeCompatibleTopP(String modelId, int? budget, double? topP) {
   return topP;
 }
 
-// Clean JSON Schema for Google Gemini API strict validation
-// Google requires array types to have 'items' field, and only accepts `enum`
-// on string-typed schemas (values must be strings too).
+/// Compatibility alias; every provider shares the source-schema normalizer.
 Map<String, dynamic> cleanSchemaForGemini(
   Map<String, dynamic> schema, {
   bool stringEnumOnly = false,
-}) {
-  return _cleanSchemaNode(schema, stringEnumOnly) as Map<String, dynamic>;
-}
-
-/// JSON Schema scalar type of [value], or null when it is not a scalar.
-String? _scalarTypeOf(dynamic value) {
-  if (value is String) return 'string';
-  if (value is bool) return 'boolean';
-  if (value is int) return 'integer';
-  if (value is num) return 'number';
-  return null;
-}
-
-/// JSON Schema type of [value], including the composite and null kinds.
-String? _jsonTypeOf(dynamic value) {
-  if (value == null) return 'null'; // Gemini's Schema.type accepts NULL
-  if (value is Map) return 'object';
-  if (value is List) return 'array';
-  return _scalarTypeOf(value);
-}
-
-/// Infer the JSON Schema scalar type shared by [values], or null when they are
-/// mixed / empty. Used to type an `enum` that came without a `type`.
-String? _inferScalarType(List<dynamic> values) {
-  if (values.isEmpty) return null;
-  String? type;
-  for (final v in values) {
-    final t = _scalarTypeOf(v);
-    if (t == null) return null;
-    if (type == null) {
-      type = t;
-    } else if (type != t) {
-      // integer and number can coexist in one numeric enum
-      if ((type == 'integer' && t == 'number') ||
-          (type == 'number' && t == 'integer')) {
-        type = 'number';
-      } else {
-        return null;
-      }
-    }
-  }
-  return type;
-}
-
-dynamic _cleanSchemaNode(dynamic node, bool stringEnumOnly) {
-  if (node is! Map) return node;
-  final result = Map<String, dynamic>.from(node);
-
-  final declaredType = (result['type'] ?? '').toString();
-
-  // Gemini only validates `enum` against TYPE_STRING; a boolean/number enum
-  // (common in remote MCP schemas) is rejected outright.
-  if (stringEnumOnly && result['enum'] is List) {
-    final values = (result['enum'] as List);
-    // An untyped enum still carries its type in the values: only stringify
-    // when they really are strings, otherwise the tool would receive "true"
-    // instead of true and fail the remote server's own validation.
-    final inferred = declaredType.isNotEmpty ? null : _inferScalarType(values);
-    if (declaredType == 'string' || inferred == 'string') {
-      result['type'] = 'string';
-      result['enum'] = values.map((e) => e?.toString() ?? '').toList();
-    } else if (declaredType.isNotEmpty || inferred != null) {
-      // A non-string enum cannot be expressed to Gemini; keep the type only.
-      if (declaredType.isEmpty) result['type'] = inferred;
-      result.remove('enum');
-    } else {
-      // Heterogeneous (or unrepresentable) values: fall back to a string enum,
-      // but keep only the members that already were strings. Stringifying the
-      // rest would advertise values the remote server is bound to reject.
-      final strings = values.whereType<String>().toList();
-      if (strings.isNotEmpty) {
-        result['type'] = 'string';
-        result['enum'] = strings;
-      } else {
-        // No string member at all: a string schema would be disjoint from every
-        // accepted value, so keep a type that at least one member really has.
-        // `type` is required by Gemini, so fall back to a composite kind rather
-        // than leaving the node untyped.
-        final fallback =
-            values
-                .map(_scalarTypeOf)
-                .firstWhere((t) => t != null, orElse: () => null) ??
-            values
-                .map(_jsonTypeOf)
-                .firstWhere((t) => t != null, orElse: () => null) ??
-            'string';
-        result['type'] = fallback;
-        result.remove('enum');
-      }
-    }
-  }
-
-  // The enum handling above can settle a type on a previously untyped node.
-  final type = (result['type'] ?? '').toString();
-
-  // Recursively fix 'properties' if present
-  Map<String, dynamic> props = const <String, dynamic>{};
-  if (result['properties'] is Map) {
-    props = Map<String, dynamic>.from(result['properties'] as Map);
-  } else if (type == 'object') {
-    // Ensure objects always have a properties map for Gemini validation
-    props = <String, dynamic>{};
-  }
-  if (props.isNotEmpty || type == 'object') {
-    props.updateAll((key, value) => _cleanSchemaNode(value, stringEnumOnly));
-
-    // Gemini requires every entry in `required` to exist in `properties`
-    final req = result['required'];
-    if (req is List) {
-      for (final r in req) {
-        final name = r.toString();
-        if (!props.containsKey(name)) {
-          props[name] = {'type': 'string'}; // Fallback to a simple string field
-        }
-      }
-    }
-    result['properties'] = props;
-  }
-
-  // Handle array items recursively; arrays always need an items schema
-  if (result['items'] is Map) {
-    result['items'] = _cleanSchemaNode(result['items'], stringEnumOnly);
-  } else if (type == 'array' && !result.containsKey('items')) {
-    result['items'] = {'type': 'string'}; // Default to string array
-  }
-
-  return result;
-}
+}) => normalizeToolSchema(
+  schema,
+  stringEnumOnly ? ToolSchemaTarget.gemini : ToolSchemaTarget.openai,
+).parameters;
 
 class ImageRef {
   final String kind; // 'data' | 'path' | 'url'

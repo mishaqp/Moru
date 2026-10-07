@@ -144,6 +144,6 @@ void main() {
         'preserved',
       );
     },
-    skip: !(Platform.isMacOS || Platform.isLinux),
+    skip: !(Platform.isLinux),
   );
 }

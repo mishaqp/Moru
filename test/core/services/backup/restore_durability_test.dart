@@ -32,10 +32,9 @@ void main() {
       await durability.syncDirectory(root, fullBarrier: true);
 
       expect(await file.readAsBytes(), [1, 2, 3]);
-      if (!Platform.isWindows) {
-        expect((await file.stat()).mode & 0x1ff, 0x180);
-        expect((await root.stat()).mode & 0x1ff, 0x1c0);
-      }
+
+      expect((await file.stat()).mode & 0x1ff, 0x180);
+      expect((await root.stat()).mode & 0x1ff, 0x1c0);
     });
 
     test(
@@ -79,7 +78,6 @@ void main() {
     });
 
     test('rejects links instead of syncing their targets', () async {
-      if (Platform.isWindows) return;
       final target = File(p.join(root.path, 'target'));
       await target.writeAsString('value');
       final link = Link(p.join(root.path, 'link'));
